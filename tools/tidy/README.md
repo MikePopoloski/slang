@@ -1,4 +1,4 @@
-# Slang Tidy
+# slang-tidy
 
 A SystemVerilog linter
 
@@ -55,17 +55,22 @@ Disable all: -*
 The `CheckConfigs` is a dictionary like, `config: value`, comma separated list of options for the different checks.
 The available options are:
 
-|            Config             |   Type   | Default |
-|:-----------------------------:|:--------:|:-------:|
-|          **clkName**          |  string  |  clk_i  |
-|         **resetName**         |  string  | rst_ni  |
-|     **resetIsActiveHigh**     |   bool   |  true   |
-|      **inputPortSuffix**      | [string] |  [_i]   |
-|     **outputPortSuffix**      | [string] |  [_o]   |
-|      **inoutPortSuffix**      | [string] |  [_io]  |
-| **moduleInstantiationPrefix** |  string  |   i_    |
+|            Config             |   Type   |      Default       |
+|:-----------------------------:|:--------:|:------------------:|
+|          **clkName**          |  string  |       clk_i        |
+|    **clkNameRegexString**     |  string  | \"clk\\S*\|clock\\S*\" |
+|         **resetName**         |  string  |      rst_ni        |
+|     **resetIsActiveHigh**     |   bool   |       true         |
+|      **inputPortSuffix**      | [string] |       [_i]         |
+|     **outputPortSuffix**      | [string] |       [_o]         |
+|      **inoutPortSuffix**      | [string] |       [_io]        |
+| **moduleInstantiationPrefix** |  string  |        i_          |
+|      **inputPortPrefix**      | [string] |       []           |
+|     **outputPortPrefix**      | [string] |       []           |
+|      **inoutPortPrefix**      | [string] |       []           |
 
 An example of a possible configuration file:
+
 ```
 Checks:
     -*,
@@ -74,6 +79,7 @@ Checks:
 
 CheckConfigs:
     clkName: clk,
+    clkNameRegexString: "clk_signal\S*|clock_port\S*",
     resetIsActiveHigh: false,
     inputPortSuffix: _k,
     outputPortSuffix: _p

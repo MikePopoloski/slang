@@ -255,11 +255,11 @@ static const SourceLibrary& getLibForDef(const Scope& scope, const SyntaxTree* s
 DefinitionSymbol::DefinitionSymbol(const Scope& scope, LookupLocation lookupLocation,
                                    const ModuleDeclarationSyntax& syntax,
                                    const NetType& defaultNetType, UnconnectedDrive unconnectedDrive,
-                                   std::optional<TimeScale> directiveTimeScale,
+                                   bool cellDefine, std::optional<TimeScale> directiveTimeScale,
                                    const SyntaxTree* syntaxTree) :
     Symbol(SymbolKind::Definition, syntax.header->name.valueText(), syntax.header->name.location()),
-    defaultNetType(defaultNetType), unconnectedDrive(unconnectedDrive), syntaxTree(syntaxTree),
-    sourceLibrary(getLibForDef(scope, syntaxTree)) {
+    defaultNetType(defaultNetType), unconnectedDrive(unconnectedDrive), cellDefine(cellDefine),
+    syntaxTree(syntaxTree), sourceLibrary(getLibForDef(scope, syntaxTree)) {
 
     // Extract and save various properties of the definition.
     setParent(scope, lookupLocation.getIndex());
@@ -330,9 +330,8 @@ std::string_view DefinitionSymbol::getKindString() const {
             return "interface"sv;
         case DefinitionKind::Program:
             return "program"sv;
-        default:
-            SLANG_UNREACHABLE;
     }
+    SLANG_UNREACHABLE;
 }
 
 std::string_view DefinitionSymbol::getArticleKindString() const {
@@ -343,9 +342,8 @@ std::string_view DefinitionSymbol::getArticleKindString() const {
             return "an interface"sv;
         case DefinitionKind::Program:
             return "a program"sv;
-        default:
-            SLANG_UNREACHABLE;
     }
+    SLANG_UNREACHABLE;
 }
 
 void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -353,6 +351,7 @@ void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("definitionKind", toString(definitionKind));
     serializer.write("defaultLifetime", toString(defaultLifetime));
     serializer.write("unconnectedDrive", toString(unconnectedDrive));
+    serializer.write("cellDefine", cellDefine);
 
     if (timeScale)
         serializer.write("timeScale", timeScale->toString());

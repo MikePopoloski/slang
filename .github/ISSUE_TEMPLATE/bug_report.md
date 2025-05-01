@@ -7,6 +7,9 @@ assignees: ''
 
 ---
 
+**Is your bug report related to the C++ slang project or the pyslang Python bindings?**
+C++ slang / Pyslang Python bindings
+
 **Describe the bug**
 A clear and concise description of what the bug is.
 

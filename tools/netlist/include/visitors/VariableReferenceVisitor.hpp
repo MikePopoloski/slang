@@ -7,6 +7,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "Netlist.h"
+
+#include "slang/ast/ASTVisitor.h"
+
 using namespace slang;
 
 namespace netlist {
@@ -19,7 +23,7 @@ public:
                                       bool leftOperand = false) :
         netlist(netlist), evalCtx(evalCtx), leftOperand(leftOperand) {}
 
-    void handle(const ast::NamedValueExpression& expr) {
+    void handle(const ast::ValueExpressionBase& expr) {
 
         // If the symbol reference is to a constant (eg a parameter or enum
         // value), then skip it.

@@ -36,6 +36,7 @@ struct Token::Info {
     SVIntStorage& integer() { return *reinterpret_cast<SVIntStorage*>(extra()); }
     std::string_view& stringText() { return *reinterpret_cast<std::string_view*>(extra()); }
     SyntaxKind& directiveKind() { return *reinterpret_cast<SyntaxKind*>(extra()); }
+    KnownSystemName& systemName() { return *reinterpret_cast<KnownSystemName*>(extra()); }
 };
 
 static constexpr size_t getExtraSize(TokenKind kind) {
@@ -58,6 +59,9 @@ static constexpr size_t getExtraSize(TokenKind kind) {
         case TokenKind::Directive:
         case TokenKind::MacroUsage:
             size = sizeof(SyntaxKind);
+            break;
+        case TokenKind::SystemIdentifier:
+            size = sizeof(KnownSystemName);
             break;
         default:
             return 0;
@@ -94,7 +98,7 @@ Trivia::Trivia(TriviaKind kind, std::span<Token const> tokens) :
 Trivia::Trivia(TriviaKind kind, SyntaxNode* syntax) : syntaxNode(syntax), kind(kind) {
 }
 
-Trivia Trivia::withLocation(BumpAllocator& alloc, SourceLocation location) const {
+Trivia Trivia::withLocation(BumpAllocator& alloc, SourceLocation anchorLocation) const {
     switch (kind) {
         case TriviaKind::Directive:
         case TriviaKind::SkippedSyntax:
@@ -104,23 +108,42 @@ Trivia Trivia::withLocation(BumpAllocator& alloc, SourceLocation location) const
             break;
     }
 
+    auto resultLocation = alloc.emplace<FullLocation>();
+    resultLocation->text = getRawText();
+    resultLocation->location = anchorLocation - resultLocation->text.size();
+
     Trivia result;
     result.kind = kind;
     result.hasFullLocation = true;
-    result.fullLocation = alloc.emplace<FullLocation>();
-    result.fullLocation->text = getRawText();
-    result.fullLocation->location = location;
+    result.fullLocation = resultLocation;
     return result;
+}
+
+// Get the start location of a token including its trivia
+static SourceLocation tokenLocationInclTrivia(const Token& token) {
+    size_t locOffset = 0;
+
+    // We iterate over trivia until we hit one which has explicit location.
+    // All trivia without explicit location must be raw source text, for which
+    // we can easily query its length and add it to the offset.
+    for (const Trivia& trivia : token.trivia()) {
+        if (auto loc = trivia.getExplicitLocation())
+            return *loc - locOffset;
+        else
+            locOffset += trivia.getRawText().size();
+    }
+
+    return token.location() - locOffset;
 }
 
 std::optional<SourceLocation> Trivia::getExplicitLocation() const {
     switch (kind) {
         case TriviaKind::Directive:
         case TriviaKind::SkippedSyntax:
-            return syntaxNode->getFirstToken().location();
+            return tokenLocationInclTrivia(syntaxNode->getFirstToken());
         case TriviaKind::SkippedTokens:
             SLANG_ASSERT(tokens.len);
-            return tokens.ptr[0].location();
+            return tokenLocationInclTrivia(tokens.ptr[0]);
         default:
             if (hasFullLocation)
                 return fullLocation->location;
@@ -206,6 +229,13 @@ Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivi
     SLANG_ASSERT(kind == TokenKind::Directive || kind == TokenKind::MacroUsage);
     init(alloc, kind, trivia, rawText, location);
     info->directiveKind() = directive;
+}
+
+Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+             std::string_view rawText, SourceLocation location, KnownSystemName systemName) {
+    SLANG_ASSERT(kind == TokenKind::SystemIdentifier);
+    init(alloc, kind, trivia, rawText, location);
+    info->systemName() = systemName;
 }
 
 Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
@@ -355,6 +385,11 @@ SyntaxKind Token::directiveKind() const {
     return info->directiveKind();
 }
 
+KnownSystemName Token::systemName() const {
+    SLANG_ASSERT(kind == TokenKind::SystemIdentifier);
+    return info->systemName();
+}
+
 bool Token::isOnSameLine() const {
     for (auto& t : trivia()) {
         switch (t.kind) {
@@ -467,6 +502,9 @@ Token Token::createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation 
         case TokenKind::Directive:
         case TokenKind::MacroUsage:
             result = Token(alloc, kind, {}, "", location, SyntaxKind::Unknown);
+            break;
+        case TokenKind::SystemIdentifier:
+            result = Token(alloc, kind, {}, "", location, KnownSystemName::Unknown);
             break;
         case TokenKind::IntegerLiteral:
             result = Token(alloc, kind, {}, "", location, SVInt::Zero);

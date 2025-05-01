@@ -9,6 +9,7 @@
 
 #include "slang/numeric/SVInt.h"
 #include "slang/numeric/Time.h"
+#include "slang/parsing/KnownSystemName.h"
 #include "slang/parsing/TokenKind.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/SmallVector.h"
@@ -95,13 +96,15 @@ public:
 
     explicit operator bool() const { return valid(); }
 
-    /// If the trivia is raw source text, creates a new trivia with the specified location
-    /// (instead of implicitly offset from the parent token). If this trivia is for a
-    /// directive or skipped tokens, returns a copy without modification.
-    [[nodiscard]] Trivia withLocation(BumpAllocator& alloc, SourceLocation location) const;
+    /// If the trivia is raw source text, creates a new trivia attached from behind
+    /// to the specified location (instead of implicitly offset from the parent token).
+    /// If this trivia is for a directive or skipped tokens, returns a copy without
+    /// modification.
+    [[nodiscard]] Trivia withLocation(BumpAllocator& alloc, SourceLocation anchorLocation) const;
 
     /// Gets the source location of the trivia if one is explicitly known. If not, nullopt
-    /// is returned to signify that the location is implicitly relative to the parent token.
+    /// is returned to signify that the location is implicitly relative to the parent token
+    /// or subsequent trivia.
     std::optional<SourceLocation> getExplicitLocation() const;
 
     /// If this trivia is tracking a skipped syntax node or a directive, returns that node.
@@ -141,6 +144,8 @@ public:
     Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
           std::string_view rawText, SourceLocation location, syntax::SyntaxKind directive);
     Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+          std::string_view rawText, SourceLocation location, KnownSystemName systemName);
+    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
           std::string_view rawText, SourceLocation location, logic_t bit);
     Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
           std::string_view rawText, SourceLocation location, const SVInt& value);
@@ -174,6 +179,7 @@ public:
     logic_t bitValue() const;
     NumericTokenFlags numericFlags() const;
     syntax::SyntaxKind directiveKind() const;
+    KnownSystemName systemName() const;
 
     /// Returns true if this token is on the same line as the token before it.
     /// This is detected by examining the leading trivia of this token for newlines.

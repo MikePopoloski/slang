@@ -57,7 +57,8 @@ TEST_CASE("Driver library default ordering") {
     CHECK(driver.parseAllSources());
 
     auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, false));
+    driver.reportCompilation(*compilation, false);
+    CHECK(driver.reportDiagnostics(false));
 
     auto& m = compilation->getRoot().lookupName<InstanceSymbol>("top.m");
     CHECK(m.getDefinition().sourceLibrary.name == "lib1");
@@ -77,7 +78,8 @@ TEST_CASE("Driver library explicit ordering") {
     CHECK(driver.parseAllSources());
 
     auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, false));
+    driver.reportCompilation(*compilation, false);
+    CHECK(driver.reportDiagnostics(false));
 
     auto& m = compilation->getRoot().lookupName<InstanceSymbol>("top.m");
     CHECK(m.getDefinition().sourceLibrary.name == "lib2");
@@ -1242,4 +1244,72 @@ endmodule : cmp
         compilation.addSyntaxTree(cmpSv);
         NO_COMPILATION_ERRORS;
     }
+}
+
+TEST_CASE("Configs with virtual interfaces") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top.i use J;
+    cell I use J;
+endconfig
+
+interface J;
+endinterface
+
+module top;
+    I i();
+    virtual I vi = i;
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::VirtualIfaceConfigRule);
+}
+
+TEST_CASE("Configs with instance caching") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top.i2.j.k use L#(.b(3));
+endconfig
+
+module I;
+    J j();
+endmodule
+
+module J;
+    K k();
+endmodule
+
+module K;
+endmodule
+
+module L #(parameter int b);
+    if (b == 3) begin
+        $warning("b is 3");
+    end
+endmodule
+
+module top;
+    I i1();
+    I i2();
+endmodule
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::WarningTask);
 }

@@ -24,8 +24,9 @@ CompilationUnitSyntax& Parser::parseCompilationUnit() {
         return factory.compilationUnit(members, meta.eofToken);
     }
     SLANG_CATCH(const RecursionException&) {
-        return factory.compilationUnit(nullptr, meta.eofToken);
     }
+
+    return factory.compilationUnit(nullptr, meta.eofToken);
 }
 
 LibraryMapSyntax& Parser::parseLibraryMap() {
@@ -37,8 +38,9 @@ LibraryMapSyntax& Parser::parseLibraryMap() {
         return factory.libraryMap(members, meta.eofToken);
     }
     SLANG_CATCH(const RecursionException&) {
-        return factory.libraryMap(nullptr, meta.eofToken);
     }
+
+    return factory.libraryMap(nullptr, meta.eofToken);
 }
 
 MemberSyntax& Parser::parseModule() {
@@ -73,7 +75,8 @@ MemberSyntax& Parser::parseModule(AttrList attributes, SyntaxKind parentKind,
     }
 
     SyntaxKind declKind = getModuleDeclarationKind(header.moduleKeyword.kind);
-    ParserMetadata::Node node{pp.getDefaultNetType(), pp.getUnconnectedDrive(), pp.getTimeScale()};
+    ParserMetadata::Node node{pp.getDefaultNetType(), pp.getUnconnectedDrive(), pp.getCellDefine(),
+                              pp.getTimeScale()};
 
     auto savedDefinitionKind = currentDefinitionKind;
     currentDefinitionKind = declKind;
@@ -415,8 +418,10 @@ MemberSyntax* Parser::parseSingleMember(SyntaxKind parentKind) {
     if (anyLocalModules)
         moduleDeclStack.pop_back();
 
-    if (result)
+    if (result) {
         checkMemberAllowed(*result, parentKind);
+        result->previewNode = std::exchange(previewNode, nullptr);
+    }
 
     return result;
 }
@@ -438,6 +443,8 @@ std::span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken,
             checkMemberAllowed(*member, parentKind);
             members.push_back(member);
             errored = false;
+
+            member->previewNode = std::exchange(previewNode, nullptr);
         }
         else {
             if (isCloseDelimOrKeyword(kind)) {
@@ -484,10 +491,10 @@ MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
     SmallVector<TokenOrSyntax, 8> buffer;
     while (true) {
         if (peek(TokenKind::FunctionKeyword) || peek(TokenKind::TaskKeyword)) {
-            auto& proto = parseFunctionPrototype(SyntaxKind::Unknown,
-                                                 FunctionOptions::AllowEmptyArgNames |
-                                                     FunctionOptions::IsPrototype);
-            buffer.push_back(&factory.modportSubroutinePort(proto));
+            auto& proto = parseFunctionPrototype(SyntaxKind::Unknown, FunctionOptions::IsPrototype);
+            auto& msp = factory.modportSubroutinePort(proto);
+            msp.previewNode = std::exchange(previewNode, nullptr);
+            buffer.push_back(&msp);
         }
         else {
             auto name = expect(TokenKind::Identifier);
@@ -635,15 +642,18 @@ FunctionPortBaseSyntax& Parser::parseFunctionPort(bitmask<FunctionOptions> optio
         dataType = &parseDataType();
 
     DeclaratorSyntax* decl;
-    if (!options.has(FunctionOptions::AllowEmptyArgNames) || peek(TokenKind::Identifier) ||
+    if (!options.has(FunctionOptions::IsPrototype) || peek(TokenKind::Identifier) ||
         peek(TokenKind::Equals)) {
         decl = &parseDeclarator();
     }
     else {
         decl = &factory.declarator(placeholderToken(), nullptr, nullptr);
     }
-    return factory.functionPort(attributes, constKeyword, direction, staticKeyword, varKeyword,
-                                dataType, *decl);
+
+    auto& result = factory.functionPort(attributes, constKeyword, direction, staticKeyword,
+                                        varKeyword, dataType, *decl);
+    result.previewNode = std::exchange(previewNode, nullptr);
+    return result;
 }
 
 static bool checkSubroutineName(const NameSyntax& name) {
@@ -682,8 +692,8 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
     else
         keyword = expect(TokenKind::FunctionKeyword);
 
-    auto specifiers = parseClassSpecifierList(
-        options.has(FunctionOptions::AllowOverrideSpecifiers));
+    const bool allowSpecifiers = options.has(FunctionOptions::AllowOverrideSpecifiers);
+    auto specifiers = parseClassSpecifierList(allowSpecifiers);
 
     auto lifetime = parseLifetime();
     if (lifetime && options.has(FunctionOptions::IsPrototype))
@@ -728,20 +738,30 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
         else if (constructor)
             addDiag(diag::TaskConstructor, keyword.location()) << name.sourceRange();
     }
-    else if (constructor && returnType->kind != SyntaxKind::ImplicitType) {
-        addDiag(diag::ConstructorReturnType, name.getFirstToken().location())
-            << returnType->sourceRange();
+    else if (constructor) {
+        if (returnType->kind != SyntaxKind::ImplicitType) {
+            addDiag(diag::ConstructorReturnType, name.getFirstToken().location())
+                << returnType->sourceRange();
+        }
+        else if (name.kind != SyntaxKind::ScopedName &&
+                 parentKind != SyntaxKind::ClassDeclaration) {
+            addDiag(diag::ConstructorOutsideClass, keyword.location()) << name.sourceRange();
+        }
+        else if (allowSpecifiers && !specifiers.empty()) {
+            addDiag(diag::SpecifiersNotAllowed, specifiers[0]->sourceRange()) << name.sourceRange();
+        }
     }
-    else if (constructor && name.kind != SyntaxKind::ScopedName &&
-             parentKind != SyntaxKind::ClassDeclaration) {
-        addDiag(diag::ConstructorOutsideClass, keyword.location()) << name.sourceRange();
-    }
-    else if (!constructor && !options.has(FunctionOptions::AllowImplicitReturn) &&
+    else if (!options.has(FunctionOptions::AllowImplicitReturn) &&
              returnType->kind == SyntaxKind::ImplicitType) {
         addDiag(diag::ImplicitNotAllowed, name.getFirstToken().location());
     }
 
+    // If the function returns a declared enum type, save it off here
+    // so that we don't suck it into the port list.
+    auto savedPN = std::exchange(previewNode, nullptr);
     auto portList = parseFunctionPortList(options);
+    previewNode = savedPN;
+
     return factory.functionPrototype(keyword, specifiers, lifetime, *returnType, name, portList);
 }
 
@@ -756,6 +776,10 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
                                              options | FunctionOptions::AllowImplicitReturn,
                                              &isConstructor);
 
+    // If the function returns a declared enum type, save it off here
+    // so that we don't suck it into the body.
+    auto savedPN = std::exchange(previewNode, nullptr);
+
     auto semi = expect(TokenKind::Semicolon);
     auto items = parseBlockItems(endKind, end, isConstructor);
     auto endBlockName = parseNamedBlockClause();
@@ -764,6 +788,7 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
     if (nameToken.kind == TokenKind::Identifier || nameToken.kind == TokenKind::NewKeyword)
         checkBlockNames(nameToken, endBlockName);
 
+    previewNode = savedPN;
     return factory.functionDeclaration(functionKind, attributes, prototype, semi, items, end,
                                        endBlockName);
 }
@@ -825,7 +850,8 @@ LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(AttrList attributes) {
             iterVarCheck = iterationExpr->as<PostfixUnaryExpressionSyntax>().operand;
             break;
         default:
-            addDiag(diag::InvalidGenvarIterExpression, iterationExpr->sourceRange());
+            if (!iterationExpr->getFirstToken().isMissing())
+                addDiag(diag::InvalidGenvarIterExpression, iterationExpr->sourceRange());
             iterationExpr = &factory.badExpression(*iterationExpr);
             break;
     }
@@ -922,7 +948,8 @@ MemberSyntax& Parser::parseGenerateBlock() {
             // If there was some syntax error that caused parseMember to return null, fabricate an
             // empty member here and let our caller sort it out.
             auto loc = peek().location();
-            addDiag(diag::ExpectedMember, loc);
+            if (!haveDiagAtCurrentLoc())
+                addDiag(diag::ExpectedMember, loc);
             return factory.emptyMember(nullptr, nullptr, missingToken(TokenKind::Semicolon, loc));
         }
 
@@ -974,8 +1001,11 @@ ClassSpecifierSyntax* Parser::parseClassSpecifier() {
             case TokenKind::FinalKeyword:
                 keyword = consume();
                 break;
-            default:
+            case TokenKind::Identifier:
                 skipToken(diag::ExpectedClassSpecifier);
+                break;
+            default:
+                addDiag(diag::ExpectedClassSpecifier, peek().location());
                 break;
         }
 
@@ -2208,8 +2238,12 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
 
     // at this point we either have an expression with optional distribution or
     // we have an implication constraint
+    Token curr = peek();
     auto expr =
         &parseSubExpression(ExpressionOptions::ConstraintContext | ExpressionOptions::AllowDist, 0);
+    if (!allowBlock && curr == peek())
+        return nullptr;
+
     if (peek(TokenKind::MinusArrow)) {
         auto arrow = consume();
         return &factory.implicationConstraint(*expr, arrow, *parseConstraintItem(true, false));
@@ -2349,10 +2383,8 @@ DPIImportSyntax& Parser::parseDPIImport(AttrList attributes) {
         equals = expect(TokenKind::Equals);
     }
 
-    auto& method = parseFunctionPrototype(SyntaxKind::Unknown,
-                                          FunctionOptions::AllowEmptyArgNames |
-                                              FunctionOptions::AllowImplicitReturn |
-                                              FunctionOptions::IsPrototype);
+    auto& method = parseFunctionPrototype(
+        SyntaxKind::Unknown, FunctionOptions::AllowImplicitReturn | FunctionOptions::IsPrototype);
 
     if (property.kind == TokenKind::PureKeyword && method.keyword.kind == TokenKind::TaskKeyword)
         addDiag(diag::DPIPureTask, method.keyword.range()) << property.range();
@@ -2458,8 +2490,10 @@ AssertionItemPortSyntax& Parser::parseAssertionItemPort(SyntaxKind parentKind) {
         defaultValue = &factory.equalsAssertionArgClause(equals, parsePropertyExpr(0));
     }
 
-    return factory.assertionItemPort(attributes, local, direction, *type, name, dimensions,
-                                     defaultValue);
+    auto& result = factory.assertionItemPort(attributes, local, direction, *type, name, dimensions,
+                                             defaultValue);
+    result.previewNode = std::exchange(previewNode, nullptr);
+    return result;
 }
 
 AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(SyntaxKind parentKind) {

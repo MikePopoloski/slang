@@ -1,341 +1,7 @@
 // This file is an input to the diagnostic_gen.py script, to generate
 // documentation for compiler warning flags.
 
--Wunknown-escape-code
-Detects use of unknown character escape codes in string literals.
-```
-string s = "Hello World\q";
-```
-
--Wnonstandard-escape-code
-Detects use of '\\\%' in string literals. This is not a real escape code
-but other tools silently allow it anyway.
-```
-string s = "Hello World\%";
-```
-
--Wreal-underflow
-Issued for real literals that are too small to be represented.
-```
-real r = 4.94066e-325;
-```
-
--Wreal-overflow
-Issued for real literals that are too large to be represented.
-```
-real r = 1.79769e+309;
-```
-
--Wvector-overflow
-Issued for vector literals that are larger than their specified number of bits.
-```
-logic [7:0] i = 7'd256;
-```
-
--Wint-overflow
-Issued for integer literals that overflow a 32-bit integer (31-bits plus sign).
-```
-int i = 2147483648;
-```
-
--Wignored-macro-paste
-Points out macro concatenation tokens that aren't actually concatenating anything due
-to whitespace on either side, or tokens that can't be concatenated in the first place.
-```
-`define FOO(a) a `` +
-int foo;
-int bar = `FOO(foo) foo;
-```
-
--Wredef-macro
-Issued for redefining a macro name with a different body.
-```
-`define FOO 1
-`define FOO 2
-```
-
--Wunknown-pragma
-Issued for an unknown pragma directive.
-```
-`pragma foo
-```
-
--Wextra-pragma-args
-Issued for a pragma directive that specifies more arguments than expected.
-```
-`pragma resetall extraarg
-```
-
--Wexpected-diag-arg
-Issued for a pragma diagnostic directive that is missing an argument.
-```
-`pragma diagnostic
-```
-
--Wunknown-diag-arg
-Issued for an unknown argument given to a pragma diagnostic directive.
-```
-`pragma diagnostic pushh
-```
-
--Wpragma-diag-level
-Issued for a malformed diagnostic pragma. A severity code was expected
-where the given location is indicated.
-```
-`pragma diagnostic foo=3'd3
-```
-
--Wnonstandard-generate
-Indicates a standalone generate block (begin / end pair) without a corresponding
-generate loop or condition. This was allowed in older Verilog standards but
-is no longer allowed in SystemVerilog.
-```
-module m;
-    begin : gen_block
-        int i = 1;
-    end
-endmodule
-```
-
--Wempty-pattern
-Issued for empty assignment pattern literals, which are not allowed by
-SystemVerilog but are supported by some tools.
-```
-int foo[] = '{};
-```
-
--Wnonstandard-foreach
-foreach loops are not allowed to have multidimensional brackets when declaring
-loop variables, but most tools allow it as an extension.
-```
-module top;
-    int array[8][8];
-    initial begin
-        foreach (array[i]) begin
-            foreach (array[i][j]) begin
-                array[i][j] = i * j;
-            end
-        end
-    end
-endmodule
-```
-
--Wlifetime-prototype
-Lifetime specifiers are not allowed on method prototype declarations but some
-tools allow it as an extension.
-```
-class C;
-    extern function automatic void foo;
-endclass
-
-function automatic void C::foo;
-endfunction
-```
-
--Wnonstandard-dist
-'dist' constraint items are technically not allowed to be surrounded by parentheses according
-to the language grammar, but most tools allow it as an extension.
-```
-class C;
-    rand bit a;
-    rand bit [3:0] b;
-    constraint cmd_c {
-        a -> (b dist { 0 := 1, [1:15] := 1});
-    }
-endclass
-```
-
--Wempty-body
-An empty statement body for a loop or conditional statement could be confusing or misleading.
-If intended, move the semicolon to a separate line to suppress the warning.
-```
-module m;
-    initial begin
-        if (1); begin
-        end
-    end
-endmodule
-```
-
--Wsplit-distweight-op
-Some tools allow the dist weight operators to be split instead of a single token.
-slang will issue this warning as an error by default but it can be downgraded for compatibility.
-```
-class c;
-  rand int val;
-  constraint cst_sum {
-    val dist {1 :    = 10, 4 :   / 20};
-  }
-endclass
-```
-
--Wwarning-task
-A $warning elaboration task was encountered. Its message is printed by this diagnostic.
-```
-$warning("Hello World!");
-```
-
--Wexplicit-static
-static variables declared locally to a procedural block that contain an initializer require
-that the 'static' keyword be explicitly provided (and not just inferred from context) to
-clarify that the initialization happens only once. Most tools don't enforce this rule,
-so this is just a warning instead of an error.
-```
-module m;
-    initial begin
-        int i = 1;
-    end
-endmodule
-```
-
--Wcase-gen-dup
-More than one case generate item was found to have the same value. The second
-case block will never be selected.
-```
-module m;
-    case (1)
-        1: begin end
-        1: begin end
-    endcase
-endmodule
-```
-
--Wcase-gen-none
-A case generate directive did not match any items and so no block was selected.
-```
-module m;
-    case (1)
-        0: begin end
-    endcase
-endmodule
-```
-
--Wunconnected-port
-An instance port was left unconnected and it has no default value.
-```
-module m(input int i);
-endmodule
-
-module n;
-    m m1();
-endmodule
-```
-
--Wunconnected-unnamed-port
-An unnamed instance port was left unconnected.
-```
-module m({a, b});
-    input a, b;
-endmodule
-
-module n;
-    m m1();
-endmodule
-```
-
--Wimplicit-net-port
-A net port that elides its net type occurs in a context where `default_nettype is set to 'none'.
-This technically should be an error but it makes the use of 'none' as a default nettype very
-annoying and most tools just default to a wire in this case.
-```
-`default_nettype none
-
-module m(input i);
-endmodule
-```
-
--Wdup-attr
-A design element has more than one attribute of the same name.
-Only the last one will apply.
-```
-module m;
-    (* foo = 1, foo = 2 *)
-    int i;
-endmodule
-```
-
--Wempty-member
-An unnecessary semicolon is located in a non-procedural scope (such as a module body).
-```
-module m;
-    ;
-endmodule
-```
-
--Wineffective-sign
-For a non-ANSI instance port or function body port declaration, the port I/O specifies a
-signing keyword but the actual data type of the port does not permit that signing to take effect.
-```
-module m(a);
-    input unsigned a;
-    int a;
-endmodule
-```
-
--Wconstraint-missing
-An implicit class constraint block has no external definition and so is useless.
-```
-class C;
-    constraint c;
-endclass
-```
-
--Wdpi-spec
-Old-style "DPI" specified subroutines are deprecated and not supported by slang.
-Use the new-style "DPI-C" which has a well-defined standardized calling convention.
-```
-import "DPI" function void foo();
-```
-
--Wudp-port-empty
-A connection to a user-defined primitive instance is an empty expression.
-While allowed, this is easily confused with a misplaced comma and is likely
-not what you want.
-```
-primitive p1 (output a, input b);
-    table 00:0; endtable
-endprimitive
-
-module m;
-    logic a;
-    p1 (a,);
-endmodule
-```
-
--Wnet-inconsistent
-A connection (or part of a connection) between an external net and an internal net
-port has inconsistent net types. The SystemVerilog LRM defines which combinations
-of net types are inconsistent and should produce a warning; see section [23.3.3.7]
-"Port connections with dissimilar net types (net and port collapsing)" for more detail.
-```
-module m (input .a({b, {c[1:0], d}}));
-    wand b;
-    wand [3:0] c;
-    supply0 d;
-endmodule
-
-module top;
-    wand a;
-    wor b;
-    trireg [1:0] c;
-    m m1({a, b, c});
-endmodule
-```
-
--Wignored-slice
-A streaming operator with direction left-to-right provides a slice size, which
-has no effect because only right-to-left streaming can use a slice size.
-```
-int a;
-int b = {>> 4 {a}};
-```
-
--Wunsized-concat
-An unsized type is used in a concatenation. This is not allowed in SystemVerilog
-but most tools allow it anyway as an extension.
-```
-longint i = {1, 2};
-```
+@category Type Conversions
 
 -Wwidth-expand
 An implicit conversion in an expression expands a type. This may be harmless,
@@ -391,14 +57,211 @@ module m;
 endmodule
 ```
 
--Wnonblocking-final
-A nonblocking assignment is used in a 'final' block, which will have no effect.
+-Wconstant-conversion
+A constant value is changed (truncated) by an implicit conversion.
+```
+module m;
+    logic [9:0] a = 9000;
+endmodule
+```
+
+-Wsign-conversion
+An implicit conversion changes the signedness of an integer type
+(from signed to unsigned or vice versa).
+```
+module m;
+    logic signed [31:0] a;
+    logic [31:0] b;
+    assign b = a;
+endmodule
+```
+
+-Wfloat-bool-conv
+A floating point value is implicitly converted to a boolean predicate (such as in an
+if statement or loop condition). This is not necessarily wrong but can indicate
+mistakes where you intended to compare the value to something.
+```
+module m;
+    real r;
+    initial if (r) begin end // Did you mean r != 0 or something else?
+endmodule
+```
+
+-Wint-bool-conv
+A multi-bit integer value is implicitly converted to a boolean predicate (such as in an
+if statement or loop condition). This is not necessarily wrong but can indicate
+mistakes where you intended to compare the value to something.
 ```
 module m;
     int i;
-    final begin
-        i <= 1;
+    initial if (i + 2) begin end // Did you mean i + 2 != 0 or something else?
+endmodule
+```
+
+-Wfloat-int-conv
+A floating point value (real or shortreal) is implicitly converted to an integer.
+```
+function automatic f(real r);
+    int i = r;
+endfunction
+```
+
+-Wint-float-conv
+A integer value is implicitly converted to a floating point type (real or shortreal).
+```
+function automatic f(int i);
+    real r = i;
+endfunction
+```
+
+-Wfloat-widen
+A floating point value is implicitly converted to a wider floating point type.
+```
+function automatic f(shortreal s);
+    real r = s;
+endfunction
+```
+
+-Wfloat-narrow
+A floating point value is implicitly converted to a narrower floating point type.
+```
+function automatic f(real r);
+    shortreal s = r;
+endfunction
+```
+
+-Warith-op-mismatch
+An arithmetic operator has operands of different types -- one or both will be converted
+before the operation is performed. This is not necessarily a problem but the warning
+can be helpful if you prefer to be strict about disallowing implicit conversions.
+```
+module m;
+    logic [7:0] a;
+    struct packed { logic [7:0] x; } b;
+    initial a += b;
+endmodule
+```
+
+-Wbitwise-op-mismatch
+A bitwise operator has operands of different types -- one or both will be converted
+before the operation is performed. This is not necessarily a problem but the warning
+can be helpful if you prefer to be strict about disallowing implicit conversions.
+```
+module m;
+    logic [7:0] a;
+    logic [11:1] b;
+    initial a = a | b;
+endmodule
+```
+
+-Wcomparison-mismatch
+A comparison operator has operands of different types -- one or both will be converted
+before the operation is performed. This is not necessarily a problem but the warning
+can be helpful if you prefer to be strict about disallowing implicit conversions.
+```
+module m;
+    logic [7:0] a;
+    struct packed { logic [7:0] x; } b;
+    initial begin
+        if (a == b) begin
+        end
     end
+endmodule
+```
+
+-Wsign-compare
+A comparison operator has operands of differing signs. The signed operand will be
+treated as unsigned, which can lead to unexpected results.
+```
+module m;
+    int a = -1;
+    int unsigned b = 1;
+    initial begin
+        if (a < b) begin
+        end
+    end
+endmodule
+```
+
+-Wpacked-array-conv
+Indicates an implicit conversion between types with differing
+packed array dimensions, even if their overall bit width is the same.
+This will not warn for types with a single packed dimension; at least
+one of the types must have multiple declared dimensions.
+```
+module m;
+    logic [3:1][1:0] a;
+    logic [5:0][1:0] b;
+    initial b = a;
+endmodule
+```
+
+-Wformat-real
+A string formatting function was passed a real value for an integer format specifier,
+which will force the value to round to an integer.
+```
+module m;
+    initial $display("%d", 3.14);
+endmodule
+```
+
+@category Port Connections
+
+-Wunconnected-port
+An instance port was left unconnected and it has no default value.
+```
+module m(input int i);
+endmodule
+
+module n;
+    m m1();
+endmodule
+```
+
+-Wunconnected-unnamed-port
+An unnamed instance port was left unconnected.
+```
+module m({a, b});
+    input a, b;
+endmodule
+
+module n;
+    m m1();
+endmodule
+```
+
+-Wudp-port-empty
+A connection to a user-defined primitive instance is an empty expression.
+While allowed, this is easily confused with a misplaced comma and is likely
+not what you want.
+```
+primitive p1 (output a, input b);
+    table 00:0; endtable
+endprimitive
+
+module m;
+    logic a;
+    p1 (a,);
+endmodule
+```
+
+-Wnet-inconsistent
+A connection (or part of a connection) between an external net and an internal net
+port has inconsistent net types. The SystemVerilog LRM defines which combinations
+of net types are inconsistent and should produce a warning; see section [23.3.3.7]
+"Port connections with dissimilar net types (net and port collapsing)" for more detail.
+```
+module m (input .a({b, {c[1:0], d}}));
+    wand b;
+    wand [3:0] c;
+    supply0 d;
+endmodule
+
+module top;
+    wand a;
+    wor b;
+    trireg [1:0] c;
+    m m1({a, b, c});
 endmodule
 ```
 
@@ -418,114 +281,297 @@ module n;
 endmodule
 ```
 
--Wevent-const
-An event expression is a constant and so will never change.
+-Wineffective-sign
+For a non-ANSI instance port or function body port declaration, the port I/O specifies a
+signing keyword but the actual data type of the port does not permit that signing to take effect.
 ```
-module m;
-    always @(1) begin
-    end
+module m(a);
+    input unsigned a;
+    int a;
 endmodule
 ```
 
--Wempty-stmt
-An extra semicolon in a procedural context implies an empty statement that does nothing.
+@category Case Statements
+
+-Wcase-gen-dup
+More than one case generate item was found to have the same value. The second
+case block will never be selected.
 ```
 module m;
+    case (1)
+        1: begin end
+        1: begin end
+    endcase
+endmodule
+```
+
+-Wcase-gen-none
+A case generate directive did not match any items and so no block was selected.
+```
+module m;
+    case (1)
+        0: begin end
+    endcase
+endmodule
+```
+
+-Wcase-type
+The type of a case item expression does not match the type of the case condition
+expression.
+```
+module m;
+    enum {A, B} e;
+    enum {C, D} f;
     initial begin
-        ;
+        case (e)
+            C: ;
+        endcase
     end
 endmodule
 ```
 
--Wpointless-void-cast
-A function call is cast to 'void' but it already returns void so the cast is pointless.
+-Wcase-default
+A case statement is missing a 'default' label. This is not necessarily problematic,
+but some coding standards mandate that all case statements include a 'default' so
+this warning can be used to enforce that.
 ```
 module m;
-    function void foo; endfunction
+    enum {A, B} e;
     initial begin
-        void'(foo());
+        case (e)
+            A, B: ;
+        endcase
     end
 endmodule
 ```
 
--Wunused-result
-A non-void function is invoked without inspecting its return value. Capture the result
-or cast the call to 'void' to suppress the warning.
+-Wcase-outside-range
+A case item has a known value that makes it impossible to ever match
+the case condition (or vice versa).
 ```
 module m;
-    function int foo; return 1; endfunction
+    logic [2:0] a;
     initial begin
-        foo();
+        case (a)
+            4'b1000: ;
+        endcase
     end
 endmodule
 ```
 
--Wenum-range
-An enum member is specified as a range with values that are not integer literals.
-The LRM does not allow other constant expressions to be used here.
+-Wcase-enum
+A case statement with an enum type condition does not include items
+that cover every enumerand. Note that this warning will not be
+issued if there is a 'default' label.
 ```
-localparam int i = 1;
-typedef enum { A[i:3] } e_t;
+module m;
+    enum {A, B} e;
+    initial begin
+        case (e)
+            A: ;
+        endcase
+    end
+endmodule
 ```
 
--Wdup-import
-A given scope contains more than one import statement for the same package and name.
+-Wcase-enum-explicit
+A case statement with an enum type condition does not include items
+that cover every enumerand, regardless of whether there is a default
+label or not.
 ```
-package p;
+module m;
+    enum {A, B} e;
+    initial begin
+        case (e)
+            A: ;
+            default;
+        endcase
+    end
+endmodule
+```
+
+-Wcase-dup
+A case statement contains more than one item with the same value.
+Case items are evaluated and selected in order and so the second
+one will never be matched.
+```
+module m;
     int i;
-endpackage
-
-module m;
-    import p::i;
-    import p::i;
+    initial begin
+        case (i)
+            1, 2:;
+            3, 1:;
+            default;
+        endcase
+    end
 endmodule
 ```
 
--Wformat-real
-A string formatting function was passed a real value for an integer format specifier,
-which will force the value to round to an integer.
+-Wcase-overlap
+A wildcard case statement contains overlapping items, which can be confusing
+since the overlapping value(s) will only ever match the first item in the list.
 ```
 module m;
-    initial $display("%d", 3.14);
+    logic [3:0] a;
+    initial begin
+        casez (a)
+            4'b1011:;
+            4'b101?:;
+            default;
+        endcase
+    end
 endmodule
 ```
 
--Wfinish-num
-The $finish control task accepts a "finish number" of 0, 1, or 2 as its first argument.
-The actual call to $finish in this case passed something other than one of those values.
+-Wcase-unreachable
+A wildcard case statement is unreachable because earlier items completely
+cover all of its possible values.
 ```
 module m;
-    initial $finish("Hello");
+    logic [2:0] a;
+    initial begin
+        casez (a)
+            3'b10?:;
+            3'b101:;
+            default;
+        endcase
+    end
 endmodule
 ```
 
--Wmissing-format
-A string formatting function has a lone '%%' at the end of the format string,
-implying that the rest of the specifier is missing. If a literal '%%' is intended
-in the output, use the standard '%%%' to achieve that.
+-Wcase-not-wildcard
+A normal case statement has items with integer literals that contain X or Z bits.
+These bits don't count as wildcards, so the designer may have meant for this to
+be a 'casex' or 'casez' statement instead.
 ```
 module m;
-    initial $display("Hello World %");
+    logic [2:0] a;
+    initial begin
+        case (a)
+            3'b10?:;
+        endcase
+    end
 endmodule
 ```
 
--Wformat-multibit-strength
-Formatting multibit nets with the %%v specifier is not allowed in SystemVerilog
-but most tools allow it anyway as an extension.
+-Wcasez-with-x
+A 'casez' statement has items with integer literals that contain X bits.
+These bits don't count as wildcards, so the designer may have meant for this to
+be a 'casex' statement instead.
 ```
 module m;
-    wire [3:0] w;
-    initial $display("%v", w);
+    logic [2:0] a;
+    initial begin
+        casez (a)
+            3'b10x:;
+        endcase
+    end
 endmodule
 ```
 
--Wnonstandard-sys-func
-Indicates a call to a nonstandard system function. Currently this only applies
-to the $psprintf function, which is a synonym for $sformatf.
+-Wcase-too-complex
+@options --max-case-analysis-steps=1024
+Determining whether a list of wildcard case clauses fully cover the entire input space
+is, in general, NP-complete, so there is a limit to prevent exponential explosion in
+analysis time. In practice case statements written by humans will rarely, if ever,
+exhibit this kind of behavior.
 ```
 module m;
-    initial $psprintf("%d", 42);
+    logic [51:0] a;
+    always_comb begin
+        casex (a)
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx011111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx011111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111111:;
+            52'bxxxxxxxxxxxx1xxxxxxxxxxxxxxxxxxxxxxxxxxxx01111111x11:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx011111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01x11111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx011111111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01111111111111111:;
+            52'bxxxxxxxxxxxxxxxxx0xxxxxxxxxxxxxxxx0111111111111x1111:;
+            52'bxxxx1xxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111111111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01111111111111111111:;
+            52'bxxxxxx1xxxxxxxxxxxxx1xxxxxx1xxx011111111111111111111:;
+            52'bxxxxxxxxxxxx0xxxxxxxxxxxxxxxxx0111111111111111111111:;
+        endcase
+    end
 endmodule
+```
+
+-Wcase-redundant-default
+A case statement that is marked 'unique' or 'priority' has a default item.
+Using 'unique' or 'priority' asserts that the case items fully cover all
+possible inputs, so the default item should never be hit.
+```
+module m;
+    logic [2:0] a;
+    initial begin
+        unique case (a)
+            1:;
+            2:;
+            default; // Warning for default
+        endcase
+    end
+endmodule
+```
+
+-Wcase-wildcard-2state
+A wildcard case statement has a 2-state condition and 2-state items, so there
+will never be unknown bits and therefore no wildcard matching will occur.
+If expected, convert this to a normal 'case' statement to better express
+the intent.
+```
+module m;
+    bit [2:0] a;
+    initial casex (a)
+        3'd0:;
+        3'd1:;
+        default;
+    endcase
+endmodule
+```
+
+-Wcase-incomplete
+A wildcard case statement is missing coverage of one or more possible inputs
+and has no default case to handle them.
+```
+module m;
+    logic [2:0] a;
+    initial casez (a)
+        3'b00?:;
+        3'b1??:;
+    endcase
+endmodule
+```
+
+@category Constant Evaluation
+
+-Wreal-underflow
+Issued for real literals that are too small to be represented.
+```
+real r = 4.94066e-325;
+```
+
+-Wreal-overflow
+Issued for real literals that are too large to be represented.
+```
+real r = 1.79769e+309;
+```
+
+-Wvector-overflow
+Issued for vector literals that are larger than their specified number of bits.
+```
+logic [7:0] i = 7'd256;
+```
+
+-Wint-overflow
+Issued for integer literals that overflow a 32-bit integer (31-bits plus sign).
+```
+int i = 2147483648;
 ```
 
 -Welem-not-found
@@ -604,15 +650,144 @@ function string func;
 endfunction
 ```
 
--Wmissing-top
-No valid top-level modules exist in the design. No top has been instantiated.
+@category Misleading or Suspicious
+
+-Wunknown-escape-code
+Detects use of unknown character escape codes in string literals.
 ```
-module m #(parameter int i);
+string s = "Hello World\q";
+```
+
+-Wempty-body
+An empty statement body for a loop or conditional statement could be confusing or misleading.
+If intended, move the semicolon to a separate line to suppress the warning.
+```
+module m;
+    initial begin
+        if (1); begin
+        end
+    end
 endmodule
 ```
 
--Wunknown-warning-option
-<ignored>
+-Wdup-attr
+A design element has more than one attribute of the same name.
+Only the last one will apply.
+```
+module m;
+    (* foo = 1, foo = 2 *)
+    int i;
+endmodule
+```
+
+-Wempty-member
+An unnecessary semicolon is located in a non-procedural scope (such as a module body).
+```
+module m;
+    ;
+endmodule
+```
+
+-Wconstraint-missing
+An implicit class constraint block has no external definition and so is useless.
+```
+class C;
+    constraint c;
+endclass
+```
+
+-Wignored-slice
+A streaming operator with direction left-to-right provides a slice size, which
+has no effect because only right-to-left streaming can use a slice size.
+```
+int a;
+int b = {>> 4 {a}};
+```
+
+-Wnonblocking-final
+A nonblocking assignment is used in a 'final' block, which will have no effect.
+```
+module m;
+    int i;
+    final begin
+        i <= 1;
+    end
+endmodule
+```
+
+-Wevent-const
+An event expression is a constant and so will never change.
+```
+module m;
+    always @(1) begin
+    end
+endmodule
+```
+
+-Wempty-stmt
+An extra semicolon in a procedural context implies an empty statement that does nothing.
+```
+module m;
+    initial begin
+        ;
+    end
+endmodule
+```
+
+-Wpointless-void-cast
+A function call is cast to 'void' but it already returns void so the cast is pointless.
+```
+module m;
+    function void foo; endfunction
+    initial begin
+        void'(foo());
+    end
+endmodule
+```
+
+-Wunused-result
+A non-void function is invoked without inspecting its return value. Capture the result
+or cast the call to 'void' to suppress the warning.
+```
+module m;
+    function int foo; return 1; endfunction
+    initial begin
+        foo();
+    end
+endmodule
+```
+
+-Wdup-import
+A given scope contains more than one import statement for the same package and name.
+```
+package p;
+    int i;
+endpackage
+
+module m;
+    import p::i;
+    import p::i;
+endmodule
+```
+
+-Wfinish-num
+The $finish control task accepts a "finish number" of 0, 1, or 2 as its first argument.
+The actual call to $finish in this case passed something other than one of those values.
+```
+module m;
+    initial $finish("Hello");
+endmodule
+```
+
+-Wmissing-format
+A string formatting function has a lone '%%' at the end of the format string,
+implying that the rest of the specifier is missing. If a literal '%%' is intended
+in the output, use the standard '%%%' to achieve that.
+```
+module m;
+    initial $display("Hello World %");
+endmodule
+```
 
 -Wreversed-range
 An open range with constant bounds is reversed (i.e. has a larger left-hand side compared to its right).
@@ -626,8 +801,459 @@ class C;
 endclass
 ```
 
--Winvalid-source-encoding
-<ignored>
+-Wduplicate-defparam
+More than one defparam targets the same parameter. The LRM specifies that this is undefined
+behavior. slang takes the value from the first defparam it sees and ignores the rest.
+```
+module m;
+    parameter p = 1;
+endmodule
+
+module n;
+    defparam m1.p = 3;
+endmodule
+
+module top;
+    m m1();
+    n n1();
+    defparam m1.p = 2;
+endmodule
+```
+
+-Wmultibit-edge
+A timing control edge expression (posedge, negedge, etc) is wider than one bit,
+which can indicate a mistake since only changes to the first bit will trigger the edge.
+```
+module m;
+    int i;
+    always @(posedge i) begin end
+endmodule
+```
+
+-Wuseless-cast
+An explicit cast converts an expression to the same type, so the cast does nothing.
+```
+module m;
+    int i, j;
+    assign i = int'(j);
+endmodule
+```
+
+-Wunsigned-arith-shift
+An arithmetic right shift of an unsigned integral type will always shift in zeros, which can be
+confusing since typically this operator is used to shift in the value of the most significant bit.
+If this is intended behavior use the logical right shift operator which does the same.
+```
+function bit[31:0] f1(int unsigned i);
+    return i >>> 5;
+endfunction
+```
+
+-Wstatic-init-value
+A static variable's initializer expression refers to an uninitialized variable, a net, a port,
+or a modport member, which won't have a value assigned by the time the initializer runs. The variable
+therefore will always be initialized to the default value.
+```
+module m(input i);
+    logic j = i;
+endmodule
+```
+
+-Wstatic-init-order
+A static variable's initializer refers to another variable that does not have a defined order
+of initialization relative to the first. This means that the initialization may or may not work
+as expected depending on how the tool chooses to schedule the initializers.
+```
+package p;
+    int i = 1;
+endpackage
+
+module m;
+    import p::i;
+    int j = i;
+endmodule
+```
+
+-Wbitwise-rel-precedence
+Identifies a bitwise operator used in a relational expression without parentheses,
+which can indicate a mistake in the intended order of operations.
+```
+module m;
+    int unsigned flags;
+    initial begin
+        if (flags & 'h1 == 'h1) begin end
+    end
+endmodule
+```
+
+-Warith-in-shift
+Identifies an arithmetic operator used in a shift expression, which can
+indicate a mistake in the intended order of operations.
+```
+module m;
+    logic a;
+    initial begin
+        if (a << 1 + 1) begin end
+    end
+endmodule
+```
+
+-Wlogical-not-parentheses
+Identifies a logical not operator used without parentheses around the operand,
+followed by a comparison operator. This can indicate a mistake in the intended
+order of operations.
+```
+module m;
+    int a, b;
+    initial begin
+        if (!a < b) begin end
+    end
+endmodule
+```
+
+-Wbitwise-op-parentheses
+Identifies a mix of bitwise operators with different levels of precedence without
+any parentheses, which can indicate a mistake in the intended order of operations.
+```
+module m;
+    logic a, b, c;
+    initial begin
+        if (a & b | c) begin end
+    end
+endmodule
+```
+
+-Wlogical-op-parentheses
+Identifies a mix of logical operators with different levels of precedence without
+any parentheses, which can indicate a mistake in the intended order of operations.
+```
+module m;
+    logic a, b, c;
+    initial begin
+        if (a || b && c) begin end
+    end
+endmodule
+```
+
+-Wconditional-precedence
+Identifies a conditional expression mixed with a binary expression in way that
+suggests a different intended order of operations.
+```
+module m;
+    logic a, b;
+    initial begin
+        if ((a + b ? 1 : 2) == 2) begin end
+    end
+endmodule
+```
+
+-Wconsecutive-comparison
+Identifies a sequence of comparison operators that suggest an incorrect notion
+of how the comparisons will be evaluated.
+```
+module m;
+    logic a, b, c;
+    initial begin
+        if (a < b < c) begin end
+    end
+endmodule
+```
+
+-Wseq-no-match
+Warns about a sequence expression that can never be matched.
+```
+module top;
+    assert property ((1'b1 ##1 1'b0) intersect (1'b1[*0] ##2 1'b1));
+endmodule
+```
+
+-Winferred-latch
+A signal assigned in an always_comb procedure is not assigned on all control
+paths and so infers a latch instead of combinatorial logic.
+@options --disable-analysis=false
+```
+module m(input logic a, output logic b);
+    always_comb begin
+        if (a)
+            b = 0;
+    end
+endmodule
+```
+
+-Wmissing-return
+A non-void function has no return statements and does not
+assign to its return value variable.
+```
+function int foo;
+endfunction
+```
+
+-Wincomplete-return
+A non-void function has return statements or assigns to its
+return value variable but does not do so on all control paths
+through the function.
+```
+function int foo(input a);
+    if (a) begin
+        return 1;
+    end
+endfunction
+```
+
+@category Compatibility
+
+-Wdpi-spec
+Old-style "DPI" specified subroutines are deprecated and not supported by slang.
+Use the new-style "DPI-C" which has a well-defined standardized calling convention.
+```
+import "DPI" function void foo();
+```
+
+-Wexplicit-static
+static variables declared locally to a procedural block that contain an initializer require
+that the 'static' keyword be explicitly provided (and not just inferred from context) to
+clarify that the initialization happens only once. Most tools don't enforce this rule,
+so this is just a warning instead of an error.
+```
+module m;
+    initial begin
+        int i = 1;
+    end
+endmodule
+```
+
+-Wlifetime-prototype
+Lifetime specifiers are not allowed on method prototype declarations but some
+tools allow it as an extension.
+```
+class C;
+    extern function automatic void foo;
+endclass
+
+function automatic void C::foo;
+endfunction
+```
+
+-Wsplit-distweight-op
+Some tools allow the dist weight operators to be split instead of a single token.
+slang will issue this warning as an error by default but it can be downgraded for compatibility.
+```
+class c;
+  rand int val;
+  constraint cst_sum {
+    val dist {1 :    = 10, 4 :   / 20};
+  }
+endclass
+```
+
+-Windex-oob
+An out-of-bounds value was used to index an array. This is an error by default but can be downgraded to
+a warning for compatibility with other tools.
+```
+logic [7:0] a;
+logic b = a[9];
+```
+
+-Wrange-oob
+An out-of-bounds range was used to select from an array. This is an error by default but can be downgraded to
+a warning for compatibility with other tools.
+```
+logic [7:0] a;
+logic [2:0] b = a[9:7];
+```
+
+-Wrange-width-oob
+An indexed part-select has a width that is wider than the bounds of the array it is selecting. This is an error
+by default but can be downgraded to a warning for compatibility with other tools.
+```
+logic [1:0] a;
+int b;
+logic [2:0] c = a[b+:3];
+```
+
+-Wduplicate-definition
+A module has been defined using the same name as a previously defined module. This is an error
+by default but can be downgraded to a warning for compatibility with other tools.
+This applies to both top level modules as well as nested modules (but only duplicated nested modules within the same scope,
+as it is OK to have modules with the same name in different scopes).
+```
+module a;
+endmodule;
+
+module a;
+endmodule
+```
+
+-Wspecify-param
+The LRM disallows using parameters inside of specify blocks. Most tools allow this with
+a warning so slang makes it a warning as well.
+```
+module m(input [1:0] a, output [1:0] b);
+    parameter p = 1;
+    specify
+        (a[p] => b[0]) = 1;
+    endspecify
+endmodule
+```
+
+-Wdup-timing-path
+More than one specify timing path was given for a particular pair of input and output
+terminals in a module.
+```
+module m(input a, output b);
+    specify
+        (a => b) = 1;
+        (a => b) = 2;
+    endspecify
+endmodule
+```
+
+-Winvalid-pulsestyle
+A `pulsestyle` or `showcancelled` declaration targets an output terminal that has
+previously been used in a timing path declaration, which is not allowed according to the LRM.
+```
+module m(input a, output b);
+    specify
+        (a => b) = 1;
+        pulsestyle_ondetect b;
+    endspecify
+endmodule
+```
+
+-Wnegative-timing-limit
+A system timing check parameter that should be positive has a negative value.
+```
+module m(input a, b);
+    specify
+        $setup(posedge a, b, -1);
+    endspecify
+endmodule
+```
+
+-Wbad-procedural-force
+According to the Verilog/SystemVerilog standard, it is illegal to procedurally force a
+bit-select or range select of a variable (you can do that with a net, or with a plain
+variable). It is an error by default, but can be turned into a warning, to support code
+compatibility with commercial tools that accept this illegal code.
+```
+module m;
+    reg [1:0]r;
+    initial
+        force r[0] = 1'b0;
+endmodule
+```
+
+-Wimplicit-port-type-mismatch
+An implicit named port connection is made between two inequivalent types. Unlike with a normal
+port connection, where the type of the connection undergoes implicit conversion, the LRM specifies
+that this case is an error. slang makes this an error by default but it can be turned into a warning,
+to support code compatibility with commercial tools.
+```
+module m(logic p);
+endmodule
+
+module n;
+    int p;
+    m m1(.p);
+endmodule
+```
+
+-Wdpi-pure-task
+A DPI import task is marked 'pure', which is disallowed by SystemVerilog but can be
+downgraded to a warning to support code compatibility with other tools.
+```
+import "DPI-C" pure task func(logic [3:0] a);
+```
+
+-Wspecify-condition-expr
+State-dependent path conditions in specify blocks are restricted to a subset of expression
+types and operators (see Table 30-1 in the LRM for the list of valid operators). This is an
+error by default but can be downgraded to a warning for compatibility with other tools.
+```
+module m(input b, output c);
+    wire integer a;
+    specify
+        if (a === 1 + 1) (b => c) = (0,0);
+    endspecify
+endmodule
+```
+
+-Wunknown-sys-name
+An unknown system task or function is called. This is an error by default but can
+be downgraded to allow analyzing code using special system names defined by other tools.
+```
+module m;
+    always_comb begin
+        if (!$somename) begin end
+    end
+endmodule
+```
+
+-Wunsized-concat
+An unsized type is used in a concatenation. This is not allowed in SystemVerilog
+but most tools allow it anyway as an extension.
+```
+longint i = {1, 2};
+```
+
+-Wenum-range
+An enum member is specified as a range with values that are not integer literals.
+The LRM does not allow other constant expressions to be used here.
+```
+localparam int i = 1;
+typedef enum { A[i:3] } e_t;
+```
+
+@category Macros
+
+-Wignored-macro-paste
+Points out macro concatenation tokens that aren't actually concatenating anything due
+to whitespace on either side, or tokens that can't be concatenated in the first place.
+```
+`define FOO(a) a `` +
+int foo;
+int bar = `FOO(foo) foo;
+```
+
+-Wredef-macro
+Issued for redefining a macro name with a different body.
+```
+`define FOO 1
+`define FOO 2
+```
+
+@category Pragmas
+
+-Wunknown-pragma
+Issued for an unknown pragma directive.
+```
+`pragma foo
+```
+
+-Wextra-pragma-args
+Issued for a pragma directive that specifies more arguments than expected.
+```
+`pragma resetall extraarg
+```
+
+-Wexpected-diag-arg
+Issued for a pragma diagnostic directive that is missing an argument.
+```
+`pragma diagnostic
+```
+
+-Wunknown-diag-arg
+Issued for an unknown argument given to a pragma diagnostic directive.
+```
+`pragma diagnostic pushh
+```
+
+-Wpragma-diag-level
+Issued for a malformed diagnostic pragma. A severity code was expected
+where the given location is indicated.
+```
+`pragma diagnostic foo=3'd3
+```
 
 -Wexpected-protect-keyword
 A `pragma protect directive is missing the protect keyword to set.
@@ -693,44 +1319,6 @@ the form (object = &lt;string>, access = &lt;string>)
 `pragma protect viewport=(not_object = "hello")
 ```
 
--Windex-oob
-An out-of-bounds value was used to index an array. This is an error by default but can be downgraded to
-a warning for compatibility with other tools.
-```
-logic [7:0] a;
-logic b = a[9];
-```
-
--Wrange-oob
-An out-of-bounds range was used to select from an array. This is an error by default but can be downgraded to
-a warning for compatibility with other tools.
-```
-logic [7:0] a;
-logic [2:0] b = a[9:7];
-```
-
--Wrange-width-oob
-An indexed part-select has a width that is wider than the bounds of the array it is selecting. This is an error
-by default but can be downgraded to a warning for compatibility with other tools.
-```
-logic [1:0] a;
-int b;
-logic [2:0] c = a[b+:3];
-```
-
--Wduplicate-definition
-A module has been defined using the same name as a previously defined module. This is an error
-by default but can be downgraded to a warning for compatibility with other tools.
-This applies to both top level modules as well as nested modules (but only duplicated nested modules within the same scope,
-as it is OK to have modules with the same name in different scopes).
-```
-module a;
-endmodule;
-
-module a;
-endmodule
-```
-
 -Wprotect-encoding-bytes
 An encoded block in a protected envelope differed in size from what was specified in
 a prior encoding pragma directive.
@@ -770,51 +1358,129 @@ asdfasdf
 `pragma protect end_protected
 ```
 
--Wspecify-param
-The LRM disallows using parameters inside of specify blocks. Most tools allow this with
-a warning so slang makes it a warning as well.
+@category Pedantic
+
+-Wnonstandard-escape-code
+Detects use of '\\\%' in string literals. This is not a real escape code
+but other tools silently allow it anyway.
 ```
-module m(input [1:0] a, output [1:0] b);
-    parameter p = 1;
-    specify
-        (a[p] => b[0]) = 1;
-    endspecify
+string s = "Hello World\%";
+```
+
+-Wnonstandard-generate
+Indicates a standalone generate block (begin / end pair) without a corresponding
+generate loop or condition. This was allowed in older Verilog standards but
+is no longer allowed in SystemVerilog.
+```
+module m;
+    begin : gen_block
+        int i = 1;
+    end
 endmodule
 ```
 
--Wdup-timing-path
-More than one specify timing path was given for a particular pair of input and output
-terminals in a module.
+-Wempty-pattern
+Issued for empty assignment pattern literals, which are not allowed by
+SystemVerilog but are supported by some tools.
 ```
-module m(input a, output b);
-    specify
-        (a => b) = 1;
-        (a => b) = 2;
-    endspecify
+int foo[] = '{};
+```
+
+-Wnonstandard-foreach
+foreach loops are not allowed to have multidimensional brackets when declaring
+loop variables, but most tools allow it as an extension.
+```
+module top;
+    int array[8][8];
+    initial begin
+        foreach (array[i]) begin
+            foreach (array[i][j]) begin
+                array[i][j] = i * j;
+            end
+        end
+    end
 endmodule
 ```
 
--Winvalid-pulsestyle
-A `pulsestyle` or `showcancelled` declaration targets an output terminal that has
-previously been used in a timing path declaration, which is not allowed according to the LRM.
+-Wnonstandard-dist
+'dist' constraint items are technically not allowed to be surrounded by parentheses according
+to the language grammar, but most tools allow it as an extension.
 ```
-module m(input a, output b);
-    specify
-        (a => b) = 1;
-        pulsestyle_ondetect b;
-    endspecify
+class C;
+    rand bit a;
+    rand bit [3:0] b;
+    constraint cmd_c {
+        a -> (b dist { 0 := 1, [1:15] := 1});
+    }
+endclass
+```
+
+-Wimplicit-net-port
+A net port that elides its net type occurs in a context where `default_nettype is set to 'none'.
+This technically should be an error but it makes the use of 'none' as a default nettype very
+annoying and most tools just default to a wire in this case.
+```
+`default_nettype none
+
+module m(input i);
 endmodule
 ```
 
--Wnegative-timing-limit
-A system timing check parameter that should be positive has a negative value.
+-Wudp-coverage
+A user-defined primitive is edge sensitive but does not provide an output value
+for all possible edges of all inputs. This is not necessarily wrong; the default
+output value when given unspecified input combinations is 'x', but the LRM mentions
+this constraint in section 29.6 so this warning can be used if you wish to be pedantic.
+Additionally, it can be useful for checking for missed transitions when developing and
+simulating the behavioral model of industrial cells, which are commonly implemented as
+Verilog primitives.
 ```
-module m(input a, b);
-    specify
-        $setup(posedge a, b, -1);
-    endspecify
+primitive d_edge_ff (q, clock, data);
+    output q; reg q;
+    input clock, data;
+    table
+        // clock data q q+
+        // obtain output on rising edge of clock
+        (01) 0 : ? : 0 ;
+        (01) 1 : ? : 1 ;
+        (0?) 1 : 1 : 1 ;
+        (0?) 0 : 0 : 0 ;
+        // ignore negative edge of clock
+        (?0) ? : ? : - ;
+        // missed clock edge (1x) specification
+        // missed edge specifications for data signal
+    endtable
+endprimitive
+```
+
+-Wformat-multibit-strength
+Formatting multibit nets with the %%v specifier is not allowed in SystemVerilog
+but most tools allow it anyway as an extension.
+```
+module m;
+    wire [3:0] w;
+    initial $display("%v", w);
 endmodule
 ```
+
+-Wnonstandard-sys-func
+Indicates a call to a nonstandard system function. Currently this only applies
+to the $psprintf function, which is a synonym for $sformatf.
+```
+module m;
+    initial $psprintf("%d", 42);
+endmodule
+```
+
+-Wisunbounded-param-arg
+The SystemVerilog LRM 1800-2023 requires that the argument to the $isunbounded system
+function be a parameter name. This seems needlessly restrictive and conflicts with the
+wording in prior versions so this is implemented as a pedantic warning only.
+```
+localparam p = $isunbounded(1 + 1);
+```
+
+@category Unused Items
 
 -Wunused-def
 A module, interface, or program definition is unused in the design.
@@ -1037,130 +1703,7 @@ module m;
 endmodule
 ```
 
--Wbad-procedural-force
-According to the Verilog/SystemVerilog standard, it is illegal to procedurally force a
-bit-select or range select of a variable (you can do that with a net, or with a plain
-variable). It is an error by default, but can be turned into a warning, to support code
-compatibility with commercial tools that accept this illegal code.
-```
-module m;
-    reg [1:0]r;
-    initial
-        force r[0] = 1'b0;
-endmodule
-```
-
--Wduplicate-defparam
-More than one defparam targets the same parameter. The LRM specifies that this is undefined
-behavior. slang takes the value from the first defparam it sees and ignores the rest.
-```
-module m;
-    parameter p = 1;
-endmodule
-
-module n;
-    defparam m1.p = 3;
-endmodule
-
-module top;
-    m m1();
-    n n1();
-    defparam m1.p = 2;
-endmodule
-```
-
--Wimplicit-port-type-mismatch
-An implicit named port connection is made between two inequivalent types. Unlike with a normal
-port connection, where the type of the connection undergoes implicit conversion, the LRM specifies
-that this case is an error. slang makes this an error by default but it can be turned into a warning,
-to support code compatibility with commercial tools.
-```
-module m(logic p);
-endmodule
-
-module n;
-    int p;
-    m m1(.p);
-endmodule
-```
-
--Wconstant-conversion
-A constant value is changed (truncated) by an implicit conversion.
-```
-module m;
-    logic [9:0] a = 9000;
-endmodule
-```
-
--Wsign-conversion
-An implicit conversion changes the signedness of an integer type
-(from signed to unsigned or vice versa).
-```
-module m;
-    logic signed [31:0] a;
-    logic [31:0] b;
-    assign b = a;
-endmodule
-```
-
--Wdpi-pure-task
-A DPI import task is marked 'pure', which is disallowed by SystemVerilog but can be
-downgraded to a warning to support code compatibility with other tools.
-```
-import "DPI-C" pure task func(logic [3:0] a);
-```
-
--Wmultibit-edge
-A timing control edge expression (posedge, negedge, etc) is wider than one bit,
-which can indicate a mistake since only changes to the first bit will trigger the edge.
-```
-module m;
-    int i;
-    always @(posedge i) begin end
-endmodule
-```
-
--Wfloat-bool-conv
-A floating point value is implicitly converted to a boolean predicate (such as in an
-if statement or loop condition). This is not necessarily wrong but can indicate
-mistakes where you intended to compare the value to something.
-```
-module m;
-    real r;
-    initial if (r) begin end // Did you mean r != 0 or something else?
-endmodule
-```
-
--Wint-bool-conv
-A multi-bit integer value is implicitly converted to a boolean predicate (such as in an
-if statement or loop condition). This is not necessarily wrong but can indicate
-mistakes where you intended to compare the value to something.
-```
-module m;
-    int i;
-    initial if (i + 2) begin end // Did you mean i + 2 != 0 or something else?
-endmodule
-```
-
--Wuseless-cast
-An explicit cast converts an expression to the same type, so the cast does nothing.
-```
-module m;
-    int i, j;
-    assign i = int'(j);
-endmodule
-```
-
--Wunknown-sys-name
-An unknown system task or function is called. This is an error by default but can
-be downgraded to allow analyzing code using special system names defined by other tools.
-```
-module m;
-    always_comb begin
-        if (!$somename) begin end
-    end
-endmodule
-```
+@category Libraries and Configurations
 
 -Wunknown-library
 A configuration library list references an unknown library.
@@ -1213,143 +1756,23 @@ module top;
 endmodule
 ```
 
--Wunsigned-arith-shift
-An arithmetic right shift of an unsigned integral type will always shift in zeros, which can be
-confusing since typically this operator is used to shift in the value of the most significant bit.
-If this is intended behavior use the logical right shift operator which does the same.
+@category Miscellaneous
+
+-Wwarning-task
+A $warning elaboration task was encountered. Its message is printed by this diagnostic.
 ```
-function bit[31:0] f1(int unsigned i);
-    return i >>> 5;
-endfunction
+$warning("Hello World!");
 ```
 
--Wstatic-init-value
-A static variable's initializer expression refers to an uninitialized variable, a net, a port,
-or a modport member, which won't have a value assigned by the time the initializer runs. The variable
-therefore will always be initialized to the default value.
+-Wmissing-top
+No valid top-level modules exist in the design. No top has been instantiated.
 ```
-module m(input i);
-    logic j = i;
+module m #(parameter int i);
 endmodule
 ```
 
--Wstatic-init-order
-A static variable's initializer refers to another variable that does not have a defined order
-of initialization relative to the first. This means that the initialization may or may not work
-as expected depending on how the tool chooses to schedule the initializers.
-```
-package p;
-    int i = 1;
-endpackage
+-Wunknown-warning-option
+<ignored>
 
-module m;
-    import p::i;
-    int j = i;
-endmodule
-```
-
--Wfloat-int-conv
-A floating point value (real or shortreal) is implicitly converted to an integer.
-```
-function automatic f(real r);
-    int i = r;
-endfunction
-```
-
--Wint-float-conv
-A integer value is implicitly converted to a floating point type (real or shortreal).
-```
-function automatic f(int i);
-    real r = i;
-endfunction
-```
-
--Wfloat-widen
-A floating point value is implicitly converted to a wider floating point type.
-```
-function automatic f(shortreal s);
-    real r = s;
-endfunction
-```
-
--Wfloat-narrow
-A floating point value is implicitly converted to a narrower floating point type.
-```
-function automatic f(real r);
-    shortreal s = r;
-endfunction
-```
-
--Wisunbounded-param-arg
-The SystemVerilog LRM 1800-2023 requires that the argument to the $isunbounded system
-function be a parameter name. This seems needlessly restrictive and conflicts with the
-wording in prior versions so this is implemented as a pedantic warning only.
-```
-localparam p = $isunbounded(1 + 1);
-```
-
--Wspecify-condition-expr
-State-dependent path conditions in specify blocks are restricted to a subset of expression
-types and operators (see Table 30-1 in the LRM for the list of valid operators). This is an
-error by default but can be downgraded to a warning for compatibility with other tools.
-```
-module m(input b, output c);
-    wire integer a;
-    specify
-        if (a === 1 + 1) (b => c) = (0,0);
-    endspecify
-endmodule
-```
-
--Warith-op-mismatch
-An arithmetic operator has operands of different types -- one or both will be converted
-before the operation is performed. This is not necessarily a problem but the warning
-can be helpful if you prefer to be strict about disallowing implicit conversions.
-```
-module m;
-    logic [7:0] a;
-    struct packed { logic [7:0] x; } b;
-    initial a += b;
-endmodule
-```
-
--Wbitwise-op-mismatch
-A bitwise operator has operands of different types -- one or both will be converted
-before the operation is performed. This is not necessarily a problem but the warning
-can be helpful if you prefer to be strict about disallowing implicit conversions.
-```
-module m;
-    logic [7:0] a;
-    logic [11:1] b;
-    initial a = a | b;
-endmodule
-```
-
--Wcomparison-mismatch
-A comparison operator has operands of different types -- one or both will be converted
-before the operation is performed. This is not necessarily a problem but the warning
-can be helpful if you prefer to be strict about disallowing implicit conversions.
-```
-module m;
-    logic [7:0] a;
-    struct packed { logic [7:0] x; } b;
-    initial begin
-        if (a == b) begin
-        end
-    end
-endmodule
-```
-
--Wsign-compare
-A comparison operator has operands of differing signs. The signed operand will be
-treated as unsigned, which can lead to unexpected results.
-```
-module m;
-    int a = -1;
-    int unsigned b = 1;
-    initial begin
-        if (a < b) begin
-        end
-    end
-endmodule
-```
+-Winvalid-source-encoding
+<ignored>

@@ -8,7 +8,7 @@
 #include "slang/ast/ScriptSession.h"
 
 #include "slang/ast/Expression.h"
-#include "slang/ast/Statements.h"
+#include "slang/ast/Statement.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
@@ -47,6 +47,11 @@ ConstantValue ScriptSession::eval(std::string_view text) {
             scope.addMembers(node);
             return nullptr;
         case SyntaxKind::DataDeclaration: {
+            if (node.previewNode) {
+                scope.addMembers(*node.previewNode);
+                scope.getNameMap(); // force name map to be built
+            }
+
             SmallVector<VariableSymbol*> symbols;
             VariableSymbol::fromSyntax(compilation, node.as<DataDeclarationSyntax>(), scope,
                                        /* isCheckerFreeVar */ false, symbols);
@@ -67,6 +72,11 @@ ConstantValue ScriptSession::eval(std::string_view text) {
                 scope.addMembers(*member);
             return nullptr;
         default:
+            if (node.previewNode) {
+                scope.addMembers(*node.previewNode);
+                scope.getNameMap(); // force name map to be built
+            }
+
             if (ExpressionSyntax::isKind(node.kind)) {
                 return evalExpression(node.as<ExpressionSyntax>());
             }
@@ -95,6 +105,15 @@ void ScriptSession::evalStatement(const StatementSyntax& stmt) {
     ASTContext context(scope, LookupLocation::max);
     Statement::StatementContext stmtCtx(context);
     block.getStatement(context, stmtCtx).eval(evalContext);
+}
+
+void ScriptSession::copyPackagesFrom(const Compilation& other) {
+    for (auto& pkg : other.getPackages()) {
+        if (auto syntax = pkg->getSyntax();
+            syntax && syntax->kind == SyntaxKind::PackageDeclaration) {
+            compilation.createPackage(scope, syntax->as<ModuleDeclarationSyntax>());
+        }
+    }
 }
 
 Diagnostics ScriptSession::getDiagnostics() {

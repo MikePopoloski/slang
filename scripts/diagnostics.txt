@@ -13,6 +13,7 @@ note NoteDrivenHere "driven here"
 note NoteOriginalAssign "original assignment here"
 note NoteConfigRule "from configuration here"
 note NoteFromHere2 "from '{}' and '{}'"
+note NoteExpandedHere "expanded here"
 error AttributesNotAllowed "attributes are not allowed here"
 error WrongLanguageVersion "language feature is not supported in version {}; use the --std option to select a supported language version"
 
@@ -35,6 +36,7 @@ error BadOctalDigit "expected octal digit"
 error BadDecimalDigit "expected decimal digit"
 error BadHexDigit "expected hexadecimal digit"
 error TooManyLexerErrors "lexer has encountered too many errors (input is a binary file?)"
+error UnclosedTranslateOff "missing '{}' counterpart for this directive"
 warning unknown-escape-code UnknownEscapeCode "unknown character escape sequence '\\\\{}'"
 warning nonstandard-escape-code NonstandardEscapeCode "non-standard character escape sequence '\\\\{}'"
 warning invalid-source-encoding InvalidUTF8Seq "invalid UTF-8 sequence in source text"
@@ -298,6 +300,9 @@ error OverridingExtends "'{}' is marked 'extends' but doesn't override a base cl
 error DerivedCovergroupNotInClass "covergroup inheritance can only be used inside a class"
 error DerivedCovergroupNoBase "covergroup is marked 'extends' but is in a class that has no base class"
 error UnexpectedEndDelim "unexpected '{}' delimiter"
+error InvalidSelectExpression "select expression is not allowed here"
+error ImplicitEventInAssertion "implicit event list not allowed in sequence and property expressions"
+error EventTriggerCycleDelay "cycle delay not allowed in event trigger statements"
 warning dpi-pure-task DPIPureTask "DPI tasks cannot be marked 'pure'"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
@@ -375,6 +380,7 @@ error MethodArgDirectionMismatch "direction of method argument '{}' differs from
 error MemberDefinitionBeforeClass "definition of '{}' must come after its containing class '{}'"
 error MethodReturnTypeScoped "return type for out-of-block method '{}' must use class scope '{}::' to access nested type"
 error VirtualKindMismatch "mismatch between 'function' and 'task' declared in superclass method"
+error VirtualVisibilityMismatch "virtual method '{}' is '{}' but declared '{}' in superclass method"
 error VirtualReturnMismatch "return type {} of virtual method '{}' does not match {} declared in its superclass"
 error VirtualArgCountMismatch "virtual method '{}' has different number of arguments from its superclass method"
 error VirtualArgNameMismatch "virtual method argument name '{}' doesn't match '{}' given in its superclass method"
@@ -492,6 +498,7 @@ error VirtualInterfaceIfaceMember "virtual interfaces cannot be used as the type
 error DefparamBadHierarchy "defparam in a hierarchy in or under a generate block, array of instances, or bind instantiation cannot change a parameter value outside that hierarchy"
 error BindTargetPrimitive "cannot bind a primitive"
 error BindUnderBind "cannot bind an instance underneath the scope of another bind instance"
+error DuplicateBind "bind directive targeting the same scope instantiated more than once"
 error UdpWrongInputCount "incorrect number of input fields in table row; have {} but expect {}"
 error UdpDupDiffOutput "primitive table row duplicates a set of inputs with a different specified output value"
 error UdpAllX "primitive table row has all 'x' inputs so its output must also be 'x'"
@@ -502,7 +509,6 @@ error CheckerClassBadInstantiation "class '{}' cannot be instantiated this way -
 error CheckerFuncBadInstantiation "invalid syntax for calling '{}'"
 error NotAChecker "invalid reference to '{}' -- this looks like a module/interface/program/checker instantiation but '{}' is none of those things"
 error CheckerParameterAssign "checkers cannot have parameter assignments"
-error CheckerInForkJoin "checkers cannot be instantiated inside fork-join blocks"
 error CheckerInCheckerProc "checkers cannot be instantiated inside the procedures of other checkers"
 error InvalidStmtInChecker "statement is not allowed in '{}' procedure inside a checker"
 error AlwaysInChecker "always procedures are not allowed in checkers (use always_comb, always_latch, or always_ff)"
@@ -542,6 +548,8 @@ warning warning-task WarningTask "$warning encountered{}"
 note InfoTask "$info encountered{}"
 note NoteComparisonReduces "comparison reduces to ({} {} {})"
 note NoteCommonAncestor "common ancestor here violates that constraint"
+warning udp-coverage UdpCoverage "primitive does not specify outputs for all edges of all inputs"
+note NoteUdpCoverage "missed desired output for rows:\n{}"
 warning explicit-static StaticInitializerMustBeExplicit "initializing a static variable in a procedural context requires an explicit 'static' keyword"
 warning case-gen-dup CaseGenerateDup "more than one case generate block matches the value {}"
 warning case-gen-none CaseGenerateNoBlock "no case generate expression matches the value {}"
@@ -670,6 +678,8 @@ error ChainedMethodParens "parentheses are required when chaining method calls"
 error NameListWithScopeRandomize "lookup restriction list not allowed for std::randomize call"
 error UnboundedNotAllowed "unbounded literal '$' not allowed here"
 error DynamicNotProcedural "cannot refer to an element or member of a dynamic type outside of a procedural context"
+error DynamicFromChecker "cannot refer to an element or member of a dynamic type from within a checker"
+error CheckerForkJoinRef "checkers cannot refer to members of fork-join blocks from their enclosing scopes"
 error SpecparamInConstant "specparams cannot be used in general constant expressions"
 error TaskFromFunction "cannot invoke a task from within a function"
 error TaskFromFinal "cannot invoke a task from within a final block"
@@ -737,6 +747,7 @@ error InvalidExtendsDefault "constructor must use 'default' in its argument list
 error NonblockingDynamicAssign "nonblocking assignments to elements of dynamically sized arrays are not allowed"
 error VoidAssignment "expression of type 'void' cannot be used in assignments"
 error VirtualIfaceDefparam "interface instance cannot be assigned to a virtual interface because it is the target of a defparam or bind directive"
+error VirtualIfaceConfigRule "interface instance cannot be assigned to a virtual interface because it is the target of config rule"
 error MultipleDefaultDistWeight "'default' cannot be used more than once in dist item list"
 error DistRealRangeWeight "'dist' for a range of real values must include an explicit weight and must use the ':/' operator"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
@@ -746,6 +757,7 @@ warning width-trunc WidthTruncate "implicit conversion truncates from {} to {} b
 warning port-width-expand PortWidthExpand "implicit conversion of port connection expands from {} to {} bits"
 warning port-width-trunc PortWidthTruncate "implicit conversion of port connection truncates from {} to {} bits"
 warning implicit-conv ImplicitConvert "implicit conversion from {} to {}"
+warning packed-array-conv PackedArrayConv "implicit conversion from {} to {}"
 warning nonblocking-final NonblockingInFinal "nonblocking assignments in final blocks have no effect"
 warning port-coercion InputPortCoercion "input net port '{}' coerced to 'inout'"
 warning port-coercion OutputPortCoercion "output net port '{}' coerced to 'inout'"
@@ -769,6 +781,20 @@ warning arith-op-mismatch ArithOpMismatch "arithmetic between operands of differ
 warning bitwise-op-mismatch BitwiseOpMismatch "bitwise operation between operands of different types ({} and {})"
 warning comparison-mismatch ComparisonMismatch "comparison between operands of different types ({} and {})"
 warning sign-compare SignCompare "comparison of differently signed types ({} and {})"
+warning case-type CaseTypeMismatch "comparison of different types in '{}' statement ({} and {})"
+warning case-outside-range CaseOutsideRange "'{}' item with {} bits can never match the {} bit case expression"
+warning bitwise-rel-precedence BitwiseRelPrecedence "'{}' has lower precedence than '{}'; '{}' will be evaluated first"
+note NotePrecedenceBitwiseFirst "place parentheses around the '{}' expression to evaluate it first"
+note NotePrecedenceSilence "place parentheses around the '{}' expression to silence this warning"
+warning bitwise-op-parentheses BitwiseOpParentheses "'{}' within '{}'"
+warning logical-op-parentheses LogicalOpParentheses "'{}' within '{}'"
+warning arith-in-shift ArithInShift "'{}' has lower precedence than '{}'; '{}' will be evaluated first"
+warning logical-not-parentheses LogicalNotParentheses "logical not is only applied to the left hand side of this {}"
+note NoteLogicalNotFix "add parentheses after the '!' to evaluate the {} first"
+note NoteLogicalNotSilence "add parentheses around left hand side expression to silence this warning"
+warning conditional-precedence ConditionalPrecedence "operator '?:' has lower precedence than '{}'; '{}' will be evaluated first"
+note NoteConditionalPrecedenceFix "place parentheses around the '?:' expression to evaluate it first"
+warning consecutive-comparison ConsecutiveComparison "comparisons like 'x < y < z' don't have their mathematical meaning"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -813,6 +839,7 @@ error TimingInFuncNotAllowed "statements that pass time are not allowed in this 
 error AssertionExprType "expression of type {} is not valid in concurrent assertions; type must be cast compatible with an integral type"
 error SeqRangeMinMax "sequence range minimum '{}' is greater than specified maximum '{}'"
 error ClockingBlockEventEdge "cannot specify an edge when waiting on a clocking item"
+error ClockingBlockEventIff "cannot specify an 'iff' condition when waiting on a clocking item"
 error NoDefaultClocking "cycle delay cannot be used because no default clocking has been specified"
 error WriteToInputClockVar "cannot write to input clocking signal '{}'"
 error ClockVarSyncDrive "clocking signal '{}' can only be written via a synchronous drive (with the '<=' operator)"
@@ -848,8 +875,15 @@ error ForkJoinAlwaysComb "fork-join is not allowed in {} procedure"
 error BlockingInAlwaysFF "always_ff procedures cannot have blocking timing controls"
 error AlwaysFFEventControl "always_ff procedure must have one and only one event control"
 error SeqEmptyMatch "sequence must not admit an empty match"
-error SeqNoMatch "sequence can never be matched"
 error SeqOnlyEmpty "sequence admits only empty matches"
+error ExplicitClockInClockingBlock "sequences and properties declared within clocking blocks cannot specify an explicit clock event"
+error ConcurrentAssertNotInProc "concurrent assertion statements may only appear in always and initial blocks"
+error CheckerNotInProc "procedural checkers may only appear in always and initial blocks"
+error CheckerInForkJoin "checkers cannot be instantiated inside fork-join blocks"
+warning case-default CaseDefault "'{}' missing 'default' label"
+warning case-redundant-default CaseRedundantDefault "'{}' marked '{}' has 'default' label"
+warning case-wildcard-2state CaseWildcard2State "'{}' has two-state type so no wildcard matching will be performed"
+warning seq-no-match SeqNoMatch "sequence can never be matched"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"
@@ -857,7 +891,7 @@ warning unused-result UnusedResult "ignoring return value of '{}', cast to void 
 warning bad-procedural-force BadProceduralForce "lvalue of force/release must be a net, a variable, a constant select of a net, or a concatenation of these"
 warning multibit-edge MultiBitEdge "edge of expression of type {} will only trigger on changes to the first bit"
 note NoteWhileExpanding "while expanding {} '{}'"
-note NoteExpandedHere "expanded here"
+note NoteAlwaysFalse "expression is always false"
 
 subsystem Types
 error InvalidEnumBase "invalid enum base type {} (must be a single dimensional integer type)"
@@ -1005,6 +1039,7 @@ error SampledValueLocalVar "local variables cannot be used in sampled value syst
 error SampledValueMatched "'matched' method cannot be used in sampled value system functions"
 error GlobalSampledValueAssertionExpr "global clocking future sampled value functions may be invoked only in sequence and property expressions"
 error SequenceMethodLocalVar "local variables can only be passed to sequences on which '{}' is called if they are the entire argument and not a sub-expression"
+error SequenceMatchedOutsideAssertion "'matched' method can only be called from a sequence expression"
 error PlaRangeInAscendingOrder "must specify dimensions in ascending order for PLA input type {}"
 error SysFuncHierarchicalNotAllowed "hierarchical references are not allowed in calls to '{}'"
 error TypeIsNotAClass "{} is not a class type"
@@ -1061,8 +1096,8 @@ warning task-ignored ConstSysTaskIgnored "system task '{}' is ignored in constan
 warning constant-conversion ConstantConversion "implicit conversion from {} to {} changes value from {} to {}"
 
 subsystem Compilation
-error MaxInstanceDepthExceeded "{} instantiation exceeded maximum depth of {}"
-error InfinitelyRecursiveHierarchy "infinitely recursive instantiation of {}"
+fatal MaxInstanceDepthExceeded "{} instantiation exceeded maximum depth of {}"
+fatal InfinitelyRecursiveHierarchy "infinitely recursive instantiation of {}"
 error InvalidTopModule "'{}' is not a valid top-level module"
 error TopModuleIfacePort "top-level module '{}' has unconnected interface port '{}'"
 error TopModuleRefPort "top-level module '{}' has unconnected 'ref' port '{}'"
@@ -1095,6 +1130,29 @@ error UnknownLibrary "unknown library '{}'"
 error NestedConfigMultipleTops "non-top config '{}' has more than one top cell specified"
 error ConfigParamsIgnored "parameter overrides provided by config rule are ignored because the target instance is using a different nested config '{}'"
 error MultipleTopDupName "more than one top module specified with the name '{}'"
+error NetAliasSelf "cannot alias a net to itself"
+error MultipleNetAlias "cannot specify an alias between the same bits of the same nets more than once"
+error VirtualIfaceHierRef "interface containing hierarchical reference to object outside its body cannot be used in a virtual interface"
+error VirtualIfaceIfacePort "interface with ports that reference other interfaces cannot be used in a virtual interface"
+note NoteAliasedTo "which is aliased to"
+note NoteAliasDeclaration "previous alias declaration here"
+note NoteHierarchicalRef "hierarchical reference here"
+warning missing-top NoTopModules "no top-level modules found in design"
+warning duplicate-defparam DuplicateDefparam "parameter already has a defparam override applied; ignoring this one"
+
+subsystem Analysis
+error AssertionNoClock "{} has no explicit clocking event and one cannot be inferred from context"
+error InvalidMulticlockedSeqOp "multiclocked sequence operands cannot be combined with any sequence operators other than ##1 and ##0"
+error MulticlockedSeqEmptyMatch "sequence admits an empty match; this is not allowed when concatenating differently clocked sequences"
+error MulticlockedInClockingBlock "cannot instantiate '{}' in clocking block because it is multiclocked"
+error DifferentClockInClockingBlock "cannot instantiate '{}' in clocking block because its clock differs from that of the containing clocking block"
+error NoUniqueClock "assertion expression does not have a unique leading clock"
+error NoInferredClock "no inferred clock in this context"
+error SampledValueFuncClock "could not determine clocking event for '{}'"
+error SeqMethodEndClock "the ending clock of the sequence to which '{}' is applied differs from the clock of the calling context"
+error GFSVMatchItems "cannot call '{}' in an assertion that has sequence match items"
+note NoteRequiredHere "required here"
+note NoteClockHere "clock here"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning unused-net UnusedNet "unused net '{}'"
 warning unused-implicit-net UnusedImplicitNet "implicit net '{}' is unused elsewhere"
@@ -1114,11 +1172,21 @@ warning unused-genvar UnusedGenvar "unused genvar '{}'"
 warning unused-assertion-decl UnusedAssertionDecl "unused {} '{}'"
 warning unused-import UnusedImport "unused import '{}'"
 warning unused-wildcard-import UnusedWildcardImport "unused wildcard import"
-warning missing-top NoTopModules "no top-level modules found in design"
-warning duplicate-defparam DuplicateDefparam "parameter already has a defparam override applied; ignoring this one"
+warning inferred-latch InferredLatch "latch inferred for '{}' because it is not assigned on all control paths"
+warning incomplete-return IncompleteReturn "non-void function '{}' does not return a value on all control paths"
+warning missing-return MissingReturn "non-void function '{}' does not return a value"
+warning case-enum CaseEnum "enumeration {} not handled in case statement"
+warning case-enum-explicit CaseEnumExplicit "enumeration {} not explicitly handled in case statement"
+warning case-dup CaseDup "'{}' statement contains duplicate items for value '{}' (the second one will never be matched)"
+warning case-overlap CaseOverlap "'{}' statement item overlaps previous item"
+warning case-unreachable CaseUnreachable "'{}' statement item will never match because it is completely handled by previous items"
+warning case-not-wildcard CaseNotWildcard "'case' statement item has unknown bits which don't work as wildcards; should this be a 'casex' or 'casez' statement?"
+warning casez-with-x CaseZWithX "'casez' statement item has 'x' bits which don't work as wildcards; should this be a 'casex' statement?"
+warning case-too-complex CaseComplex "'{}' statement is too complex to analyze; assuming it does not have full coverage (increase --max-case-analysis-steps to try harder)"
+warning case-incomplete CaseIncomplete "'{}' statement does not handle all possible inputs (for example, {})"
 
 subsystem Meta
-error TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
+fatal TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
 warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'"
 
 // Following are groups of diagnostics, to make it easy to control them from the command line.
@@ -1138,22 +1206,29 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
                   split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
-                  dup-config-rule unused-config-cell unused-config-instance specify-condition-expr }
+                  dup-config-rule unused-config-cell unused-config-instance specify-condition-expr
+                  seq-no-match case-too-complex }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
                 ineffective-sign port-width-trunc constant-conversion float-bool-conv int-bool-conv
                 useless-cast unsigned-arith-shift static-init-order static-init-value float-int-conv
-                float-narrow }
+                float-narrow bitwise-rel-precedence arith-in-shift logical-not-parentheses
+                consecutive-comparison case-outside-range case-enum case-dup case-overlap
+                case-unreachable incomplete-return missing-return case-redundant-default case-incomplete
+                case-wildcard-2state }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
-                   nonstandard-sys-func nonstandard-foreach nonstandard-dist isunbounded-param-arg }
+                   nonstandard-sys-func nonstandard-foreach nonstandard-dist isunbounded-param-arg udp-coverage }
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
                      constant-conversion sign-conversion float-bool-conv int-bool-conv float-int-conv
-                     int-float-conv float-widen float-narrow }
+                     int-float-conv float-widen float-narrow packed-array-conv case-type }
 
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument
                  unused-parameter unused-type-parameter unused-typedef unused-genvar unused-assertion-decl
                  unused-but-set-port unused-config-cell unused-config-instance unused-import unused-wildcard-import }
+
+group parentheses = { bitwise-rel-precedence arith-in-shift logical-not-parentheses bitwise-op-parentheses
+                      logical-op-parentheses conditional-precedence consecutive-comparison }

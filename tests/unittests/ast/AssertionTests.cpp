@@ -50,8 +50,7 @@ TEST_CASE("Concurrent assertion expressions") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     string a;
-    logic b;
-    int c,d,e;
+    logic b,c,d,e;
 
     foo: assert property (a);
     assert property (a ##1 b ##[+] c ##[*] d ##[1:5] e);
@@ -95,7 +94,7 @@ endfunction
 
 module m;
     int a[];
-    int b;
+    logic b;
     chandle c;
     C d = new;
     logic o;
@@ -156,16 +155,16 @@ module m;
     assert property (n.a(3));
     assert property (b);
 
-    int c, d;
+    logic c, d;
     sequence b;
         ##1 c ##1 d;
     endsequence
 endmodule
 
 module n;
-    int c, d;
+    logic c, d;
     property a(int i, foo = 1);
-        ##1 c ##1 d ##1 i;
+        ##1 c ##1 d ##1 i > 0;
     endproperty
 endmodule
 )");
@@ -206,8 +205,8 @@ TEST_CASE("Assertion instance arg type checking") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     int foo[];
-    assert property (a(1, 1 iff 2, foo, 1 and 2));
-    assert property (a(1 iff 2, 1, 1));
+    assert property (a(1, 1 iff 1, foo, 1 and 1));
+    assert property (a(1 iff 1, 1, 1));
     assert property (a(1, 1, foo[*]));
 
     int e;
@@ -241,19 +240,19 @@ module m;
 
     assert property (s1($, 5));
     assert property (s1(bar, 9.2));
-    assert property (s3(9));
-    assert property (s4(1 and 2));
+    assert property (s3(1));
+    assert property (s4(1 and 1));
 
     sequence s1(a, int b);
-        s2(a) ##1 bar[b:0];
+        s2(a) ##1 bar[b:0] > 0;
     endsequence
 
     sequence s2(foo);
-        1 ##[0:foo] 2 ##1 foo;
+        1 ##[0:foo] 1 ##1 foo > 0;
     endsequence
 
     sequence s3(sequence a);
-        1 ##[0:a] 2;
+        1 ##[0:a] 1;
     endsequence
 
     sequence s4(foo);
@@ -278,7 +277,7 @@ TEST_CASE("More complex sequence arg expansion") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     sequence s1;
-        int foo;
+        logic foo;
         s2(s2(foo));
     endsequence
 
@@ -347,13 +346,13 @@ module m;
     int baz;
     sequence s2;
         int j, k = j;
-        first_match(j, !j, j + k, baz = 1, baz++);
+        first_match(j > 0, !j, j + k, baz = 1, baz++);
     endsequence
 
     typedef int Foo;
     property p;
         Foo u, v;
-        s(u) and v and s2;
+        s(u) and v > 0 and s2;
     endproperty
 
     assert property (p);
@@ -395,7 +394,7 @@ TEST_CASE("Sequence triggered method") {
 module m;
     wire clk, ready;
     sequence e1;
-        @(posedge clk) $rose(ready) ##1 1 ##1 2;
+        @(posedge clk) $rose(ready) ##1 1 ##1 1;
     endsequence
 
     sequence rule;
@@ -468,13 +467,14 @@ module m;
     endsequence
 
     sequence s5(a, event b, sequence c);
-        a ##1 c ##1 @b 1;
+        a > 0 ##1 c ##1 @b 1;
     endsequence
 
     event e;
     sequence s6;
         int i;
-        s5(i + 1, e, i + 1).triggered ##1 s5(i, e, i).triggered;
+        logic j;
+        s5(i + 1, e, i + 1 > 0).triggered ##1 s5(i, e, j).triggered;
     endsequence
 endmodule
 )");
@@ -848,7 +848,8 @@ endmodule
 TEST_CASE("Local var formal arg") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    int a,b,c;
+    logic a;
+    int b,c;
     int data_in, data_out;
 
     sequence sub_seq2(local inout int lv);
@@ -858,7 +859,7 @@ module m;
 
     sequence seq2;
         int v1;
-        (c, v1 = data_in)
+        (c > 0, v1 = data_in)
         ##1 sub_seq2(v1)
         ##1 (data_out == v1);
     endsequence
@@ -925,7 +926,7 @@ endmodule
 TEST_CASE("Match items + empty match") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    int a,b,c;
+    logic a,b,c;
     sequence s;
         int x,e;
         a ##1 (b[*0:1], x = e) ##1 c[*];
@@ -1119,13 +1120,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::RecursivePropNegation);
-    CHECK(diags[1].code == diag::RecursivePropDisableIff);
-    CHECK(diags[2].code == diag::RecursivePropTimeAdvance);
-    CHECK(diags[3].code == diag::RecursivePropArgExpr);
+    CHECK(diags[1].code == diag::RecursivePropNegation);
+    CHECK(diags[2].code == diag::RecursivePropDisableIff);
+    CHECK(diags[3].code == diag::RecursivePropTimeAdvance);
     CHECK(diags[4].code == diag::RecursivePropArgExpr);
     CHECK(diags[5].code == diag::RecursivePropArgExpr);
+    CHECK(diags[6].code == diag::RecursivePropArgExpr);
 }
 
 TEST_CASE("Illegal concurrent assertions in action blocks") {
@@ -1207,7 +1209,7 @@ TEST_CASE("$past in $bits regress GH #509") {
 module top;
     logic clk, reset, a, b, c;
     assert property(@(posedge clk) disable iff (reset)
-        a |-> {500-$bits($past(b)){1'b1}});
+        a |-> {500-$bits($past(b)){1'b1}} != 0);
 endmodule
 )");
 
@@ -1760,9 +1762,9 @@ package p;
 
     checker d(r);
         string a;
-        int b,c,d,e;
+        logic b,c,d,e;
 
-        assert property (a ##1 b ##[+] c ##[*] d ##[1:5] e + r);
+        assert property (a ##1 b ##[+] c ##[*] d ##[1:5] e & r);
     endchecker
 endpackage
 
@@ -1796,7 +1798,7 @@ source:4:14: note: expanded here
         d d1(q);
              ^
 source:11:62: note: expanded here
-        assert property (a ##1 b ##[+] c ##[*] d ##[1:5] e + r);
+        assert property (a ##1 b ##[+] c ##[*] d ##[1:5] e & r);
                                                              ^
 source:25:21: error: invalid operands to binary expression ('queue of int' and 'int')
         int j = foo + r;
@@ -1973,8 +1975,8 @@ endchecker
 module m;
     logic clk;
     my_check c1(clk, 1);
-    op_test1 t1(clk, 1, 2, 3);
-    op_test2 t2(clk, 1, 2, 3);
+    op_test1 t1(clk, 1, 1, 3);
+    op_test2 t2(clk, 1, 1, 3);
 endmodule
 )");
 
@@ -2000,7 +2002,7 @@ checker assert_window1 (
     bit window = 1'b0, next_window = 1'b1;
 
     always_comb begin
-        if (reset || window && end_event)
+        if (reset || (window && end_event))
             next_window = 1'b0;
         else if (!window && start_event)
             next_window = 1'b1;
@@ -2045,7 +2047,7 @@ checker assert_window2 (
     let end_flag = end_event.triggered;
 
     function bit next_window (bit win);
-        if (reset || win && end_flag)
+        if (reset || (win && end_flag))
             return 1'b0;
         if (!win && start_flag)
             return 1'b1;
@@ -2261,6 +2263,41 @@ endmodule
     CHECK(diags[0].code == diag::CheckerFuncArg);
 }
 
+TEST_CASE("Checker dynamic access restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    class C;
+        int i;
+    endclass
+
+    C c;
+    int d[];
+
+    initial
+        fork : h
+            int d;
+        join
+
+    checker e;
+        int a = c.i;
+        int b = d[0];
+        int e[];
+        int f = e[0];
+        int g = h.d;
+    endchecker
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::DynamicFromChecker);
+    CHECK(diags[1].code == diag::DynamicFromChecker);
+    CHECK(diags[2].code == diag::CheckerForkJoinRef);
+}
+
 TEST_CASE("Duplicate assertion local variable error") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -2379,7 +2416,7 @@ TEST_CASE("Sequence nondegeneracy tests 1") {
 module top;
     string a;
     logic b;
-    int c, d, e;
+    logic c, d, e;
     assert property ({});
 endmodule
 )",
@@ -2428,7 +2465,7 @@ module top(a, b, e);
     input a;
     input b;
     input e;
-    int c, d;
+    logic c, d;
     logic clk;
 
     property p;
@@ -2457,7 +2494,7 @@ endmodule
     };
 
     test("!(2'b01 - 2'b01 + 3'b010 - 3'b010 + 4'b0010)", diag::SeqNoMatch);
-    test("2'b01 - 2'b01 + 3'b010 - 3'b010 + 4'b0010");
+    test("(2'b01 - 2'b01 + 3'b010 - 3'b010 + 4'b0010) > 0");
     test("a[*0] |-> b", diag::SeqOnlyEmpty);
     test("a[*1] |-> b");
     test("1'b1 ##1 b");
@@ -2579,8 +2616,8 @@ endmodule
 TEST_CASE("Sequence nondegeneracy tests 4") {
     auto tree = SyntaxTree::fromText(R"(
 module top;
-    int c, d;
-    property p(int i, foo = 1);
+    logic c, d;
+    property p(logic i, foo = 1);
 	    ##1 c ##1 d ##1 i;  // may be legal or not - depends on value of `i`
     endproperty
 
@@ -2602,13 +2639,13 @@ TEST_CASE("Sequence nondegeneracy tests 5") {
 module top;
     logic clk, reset, a, b;
     assert property(@(posedge clk) disable iff (reset)
-        a |-> {500-$bits($past(b)){1'b0}});  // illegal
+        a |-> {500-$bits($past(b)){1'b0}} != 0);  // illegal
 
     assert property(@(posedge clk) disable iff (reset)
-        {3 - 2{3'b111}});  // legal
+        {3 - 2{3'b111}} != 0);  // legal
 
     assert property(@(posedge clk) disable iff (reset)
-        {500 - $bits(b){1'b1}});  // legal
+        {500 - $bits(b){1'b1}} != 0);  // legal
 endmodule
 )");
 
@@ -2644,7 +2681,8 @@ endmodule
 
 TEST_CASE("Sequence local variable same as formal argument declaration") {
     auto tree = SyntaxTree::fromText(R"(
-logic a, b, c, d;
+logic a, b, c;
+int d;
 
 sequence sub_seq(lv);
 int lv;
@@ -2667,6 +2705,61 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::Redefinition);
+}
+
+TEST_CASE("Invalid property lookup crash regress") {
+    auto tree = SyntaxTree::fromText(R"(
+f(p1(,;property p1(,
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Explicit clocks specified in seq / prop in clocking block") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk, a);
+    clocking cb @(posedge clk);
+        sequence s;
+            @(posedge clk) a;
+        endsequence
+
+        property p;
+            @(posedge clk) a;
+        endproperty
+    endclocking
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ExplicitClockInClockingBlock);
+    CHECK(diags[1].code == diag::ExplicitClockInClockingBlock);
+}
+
+TEST_CASE("matched method can only be used in a sequence") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk, a);
+    sequence s;
+        @(posedge clk) a;
+    endsequence
+
+    always @(posedge clk) begin
+        if (s.matched()) begin end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SequenceMatchedOutsideAssertion);
 }

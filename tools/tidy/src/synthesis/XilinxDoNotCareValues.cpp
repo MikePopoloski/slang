@@ -7,9 +7,11 @@
 #include "fmt/color.h"
 
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxPrinter.h"
 
 using namespace slang;
 using namespace slang::ast;
+using namespace slang::syntax;
 
 namespace xilinx_do_not_care_values {
 struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
@@ -17,8 +19,9 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
 
     void handle(const IntegerLiteral& expr) {
         if (auto syntax = expr.syntax; syntax) {
-            bool hasDoNotCare = syntax->toString().find('?') != std::string::npos;
-            bool hasDecimal = syntax->toString().find('d') != std::string::npos;
+            auto strSyntax = SyntaxPrinter().setIncludeTrivia(false).print(*syntax).str();
+            bool hasDoNotCare = strSyntax.find('?') != std::string::npos;
+            bool hasDecimal = strSyntax.find('d') != std::string::npos;
 
             if (hasDoNotCare && hasDecimal)
                 diags.add(diag::XilinxDoNotCareValues, syntax->sourceRange());

@@ -9,12 +9,6 @@
 
 namespace slang::IntervalMapDetails {
 
-void Path::replaceRoot(void* node, uint32_t size, IndexPair offset) {
-    SLANG_ASSERT(!path.empty());
-    path.front() = Entry(node, size, offset.first);
-    path.insert(path.begin() + 1, Entry(childAt(0), offset.second));
-}
-
 void Path::moveLeft(uint32_t level) {
     SLANG_ASSERT(level);
 

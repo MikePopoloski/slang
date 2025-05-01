@@ -12,6 +12,8 @@
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/statements/LoopStatements.h"
+#include "slang/ast/statements/MiscStatements.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
@@ -35,8 +37,12 @@ const Statement& StatementBlockSymbol::getStatement(const ASTContext& parentCont
             return *stmt;
 
         auto syntax = getSyntax();
-        if (!syntax || syntax->kind == SyntaxKind::RsRule) {
-            stmt = &BlockStatement::makeEmpty(parentContext.getCompilation());
+        if (!syntax || syntax->kind == SyntaxKind::RsRule ||
+            syntax->kind == SyntaxKind::ConditionalPattern) {
+
+            auto& bs = BlockStatement::makeEmpty(parentContext.getCompilation());
+            bs.blockSymbol = this;
+            stmt = &bs;
         }
         else {
             ASTContext context = parentContext;
@@ -121,6 +127,9 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     auto& comp = scope.getCompilation();
     const VariableSymbol* lastVar = nullptr;
     for (auto init : syntax.initializers) {
+        if (init->previewNode)
+            result->addMembers(*init->previewNode);
+
         auto& var = VariableSymbol::fromSyntax(comp, init->as<ForVariableDeclarationSyntax>(),
                                                lastVar);
 
@@ -147,12 +156,84 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
+                                                       const ConditionalStatementSyntax& syntax) {
+    // Each matches clause gets its own block with its own variables.
+    auto& comp = scope.getCompilation();
+    StatementBlockSymbol* first = nullptr;
+    StatementBlockSymbol* curr = nullptr;
+
+    for (auto cond : syntax.predicate->conditions) {
+        if (cond->matchesClause) {
+            auto block = comp.emplace<StatementBlockSymbol>(
+                comp, ""sv, cond->matchesClause->getFirstToken().location(),
+                StatementBlockKind::Sequential, VariableLifetime::Automatic);
+
+            // Each block needs elaboration to collect pattern variables.
+            block->setNeedElaboration();
+            block->setSyntax(*cond);
+
+            if (!first) {
+                first = curr = block;
+            }
+            else {
+                curr->addMember(*block);
+                curr = block;
+            }
+        }
+    }
+
+    // The most nested block gets the actual statement items. If it's already a sequential
+    // block we can just use that, otherwise we need to fabricate one.
+    StatementBlockSymbol* block;
+    if (syntax.statement->kind == SyntaxKind::SequentialBlockStatement ||
+        syntax.statement->kind == SyntaxKind::ParallelBlockStatement) {
+
+        block = &StatementBlockSymbol::fromSyntax(scope,
+                                                  syntax.statement->as<BlockStatementSyntax>());
+    }
+    else {
+        block = comp.emplace<StatementBlockSymbol>(comp, ""sv,
+                                                   syntax.statement->getFirstToken().location(),
+                                                   StatementBlockKind::Sequential,
+                                                   VariableLifetime::Automatic);
+        block->setSyntax(*syntax.statement);
+        block->setAttributes(scope, syntax.attributes);
+        block->blocks = Statement::createAndAddBlockItems(*block, *syntax.statement,
+                                                          /* labelHandled */ false);
+    }
+
+    SLANG_ASSERT(curr && first);
+    curr->addMember(*block);
+
+    return *first;
+}
+
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
+                                                       const PatternCaseItemSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<StatementBlockSymbol>(comp, ""sv, syntax.getFirstToken().location(),
+                                                     StatementBlockKind::Sequential,
+                                                     VariableLifetime::Automatic);
+    result->setSyntax(syntax);
+    result->blocks = Statement::createAndAddBlockItems(*result, *syntax.statement,
+                                                       /* labelHandled */ false);
+
+    // This block needs elaboration to collect pattern variables.
+    result->setNeedElaboration();
+
+    return *result;
+}
+
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const RandSequenceStatementSyntax& syntax) {
     auto [name, loc] = getLabel(syntax, syntax.randsequence.location());
     auto result = createBlock(scope, syntax, name, loc, StatementBlockKind::Sequential,
                               VariableLifetime::Automatic);
 
     for (auto prod : syntax.productions) {
+        if (prod->previewNode)
+            result->addMembers(*prod->previewNode);
+
         if (prod->name.valueText().empty())
             continue;
 
@@ -173,6 +254,9 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     result->setNeedElaboration();
 
     for (auto prod : syntax.prods) {
+        if (prod->previewNode)
+            result->addMembers(*prod->previewNode);
+
         if (prod->kind == SyntaxKind::RsCodeBlock) {
             result->addMember(
                 StatementBlockSymbol::fromSyntax(scope, prod->as<RsCodeBlockSyntax>()));
@@ -236,6 +320,33 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
             if (dim.loopVar)
                 insertCB(*dim.loopVar);
         }
+    }
+    else if (syntax->kind == SyntaxKind::ConditionalPattern) {
+        ASTContext context(*this, LookupLocation::max);
+
+        auto& cond = syntax->as<ConditionalPatternSyntax>();
+        SLANG_ASSERT(cond.matchesClause);
+
+        SmallVector<const PatternVarSymbol*> vars;
+        if (!Pattern::createPatternVars(context, *cond.matchesClause->pattern, *cond.expr, vars))
+            stmt = &InvalidStatement::Instance;
+
+        for (auto var : vars)
+            insertCB(*var);
+    }
+    else if (syntax->kind == SyntaxKind::PatternCaseItem) {
+        ASTContext context(*this, LookupLocation::max);
+        SLANG_ASSERT(syntax->parent);
+        auto& caseSyntax = syntax->parent->as<CaseStatementSyntax>();
+
+        SmallVector<const PatternVarSymbol*> vars;
+        if (!Pattern::createPatternVars(context, *syntax->as<PatternCaseItemSyntax>().pattern,
+                                        *caseSyntax.expr, vars)) {
+            stmt = &InvalidStatement::Instance;
+        }
+
+        for (auto var : vars)
+            insertCB(*var);
     }
 }
 
@@ -570,14 +681,13 @@ static uint64_t getGenerateLoopCount(const Scope& parent) {
     return count ? count : 1;
 }
 
-GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& compilation,
+GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp,
                                                                const LoopGenerateSyntax& syntax,
                                                                SymbolIndex scopeIndex,
                                                                const ASTContext& context,
                                                                uint32_t constructIndex) {
     auto [name, loc] = getGenerateBlockName(*syntax.block);
-    auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc,
-                                                                constructIndex);
+    auto result = comp.emplace<GenerateBlockArraySymbol>(comp, name, loc, constructIndex);
     result->setSyntax(syntax);
     result->setAttributes(*context.scope, syntax.attributes);
 
@@ -585,11 +695,13 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     if (genvar.isMissing())
         return *result;
 
+    auto genvarSyntax = comp.emplace<IdentifierNameSyntax>(genvar);
+
     // Walk up the tree a bit to see if we're nested inside another generate loop.
     // If we are, we'll include that parent's array size in our decision about
     // wether we've looped too many times within one generate block.
     const uint64_t baseCount = getGenerateLoopCount(*context.scope);
-    const uint64_t loopLimit = compilation.getOptions().maxGenerateSteps;
+    const uint64_t loopLimit = comp.getOptions().maxGenerateSteps;
 
     // If the loop initializer has a `genvar` keyword, we can use the name directly
     // Otherwise we need to do a lookup to make sure we have the actual genvar somewhere.
@@ -606,45 +718,53 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
             return *result;
         }
 
-        compilation.noteReference(*symbol);
+        comp.noteReference(*symbol);
+    }
+    else {
+        // Fabricate a genvar symbol to live in this array since it was declared inline.
+        auto genvarSymbol = comp.emplace<GenvarSymbol>(genvar.valueText(), genvar.location());
+        genvarSymbol->setSyntax(*genvarSyntax);
+        result->addMember(*genvarSymbol);
     }
 
     SmallVector<const GenerateBlockSymbol*> entries;
     auto createBlock = [&, blockLoc = loc](ConstantValue value, bool isUninstantiated) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", blockLoc,
-                                                              (uint32_t)entries.size(),
-                                                              isUninstantiated);
-        auto implicitParam = compilation.emplace<ParameterSymbol>(
-            genvar.valueText(), genvar.location(), true /* isLocal */, false /* isPort */);
+        auto block = comp.emplace<GenerateBlockSymbol>(comp, "", blockLoc, (uint32_t)entries.size(),
+                                                       isUninstantiated);
+        auto implicitParam = comp.emplace<ParameterSymbol>(genvar.valueText(), genvar.location(),
+                                                           true /* isLocal */, false /* isPort */);
+        implicitParam->setSyntax(*genvarSyntax);
+        comp.noteReference(*implicitParam);
 
         block->addMember(*implicitParam);
         block->setSyntax(*syntax.block);
 
         addBlockMembers(*block, *syntax.block);
 
-        implicitParam->setType(compilation.getIntegerType());
-        implicitParam->setValue(compilation, std::move(value), /* needsCoercion */ false);
+        implicitParam->setType(comp.getIntegerType());
+        implicitParam->setValue(comp, std::move(value), /* needsCoercion */ false);
+        implicitParam->setIsFromGenvar(true);
 
         block->arrayIndex = &implicitParam->getValue().integer();
         entries.push_back(block);
     };
 
     // Bind the initialization expression.
-    auto& initial = Expression::bindRValue(compilation.getIntegerType(), *syntax.initialExpr,
+    auto& initial = Expression::bindRValue(comp.getIntegerType(), *syntax.initialExpr,
                                            syntax.equals.range(), context);
     ConstantValue initialVal = context.eval(initial);
     if (!initialVal)
         return *result;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    auto& iterScope = *compilation.emplace<StatementBlockSymbol>(compilation, "", loc,
-                                                                 StatementBlockKind::Sequential,
-                                                                 VariableLifetime::Automatic);
-    auto& local = *compilation.emplace<VariableSymbol>(genvar.valueText(), genvar.location(),
-                                                       VariableLifetime::Automatic);
-    local.setType(compilation.getIntegerType());
+    auto& iterScope = *comp.emplace<StatementBlockSymbol>(comp, "", loc,
+                                                          StatementBlockKind::Sequential,
+                                                          VariableLifetime::Automatic);
+    auto& local = *comp.emplace<VariableSymbol>(genvar.valueText(), genvar.location(),
+                                                VariableLifetime::Automatic);
+    local.setType(comp.getIntegerType());
     local.flags |= VariableFlags::CompilerGenerated;
 
     iterScope.setTemporaryParent(*context.scope, scopeIndex);
@@ -718,7 +838,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
             createBlock(index, isUninstantiated);
     }
 
-    result->entries = entries.copy(compilation);
+    result->entries = entries.copy(comp);
     if (entries.empty()) {
         createBlock(SVInt(32, 0, true), true);
     }

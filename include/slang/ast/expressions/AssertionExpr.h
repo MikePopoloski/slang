@@ -84,7 +84,7 @@ enum class NondegeneracyStatus {
     /// The sequence definitely admits no match.
     AdmitsNoMatch = 1 << 2
 };
-SLANG_BITMASK(NondegeneracyStatus, AdmitsNoMatch);
+SLANG_BITMASK(NondegeneracyStatus, AdmitsNoMatch)
 
 /// Represents a range of potential sequence matches.
 struct SequenceRange {
@@ -127,13 +127,6 @@ public:
     /// Indicates whether the expression is invalid.
     bool bad() const { return kind == AssertionExprKind::Invalid; }
 
-    /// Checks whether this assertion expression is nondegenerate or whether it has
-    /// properties of degeneracy (admitting empty matches or no matches at all).
-    bitmask<NondegeneracyStatus> checkNondegeneracy() const;
-
-    /// Computes possible clock ticks (delay) length of sequence under assertion expression.
-    std::optional<SequenceRange> computeSequenceLength() const;
-
     /// Specifies binding behavior of property expressions as
     /// it pertains to nondegeneracy checking.
     enum class NondegeneracyRequirement {
@@ -151,6 +144,45 @@ public:
         NonOverlapOp,
     };
 
+    /// A result structure for checking nondegeneracy.
+    struct NondegeneracyCheckResult {
+        /// The nondegeneracy status of the expression.
+        bitmask<NondegeneracyStatus> status;
+
+        /// The range of the expression that caused status
+        /// to contain NondegeneracyStatus::AdmitsNoMatch.
+        SourceRange noMatchRange;
+
+        /// Set to true if the expression is known to be always false.
+        bool isAlwaysFalse = false;
+
+        NondegeneracyCheckResult& operator|=(const NondegeneracyCheckResult& rhs) {
+            status |= rhs.status;
+            if (!noMatchRange.start()) {
+                noMatchRange = rhs.noMatchRange;
+                isAlwaysFalse = rhs.isAlwaysFalse;
+            }
+            return *this;
+        }
+
+        NondegeneracyCheckResult operator|(const NondegeneracyCheckResult& rhs) const {
+            auto result = *this;
+            result |= rhs;
+            return result;
+        }
+    };
+
+    /// Checks whether this assertion expression is nondegenerate or whether it has
+    /// properties of degeneracy (admitting empty matches or no matches at all).
+    NondegeneracyCheckResult checkNondegeneracy() const;
+
+    /// Computes possible clock ticks (delay) length of sequence under assertion expression.
+    std::optional<SequenceRange> computeSequenceLength() const;
+
+    /// Returns true if this expression is known to be within a pair of parentheses,
+    /// and otherwise false.
+    bool isParenthesized() const;
+
     static const AssertionExpr& bind(const syntax::SequenceExprSyntax& syntax,
                                      const ASTContext& context, bool allowDisable = false);
 
@@ -164,7 +196,7 @@ public:
 
     static bool checkAssertionCall(const CallExpression& call, const ASTContext& context,
                                    DiagCode outArgCode, DiagCode refArgCode, DiagCode nonVoidCode,
-                                   SourceRange range, bool isInsideSequence = false);
+                                   SourceRange range, bool isInsideSequence);
 
     static void checkSampledValueExpr(const Expression& expr, const ASTContext& context,
                                       bool isFutureGlobal, DiagCode localVarCode,
@@ -230,9 +262,7 @@ public:
     explicit InvalidAssertionExpr(const AssertionExpr* child) :
         AssertionExpr(AssertionExprKind::Invalid), child(child) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const {
-        return NondegeneracyStatus::None;
-    }
+    NondegeneracyCheckResult checkNondegeneracyImpl() const { return {}; }
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
@@ -263,7 +293,7 @@ struct SequenceRepetition {
 
     /// Checks whether this assertion expression is nondegenerate or whether it has
     /// properties of degeneracy (admitting empty matches or no matches at all).
-    bitmask<NondegeneracyStatus> checkNondegeneracy() const;
+    AssertionExpr::NondegeneracyCheckResult checkNondegeneracy() const;
 
     /// Applies the repetition to the given range, scaling it and returning the result.
     SequenceRange applyTo(SequenceRange other) const;
@@ -289,7 +319,7 @@ public:
         isNullExpr(isNullExpr) {}
 
     void requireSequence(const ASTContext& context, DiagCode code) const;
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
+    NondegeneracyCheckResult checkNondegeneracyImpl() const;
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::SimpleSequenceExprSyntax& syntax,
@@ -313,6 +343,9 @@ public:
         /// A delay that applies to the element.
         SequenceRange delay;
 
+        /// An optional source range for the delay syntax.
+        SourceRange delayRange;
+
         /// The element expression.
         not_null<const AssertionExpr*> sequence;
     };
@@ -323,7 +356,7 @@ public:
     explicit SequenceConcatExpr(std::span<const Element> elements) :
         AssertionExpr(AssertionExprKind::SequenceConcat), elements(elements) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
+    NondegeneracyCheckResult checkNondegeneracyImpl() const;
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::DelayedSequenceExprSyntax& syntax,
@@ -358,7 +391,7 @@ public:
         AssertionExpr(AssertionExprKind::SequenceWithMatch), expr(expr), repetition(repetition),
         matchItems(matchItems) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
+    NondegeneracyCheckResult checkNondegeneracyImpl() const;
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::ParenthesizedSequenceExprSyntax& syntax,
@@ -394,7 +427,7 @@ public:
                        std::optional<SequenceRange> range) :
         AssertionExpr(AssertionExprKind::Unary), op(op), expr(expr), range(range) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return {}; }
+    NondegeneracyCheckResult checkNondegeneracyImpl() const { return {}; }
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
     static AssertionExpr& fromSyntax(const syntax::UnaryPropertyExprSyntax& syntax,
@@ -425,13 +458,17 @@ public:
     /// The right operand.
     const AssertionExpr& right;
 
+    /// The source range of the operator token.
+    SourceRange opRange;
+
     BinaryAssertionExpr(BinaryAssertionOperator op, const AssertionExpr& left,
-                        const AssertionExpr& right) :
-        AssertionExpr(AssertionExprKind::Binary), op(op), left(left), right(right) {}
+                        const AssertionExpr& right, SourceRange opRange) :
+        AssertionExpr(AssertionExprKind::Binary), op(op), left(left), right(right),
+        opRange(opRange) {}
 
     void requireSequence(const ASTContext& context, DiagCode code) const;
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
+    NondegeneracyCheckResult checkNondegeneracyImpl() const;
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::BinarySequenceExprSyntax& syntax,
@@ -464,7 +501,7 @@ public:
                             std::span<const Expression* const> matchItems) :
         AssertionExpr(AssertionExprKind::FirstMatch), seq(seq), matchItems(matchItems) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
+    NondegeneracyCheckResult checkNondegeneracyImpl() const;
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const {
         return seq.computeSequenceLength();
@@ -497,9 +534,7 @@ public:
     ClockingAssertionExpr(const TimingControl& clocking, const AssertionExpr& expr) :
         AssertionExpr(AssertionExprKind::Clocking), clocking(clocking), expr(expr) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const {
-        return expr.checkNondegeneracy();
-    }
+    NondegeneracyCheckResult checkNondegeneracyImpl() const { return expr.checkNondegeneracy(); }
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const {
         return expr.computeSequenceLength();
@@ -540,7 +575,7 @@ public:
     StrongWeakAssertionExpr(const AssertionExpr& expr, Strength strength) :
         AssertionExpr(AssertionExprKind::StrongWeak), expr(expr), strength(strength) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return {}; }
+    NondegeneracyCheckResult checkNondegeneracyImpl() const { return {}; }
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
     static AssertionExpr& fromSyntax(const syntax::StrongWeakPropertyExprSyntax& syntax,
@@ -576,7 +611,7 @@ public:
         AssertionExpr(AssertionExprKind::Abort), condition(condition), expr(expr), action(action),
         isSync(isSync) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return {}; }
+    NondegeneracyCheckResult checkNondegeneracyImpl() const { return {}; }
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
     static AssertionExpr& fromSyntax(const syntax::AcceptOnPropertyExprSyntax& syntax,
@@ -610,7 +645,7 @@ public:
         AssertionExpr(AssertionExprKind::Conditional), condition(condition), ifExpr(ifExpr),
         elseExpr(elseExpr) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return {}; }
+    NondegeneracyCheckResult checkNondegeneracyImpl() const { return {}; }
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
     static AssertionExpr& fromSyntax(const syntax::ConditionalPropertyExprSyntax& syntax,
@@ -655,7 +690,7 @@ public:
         AssertionExpr(AssertionExprKind::Case), expr(expr), items(items), defaultCase(defaultCase) {
     }
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return {}; }
+    NondegeneracyCheckResult checkNondegeneracyImpl() const { return {}; }
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
     static AssertionExpr& fromSyntax(const syntax::CasePropertyExprSyntax& syntax,
@@ -691,7 +726,7 @@ public:
     DisableIffAssertionExpr(const Expression& condition, const AssertionExpr& expr) :
         AssertionExpr(AssertionExprKind::DisableIff), condition(condition), expr(expr) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return {}; }
+    NondegeneracyCheckResult checkNondegeneracyImpl() const { return {}; }
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
     static AssertionExpr& fromSyntax(const syntax::DisableIffSyntax& syntax,

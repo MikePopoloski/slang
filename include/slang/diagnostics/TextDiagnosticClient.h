@@ -8,7 +8,6 @@
 #pragma once
 
 #include <fmt/color.h>
-#include <functional>
 #include <string>
 
 #include "slang/diagnostics/DiagnosticClient.h"
@@ -16,10 +15,6 @@
 namespace slang {
 
 class FormatBuffer;
-
-namespace ast {
-class Symbol;
-}
 
 enum class ShowHierarchyPathOption { Auto, Always, Never };
 
@@ -45,16 +40,6 @@ public:
     void showMacroExpansion(bool show) { includeExpansion = show; }
     void showHierarchyInstance(ShowHierarchyPathOption option) { includeHierarchy = option; }
 
-    template<typename TFunc>
-    void setSymbolPathCB(TFunc&& func) {
-        symbolPathCB = std::forward<TFunc>(func);
-    }
-
-    template<typename TFunc>
-    static void setDefaultSymbolPathCB(TFunc&& func) {
-        defaultSymbolPathCB = std::forward<TFunc>(func);
-    }
-
     fmt::terminal_color getSeverityColor(DiagnosticSeverity severity) const;
 
     void report(const ReportedDiagnostic& diagnostic) override;
@@ -71,10 +56,6 @@ private:
     bool includeFileStack = true;
     bool includeExpansion = true;
     ShowHierarchyPathOption includeHierarchy = ShowHierarchyPathOption::Auto;
-
-    using SymbolPathCB = std::function<std::string(const ast::Symbol&)>;
-    SymbolPathCB symbolPathCB;
-    static SymbolPathCB defaultSymbolPathCB;
 
     void formatDiag(SourceLocation loc, std::span<const SourceRange> ranges,
                     DiagnosticSeverity severity, std::string_view message,

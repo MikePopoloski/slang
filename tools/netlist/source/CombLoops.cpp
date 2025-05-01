@@ -309,7 +309,7 @@ std::vector<CycleListType>* ElementaryCyclesSearch::getElementaryCycles() {
     return &(this->cycles);
 }
 
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
 /**
  * These are useful when debugging but are not needed otherwise
  */

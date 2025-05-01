@@ -1,0 +1,43 @@
+name: Coverage
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  linux-coverage:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Install dependencies
+      run: |
+        sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+        sudo apt-get update
+        sudo apt-get install -y g++-14
+        wget --quiet https://github.com/linux-test-project/lcov/releases/download/v2.3/lcov-2.3.tar.gz
+        tar -xf lcov-2.3.tar.gz
+        cd lcov-2.3
+        sudo make install
+        sudo cpan App::cpanminus
+        sudo cpanm --notest Capture::Tiny DateTime
+    - name: Configure
+      run: cmake --preset=ci-coverage
+    - name: Build
+      run: cmake --build build/ci-coverage -j8
+    - name: Run tests
+      run: ctest --test-dir build/ci-coverage --output-on-failure --no-tests=error -j8
+    - name: Process coverage info
+      run: cmake --build build/ci-coverage -t coverage
+    - name: Submit to codecov.io
+      uses: codecov/codecov-action@v5
+      with:
+        files: build/ci-coverage/coverage.info
+        plugins: noop
+        disable_search: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true

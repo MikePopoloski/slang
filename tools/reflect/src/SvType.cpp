@@ -17,12 +17,14 @@ SvType::SvType(const Type& type) {
         cppType = CppType::fromSize(size);
     else if (type.isEnum())
         cppType = CppType::ENUM;
-    else if (type.isStruct() || type.isUnpackedStruct())
+    else if (type.isStruct())
         cppType = CppType::STRUCT;
+    else if (type.isUnion())
+        cppType = CppType::UNION;
     else
         SLANG_UNREACHABLE;
 
-    if (this->isEnum() || this->isStruct())
+    if (this->isStructEnumOrUnion())
         _namespace = type.getParentScope()->asSymbol().name;
 }
 
@@ -33,9 +35,9 @@ std::ostream& operator<<(std::ostream& os, const SvType& type) {
 std::string SvType::toString() const {
     std::stringstream ss;
     if (cppType == CppType::SC_BV)
-        ss << fmt::format(fmt::runtime(CppType::toString(cppType)), size);
-    else if (this->isEnum() || this->isStruct())
-        ss << fmt::format(fmt::runtime(CppType::toString(cppType)), name);
+        ss << format(fmt::runtime(CppType::toString(cppType)), size);
+    else if (this->isStructEnumOrUnion())
+        ss << format(fmt::runtime(CppType::toString(cppType)), name);
     else
         ss << CppType::toString(cppType);
 
@@ -43,7 +45,7 @@ std::string SvType::toString() const {
 }
 
 namespace CppType {
-std::string toString(const CppType::Type& cppType) {
+std::string toString(const Type& cppType) {
     // clang-format off
     switch (cppType) {
         case BOOL: return "bool";
@@ -52,17 +54,18 @@ std::string toString(const CppType::Type& cppType) {
         case SC_BV: return "sc_bv<{}>";
         case STRUCT: return "{}";
         case ENUM: return "{}";
+        case UNION: return "{}";
     }
     // clang-format on
     SLANG_UNREACHABLE;
 }
 
-CppType::Type fromSize(size_t size) {
+Type fromSize(const size_t size) {
     // clang-format off
-        if (size == 1) return CppType::BOOL;
-        else if (size <= 32) return CppType::U32;
-        else if (size <= 64) return CppType::U64;
-        else return CppType::SC_BV;
+        if (size == 1) return BOOL;
+        if (size <= 32) return U32;
+        if (size <= 64) return U64;
+        return SC_BV;
     // clang-format on
 }
 } // namespace CppType

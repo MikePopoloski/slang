@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/Statements.h"
+#include "slang/ast/Scope.h"
 #include "slang/ast/types/DeclaredType.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Enum.h"
@@ -15,6 +15,9 @@
 namespace slang::ast {
 
 class FormalArgumentSymbol;
+class Statement;
+class StatementBlockSymbol;
+class VariableSymbol;
 
 /// Specifies various flags that can apply to subroutines.
 enum class SLANG_EXPORT MethodFlags : uint16_t {
@@ -134,9 +137,9 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static SubroutineSymbol* fromSyntax(Compilation& compilation,
-                                        const syntax::FunctionDeclarationSyntax& syntax,
-                                        const Scope& parent, bool outOfBlock);
+    static std::pair<SubroutineSymbol*, bool> fromSyntax(
+        Compilation& compilation, const syntax::FunctionDeclarationSyntax& syntax,
+        const Scope& parent, bool outOfBlock);
 
     static SubroutineSymbol* fromSyntax(Compilation& compilation,
                                         const syntax::ClassMethodDeclarationSyntax& syntax,
@@ -170,9 +173,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }
 
     template<typename TVisitor>
-    decltype(auto) visitStmts(TVisitor&& visitor) const {
-        return getBody().visit(visitor);
-    }
+    decltype(auto) visitStmts(TVisitor&& visitor) const;
 
 private:
     void addThisVar(const Type& type);

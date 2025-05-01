@@ -223,7 +223,9 @@ static const Expression* bindTerminal(const ExpressionSyntax& syntax,
             break;
     }
 
-    if (valueExpr->kind != ExpressionKind::NamedValue) {
+    if (valueExpr->kind != ExpressionKind::NamedValue &&
+        (valueExpr->kind != ExpressionKind::HierarchicalValue ||
+         !valueExpr->as<HierarchicalValueExpression>().ref.isViaIfacePort())) {
         auto code = (valueExpr->kind == ExpressionKind::ElementSelect ||
                      valueExpr->kind == ExpressionKind::RangeSelect)
                         ? diag::SpecifyPathMultiDim
@@ -231,7 +233,7 @@ static const Expression* bindTerminal(const ExpressionSyntax& syntax,
         context.addDiag(code, syntax.sourceRange());
     }
     else {
-        auto& symbol = valueExpr->as<NamedValueExpression>().symbol;
+        auto& symbol = valueExpr->as<ValueExpressionBase>().symbol;
         if (SpecifyBlockSymbol::checkPathTerminal(symbol, *expr->type, *parentParent, dir,
                                                   valueExpr->sourceRange)) {
             return expr;
@@ -437,7 +439,7 @@ void TimingPathSymbol::checkDuplicatePaths(TimingPathMap& timingPathMap) const {
         if (otherExpr.getSymbolReference() != &ourTerminal)
             return false;
 
-        auto otherRange = otherExpr.evalSelector(evalCtx);
+        auto otherRange = otherExpr.evalSelector(evalCtx, /* enforceBounds */ false);
         identicalRanges = ourRange == otherRange;
         return !ourRange || !otherRange || ourRange->overlaps(*otherRange);
     };
@@ -495,13 +497,13 @@ void TimingPathSymbol::checkDuplicatePaths(TimingPathMap& timingPathMap) const {
         if (auto output = outputExpr->getSymbolReference()) {
             // Find all paths that map to this output.
             auto& inputMap = timingPathMap[output];
-            auto outputRange = outputExpr->evalSelector(evalCtx);
+            auto outputRange = outputExpr->evalSelector(evalCtx, /* enforceBounds */ false);
 
             for (auto inputExpr : getInputs()) {
                 if (auto input = inputExpr->getSymbolReference()) {
                     // Find all paths that also map to this input.
                     auto& vec = inputMap[input];
-                    auto inputRange = inputExpr->evalSelector(evalCtx);
+                    auto inputRange = inputExpr->evalSelector(evalCtx, /* enforceBounds */ false);
 
                     // Look at each existing path and determine whether it's a duplicate.
                     bool alreadyAdded = false;
@@ -547,9 +549,8 @@ static std::string_view toString(TimingPathSymbol::Polarity polarity) {
             return "Positive"sv;
         case TimingPathSymbol::Polarity::Negative:
             return "Negative"sv;
-        default:
-            SLANG_UNREACHABLE;
     }
+    SLANG_UNREACHABLE;
 }
 
 void TimingPathSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -1001,8 +1002,6 @@ void SystemTimingCheckSymbol::resolve() const {
                 argBuf.emplace_back(expr);
                 break;
             }
-            default:
-                SLANG_UNREACHABLE;
         }
     }
 

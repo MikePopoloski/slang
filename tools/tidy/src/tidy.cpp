@@ -171,12 +171,11 @@ int main(int argc, char** argv) {
     SLANG_TRY {
         compilationOk = driver.parseAllSources();
         compilation = driver.createCompilation();
-        compilationOk &= driver.reportCompilation(*compilation, true);
+        driver.reportCompilation(*compilation, true);
+        compilationOk &= driver.reportDiagnostics(true);
     }
     SLANG_CATCH(const std::exception& e) {
-#if __cpp_exceptions
-        OS::printE(fmt::format("internal compiler error: {}\n", e.what()));
-#endif
+        SLANG_REPORT_EXCEPTION(e, "internal compiler error: {}\n");
         return 1;
     }
 
@@ -193,8 +192,9 @@ int main(int argc, char** argv) {
     int retCode = 0;
 
     // Check all enabled checks
+    auto& tdc = *driver.textDiagClient;
     for (const auto& checkName : Registry::getEnabledChecks()) {
-        driver.diagClient->clear();
+        tdc.clear();
 
         const auto check = Registry::create(checkName);
 
@@ -210,13 +210,13 @@ int main(int argc, char** argv) {
 
             if (!quiet) {
                 if (check->diagSeverity() == DiagnosticSeverity::Warning) {
-                    OS::print(fmt::emphasis::bold | fmt::fg(driver.diagClient->getSeverityColor(
-                                                        DiagnosticSeverity::Warning)),
+                    OS::print(fmt::emphasis::bold |
+                                  fmt::fg(tdc.getSeverityColor(DiagnosticSeverity::Warning)),
                               " WARN\n");
                 }
                 else if (check->diagSeverity() == DiagnosticSeverity::Error) {
-                    OS::print(fmt::emphasis::bold | fmt::fg(driver.diagClient->getSeverityColor(
-                                                        DiagnosticSeverity::Error)),
+                    OS::print(fmt::emphasis::bold |
+                                  fmt::fg(tdc.getSeverityColor(DiagnosticSeverity::Error)),
                               " FAIL\n");
                 }
                 else {
@@ -228,7 +228,7 @@ int main(int argc, char** argv) {
                 for (const auto& diag : check->getDiagnostics()) {
                     driver.diagEngine.issue(diag);
                 }
-                OS::print(fmt::format("{}\n", driver.diagClient->getString()));
+                OS::print(fmt::format("{}\n", tdc.getString()));
             }
         }
         else {

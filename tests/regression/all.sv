@@ -40,7 +40,7 @@ macromodule m3;
     wor u,v;
     alias {u,v} = w;
 
-    logic f;
+    logic f, z;
     event ev;
     initial begin
         repeat (3) @(negedge b) f = #2 1;
@@ -54,6 +54,9 @@ macromodule m3;
         join_none
 
         disable m3.foo;
+
+        assign z = 1;
+        deassign z;
 
         if (1) begin end else begin end
 
@@ -122,6 +125,8 @@ macromodule m3;
         if (instr matches (tagged Jmp .j) &&&
             j matches (tagged JmpC '{cc:.c,addr:.a})) begin
             pc = c[0] & a[0];
+            pc = instr matches (tagged Jmp .j) &&&
+                  j matches (tagged JmpC '{cc:.c,addr:.a}) ? c[0] & a[0] : 0;
         end
         else begin
         end
@@ -309,8 +314,33 @@ checker assert_window1 (
 endchecker : assert_window1
 
 module m5;
-    logic a, b;
+    logic a, b, c, d, e, clk;
+
+    default clocking @(posedge clk); endclocking
+
     assert_window1 aw1(1 + 1, a, b);
+
+    initial begin
+        assert_window1 aw2(1 + 1, a, b);
+    end
+
+    sequence abc;
+        @(posedge clk) a ##1 b ##1 c;
+    endsequence
+
+    sequence de;
+        @(negedge clk) d ##[2:5] e;
+    endsequence
+
+    program check;
+        initial begin
+            wait( abc.triggered || de.triggered );
+            if( abc.triggered )
+                $display( "abc succeeded" );
+            if( de.triggered )
+                $display( "de succeeded" );
+        end
+    endprogram
 endmodule
 
 class C;
@@ -457,3 +487,26 @@ class C3;
         b: cross y, x;
     endgroup
 endclass
+
+module m9;
+    logic [3:0] a = {4 {1'b1}};
+endmodule
+
+module m10;
+    byte stream[$];
+    class Packet;
+        rand int header;
+        rand int len;
+        rand byte payload[];
+        int crc;
+        constraint G { len > 1; payload.size == len ; }
+        function void post_randomize; crc = payload.sum; endfunction
+    endclass
+
+    initial begin
+        byte q[$];
+        automatic Packet p = new;
+        {<< byte{ p.header, p.len, p.payload with [0 +: p.len], p.crc }} = stream;
+        stream = stream[ $bits(p) / 8 : $ ];
+    end
+endmodule

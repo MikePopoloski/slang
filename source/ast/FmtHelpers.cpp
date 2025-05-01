@@ -115,7 +115,7 @@ static bool checkFormatString(const ASTContext& context, const StringLiteral& ar
     };
 
     bool ok = true;
-    ok &= SFormat::parse(
+    bool parseOk = SFormat::parse(
         fmt, [](std::string_view) {},
         [&](char spec, size_t offset, size_t len, const SFormat::FormatOptions&) {
             // Filter out non-consuming arguments.
@@ -151,7 +151,7 @@ static bool checkFormatString(const ASTContext& context, const StringLiteral& ar
                 diag << *specifier;
         });
 
-    return ok;
+    return ok && parseOk;
 }
 
 bool FmtHelpers::checkDisplayArgs(const ASTContext& context, const Args& args) {
@@ -213,7 +213,7 @@ static bool formatSpecialArg(char spec, const Scope& scope, std::string& result)
             return true;
         }
         case 'm':
-            scope.asSymbol().getHierarchicalPath(result);
+            scope.asSymbol().appendHierarchicalPath(result);
             return true;
         default:
             return false;
@@ -237,7 +237,7 @@ std::optional<std::string> FmtHelpers::formatArgs(std::string_view formatString,
     auto argIt = args.begin();
 
     bool ok = true;
-    ok &= SFormat::parse(
+    bool parseOk = SFormat::parse(
         formatString, [&](std::string_view text) { result += text; },
         [&](char spec, size_t offset, size_t len, const SFormat::FormatOptions& options) {
             if (formatSpecialArg(spec, scope, result))
@@ -270,7 +270,7 @@ std::optional<std::string> FmtHelpers::formatArgs(std::string_view formatString,
                 return;
             }
 
-            SFormat::formatArg(result, value, spec, options);
+            SFormat::formatArg(result, value, *arg->type, spec, options, arg->isImplicitString());
         },
         [&](DiagCode code, size_t offset, size_t len, std::optional<char> specifier) {
             // If this is from a string literal format string, we already checked
@@ -287,6 +287,7 @@ std::optional<std::string> FmtHelpers::formatArgs(std::string_view formatString,
     if (argIt != args.end())
         context.addDiag(diag::FormatTooManyArgs, (*argIt)->sourceRange);
 
+    ok &= parseOk;
     if (!ok)
         return std::nullopt;
 
@@ -305,8 +306,6 @@ static char getDefaultSpecifier(const Expression& expr, LiteralBase defaultBase)
                 return 'h';
             case LiteralBase::Binary:
                 return 'b';
-            default:
-                SLANG_UNREACHABLE;
         }
     }
 
@@ -340,7 +339,7 @@ std::optional<std::string> FmtHelpers::formatDisplay(
                 fmt = fmt.substr(1, fmt.length() - 2);
 
             bool ok = true;
-            ok &= SFormat::parse(
+            bool parseOk = SFormat::parse(
                 fmt, [&](std::string_view text) { result += text; },
                 [&](char specifier, size_t, size_t, const SFormat::FormatOptions& options) {
                     if (formatSpecialArg(specifier, scope, result))
@@ -354,11 +353,13 @@ std::optional<std::string> FmtHelpers::formatDisplay(
                             return;
                         }
 
-                        SFormat::formatArg(result, value, specifier, options);
+                        SFormat::formatArg(result, value, *currentArg->type, specifier, options,
+                                           currentArg->isImplicitString());
                     }
                 },
                 [](DiagCode, size_t, size_t, std::optional<char>) {});
 
+            ok &= parseOk;
             if (!ok)
                 return std::nullopt;
         }
@@ -368,7 +369,9 @@ std::optional<std::string> FmtHelpers::formatDisplay(
             if (!value)
                 return std::nullopt;
 
-            SFormat::formatArg(result, value, getDefaultSpecifier(*arg, LiteralBase::Decimal), {});
+            SFormat::formatArg(result, value, *arg->type,
+                               getDefaultSpecifier(*arg, LiteralBase::Decimal), {},
+                               arg->isImplicitString());
         }
     }
 

@@ -355,10 +355,11 @@ SyntaxNode& Parser::parseForInitializer() {
     if (isVariableDeclaration()) {
         auto varKeyword = consumeIf(TokenKind::VarKeyword);
         auto& type = parseDataType();
-
-        return factory.forVariableDeclaration(varKeyword, &type,
-                                              parseDeclarator(/* allowMinTypMax */ false,
-                                                              /* requireInitializers */ true));
+        auto& decl = parseDeclarator(/* allowMinTypMax */ false,
+                                     /* requireInitializers */ true);
+        auto& result = factory.forVariableDeclaration(varKeyword, &type, decl);
+        result.previewNode = std::exchange(previewNode, nullptr);
+        return result;
     }
 
     return factory.forVariableDeclaration(Token(), nullptr, parseDeclarator());
@@ -600,7 +601,7 @@ ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(NamedLabelS
 PropertySpecSyntax& Parser::parsePropertySpec() {
     TimingControlSyntax* timing = nullptr;
     if (peek(TokenKind::At))
-        timing = parseTimingControl();
+        timing = parseTimingControl(/* inAssertion */ true);
 
     DisableIffSyntax* disable = nullptr;
     if (peek(TokenKind::DisableKeyword)) {
@@ -681,6 +682,7 @@ std::span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bo
         }
 
         if (newNode) {
+            newNode->previewNode = std::exchange(previewNode, nullptr);
             buffer.push_back(newNode);
             errored = false;
 
@@ -762,15 +764,16 @@ RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
     SmallVector<RandCaseItemSyntax*> itemBuffer;
 
     while (isPossibleExpression(peek().kind)) {
+        auto curr = peek();
         auto& expr = parseExpression();
         auto colon = expect(TokenKind::Colon);
-        const auto loc = peek().location();
         auto& stmt = parseStatement();
-        if (stmt.kind == SyntaxKind::EmptyStatement &&
-            stmt.as<EmptyStatementSyntax>().semicolon.isMissing() && loc == peek().location()) {
+
+        // If there are no consumed tokens then expression and statement were not parsed.
+        if (curr == peek())
             skipToken(std::nullopt);
-        }
-        itemBuffer.push_back(&factory.randCaseItem(expr, colon, stmt));
+        else
+            itemBuffer.push_back(&factory.randCaseItem(expr, colon, stmt));
     }
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
@@ -786,6 +789,8 @@ EventTriggerStatementSyntax& Parser::parseEventTriggerStatement(NamedLabelSyntax
     if (trigger.kind == TokenKind::MinusDoubleArrow) {
         kind = SyntaxKind::NonblockingEventTriggerStatement;
         timing = parseTimingControl();
+        if (timing && timing->kind == SyntaxKind::CycleDelay)
+            addDiag(diag::EventTriggerCycleDelay, timing->sourceRange());
     }
 
     auto& name = parseName();
@@ -995,8 +1000,15 @@ StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, Att
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
     SmallVector<ProductionSyntax*> productions;
-    while (isPossibleDataType(peek().kind))
+    while (isPossibleDataType(peek().kind)) {
+        auto curr = peek();
         productions.push_back(&parseProduction());
+        productions.back()->previewNode = std::exchange(previewNode, nullptr);
+
+        // If there are no consumed tokens then production was not parsed.
+        if (curr == peek())
+            skipToken(std::nullopt);
+    }
 
     if (productions.empty())
         addDiag(diag::ExpectedRsRule, peek().location());

@@ -6,6 +6,7 @@
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
+#include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
@@ -336,12 +337,12 @@ TEST_CASE("Expression types") {
 
     // Unpacked unions
     declare("union { int i; real r; } uu1, uu2;");
-    CHECK(typeof("uu1 == uu2") == "<error>");
-    CHECK(typeof("uu1 !== uu2") == "<error>");
-    CHECK(typeof("1 ? uu1 : uu2") == "<error>");
+    CHECK(typeof("uu1 == uu2") == "bit");
+    CHECK(typeof("uu1 !== uu2") == "bit");
+    CHECK(typeof("1 ? uu1 : uu2") == "union{int i;real r;}u$3");
 
     auto diags = filterWarnings(compilation.getAllDiagnostics());
-    REQUIRE(diags.size() == 11);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::BadUnaryExpression);
     CHECK(diags[1].code == diag::BadBinaryExpression);
     CHECK(diags[2].code == diag::BadBinaryExpression);
@@ -350,9 +351,6 @@ TEST_CASE("Expression types") {
     CHECK(diags[5].code == diag::BadBinaryExpression);
     CHECK(diags[6].code == diag::BadConditionalExpression);
     CHECK(diags[7].code == diag::NotBooleanConvertible);
-    CHECK(diags[8].code == diag::BadBinaryExpression);
-    CHECK(diags[9].code == diag::BadBinaryExpression);
-    CHECK(diags[10].code == diag::BadConditionalExpression);
 }
 
 TEST_CASE("Expression - bad name references") {
@@ -2448,6 +2446,7 @@ module m;
     initial begin
         case (bar)
             A: begin end
+            default;
         endcase
     end
 endmodule
@@ -2455,7 +2454,10 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CaseTypeMismatch);
 }
 
 TEST_CASE("Binary expression regress GH #457") {
@@ -2829,7 +2831,7 @@ endmodule
 TEST_CASE("Index oob tryEval regress GH #602") {
     auto tree = SyntaxTree::fromText(R"(
 module top #(
-    parameter [2:0][4:0] IDX_MAP = {5'd1, 5'd3, 5'd4}
+    parameter [2:0][4:0] IDX_MAP = '{5'd1, 5'd3, 5'd4}
 );
     logic [4:0] sig;
 
@@ -3665,4 +3667,289 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("LHS assignment pattern bit width checking") {
+    auto tree = SyntaxTree::fromText(R"(
+function automatic [7:0] f();
+    logic [3:0] a, b;
+    '{ a, b } = 2'h3;
+    return {a, b};
+endfunction
+
+typedef logic[1:0] tt[2];
+function automatic tt g();
+    logic [1:0] a, b;
+    int c[2] = '{ 11, 13 };
+    '{ a, b } = c;
+    return {a, b};
+endfunction
+
+function automatic [3:0] h();
+    logic [0:0] data[1] = '{1};
+    logic [3:0] a;
+    '{ a } = data;
+    return a;
+endfunction
+
+module m;
+    localparam p = f();
+    localparam q = g();
+    localparam r = h();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::WidthExpand);
+    CHECK(diags[1].code == diag::WidthExpand);
+    CHECK(diags[2].code == diag::SignConversion);
+    CHECK(diags[3].code == diag::WidthTruncate);
+    CHECK(diags[4].code == diag::ConstantConversion);
+    CHECK(diags[5].code == diag::SignConversion);
+    CHECK(diags[6].code == diag::WidthTruncate);
+    CHECK(diags[7].code == diag::ConstantConversion);
+    CHECK(diags[8].code == diag::WidthExpand);
+
+    auto& p = compilation.getRoot().lookupName<ParameterSymbol>("m.p");
+    CHECK(p.getValue().integer() == "8'b00010001"_si);
+
+    auto& q = compilation.getRoot().lookupName<ParameterSymbol>("m.q");
+    CHECK(q.getValue().toString() == "[2'b11,2'b1]");
+
+    auto& r = compilation.getRoot().lookupName<ParameterSymbol>("m.r");
+    CHECK(r.getValue().toString() == "4'b1");
+}
+
+TEST_CASE("Invalid selection driver bounds regress -- GH #1141") {
+    auto tree = SyntaxTree::fromText(R"(
+module test;
+  reg [15:0] vect;
+
+  initial begin
+    vect[1 -: 4] = 8'b1010_1010;
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::RangeOOB);
+    CHECK(diags[1].code == diag::ConstantConversion);
+}
+
+TEST_CASE("Empty queue assignment to unknown type placeholder -- GH #1146") {
+    auto tree = SyntaxTree::fromText(R"(
+class cls#(type T = int);
+  int q1[$] = {};
+  T q2[$] = {};
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Pattern var in static initializer") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct {int a; real b;} s;
+    initial begin
+        static int b = s matches '{a:.i, b:.j} ? i : 0;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Boolean convertible types can be used with operator! -- GH #1208") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    chandle handle = null;
+    always_comb begin
+        if (!handle) begin
+            $fatal(1, "handle is null");
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Static casts propagate type correctly and don't truncate") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef logic [6:0] lt;
+function automatic logic[7:0] foo;
+    logic [7:0] a = 8'hff;
+    lt b = lt'(a >> 1);
+    return 8'(b);
+endfunction
+
+$static_assert(foo() == 8'h7f);
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Test ternary operation sizing regression") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  logic [3:0] w = (0) ? '0 : '0;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& var = root.lookupName<VariableSymbol>("m.w");
+
+    ast::EvalContext eval_ctx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
+    CHECK(var.getInitializer()->eval(eval_ctx).getBitstreamWidth() == 4);
+}
+
+TEST_CASE("Value range where implicit strings not allowed") {
+    auto tree = SyntaxTree::fromText(R"(
+int i = "a" inside { [1:2] };
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("LValue required for prefix unary operators") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        ++(1 + 1);
+        (1 + 1)++;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ExpressionNotAssignable);
+    CHECK(diags[1].code == diag::ExpressionNotAssignable);
+}
+
+TEST_CASE("More operator eval tests") {
+    auto tree = SyntaxTree::fromText(R"(
+parameter p = foo();
+
+function automatic bit foo;
+    shortreal a = 1.0;
+    int b = 3;
+    string s;
+    event ev;
+    union { int i; shortreal r; } u, v;
+
+    assert(++a == shortreal'(2.0));
+    assert(a++ == shortreal'(2.0));
+    --a;
+    assert(a-- == shortreal'(2.0));
+    assert(+b == 3);
+    assert(^4'b1000 == 1);
+    assert(~&4'b1111 == 0);
+    assert(~|4'b0000 == 1);
+    assert(~^4'b1000 == 0);
+    assert(+a == shortreal'(1.0));
+    assert(-a == shortreal'(-1.0));
+    assert((!a) == 0);
+    assert((!s) == 1);
+    assert(a === shortreal'(1.0));
+    assert(!(a !== shortreal'(1.0)));
+    assert(a && 1);
+    assert(a || 0);
+    assert(0 || b);
+    assert(0 || 1.0);
+    assert(1 -> a);
+    assert(1.0 <-> a);
+    assert(a <-> 1.0);
+    assert(1.0 && 1.0);
+    assert(0.0 || 1.0);
+    assert(3 % 2 == 1);
+    assert(3 !== 2);
+    assert(3'b1x0 !=? 3'b111);
+    assert(1 <-> 1);
+    assert(s === "");
+    assert(s !== "asdf");
+    assert(ev === null);
+    assert(!(ev != null));
+    assert(!(ev !== null));
+
+    assert(u === v);
+    u.i = 1;
+    v.r = 1.0;
+    assert(u != v);
+    assert(u !== v);
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter({diag::FloatBoolConv, diag::IntBoolConv});
+    if (!diags.empty()) {
+        FAIL_CHECK(report(diags));
+    }
+}
+
+TEST_CASE("Referring to instance array in expression -- GH #1314") {
+    auto tree = SyntaxTree::fromText(R"(
+module subm();
+endmodule
+module top();
+	subm inst[3:0]();
+	wire w = inst[0];
+
+    for (genvar i = 0; i < 2; i++) begin : asdf
+    end
+    int i = asdf[0];
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::NotAValue);
+    CHECK(diags[1].code == diag::NotAValue);
+}
+
+TEST_CASE("Assignments in timing controls disallowed") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a, b;
+    always @((a = b)) begin end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssignmentNotAllowed);
 }

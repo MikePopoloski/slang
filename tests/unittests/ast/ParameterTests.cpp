@@ -82,14 +82,14 @@ interface width_checker #(parameter min_cks = 1, parameter max_cks = 1)
         if ($isunbounded(max_cks)) begin
             property width;
                 @(posedge clk)
-                    (reset_n && $rose(expr)) |-> (expr [*min_cks]);
+                    (reset_n && $rose(expr)) |-> (expr[0] [*min_cks]);
             endproperty
             a2: assert property (width);
         end
         else begin
             property width;
                 @(posedge clk)
-                    (reset_n && $rose(expr)) |-> (expr[*min_cks:max_cks])
+                    (reset_n && $rose(expr)) |-> (expr[0][*min_cks:max_cks])
                         ##1 (!expr);
             endproperty
             a2: assert property (width);
@@ -627,7 +627,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::RecursiveDefinition);
-    CHECK(diags[1].code == diag::RecursiveDefinition);
+    CHECK(diags[1].code == diag::ConstEvalParamCycle);
     CHECK(diags[2].code == diag::ConstEvalParamCycle);
     CHECK(diags[3].code == diag::ConstEvalIdUsedInCEBeforeDecl);
     CHECK(diags[4].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
@@ -707,25 +707,57 @@ endmodule
 
 TEST_CASE("Options to override top-level params") {
     auto tree = SyntaxTree::fromText(R"(
-module m #(parameter int foo, string bar, real baz);
-    localparam int j = foo + int'(bar == "asdf" ? baz : 0);
+package p;
+    typedef enum { A = 8, B = 9 } et;
+endpackage
+
+module m #(parameter int foo, string bar, real baz, p::et e);
+    localparam int j = foo + int'(bar == "asdf" ? baz : 0) + int'(e);
 endmodule
 )");
 
-    CompilationOptions coptions;
-    coptions.paramOverrides.push_back("foo=3");
-    coptions.paramOverrides.push_back("bar=\"asdf\"");
-    coptions.paramOverrides.push_back("baz=1.6");
-
-    Bag options;
-    options.set(coptions);
+    CompilationOptions options;
+    options.paramOverrides.push_back("foo=3");
+    options.paramOverrides.push_back("bar=\"asdf\"");
+    options.paramOverrides.push_back("baz=1.6");
+    options.paramOverrides.push_back("e=p::B");
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
     auto& j = compilation.getRoot().lookupName<ParameterSymbol>("m.j");
-    CHECK(j.getValue().integer() == 5);
+    CHECK(j.getValue().integer() == 14);
+}
+
+TEST_CASE("Options to override hierarchical params") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    typedef enum { A = 8, B = 9 } et;
+endpackage
+
+module n;
+    m m1();
+    m #(3, "asdf", 1.6, p::A) m2();
+endmodule
+
+module m #(parameter int foo, string bar, real baz, p::et e);
+    localparam int j = foo + int'(bar == "asdf" ? baz : 0) + int'(e);
+endmodule
+)");
+
+    CompilationOptions options;
+    options.paramOverrides.push_back("n.m1.foo=3");
+    options.paramOverrides.push_back("n.m1.bar=\"asdf\"");
+    options.paramOverrides.push_back("n.m1.baz=1.6");
+    options.paramOverrides.push_back("n.m1.e=p::B");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& j = compilation.getRoot().lookupName<ParameterSymbol>("n.m1.j");
+    CHECK(j.getValue().integer() == 14);
 }
 
 TEST_CASE("Invalid param override option handling") {
@@ -750,9 +782,10 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
-    for (size_t i = 0; i < diags.size(); i++) {
-        CHECK(diags[i].code == diag::InvalidParamOverrideOpt);
-    }
+    CHECK(diags[0].code == diag::CouldNotResolveHierarchicalPath);
+    CHECK(diags[1].code == diag::InvalidParamOverrideOpt);
+    CHECK(diags[2].code == diag::InvalidParamOverrideOpt);
+    CHECK(diags[3].code == diag::InvalidParamOverrideOpt);
 }
 
 TEST_CASE("Empty params for uninstantiated modules") {
@@ -1265,4 +1298,71 @@ endmodule
             fmt::format("m2.{}[{}].m.p", name, i));
         CHECK(p.getValue().integer() == i + 1);
     }
+}
+
+TEST_CASE("Defparams with instance caching") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    n n1();
+    n n2();
+
+    defparam n2.o1.p = 2;
+endmodule
+
+module n;
+    o o1();
+endmodule
+
+module o;
+    parameter int p = 1;
+    if (p == 2) begin
+        $info("Hello");
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfoTask);
+}
+
+TEST_CASE("Defparams targeting interface used in port with instance caching") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    J j();
+endinterface
+
+interface J;
+    parameter int p = 1;
+endinterface
+
+module m;
+    I i1();
+    I i2();
+
+    n n1(i1);
+    n n2(i2);
+
+    defparam i2.j.p = 2;
+endmodule
+
+module n(I i);
+    if (i.j.p == 2) begin
+        $info("Hello");
+    end
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowHierarchicalConst;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfoTask);
 }

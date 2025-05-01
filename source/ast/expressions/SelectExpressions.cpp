@@ -690,7 +690,7 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv)
         return nullptr;
 
-    auto range = evalRange(context, cv);
+    auto range = evalRange(context, cv, /* enforceBounds */ false);
     if (!range)
         return nullptr;
 
@@ -714,7 +714,7 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!value().type->hasFixedRange())
         loadedVal = lval.load();
 
-    auto range = evalRange(context, loadedVal);
+    auto range = evalRange(context, loadedVal, /* enforceBounds */ false);
     if (!range)
         return nullptr;
 
@@ -727,7 +727,8 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
 }
 
 std::optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
-                                                              const ConstantValue& val) const {
+                                                              const ConstantValue& val,
+                                                              bool enforceBounds) const {
     auto prevQ = context.getQueueTarget();
     if (val.isQueue())
         context.setQueueTarget(&val);
@@ -781,6 +782,11 @@ std::optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& conte
             diag << valueType;
         }
 
+        if (enforceBounds) {
+            result.left = std::min(std::max(result.left, valueRange.lower()), valueRange.upper());
+            result.right = std::min(std::max(result.right, valueRange.lower()), valueRange.upper());
+        }
+
         if (!valueType.isPackedArray()) {
             if (valueType.isUnpackedArray()) {
                 // Unpacked arrays are stored reversed in memory, so reverse the range here.
@@ -810,11 +816,21 @@ std::optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& conte
             diag << valueType;
             diag << size;
         }
+
+        if (enforceBounds) {
+            result.left = std::min(std::max(result.left, 0), int32_t(size));
+            result.right = std::min(std::max(result.right, 0), int32_t(size));
+        }
     }
     else if (result.left < 0 || result.right < 0) {
         auto& diag = context.addDiag(diag::RangeOOB, sourceRange);
         diag << result.left << result.right;
         diag << valueType;
+
+        if (enforceBounds) {
+            result.left = std::max(result.left, 0);
+            result.right = std::max(result.right, 0);
+        }
     }
 
     return result;
@@ -1040,8 +1056,7 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::EnumValue:
             // The thing being selected from doesn't actually matter, since the
             // enum value is a constant.
-            return ValueExpressionBase::fromSymbol(context, *member, /* isHierarchical */ false,
-                                                   range);
+            return ValueExpressionBase::fromSymbol(context, *member, nullptr, range);
         default: {
             if (member->isValue()) {
                 auto& value = member->as<ValueSymbol>();
@@ -1269,7 +1284,10 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     else {
         int32_t io = (int32_t)field.bitOffset;
         int32_t width = (int32_t)type->getBitWidth();
-        return cv.integer().slice(width + io - 1, io);
+        cv = cv.integer().slice(width + io - 1, io);
+
+        // Make sure sign and four-statedness are correct.
+        return cv.convertToInt(type->getBitWidth(), type->isSigned(), type->isFourState());
     }
 }
 

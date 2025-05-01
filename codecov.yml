@@ -16,10 +16,10 @@ coverage:
     changes: no
 
   ignore:
-    - "external/**/*"
-    - "tests/**/*"
-    - "tools/**/*"
-    - "build/**/*"
+    - "external"
+    - "tests"
+    - "tools"
+    - "build"
 
 parsers:
   gcov:

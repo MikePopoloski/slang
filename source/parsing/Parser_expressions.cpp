@@ -78,6 +78,8 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
     if (opKind != SyntaxKind::Unknown) {
         auto opToken = consume();
         auto attributes = parseAttributes();
+        if (options.has(ExpressionOptions::DisallowAttrs))
+            errorIfAttributes(attributes);
 
         auto& operand = parsePrimaryExpression(options);
         auto& postfix = parsePostfixExpression(operand, options);
@@ -91,7 +93,11 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
         if (isNewExpr(leftOperand))
             return parseNewExpression(leftOperand->as<NameSyntax>(), options);
 
-        leftOperand = &parsePostfixExpression(*leftOperand, options);
+        // Don't try to parse postfix if we didn't find a valid primary to begin with.
+        if (leftOperand->kind != SyntaxKind::IdentifierName ||
+            !leftOperand->as<IdentifierNameSyntax>().identifier.isMissing()) {
+            leftOperand = &parsePostfixExpression(*leftOperand, options);
+        }
     }
 
     options &= ~ExpressionOptions::AllowSuperNewCall;
@@ -163,7 +169,7 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
             auto& rightOperand = parseSubExpression(options, newPrecedence);
             left = &factory.binaryExpression(opKind, *left, opToken, attributes, rightOperand);
 
-            if (!attributes.empty() && isAssignmentOperator(opKind))
+            if (isAssignmentOperator(opKind) || options.has(ExpressionOptions::DisallowAttrs))
                 errorIfAttributes(attributes);
         }
     }
@@ -184,6 +190,9 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
             Token question;
             auto& predicate = parseConditionalPredicate(*left, TokenKind::Question, question);
             auto attributes = parseAttributes();
+            if (options.has(ExpressionOptions::DisallowAttrs))
+                errorIfAttributes(attributes);
+
             auto& lhs = parseSubExpression(options, logicalOrPrecedence - 1);
             auto colon = expect(TokenKind::Colon);
             auto& rhs = parseSubExpression(options, logicalOrPrecedence - 1);
@@ -574,16 +583,35 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
         }
     };
 
+    auto isSelectAllowed = [&] {
+        switch (expr->kind) {
+            case SyntaxKind::ConcatenationExpression:
+            case SyntaxKind::MultipleConcatenationExpression:
+            case SyntaxKind::MemberAccessExpression:
+            case SyntaxKind::InvocationExpression:
+            case SyntaxKind::ArrayOrRandomizeMethodExpression:
+            case SyntaxKind::ElementSelectExpression:
+                return true;
+            default:
+                return NameSyntax::isKind(expr->kind);
+        }
+    };
+
     while (true) {
         switch (peek().kind) {
-            case TokenKind::OpenBracket:
+            case TokenKind::OpenBracket: {
                 if (isLiteral() ||
                     (options.has(ExpressionOptions::SequenceExpr) && isSequenceRepetition())) {
                     return *expr;
                 }
 
+                const bool isValid = isSelectAllowed();
                 expr = &factory.elementSelectExpression(*expr, parseElementSelect());
+                if (!isValid)
+                    addDiag(diag::InvalidSelectExpression, expr->sourceRange());
+
                 break;
+            }
             case TokenKind::Dot: {
                 auto dot = consume();
 
@@ -606,6 +634,9 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
             case TokenKind::OpenParenthesis: {
                 if (isStartOfAttrs(0)) {
                     auto attributes = parseAttributes();
+                    if (options.has(ExpressionOptions::DisallowAttrs))
+                        errorIfAttributes(attributes);
+
                     switch (peek().kind) {
                         case TokenKind::DoublePlus:
                         case TokenKind::DoubleMinus: {
@@ -1158,7 +1189,7 @@ static bool isValidCycleDelay(SyntaxKind kind) {
     }
 }
 
-TimingControlSyntax* Parser::parseTimingControl() {
+TimingControlSyntax* Parser::parseTimingControl(bool inAssertion) {
     switch (peek().kind) {
         case TokenKind::Hash: {
             auto hash = consume();
@@ -1186,8 +1217,13 @@ TimingControlSyntax* Parser::parseTimingControl() {
                     auto openParen = consume();
                     if (peek(TokenKind::Star)) {
                         auto star = consume();
-                        return &factory.implicitEventControl(at, openParen, star,
-                                                             expect(TokenKind::CloseParenthesis));
+                        auto& result = factory.implicitEventControl(
+                            at, openParen, star, expect(TokenKind::CloseParenthesis));
+
+                        if (inAssertion)
+                            addDiag(diag::ImplicitEventInAssertion, result.sourceRange());
+
+                        return &result;
                     }
 
                     auto& eventExpr = parseEventExpression();
@@ -1195,8 +1231,13 @@ TimingControlSyntax* Parser::parseTimingControl() {
                     return &factory.eventControlWithExpression(
                         at, factory.parenthesizedEventExpression(openParen, eventExpr, closeParen));
                 }
-                case TokenKind::Star:
-                    return &factory.implicitEventControl(at, Token(), consume(), Token());
+                case TokenKind::Star: {
+                    auto& result = factory.implicitEventControl(at, Token(), consume(), Token());
+                    if (inAssertion)
+                        addDiag(diag::ImplicitEventInAssertion, result.sourceRange());
+
+                    return &result;
+                }
                 case TokenKind::SystemIdentifier:
                     return &factory.eventControl(at,
                                                  parsePrimaryExpression(ExpressionOptions::None));
@@ -1437,7 +1478,7 @@ SequenceExprSyntax& Parser::parseSequencePrimary() {
         case TokenKind::DoubleHash:
             return parseDelayedSequenceExpr(nullptr);
         case TokenKind::At: {
-            auto event = parseTimingControl();
+            auto event = parseTimingControl(/* inAssertion */ true);
             SLANG_ASSERT(event);
             return factory.clockingSequenceExpr(*event,
                                                 parseSequenceExpr(0, /* isInProperty */ false));
@@ -1567,7 +1608,7 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
     auto current = peek();
     switch (current.kind) {
         case TokenKind::At: {
-            auto event = parseTimingControl();
+            auto event = parseTimingControl(/* inAssertion */ true);
             SLANG_ASSERT(event);
 
             // To support clocking events in sampled value system calls,

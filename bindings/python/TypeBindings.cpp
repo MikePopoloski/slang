@@ -124,8 +124,9 @@ void registerTypes(py::module_& m) {
         .def_readwrite("elideScopeNames", &TypePrintingOptions::elideScopeNames)
         .def_readwrite("printAKA", &TypePrintingOptions::printAKA)
         .def_readwrite("anonymousTypeStyle", &TypePrintingOptions::anonymousTypeStyle)
-        .def_readwrite("skipScopedTypeNames", &TypePrintingOptions::anonymousTypeStyle)
-        .def_readwrite("fullEnumType", &TypePrintingOptions::anonymousTypeStyle);
+        .def_readwrite("skipScopedTypeNames", &TypePrintingOptions::skipScopedTypeNames)
+        .def_readwrite("fullEnumType", &TypePrintingOptions::fullEnumType)
+        .def_readwrite("skipTypeDefs", &TypePrintingOptions::skipTypeDefs);
 
     py::enum_<TypePrintingOptions::AnonymousTypeStyle>(typePrintingOptions, "AnonymousTypeStyle")
         .value("SystemName", TypePrintingOptions::SystemName)
@@ -289,7 +290,7 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("firstForwardDecl", &GenericClassDefSymbol::getFirstForwardDecl);
 
     py::enum_<ConstraintBlockFlags>(m, "ConstraintBlockFlags")
-        .value("None", ConstraintBlockFlags::None)
+        .value("None_", ConstraintBlockFlags::None)
         .value("Pure", ConstraintBlockFlags::Pure)
         .value("Static", ConstraintBlockFlags::Static)
         .value("Extern", ConstraintBlockFlags::Extern)

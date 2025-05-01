@@ -57,7 +57,9 @@ void registerUtil(py::module_& m) {
     py::class_<BufferID>(m, "BufferID")
         .def(py::init<>())
         .def_property_readonly("id", &BufferID::getId)
-        .def_property_readonly_static("placeholder", &BufferID::getPlaceholder)
+        .def_static("getPlaceholder", &BufferID::getPlaceholder)
+        .def_property_readonly_static(
+            "placeholder", [](py::object /* self or cls */) { return BufferID::getPlaceholder(); })
         .def(py::self == py::self)
         .def(py::self != py::self)
         .def(py::self < py::self)
@@ -136,10 +138,13 @@ void registerUtil(py::module_& m) {
         .def("isMacroArgLoc", &SourceManager::isMacroArgLoc, "location"_a)
         .def("isIncludedFileLoc", &SourceManager::isIncludedFileLoc, "location"_a)
         .def("isPreprocessedLoc", &SourceManager::isPreprocessedLoc, "location"_a)
+        .def("isBeforeInCompilationUnit", &SourceManager::isBeforeInCompilationUnit, "left"_a,
+             "right"_a)
         .def("getExpansionLoc", &SourceManager::getExpansionLoc, "location"_a)
         .def("getExpansionRange", &SourceManager::getExpansionRange, "location"_a)
         .def("getOriginalLoc", &SourceManager::getOriginalLoc, "location"_a)
         .def("getFullyOriginalLoc", &SourceManager::getFullyOriginalLoc, "location"_a)
+        .def("getFullyOriginalRange", &SourceManager::getFullyOriginalRange, "range"_a)
         .def("getFullyExpandedLoc", &SourceManager::getFullyExpandedLoc, "location"_a)
         .def("getSourceText", &SourceManager::getSourceText, "buffer"_a)
         .def("assignText",
@@ -302,7 +307,8 @@ void registerUtil(py::module_& m) {
     py::class_<DiagnosticClient,PyDiagnosticClient, std::shared_ptr<DiagnosticClient>>(m, "DiagnosticClient")
         .def(py::init<>())
         .def("report", &DiagnosticClient::report, "diagnostic"_a)
-        .def("setEngine", &DiagnosticClient::setEngine, "engine"_a);
+        .def("setEngine", &DiagnosticClient::setEngine, "engine"_a)
+        .def("showAbsPaths", &DiagnosticClient::showAbsPaths, "show"_a);
 
     py::class_<TextDiagnosticClient, DiagnosticClient, std::shared_ptr<TextDiagnosticClient>>(
         m, "TextDiagnosticClient")

@@ -775,6 +775,15 @@ std::optional<bitwidth_t> CallExpression::getEffectiveWidthImpl() const {
     return type->getBitWidth();
 }
 
+Expression::EffectiveSign CallExpression::getEffectiveSignImpl(bool) const {
+    if (isSystemCall()) {
+        auto& callInfo = std::get<1>(subroutine);
+        if (callInfo.subroutine->getEffectiveWidth() == 1)
+            return EffectiveSign::Either;
+    }
+    return type->isSigned() ? EffectiveSign::Signed : EffectiveSign::Unsigned;
+}
+
 bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
                                    SourceRange range) {
     if (context.flags.has(EvalFlags::IsScript))
@@ -849,6 +858,14 @@ SubroutineKind CallExpression::getSubroutineKind() const {
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
     return symbol.subroutineKind;
+}
+
+parsing::KnownSystemName CallExpression::getKnownSystemName() const {
+    if (subroutine.index() == 1) {
+        auto& callInfo = std::get<1>(subroutine);
+        return callInfo.subroutine->knownNameId;
+    }
+    return parsing::KnownSystemName::Unknown;
 }
 
 bool CallExpression::hasOutputArgs() const {

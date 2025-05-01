@@ -10,6 +10,7 @@
 #include "slang/ast/ASTContext.h"
 #include "slang/ast/LValue.h"
 #include "slang/ast/SemanticFacts.h"
+#include "slang/util/SmallMap.h"
 
 namespace slang::ast {
 
@@ -66,59 +67,20 @@ enum class VariableFlags : uint16_t;
 SLANG_ENUM(ExpressionKind, EXPRESSION)
 #undef EXPRESSION
 
-#define OP(x) \
-    x(Plus) \
-    x(Minus) \
-    x(BitwiseNot) \
-    x(BitwiseAnd) \
-    x(BitwiseOr) \
-    x(BitwiseXor) \
-    x(BitwiseNand) \
-    x(BitwiseNor) \
-    x(BitwiseXnor) \
-    x(LogicalNot) \
-    x(Preincrement) \
-    x(Predecrement) \
-    x(Postincrement) \
-    x(Postdecrement)
-SLANG_ENUM(UnaryOperator, OP)
-#undef OP
-
-#define OP(x) \
-    x(Add) \
-    x(Subtract) \
-    x(Multiply) \
-    x(Divide) \
-    x(Mod) \
-    x(BinaryAnd) \
-    x(BinaryOr) \
-    x(BinaryXor) \
-    x(BinaryXnor) \
-    x(Equality) \
-    x(Inequality) \
-    x(CaseEquality) \
-    x(CaseInequality) \
-    x(GreaterThanEqual) \
-    x(GreaterThan) \
-    x(LessThanEqual) \
-    x(LessThan) \
-    x(WildcardEquality) \
-    x(WildcardInequality) \
-    x(LogicalAnd) \
-    x(LogicalOr) \
-    x(LogicalImplication) \
-    x(LogicalEquivalence) \
-    x(LogicalShiftLeft) \
-    x(LogicalShiftRight) \
-    x(ArithmeticShiftLeft) \
-    x(ArithmeticShiftRight) \
-    x(Power)
-SLANG_ENUM(BinaryOperator, OP)
-#undef OP
-
 #define RANGE(x) x(Simple) x(IndexedUp) x(IndexedDown)
 SLANG_ENUM(RangeSelectionKind, RANGE)
 #undef RANGE
+
+// clang-format off
+#define CK(x) \
+    x(Implicit) \
+    x(Propagated) \
+    x(StreamingConcat) \
+    x(Explicit) \
+    x(BitstreamCast)
+// clang-format on
+SLANG_ENUM(ConversionKind, CK)
+#undef CK
 // clang-format on
 
 /// The base class for all expressions in SystemVerilog.
@@ -131,11 +93,6 @@ public:
 
     /// The type of the expression.
     not_null<const Type*> type;
-
-    /// A pointer to a constant value if the expression has been evaluated.
-    /// The value may be empty to indicate that the expression is known to not be constant.
-    /// If the pointer is null, the expression hasn't been evaluated yet.
-    mutable const ConstantValue* constant = nullptr;
 
     /// The syntax used to create the expression, if any. An expression tree can
     /// be created manually in which case it may not have a syntax representation.
@@ -287,6 +244,11 @@ public:
     /// For example, the integer literal "4" or the unbased unsized literal "'1";
     bool isUnsizedInteger() const;
 
+    /// Returns a pointer to a constant value if the expression has been evaluated.
+    /// The value may be empty to indicate that the expression is known to not be constant.
+    /// If the pointer is null, the expression hasn't been evaluated yet.
+    const ConstantValue* getConstant() const { return constant; }
+
     /// Evaluates the expression under the given evaluation context. Any errors that occur
     /// will be stored in the evaluation context instead of issued to the compilation.
     ConstantValue eval(EvalContext& context) const;
@@ -298,7 +260,7 @@ public:
     /// Evaluates the expression as a selector and returns the selection range that
     /// results. If the evaluates fails or the expression does not represent a selection
     /// std::nullopt will be returned.
-    std::optional<ConstantRange> evalSelector(EvalContext& context) const;
+    std::optional<ConstantRange> evalSelector(EvalContext& context, bool enforceBounds) const;
 
     /// Verifies that this expression is a valid lvalue and that each element
     /// of that lvalue can be assigned to. If it's not, appropriate diagnostics
@@ -354,6 +316,10 @@ public:
     /// Returns true if any subexpression of this expression is a hierarchical reference.
     bool hasHierarchicalReference() const;
 
+    /// Returns true if this expression is known to be within a pair of parentheses,
+    /// and otherwise false.
+    bool isParenthesized() const;
+
     /// If this expression is an implicit conversion, recursively unwraps to the
     /// target operand. Otherwise returns `*this`.
     const Expression& unwrapImplicitConversions() const;
@@ -408,15 +374,6 @@ protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
 
-    static UnaryOperator getUnaryOperator(syntax::SyntaxKind kind);
-    static BinaryOperator getBinaryOperator(syntax::SyntaxKind kind);
-
-    static const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const Type* rt,
-                                          bool forceFourState, bool signednessFromRt = false);
-
-    static ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
-                                            const ConstantValue& cvr);
-
     static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax,
                               const ASTContext& context,
                               bitmask<ASTFlags> extraFlags = ASTFlags::None,
@@ -452,7 +409,8 @@ protected:
     // Perform type propagation and constant folding of a context-determined subexpression.
     static void contextDetermined(const ASTContext& context, Expression*& expr,
                                   const Expression* parentExpr, const Type& newType,
-                                  SourceRange operatorRange, bool isAssignment = false);
+                                  SourceRange operatorRange,
+                                  ConversionKind conversionKind = ConversionKind::Propagated);
 
     // Perform type propagation and constant folding of a self-determined subexpression.
     static void selfDetermined(const ASTContext& context, Expression*& expr);
@@ -460,7 +418,6 @@ protected:
                                                     const ExpressionSyntax& syntax,
                                                     const ASTContext& context,
                                                     bitmask<ASTFlags> extraFlags = ASTFlags::None);
-    struct PropagationVisitor;
 
     template<typename TExpression, typename TVisitor, typename... Args>
     decltype(auto) visitExpression(TExpression* expr, TVisitor&& visitor, Args&&... args) const;
@@ -473,6 +430,16 @@ protected:
 
     static EffectiveSign conjunction(EffectiveSign left, EffectiveSign right);
     static bool signMatches(EffectiveSign left, EffectiveSign right);
+
+private:
+    struct EvalVisitor;
+    struct LValueVisitor;
+    struct EffectiveWidthVisitor;
+    struct EffectiveSignVisitor;
+    struct HierarchicalVisitor;
+    struct PropagationVisitor;
+
+    mutable const ConstantValue* constant = nullptr;
 };
 
 /// @brief Represents an invalid expression

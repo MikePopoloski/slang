@@ -89,8 +89,6 @@ bitwidth_t Type::getBitWidth() const {
                 return 64;
             case FloatingType::ShortReal:
                 return 32;
-            default:
-                SLANG_UNREACHABLE;
         }
     }
     return 0;
@@ -390,6 +388,17 @@ bool Type::isHandleType() const {
     }
 }
 
+bool Type::isUnion() const {
+    const Type& ct = getCanonicalType();
+    switch (ct.kind) {
+        case SymbolKind::UnpackedUnionType:
+        case SymbolKind::PackedUnionType:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool Type::isTaggedUnion() const {
     auto& ct = getCanonicalType();
     switch (ct.kind) {
@@ -415,10 +424,9 @@ bool Type::isMatching(const Type& rhs) const {
     if (l == r)
         return true;
 
-    if (l->getSyntax() && l->getSyntax() == r->getSyntax() &&
-        l->getParentScope() == r->getParentScope()) {
+    if (l->getSyntax() && l->getSyntax() == r->getSyntax() && l->getParentScope() &&
+        l->getParentScope() == r->getParentScope())
         return true;
-    }
 
     // Special casing for type synonyms: real/realtime
     if (l->isFloating() && r->isFloating()) {
@@ -930,6 +938,7 @@ const Type& Type::makeUnsigned(Compilation& compilation) const {
 
 std::string Type::toString() const {
     TypePrinter printer;
+    printer.options.skipTypeDefs = true;
     printer.append(*this);
     return printer.toString();
 }
@@ -1062,8 +1071,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::SequenceType:
             return compilation.getType(node.kind);
         case SyntaxKind::EnumType:
-            return EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), context,
-                                        typedefTarget);
+            return EnumType::findDefinition(compilation, node.as<EnumTypeSyntax>(), context);
         case SyntaxKind::StructType: {
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
             return structUnion.packed

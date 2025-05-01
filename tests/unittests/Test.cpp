@@ -11,7 +11,7 @@
 #include "slang/parsing/Preprocessor.h"
 #include "slang/text/SourceManager.h"
 
-std::string findTestDir() {
+static std::string findTestDirInternal() {
     auto path = fs::current_path();
     while (!fs::exists(path / "tests")) {
         path = path.parent_path();
@@ -19,6 +19,11 @@ std::string findTestDir() {
     }
 
     return (path / "tests/unittests/data/").string();
+}
+
+std::string findTestDir() {
+    static auto path = findTestDirInternal();
+    return path;
 }
 
 void setupSourceManager(SourceManager& sourceManager) {
@@ -88,8 +93,9 @@ Token lexToken(std::string_view text, LanguageVersion languageVersion) {
 
 Token lexRawToken(std::string_view text) {
     diagnostics.clear();
-    auto buffer = getSourceManager().assignText(text);
-    Lexer lexer(buffer, alloc, diagnostics);
+    auto& sm = getSourceManager();
+    auto buffer = sm.assignText(text);
+    Lexer lexer(buffer, alloc, diagnostics, sm);
 
     Token token = lexer.lex();
     REQUIRE(token);

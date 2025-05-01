@@ -40,12 +40,6 @@ public:
     bool empty() const { return nodes.empty(); }
     void clear() { nodes.clear(); }
 
-    static std::string getSymbolHierPath(const ast::Symbol& symbol) {
-        std::string buffer;
-        symbol.getHierarchicalPath(buffer);
-        return buffer;
-    }
-
     /// Return index within the path if a variable reference matches the
     /// specified syntax (ie including the hierarchical reference to the
     /// variable name and selectors) and appears on the left-hand side of an
@@ -54,7 +48,7 @@ public:
         auto match = [this, &syntax](NetlistNode* node) {
             if (node->kind == NodeKind::VariableReference) {
                 auto& varRefNode = node->as<NetlistVariableReference>();
-                auto hierPath = getSymbolHierPath(varRefNode.symbol);
+                auto hierPath = varRefNode.symbol.getHierarchicalPath();
                 auto selectorString = varRefNode.selectorString();
                 return hierPath + selectorString == syntax;
             }

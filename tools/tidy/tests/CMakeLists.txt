@@ -11,6 +11,7 @@ add_executable(
   OnlyAssignedOnResetTest.cpp
   RegisterHasNoResetTest.cpp
   NoLatchesOnDesignTest.cpp
+  EnforcePortPrefixTest.cpp
   EnforcePortSuffixTest.cpp
   NoOldAlwaysSyntaxTest.cpp
   AlwaysCombNonBlockingTest.cpp

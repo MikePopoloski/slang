@@ -10,6 +10,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
@@ -27,37 +28,39 @@ TimingControl& TimingControl::bind(const TimingControlSyntax& syntax, const ASTC
         return badCtrl(comp, nullptr);
     }
 
+    ASTContext ctx(context);
+    ctx.flags |= ASTFlags::AssignmentDisallowed;
+
     TimingControl* result;
     switch (syntax.kind) {
         case SyntaxKind::DelayControl:
-            result = &DelayControl::fromSyntax(comp, syntax.as<DelaySyntax>(), context);
+            result = &DelayControl::fromSyntax(comp, syntax.as<DelaySyntax>(), ctx);
             break;
         case SyntaxKind::Delay3:
-            result = &Delay3Control::fromSyntax(comp, syntax.as<Delay3Syntax>(), context);
+            result = &Delay3Control::fromSyntax(comp, syntax.as<Delay3Syntax>(), ctx);
             break;
         case SyntaxKind::EventControl:
-            result = &SignalEventControl::fromSyntax(comp, syntax.as<EventControlSyntax>(),
-                                                     context);
+            result = &SignalEventControl::fromSyntax(comp, syntax.as<EventControlSyntax>(), ctx);
             break;
         case SyntaxKind::EventControlWithExpression:
             result = &EventListControl::fromSyntax(
-                comp, *syntax.as<EventControlWithExpressionSyntax>().expr, context);
+                comp, *syntax.as<EventControlWithExpressionSyntax>().expr, ctx);
             break;
         case SyntaxKind::ImplicitEventControl:
             result = &ImplicitEventControl::fromSyntax(comp,
                                                        syntax.as<ImplicitEventControlSyntax>(),
-                                                       context);
+                                                       ctx);
             break;
         case SyntaxKind::RepeatedEventControl:
             result = &RepeatedEventControl::fromSyntax(comp,
                                                        syntax.as<RepeatedEventControlSyntax>(),
-                                                       context);
+                                                       ctx);
             break;
         case SyntaxKind::OneStepDelay:
             result = comp.emplace<OneStepDelayControl>(syntax.sourceRange());
             break;
         case SyntaxKind::CycleDelay:
-            result = &CycleDelayControl::fromSyntax(comp, syntax.as<DelaySyntax>(), context);
+            result = &CycleDelayControl::fromSyntax(comp, syntax.as<DelaySyntax>(), ctx);
             break;
         default:
             SLANG_UNREACHABLE;
@@ -78,25 +81,28 @@ TimingControl& TimingControl::bind(const PropertyExprSyntax& syntax, const ASTCo
         return badCtrl(comp, nullptr);
     }
 
+    ASTContext ctx(context);
+    ctx.flags |= ASTFlags::AssignmentDisallowed;
+
     TimingControl* result;
     switch (syntax.kind) {
         case SyntaxKind::SimplePropertyExpr:
-            return bind(*syntax.as<SimplePropertyExprSyntax>().expr, context);
+            return bind(*syntax.as<SimplePropertyExprSyntax>().expr, ctx);
         case SyntaxKind::ParenthesizedPropertyExpr:
             result = &EventListControl::fromSyntax(comp,
                                                    syntax.as<ParenthesizedPropertyExprSyntax>(),
-                                                   context);
+                                                   ctx);
             break;
         case SyntaxKind::OrPropertyExpr:
             result = &EventListControl::fromSyntax(comp, syntax.as<BinaryPropertyExprSyntax>(),
-                                                   context);
+                                                   ctx);
             break;
         case SyntaxKind::IffPropertyExpr:
             result = &SignalEventControl::fromSyntax(comp, syntax.as<BinaryPropertyExprSyntax>(),
-                                                     context);
+                                                     ctx);
             break;
         default:
-            context.addDiag(diag::InvalidSyntaxInEventExpr, syntax.sourceRange());
+            ctx.addDiag(diag::InvalidSyntaxInEventExpr, syntax.sourceRange());
             return badCtrl(comp, nullptr);
     }
 
@@ -105,28 +111,31 @@ TimingControl& TimingControl::bind(const PropertyExprSyntax& syntax, const ASTCo
 }
 
 TimingControl& TimingControl::bind(const SequenceExprSyntax& syntax, const ASTContext& context) {
-    auto& comp = context.getCompilation();
+    ASTContext ctx(context);
+    ctx.flags |= ASTFlags::AssignmentDisallowed;
+
+    auto& comp = ctx.getCompilation();
     TimingControl* result;
     switch (syntax.kind) {
         case SyntaxKind::SimpleSequenceExpr:
             result = &SignalEventControl::fromSyntax(comp, syntax.as<SimpleSequenceExprSyntax>(),
-                                                     context);
+                                                     ctx);
             break;
         case SyntaxKind::ParenthesizedSequenceExpr:
             result = &EventListControl::fromSyntax(comp,
                                                    syntax.as<ParenthesizedSequenceExprSyntax>(),
-                                                   context);
+                                                   ctx);
             break;
         case SyntaxKind::OrSequenceExpr:
             result = &EventListControl::fromSyntax(comp, syntax.as<BinarySequenceExprSyntax>(),
-                                                   context);
+                                                   ctx);
             break;
         case SyntaxKind::SignalEventExpression:
             result = &SignalEventControl::fromSyntax(comp, syntax.as<SignalEventExpressionSyntax>(),
-                                                     context);
+                                                     ctx);
             break;
         default:
-            context.addDiag(diag::InvalidSyntaxInEventExpr, syntax.sourceRange());
+            ctx.addDiag(diag::InvalidSyntaxInEventExpr, syntax.sourceRange());
             return badCtrl(comp, nullptr);
     }
 
@@ -307,6 +316,27 @@ TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
     return fromExpr(compilation, EdgeKind::None, expr, nullptr, context, syntax.sourceRange());
 }
 
+static TimingControl& cloneClockingEvent(Compilation& comp, const TimingControl& timing) {
+    if (timing.kind == TimingControlKind::SignalEvent) {
+        auto& sec = timing.as<SignalEventControl>();
+        return *comp.emplace<SignalEventControl>(sec.edge, sec.expr, sec.iffCondition,
+                                                 sec.sourceRange);
+    }
+    else if (timing.kind == TimingControlKind::EventList) {
+        SmallVector<TimingControl*> events;
+        for (auto& event : timing.as<EventListControl>().events) {
+            events.push_back(&cloneClockingEvent(comp, *event));
+            if (events.back()->bad())
+                return *comp.emplace<InvalidTimingControl>(&timing);
+        }
+
+        return *comp.emplace<EventListControl>(events.ccopy(comp), timing.sourceRange);
+    }
+    else {
+        return *comp.emplace<InvalidTimingControl>(&timing);
+    }
+}
+
 TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind edge,
                                             const Expression& expr, const Expression* iffCondition,
                                             const ASTContext& context, SourceRange sourceRange) {
@@ -339,8 +369,19 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
     }
 
     if (iffCondition) {
+        if (isClocking)
+            context.addDiag(diag::ClockingBlockEventIff, iffCondition->sourceRange);
+
         if (!context.requireBooleanConvertible(*iffCondition))
             return badCtrl(compilation, result);
+    }
+
+    // If our expression is a reference to another clocking event due to
+    // a sequence or property argument expansion we need to unwrap to the
+    // target timing control and use that instead.
+    if (expr.kind == ExpressionKind::ClockingEvent) {
+        auto& cee = expr.as<ClockingEventExpression>();
+        return cloneClockingEvent(compilation, cee.timingControl);
     }
 
     // Warn if the expression is constant, since it'll never change to trigger off.
@@ -360,6 +401,16 @@ void SignalEventControl::serializeTo(ASTSerializer& serializer) const {
 
 static void collectEvents(const ASTContext& context, const SyntaxNode& expr,
                           SmallVectorBase<TimingControl*>& results) {
+    auto addResult = [&](TimingControl& ctrl) {
+        if (ctrl.kind == TimingControlKind::EventList) {
+            for (auto ev : ctrl.as<EventListControl>().events)
+                results.push_back(const_cast<TimingControl*>(ev));
+        }
+        else {
+            results.push_back(&ctrl);
+        }
+    };
+
     switch (expr.kind) {
         case SyntaxKind::ParenthesizedEventExpression:
             collectEvents(context, *expr.as<ParenthesizedEventExpressionSyntax>().expr, results);
@@ -384,11 +435,11 @@ static void collectEvents(const ASTContext& context, const SyntaxNode& expr,
         }
         case SyntaxKind::SimplePropertyExpr:
         case SyntaxKind::IffPropertyExpr:
-            results.push_back(&TimingControl::bind(expr.as<PropertyExprSyntax>(), context));
+            addResult(TimingControl::bind(expr.as<PropertyExprSyntax>(), context));
             break;
         case SyntaxKind::SimpleSequenceExpr:
         case SyntaxKind::SignalEventExpression:
-            results.push_back(&TimingControl::bind(expr.as<SequenceExprSyntax>(), context));
+            addResult(TimingControl::bind(expr.as<SequenceExprSyntax>(), context));
             break;
         case SyntaxKind::ParenthesizedPropertyExpr: {
             auto& ppe = expr.as<ParenthesizedPropertyExprSyntax>();
@@ -403,7 +454,7 @@ static void collectEvents(const ASTContext& context, const SyntaxNode& expr,
             auto& pse = expr.as<ParenthesizedSequenceExprSyntax>();
             if (pse.repetition) {
                 context.addDiag(diag::InvalidSyntaxInEventExpr, expr.sourceRange());
-                results.push_back(context.getCompilation().emplace<InvalidTimingControl>(nullptr));
+                addResult(*context.getCompilation().emplace<InvalidTimingControl>(nullptr));
             }
             else {
                 collectEvents(context, *pse.expr, results);
@@ -494,8 +545,10 @@ TimingControl& CycleDelayControl::fromSyntax(Compilation& compilation, const Del
     if (!context.requireIntegral(expr))
         return badCtrl(compilation, result);
 
-    if (!context.flags.has(ASTFlags::LValue) && !compilation.getDefaultClocking(*context.scope))
+    if (!context.flags.has(ASTFlags::LValue) && !context.scope->isUninstantiated() &&
+        !compilation.getDefaultClocking(*context.scope)) {
         context.addDiag(diag::NoDefaultClocking, syntax.sourceRange());
+    }
 
     return *result;
 }
@@ -510,22 +563,19 @@ TimingControl& BlockEventListControl::fromSyntax(const BlockEventExpressionSynta
     SmallVector<Event, 4> events;
 
     auto addEvent = [&](const PrimaryBlockEventExpressionSyntax& evSyntax) {
-        LookupResult result;
-        Lookup::name(*evSyntax.name, context,
-                     LookupFlags::ForceHierarchical | LookupFlags::NoSelectors, result);
-        result.reportDiags(context);
+        auto& expr = ArbitrarySymbolExpression::fromSyntax(comp, *evSyntax.name, context);
+        if (auto symbol = expr.getSymbolReference()) {
+            if (symbol->kind != SymbolKind::StatementBlock &&
+                symbol->kind != SymbolKind::Subroutine) {
+                context.addDiag(diag::InvalidBlockEventTarget, evSyntax.name->sourceRange());
+                return false;
+            }
 
-        const Symbol* symbol = result.found;
-        if (!symbol)
-            return false;
-
-        if (symbol->kind != SymbolKind::StatementBlock && symbol->kind != SymbolKind::Subroutine) {
-            context.addDiag(diag::InvalidBlockEventTarget, evSyntax.name->sourceRange());
-            return false;
+            events.push_back({&expr, evSyntax.keyword.kind == TokenKind::BeginKeyword});
+            return true;
         }
 
-        events.push_back({nullptr, evSyntax.keyword.kind == TokenKind::BeginKeyword});
-        return true;
+        return false;
     };
 
     const BlockEventExpressionSyntax* curr = &syntax;
@@ -548,7 +598,7 @@ void BlockEventListControl::serializeTo(ASTSerializer& serializer) const {
     for (auto& event : events) {
         SLANG_ASSERT(event.target);
         serializer.startObject();
-        serializer.writeLink("target", *event.target);
+        serializer.write("target", *event.target);
         serializer.write("isBegin", event.isBegin);
         serializer.endObject();
     }

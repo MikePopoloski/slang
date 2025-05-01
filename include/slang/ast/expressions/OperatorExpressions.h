@@ -9,6 +9,7 @@
 
 #include "slang/ast/Expression.h"
 #include "slang/ast/Patterns.h"
+#include "slang/ast/expressions/Operator.h"
 #include "slang/syntax/SyntaxFwd.h"
 
 namespace slang::ast {
@@ -21,9 +22,13 @@ public:
     /// The operator.
     UnaryOperator op;
 
+    /// The source range of the operator token.
+    SourceRange opRange;
+
     UnaryExpression(UnaryOperator op, const Type& type, Expression& operand,
-                    SourceRange sourceRange) :
-        Expression(ExpressionKind::UnaryOp, type, sourceRange), op(op), operand_(&operand) {}
+                    SourceRange sourceRange, SourceRange opRange) :
+        Expression(ExpressionKind::UnaryOp, type, sourceRange), op(op), opRange(opRange),
+        operand_(&operand) {}
 
     /// @returns the operand
     const Expression& operand() const { return *operand_; }
@@ -32,7 +37,8 @@ public:
     Expression& operand() { return *operand_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange,
+                       ConversionKind conversionKind);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
@@ -88,7 +94,8 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange,
+                       ConversionKind conversionKind);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
@@ -102,6 +109,11 @@ public:
                                       SourceRange opRange, SourceRange sourceRange,
                                       const ASTContext& context);
 
+    static void analyzeOpTypes(const Type& clt, const Type& crt, const Type& originalLt,
+                               const Type& originalRt, const Expression& lhs, const Expression& rhs,
+                               const ASTContext& context, SourceRange opRange, DiagCode code,
+                               bool isComparison, std::optional<std::string_view> extraDiagArg);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::BinaryOp; }
 
     template<typename TVisitor>
@@ -109,12 +121,6 @@ public:
         left().visit(visitor);
         right().visit(visitor);
     }
-
-private:
-    static void analyzeOpTypes(const Type& clt, const Type& crt, const Type& originalLt,
-                               const Type& originalRt, const Expression& lhs, const Expression& rhs,
-                               const ASTContext& context, SourceRange opRange, DiagCode code,
-                               bool isComparison);
 };
 
 /// Represents a conditional operator expression.
@@ -154,7 +160,8 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange,
+                       ConversionKind conversionKind);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
@@ -390,7 +397,8 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange,
+                       ConversionKind conversionKind);
 
     ConstantValue checkInside(EvalContext& context, const ConstantValue& val) const;
 

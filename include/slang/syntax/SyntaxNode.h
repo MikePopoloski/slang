@@ -91,12 +91,21 @@ class SLANG_EXPORT SyntaxNode {
 public:
     using Token = parsing::Token;
 
+    /// The kind of syntax node.
+    SyntaxKind kind;
+
     /// The parent node of this syntax node. The root of the syntax
     /// tree does not have a parent (will be nullptr).
     SyntaxNode* parent = nullptr;
 
-    /// The kind of syntax node.
-    SyntaxKind kind;
+    /// @brief An optional pointer to a syntax node that can be useful
+    /// to know ahead of time when visiting this node.
+    ///
+    /// The node, if set, is underneath this node in the syntax tree.
+    ///
+    /// For example, an enum declaration deep inside an expression tree
+    /// needs to be known up front to add its members to its parent scope.
+    const SyntaxNode* previewNode = nullptr;
 
     /// Print the node and all of its children to a string.
     std::string toString() const;
@@ -263,6 +272,11 @@ private:
     mutable SourceRange range;
     mutable PointerIntPair<const SyntaxNode*, 1, 1, bool> node;
 };
+
+#if defined(__GNUC__)
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#endif
 
 /// A base class for syntax nodes that represent a list of items.
 class SLANG_EXPORT SyntaxListBase : public SyntaxNode {
@@ -463,6 +477,10 @@ private:
 
     std::span<TokenOrSyntax> elements;
 };
+
+#if defined(__GNUC__)
+#    pragma GCC diagnostic pop
+#endif
 
 template<typename T>
 SeparatedSyntaxList<T>* deepClone(const SeparatedSyntaxList<T>& node, BumpAllocator& alloc) {

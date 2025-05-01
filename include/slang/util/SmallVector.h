@@ -8,6 +8,8 @@
 #pragma once
 
 #include <algorithm>
+#include <initializer_list>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <span>
@@ -114,7 +116,7 @@ public:
     /// @return the maximum number of elements that could ever fit in the array,
     /// assuming the system had enough memory to support it.
     [[nodiscard]] constexpr size_type max_size() const noexcept {
-        return std::numeric_limits<difference_type>::max();
+        return std::numeric_limits<difference_type>::max() / sizeof(T);
     }
 
     /// @return true if the array is empty, and false if it has elements in it.
@@ -607,6 +609,9 @@ public:
         this->append_range(range);
     }
 
+    /// Constructs the SmallVector from an initializer list.
+    SmallVector(std::initializer_list<T> list) { this->append(list.begin(), list.end()); }
+
     /// Copy constructs from another vector.
     SmallVector(const SmallVector& other) : SmallVector(static_cast<const Base&>(other)) {}
 
@@ -614,13 +619,15 @@ public:
     SmallVector(const Base& other) : Base(N) { this->append(other.begin(), other.end()); }
 
     /// Move constructs from another vector.
-    SmallVector(SmallVector&& other) : SmallVector(static_cast<Base&&>(other)) {}
+    SmallVector(SmallVector&& other) noexcept : SmallVector(static_cast<Base&&>(other)) {}
 
     /// Move constructs from another vector.
-    SmallVector(Base&& other) {
+    SmallVector(Base&& other) noexcept {
         if (other.isSmall()) {
             this->cap = N;
-            this->append(std::move_iterator(other.begin()), std::move_iterator(other.end()));
+            this->append(std::make_move_iterator(other.begin()),
+                         std::make_move_iterator(other.end()));
+            other.clear();
         }
         else {
             this->data_ = std::exchange(other.data_, nullptr);
@@ -679,25 +686,9 @@ inline bool operator==(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& 
     return std::ranges::equal(lhs, rhs);
 }
 
-// TODO: clean these up once minimum libc++ version has lexicographical_compare_three_way
 template<typename T>
-inline bool operator<(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
-    return std::ranges::lexicographical_compare(lhs, rhs);
-}
-
-template<typename T>
-inline bool operator>(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
-    return rhs < lhs;
-}
-
-template<typename T>
-inline bool operator<=(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
-    return !(lhs > rhs);
-}
-
-template<typename T>
-inline bool operator>=(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
-    return !(lhs < rhs);
+inline auto operator<=>(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
+    return std::lexicographical_compare_three_way(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
 
 template<typename T>

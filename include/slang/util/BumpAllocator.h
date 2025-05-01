@@ -10,6 +10,7 @@
 #include <cstring>
 #include <new>
 #include <span>
+#include <type_traits>
 
 #include "slang/util/Util.h"
 
@@ -42,6 +43,7 @@ public:
 
     /// Allocate @a size bytes of memory with the given @a alignment.
     byte* allocate(size_t size, size_t alignment) {
+        SLANG_ASSERT(!isFrozen());
         byte* base = alignPtr(head->current, alignment);
         byte* next = base + size;
         if (next > endPtr)
@@ -69,6 +71,23 @@ public:
     /// The other allocator will be in a moved-from state after the call.
     void steal(BumpAllocator&& other);
 
+    /// Freeze the allocator, preventing further allocations.
+    /// Attempts to allocate after freezing will assert.
+    void freeze() {
+#if SLANG_ASSERT_ENABLED
+        frozen = true;
+#endif
+    }
+
+    /// Returns true if the allocator is frozen, and false otherwise.
+    bool isFrozen() const {
+#if SLANG_ASSERT_ENABLED
+        return frozen;
+#else
+        return false;
+#endif
+    }
+
 protected:
     // Allocations are tracked as a linked list of segments.
     struct Segment {
@@ -78,6 +97,9 @@ protected:
 
     Segment* head;
     byte* endPtr;
+#if SLANG_ASSERT_ENABLED
+    bool frozen = false;
+#endif
 
     enum { INITIAL_SIZE = 512, SEGMENT_SIZE = 4096 };
 

@@ -18,8 +18,8 @@ using namespace syntax;
 
 class EnumFirstLastMethod : public SystemSubroutine {
 public:
-    EnumFirstLastMethod(const std::string& name, bool first) :
-        SystemSubroutine(name, SubroutineKind::Function), first(first) {}
+    EnumFirstLastMethod(KnownSystemName knownNameId, bool first) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), first(first) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -65,8 +65,8 @@ private:
 
 class EnumNextPrevMethod : public SystemSubroutine {
 public:
-    EnumNextPrevMethod(const std::string& name, bool next) :
-        SystemSubroutine(name, SubroutineKind::Function), next(next) {}
+    EnumNextPrevMethod(KnownSystemName knownNameId, bool next) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), next(next) {}
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
@@ -153,7 +153,7 @@ private:
 
 class EnumNumMethod : public SystemSubroutine {
 public:
-    EnumNumMethod() : SystemSubroutine("num", SubroutineKind::Function) {}
+    EnumNumMethod() : SystemSubroutine(KnownSystemName::Num, SubroutineKind::Function) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -178,8 +178,8 @@ public:
 class EnumNameMethod : public SimpleSystemSubroutine {
 public:
     explicit EnumNameMethod(const Builtins& builtins) :
-        SimpleSystemSubroutine("name", SubroutineKind::Function, 0, {}, builtins.stringType, true) {
-    }
+        SimpleSystemSubroutine(KnownSystemName::Name, SubroutineKind::Function, 0, {},
+                               builtins.stringType, true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -204,11 +204,13 @@ public:
 };
 
 void Builtins::registerEnumMethods() {
+    using parsing::KnownSystemName;
+
 #define REGISTER(kind, name, ...) addSystemMethod(kind, std::make_shared<name##Method>(__VA_ARGS__))
-    REGISTER(SymbolKind::EnumType, EnumFirstLast, "first", true);
-    REGISTER(SymbolKind::EnumType, EnumFirstLast, "last", false);
-    REGISTER(SymbolKind::EnumType, EnumNextPrev, "next", true);
-    REGISTER(SymbolKind::EnumType, EnumNextPrev, "prev", false);
+    REGISTER(SymbolKind::EnumType, EnumFirstLast, KnownSystemName::First, true);
+    REGISTER(SymbolKind::EnumType, EnumFirstLast, KnownSystemName::Last, false);
+    REGISTER(SymbolKind::EnumType, EnumNextPrev, KnownSystemName::Next, true);
+    REGISTER(SymbolKind::EnumType, EnumNextPrev, KnownSystemName::Prev, false);
     REGISTER(SymbolKind::EnumType, EnumName, *this);
 #undef REGISTER
 

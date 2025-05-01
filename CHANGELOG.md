@@ -6,6 +6,141 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+* Added support for clock flow, clock resolution, and clock inference rules in checkers and assertions
+  * Various cases of invalid clock usage will now issue appropriate errors
+  * Clock resolution is also performed for the sampled value system functions
+* Implemented rules for which kinds of sequences and properties can be declared in clocking blocks
+* Implemented rules for dynamic variable access from within checker procedures
+
+### Potentially Breaking Changes
+* AST serialization no longer includes uninstantiated scopes in the output
+* `Driver::reportCompilation` method had part of its functionality split out into `Driver::reportDiagnostics` to allow for calling the new `Driver::runAnalysis` method in between. There is a new `Driver::runFullCompilation` method that wraps all of this for convenience if you don't care about controlling when each pass is done.
+* The `DEBUG` macro set for debug builds has been renamed to `SLANG_DEBUG`. `NDEBUG` is no longer used to conditionally control compilation, which should make it much less likely that using slang as a library will result in conflicting `NDEBUG` settings and causing ODR violations.
+
+### New Features
+* slang can now optionally use [cpptrace](https://github.com/jeremy-rifkin/cpptrace) (using the `SLANG_USE_CPPTRACE` CMake option) for better backtraces in the event of internal assertions or exceptions thrown
+* There is a new post-elaboration analysis pass in slang that does additional checking for enforcing specific language rules and reporting extra warnings. This can be disabled with the `--disable-analysis` flag, though it should not be needed unless there is a bug in slang.
+* Added a new option `--diag-abs-paths` to report diagnostics with absolute instead of relative file paths
+* Added [-Wmissing-return](https://sv-lang.com/warning-ref.html#missing-return) and [-Wincomplete-return](https://sv-lang.com/warning-ref.html#incomplete-return) which warn about non-void functions that do not return a value on all control paths
+* Added [-Wcase-unreachable](https://sv-lang.com/warning-ref.html#case-unreachable) for wildcard case items that are unreachable because they are completely subsumed by earlier items
+* Added [-Wcase-too-complex](https://sv-lang.com/warning-ref.html#case-too-complex) for case statements that are too complex to analyze, and `--max-case-analysis-steps` to control that limit
+* Added [-Wcase-incomplete](https://sv-lang.com/warning-ref.html#case-incomplete) for wildcard case statements that don't completely cover the input space and have no default case
+* Added [-Wcase-redundant-default](https://sv-lang.com/warning-ref.html#case-redundant-default) for case statements marked `unique` or `priority` that provide a default case
+* Added [-Wcase-wildcard-2state](https://sv-lang.com/warning-ref.html#case-wildcard-2state) for wildcard case statements that have 2-state conditions and items
+* The `` `celldefine `` directive is now exposed in the API and in AST serialization (thanks to @whitequark)
+
+### Improvements
+* slang now performs instance caching by default, which means duplicate instance bodies will not be visited during elaboration, which can greatly speed up elaboration times for large projects. This behavior can be disabled with the `--disable-instance-caching` flag, though it should not be needed unless there's a bug in slang -- please open an issue if you find that you need the flag.
+* Added some initial documentation and an API reference for the pyslang bindings (thanks to @parker-research)
+* Added a bunch more tests for the pyslang bindings (thanks to @parker-research)
+* Added pyslang bindings for the SyntaxRewriter class (thanks to @parker-research)
+* -Wint-bool-conv now applies to expressions used in assertions, properties, and sequences
+* Added a port prefix rule to slang-tidy, similar to the existing port suffix rule (thanks to @corco)
+
+### Fixes
+* The restriction on interface instances targeted by defparams not being allowed with virtual interfaces was also erroneously applied to interface port connections
+* Fixed a null pointer crash in slang-tidy (thanks to @rhanqtl)
+* Fixed a bug that could cause infinite recursion when instantiating bind targets that force elaboration due to wildcard package imports
+* Fixed the handling of disable region directives declared in block comments (as opposed to single line comments which were working fine)
+* Fixed argument binding for sequence and property instances when using named arguments
+* Concurrent assertion and procedural checker statements are now correctly disallowed from appearing in subroutines and final blocks
+* Fixed an issue with how checker formal ports are looked up from within checker instances
+* Fixed a place where empty argument names were not correctly allowed in function prototype declarations
+* Fixed ICE with conditional statements that have pattern matching along with a named statement block
+* Recursive typedef declarations now properly report an error instead of crashing
+* Fixed several issues that led to invalid builds on Linux with LTO enabled
+* Fixed serialized AST locations that come from macro expansions (thanks to @micron-ian)
+* Fixed a case where no diagnostic would be issued when incorrectly referring to an instance array element from within an expression
+* Fixed various issues with how instance array indices are mapped to underlying elements
+* Fixed SyntaxPrinter printing of directives that have skipped leading trivia
+* Fixed a bug in the constant evaluation of division between two positive signed integers; the sign flag was lost and the result was always treated as unsigned
+* Assignments are now correctly disallowed in timing controls
+* Cycle delays are now correctly disallowed in event trigger statements
+* The global future sampled value system functions are now correctly disallowed in assertions with sequence match items
+
+
+## [v8.0] - 2025-02-05
+### Language Support
+* Disallow access to protected members from class scoped randomize constraint blocks -- the LRM is unclear about this but other tools seem to have decided this way made the most sense
+* Added a check that net aliases aren't duplicated, and that nets don't alias to themselves, as mandated by the LRM (thanks to @likeamahoney)
+* Implemented remaining rules for virtual interfaces:
+  * Virtual interfaces can't have hierarchical references to objects outside the interface
+  * Virtual interfaces can't have interface ports
+  * Instances assigned to a virtual interface can't have an instance configuration rule applied to them
+
+### Potentially Breaking Changes
+* The minimum supported Xcode version is now 16 and the minimum supported Clang version is now 17 (to allow cleaning up workarounds for various bugs)
+
+### New Features
+* Added [-Wudp-coverage](https://sv-lang.com/warning-ref.html#udp-coverage) which warns about edge-sensitive user-defined primitives that don't specify an output state for all edges of all inputs (thanks to @likeamahoney)
+* Added [-Wpacked-array-conv](https://sv-lang.com/warning-ref.html#packed-array-conv) which warns for conversions between different multidimensional packed array types even if their overall bit width is the same
+* Added the [-Wparentheses](https://sv-lang.com/warning-ref.html#parentheses) warning group for diagnosing common precedence-related syntactical errors, which includes the following new warnings: [-Wbitwise-rel-precedence](https://sv-lang.com/warning-ref.html#bitwise-rel-precedence), [-Warith-in-shift](https://sv-lang.com/warning-ref.html#arith-in-shift), [-Wlogical-not-parentheses](https://sv-lang.com/warning-ref.html#logical-not-parentheses), [-Wbitwise-op-parentheses](https://sv-lang.com/warning-ref.html#bitwise-op-parentheses), [-Wlogical-op-parentheses](https://sv-lang.com/warning-ref.html#logical-op-parentheses), [-Wconditional-precedence](https://sv-lang.com/warning-ref.html#conditional-precedence), [-Wconsecutive-comparison](https://sv-lang.com/warning-ref.html#consecutive-comparison)
+* Added [-Wcase-type](https://sv-lang.com/warning-ref.html#case-type) to warn about case statements with mismatching types in their item expressions
+* Added [-Wcase-default](https://sv-lang.com/warning-ref.html#case-default) which warns about case statements that don't include a `default` label
+* Added [-Wcase-outside-range](https://sv-lang.com/warning-ref.html#case-outside-range) which warns for case items that can never be matched because they are outside the range of the case condition expression
+* Added [-Wcase-enum](https://sv-lang.com/warning-ref.html#case-enum) and [-Wcase-enum-explicit](https://sv-lang.com/warning-ref.html#case-enum-explicit) which warns about enum values that are missing from a case statement (with and without the presence of a `default` label, respectively)
+* Added [-Wcase-dup](https://sv-lang.com/warning-ref.html#case-dup) which warns about duplicate item expressions in a case statement
+* Added [-Wcase-overlap](https://sv-lang.com/warning-ref.html#case-overlap) which warns about overlapping case items (due to wildcard bits)
+* Added [-Wcase-not-wildcard](https://sv-lang.com/warning-ref.html#case-not-wildcard) and [-Wcasez-with-x](https://sv-lang.com/warning-ref.html#casez-with-x) which warn about potentially misleading wildcard bits in non-wildcard case statements
+* Added initial support for instance caching, which skips elaborating identical module instances to speed up elaboration. This is currently hidden behind the `--disable-instance-caching` command line flag because when turned on not all multi-driven errors are properly issued. Once all issues have been worked out the feature will be turned on by default.
+* Added the ability to output diagnostics to JSON instead of (or in addition to) plain text
+* Added `--translate-off-format` which allows specifying comment directives that should act as skipped regions (for example, `// pragma translate_off` and `// pragma translate_on`)
+* slang warnings can now be turned on and off within source code using `// slang lint_off` style comment directives
+* Added `--ast-json-detailed-types` to include detailed type information in AST JSON output
+* slang-tidy gained a `clkNameRegexString` option to control how clocks are named (thanks to @spomatasmd)
+
+### Improvements
+* Made -Wuseless-cast a bit less noisy -- it now does not warn about expressions involving genvars or cases where types are matching but one or the other has a different typedef alias name
+* -Wsign-compare no longer warns about expressions involving genvars
+* -Wvector-overflow no longer warns about signed literals with binary, octal, or hex bases that place a bit in the MSB
+* Made some build tweaks to support hermetic builds (thanks to @cc10512)
+* Added support for unions to slang-reflect (thanks to @Sustrak)
+* Changed the error issued for sequences that can never be matched to be a warning instead (-Wseq-no-match) and added additional context to the diagnostic message
+* Made minor tweaks to improve defparam and bind resolution performance
+* -Wsign-conversion will no longer warn for certain system functions that have a return type of `int` but in practice only return a single bit result
+* Made some minor improvements to parser error recovery when struct definitions are missing a closing brace
+* Inline genvars declared in generate loops are now included in the generate loop's members list when serializing the AST
+* The pyslang packaging build is now done in this repo instead of a separate downstream repo (thanks to @parker-research)
+* pyslang wheels now include support for arm64 (thanks to @gadfort)
+* Documentation now includes the READMEs for the various ancillary slang tools
+* Added stub generation to the Python distribution (thanks to @parker-research)
+
+### Fixes
+* Fixed a bug with constant evaluation of left-hand side assignment patterns that require implicit conversions to be applied
+* Fixed the locations returned by Trivia::getExplicitLocation for nested trivia involving directives (thanks to @povik)
+* Fixed checking of illegal property negation operator when used within recursive property instantiations (thanks to @likeamahoney)
+* Fixed a bug with serializing UninstantiatedDef AST nodes that use implicit named port connections
+* Fixed a crash when checking duplicate drivers in assignments to invalid ranges of a vector
+* Correctly allow unpacked unions to be used in equality and conditional expressions
+* Fixed spurious warnings inside an unused generic class that instantiates the default specialization of itself
+* Fixed Python bindings build to work with Python 3.13 (thanks to @vowstar)
+* Fixed a spurious error when assigning the empty queue to an unresolved / unknown typed variable
+* Correctly disallow override specifiers on class constructor declarations
+* Correctly report an error for unbased unsized literals that use a `?` instead of a `z` character for high impedance
+* Fixed handling of connections of interface arrays to ports with different declared dimensions
+* Fixed a bug in constant evaluation of packed struct member access
+* Correctly disallow select expressions of a parenthesized subexpression
+* Fixed a bug where some type declarations in two modules with different parameter values could be erroneously considered equivalent to each other (thanks to @povik)
+* Correctly disallow derived class virtual methods from declaring a different visibility level from their base class method
+* Reworked how enum types are implemented to fix various issues related to enum values declared inside subexpressions from being visible to their surrounding scopes
+* Fixed several issues related to enum value initializers that try to refer to themselves or other enum values
+* Fixed a parser crash when an invalid class override specifier is at the very end of a file
+* Fixed a potentially unbounded loop when resolving a specific case of invalid bind directives
+* Fixed bad diagnostic output related to instantiating properties with missing formal argument names
+* Fixed several minor issues with the Python bindings (thanks to @parker-research)
+* Fixed bugs with pattern variables not being visible in certain scopes where they otherwise should have been
+* Pattern variables are now properly usable from static variable initializer expressions
+* $sformat in constant expressions now works properly with %p specifiers
+* Fixed -Wwidth-expand to apply to conditional expressions
+* Fixed \[\*\] and ##\[\*\] sequence repetitions to start from 0 instead of 1 (thanks to @georgerennie)
+* Fixed a case where nested attributes were not properly diagnosed (thanks to @likeamahoney)
+* Fixed type resolution for expressions involving static casts; previously the operand of the cast was considered self determined, but now the type of the cast is correctly propagated to the operand
+* Fixed a bug in SyntaxNode::isEquivalentTo which would cause it to sometimes return the wrong result
+* Fixed the direction of argument binding for n-output gate terminals
+
+
+## [v7.0] - 2024-09-26
+### Language Support
 * Select expressions of packed arrays now always return an unsigned type, as mandated by the LRM
 * Clocking skew delays now properly require a constant value
 * Enforce that static methods can't have override specifiers
@@ -60,7 +195,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed and improved various parts of the SyntaxRewriter API (thanks to @sgizler)
 
 ### Fixes
-* Fixed several AST serialization methods (thanks to @tdp2110, @likeamahoney, @Kitaev2003)
+* Fixed several AST serialization methods (thanks to @tdp2110, @likeamahoney, @Kitaev2003, @cyuzuzo-j)
 * Fixed the return type of DPI import tasks
 * Fixed a bug that caused some `inout` ports to warn as "unused"
 * Fixed the checking of the `extends` override specifier when the containing class has no base class
@@ -76,6 +211,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a bug that could cause spurious errors in uninstantiated generic class definitions
 * Fixed the Symbol::getHierarchicalPath API to round-trip correctly
 * Fixed JSON serialization of integers to round-trip correctly
+* Fixed a bug in resolving defparam values inside of generate loops
+* Fixed checking of event arguments in system timing check functions
+* Fixed checking of deferred assertion function calls (thanks to @likeamahoney)
+* Correctly issue an error if a sequence or property has a formal argument with the same name as a local variable declaration (thanks to @likeamahoney)
+* Fixed a case of recursive property instantiation that was incorrectly disallowed (thanks to @likeamahoney)
+* Fixed bugs in checking for overlapping user-defined primitive table rows (thanks to @likeamahoney)
+* Fixed infinite loops in the parser when encountering constraint blocks with certain kinds of invalid tokens in them (thanks to @likeamahoney)
+* Fixed errors in assigning to select expressions involving members of virtual interfaces (thanks to @micron-ian)
 
 
 ## [v6.0] - 2024-04-21

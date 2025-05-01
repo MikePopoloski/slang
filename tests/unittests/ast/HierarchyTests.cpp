@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -177,10 +178,10 @@ endmodule
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation).body.memberAt<GenerateBlockArraySymbol>(1);
 
-    REQUIRE(std::ranges::distance(instance.members()) == 10);
+    REQUIRE(std::ranges::distance(instance.members()) == 11);
 
     for (uint32_t i = 0; i < 10; i++) {
-        auto& leaf = instance.memberAt<GenerateBlockSymbol>(i).memberAt<InstanceSymbol>(1).body;
+        auto& leaf = instance.memberAt<GenerateBlockSymbol>(i + 1).memberAt<InstanceSymbol>(1).body;
         auto& foo = leaf.find<ParameterSymbol>("foo");
         CHECK(foo.getValue().integer() == i);
     }
@@ -662,35 +663,31 @@ module top;
 endmodule
 )");
 
-    CompilationOptions coptions;
-    coptions.flags &= ~CompilationFlags::SuppressUnused;
-    coptions.topModules.emplace("invalid"sv);
-    coptions.topModules.emplace("unknown"sv);
-    coptions.topModules.emplace("top"sv);
-
-    Bag options;
-    options.set(coptions);
+    CompilationOptions options;
+    options.topModules.emplace("invalid"sv);
+    options.topModules.emplace("unknown"sv);
+    options.topModules.emplace("top"sv);
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::UnusedDefinition);
-    CHECK(diags[1].code == diag::UnusedDefinition);
-    CHECK(diags[2].code == diag::InvalidTopModule);
-    CHECK(diags[3].code == diag::InvalidTopModule);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidTopModule);
+    CHECK(diags[1].code == diag::InvalidTopModule);
+
+    auto unusedDefs = compilation.getUnreferencedDefinitions();
+    REQUIRE(unusedDefs.size() == 2);
+    CHECK(unusedDefs[0]->name == "invalid");
+    CHECK(unusedDefs[1]->name == "nottop");
 }
 
 TEST_CASE("No top warning") {
     auto tree = SyntaxTree::fromText(R"(
 )");
 
-    CompilationOptions coptions;
-    coptions.flags &= ~CompilationFlags::SuppressUnused;
-
-    Bag options;
-    options.set(coptions);
+    CompilationOptions options;
+    options.flags = CompilationFlags::None;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
@@ -1732,6 +1729,23 @@ bind p program p(s
     compilation.getAllDiagnostics();
 }
 
+TEST_CASE("Bind corner case crash regress 4") {
+    auto tree = SyntaxTree::fromText(R"(
+module m3;
+    module m2;
+        bind m2 m2 mc();
+    endmodule
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DuplicateBind);
+}
+
 TEST_CASE("Nested modules with binds, parameterized, info task") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter P);
@@ -1901,6 +1915,165 @@ module Top (
     .grayscale(grayscale_cmyk)
   );
 
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Instance caching with nested bind directives") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    l l1();
+endmodule
+
+module l;
+    n n1();
+endmodule
+
+module n;
+    bind q1.o1 o o1();
+endmodule
+
+module o;
+endmodule
+
+module p;
+    m m2();
+endmodule
+
+module q;
+    o o1();
+endmodule
+
+module top;
+    if (1) begin
+        m m1();
+        q q1();
+    end
+    if (1) begin
+        p p1();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Instance caching with $root scope upward names") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    assign $root.top.n1.l = 1;
+endmodule
+
+module n;
+    logic l;
+endmodule
+
+module top;
+    n n1();
+    m m1(), m2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+}
+
+TEST_CASE("Instance caching with downward names") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic i;
+    assign i = 0;
+endmodule
+
+module top;
+    assign m2.i = 1;
+    m m1(), m2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+}
+
+TEST_CASE("Bind with package elab loop regress -- GH #1249") {
+    auto tree = SyntaxTree::fromText(R"(
+module rv_plic import rv_plic_reg_pkg::*; (
+    input  [63:0] c
+);
+endmodule
+
+package rv_plic_reg_pkg;
+    parameter int NumSrc = 64;
+endpackage
+
+module rv_plic_bind_fpv;
+  bind rv_plic rv_plic_assert_fpv #(
+    .P(rv_plic_reg_pkg::NumSrc)
+  ) m(
+    .intr_src_i(c)
+  );
+endmodule
+
+module rv_plic_assert_fpv #(parameter int P = 1) (input [P-1:0] intr_src_i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Instance caching with visitation -- GH #1285") {
+    auto tree = SyntaxTree::fromText(R"(
+interface bus();
+	logic w;
+endinterface
+
+module m1(bus intf);
+	assign intf.w = 0;
+endmodule
+
+module top();
+	bus intf1();
+	bus intf2();
+
+	m1 a(.intf(intf1));
+	m1 b(.intf(intf2));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto visitor = slang::ast::makeVisitor();
+    for (auto instance : compilation.getRoot().topInstances)
+        instance->visit(visitor);
+
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Incorrect generate loop regress -- GH #1328") {
+    auto tree = SyntaxTree::fromText(R"(
+module Test;
+  for (genvar i = 4/2; i >= 0; i--) begin
+  end
 endmodule
 )");
 

@@ -7,6 +7,7 @@
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/statements/MiscStatements.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -2173,4 +2174,87 @@ endmodule
     CHECK(diags[3].code == diag::ImplicitNamedPortNotFound);
     CHECK(diags[4].code == diag::UndeclaredIdentifier);
     CHECK(diags[5].code == diag::ImplicitNamedPortNotFound);
+}
+
+TEST_CASE("Enum in inherited class lookup regress -- GH #1177") {
+    auto tree = SyntaxTree::fromText(R"(
+package P;
+    typedef class C1;
+
+    class C2 extends C1;
+        constraint c {
+            if (e == A) {
+            }
+        }
+
+        function f();
+            enum {X, Y} z;
+            z = X;
+        endfunction
+    endclass
+
+    class C1;
+        rand enum {A, B} e;
+    endclass
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Enum initializer cycle") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum { A = 1, B = A, C = D, D = D, E = foo(), F = bar() } e;
+    function foo;
+        return A;
+    endfunction
+    function int bar;
+        return F;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::EnumValueDuplicate);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::ConstEvalParamCycle);
+    CHECK(diags[3].code == diag::EnumValueDuplicate);
+    CHECK(diags[4].code == diag::ConstEvalParamCycle);
+    CHECK(diags[5].code == diag::ConstEvalIdUsedInCEBeforeDecl);
+}
+
+TEST_CASE("Instance range select lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module n;
+endmodule
+
+module m;
+    n n1[2:1][3:5] ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto sym = compilation.getRoot().lookupName("m.n1[1][3:4]");
+    REQUIRE(sym);
+
+    auto& arr = sym->as<InstanceArraySymbol>();
+    CHECK(arr.elements[0]->getHierarchicalPath() == "m.n1[1][3]");
+    CHECK(arr.elements[1]->getHierarchicalPath() == "m.n1[1][4]");
+
+    sym = compilation.getRoot().lookupName("m.n1[2][5-:2]");
+    REQUIRE(sym);
+
+    auto& arr2 = sym->as<InstanceArraySymbol>();
+    CHECK(arr2.elements[0]->getHierarchicalPath() == "m.n1[2][4]");
+    CHECK(arr2.elements[1]->getHierarchicalPath() == "m.n1[2][5]");
 }

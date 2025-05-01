@@ -22,10 +22,10 @@ using namespace syntax;
 
 class CoverageNameOrHierFunc : public SystemSubroutine {
 public:
-    CoverageNameOrHierFunc(const std::string& name, const Type& returnType,
+    CoverageNameOrHierFunc(KnownSystemName knownNameId, const Type& returnType,
                            unsigned int nameOrHierIndex, size_t requiredArgs = 0,
                            const std::vector<const Type*>& argTypes = {}) :
-        SystemSubroutine(name, SubroutineKind::Function), argTypes(argTypes),
+        SystemSubroutine(knownNameId, SubroutineKind::Function), argTypes(argTypes),
         returnType(&returnType), nameOrHierIndex(nameOrHierIndex), requiredArgs(requiredArgs) {
         SLANG_ASSERT(requiredArgs <= argTypes.size());
         SLANG_ASSERT(nameOrHierIndex <= argTypes.size());
@@ -89,22 +89,24 @@ private:
 };
 
 void Builtins::registerCoverageFuncs() {
+    using parsing::KnownSystemName;
+
 #define REGISTER(name, ...) addSystemSubroutine(std::make_shared<name>(__VA_ARGS__))
-    REGISTER(CoverageNameOrHierFunc, "$coverage_control", intType, 3, 4,
+    REGISTER(CoverageNameOrHierFunc, KnownSystemName::CoverageControl, intType, 3, 4,
              std::vector<const Type*>{&intType, &intType, &intType, &stringType});
-    REGISTER(CoverageNameOrHierFunc, "$coverage_get_max", intType, 2, 3,
+    REGISTER(CoverageNameOrHierFunc, KnownSystemName::CoverageGetMax, intType, 2, 3,
              std::vector<const Type*>{&intType, &intType, &stringType});
-    REGISTER(CoverageNameOrHierFunc, "$coverage_get", intType, 2, 3,
+    REGISTER(CoverageNameOrHierFunc, KnownSystemName::CoverageGet, intType, 2, 3,
              std::vector<const Type*>{&intType, &intType, &stringType});
 
-    REGISTER(NonConstantFunction, "$coverage_merge", intType, 2,
+    REGISTER(NonConstantFunction, KnownSystemName::CoverageMerge, intType, 2,
              std::vector<const Type*>{&intType, &stringType});
-    REGISTER(NonConstantFunction, "$coverage_save", intType, 2,
+    REGISTER(NonConstantFunction, KnownSystemName::CoverageSave, intType, 2,
              std::vector<const Type*>{&intType, &stringType});
-    REGISTER(NonConstantFunction, "$get_coverage", realType);
-    REGISTER(NonConstantFunction, "$set_coverage_db_name", voidType, 1,
+    REGISTER(NonConstantFunction, KnownSystemName::GetCoverage, realType);
+    REGISTER(NonConstantFunction, KnownSystemName::SetCoverageDbName, voidType, 1,
              std::vector<const Type*>{&stringType});
-    REGISTER(NonConstantFunction, "$load_coverage_db", voidType, 1,
+    REGISTER(NonConstantFunction, KnownSystemName::LoadCoverageDb, voidType, 1,
              std::vector<const Type*>{&stringType});
 #undef REGISTER
 }

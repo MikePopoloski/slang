@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 
 #include "NetlistTest.h"
+#include "Test.h"
 #include <stdexcept>
 
 #include "slang/util/Util.h"

@@ -15,10 +15,10 @@
 
 namespace slang::assert {
 
-[[noreturn]] void assertFailed(const char* expr, const char* file, int line, const char* func) {
+[[noreturn]] void assertFailed(const char* expr, const std::source_location& location) {
     auto msg = fmt::format("Assertion '{}' failed\n  in file {}, line {}\n"
                            "  function: {}\n",
-                           expr, file, line, func);
+                           expr, location.file_name(), location.line(), location.function_name());
 
 #if __cpp_exceptions
     throw AssertionException(msg);
@@ -29,19 +29,19 @@ namespace slang::assert {
 }
 
 #if !__cpp_exceptions
-[[noreturn]] void handleThrow(const char* msg, const char* file, int line, const char* func) {
+[[noreturn]] void handleThrow(const char* msg, const std::source_location& location) {
     fprintf(stderr,
             "internal compiler error: '%s'\n  in file %s, line %d\n"
             "  function: %s\n",
-            msg, file, line, func);
+            msg, location.file_name(), location.line(), location.function_name());
     std::abort();
 }
 #endif
 
-[[noreturn]] void handleUnreachable(const char* file, int line, const char* func) {
+[[noreturn]] void handleUnreachable(const std::source_location& location) {
     auto msg = fmt::format("Supposedly unreachable code was executed\n  in file {}, line {}\n"
                            "  function: {}\n",
-                           file, line, func);
+                           location.file_name(), location.line(), location.function_name());
 
 #if __cpp_exceptions
     throw std::logic_error(msg);

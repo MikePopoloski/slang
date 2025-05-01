@@ -10,12 +10,14 @@
 #include <algorithm>
 #include <fmt/args.h>
 
+#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/DiagArgFormatter.h"
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/MetaDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/text/Glob.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/SmallMap.h"
 
 namespace fs = std::filesystem;
 
@@ -28,10 +30,11 @@ std::string_view getDefaultOptionName(DiagCode code);
 std::span<const DiagCode> findDiagsFromOptionName(std::string_view name);
 const DiagGroup* findDefaultDiagGroup(std::string_view name);
 
+DiagnosticEngine::SymbolPathCB DiagnosticEngine::defaultSymbolPathCB;
 DiagnosticEngine::FormatterMap DiagnosticEngine::defaultFormatters;
 
 DiagnosticEngine::DiagnosticEngine(const SourceManager& sourceManager) :
-    sourceManager(sourceManager), formatters(defaultFormatters) {
+    sourceManager(sourceManager), symbolPathCB(defaultSymbolPathCB), formatters(defaultFormatters) {
 }
 
 DiagnosticEngine::~DiagnosticEngine() = default;
@@ -262,8 +265,12 @@ bool DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
     // Notes are ignored if location is "NoLocation" since they frequently make no
     // sense without location information.
     for (const Diagnostic& note : diagnostic.notes) {
-        if (note.location != SourceLocation::NoLocation || note.code == diag::NoteFromHere2)
+        // At some point we should figure out how to not hardcode these special cases
+        // that allow notes to be issued without a location.
+        if (note.location != SourceLocation::NoLocation || note.code == diag::NoteFromHere2 ||
+            note.code == diag::NoteUdpCoverage) {
             issue(note);
+        }
     }
 
     return true;

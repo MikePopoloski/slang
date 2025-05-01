@@ -12,12 +12,11 @@
 
 #include "slang/ast/types/AllTypes.h"
 
-class SvEnum : public SvGeneric {
+class SvEnum final : public SvGeneric {
 public:
-    explicit SvEnum(const slang::ast::TypeAliasType& type) :
-        SvGeneric(SvGeneric::Kind::Enum), type(type) {}
+    explicit SvEnum(const slang::ast::TypeAliasType& type) : SvGeneric(Kind::Enum), type(type) {}
 
-    void toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool noSystemC) const override;
+    void toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) const override;
 
 private:
     const slang::ast::TypeAliasType& type;

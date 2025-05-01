@@ -7,6 +7,8 @@
 using Catch::Approx;
 
 #include "slang/ast/ScriptSession.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
 
 TEST_CASE("Simple eval") {
     ScriptSession session;
@@ -841,6 +843,9 @@ union {
     session.eval("baz.c = 123;");
     CHECK(session.eval("baz.a.s1").integer() == 123);
 
+    CHECK(session.eval("foo == bar").integer() == 1);
+    CHECK(session.eval("1 ? foo : bar").toString() == "(0) [3,4,42]");
+
     NO_SESSION_ERRORS;
 }
 
@@ -1191,6 +1196,45 @@ endfunction
     CHECK(sformatf("%v", "3'b1z0") == "St1 HiZ St0");
 
     CHECK(sformatf("%t", "12345") == "               12345");
+
+    session.eval(R"(
+typedef enum {ON, OFF} switch_e;
+typedef struct {switch_e sw; string s;} pair_t;
+localparam pair_t va[int] = '{10:'{OFF, "switch10"}, 20:'{ON, "switch20"}};
+localparam union packed { struct packed { logic [3:0] a; } a; logic [3:0] b; } up = 15;
+
+localparam int da[] = '{3, 0, 0, 1};
+localparam int fa[8] = '{2:4, default:1};
+localparam int qa[$] = '{1, 2, 3};
+localparam int aa[*] = '{3:1, 4:2, 5:3};
+
+localparam switch_e eu = switch_e'(3);
+
+typedef union tagged { void A; int B; } TaggedUnion;
+
+localparam TaggedUnion tu1 = tagged A;
+localparam TaggedUnion tu2 = tagged B 3;
+localparam TaggedUnion tu3 = funcTU();
+
+function automatic TaggedUnion funcTU();
+    TaggedUnion tu;
+    return tu;
+endfunction
+)");
+
+    CHECK(sformatf("%p", "va") == "'{10:'{sw:OFF, s:\"switch10\"}, 20:'{sw:ON, s:\"switch20\"}}");
+    CHECK(sformatf("%p", "\"Hello World\"") == "\"Hello World\"");
+    CHECK(sformatf("%0p", "va") == "'{10:'{OFF,\"switch10\"},20:'{ON,\"switch20\"}}");
+    CHECK(sformatf("%p", "up") == "'{a:4'b1111}");
+    CHECK(sformatf("%p", "da") == "'{3, 0, 0, 1}");
+    CHECK(sformatf("%0p", "fa") == "'{1,1,4,1,1,1,1,1}");
+    CHECK(sformatf("%0p", "qa") == "'{1,2,3}");
+    CHECK(sformatf("%p", "aa") == "'{3:1, 4:2, 5:3}");
+    CHECK(sformatf("%p", "eu") == "3");
+    CHECK(sformatf("%p", "tu1") == "A");
+    CHECK(sformatf("%p", "tu2") == "B:3");
+    CHECK(sformatf("%p", "tu3") == "(unset)");
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("sformatf with trailing percent") {
@@ -2496,14 +2540,15 @@ endfunction
     CHECK(session.eval("f3();").integer() == 139);
 
     auto diags = session.getDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::ArithOpMismatch);
     CHECK(diags[1].code == diag::ConstEvalNoCaseItemsMatched);
     CHECK(diags[2].code == diag::ConstEvalCaseItemsNotUnique);
     CHECK(diags[3].code == diag::ConstantConversion);
     CHECK(diags[4].code == diag::ArithOpMismatch);
     CHECK(diags[5].code == diag::ArithOpMismatch);
-    CHECK(diags[6].code == diag::ArithOpMismatch);
+    CHECK(diags[6].code == diag::WidthExpand);
+    CHECK(diags[7].code == diag::ArithOpMismatch);
 }
 
 TEST_CASE("case statement eval regression") {
@@ -2537,6 +2582,54 @@ TEST_CASE("Array map eval") {
     CHECK(session.eval("B.map with (1)").toString() == "[1,1,1]");
     CHECK(session.eval("C.map with (int'(item))").toString() == "[3]");
     CHECK(session.eval("D.map with (item * 3)").toString() == R"(["Hello":-3,"World":15])");
+
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Packed struct field comparison const eval regress -- GH #1170") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  typedef struct packed {
+    int width;
+  } t_config;
+
+  parameter t_config Config = '{ width: 4 };
+  parameter bit Compare = Config.width > -1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& config = root.lookupName<ParameterSymbol>("m.Config");
+    CHECK(config.getValue().integer() == 4);
+
+    auto& compare = root.lookupName<ParameterSymbol>("m.Compare");
+    CHECK(compare.getValue().integer() == 1);
+}
+
+TEST_CASE("Eval truthiness of strings") {
+    ScriptSession session;
+    session.eval(R"(
+function automatic bit b;
+    string s = "SDF";
+    if (s)
+        return 1;
+    return 0;
+endfunction
+)");
+
+    CHECK(session.eval("b()").integer() == 1);
+
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Eval static cast type propagation") {
+    ScriptSession session;
+    CHECK(session.eval("(3)'(1'b1 << 2)").integer() == 4);
+    CHECK(session.eval("int'(1'b1 + (1'b1 << 2))").integer() == 5);
 
     NO_SESSION_ERRORS;
 }

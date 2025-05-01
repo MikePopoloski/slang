@@ -8,6 +8,7 @@
 #include "SvGeneric.h"
 #include "SvLocalParam.h"
 #include "SvStruct.h"
+#include "SvUnion.h"
 #include "fmt/color.h"
 
 #include "slang/util/OS.h"
@@ -38,14 +39,17 @@ void SvTypeReflector::reflect() {
     std::unordered_map<std::string_view, namespaceMembers> namespaces;
 
     compilation->getRoot().visit(makeVisitor([&](auto&, const TypeAliasType& type) {
-        if (checkPublic(type, slang::parsing::TokenKind::Semicolon)) {
+        if (checkPublic(type, parsing::TokenKind::Semicolon)) {
             if (type.isStruct())
                 namespaces[getNamespace(type)].members.emplace_back(
                     std::make_unique<SvStruct>(type));
             else if (type.isEnum())
                 namespaces[getNamespace(type)].members.emplace_back(std::make_unique<SvEnum>(type));
+            else if (type.isUnion())
+                namespaces[getNamespace(type)].members.emplace_back(
+                    std::make_unique<SvUnion>(type));
             if (verbose)
-                OS::print(fmt::fg(fmt::color::yellow_green),
+                OS::print(fg(fmt::color::yellow_green),
                           fmt::format("Detected {} as public\n", type.name));
         }
 
@@ -58,31 +62,34 @@ void SvTypeReflector::reflect() {
             namespaces[getNamespace(type)].members.emplace_back(
                 std::make_unique<SvLocalParam>(type));
             if (verbose)
-                OS::print(fmt::fg(fmt::color::yellow_green),
+                OS::print(fg(fmt::color::yellow_green),
                           fmt::format("Detected {} as public\n", type.name));
         }
     }));
 
-    for (const auto& _namespace : namespaces) {
-        if (_namespace.second.members.empty())
+    for (const auto& [namespaceName, namespaceMembers] : namespaces) {
+        if (namespaceMembers.members.empty())
             continue;
 
         //** NAMESPACE DECLARATION **//
-        auto& hpp = cppEmitter.newNamespace(_namespace.first);
-        hpp.add(fmt::format("namespace {} {{\n", _namespace.first));
+        auto& hpp = cppEmitter.newNamespace(namespaceName);
+        hpp.add(fmt::format("namespace {} {{\n", namespaceName));
         hpp.increaseIndent();
 
         //** NAMESPACE MEMBERS DECLARATION **//
-        for (const auto& generic : _namespace.second.members) {
+        for (const auto& generic : namespaceMembers.members) {
             if (generic->isStruct())
                 reinterpret_cast<SvStruct*>(generic.get())
-                    ->toCpp(hpp, _namespace.first, _namespace.second.aliases, noSystemC);
+                    ->toCpp(hpp, namespaceName, namespaceMembers.aliases, noSystemC);
             else if (generic->isEnum())
                 reinterpret_cast<SvEnum*>(generic.get())
-                    ->toCpp(hpp, _namespace.first, _namespace.second.aliases, noSystemC);
+                    ->toCpp(hpp, namespaceName, namespaceMembers.aliases, noSystemC);
+            else if (generic->isUnion())
+                reinterpret_cast<SvUnion*>(generic.get())
+                    ->toCpp(hpp, namespaceName, namespaceMembers.aliases, noSystemC);
             else if (generic->isLocalParam())
                 reinterpret_cast<SvLocalParam*>(generic.get())
-                    ->toCpp(hpp, _namespace.first, _namespace.second.aliases, noSystemC);
+                    ->toCpp(hpp, namespaceName, namespaceMembers.aliases, noSystemC);
         }
 
         hpp.decreaseIndent();

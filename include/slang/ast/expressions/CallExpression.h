@@ -82,11 +82,15 @@ public:
     /// @returns the kind of subroutine being called.
     SubroutineKind getSubroutineKind() const;
 
+    /// @returns the known system name for the subroutine, if it's a built-in subroutine.
+    parsing::KnownSystemName getKnownSystemName() const;
+
     /// @returns true if the called subroutine has output (or inout / ref) arguments.
     bool hasOutputArgs() const;
 
     ConstantValue evalImpl(EvalContext& context) const;
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
+    EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

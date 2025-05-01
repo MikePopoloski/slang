@@ -288,7 +288,7 @@ TEST_CASE("Streaming concatenation") {
 }
 
 TEST_CASE("Element Access") {
-    auto& text = "(foo)[3][9+4]";
+    auto& text = "(foo).bar[3][9+4]";
     auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::ElementSelectExpression);
@@ -305,9 +305,9 @@ void testElementRange(std::string_view text, SyntaxKind kind) {
 }
 
 TEST_CASE("Element range") {
-    testElementRange("(foo)[3:4]", SyntaxKind::SimpleRangeSelect);
-    testElementRange("(foo)[3+:4]", SyntaxKind::AscendingRangeSelect);
-    testElementRange("(foo)[3-:4]", SyntaxKind::DescendingRangeSelect);
+    testElementRange("(foo).bar[3:4]", SyntaxKind::SimpleRangeSelect);
+    testElementRange("(foo).bar[3+:4]", SyntaxKind::AscendingRangeSelect);
+    testElementRange("(foo).bar[3-:4]", SyntaxKind::DescendingRangeSelect);
 }
 
 TEST_CASE("Member Access") {
@@ -917,15 +917,17 @@ TEST_CASE("Vector literal overflow parsing") {
 shortint a = -16'sd32769;
 int b = -32'sd2147483649;
 int c = 32'd4294967297;
+
+// No warnings for these
 int d = 9'so777;
+int e = 4'sb1000;
 )";
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 4);
+    REQUIRE(diagnostics.size() == 3);
     CHECK(diagnostics[0].code == diag::VectorLiteralOverflow);
     CHECK(diagnostics[1].code == diag::VectorLiteralOverflow);
     CHECK(diagnostics[2].code == diag::VectorLiteralOverflow);
-    CHECK(diagnostics[3].code == diag::VectorLiteralOverflow);
 }
 
 TEST_CASE("Diagnosing missing base after signed specifier parsing") {
@@ -975,4 +977,53 @@ endclass
 
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+}
+
+TEST_CASE("Unbased unsized question mark parsing") {
+    auto& text = R"(
+module bug(input logic [1:0] a, input logic s, output logic [1:0]y);
+    assign y = s? a: '?;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedExpression);
+}
+
+TEST_CASE("Invalid select expression parsing") {
+    auto& text = R"(
+module signal_wrong (input logic [3:0] a,b, output logic [1:0] c);
+    assign c = (a & b)[3:2];
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::InvalidSelectExpression);
+}
+
+TEST_CASE("Invalid timing control parsing") {
+    auto& text = R"(
+module m;
+    logic clk;
+    event a;
+    default clocking @clk; endclocking
+    initial begin
+        ->> ##3 a;
+    end
+
+    logic b;
+    assert property (@* b ##1 @(*) b);
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::EventTriggerCycleDelay);
+    CHECK(diagnostics[1].code == diag::ImplicitEventInAssertion);
+    CHECK(diagnostics[2].code == diag::ImplicitEventInAssertion);
 }

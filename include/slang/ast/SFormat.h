@@ -13,6 +13,8 @@
 
 namespace slang::ast {
 
+class Type;
+
 namespace SFormat {
 
 /// A collection of options that can be applied to the SFormat string formatting functions.
@@ -54,8 +56,8 @@ void formatInt(std::string& result, const SVInt& value, LiteralBase base,
 
 /// Format the given @a arg into a string and append it to @a result according
 /// to the provided @a options
-void formatArg(std::string& result, const ConstantValue& arg, char specifier,
-               const FormatOptions& options);
+void formatArg(std::string& result, const ConstantValue& arg, const Type& type, char specifier,
+               const FormatOptions& options, bool isStringLiteral);
 
 } // namespace SFormat
 

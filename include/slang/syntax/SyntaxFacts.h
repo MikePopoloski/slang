@@ -176,6 +176,9 @@ public:
     /// @return true if the given token represents a possible randsequence production rule.
     static bool isPossibleRsRule(TokenKind kind);
 
+    /// @return true if the given token represents a possible struct member.
+    static bool isPossibleStructMember(TokenKind kind);
+
     /// @return true if the given token is an ending keyword (like "endmodule", "endfunction", etc).
     static bool isEndKeyword(TokenKind kind);
 

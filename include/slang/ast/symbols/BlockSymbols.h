@@ -8,7 +8,7 @@
 #pragma once
 
 #include "slang/ast/SemanticFacts.h"
-#include "slang/ast/Statements.h"
+#include "slang/ast/Statement.h"
 #include "slang/ast/Symbol.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Function.h"
@@ -29,6 +29,10 @@ public:
     const Statement& getStatement(const ASTContext& context,
                                   Statement::StatementContext& stmtCtx) const;
 
+    const Statement* tryGetStatement() const { return stmt; }
+
+    bool isKnownBad() const { return stmt && stmt->bad(); }
+
     void serializeTo(ASTSerializer&) const {}
 
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
@@ -37,6 +41,10 @@ public:
                                             const syntax::ForLoopStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
                                             const syntax::ForeachLoopStatementSyntax& syntax);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope,
+                                            const syntax::ConditionalStatementSyntax& syntax);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope,
+                                            const syntax::PatternCaseItemSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
                                             const syntax::RandSequenceStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope, const syntax::RsRuleSyntax& syntax);

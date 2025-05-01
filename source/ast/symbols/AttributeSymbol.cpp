@@ -45,7 +45,7 @@ const ConstantValue& AttributeSymbol::getValue() const {
         SLANG_ASSERT(bindScope);
         SLANG_ASSERT(expr);
 
-        ASTContext context(*bindScope, loc, ASTFlags::NoAttributes | ASTFlags::NonProcedural);
+        ASTContext context(*bindScope, loc, ASTFlags::NonProcedural);
         auto& bound = Expression::bind(*expr, context);
 
         value = bindScope->getCompilation().allocConstant(context.eval(bound));

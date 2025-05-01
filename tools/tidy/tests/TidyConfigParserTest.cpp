@@ -103,6 +103,7 @@ TEST_CASE("TidyParser: Disable some checks") {
 TEST_CASE("TidyParser: Set check config") {
     auto config_str = std::string(R"(CheckConfigs:
     clkName: clk,
+    clkNameRegexString: "clock\S.*",
     resetIsActiveHigh: false,
     inputPortSuffix: _k,
     inputPortSuffix: _p)");
@@ -112,6 +113,7 @@ TEST_CASE("TidyParser: Set check config") {
 
     CHECK(config.getCheckConfigs().clkName == "clk");
     CHECK(config.getCheckConfigs().resetName == "rst_ni");
+    CHECK(config.getCheckConfigs().clkNameRegexString == "clock\\S.*");
     CHECK_FALSE(config.getCheckConfigs().resetIsActiveHigh);
     CHECK(config.getCheckConfigs().inputPortSuffix == std::vector<std::string>{"_p"});
 }

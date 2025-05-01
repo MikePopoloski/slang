@@ -37,13 +37,12 @@ namespace slang::ast {
 
 using namespace syntax;
 
-Pattern& Pattern::bind(const PatternSyntax& syntax, const Type& targetType, VarMap& varMap,
-                       ASTContext& context) {
+Pattern& Pattern::bind(const ASTContext& context, const syntax::PatternSyntax& syntax,
+                       const Type& targetType) {
     Pattern* result;
     switch (syntax.kind) {
         case SyntaxKind::ParenthesizedPattern:
-            return bind(*syntax.as<ParenthesizedPatternSyntax>().pattern, targetType, varMap,
-                        context);
+            return bind(context, *syntax.as<ParenthesizedPatternSyntax>().pattern, targetType);
         case SyntaxKind::WildcardPattern:
             result = &WildcardPattern::fromSyntax(syntax.as<WildcardPatternSyntax>(), context);
             break;
@@ -52,16 +51,15 @@ Pattern& Pattern::bind(const PatternSyntax& syntax, const Type& targetType, VarM
                                                   context);
             break;
         case SyntaxKind::VariablePattern:
-            result = &VariablePattern::fromSyntax(syntax.as<VariablePatternSyntax>(), targetType,
-                                                  varMap, context);
+            result = &VariablePattern::fromSyntax(syntax.as<VariablePatternSyntax>(), context);
             break;
         case SyntaxKind::TaggedPattern:
             result = &TaggedPattern::fromSyntax(syntax.as<TaggedPatternSyntax>(), targetType,
-                                                varMap, context);
+                                                context);
             break;
         case SyntaxKind::StructurePattern:
             result = &StructurePattern::fromSyntax(syntax.as<StructurePatternSyntax>(), targetType,
-                                                   varMap, context);
+                                                   context);
             break;
         default:
             SLANG_UNREACHABLE;
@@ -71,31 +69,76 @@ Pattern& Pattern::bind(const PatternSyntax& syntax, const Type& targetType, VarM
     return *result;
 }
 
-void Pattern::createPlaceholderVars(const PatternSyntax& syntax, VarMap& varMap,
-                                    ASTContext& context) {
+bool Pattern::createPatternVars(const ASTContext& context, const PatternSyntax& patternSyntax,
+                                const ExpressionSyntax& condSyntax,
+                                SmallVector<const PatternVarSymbol*>& results) {
+    auto& expr = Expression::bind(condSyntax, context);
+    if (expr.bad())
+        return false;
+
+    return createPatternVars(context, patternSyntax, *expr.type, results);
+}
+
+bool Pattern::createPatternVars(const ASTContext& context, const PatternSyntax& syntax,
+                                const Type& targetType,
+                                SmallVector<const PatternVarSymbol*>& results) {
     switch (syntax.kind) {
         case SyntaxKind::ParenthesizedPattern:
-            createPlaceholderVars(*syntax.as<ParenthesizedPatternSyntax>().pattern, varMap,
-                                  context);
+            return createPatternVars(context, *syntax.as<ParenthesizedPatternSyntax>().pattern,
+                                     targetType, results);
+        case SyntaxKind::VariablePattern: {
+            auto& varSyntax = syntax.as<VariablePatternSyntax>();
+            auto var = context.getCompilation().emplace<PatternVarSymbol>(
+                varSyntax.variableName.valueText(), varSyntax.variableName.location(), targetType);
+            var->setSyntax(varSyntax);
+            results.push_back(var);
             break;
-        case SyntaxKind::VariablePattern:
-            VariablePattern::fromSyntax(syntax.as<VariablePatternSyntax>(),
-                                        context.getCompilation().getErrorType(), varMap, context);
+        }
+        case SyntaxKind::TaggedPattern:
+            return TaggedPattern::createVars(context, syntax.as<TaggedPatternSyntax>(), targetType,
+                                             results);
+        case SyntaxKind::StructurePattern:
+            return StructurePattern::createVars(context, syntax.as<StructurePatternSyntax>(),
+                                                targetType, results);
+        default:
             break;
+    }
+
+    return true;
+}
+
+void Pattern::createPlaceholderVars(const ASTContext& context, const PatternSyntax& syntax,
+                                    SmallVector<const PatternVarSymbol*>& results) {
+    switch (syntax.kind) {
+        case SyntaxKind::ParenthesizedPattern:
+            createPlaceholderVars(context, *syntax.as<ParenthesizedPatternSyntax>().pattern,
+                                  results);
+            break;
+        case SyntaxKind::VariablePattern: {
+            auto& comp = context.getCompilation();
+            auto& varSyntax = syntax.as<VariablePatternSyntax>();
+            auto var = comp.emplace<PatternVarSymbol>(varSyntax.variableName.valueText(),
+                                                      varSyntax.variableName.location(),
+                                                      comp.getErrorType());
+            var->setSyntax(varSyntax);
+            results.push_back(var);
+            break;
+        }
         case SyntaxKind::TaggedPattern:
             if (auto pattern = syntax.as<TaggedPatternSyntax>().pattern)
-                createPlaceholderVars(*pattern, varMap, context);
+                createPlaceholderVars(context, *pattern, results);
             break;
         case SyntaxKind::StructurePattern:
             for (auto member : syntax.as<StructurePatternSyntax>().members) {
                 if (member->kind == SyntaxKind::NamedStructurePatternMember) {
-                    createPlaceholderVars(*member->as<NamedStructurePatternMemberSyntax>().pattern,
-                                          varMap, context);
+                    createPlaceholderVars(context,
+                                          *member->as<NamedStructurePatternMemberSyntax>().pattern,
+                                          results);
                 }
                 else {
                     createPlaceholderVars(
-                        *member->as<OrderedStructurePatternMemberSyntax>().pattern, varMap,
-                        context);
+                        context, *member->as<OrderedStructurePatternMemberSyntax>().pattern,
+                        results);
                 }
             }
             break;
@@ -152,16 +195,16 @@ Pattern& ConstantPattern::fromSyntax(const ExpressionPatternSyntax& syntax, cons
 
 ConstantValue ConstantPattern::evalImpl(EvalContext&, const ConstantValue& value,
                                         CaseStatementCondition conditionKind) const {
-    SLANG_ASSERT(expr.constant);
+    SLANG_ASSERT(expr.getConstant());
     SLANG_ASSERT(conditionKind != CaseStatementCondition::Inside);
 
     bool result;
-    if (conditionKind == CaseStatementCondition::Normal || !expr.constant->isInteger() ||
+    if (conditionKind == CaseStatementCondition::Normal || !expr.getConstant()->isInteger() ||
         !value.isInteger()) {
-        result = *expr.constant == value;
+        result = *expr.getConstant() == value;
     }
     else {
-        const SVInt& l = expr.constant->integer();
+        const SVInt& l = expr.getConstant()->integer();
         const SVInt& r = value.integer();
         if (conditionKind == CaseStatementCondition::WildcardJustZ)
             result = caseZWildcardEqual(l, r);
@@ -176,29 +219,28 @@ void ConstantPattern::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
 }
 
-Pattern& VariablePattern::fromSyntax(const VariablePatternSyntax& syntax, const Type& targetType,
-                                     VarMap& varMap, ASTContext& context) {
+Pattern& VariablePattern::fromSyntax(const VariablePatternSyntax& syntax,
+                                     const ASTContext& context) {
+    // The pattern var has already been created in our scope, so just look it up.
     auto& comp = context.getCompilation();
-    auto var = comp.emplace<PatternVarSymbol>(syntax.variableName.valueText(),
-                                              syntax.variableName.location(), targetType);
-
-    if (!var->name.empty()) {
-        auto [it, inserted] = varMap.emplace(var->name, var);
-        if (!inserted) {
-            auto& diag = context.addDiag(diag::Redefinition, syntax.variableName.range());
-            diag << var->name;
-            diag.addNote(diag::NoteDeclarationHere, it->second->location);
-            return badPattern(comp, nullptr);
+    auto name = syntax.variableName.valueText();
+    auto currVar = context.firstTempVar;
+    while (currVar) {
+        if (currVar->name == name && currVar->kind == SymbolKind::PatternVar) {
+            return *comp.emplace<VariablePattern>(currVar->as<PatternVarSymbol>(),
+                                                  syntax.sourceRange());
         }
-
-        var->nextTemp = std::exchange(context.firstTempVar, var);
+        currVar = currVar->nextTemp;
     }
 
-    // We need to force resolution here because the pattern variable doesn't
-    // live in a scope and so later attempts at touching it could cause normal
-    // resolution logic to fail.
-    var->getDeclaredType()->forceResolveAt(context);
-    return *comp.emplace<VariablePattern>(*var, syntax.sourceRange());
+    auto var = context.scope->find(name);
+    if (!var || var->kind != SymbolKind::PatternVar || var->getSyntax() != &syntax) {
+        // Some other error has occurred, likely a duplicate name,
+        // so just return an error.
+        return badPattern(comp, nullptr);
+    }
+
+    return *comp.emplace<VariablePattern>(var->as<PatternVarSymbol>(), syntax.sourceRange());
 }
 
 ConstantValue VariablePattern::evalImpl(EvalContext& context, const ConstantValue& value,
@@ -214,15 +256,15 @@ void VariablePattern::serializeTo(ASTSerializer& serializer) const {
     serializer.write("variable", variable);
 }
 
-Pattern& TaggedPattern::fromSyntax(const TaggedPatternSyntax& syntax, const Type& targetType,
-                                   VarMap& varMap, ASTContext& context) {
-    auto& comp = context.getCompilation();
+bool TaggedPattern::createVars(const ASTContext& context, const syntax::TaggedPatternSyntax& syntax,
+                               const Type& targetType,
+                               SmallVector<const PatternVarSymbol*>& results) {
     if (!targetType.isTaggedUnion()) {
         if (!targetType.isError())
             context.addDiag(diag::PatternTaggedType, syntax.sourceRange()) << targetType;
 
-        createPlaceholderVars(syntax, varMap, context);
-        return badPattern(comp, nullptr);
+        createPlaceholderVars(context, syntax, results);
+        return false;
     }
 
     auto memberName = syntax.memberName.valueText();
@@ -233,16 +275,32 @@ Pattern& TaggedPattern::fromSyntax(const TaggedPatternSyntax& syntax, const Type
             diag << memberName << targetType;
         }
 
-        createPlaceholderVars(syntax, varMap, context);
-        return badPattern(comp, nullptr);
+        createPlaceholderVars(context, syntax, results);
+        return false;
     }
+
+    if (!syntax.pattern)
+        return true;
+
+    auto& field = member->as<FieldSymbol>();
+    return createPatternVars(context, *syntax.pattern, field.getType(), results);
+}
+
+Pattern& TaggedPattern::fromSyntax(const TaggedPatternSyntax& syntax, const Type& targetType,
+                                   const ASTContext& context) {
+    SLANG_ASSERT(targetType.isTaggedUnion());
+
+    auto memberName = syntax.memberName.valueText();
+    auto member = targetType.getCanonicalType().as<Scope>().find(memberName);
+    SLANG_ASSERT(member);
 
     auto& field = member->as<FieldSymbol>();
 
     const Pattern* value = nullptr;
     if (syntax.pattern)
-        value = &Pattern::bind(*syntax.pattern, field.getType(), varMap, context);
+        value = &Pattern::bind(context, *syntax.pattern, field.getType());
 
+    auto& comp = context.getCompilation();
     auto result = comp.emplace<TaggedPattern>(field, value, syntax.sourceRange());
     if (value && value->bad())
         return badPattern(comp, result);
@@ -273,47 +331,44 @@ void TaggedPattern::serializeTo(ASTSerializer& serializer) const {
         serializer.write("valuePattern", *valuePattern);
 }
 
-Pattern& StructurePattern::fromSyntax(const StructurePatternSyntax& syntax, const Type& targetType,
-                                      VarMap& varMap, ASTContext& context) {
-    auto& comp = context.getCompilation();
+bool StructurePattern::createVars(const ASTContext& context,
+                                  const syntax::StructurePatternSyntax& syntax,
+                                  const Type& targetType,
+                                  SmallVector<const PatternVarSymbol*>& results) {
     if (!targetType.isStruct() || syntax.members.empty()) {
         if (!targetType.isError() && !syntax.members.empty())
             context.addDiag(diag::PatternStructType, syntax.sourceRange()) << targetType;
 
-        createPlaceholderVars(syntax, varMap, context);
-        return badPattern(comp, nullptr);
+        createPlaceholderVars(context, syntax, results);
+        return false;
     }
 
-    bool bad = false;
+    bool result = true;
     auto& structScope = targetType.getCanonicalType().as<Scope>();
 
-    SmallVector<FieldPattern, 4> patterns;
     if (syntax.members[0]->kind == SyntaxKind::OrderedStructurePatternMember) {
         auto fields = structScope.membersOfType<FieldSymbol>();
         auto it = fields.begin();
         for (auto memberSyntax : syntax.members) {
             auto& patternSyntax = *memberSyntax->as<OrderedStructurePatternMemberSyntax>().pattern;
             if (it == fields.end()) {
-                if (!bad) {
+                if (result) {
                     context.addDiag(diag::PatternStructTooMany, memberSyntax->sourceRange())
                         << targetType;
-                    bad = true;
+                    result = false;
                 }
 
-                createPlaceholderVars(patternSyntax, varMap, context);
-                break;
+                createPlaceholderVars(context, patternSyntax, results);
+                continue;
             }
 
-            auto& pattern = bind(patternSyntax, it->getType(), varMap, context);
-            bad |= pattern.bad();
-
-            patterns.push_back({&(*it), &pattern});
+            result &= createPatternVars(context, patternSyntax, it->getType(), results);
             it++;
         }
 
         if (it != fields.end()) {
             context.addDiag(diag::PatternStructTooFew, syntax.sourceRange()) << targetType;
-            bad = true;
+            result = false;
         }
     }
     else {
@@ -327,13 +382,53 @@ Pattern& StructurePattern::fromSyntax(const StructurePatternSyntax& syntax, cons
                     diag << memberName << targetType;
                 }
 
-                createPlaceholderVars(*nspms.pattern, varMap, context);
-                bad = true;
+                createPlaceholderVars(context, *nspms.pattern, results);
+                result = false;
                 continue;
             }
 
             auto& field = member->as<FieldSymbol>();
-            auto& pattern = bind(*nspms.pattern, field.getType(), varMap, context);
+            result &= createPatternVars(context, *nspms.pattern, field.getType(), results);
+        }
+    }
+
+    return result;
+}
+
+Pattern& StructurePattern::fromSyntax(const StructurePatternSyntax& syntax, const Type& targetType,
+                                      const ASTContext& context) {
+    auto& comp = context.getCompilation();
+    SLANG_ASSERT(targetType.isStruct() && !syntax.members.empty());
+
+    bool bad = false;
+    auto& structScope = targetType.getCanonicalType().as<Scope>();
+
+    SmallVector<FieldPattern, 4> patterns;
+    if (syntax.members[0]->kind == SyntaxKind::OrderedStructurePatternMember) {
+        auto fields = structScope.membersOfType<FieldSymbol>();
+        auto it = fields.begin();
+        for (auto memberSyntax : syntax.members) {
+            SLANG_ASSERT(it != fields.end());
+
+            auto& patternSyntax = *memberSyntax->as<OrderedStructurePatternMemberSyntax>().pattern;
+            auto& pattern = bind(context, patternSyntax, it->getType());
+            bad |= pattern.bad();
+
+            patterns.push_back({&(*it), &pattern});
+            it++;
+        }
+
+        SLANG_ASSERT(it == fields.end());
+    }
+    else {
+        for (auto memberSyntax : syntax.members) {
+            auto& nspms = memberSyntax->as<NamedStructurePatternMemberSyntax>();
+            auto memberName = nspms.name.valueText();
+            auto member = structScope.find(memberName);
+            SLANG_ASSERT(member);
+
+            auto& field = member->as<FieldSymbol>();
+            auto& pattern = bind(context, *nspms.pattern, field.getType());
             bad |= pattern.bad();
 
             patterns.push_back({&field, &pattern});

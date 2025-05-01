@@ -29,12 +29,15 @@ using namespace slang::parsing;
 using namespace slang::syntax;
 using namespace slang::ast;
 
-#define EXPOSE_ENUM(handle, name)                                   \
-    do {                                                            \
-        py::enum_<name> e(handle, #name);                           \
-        for (auto member : name##_traits::values) {                 \
-            e.value(std::string(toString(member)).c_str(), member); \
-        }                                                           \
+#define EXPOSE_ENUM(handle, name)                                \
+    do {                                                         \
+        py::enum_<name> e(handle, #name);                        \
+        for (auto member : name##_traits::values) {              \
+            std::string nameStr = std::string(toString(member)); \
+            if (nameStr == "None")                               \
+                nameStr = "None_";                               \
+            e.value(nameStr.c_str(), member);                    \
+        }                                                        \
     } while (0)
 
 static constexpr auto byref = py::return_value_policy::reference;

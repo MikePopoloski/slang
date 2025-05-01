@@ -59,9 +59,10 @@ const Statement& SubroutineSymbol::getBody() const {
     return *stmt;
 }
 
-SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
-                                               const FunctionDeclarationSyntax& syntax,
-                                               const Scope& parent, bool outOfBlock) {
+std::pair<SubroutineSymbol*, bool> SubroutineSymbol::fromSyntax(
+    Compilation& compilation, const FunctionDeclarationSyntax& syntax, const Scope& parent,
+    bool outOfBlock) {
+
     // If this subroutine has a scoped name, it should be an out of block declaration.
     // We shouldn't create a symbol now, since we need the class prototype to hook
     // us in to the correct scope. Register this syntax with the compilation so that
@@ -74,6 +75,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
         if (auto last = parent.getLastMember())
             index = (uint32_t)last->getIndex() + 1;
 
+        bool isExternIfaceMethod = false;
         auto& scopedName = proto->name->as<ScopedNameSyntax>();
         if (scopedName.separator.kind == TokenKind::DoubleColon) {
             // This is an out-of-block class method implementation.
@@ -84,14 +86,15 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
             // We should create the method like normal but not add it to
             // the parent name map (because it can only be looked up via
             // the interface instance).
-            auto result = SubroutineSymbol::fromSyntax(compilation, syntax, parent,
-                                                       /* outOfBlock */ true);
+            auto [result, _] = SubroutineSymbol::fromSyntax(compilation, syntax, parent,
+                                                            /* outOfBlock */ true);
             SLANG_ASSERT(result);
 
             result->setParent(parent, SymbolIndex(index));
             compilation.addExternInterfaceMethod(*result);
+            isExternIfaceMethod = true;
         }
-        return nullptr;
+        return {nullptr, isExternIfaceMethod};
     }
 
     Token nameToken = proto->name->getLastToken();
@@ -180,7 +183,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
     }
 
     result->arguments = arguments.copy(compilation);
-    return result;
+    return {result, false};
 }
 
 static std::pair<bitmask<MethodFlags>, Visibility> getMethodFlags(
@@ -239,7 +242,7 @@ static std::pair<bitmask<MethodFlags>, Visibility> getMethodFlags(
 SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
                                                const ClassMethodDeclarationSyntax& syntax,
                                                const Scope& parent) {
-    auto result = fromSyntax(compilation, *syntax.declaration, parent, /* outOfBlock */ false);
+    auto [result, _] = fromSyntax(compilation, *syntax.declaration, parent, /* outOfBlock */ false);
     if (!result)
         return nullptr;
 
@@ -325,7 +328,7 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
                                                      const Scope& parent,
                                                      const Scope& definitionScope,
                                                      SymbolIndex outOfBlockIndex) {
-    auto result = fromSyntax(compilation, syntax, parent, /* outOfBlock */ true);
+    auto [result, _] = fromSyntax(compilation, syntax, parent, /* outOfBlock */ true);
     SLANG_ASSERT(result);
 
     // Set the parent pointer of the new subroutine so that lookups work correctly.
@@ -561,6 +564,25 @@ void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
             return;
         }
     }
+
+    if (parentMethod.visibility != derivedMethod.visibility) {
+        auto visStr = [](Visibility vis) {
+            switch (vis) {
+                case Visibility::Local:
+                    return "local"sv;
+                case Visibility::Protected:
+                    return "protected"sv;
+                case Visibility::Public:
+                    return "public"sv;
+            }
+            return ""sv;
+        };
+
+        auto& diag = scope.addDiag(diag::VirtualVisibilityMismatch, derivedMethod.location);
+        diag << derivedMethod.name << visStr(derivedMethod.visibility)
+             << visStr(parentMethod.visibility);
+        diag.addNote(diag::NoteDeclarationHere, parentMethod.location);
+    }
 }
 
 struct LocalVarCheckVisitor {
@@ -659,6 +681,9 @@ bitmask<MethodFlags> SubroutineSymbol::buildArguments(
     bitmask<MethodFlags> resultFlags;
 
     for (auto portBase : syntax.ports) {
+        if (portBase->previewNode)
+            scope.addMembers(*portBase->previewNode);
+
         if (portBase->kind == SyntaxKind::DefaultFunctionPort) {
             lastDirection = ArgumentDirection::In;
             lastType = nullptr;

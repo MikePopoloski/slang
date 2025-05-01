@@ -13,7 +13,7 @@
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/Symbol.h"
 #include "slang/diagnostics/Diagnostics.h"
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/Iterator.h"
 #include "slang/util/Util.h"
 
@@ -28,7 +28,6 @@ namespace slang::ast {
 class ASTContext;
 class Compilation;
 class CompilationUnitSymbol;
-class ForwardingTypedefSymbol;
 class InstanceBodySymbol;
 class NetType;
 class WildcardImportSymbol;
@@ -44,7 +43,7 @@ public:
     Scope& operator=(const Scope&) = delete;
 
     /// Adds a symbol as a member to the scope.
-    void addMember(const Symbol& symbol);
+    void addMember(const Symbol& symbol) { insertMember(&symbol, lastMember, false, true); }
 
     /// Creates and adds one or more member symbols to the scope from the given syntax node.
     void addMembers(const syntax::SyntaxNode& syntax);
@@ -67,6 +66,10 @@ public:
     /// Gets the instance body that contains this scope, if applicable.
     /// Otherwise returns nullptr.
     const InstanceBodySymbol* getContainingInstance() const;
+
+    /// Gets the instance body or checker body that contains this scope, if applicable.
+    /// Otherwise returns nullptr.
+    const Symbol* getContainingInstanceOrChecker() const;
 
     /// Gets the compilation unit that contains this scope, if applicable.
     /// Otherwise returns nullptr.
@@ -256,62 +259,23 @@ protected:
     /// Before we access any members to do lookups or return iterators, make sure
     /// the scope is fully elaborated.
     void ensureElaborated() const {
-        if (deferredMemberIndex != DeferredMemberIndex::Invalid)
+        if (needsElaboration)
             elaborate();
     }
 
     /// Flag the need for this scope to be elaborated before members are accessed.
-    void setNeedElaboration() { getOrAddDeferredData(); }
+    void setNeedElaboration() { needsElaboration = true; }
 
     /// Add a preconstructed wildcard import to this scope.
     void addWildcardImport(const WildcardImportSymbol& item);
 
-    void addDeferredMembers(const syntax::SyntaxNode& syntax);
     void insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
                       bool incrementIndex) const;
 
 private:
     friend class Compilation;
 
-    // Strongly typed index type which is used in a sideband list in the Compilation object
-    // to store information about deferred members in this scope.
-    enum class DeferredMemberIndex : uint32_t { Invalid = 0 };
-
-    // Data stored in sideband tables in the Compilation object for deferred members.
-    class DeferredMemberData {
-    public:
-        void addMember(Symbol* symbol);
-        std::span<Symbol* const> getMembers() const;
-
-        void registerTransparentType(const Symbol* insertion, const Symbol& parent);
-        std::span<std::pair<const Symbol*, const Symbol*> const> getTransparentTypes() const;
-
-        void addForwardingTypedef(const ForwardingTypedefSymbol& symbol);
-        std::span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const;
-
-        void addPortDeclaration(const syntax::SyntaxNode& syntax, const Symbol* insertion);
-        std::span<std::pair<const syntax::SyntaxNode*, const Symbol*> const> getPortDeclarations()
-            const;
-
-    private:
-        // A list of deferred member symbols.
-        std::vector<Symbol*> members;
-
-        // Some types are special in that their members leak into the surrounding scope; this
-        // set keeps track of all variables, parameters, arguments, etc that have such data types
-        // so that when our list of members is finalized we can include their members as well.
-        std::vector<std::pair<const Symbol*, const Symbol*>> transparentTypes;
-
-        // Track a list of forwarding typedefs declared in the scope; once we've fully elaborated
-        // we'll go back and make sure they're actually valid.
-        std::vector<const ForwardingTypedefSymbol*> forwardingTypedefs;
-
-        // Track a list of non-ANSI port declarations declared in the scope; once we've fully
-        // elaborated we'll go back and make sure they're valid.
-        std::vector<std::pair<const syntax::SyntaxNode*, const Symbol*>> portDecls;
-    };
-
-    DeferredMemberData& getOrAddDeferredData() const;
+    void addDeferredMembers(const syntax::SyntaxNode& syntax);
     void elaborate() const;
     void handleNameConflict(const Symbol& member) const;
     void handleNameConflict(const Symbol& member, const Symbol*& existing,
@@ -319,12 +283,10 @@ private:
     bool handleDataDeclaration(const syntax::DataDeclarationSyntax& syntax);
     void handleUserDefinedNet(const syntax::UserDefinedNetDeclarationSyntax& syntax);
     void handleNestedDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
-    void handleExportedMethods(std::span<Symbol* const> deferredMembers) const;
+    void handleExportedMethods() const;
     void checkImportConflict(const Symbol& member, const Symbol& existing) const;
     void addWildcardImport(const syntax::PackageImportItemSyntax& item,
                            std::span<const syntax::AttributeInstanceSyntax* const> attributes);
-    void tryFixupInstances(const syntax::DataDeclarationSyntax& syntax, const ASTContext& context,
-                           SmallVectorBase<const Symbol*>& results) const;
 
     // The compilation that owns this scope.
     Compilation& compilation;
@@ -342,13 +304,23 @@ private:
     mutable const Symbol* firstMember = nullptr;
     mutable const Symbol* lastMember = nullptr;
 
-    // If this scope has any deferred member symbols they'll be temporarily
-    // stored in a sideband list in the compilation object until we expand them.
-    mutable DeferredMemberIndex deferredMemberIndex{0};
-
     // If this scope has any wildcard import directives we'll keep track of them
     // in a sideband object.
     WildcardImportData* importData = nullptr;
+
+    // Set to true if the scope needs a separate elaboration pass before
+    // its members can be accessed.
+    mutable bool needsElaboration = false;
+
+    // Indicates whether any enums have been registered in the scope.
+    bool hasEnums = false;
+
+    // Indicates whether this scope is uncacheable, for instance if
+    // it contains an extern iface method implementation.
+    bool isUncacheable = false;
+
+    // Indicates whether this scope has any exported modport subroutines.
+    bool hasModportExports = false;
 };
 
 } // namespace slang::ast

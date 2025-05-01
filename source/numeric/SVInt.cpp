@@ -14,7 +14,7 @@
 #include <stdexcept>
 
 #include "slang/text/CharInfo.h"
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/String.h"
 
 static const double log2_10 = log2(10.0);
@@ -1339,7 +1339,7 @@ SVInt SVInt::operator/(const SVInt& rhs) const {
     }
 
     // otherwise, just do the division
-    return udiv(*this, rhs, false);
+    return udiv(*this, rhs, bothSigned);
 }
 
 SVInt SVInt::operator%(const SVInt& rhs) const {
@@ -1946,6 +1946,63 @@ bitwidth_t SVInt::countLeadingOnesSlowCase() const {
                 count += BITS_PER_WORD;
             else {
                 count += (bitwidth_t)std::countl_one(pVal[i]);
+                break;
+            }
+        }
+    }
+
+    return count;
+}
+
+bitwidth_t SVInt::countLeadingUnknowns() const {
+    if (!hasUnknown())
+        return 0;
+
+    bitwidth_t bitsInMsw = bitWidth % BITS_PER_WORD;
+    uint32_t shift = 0;
+    if (!bitsInMsw)
+        bitsInMsw = BITS_PER_WORD;
+    else
+        shift = BITS_PER_WORD - bitsInMsw;
+
+    int words = (int)getNumWords(bitWidth, false);
+    int i = words - 1;
+    bitwidth_t count = (bitwidth_t)std::countl_one(pVal[i + words] << shift);
+    if (count == bitsInMsw) {
+        for (i--; i >= 0; i--) {
+            if (pVal[i + words] == UINT64_MAX)
+                count += BITS_PER_WORD;
+            else {
+                count += (bitwidth_t)std::countl_one(pVal[i + words]);
+                break;
+            }
+        }
+    }
+
+    return count;
+}
+
+bitwidth_t SVInt::countLeadingZs() const {
+    if (!hasUnknown())
+        return 0;
+
+    bitwidth_t bitsInMsw = bitWidth % BITS_PER_WORD;
+    uint32_t shift = 0;
+    if (!bitsInMsw)
+        bitsInMsw = BITS_PER_WORD;
+    else
+        shift = BITS_PER_WORD - bitsInMsw;
+
+    int words = (int)getNumWords(bitWidth, false);
+    int i = words - 1;
+    bitwidth_t count = (bitwidth_t)std::countl_one((pVal[i + words] & pVal[i]) << shift);
+    if (count == bitsInMsw) {
+        for (i--; i >= 0; i--) {
+            auto elem = pVal[i + words] & pVal[i];
+            if (elem == UINT64_MAX)
+                count += BITS_PER_WORD;
+            else {
+                count += (bitwidth_t)std::countl_one(elem);
                 break;
             }
         }

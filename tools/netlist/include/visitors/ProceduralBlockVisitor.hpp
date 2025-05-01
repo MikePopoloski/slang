@@ -9,27 +9,27 @@
 
 #include "Debug.h"
 #include "Netlist.h"
-#include <memory>
+#include "NetlistVisitorOptions.hpp"
+#include "visitors/VariableReferenceVisitor.hpp"
 
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/symbols/BlockSymbols.h"
-#include "slang/util/IntervalMap.h"
 
 using namespace slang;
 
 namespace netlist {
 
 /// Visit a proceural block. This visitor performs unrolling of loops and
-/// evaluation of conditionals where the controlloing conditions can be
+/// evaluation of conditionals where the controlling conditions can be
 /// determined statically.
 class ProceduralBlockVisitor : public ast::ASTVisitor<ProceduralBlockVisitor, true, false> {
 public:
     bool anyErrors = false;
 
     explicit ProceduralBlockVisitor(ast::Compilation& compilation, Netlist& netlist,
-                                    ast::EdgeKind edgeKind) :
+                                    NetlistVisitorOptions const& options, ast::EdgeKind edgeKind) :
         netlist(netlist), evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)),
-        edgeKind(edgeKind) {
+        options(options), edgeKind(edgeKind) {
         evalCtx.pushEmptyFrame();
         DEBUG_PRINT("Procedural block\n");
     }
@@ -68,7 +68,7 @@ public:
                     if (result == ast::EdgeKind::None)
                         break;
                 }
-                // if we got here, edgeKind is not "None" which is all we care about
+                // If we got here, edgeKind is not "None" which is all we care about.
             }
         }
         return result;
@@ -84,8 +84,9 @@ public:
 
     void handle(const ast::ForLoopStatement& loop) {
 
-        // Conditions this loop cannot be unrolled.
-        if (loop.loopVars.empty() || !loop.stopExpr || loop.steps.empty() || anyErrors) {
+        // Conditions that mean this loop cannot be unrolled.
+        if (!options.unrollForLoops || loop.loopVars.empty() || !loop.stopExpr ||
+            loop.steps.empty() || anyErrors) {
             loop.body.visit(*this);
             return;
         }
@@ -174,21 +175,11 @@ public:
                 cond.expr->visit(varRefVisitor);
             }
 
-            // Push the condition variables.
-            for (auto& varRef : varRefVisitor.getVars()) {
-                condVarsStack.push_back(varRef);
-            }
-
             // Visit the 'then' and 'else' statements, whose execution is
             // under the control of the condition variables.
             stmt.ifTrue.visit(*this);
             if (stmt.ifFalse) {
                 stmt.ifFalse->visit(*this);
-            }
-
-            // Pop the condition variables.
-            for (auto& varRef : varRefVisitor.getVars()) {
-                condVarsStack.pop_back();
             }
         };
 
@@ -251,19 +242,6 @@ public:
                 connectVarToVar(RHSVarRef, LHSVarRef);
             }
         }
-
-        // Add edges to the LHS target variables from declarations that
-        // correspond to conditions controlling the assignment.
-        for (auto* condNode : condVarsStack) {
-            auto& condVarRef = condNode->as<NetlistVariableReference>();
-
-            connectDeclToVar(condVarRef, condVarRef.symbol);
-            for (auto* leftNode : visitorLHS.getVars()) {
-
-                // Add edge from conditional variable to the LHS variable.
-                connectVarToVar(*condNode, *leftNode);
-            }
-        }
     }
 
 private:
@@ -303,7 +281,7 @@ private:
 
     Netlist& netlist;
     ast::EvalContext evalCtx;
-    SmallVector<NetlistNode*> condVarsStack;
+    NetlistVisitorOptions const& options;
     ast::EdgeKind edgeKind;
 };
 

@@ -25,12 +25,15 @@ using namespace slang::ast;
 using namespace slang::driver;
 
 void printJson(Compilation& compilation, const std::string& fileName,
-               const std::vector<std::string>& scopes, bool includeSourceInfo) {
+               const std::vector<std::string>& scopes, bool includeSourceInfo, bool detailedTypes) {
     JsonWriter writer;
     writer.setPrettyPrint(true);
 
     ASTSerializer serializer(compilation, writer);
     serializer.setIncludeSourceInfo(includeSourceInfo);
+    serializer.setDetailedTypeInfo(detailedTypes);
+    serializer.setTryConstantFold(false);
+
     if (scopes.empty()) {
         serializer.startObject();
         serializer.writeProperty("design");
@@ -73,12 +76,16 @@ int driverMain(int argc, TArgs argv) {
         std::optional<bool> onlyPreprocess;
         std::optional<bool> onlyParse;
         std::optional<bool> onlyMacros;
+        std::optional<bool> disableAnalysis;
         driver.cmdLine.add("-E,--preprocess", onlyPreprocess,
                            "Only run the preprocessor (and print preprocessed files to stdout)");
         driver.cmdLine.add("--macros-only", onlyMacros, "Print a list of found macros and exit");
         driver.cmdLine.add(
             "--parse-only", onlyParse,
             "Stop after parsing input files, don't perform elaboration or type checking");
+        driver.cmdLine.add("--disable-analysis", disableAnalysis,
+                           "Disables post-elaboration analysis passes,"
+                           "which prevents some diagnostics from being issued");
 
         std::optional<bool> includeComments;
         std::optional<bool> includeDirectives;
@@ -105,6 +112,10 @@ int driverMain(int argc, TArgs argv) {
         std::optional<bool> includeSourceInfo;
         driver.cmdLine.add("--ast-json-source-info", includeSourceInfo,
                            "When dumping AST to JSON, include source line and file information");
+
+        std::optional<bool> serializeDetailedTypes;
+        driver.cmdLine.add("--ast-json-detailed-types", serializeDetailedTypes,
+                           "When dumping AST to JSON, expand out all type information");
 
         std::optional<std::string> timeTrace;
         driver.cmdLine.add("--time-trace", timeTrace,
@@ -134,7 +145,7 @@ int driverMain(int argc, TArgs argv) {
         if (onlyParse.has_value() + onlyPreprocess.has_value() + onlyMacros.has_value() +
                 driver.options.lintMode() >
             1) {
-            OS::printE(fg(driver.diagClient->errorColor), "error: ");
+            OS::printE(fg(driver.textDiagClient->errorColor), "error: ");
             OS::printE("can only specify one of --preprocess, --macros-only, "
                        "--parse-only, --lint-only");
             return 3;
@@ -162,20 +173,29 @@ int driverMain(int argc, TArgs argv) {
                     ok = driver.parseAllSources();
                 }
 
+                std::unique_ptr<Compilation> compilation;
                 {
                     TimeTraceScope timeScope("elaboration"sv, ""sv);
-                    auto compilation = driver.createCompilation();
-                    ok &= driver.reportCompilation(*compilation, quiet == true);
-                    if (astJsonFile)
-                        printJson(*compilation, *astJsonFile, astJsonScopes,
-                                  includeSourceInfo == true);
+                    compilation = driver.createCompilation();
+                    driver.reportCompilation(*compilation, quiet == true);
+                }
+
+                if (!disableAnalysis.value_or(false)) {
+                    TimeTraceScope timeScope("semanticAnalysis"sv, ""sv);
+                    driver.runAnalysis(*compilation);
+                }
+
+                ok &= driver.reportDiagnostics(quiet == true);
+
+                if (astJsonFile) {
+                    TimeTraceScope timeScope("serialization"sv, ""sv);
+                    printJson(*compilation, *astJsonFile, astJsonScopes, includeSourceInfo == true,
+                              serializeDetailedTypes == true);
                 }
             }
         }
         SLANG_CATCH(const std::exception& e) {
-#if __cpp_exceptions
-            OS::printE(fmt::format("internal compiler error: {}\n", e.what()));
-#endif
+            SLANG_REPORT_EXCEPTION(e, "internal compiler error: {}\n");
             return 4;
         }
 
@@ -191,11 +211,9 @@ int driverMain(int argc, TArgs argv) {
         return ok ? 0 : 5;
     }
     SLANG_CATCH(const std::exception& e) {
-#if __cpp_exceptions
-        OS::printE(fmt::format("{}\n", e.what()));
-#endif
-        return 6;
+        SLANG_REPORT_EXCEPTION(e, "{}\n");
     }
+    return 6;
 }
 
 #ifndef FUZZ_TARGET
@@ -215,10 +233,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     auto tree = SyntaxTree::fromFileInMemory(text, sourceManager);
 
     DiagnosticEngine diagEngine(sourceManager);
+    diagEngine.setErrorLimit(10);
+
     auto diagClient = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(diagClient);
 
-    Compilation compilation;
+    CompilationOptions options;
+    options.maxInstanceDepth = 16;
+    options.maxDefParamSteps = 32;
+
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     for (auto& diag : compilation.getAllDiagnostics())
         diagEngine.issue(diag);

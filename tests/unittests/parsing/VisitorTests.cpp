@@ -4,6 +4,7 @@
 #include "Test.h"
 #include <fmt/core.h>
 
+#include "slang/analysis/AnalysisManager.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/parsing/ParserMetadata.h"
 #include "slang/syntax/SyntaxPrinter.h"
@@ -649,6 +650,7 @@ TEST_CASE("Syntax rewriting with metadata updates") {
     auto tree = SyntaxTree::fromFileInMemory(R"(
 `default_nettype none
 `unconnected_drive pull0
+`celldefine
 `timescale 1ns/1ps
 `define FOO
 
@@ -693,6 +695,7 @@ class C; endclass
     CHECK(SyntaxPrinter::printFile(*newTree) == R"(
 `default_nettype none
 `unconnected_drive pull0
+`celldefine
 `timescale 1ns/1ps
 `define FOO
 
@@ -726,6 +729,7 @@ class C; endclass
         if (key->as<ModuleDeclarationSyntax>().header->name.valueText() == "FooBar") {
             CHECK(node.timeScale->base.unit == TimeUnit::Nanoseconds);
             CHECK(node.unconnectedDrive == TokenKind::Pull0Keyword);
+            CHECK(node.cellDefine == true);
         }
     }
 }
@@ -747,5 +751,11 @@ TEST_CASE("Visit all file") {
         v.visitDefault(elem);
     }));
 
-    CHECK(count == 1456);
+    CHECK(count == 1812);
+
+    compilation.getAllDiagnostics();
+    compilation.freeze();
+
+    analysis::AnalysisManager analysisManager;
+    analysisManager.analyze(compilation);
 }

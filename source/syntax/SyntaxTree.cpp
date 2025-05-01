@@ -18,7 +18,7 @@ namespace slang::syntax {
 using namespace parsing;
 
 SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-                       const SourceLibrary* library, std::shared_ptr<SyntaxTree> parent) :
+                       const SourceLibrary* library, const std::shared_ptr<SyntaxTree>& parent) :
     rootNode(root), library(library), sourceMan(sourceManager), alloc(std::move(alloc)) {
     metadata = std::make_unique<ParserMetadata>(ParserMetadata::fromSyntax(*root));
     if (parent) { // copy parent's info

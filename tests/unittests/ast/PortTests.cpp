@@ -3,6 +3,8 @@
 
 #include "Test.h"
 
+#include "slang/ast/expressions/LiteralExpressions.h"
+#include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
@@ -155,7 +157,7 @@ module m6(I.bar bar); endmodule
     checkIfacePort("m0", "a", "I", "");
     checkIfacePort("m0", "b", "I", "");
     checkWirePort("m0", "c", In, wire, "logic");
-    checkWirePort("m1", "j", InOut, wire, "struct{logic f;}J");
+    checkWirePort("m1", "j", InOut, wire, "J");
     checkIfacePort("m3", "k", "K", "");
     checkWirePort("m3", "w", InOut, wire, "logic");
     checkWirePort("m4", "v", Out, nullptr, "logic");
@@ -727,7 +729,7 @@ interface A_Bus( input logic clk );
         input gnt;
         output req, addr;
         inout data;
-        property p1; gnt ##[1:3] data; endproperty
+        property p1; gnt ##[1:3] data > 0; endproperty
     endclocking
 
     modport DUT ( input clk, req, addr,
@@ -1713,36 +1715,6 @@ interface I(.;input interface I
     compilation.getAllDiagnostics();
 }
 
-TEST_CASE("Inout ports are treated as readers and writers") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I;
-    wire integer i;
-    modport m(inout i);
-endinterface
-
-module m(inout wire a);
-    wire local_a;
-    pullup(local_a);
-    tranif1(a, local_a, 1'b1);
-endmodule
-
-module top;
-    I i();
-
-    wire a;
-    m m1(.*);
-    m m2(.*);
-endmodule
-)");
-
-    CompilationOptions options;
-    options.flags &= ~CompilationFlags::SuppressUnused;
-
-    Compilation compilation(options);
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
 TEST_CASE("Ansi duplicate port compatibility option") {
     auto tree = SyntaxTree::fromText(R"(
 module m(input a, output b);
@@ -1763,4 +1735,66 @@ endmodule
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Unpacked port connection regress -- GH #1315") {
+    auto tree = SyntaxTree::fromText(R"(
+module subm(input h);
+endmodule
+
+module top();
+	wire g [1:0];
+	subm inst[2:3](.h(g));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& inst = compilation.getRoot().lookupName<InstanceArraySymbol>("top.inst");
+    REQUIRE(inst.elements.size() == 2);
+
+    auto getHierName = [&](size_t index) { return inst.elements[index]->getHierarchicalPath(); };
+    auto getSelectIdx = [&](size_t index) {
+        return inst.elements[index]
+            ->as<InstanceSymbol>()
+            .getPortConnections()[0]
+            ->getExpression()
+            ->as<ElementSelectExpression>()
+            .selector()
+            .as<IntegerLiteral>()
+            .getValue();
+    };
+
+    CHECK(getHierName(0) == "top.inst[2]");
+    CHECK(getSelectIdx(0) == 1);
+    CHECK(getHierName(1) == "top.inst[3]");
+    CHECK(getSelectIdx(1) == 0);
+}
+
+TEST_CASE("Iface port connection with reversed range regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface bus(input clk);
+	logic a;
+endinterface
+
+module m1(bus intf [0:1]);
+	wire w = intf[0].a;
+endmodule
+
+module top(input logic clk);
+	bus top_bus[1:0](clk);
+	m1 m1i(top_bus);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& w = compilation.getRoot().lookupName<NetSymbol>("top.m1i.w");
+    auto target = w.getInitializer()->getSymbolReference();
+    REQUIRE(target);
+    CHECK(target->getHierarchicalPath() == "top.top_bus[1].a");
 }

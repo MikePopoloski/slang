@@ -8,6 +8,7 @@
 
 #include "CombLoops.h"
 #include "NetlistTest.h"
+#include "Test.h"
 
 //===---------------------------------------------------------------------===//
 // Basic tests

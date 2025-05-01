@@ -48,10 +48,17 @@ public:
     /// Returns true if the pattern had an error and is therefore invalid.
     bool bad() const { return kind == PatternKind::Invalid; }
 
-    using VarMap = SmallMap<std::string_view, const PatternVarSymbol*, 4>;
+    static bool createPatternVars(const ASTContext& context,
+                                  const syntax::PatternSyntax& patternSyntax,
+                                  const syntax::ExpressionSyntax& condSyntax,
+                                  SmallVector<const PatternVarSymbol*>& results);
 
-    static Pattern& bind(const syntax::PatternSyntax& syntax, const Type& targetType,
-                         VarMap& varMap, ASTContext& context);
+    static bool createPatternVars(const ASTContext& context, const syntax::PatternSyntax& syntax,
+                                  const Type& targetType,
+                                  SmallVector<const PatternVarSymbol*>& results);
+
+    static Pattern& bind(const ASTContext& context, const syntax::PatternSyntax& syntax,
+                         const Type& targetType);
 
     /// Evaluates the pattern under the given evaluation context. Any errors that occur
     /// will be stored in the evaluation context instead of issued to the compilation.
@@ -104,8 +111,10 @@ protected:
     Pattern(PatternKind kind, SourceRange sourceRange) : kind(kind), sourceRange(sourceRange) {}
 
     static Pattern& badPattern(Compilation& compilation, const Pattern* child);
-    static void createPlaceholderVars(const syntax::PatternSyntax& syntax, VarMap& varMap,
-                                      ASTContext& context);
+
+    static void createPlaceholderVars(const ASTContext& context,
+                                      const syntax::PatternSyntax& syntax,
+                                      SmallVector<const PatternVarSymbol*>& results);
 };
 
 /// @brief Represents an invalid pattern
@@ -127,6 +136,9 @@ public:
     static bool isKind(PatternKind kind) { return kind == PatternKind::Invalid; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&&) const {}
 };
 
 /// Represents a wildcard pattern that matches anything.
@@ -144,6 +156,9 @@ public:
     static bool isKind(PatternKind kind) { return kind == PatternKind::Wildcard; }
 
     void serializeTo(ASTSerializer&) const {}
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&&) const {}
 };
 
 /// Reresents a pattern that matches a given constant expression.
@@ -180,8 +195,8 @@ public:
     VariablePattern(const PatternVarSymbol& variable, SourceRange sourceRange) :
         Pattern(PatternKind::Variable, sourceRange), variable(variable) {}
 
-    static Pattern& fromSyntax(const syntax::VariablePatternSyntax& syntax, const Type& targetType,
-                               VarMap& varMap, ASTContext& context);
+    static Pattern& fromSyntax(const syntax::VariablePatternSyntax& syntax,
+                               const ASTContext& context);
 
     ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
                            CaseStatementCondition conditionKind) const;
@@ -189,6 +204,9 @@ public:
     static bool isKind(PatternKind kind) { return kind == PatternKind::Variable; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&&) const {}
 };
 
 /// Represents a pattern that matches a member of a tagged union.
@@ -203,8 +221,11 @@ public:
     TaggedPattern(const FieldSymbol& member, const Pattern* valuePattern, SourceRange sourceRange) :
         Pattern(PatternKind::Tagged, sourceRange), member(member), valuePattern(valuePattern) {}
 
+    static bool createVars(const ASTContext& context, const syntax::TaggedPatternSyntax& syntax,
+                           const Type& targetType, SmallVector<const PatternVarSymbol*>& results);
+
     static Pattern& fromSyntax(const syntax::TaggedPatternSyntax& syntax, const Type& targetType,
-                               VarMap& varMap, ASTContext& context);
+                               const ASTContext& context);
 
     ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
                            CaseStatementCondition conditionKind) const;
@@ -238,8 +259,11 @@ public:
     StructurePattern(std::span<const FieldPattern> patterns, SourceRange sourceRange) :
         Pattern(PatternKind::Structure, sourceRange), patterns(patterns) {}
 
+    static bool createVars(const ASTContext& context, const syntax::StructurePatternSyntax& syntax,
+                           const Type& targetType, SmallVector<const PatternVarSymbol*>& results);
+
     static Pattern& fromSyntax(const syntax::StructurePatternSyntax& syntax, const Type& targetType,
-                               VarMap& varMap, ASTContext& context);
+                               const ASTContext& context);
 
     ConstantValue evalImpl(EvalContext& context, const ConstantValue& value,
                            CaseStatementCondition conditionKind) const;

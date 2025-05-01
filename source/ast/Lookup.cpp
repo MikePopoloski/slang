@@ -27,6 +27,7 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/LexerFacts.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/text/SourceManager.h"
 #include "slang/util/String.h"
 
 namespace slang::ast {
@@ -328,8 +329,12 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
         // - This is not a direct interface port, package, or $unit reference
         const bool isCBOrVirtualIface = symbol->kind == SymbolKind::ClockingBlock || isVirtualIface;
         if (it == nameParts.rbegin()) {
-            if (symbol->kind != SymbolKind::InterfacePort && symbol->kind != SymbolKind::Package &&
-                symbol->kind != SymbolKind::CompilationUnit && !isCBOrVirtualIface) {
+            if (symbol->kind == SymbolKind::InterfacePort) {
+                result.flags |= LookupResultFlags::IfacePort;
+                result.path.emplace_back(*symbol);
+            }
+            else if (symbol->kind != SymbolKind::Package &&
+                     symbol->kind != SymbolKind::CompilationUnit && !isCBOrVirtualIface) {
                 result.flags |= LookupResultFlags::IsHierarchical;
                 result.path.emplace_back(*symbol);
             }
@@ -497,18 +502,21 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
     if (!checkClassParams(name))
         return false;
 
-    if (result.flags.has(LookupResultFlags::IsHierarchical) && symbol) {
-        if (VariableSymbol::isKind(symbol->kind) &&
-            symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
-            // If we found an automatic variable check that we didn't try to reference it
-            // hierarchically.
-            result.addDiag(*context.scope, diag::AutoVariableHierarchical, name.range);
-            return false;
-        }
-        else if (symbol->isType()) {
-            // Types cannot be referenced hierarchically.
-            result.addDiag(*context.scope, diag::TypeHierarchical, name.range);
-            return false;
+    if (result.flags.has(LookupResultFlags::IsHierarchical | LookupResultFlags::IfacePort) &&
+        symbol) {
+        if (result.flags.has(LookupResultFlags::IsHierarchical)) {
+            if (VariableSymbol::isKind(symbol->kind) &&
+                symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+                // If we found an automatic variable check that we didn't try to reference it
+                // hierarchically.
+                result.addDiag(*context.scope, diag::AutoVariableHierarchical, name.range);
+                return false;
+            }
+            else if (symbol->isType()) {
+                // Types cannot be referenced hierarchically.
+                result.addDiag(*context.scope, diag::TypeHierarchical, name.range);
+                return false;
+            }
         }
         result.path.emplace_back(*symbol);
     }
@@ -547,8 +555,9 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
         return lookupDownward(nameParts, name, context, flags, result);
     };
 
+    uint32_t upwardCount = 0;
     const Scope* scope = context.scope;
-    while (scope) {
+    do {
         // Search for a scope or instance target within our current scope.
         auto symbol = scope->find(name.text);
         if (symbol && !symbol->isValue() && !symbol->isType() &&
@@ -556,8 +565,10 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
             if (!tryMatch(*symbol))
                 return false;
 
-            if (result.found)
+            if (result.found) {
+                result.upwardCount = upwardCount;
                 return true;
+            }
         }
 
         // Advance to the next scope, skipping to the parent instance when
@@ -577,11 +588,15 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
                 if (!tryMatch(*inst))
                     return false;
 
-                if (result.found)
+                if (result.found) {
+                    result.upwardCount = upwardCount;
                     return true;
+                }
             }
         }
-    }
+
+        upwardCount++;
+    } while (scope);
 
     result.clear();
     if (firstMatch) {
@@ -867,7 +882,7 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
     // the default specialization (if possible).
     if (result.found->kind == SymbolKind::GenericClassDef && unwrapGenericClasses) {
         auto& genericClass = result.found->as<GenericClassDefSymbol>();
-        result.found = genericClass.getDefaultSpecialization();
+        result.found = genericClass.getDefaultSpecialization(scope);
 
         if (!result.found) {
             if (range)
@@ -1033,8 +1048,15 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             // If this is a system name, look up directly in the compilation.
             Token nameToken = syntax.as<SystemNameSyntax>().systemIdentifier;
             result.found = nullptr;
-            result.systemSubroutine = scope.getCompilation().getSystemSubroutine(
-                nameToken.valueText());
+
+            if (auto knownNameId = nameToken.systemName();
+                knownNameId != KnownSystemName::Unknown) {
+                result.systemSubroutine = scope.getCompilation().getSystemSubroutine(knownNameId);
+            }
+            else {
+                result.systemSubroutine = scope.getCompilation().getSystemSubroutine(
+                    nameToken.valueText());
+            }
 
             if (!result.systemSubroutine) {
                 result.addDiag(scope, diag::UnknownSystemName, nameToken.range())
@@ -1088,7 +1110,8 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
         return;
 
     // Perform the lookup.
-    unqualifiedImpl(scope, name.text, context.getLocation(), name.range, flags, {}, result, scope);
+    unqualifiedImpl(scope, name.text, context.getLocation(), name.range, flags, {}, result, scope,
+                    &syntax);
 
     if (!result.found) {
         if (flags.has(LookupFlags::AlwaysAllowUpward)) {
@@ -1135,7 +1158,9 @@ const Symbol* Lookup::unqualified(const Scope& scope, std::string_view name,
         return nullptr;
 
     LookupResult result;
-    unqualifiedImpl(scope, name, LookupLocation::max, std::nullopt, flags, {}, result, scope);
+    unqualifiedImpl(scope, name, LookupLocation::max, std::nullopt, flags, {}, result, scope,
+                    nullptr);
+
     SLANG_ASSERT(result.selectors.empty());
     unwrapResult(scope, std::nullopt, result, /* unwrapGenericClasses */ false);
 
@@ -1149,7 +1174,8 @@ const Symbol* Lookup::unqualifiedAt(const Scope& scope, std::string_view name,
         return nullptr;
 
     LookupResult result;
-    unqualifiedImpl(scope, name, location, sourceRange, flags, {}, result, scope);
+    unqualifiedImpl(scope, name, location, sourceRange, flags, {}, result, scope, nullptr);
+
     SLANG_ASSERT(result.selectors.empty());
     unwrapResult(scope, sourceRange, result, /* unwrapGenericClasses */ false);
 
@@ -1181,8 +1207,9 @@ static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSynt
             return nullptr;
         }
 
-        auto child = array.elements[size_t(array.range.translateIndex(*index))];
-        result.path.emplace_back(*child, *index);
+        int32_t translated = *index - array.range.lower();
+        auto child = array.elements[size_t(translated)];
+        result.path.emplace_back(*child, translated);
         return child;
     }
     else {
@@ -1190,11 +1217,13 @@ static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSynt
         if (!array.valid)
             return nullptr;
 
+        int32_t idx = 0;
         for (auto entry : array.entries) {
             if (entry->arrayIndex && *entry->arrayIndex == *index) {
-                result.path.emplace_back(*entry, *index);
+                result.path.emplace_back(*entry, idx);
                 return entry;
             }
+            idx++;
         }
 
         auto& diag = result.addDiag(*context.scope, diag::ScopeIndexOutOfRange,
@@ -1253,8 +1282,8 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
         return nullptr;
     }
 
-    int32_t begin = array.range.translateIndex(selRange.left);
-    int32_t end = array.range.translateIndex(selRange.right);
+    int32_t begin = selRange.left - array.range.lower();
+    int32_t end = selRange.right - array.range.lower();
     if (begin > end)
         std::swap(begin, end);
 
@@ -1268,7 +1297,7 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
     auto& comp = context.getCompilation();
     auto children = comp.emplace<InstanceArraySymbol>(comp, ""sv, syntax.getFirstToken().location(),
                                                       elems, newRange);
-    result.path.emplace_back(*children);
+    result.path.emplace_back(*children, std::pair(begin, end));
     return children;
 }
 
@@ -1340,12 +1369,14 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
     SmallVector<const ElementSelectSyntax*> elementSelects;
     auto& comp = context.getCompilation();
 
-    for (auto& selector : selectors) {
+    for (auto& selector : std::views::reverse(selectors)) {
         if (auto memberSel = std::get_if<LookupResult::MemberSelector>(&selector)) {
             NamePlusLoc npl;
             npl.dotLocation = memberSel->dotLocation;
             npl.name.text = memberSel->name;
             npl.name.range = memberSel->nameRange;
+            std::ranges::reverse(elementSelects); // reverse the element selects since we initially
+                                                  // saw them in reverse order
             npl.name.selectors = elementSelects.copy(comp);
 
             nameParts.push_back(npl);
@@ -1356,13 +1387,8 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
         }
     }
 
-    // lookupDownward expects names in reverse order...
-    SmallVector<NamePlusLoc, 4> namePartsReversed(nameParts.size(), UninitializedTag());
-    for (auto& npl : std::views::reverse(nameParts))
-        namePartsReversed.push_back(npl);
-
     result.found = getVirtualInterfaceTarget(virtualInterface, context, range);
-    lookupDownward(namePartsReversed, unused, context, LookupFlags::None, result);
+    lookupDownward(nameParts, unused, context, LookupFlags::None, result);
 }
 
 const ClassType* Lookup::findClass(const NameSyntax& className, const ASTContext& context,
@@ -1624,10 +1650,16 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
         if (!isClass.has_value() || !isClass.value())
             return false;
 
-        return resolveColonNames(nameParts, colonParts, name, flags, result, classContext);
+        if (!resolveColonNames(nameParts, colonParts, name, flags, result, classContext))
+            return false;
+    }
+    else {
+        if (!lookupDownward(nameParts, name, classContext, flags, result))
+            return false;
     }
 
-    return lookupDownward(nameParts, name, classContext, flags, result);
+    unwrapResult(*context.scope, syntax.sourceRange(), result);
+    return true;
 }
 
 bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& syntax,
@@ -1670,7 +1702,7 @@ bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& 
 void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLocation location,
                              std::optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                              SymbolIndex outOfBlockIndex, LookupResult& result,
-                             const Scope& originalScope) {
+                             const Scope& originalScope, const SyntaxNode* originalSyntax) {
     auto reportRecursiveError = [&](const Symbol& symbol) {
         if (sourceRange) {
             auto& diag = result.addDiag(scope, diag::RecursiveDefinition, *sourceRange);
@@ -1755,6 +1787,34 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
             if (forward) {
                 locationGood = LookupLocation::before(*forward) < location;
                 result.flags |= LookupResultFlags::FromForwardTypedef;
+            }
+        }
+        else if (symbol->kind == SymbolKind::TransparentMember && originalSyntax) {
+            // Enum values are special in that we can't always get a precise ordering
+            // of where they are declared in a scope, since they can be declared inside
+            // a nested subexpression. Check for correct location by looking at the
+            // actual source locations involved.
+            auto& wrapped = symbol->as<TransparentMemberSymbol>().wrapped;
+            if (wrapped.kind == SymbolKind::EnumValue) {
+                // If the enum was inherited from a base class then we shouldn't
+                // worry about the source location; the base class may be declared
+                // later in the file.
+                bool skipLocationCheck = false;
+                auto enumScope = wrapped.getParentScope()->asSymbol().getParentScope();
+                SLANG_ASSERT(enumScope);
+                if (enumScope->asSymbol().kind == SymbolKind::ClassType) {
+                    auto containingClass = getContainingClass(scope).first;
+                    if (containingClass &&
+                        containingClass->isDerivedFrom(enumScope->asSymbol().as<ClassType>())) {
+                        skipLocationCheck = true;
+                    }
+                }
+
+                if (auto sm = scope.getCompilation().getSourceManager(); sm && !skipLocationCheck) {
+                    auto loc = originalSyntax->getFirstToken().location();
+                    locationGood =
+                        sm->isBeforeInCompilationUnit(wrapped.location, loc).value_or(true);
+                }
             }
         }
 
@@ -1951,7 +2011,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
     }
 
     return unqualifiedImpl(*location.getScope(), name, location, sourceRange, flags,
-                           outOfBlockIndex, result, originalScope);
+                           outOfBlockIndex, result, originalScope, originalSyntax);
 }
 
 void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context,
@@ -2000,7 +2060,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
         case SyntaxKind::ClassName:
             // Start by trying to find the first name segment using normal unqualified lookup
             unqualifiedImpl(scope, name, context.getLocation(), first.range, flags, {}, result,
-                            scope);
+                            scope, nullptr);
             break;
         case SyntaxKind::UnitScope: {
             // Walk upward to find the compilation unit scope.
@@ -2013,8 +2073,8 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
             do {
                 auto& symbol = current->asSymbol();
                 if (symbol.kind == SymbolKind::CompilationUnit) {
-                    unqualifiedImpl(*current, name, location, first.range, flags, {}, result,
-                                    scope);
+                    unqualifiedImpl(*current, name, location, first.range, flags, {}, result, scope,
+                                    nullptr);
                     break;
                 }
 

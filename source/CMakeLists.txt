@@ -10,7 +10,8 @@ add_custom_command(
   COMMAND
     ${Python_EXECUTABLE} ${SCRIPTS_DIR}/diagnostic_gen.py --outDir
     ${CMAKE_CURRENT_BINARY_DIR} --srcDir ${CMAKE_CURRENT_SOURCE_DIR} --incDir
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/slang
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/slang --diagnostics
+    ${SCRIPTS_DIR}/diagnostics.txt
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/CompilationDiags.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/ConstEvalDiags.h
@@ -33,16 +34,19 @@ add_custom_command(
 # Generate syntax headers and sources
 add_custom_command(
   COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir
-          ${CMAKE_CURRENT_BINARY_DIR}
+          ${CMAKE_CURRENT_BINARY_DIR} --syntax ${SCRIPTS_DIR}/syntax.txt
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h
          ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
          ${CMAKE_CURRENT_BINARY_DIR}/SyntaxClone.cpp
          ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxFwd.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/KnownSystemName.h
          ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
+         ${CMAKE_CURRENT_BINARY_DIR}/KnownSystemName.cpp
   DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
           ${SCRIPTS_DIR}/triviakinds.txt ${SCRIPTS_DIR}/tokenkinds.txt
+          ${SCRIPTS_DIR}/systemnames.txt
   COMMENT "Generating syntax")
 
 # Generate version header
@@ -56,11 +60,20 @@ add_library(
   ${CMAKE_CURRENT_BINARY_DIR}/SyntaxClone.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/KnownSystemName.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/VersionInfo.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h
+  analysis/AbstractFlowAnalysis.cpp
+  analysis/AnalysisManager.cpp
+  analysis/AnalyzedAssertion.cpp
+  analysis/AnalyzedProcedure.cpp
+  analysis/CaseDecisionDag.cpp
+  analysis/ClockInference.cpp
+  analysis/DataFlowAnalysis.cpp
   diagnostics/DiagnosticClient.cpp
   diagnostics/DiagnosticEngine.cpp
   diagnostics/Diagnostics.cpp
+  diagnostics/JsonDiagnosticClient.cpp
   diagnostics/TextDiagnosticClient.cpp
   driver/Driver.cpp
   driver/SourceLoader.cpp
@@ -113,7 +126,7 @@ set_target_properties(
 
 # Compile options
 target_compile_options(slang_slang PRIVATE ${SLANG_WARN_FLAGS})
-target_compile_definitions(slang_slang PUBLIC $<$<CONFIG:Debug>:DEBUG>)
+target_compile_definitions(slang_slang PUBLIC $<$<CONFIG:Debug>:SLANG_DEBUG>)
 
 # Include directories
 target_include_directories(
@@ -133,6 +146,11 @@ target_link_libraries(slang_slang PUBLIC fmt::fmt Boost::headers
 if(SLANG_USE_MIMALLOC)
   target_link_libraries(slang_slang PUBLIC ${mimalloc_target})
   target_compile_definitions(slang_slang PUBLIC SLANG_USE_MIMALLOC)
+endif()
+
+if(SLANG_USE_CPPTRACE)
+  target_link_libraries(slang_slang PUBLIC cpptrace::cpptrace)
+  target_compile_definitions(slang_slang PUBLIC SLANG_USE_CPPTRACE)
 endif()
 
 # If building the Python library we'll end up with a shared lib no matter what,

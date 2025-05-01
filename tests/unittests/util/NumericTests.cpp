@@ -230,7 +230,9 @@ TEST_CASE("SVInt to string (and back)") {
     CHECK(ss.str() == "1");
 
     // This caught a heap corruption bug in from-string truncation.
-    { "54'bxx0111x10xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"_si; }
+    {
+        "54'bxx0111x10xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"_si;
+    }
 
     CHECK("96'hx00000Z101"_si.toString(LiteralBase::Decimal, false) == "X");
     CHECK("96'hxxxxxxxxxxxxxxxxxxxxxxxx"_si.toString(LiteralBase::Decimal, false) == "x");
@@ -397,6 +399,10 @@ TEST_CASE("Division") {
     CHECK("-50"_si % "-40"_si == -10);
     CHECK("-50"_si % "40"_si == -10);
     CHECK("-4'sd8"_si / "-4'sd7"_si == 1);
+
+    SVInt v6 = "4"_si / "2"_si;
+    CHECK(v6 == 2);
+    CHECK(v6.isSigned());
 
     SVInt v7 = "19823'd234098234098234098234"_si;
     CHECK("300'd0"_si / "10"_si == 0);
@@ -668,6 +674,10 @@ TEST_CASE("SVInt misc functions") {
     CHECK("64'd1"_si.reverse() == 1ull << 63);
     CHECK_THAT("129'b1x10"_si.shl(125).reverse(), exactlyEquals("129'b1x1"_si));
     CHECK_THAT("128'b1x10"_si.shl(124).reverse(), exactlyEquals("128'b1x1"_si));
+
+    CHECK("192'hzzxx000000zz0000"_si.countLeadingUnknowns() == 144);
+    CHECK("192'hzzxx000000zz0000"_si.countLeadingZs() == 136);
+    CHECK(a.countLeadingZs() == 0);
 }
 
 TEST_CASE("Double conversions") {

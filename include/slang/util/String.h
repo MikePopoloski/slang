@@ -9,6 +9,7 @@
 
 #include <filesystem>
 #include <optional>
+#include <vector>
 
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
@@ -54,6 +55,9 @@ void strToUpper(std::string& str);
 /// Converts the provided string to all lowercase characters (assuming ASCII contents).
 /// The string is converted in place.
 void strToLower(std::string& str);
+
+/// Splits the provided string into substrings based on the provided delimiter.
+std::vector<std::string_view> splitString(std::string_view str, char delimiter);
 
 /// Converts a character to uppercase (assuming ASCII).
 inline char charToUpper(char c) {

@@ -18,7 +18,7 @@ static std::string getLexicalPath(const Scope* scope) {
 
     std::string str;
     auto& sym = scope->asSymbol();
-    sym.getLexicalPath(str);
+    sym.appendLexicalPath(str);
 
     if (sym.kind == SymbolKind::Package || sym.kind == SymbolKind::ClassType ||
         sym.kind == SymbolKind::CovergroupType) {
@@ -84,7 +84,9 @@ void TypePrinter::visit(const EnumType& type, std::string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         printScope(type.getParentScope());
 
-        if (overrideName.empty())
+        if (!type.name.empty())
+            buffer->append(type.name);
+        else if (overrideName.empty())
             buffer->append("<unnamed enum>");
         else
             buffer->append(overrideName);
@@ -109,13 +111,18 @@ void TypePrinter::visit(const EnumType& type, std::string_view overrideName) {
         }
         buffer->append("}");
 
-        if (options.skipScopedTypeNames)
-            ;
-        else if (!overrideName.empty())
+        if (options.skipScopedTypeNames) {
+            // Nothing to do here.
+        }
+        else if (!overrideName.empty()) {
             buffer->append(overrideName);
+        }
         else {
             printScope(type.getParentScope());
-            buffer->format("e${}", type.systemId);
+            if (type.name.empty())
+                buffer->format("e${}", type.systemId);
+            else
+                buffer->append(type.name);
         }
     }
 }
@@ -390,17 +397,25 @@ void TypePrinter::visit(const VirtualInterfaceType& type, std::string_view) {
 }
 
 void TypePrinter::visit(const TypeAliasType& type, std::string_view overrideName) {
+    std::string downstreamOverrideName;
     if (!overrideName.empty()) {
-        type.targetType.getType().visit(*this, overrideName);
+        downstreamOverrideName = overrideName;
     }
     else if (options.elideScopeNames ||
              options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        type.targetType.getType().visit(*this, type.name);
+        downstreamOverrideName = type.name;
     }
     else {
         std::string path = getLexicalPath(type.getParentScope());
         path.append(type.name);
-        type.targetType.getType().visit(*this, path);
+        downstreamOverrideName = path;
+    }
+
+    if (options.skipTypeDefs) {
+        buffer->append(downstreamOverrideName);
+    }
+    else {
+        type.targetType.getType().visit(*this, downstreamOverrideName);
     }
 }
 

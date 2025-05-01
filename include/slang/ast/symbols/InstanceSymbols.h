@@ -12,6 +12,8 @@
 #include "slang/ast/Symbol.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/syntax/SyntaxFwd.h"
+#include "slang/util/Function.h"
+#include "slang/util/SmallMap.h"
 
 namespace slang::ast {
 
@@ -53,14 +55,22 @@ enum class SLANG_EXPORT InstanceFlags : uint8_t {
 
     /// The instance resides in a parent instance that itself is from a bind directive.
     /// This applies recursively for the entire bound hierarchy.
-    ParentFromBind = 1 << 2
+    ParentFromBind = 1 << 2,
+
+    /// The instance is the target of a bind instantiation.
+    TargetedByBind = 1 << 3
 };
-SLANG_BITMASK(InstanceFlags, ParentFromBind)
+SLANG_BITMASK(InstanceFlags, TargetedByBind)
 
 /// Common functionality for module, interface, program, and primitive instances.
 class SLANG_EXPORT InstanceSymbolBase : public Symbol {
 public:
-    std::span<const int32_t> arrayPath;
+    /// The path to this instance, if it is contained within an array (or multiple
+    /// nested arrays). This is a list of indices that can be used to index into the
+    /// arrays' elements list, always zero based. This is not necessarily what the
+    /// user wrote in the source code; the array dimensions are needed to translate
+    /// from this canonical space back to the source code indices.
+    std::span<const uint32_t> arrayPath;
 
     /// If this instance is part of an array, walk upward to find the array's name.
     /// Otherwise returns the name of the instance itself.
@@ -103,6 +113,16 @@ public:
     const PortConnection* getPortConnection(const MultiPortSymbol& port) const;
     const PortConnection* getPortConnection(const InterfacePortSymbol& port) const;
     std::span<const PortConnection* const> getPortConnections() const;
+
+    /// If it has been determined that the body of this instance is an exact
+    /// duplicate of another, this returns a pointer to the canonical copy
+    /// to avoid duplicating effort visiting this instance's body again.
+    /// Otherwise returns nullptr.
+    const InstanceBodySymbol* getCanonicalBody() const { return canonicalBody; }
+
+    void setCanonicalBody(const InstanceBodySymbol& newCanonical) const {
+        canonicalBody = &newCanonical;
+    }
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -150,6 +170,7 @@ private:
 
     mutable PointerMap* connectionMap = nullptr;
     mutable std::span<const PortConnection* const> connections;
+    mutable const InstanceBodySymbol* canonicalBody = nullptr;
 };
 
 class SLANG_EXPORT InstanceBodySymbol : public Symbol, public Scope {
@@ -203,6 +224,7 @@ private:
     friend class Scope;
 
     void setPorts(std::span<const Symbol* const> ports) const { portList = ports; }
+    void finishElaboration(function_ref<void(const Symbol&)> insertCB) const;
 
     const DefinitionSymbol& definition;
     mutable std::span<const Symbol* const> portList;
@@ -383,7 +405,7 @@ public:
         Compilation& compilation, const ASTContext& context, const CheckerSymbol& checker,
         const syntax::HierarchicalInstanceSyntax& syntax,
         std::span<const syntax::AttributeInstanceSyntax* const> attributes,
-        SmallVectorBase<int32_t>& path, bool isProcedural, bitmask<InstanceFlags> flags);
+        SmallVectorBase<uint32_t>& path, bool isProcedural, bitmask<InstanceFlags> flags);
 
     void verifyMembers() const;
 

@@ -135,7 +135,7 @@ protected:
                    DiagCode code, TParserFunc&& parseItem, AllowEmpty allowEmpty = {}) {
         auto current = peek();
         if (IsEnd(current.kind)) {
-            if (requireItems == RequireItems::True)
+            if (requireItems == RequireItems::True && !haveDiagAtCurrentLoc())
                 addDiag(code, current.location());
 
             closeToken = expect(closeKind);

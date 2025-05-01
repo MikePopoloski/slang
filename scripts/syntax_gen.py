@@ -48,10 +48,11 @@ def main():
     parser = argparse.ArgumentParser(description="Diagnostic source generator")
     parser.add_argument("--dir", default=os.getcwd(), help="Output directory")
     parser.add_argument("--python-bindings", action="store_true")
+    parser.add_argument("--syntax", help="full path to syntax file")
     args = parser.parse_args()
 
-    ourdir = os.path.dirname(os.path.realpath(__file__))
-    alltypes, kindmap = loadalltypes(ourdir)
+    inputdir = os.path.dirname(args.syntax)
+    alltypes, kindmap = loadalltypes(inputdir)
 
     if args.python_bindings:
         generatePyBindings(args.dir, alltypes)
@@ -59,7 +60,8 @@ def main():
         generateSyntaxClone(args.dir, alltypes, kindmap)
         generateSyntaxFactory(args.dir, alltypes)
         generateSyntax(args.dir, alltypes, kindmap)
-        generateTokenKinds(ourdir, args.dir)
+        generateTokenKinds(inputdir, args.dir)
+        generateSystemNames(inputdir, args.dir)
 
 
 def loadalltypes(ourdir):
@@ -633,8 +635,8 @@ std::string_view toString(SyntaxKind kind) {
         cppf.write('        case SyntaxKind::{}: return "{}";\n'.format(k, k))
 
     cppf.write(
-        """        default: return "";
-    }
+        """    }
+    return "";
 }
 
 """
@@ -766,6 +768,9 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <ostream>
+#include "slang/slang_export.h"
+
 namespace std { class type_info; }
 
 namespace slang::syntax {
@@ -865,6 +870,7 @@ SyntaxNode* clone(const T& node, BumpAllocator& alloc) {
 SyntaxNode* clone(const SyntaxListBase&, BumpAllocator&) {
     return nullptr;
 }
+
 """
     )
     # Write out deepClone methods for each derived type.
@@ -873,7 +879,7 @@ SyntaxNode* clone(const SyntaxListBase&, BumpAllocator&) {
             continue
         if v.final:
             clonef.write(
-                "SyntaxNode* clone(const {0}& node, BumpAllocator& alloc) {{\n".format(
+                "static SyntaxNode* clone(const {0}& node, BumpAllocator& alloc) {{\n".format(
                     k
                 )
             )
@@ -997,8 +1003,8 @@ std::string_view toString({} kind) {{
     for k in kinds:
         outf.write('        case {}::{}: return "{}";\n'.format(name, k, k))
     outf.write(
-        """        default: return "";
-    }
+        """    }
+    return "";
 }
 
 """
@@ -1076,6 +1082,134 @@ namespace slang::parsing {
     outf.write("}\n")
 
 
+def generateSystemNames(ourdir, builddir):
+    headerdir = os.path.join(builddir, "slang", "parsing")
+    try:
+        os.makedirs(headerdir)
+    except OSError:
+        pass
+
+    names = []
+    inf = open(os.path.join(ourdir, "systemnames.txt"))
+    for line in [x.strip("\n") for x in inf]:
+        line = line.strip()
+        if not line:
+            continue
+
+        names.append(line.split())
+
+    outf = open(os.path.join(headerdir, "KnownSystemName.h"), "w")
+    outf.write(
+        """//------------------------------------------------------------------------------
+//! @file KnownSystemName.h
+//! @brief Generated KnownSystemName enum
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+#pragma once
+
+#include <array>
+#include <ostream>
+
+#include "slang/util/Util.h"
+
+namespace slang::parsing {
+
+enum class SLANG_EXPORT KnownSystemName {
+    Unknown,
+"""
+    )
+
+    for name in names:
+        outf.write("    {},\n".format(name[1]))
+
+    outf.write(
+        """}};
+
+SLANG_EXPORT std::ostream& operator<<(std::ostream& os, KnownSystemName ksn);
+SLANG_EXPORT std::string_view toString(KnownSystemName ksn);
+SLANG_EXPORT KnownSystemName parseKnownSystemName(std::string_view str);
+
+class SLANG_EXPORT KnownSystemName_traits {{
+public:
+    static const std::array<KnownSystemName, {}> values;
+}};
+
+}}
+""".format(
+            len(names) + 1
+        )
+    )
+
+    outf = open(os.path.join(builddir, "KnownSystemName.cpp"), "w")
+    outf.write(
+        """//------------------------------------------------------------------------------
+// KnownSystemName.cpp
+// Generated KnownSystemName enum
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+#include "slang/parsing/KnownSystemName.h"
+
+#include "slang/util/FlatMap.h"
+
+namespace slang::parsing {
+
+std::ostream& operator<<(std::ostream& os, KnownSystemName ksn) {
+    os << toString(ksn);
+    return os;
+}
+
+std::string_view toString(KnownSystemName ksn) {
+    switch (ksn) {
+        case KnownSystemName::Unknown: return "Unknown";
+"""
+    )
+
+    for name in names:
+        outf.write(
+            '        case KnownSystemName::{}: return "{}";\n'.format(name[1], name[0])
+        )
+
+    outf.write(
+        """    }
+    return "";
+}
+
+const static flat_hash_map<std::string_view, KnownSystemName> ksnTable = {
+"""
+    )
+
+    for name in names:
+        outf.write('    {{ "{}", KnownSystemName::{} }},\n'.format(name[0], name[1]))
+
+    outf.write(
+        """};
+
+KnownSystemName parseKnownSystemName(std::string_view str) {
+    if (auto it = ksnTable.find(str); it != ksnTable.end())
+        return it->second;
+    return KnownSystemName::Unknown;
+}
+
+decltype(KnownSystemName_traits::values) KnownSystemName_traits::values = {
+    KnownSystemName::Unknown,
+"""
+    )
+
+    for name in names:
+        outf.write("    KnownSystemName::{},\n".format(name[1]))
+
+    outf.write(
+        """};
+
+}
+"""
+    )
+
+
 def generatePyBindings(builddir, alltypes):
     numfiles = 4
     items = list(alltypes.items())
@@ -1102,14 +1236,20 @@ void registerSyntaxNodes{0}(py::module_& m) {{
         )
 
         idx = i * perfile
-        for k, v in items[idx : idx + perfile]:
-            if k == "SyntaxNode":
+        for class_name, v in items[idx : idx + perfile]:
+            if class_name == "SyntaxNode":
                 continue
 
-            outf.write('    py::class_<{}, {}>(m, "{}")'.format(k, v.base, k))
-            for m in v.members:
+            outf.write(f'    py::class_<{class_name}, {v.base}>(m, "{class_name}")')
+            for member_name in v.members:
+                python_member_name = member_name[1]
+
+                # Validate and rewrite invalid Python attribute names.
+                if python_member_name == "with":
+                    python_member_name = "with_"
+
                 outf.write(
-                    '\n        .def_readwrite("{}", &{}::{})'.format(m[1], k, m[1])
+                    f'\n        .def_readwrite("{python_member_name}", &{class_name}::{member_name[1]})'
                 )
             outf.write(";\n\n")
 

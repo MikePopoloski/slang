@@ -1918,7 +1918,7 @@ class D;
     bit [3:0][2:1] B [5:1][4];
     constraint c1 {
         foreach (A[i, j, k]) A[i][j][k] inside {2,4,8,16};
-        foreach (B[q, r, , s]) B[q][r] inside {1,2,3};
+        foreach (B[q, r, , s]) 32'(B[q][r]) inside {1,2,3};
     }
 
     randc int b;
@@ -3260,14 +3260,16 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
-    CHECK(diags[0].code == diag::IntFloatConv);
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::CaseTypeMismatch);
     CHECK(diags[1].code == diag::IntFloatConv);
-    CHECK(diags[2].code == diag::MultipleDefaultDistWeight);
-    CHECK(diags[3].code == diag::ExpectedToken);
-    CHECK(diags[4].code == diag::SplitDistWeightOp);
+    CHECK(diags[2].code == diag::CaseTypeMismatch);
+    CHECK(diags[3].code == diag::IntFloatConv);
+    CHECK(diags[4].code == diag::MultipleDefaultDistWeight);
     CHECK(diags[5].code == diag::ExpectedToken);
-    CHECK(diags[6].code == diag::BadSetMembershipType);
+    CHECK(diags[6].code == diag::SplitDistWeightOp);
+    CHECK(diags[7].code == diag::ExpectedToken);
+    CHECK(diags[8].code == diag::BadSetMembershipType);
 }
 
 TEST_CASE("Dist range with real values requires a weight") {
@@ -3439,6 +3441,91 @@ endfunction
 module top;
 
 endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Class randomize can't access protected members") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    protected int a;
+    rand bit b;
+endclass
+
+class T;
+    function f();
+        C c = new();
+        int i = c.randomize() with {
+            if (a == 3) {
+                b == 1'b1;
+            }
+        };
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ProtectedMemberAccess);
+}
+
+TEST_CASE("Virtual method qualifier mismatch") {
+    auto tree = SyntaxTree::fromText(R"(
+class C1;
+    virtual protected function void f();
+    endfunction
+endclass
+
+class C2 extends C1;
+    virtual function void f();
+    endfunction
+endclass
+
+module top;
+    C2 c;
+    initial begin
+        c = new();
+        c.f();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::VirtualVisibilityMismatch);
+}
+
+TEST_CASE("Generic class size computation stack overflow regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    class G #(type l);
+        G #(int) g2;
+    endclass
+endinterface
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Class prototypes allow missing arg names -- GH #1273") {
+    auto tree = SyntaxTree::fromText(R"(
+class RegisterFile;
+    extern function void SetN(logic);
+endclass
+
+function void RegisterFile::SetN(logic l);
+endfunction
 )");
 
     Compilation compilation;

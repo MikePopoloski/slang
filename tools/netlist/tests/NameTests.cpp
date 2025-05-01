@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 
 #include "NetlistTest.h"
+#include "Test.h"
 
 //===---------------------------------------------------------------------===//
 // Tests for name resolution.
@@ -77,7 +78,7 @@ module t33 #(
 
   property test_prop;
     @(posedge clk) disable iff (MODE != 3'd0)
-    !($isunknown({a,b,c})) &
+    (!$isunknown({a,b,c})) &
       a & (b == 2'b01)
       |-> (c_n[15:12] == c[15:12]);
   endproperty

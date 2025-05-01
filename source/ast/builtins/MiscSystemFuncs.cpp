@@ -24,8 +24,8 @@ using namespace syntax;
 
 class SFormatFunction : public SystemSubroutine {
 public:
-    SFormatFunction(const std::string& name, bool isNonStandard) :
-        SystemSubroutine(name, SubroutineKind::Function), isNonStandard(isNonStandard) {}
+    SFormatFunction(KnownSystemName knownNameId, bool isNonStandard) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), isNonStandard(isNonStandard) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -69,7 +69,8 @@ private:
 
 class ValuePlusArgsFunction : public SystemSubroutine {
 public:
-    ValuePlusArgsFunction() : SystemSubroutine("$value$plusargs", SubroutineKind::Function) {
+    ValuePlusArgsFunction() :
+        SystemSubroutine(KnownSystemName::ValuePlusArgs, SubroutineKind::Function) {
         hasOutputArgs = true;
     }
 
@@ -113,7 +114,8 @@ public:
 
 class ClassRandomizeFunction : public SystemSubroutine {
 public:
-    ClassRandomizeFunction() : SystemSubroutine("randomize", SubroutineKind::Function) {
+    ClassRandomizeFunction() :
+        SystemSubroutine(KnownSystemName::Randomize, SubroutineKind::Function) {
         withClauseMode = WithClauseMode::Randomize;
     }
 
@@ -173,7 +175,8 @@ public:
 
 class ScopeRandomizeFunction : public SystemSubroutine {
 public:
-    ScopeRandomizeFunction() : SystemSubroutine("randomize", SubroutineKind::Function) {
+    ScopeRandomizeFunction() :
+        SystemSubroutine(KnownSystemName::Randomize, SubroutineKind::Function) {
         withClauseMode = WithClauseMode::Randomize;
     }
 
@@ -218,7 +221,8 @@ public:
 
 class GlobalClockFunction : public SystemSubroutine {
 public:
-    GlobalClockFunction() : SystemSubroutine("$global_clock", SubroutineKind::Function) {}
+    GlobalClockFunction() :
+        SystemSubroutine(KnownSystemName::GlobalClock, SubroutineKind::Function) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -231,7 +235,7 @@ public:
             return comp.getErrorType();
         }
 
-        if (!comp.getGlobalClocking(*context.scope)) {
+        if (!comp.getGlobalClockingAndNoteUse(*context.scope)) {
             if (!context.scope->isUninstantiated())
                 context.addDiag(diag::NoGlobalClocking, range);
             return comp.getErrorType();
@@ -249,8 +253,8 @@ public:
 
 class InferredValueFunction : public SystemSubroutine {
 public:
-    InferredValueFunction(const std::string& name, bool isClockFunc) :
-        SystemSubroutine(name, SubroutineKind::Function), isClockFunc(isClockFunc) {}
+    InferredValueFunction(KnownSystemName knownNameId, bool isClockFunc) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), isClockFunc(isClockFunc) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -304,7 +308,10 @@ struct SequenceMethodExprVisitor {
 
 class SequenceMethod : public SystemSubroutine {
 public:
-    SequenceMethod(const std::string& name) : SystemSubroutine(name, SubroutineKind::Function) {}
+    bool isMatched;
+
+    SequenceMethod(KnownSystemName knownNameId, bool isMatched) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), isMatched(isMatched) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -313,6 +320,11 @@ public:
             return comp.getErrorType();
 
         checkLocalVars(*args[0], context, range);
+
+        if (!context.flags.has(ASTFlags::AssertionExpr) && isMatched) {
+            context.addDiag(diag::SequenceMatchedOutsideAssertion, range);
+            return comp.getErrorType();
+        }
 
         return comp.getBitType();
     }
@@ -395,21 +407,27 @@ private:
 };
 
 void Builtins::registerMiscSystemFuncs() {
+    using parsing::KnownSystemName;
+
 #define REGISTER(name) addSystemSubroutine(std::make_shared<name##Function>())
     REGISTER(ValuePlusArgs);
     REGISTER(ScopeRandomize);
     REGISTER(GlobalClock);
 #undef REGISTER
 
-    addSystemSubroutine(std::make_shared<SFormatFunction>("$sformatf", false));
-    addSystemSubroutine(std::make_shared<SFormatFunction>("$psprintf", true));
+    addSystemSubroutine(std::make_shared<SFormatFunction>(KnownSystemName::SFormatF, false));
+    addSystemSubroutine(std::make_shared<SFormatFunction>(KnownSystemName::PSPrintF, true));
 
-    addSystemSubroutine(std::make_shared<InferredValueFunction>("$inferred_clock", true));
-    addSystemSubroutine(std::make_shared<InferredValueFunction>("$inferred_disable", false));
+    addSystemSubroutine(
+        std::make_shared<InferredValueFunction>(KnownSystemName::InferredClock, true));
+    addSystemSubroutine(
+        std::make_shared<InferredValueFunction>(KnownSystemName::InferredDisable, false));
 
     addSystemMethod(SymbolKind::ClassType, std::make_shared<ClassRandomizeFunction>());
-    addSystemMethod(SymbolKind::SequenceType, std::make_shared<SequenceMethod>("triggered"));
-    addSystemMethod(SymbolKind::SequenceType, std::make_shared<SequenceMethod>("matched"));
+    addSystemMethod(SymbolKind::SequenceType,
+                    std::make_shared<SequenceMethod>(KnownSystemName::Triggered, false));
+    addSystemMethod(SymbolKind::SequenceType,
+                    std::make_shared<SequenceMethod>(KnownSystemName::Matched, true));
 }
 
 } // namespace slang::ast::builtins

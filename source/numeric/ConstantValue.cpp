@@ -11,7 +11,7 @@
 
 #include "slang/numeric/MathUtils.h"
 #include "slang/text/FormatBuffer.h"
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 
 namespace slang {
 
@@ -253,6 +253,8 @@ bool ConstantValue::isTrue() const {
                 return (bool)arg;
             else if constexpr (std::is_same_v<T, ConstantValue::UnboundedPlaceholder>)
                 return true;
+            else if constexpr (std::is_same_v<T, std::string>)
+                return !arg.empty();
             else
                 return false;
         },
@@ -273,6 +275,8 @@ bool ConstantValue::isFalse() const {
                 return !(bool)arg;
             else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
                 return true;
+            else if constexpr (std::is_same_v<T, std::string>)
+                return arg.empty();
             else
                 return false;
         },
@@ -507,6 +511,20 @@ uint64_t ConstantValue::getBitstreamWidth() const {
     }
 
     return width;
+}
+
+std::optional<bitwidth_t> ConstantValue::getEffectiveWidth() const {
+    if (!isInteger())
+        return std::nullopt;
+
+    auto& sv = integer();
+    if (sv.hasUnknown())
+        return sv.getBitWidth();
+
+    if (sv.isNegative())
+        return sv.getMinRepresentedBits();
+
+    return sv.getActiveBits();
 }
 
 std::ostream& operator<<(std::ostream& os, const ConstantValue& cv) {

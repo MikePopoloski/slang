@@ -4,9 +4,10 @@
 # ~~~
 
 # Required minimum versions for dependencies
-set(fmt_min_version "11.0")
-set(mimalloc_min_version "2.1")
-set(catch2_min_version "3.6")
+set(fmt_min_version "11.1")
+set(mimalloc_min_version "2.2")
+set(cpptrace_min_version "0.8")
+set(catch2_min_version "3.8")
 
 # --- fmt lib ---
 set(find_pkg_args "")
@@ -21,7 +22,7 @@ set(FMT_SYSTEM_HEADERS
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 11.0.2
+  GIT_TAG 11.1.4
   GIT_SHALLOW ON
   ${find_pkg_args})
 
@@ -53,7 +54,7 @@ else()
 endif()
 
 # --- boost ---
-find_package(Boost 1.82.0 QUIET)
+find_package(Boost 1.87.0 CONFIG QUIET)
 if(NOT Boost_FOUND)
   message(STATUS "Using vendored boost_unordered header")
 
@@ -98,7 +99,7 @@ if(SLANG_USE_MIMALLOC)
   FetchContent_Declare(
     mimalloc
     GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
-    GIT_TAG v2.1.7
+    GIT_TAG v2.2.3
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(mimalloc)
@@ -137,13 +138,44 @@ if(SLANG_USE_MIMALLOC)
                                                              YES)
 
       get_target_property(lib_include_dirs mimalloc-static INCLUDE_DIRECTORIES)
-      set(mi_version "2.1")
+      set(mi_version "2.2")
       set(mi_install_incdir
           "${CMAKE_INSTALL_INCLUDEDIR}/mimalloc-${mi_version}")
 
       target_include_directories(
         mimalloc-static SYSTEM PUBLIC $<BUILD_INTERFACE:${lib_include_dirs}>
                                       $<INSTALL_INTERFACE:${mi_install_incdir}>)
+    endif()
+  endif()
+endif()
+
+# --- cpptrace ---
+if(SLANG_USE_CPPTRACE)
+  set(find_pkg_args "")
+  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
+    set(find_pkg_args "FIND_PACKAGE_ARGS" "${cpptrace_min_version}")
+  endif()
+
+  set(CPPTRACE_BUILD_SHARED
+      OFF
+      CACHE INTERNAL "")
+
+  FetchContent_Declare(
+    cpptrace
+    GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
+    GIT_TAG v0.8.3
+    GIT_SHALLOW ON
+    ${find_pkg_args})
+  FetchContent_MakeAvailable(cpptrace)
+
+  if(cpptrace_FOUND)
+    get_target_property(CPPTRACE_INC cpptrace INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "Found system cpptrace library: ${CPPTRACE_INC}")
+  else()
+    message(STATUS "Using remote cpptrace library")
+    if(IS_DIRECTORY "${cpptrace_SOURCE_DIR}")
+      set_property(DIRECTORY ${cpptrace_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL
+                                                             YES)
     endif()
   endif()
 endif()
@@ -158,7 +190,7 @@ if(SLANG_INCLUDE_TESTS)
   FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.6.0
+    GIT_TAG v3.8.1
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(Catch2)
@@ -225,6 +257,13 @@ if(SLANG_INCLUDE_INSTALL)
             ${mimalloc_SOURCE_DIR}/include/mimalloc-override.h
             ${mimalloc_SOURCE_DIR}/include/mimalloc-new-delete.h
       DESTINATION ${mi_install_incdir}
+      COMPONENT slang_Development)
+  endif()
+
+  if(SLANG_USE_CPPTRACE AND NOT cpptrace_FOUND)
+    install(
+      TARGETS cpptrace-lib
+      EXPORT slangTargets
       COMPONENT slang_Development)
   endif()
 endif()

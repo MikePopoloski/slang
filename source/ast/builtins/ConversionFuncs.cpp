@@ -15,8 +15,8 @@ namespace slang::ast::builtins {
 
 class SignedConversionFunction : public SystemSubroutine {
 public:
-    SignedConversionFunction(const std::string& name, bool toSigned) :
-        SystemSubroutine(name, SubroutineKind::Function), toSigned(toSigned) {}
+    SignedConversionFunction(KnownSystemName knownNameId, bool toSigned) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), toSigned(toSigned) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -52,8 +52,8 @@ private:
 class RtoIFunction : public SimpleSystemSubroutine {
 public:
     explicit RtoIFunction(const Builtins& builtins) :
-        SimpleSystemSubroutine("$rtoi", SubroutineKind::Function, 1, {&builtins.realType},
-                               builtins.integerType, false) {}
+        SimpleSystemSubroutine(KnownSystemName::Rtoi, SubroutineKind::Function, 1,
+                               {&builtins.realType}, builtins.integerType, false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -67,7 +67,7 @@ public:
 
 class ItoRFunction : public SystemSubroutine {
 public:
-    ItoRFunction() : SystemSubroutine("$itor", SubroutineKind::Function) {}
+    ItoRFunction() : SystemSubroutine(KnownSystemName::Itor, SubroutineKind::Function) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -94,8 +94,8 @@ public:
 class RealToBitsFunction : public SimpleSystemSubroutine {
 public:
     explicit RealToBitsFunction(const Builtins& builtins) :
-        SimpleSystemSubroutine("$realtobits", SubroutineKind::Function, 1, {&builtins.realType},
-                               builtins.ulongIntType, false) {}
+        SimpleSystemSubroutine(KnownSystemName::RealToBits, SubroutineKind::Function, 1,
+                               {&builtins.realType}, builtins.ulongIntType, false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -110,8 +110,8 @@ public:
 class BitsToRealFunction : public SimpleSystemSubroutine {
 public:
     explicit BitsToRealFunction(const Builtins& builtins) :
-        SimpleSystemSubroutine("$bitstoreal", SubroutineKind::Function, 1, {&builtins.ulongIntType},
-                               builtins.realType, false) {}
+        SimpleSystemSubroutine(KnownSystemName::BitsToReal, SubroutineKind::Function, 1,
+                               {&builtins.ulongIntType}, builtins.realType, false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -127,7 +127,7 @@ public:
 class ShortRealToBitsFunction : public SimpleSystemSubroutine {
 public:
     explicit ShortRealToBitsFunction(const Builtins& builtins) :
-        SimpleSystemSubroutine("$shortrealtobits", SubroutineKind::Function, 1,
+        SimpleSystemSubroutine(KnownSystemName::ShortrealToBits, SubroutineKind::Function, 1,
                                {&builtins.shortRealType}, builtins.uintType, false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -143,7 +143,7 @@ public:
 class BitsToShortRealFunction : public SimpleSystemSubroutine {
 public:
     explicit BitsToShortRealFunction(const Builtins& builtins) :
-        SimpleSystemSubroutine("$bitstoshortreal", SubroutineKind::Function, 1,
+        SimpleSystemSubroutine(KnownSystemName::BitsToShortreal, SubroutineKind::Function, 1,
                                {&builtins.uintType}, builtins.shortRealType, false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -158,9 +158,11 @@ public:
 };
 
 void Builtins::registerConversionFuncs() {
+    using parsing::KnownSystemName;
+
 #define REGISTER(name, ...) addSystemSubroutine(std::make_shared<name##Function>(__VA_ARGS__))
-    REGISTER(SignedConversion, "$signed", true);
-    REGISTER(SignedConversion, "$unsigned", false);
+    REGISTER(SignedConversion, KnownSystemName::Signed, true);
+    REGISTER(SignedConversion, KnownSystemName::Unsigned, false);
 
     REGISTER(RtoI, *this);
     REGISTER(ItoR, );

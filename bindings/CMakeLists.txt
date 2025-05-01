@@ -11,7 +11,7 @@ endif()
 FetchContent_Declare(
   pybind11
   GIT_REPOSITORY https://github.com/pybind/pybind11.git
-  GIT_TAG v2.13.1
+  GIT_TAG v2.13.6
   GIT_SHALLOW ON
   ${find_pkg_args})
 FetchContent_MakeAvailable(pybind11)
@@ -25,8 +25,10 @@ endif()
 
 # Generate bindings for syntax node types
 add_custom_command(
-  COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir
-          ${CMAKE_CURRENT_BINARY_DIR} --python-bindings
+  COMMAND
+    ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir
+    ${CMAKE_CURRENT_BINARY_DIR} --python-bindings --syntax
+    ${SCRIPTS_DIR}/syntax.txt
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings0.cpp
          ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings1.cpp
          ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings2.cpp

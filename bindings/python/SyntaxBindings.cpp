@@ -9,13 +9,11 @@
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
-#include "slang/syntax/SyntaxKind.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/syntax/SyntaxVisitor.h"
 #include "slang/text/SourceManager.h"
-#include "slang/util/BumpAllocator.h"
 
 namespace fs = std::filesystem;
 
@@ -56,30 +54,68 @@ void pySyntaxVisit(const SyntaxNode& sn, py::object f) {
     PySyntaxVisitor visitor{f};
     sn.visit(visitor);
 }
-} // end namespace
 
-void insertAtFront(SyntaxNode&  node, TokenOrSyntax NewNode, BumpAllocator& alloc){
-    if(node.kind ==SyntaxKind::SyntaxList || node.kind ==SyntaxKind::SeparatedList || node.kind ==SyntaxKind::SyntaxList){
+class PySyntaxRewriter : public SyntaxRewriter<PySyntaxRewriter> {
+public:
+    PySyntaxRewriter(pybind11::function handler) : handler(std::move(handler)) {}
 
-        SyntaxListBase *list = (SyntaxListBase*)(&node);
-        std::vector<TokenOrSyntax> children_vec;
-        children_vec.push_back(NewNode);
-
-        for (int i=0;i<list->getChildCount();i++){
-            children_vec.push_back(list->getChild(i));
+    void visit(const SyntaxNode& node) {
+        try {
+            handler(pybind11::cast(&node), pybind11::cast(this));
         }
+        catch (const pybind11::error_already_set& e) {
+            throw;
+        }
+        visitDefault(node);
+    }
 
-        std::span<const TokenOrSyntax> children(children_vec);
-        list->resetAll(alloc, children);  
+    // --- Expose protected base methods via public wrappers ---
+    void py_remove(const SyntaxNode& node) { this->remove(node); }
+
+    void py_replace(const SyntaxNode& oldNode, SyntaxNode& newNode) {
+        this->replace(oldNode, cloneNode(newNode));
+    }
+
+    void py_insertBefore(const SyntaxNode& node, SyntaxNode& newNode) {
+        this->insertBefore(node, cloneNode(newNode));
+    }
+
+    void py_insertAfter(const SyntaxNode& node, SyntaxNode& newNode) {
+        this->insertAfter(node, cloneNode(newNode));
+    }
+
+    void py_insertAtFront(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
+        this->insertAtFront(list, cloneNode(newNode), separator);
+    }
+
+    void py_insertAtBack(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
+        this->insertAtBack(list, cloneNode(newNode), separator);
+    }
+
+    SyntaxFactory& getFactory() { return factory; }
+
+private:
+    pybind11::function handler;
+
+    SyntaxNode& cloneNode(const SyntaxNode& node) {
+        return *slang::syntax::deepClone(node, this->alloc);
     }
 };
+
+std::shared_ptr<SyntaxTree> pySyntaxRewrite(const std::shared_ptr<SyntaxTree>& tree,
+                                            pybind11::function handler) {
+    PySyntaxRewriter rewriter(std::move(handler));
+    return rewriter.transform(tree);
+}
+
+} // end namespace
 
 void registerSyntax(py::module_& m) {
     EXPOSE_ENUM(m, TriviaKind);
     EXPOSE_ENUM(m, TokenKind);
     EXPOSE_ENUM(m, SyntaxKind);
+    EXPOSE_ENUM(m, KnownSystemName);
 
-    
     py::class_<Trivia>(m, "Trivia")
         .def(py::init<>())
         .def(py::init<TriviaKind, std::string_view>(), "kind"_a, "rawText"_a)
@@ -183,11 +219,7 @@ void registerSyntax(py::module_& m) {
         const SyntaxNode* node;
         size_t index;
     };
-    
-    m.def("insertAtFront",[](SyntaxNode&  node, Token NewNode, BumpAllocator& alloc){insertAtFront(node,NewNode,alloc);},  "node"_a,"token"_a,"alloc"_a);
-    m.def("insertAtFront",[](SyntaxNode&  node, SyntaxNode& NewNode, BumpAllocator& alloc){insertAtFront(node,&NewNode,alloc);},  "node"_a,"node"_a,"alloc"_a);
 
-    
     py::class_<SyntaxNode>(m, "SyntaxNode")
         .def_readonly("parent", &SyntaxNode::parent)
         .def_readonly("kind", &SyntaxNode::kind)
@@ -203,7 +235,11 @@ void registerSyntax(py::module_& m) {
 
                  if (auto node = self.childNode(i))
                      return py::cast(node, byrefint, py::cast(&self));
-                 return py::cast(self.childToken(i));
+
+                 if (auto token = self.childToken(i))
+                     return py::cast(self.childToken(i));
+
+                 return py::none();
              })
         .def("__len__", &SyntaxNode::getChildCount)
         .def(
@@ -218,9 +254,6 @@ void registerSyntax(py::module_& m) {
                  return fmt::format("SyntaxNode(SyntaxKind.{})", toString(self.kind));
              })
         .def("__str__", &SyntaxNode::toString);
-
-    
-        
 
     py::class_<SyntaxTree, std::shared_ptr<SyntaxTree>>(m, "SyntaxTree")
         .def_readonly("isLibraryUnit", &SyntaxTree::isLibraryUnit)
@@ -288,9 +321,7 @@ void registerSyntax(py::module_& m) {
         .def_property_readonly("root", py::overload_cast<>(&SyntaxTree::root))
         .def_property_readonly("options", &SyntaxTree::options)
         .def_property_readonly("sourceLibrary", &SyntaxTree::getSourceLibrary)
-        .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref)
-        .def("allocator", &SyntaxTree::allocator,py::return_value_policy::reference);
-
+        .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref);
 
     py::class_<LexerOptions>(m, "LexerOptions")
         .def(py::init<>())
@@ -333,4 +364,16 @@ void registerSyntax(py::module_& m) {
         .def("str", &SyntaxPrinter::str)
         .def_static("printFile", &SyntaxPrinter::printFile, "tree"_a);
 
+    py::class_<PySyntaxRewriter>(m, "SyntaxRewriter")
+        .def("remove", &PySyntaxRewriter::py_remove)
+        .def("replace", &PySyntaxRewriter::py_replace)
+        .def("insert_before", &PySyntaxRewriter::py_insertBefore)
+        .def("insert_after", &PySyntaxRewriter::py_insertAfter)
+        .def("insert_at_front", &PySyntaxRewriter::py_insertAtFront, py::arg("list"),
+             py::arg("newNode"), py::arg("separator") = Token())
+        .def("insert_at_back", &PySyntaxRewriter::py_insertAtBack, py::arg("list"),
+             py::arg("newNode"), py::arg("separator") = Token())
+        .def_property_readonly("factory", &PySyntaxRewriter::getFactory);
+
+    m.def("rewrite", &pySyntaxRewrite, py::arg("tree"), py::arg("handler"));
 }

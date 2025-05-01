@@ -8,6 +8,7 @@
 #include "slang/parsing/Parser.h"
 
 #include "slang/diagnostics/ParserDiags.h"
+#include "slang/util/SmallMap.h"
 
 namespace slang::parsing {
 
@@ -25,6 +26,7 @@ SyntaxNode& Parser::parseGuess() {
         bool anyLocalModules = false;
         auto member = parseMember(SyntaxKind::CompilationUnit, anyLocalModules);
         SLANG_ASSERT(member);
+        member->previewNode = std::exchange(previewNode, nullptr);
         return *member;
     }
 
@@ -39,6 +41,7 @@ SyntaxNode& Parser::parseGuess() {
 
     // Now try to parse as a statement.
     auto& statement = parseStatement(/* allowEmpty */ true);
+    statement.previewNode = std::exchange(previewNode, nullptr);
 
     // It might not have been a statement at all, in which case try a whole compilation unit
     if (statement.kind == SyntaxKind::EmptyStatement &&
@@ -82,7 +85,10 @@ AnsiPortListSyntax& Parser::parseAnsiPortList(Token openParen) {
                                                     TokenKind::Comma, closeParen,
                                                     RequireItems::False, diag::ExpectedAnsiPort,
                                                     [this] { return &parseAnsiPort(); });
-    return factory.ansiPortList(openParen, buffer.copy(alloc), closeParen);
+
+    auto& result = factory.ansiPortList(openParen, buffer.copy(alloc), closeParen);
+    result.previewNode = std::exchange(previewNode, nullptr);
+    return result;
 }
 
 ModuleHeaderSyntax& Parser::parseModuleHeader() {
@@ -430,7 +436,7 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
         closeBrace = missingToken(TokenKind::CloseBrace, openBrace.location());
     else {
         auto curr = peek();
-        while (curr.kind != TokenKind::CloseBrace && curr.kind != TokenKind::EndOfFile) {
+        while (isPossibleStructMember(curr.kind)) {
             auto attributes = parseAttributes();
 
             Token randomQualifier;
@@ -460,6 +466,7 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
 
             buffer.push_back(
                 &factory.structUnionMember(attributes, randomQualifier, type, declarators, semi));
+            buffer.back()->previewNode = std::exchange(previewNode, nullptr);
 
             // If we failed to consume any tokens for this member, skip whatever token is
             // in the way, otherwise we will loop forever.
@@ -548,8 +555,11 @@ DataTypeSyntax& Parser::parseDataType(bitmask<TypeOptions> options) {
             return parseStructUnion(SyntaxKind::StructType);
         case TokenKind::UnionKeyword:
             return parseStructUnion(SyntaxKind::UnionType);
-        case TokenKind::EnumKeyword:
-            return parseEnum();
+        case TokenKind::EnumKeyword: {
+            auto& result = parseEnum();
+            result.previewNode = std::exchange(previewNode, &result);
+            return result;
+        }
         case TokenKind::VirtualKeyword: {
             auto virtualKeyword = consume();
             auto interfaceKeyword = consumeIf(TokenKind::InterfaceKeyword);
@@ -955,7 +965,9 @@ AttributeSpecSyntax& Parser::parseAttributeSpec() {
     EqualsValueClauseSyntax* initializer = nullptr;
     if (peek(TokenKind::Equals)) {
         auto equals = consume();
-        initializer = &factory.equalsValueClause(equals, parseExpression());
+        // Nested attributes are not allowed
+        initializer = &factory.equalsValueClause(
+            equals, parseSubExpression(ExpressionOptions::DisallowAttrs, 0));
     }
 
     return factory.attributeSpec(name, initializer);
@@ -977,11 +989,14 @@ NetTypeDeclarationSyntax& Parser::parseNetTypeDecl(AttrList attributes) {
 }
 
 ParameterDeclarationBaseSyntax& Parser::parseParameterPort() {
+    ParameterDeclarationBaseSyntax* result;
     if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword))
-        return parseParameterDecl(consume(), nullptr);
+        result = &parseParameterDecl(consume(), nullptr);
+    else
+        result = &parseParameterDecl(Token(), nullptr);
 
-    // this is a normal parameter without the actual parameter keyword
-    return parseParameterDecl(Token(), nullptr);
+    result->previewNode = std::exchange(previewNode, nullptr);
+    return *result;
 }
 
 TypeAssignmentSyntax& Parser::parseTypeAssignment() {

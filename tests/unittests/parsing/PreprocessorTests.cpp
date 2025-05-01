@@ -126,8 +126,9 @@ void testDirective(SyntaxKind kind) {
     std::string_view text = LexerFacts::getDirectiveText(kind);
 
     diagnostics.clear();
-    auto buffer = getSourceManager().assignText(text);
-    Lexer lexer(buffer, alloc, diagnostics);
+    auto& sm = getSourceManager();
+    auto buffer = sm.assignText(text);
+    Lexer lexer(buffer, alloc, diagnostics, sm);
 
     Token token = lexer.lex();
     REQUIRE(token);
@@ -760,7 +761,7 @@ TEST_CASE("Macro arg location bug") {
     CHECK(result == R"(
 source:4:15: error: unknown macro or compiler directive '`bar'
    `FOO(      `bar      )   asdfasdfasdfasdfasdfasdfsadfasdfasdfasdfasdf
-              ^
+              ^~~~
 )");
 }
 
@@ -1286,15 +1287,25 @@ TokenKind lexDefaultNetType(std::string_view text) {
 
 TEST_CASE("default_nettype directive") {
     CHECK(lexDefaultNetType("`default_nettype wire") == TokenKind::WireKeyword);
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(lexDefaultNetType("`default_nettype uwire") == TokenKind::UWireKeyword);
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(lexDefaultNetType("`default_nettype wand") == TokenKind::WAndKeyword);
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(lexDefaultNetType("`default_nettype wor") == TokenKind::WOrKeyword);
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(lexDefaultNetType("`default_nettype tri") == TokenKind::TriKeyword);
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(lexDefaultNetType("`default_nettype tri0") == TokenKind::Tri0Keyword);
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(lexDefaultNetType("`default_nettype tri1") == TokenKind::Tri1Keyword);
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(lexDefaultNetType("`default_nettype triand") == TokenKind::TriAndKeyword);
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(lexDefaultNetType("`default_nettype trior") == TokenKind::TriOrKeyword);
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(lexDefaultNetType("`default_nettype trireg") == TokenKind::TriRegKeyword);
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(lexDefaultNetType("`default_nettype none") == TokenKind::Unknown);
     CHECK_DIAGNOSTICS_EMPTY;
 
@@ -1317,12 +1328,36 @@ TokenKind lexUnconnectedDrive(std::string_view text) {
 
 TEST_CASE("unconnected_drive directive") {
     CHECK(lexUnconnectedDrive("`unconnected_drive pull0") == TokenKind::Pull0Keyword);
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(lexUnconnectedDrive("`unconnected_drive pull1") == TokenKind::Pull1Keyword);
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(lexUnconnectedDrive("`nounconnected_drive") == TokenKind::Unknown);
     CHECK_DIAGNOSTICS_EMPTY;
 
     CHECK(lexUnconnectedDrive("`unconnected_drive asdf") == TokenKind::Unknown);
     CHECK(!diagnostics.empty());
+}
+
+bool lexCellDefine(std::string_view text) {
+    diagnostics.clear();
+
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    Token token = preprocessor.next();
+    REQUIRE(token);
+    return preprocessor.getCellDefine();
+}
+
+TEST_CASE("celldefine directive") {
+    CHECK(lexCellDefine("`celldefine") == true);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    CHECK(lexCellDefine("`celldefine\n`endcelldefine") == false);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    CHECK(lexCellDefine("`endcelldefine") == false);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("macro-defined include file") {
@@ -2675,10 +2710,34 @@ endmodule
 
     LexerOptions lo;
     lo.enableLegacyProtect = true;
+    lo.commentHandlers["pragma"]["protect"] = {CommentHandler::Protect};
 
     std::string result = preprocess(text, lo);
     CHECK(result == expected);
 
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
+}
+
+TEST_CASE("Printing of preprocessed file regress -- GH #1317") {
+    SyntaxTree::getDefaultSourceManager().assignText("inc.v", "`define WIDTH 123\n");
+
+    auto& text = R"(
+`include "inc.v"
+
+`ifdef TEST
+    `define TEST2
+`endif
+
+module b();
+
+reg [`WIDTH-1:0]t;
+
+endmodule
+)";
+
+    auto tree = SyntaxTree::fromFileInMemory(text, SyntaxTree::getDefaultSourceManager());
+
+    auto result = SyntaxPrinter::printFile(*tree);
+    CHECK(result == text);
 }

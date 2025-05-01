@@ -391,6 +391,7 @@ module Top;
 
     // These have no actual type and should error.
     typedef enum e1_t;
+    typedef enum e1_t;
     typedef e2;
 
     // Forward declare but get the base type wrong.
@@ -416,16 +417,16 @@ endmodule
     CHECK(diags[2].code == diag::ForwardTypedefDoesNotMatch);
 
     CHECK(report(diags) ==
-          R"(source:5:18: error: forward typedef 'e1_t' does not resolve to a data type
+          R"(source:6:18: error: forward typedef 'e1_t' does not resolve to a data type
     typedef enum e1_t;
                  ^
-source:6:13: error: forward typedef 'e2' does not resolve to a data type
+source:7:13: error: forward typedef 'e2' does not resolve to a data type
     typedef e2;
             ^
-source:9:20: error: forward typedef basic type 'struct' does not match declaration
+source:10:20: error: forward typedef basic type 'struct' does not match declaration
     typedef struct s1_t;
                    ^
-source:12:26: note: declared here
+source:13:26: note: declared here
     typedef enum { SDF } s1_t;
                          ^
 )");
@@ -947,7 +948,7 @@ module m;
     union packed { logic [3:0] a; bit [1:4] b; } [4:1] u;
     enum { A, B, C } [4:1] e;
 
-    initial e = A;
+    initial e[1] = A;
 endmodule
 )");
 
@@ -1242,7 +1243,7 @@ interface A_Bus( input logic clk );
         input gnt;
         output req, addr;
         inout data;
-        property p1; gnt ##[1:3] data; endproperty
+        property p1; gnt ##[1:3] data > 0; endproperty
     endclocking
 
     modport DUT ( input clk, req, addr,
@@ -2213,4 +2214,173 @@ logic [-2147483648:-2147483649] a;
     CHECK(diags[0].code == diag::PackedTypeTooLarge);
     CHECK(diags[1].code == diag::SignedIntegerOverflow);
     CHECK(diags[2].code == diag::SignedIntegerOverflow);
+}
+
+TEST_CASE("Virtual interface element select of member") {
+    auto tree = SyntaxTree::fromText(R"(
+    interface iface;
+        logic [255:0] data[2048];
+        logic [255:0] data_3d[2048][128][128];
+    endinterface
+
+    class cls1;
+        virtual iface vif;
+    endclass
+
+    class cls2;
+        cls1 c;
+        logic [255:0] data;
+        function set(int idx);
+            c.vif.data[idx] = data;
+            c.vif.data_3d[idx][64][8] = data;
+            c.vif.data_3d[idx][64][8][10:0] = data[10:0]; // index + range select
+        endfunction
+    endclass
+
+    module top;
+    endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Hierarchy-dependent type equivalence") {
+    auto tree = SyntaxTree::fromText(R"(
+    interface iface #(parameter int WIDTH = 1)();
+        typedef struct packed {
+            bit [3:0] op;
+        } t;
+        t [WIDTH-1:0] ready;
+    endinterface
+
+    module top();
+        iface #(.WIDTH(1)) if1();
+        iface #(.WIDTH(2)) if2();
+    endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& type1 = root.lookupName<VariableSymbol>("top.if1.ready").getType();
+    auto& type2 = root.lookupName<VariableSymbol>("top.if2.ready").getType();
+
+    CHECK(!type1.isEquivalent(type2));
+}
+
+TEST_CASE("More enum member lookup cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter enum {Q,R} p1 = Q, int p2 = $bits(enum{S,T}));
+    initial randsequence () enum {A,B} foo : { int i = A; }; endsequence
+    initial for (enum {A,B} f = A; f != B; f = B) begin automatic int i = B; end
+    localparam int q = $bits(enum{A,B}) + $bits(enum{C,D});
+    localparam r = B;
+    localparam type s = type(B);
+    localparam t = R;
+    localparam u = T;
+endmodule
+
+module n #(type T = enum {U,V}, parameter p = U)(input enum {A,B} i = A,
+            output int o = $bits(enum {C,D}), q = C);
+    int a[] = '{U, A, C};
+endmodule
+
+checker c (enum {A,B} test_sig = A);
+    a1: assert property (B);
+endchecker
+
+property p(enum {A,B} a = A);
+    B;
+endproperty
+
+module o;
+    int i,j;
+    initial i = $bits(enum{A,B});
+    assign j = $bits(enum{C,D});
+
+    localparam p = A;
+    localparam q = C;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Enum mismatch corner cases") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    extern function enum {B,C} f(enum {D,E} p, int i = $bits(enum {F}));
+endclass
+
+function enum {B,C} A::f(enum {D,E} p, int i = $bits(enum {F}));
+    int j[] = '{B, D, F};
+endfunction
+
+interface I;
+    modport m(import function enum{A,B} foo(enum{C,D} a = C,
+              int i = $bits(enum{E,F}), int j = B));
+
+    function automatic enum{A,B} foo(enum{C,D} a = C,
+                                     int i = $bits(enum{E,F}),
+                                     int j = B);
+        int q[] = '{A, C, E};
+    endfunction
+endinterface
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MethodArgTypeMismatch);
+    CHECK(diags[1].code == diag::MethodReturnMismatch);
+}
+
+TEST_CASE("Enum lookup location corner cases") {
+    auto tree = SyntaxTree::fromText(R"(
+localparam int A = 1;
+module m(input int a = C, enum {C,D} c);
+    localparam int q = A + $bits(enum{A=4,B});
+    localparam int r = A;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UsedBeforeDeclared);
+
+    auto& root = compilation.getRoot();
+    auto& q = root.lookupName<ParameterSymbol>("m.q");
+    CHECK(q.getValue().integer() == 33);
+
+    auto& r = root.lookupName<ParameterSymbol>("m.r");
+    CHECK(r.getValue().integer() == 4);
+}
+
+TEST_CASE("Recursive typedef regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module test;
+ typedef T1;
+ typedef T1 T2;
+ typedef T2 T3;
+ typedef T3 T1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RecursiveDefinition);
 }

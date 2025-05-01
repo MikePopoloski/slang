@@ -41,7 +41,7 @@ void registerCompilation(py::module_& m) {
         .value("Max", MinTypMax::Max);
 
     py::enum_<CompilationFlags>(m, "CompilationFlags")
-        .value("None", CompilationFlags::None)
+        .value("None_", CompilationFlags::None)
         .value("AllowHierarchicalConst", CompilationFlags::AllowHierarchicalConst)
         .value("RelaxEnumConversions", CompilationFlags::RelaxEnumConversions)
         .value("AllowUseBeforeDeclare", CompilationFlags::AllowUseBeforeDeclare)
@@ -49,14 +49,14 @@ void registerCompilation(py::module_& m) {
         .value("AllowTopLevelIfacePorts", CompilationFlags::AllowTopLevelIfacePorts)
         .value("StrictDriverChecking", CompilationFlags::StrictDriverChecking)
         .value("LintMode", CompilationFlags::LintMode)
-        .value("SuppressUnused", CompilationFlags::SuppressUnused)
         .value("IgnoreUnknownModules", CompilationFlags::IgnoreUnknownModules)
         .value("RelaxStringConversions", CompilationFlags::RelaxStringConversions)
         .value("AllowRecursiveImplicitCall", CompilationFlags::AllowRecursiveImplicitCall)
         .value("AllowBareValParamAssignment", CompilationFlags::AllowBareValParamAssignment)
         .value("AllowSelfDeterminedStreamConcat", CompilationFlags::AllowSelfDeterminedStreamConcat)
         .value("AllowMultiDrivenLocals", CompilationFlags::AllowMultiDrivenLocals)
-        .value("AllowMergingAnsiPorts", CompilationFlags::AllowMergingAnsiPorts);
+        .value("AllowMergingAnsiPorts", CompilationFlags::AllowMergingAnsiPorts)
+        .value("DisableInstanceCaching", CompilationFlags::DisableInstanceCaching);
 
     py::class_<CompilationOptions>(m, "CompilationOptions")
         .def(py::init<>())
@@ -91,7 +91,9 @@ void registerCompilation(py::module_& m) {
              "subroutine"_a)
         .def("addSystemMethod", &Compilation::addSystemMethod, py::keep_alive<1, 3>(), "typeKind"_a,
              "method"_a)
-        .def("getSystemSubroutine", &Compilation::getSystemSubroutine, byrefint, "name"_a)
+        .def("getSystemSubroutine",
+             py::overload_cast<std::string_view>(&Compilation::getSystemSubroutine, py::const_),
+             byrefint, "name"_a)
         .def("getSystemMethod", &Compilation::getSystemMethod, byrefint, "typeKind"_a, "name"_a)
         .def("parseName", &Compilation::parseName, byrefint, "name"_a)
         .def("tryParseName", &Compilation::tryParseName, byrefint, "name"_a, "diags"_a)
@@ -139,7 +141,9 @@ void registerCompilation(py::module_& m) {
         .def_property_readonly("nullType", &Compilation::getNullType)
         .def_property_readonly("unboundedType", &Compilation::getUnboundedType)
         .def_property_readonly("typeRefType", &Compilation::getTypeRefType)
-        .def_property_readonly("wireNetType", &Compilation::getWireNetType);
+        .def_property_readonly("wireNetType", &Compilation::getWireNetType)
+        .def_property_readonly("hasIssuedErrors", &Compilation::hasIssuedErrors)
+        .def_property_readonly("hasFatalErrors", &Compilation::hasFatalErrors);
 
     py::class_<Compilation::DefinitionLookupResult>(comp, "DefinitionLookupResult")
         .def(py::init<>())
@@ -171,7 +175,7 @@ void registerCompilation(py::module_& m) {
         .def(py::init<>())
         .def_readonly("sourceManager", &Driver::sourceManager)
         .def_readonly("diagEngine", &Driver::diagEngine)
-        .def_readonly("diagClient", &Driver::diagClient)
+        .def_readonly("textDiagClient", &Driver::textDiagClient)
         .def_readonly("sourceLoader", &Driver::sourceLoader)
         .def_readonly("syntaxTrees", &Driver::syntaxTrees)
         .def_readwrite("languageVersion", &Driver::languageVersion)
@@ -192,7 +196,10 @@ void registerCompilation(py::module_& m) {
         .def("createOptionBag", &Driver::createOptionBag)
         .def("createCompilation", &Driver::createCompilation)
         .def("reportParseDiags", &Driver::reportParseDiags)
-        .def("reportCompilation", &Driver::reportCompilation, "compilation"_a, "quiet"_a);
+        .def("reportCompilation", &Driver::reportCompilation, "compilation"_a, "quiet"_a)
+        .def("runAnalysis", &Driver::runAnalysis, "compilation"_a)
+        .def("reportDiagnostics", &Driver::reportDiagnostics, "quiet"_a)
+        .def("runFullCompilation", &Driver::runFullCompilation, "quiet"_a = false);
 
     py::class_<SourceOptions>(m, "SourceOptions")
         .def(py::init<>())
@@ -266,6 +273,7 @@ void registerCompilation(py::module_& m) {
     systemSub.def(py::init_alias<const std::string&, SubroutineKind>(), "name"_a, "kind"_a)
         .def_readwrite("name", &SystemSubroutine::name)
         .def_readwrite("kind", &SystemSubroutine::kind)
+        .def_readwrite("knownNameId", &SystemSubroutine::knownNameId)
         .def_readwrite("hasOutputArgs", &SystemSubroutine::hasOutputArgs)
         .def_readwrite("withClauseMode", &SystemSubroutine::withClauseMode)
         .def("allowEmptyArgument", &SystemSubroutine::allowEmptyArgument, "argIndex"_a)
@@ -286,7 +294,7 @@ void registerCompilation(py::module_& m) {
         .def("__repr__", [](const SystemSubroutine& self) { return self.name; });
 
     py::enum_<SystemSubroutine::WithClauseMode>(systemSub, "WithClauseMode")
-        .value("None", SystemSubroutine::WithClauseMode::None)
+        .value("None_", SystemSubroutine::WithClauseMode::None)
         .value("Iterator", SystemSubroutine::WithClauseMode::Iterator)
         .value("Randomize", SystemSubroutine::WithClauseMode::Randomize);
 

@@ -69,6 +69,8 @@ public:
 
     void addDriver(DriverBitRange bounds, const ValueDriver& driver) const;
 
+    void addDriverFromSideEffect(const ValueDriver& newDriver) const;
+
     std::ranges::subrange<DriverIntervalMap::const_iterator> drivers() const {
         return {driverMap.begin(), driverMap.end()};
     }
@@ -98,6 +100,20 @@ private:
     mutable const PortBackref* firstPortBackref = nullptr;
 };
 
+/// Specifies possible containing symbol kinds for value drivers.
+enum class DriverSource : uint8_t {
+    // Note: the first entries have to match the values
+    // in the ProceduralBlocKind enum.
+    Initial,
+    Final,
+    Always,
+    AlwaysComb,
+    AlwaysLatch,
+    AlwaysFF,
+    Subroutine,
+    Other
+};
+
 /// Represents an expression that drives a value by assigning
 /// to some range of its type.
 class SLANG_EXPORT ValueDriver {
@@ -118,11 +134,16 @@ public:
     /// The kind of driver (procedural or continuous).
     DriverKind kind;
 
+    /// The source of the driver (procedural block, subroutine, etc).
+    DriverSource source;
+
+    /// Indicates whether the driver is from a side effect of
+    /// applying a cached instance body.
+    bool isFromSideEffect = false;
+
     /// Constructs a new ValueDriver instance.
     ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
-                const Symbol& containingSymbol, bitmask<AssignFlags> flags) :
-        prefixExpression(&longestStaticPrefix), containingSymbol(&containingSymbol), flags(flags),
-        kind(kind) {}
+                const Symbol& containingSymbol, bitmask<AssignFlags> flags);
 
     /// Indicates whether the driver is for an input port.
     bool isInputPort() const { return flags.has(AssignFlags::InputPort); }
@@ -138,20 +159,14 @@ public:
     /// Indicates whether the driver is for an assertion local variable formal argument.
     bool isLocalVarFormalArg() const { return flags.has(AssignFlags::AssertionLocalVarFormalArg); }
 
+    /// Indicates whether the driver is inside a procedural block.
+    bool isInProcedure() const { return source <= DriverSource::AlwaysFF; }
+
     /// Indicates whether the driver is inside a single-driver procedure (such as always_comb).
-    bool isInSingleDriverProcedure() const;
-
-    /// Indicates whether the driver is inside a subroutine.
-    bool isInSubroutine() const;
-
-    /// Indicates whether the driver is inside an initial block.
-    bool isInInitialBlock() const;
-
-    /// Indicates whether the driver is inside an always_ff block.
-    bool isInAlwaysFFBlock() const;
-
-    /// Indicates whether the driver is inside an always_latch block.
-    bool isInAlwaysLatchBlock() const;
+    bool isInSingleDriverProcedure() const {
+        return source == DriverSource::AlwaysComb || source == DriverSource::AlwaysLatch ||
+               source == DriverSource::AlwaysFF;
+    }
 
     /// Gets the source range describing the driver as written in the source code.
     SourceRange getSourceRange() const;

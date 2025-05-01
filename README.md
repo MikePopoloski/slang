@@ -2,8 +2,8 @@ slang - SystemVerilog Language Services
 =======================================
 ![](https://github.com/MikePopoloski/slang/workflows/CI%20Build/badge.svg)
 [![codecov](https://codecov.io/gh/MikePopoloski/slang/branch/master/graph/badge.svg)](https://codecov.io/gh/MikePopoloski/slang)
+[![PyPI](https://img.shields.io/pypi/v/pyslang.svg)](https://pypi.org/project/pyslang/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/MikePopoloski/slang/blob/master/LICENSE)
-[![Join the chat at https://gitter.im/MikePopoloski/slang](https://badges.gitter.im/MikePopoloski/slang.svg)](https://gitter.im/MikePopoloski/slang?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 slang is a software library that provides various components for lexing, parsing, type checking, and elaborating SystemVerilog code. It comes with an executable tool that can compile and lint any SystemVerilog project, but it is also intended to be usable as a front end for synthesis tools, simulators, linters, code editors, and refactoring tools.
 
@@ -30,7 +30,13 @@ Some examples of things you can use slang for:
 
 ### Getting Started
 
-Instructions on building slang from source are [here](https://sv-lang.com/building.html).
+Instructions on building slang from source are [here](https://sv-lang.com/building.html). The tl;dr is:
+```
+git clone https://github.com/MikePopoloski/slang.git
+cd slang
+cmake -B build
+cmake --build build -j
+```
 
 The slang binary can be run on your code right out of the box; check out the [user manual](https://sv-lang.com/user-manual.html) for more information about how it works.
 
@@ -39,6 +45,84 @@ If you're looking to use slang as a library, please read through the [developer 
 ### Try It Out
 
 Experiment with parsing, type checking, and error detection live [on the web](https://sv-lang.com/explore/) (inspired by Matt Godbolt's excellent [Compiler Explorer](https://godbolt.org/)).
+
+### Python Bindings
+
+This project also includes Python bindings for the library, which can be installed via PyPI:
+```
+pip install pyslang
+```
+or, to update your installed version to the latest release:
+```
+pip install -U pyslang
+```
+or, to checkout and install a local build:
+```
+git clone https://github.com/MikePopoloski/slang.git
+cd slang
+pip install .
+```
+
+#### Example Python Usage
+
+Given a 'test.sv' source file:
+```sv
+module memory(
+    address,
+    data_in,
+    data_out,
+    read_write,
+    chip_en
+  );
+
+  input wire [7:0] address, data_in;
+  output reg [7:0] data_out;
+  input wire read_write, chip_en;
+
+  reg [7:0] mem [0:255];
+
+  always @ (address or data_in or read_write or chip_en)
+    if (read_write == 1 && chip_en == 1) begin
+      mem[address] = data_in;
+  end
+
+  always @ (read_write or chip_en or address)
+    if (read_write == 0 && chip_en)
+      data_out = mem[address];
+    else
+      data_out = 0;
+
+endmodule
+```
+
+We can use slang to load the syntax tree and inspect it:
+```py
+import pyslang
+
+tree = pyslang.SyntaxTree.fromFile('test.sv')
+mod = tree.root.members[0]
+print(mod.header.name.value)
+print(mod.members[0].kind)
+print(mod.members[1].header.dataType)
+```
+
+```
+memory
+SyntaxKind.PortDeclaration
+reg [7:0]
+```
+
+We can also evaluate arbitrary SystemVerilog expressions:
+```py
+session = pyslang.ScriptSession()
+session.eval("logic bit_arr [16] = '{0:1, 1:1, 2:1, default:0};")
+result = session.eval("bit_arr.sum with ( int'(item) );")
+print(result)
+```
+
+```
+3
+```
 
 ### Contact & Support
 
@@ -50,7 +134,7 @@ Contributions are welcome, whether they be in the form of bug reports, comments,
 
 slang is licensed under the MIT license:
 
->   Copyright (c) 2015-2024 Michael Popoloski
+>   Copyright (c) 2015-2025 Michael Popoloski
 >
 >   Permission is hereby granted, free of charge, to any person obtaining a copy
 >   of this software and associated documentation files (the "Software"), to deal

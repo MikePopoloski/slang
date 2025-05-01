@@ -34,6 +34,14 @@ Some examples of things you can use slang for:
 @section mainpage-getting-started Getting Started
 
 Instructions on building slang from source are here: @ref building
+The tl;dr is:
+
+@code{.ansi}
+git clone https://github.com/MikePopoloski/slang.git
+cd slang
+cmake -B build
+cmake --build build -j
+@endcode
 
 The slang binary can be run on your code right out of the box; check out the
 @ref user-manual for more information about how it works.
@@ -58,7 +66,7 @@ suggestions, documentation improvements, or full fledged new features via pull r
 
 slang is licensed under the MIT license:
 
->   Copyright (c) 2015-2024 Michael Popoloski
+>   Copyright (c) 2015-2025 Michael Popoloski
 >
 >   Permission is hereby granted, free of charge, to any person obtaining a copy
 >   of this software and associated documentation files (the "Software"), to deal

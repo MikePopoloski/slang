@@ -15,11 +15,7 @@
 
 namespace slang {
 
-TextDiagnosticClient::SymbolPathCB TextDiagnosticClient::defaultSymbolPathCB;
-
-TextDiagnosticClient::TextDiagnosticClient() :
-    buffer(std::make_unique<FormatBuffer>()), symbolPathCB(defaultSymbolPathCB) {
-
+TextDiagnosticClient::TextDiagnosticClient() : buffer(std::make_unique<FormatBuffer>()) {
     noteColor = fmt::terminal_color::bright_black;
     warningColor = fmt::terminal_color::bright_yellow;
     errorColor = fmt::terminal_color::bright_red;
@@ -58,13 +54,14 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
         // Show the stack in reverse.
         for (int i = int(includeStack.size()) - 1; i >= 0; i--) {
             SourceLocation loc = includeStack[size_t(i)];
-            buffer->format("in file included from {}:{}:\n", sourceManager->getFileName(loc),
+            buffer->format("in file included from {}:{}:\n", getFileName(loc),
                            sourceManager->getLineNumber(loc));
         }
     }
 
     // Print out the hierarchy where the diagnostic occurred, if we know it.
     auto& od = diag.originalDiagnostic;
+    auto& symbolPathCB = engine->getSymbolPathCB();
     if (od.symbol && symbolPathCB &&
         (includeHierarchy == ShowHierarchyPathOption::Always ||
          (includeHierarchy == ShowHierarchyPathOption::Auto && od.coalesceCount))) {
@@ -312,7 +309,7 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, std::span<const Source
     if (hasLocation) {
         col = sourceManager->getColumnNumber(loc);
         if (includeLocation) {
-            buffer->append(fg(filenameColor), sourceManager->getFileName(loc));
+            buffer->append(fg(filenameColor), getFileName(loc));
             buffer->append(":");
             buffer->format(fg(locationColor), "{}", sourceManager->getLineNumber(loc));
             if (includeColumn)

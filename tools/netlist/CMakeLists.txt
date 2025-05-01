@@ -7,12 +7,9 @@ add_executable(slang_netlist netlist.cpp source/Netlist.cpp
                              source/CombLoops.cpp)
 add_executable(slang::netlist ALIAS slang_netlist)
 
-target_link_libraries(
-  slang_netlist
-  PRIVATE slang::slang
-  PUBLIC ${SLANG_LIBRARIES})
-target_include_directories(slang_netlist PRIVATE include ../../include)
+target_link_libraries(slang_netlist PRIVATE slang::slang)
 set_target_properties(slang_netlist PROPERTIES OUTPUT_NAME "slang-netlist")
+target_include_directories(slang_netlist PRIVATE include)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
   target_sources(slang_netlist

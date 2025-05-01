@@ -14,6 +14,7 @@
 #include "slang/ast/Constraints.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/CallExpression.h"
+#include "slang/ast/statements/MiscStatements.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
@@ -900,16 +901,14 @@ const Symbol& GenericClassDefSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-const Type* GenericClassDefSymbol::getDefaultSpecialization() const {
+const Type* GenericClassDefSymbol::getDefaultSpecialization(const Scope& scope) const {
     if (defaultSpecialization)
         return *defaultSpecialization;
 
-    auto scope = getParentScope();
-    SLANG_ASSERT(scope);
-
-    auto result = getSpecializationImpl(ASTContext(*scope, LookupLocation::max), location,
+    auto result = getSpecializationImpl(ASTContext(scope, LookupLocation::max), location,
                                         /* forceInvalidParams */ false, nullptr);
-    defaultSpecialization = result;
+    if (!scope.isUninstantiated())
+        defaultSpecialization = result;
     return result;
 }
 
@@ -954,12 +953,13 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     // have this specialization cached we'll throw it away, but that's not a big deal.
     auto classType = comp.emplace<ClassType>(comp, name, location);
     classType->genericClass = this;
+    classType->isUninstantiated = forceInvalidParams || context.scope->isUninstantiated();
     classType->setParent(*scope, getIndex());
 
     // If this is for the default specialization, `syntax` will be null.
     // We want to suppress errors about params not having values and just
     // return null so that the caller can figure out if this is actually a problem.
-    bool isForDefault = syntax == nullptr;
+    const bool isForDefault = syntax == nullptr;
 
     ParameterBuilder paramBuilder(*context.scope, name, paramDecls);
     paramBuilder.setForceInvalidValues(forceInvalidParams);
@@ -995,9 +995,22 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
         }
     }
 
-    detail::ClassSpecializationKey key(*this, paramValues.copy(comp), typeParams.copy(comp));
-    if (auto it = specMap.find(key); it != specMap.end())
-        return it->second;
+    if (!forceInvalidParams) {
+        detail::ClassSpecializationKey key(paramValues.copy(comp), typeParams.copy(comp));
+        if (classType->isUninstantiated) {
+            // If we're in an uninstantiated scope we save this specialization
+            // in a separate map so that we don't try to elaborate it further
+            // and potentially cause spurious errors to be issued.
+            auto [it, inserted] = uninstantiatedSpecMap.emplace(key, classType);
+            if (!inserted)
+                return it->second;
+        }
+        else {
+            auto [it, inserted] = specMap.emplace(key, classType);
+            if (!inserted)
+                return it->second;
+        }
+    }
 
     // Not found, so this is a new entry. Fill in its members and store the
     // specialization for later lookup. If we have a specialization function,
@@ -1006,9 +1019,6 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
         specializeFunc(comp, *classType, instanceLoc);
     else
         classType->populate(*scope, getSyntax()->as<ClassDeclarationSyntax>());
-
-    if (!forceInvalidParams && !context.scope->isUninstantiated())
-        specMap.emplace(key, classType);
 
     return classType;
 }
@@ -1044,14 +1054,12 @@ void GenericClassDefSymbol::serializeTo(ASTSerializer& serializer) const {
 
 namespace detail {
 
-ClassSpecializationKey::ClassSpecializationKey(const GenericClassDefSymbol& def,
-                                               std::span<const ConstantValue* const> paramValues,
+ClassSpecializationKey::ClassSpecializationKey(std::span<const ConstantValue* const> paramValues,
                                                std::span<const Type* const> typeParams) :
-    definition(&def), paramValues(paramValues), typeParams(typeParams) {
+    paramValues(paramValues), typeParams(typeParams) {
 
     // Precompute the hash.
     size_t h = 0;
-    hash_combine(h, definition);
     for (auto val : paramValues)
         hash_combine(h, val ? val->hash() : 0);
     for (auto type : typeParams)
@@ -1060,8 +1068,7 @@ ClassSpecializationKey::ClassSpecializationKey(const GenericClassDefSymbol& def,
 }
 
 bool ClassSpecializationKey::operator==(const ClassSpecializationKey& other) const {
-    if (savedHash != other.savedHash || definition != other.definition ||
-        paramValues.size() != other.paramValues.size() ||
+    if (savedHash != other.savedHash || paramValues.size() != other.paramValues.size() ||
         typeParams.size() != other.typeParams.size()) {
         return false;
     }

@@ -347,5 +347,32 @@ module m;
 endmodule
 @endcode
 
+@section comment-directives Comment Directives
+
+slang supports controlling warnings via comment directives in addition to the pragmas
+mentioned above. Example:
+
+@code{.sv}
+module m;
+    ; // warn
+
+    // slang lint_off empty-member
+    ; // hidden
+    // slang lint_save
+    /* slang lint_on empty-member */
+    ; // warn
+    /* slang lint_restore */
+    ; // hidden
+endmodule
+@endcode
+
+The possible comment directives are:
+-   `lint_off` -- Turn off the specified warning
+-   `lint_on` -- Turn on the specified warning
+-   `lint_save` -- Push the current warning state to a stack, just like `` `pragma diagnostic push ``
+-   `lint_restore` -- Pop the warning state stack, just like `` `pragma diagnostic pop ``
+
+slang can also be configured to skip over text enclosed in legacy style "translate_off" comment regions.
+See the `--translate-off-format` command line argument description for more details.
 
 */

@@ -8,6 +8,7 @@
 #pragma once
 
 #include "slang/ast/Expression.h"
+#include "slang/ast/HierarchicalReference.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssertionExpr.h"
 #include "slang/ast/symbols/ValueSymbol.h"
@@ -35,7 +36,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSymbol(const ASTContext& context, const Symbol& symbol,
-                                  bool isHierarchical, SourceRange sourceRange,
+                                  const HierarchicalReference* hierRef, SourceRange sourceRange,
                                   bool constraintAllowed = false, bool isDottedAccess = false);
 
     static bool checkVariableAssignment(const ASTContext& context, const VariableSymbol& var,
@@ -71,8 +72,11 @@ private:
 /// Represents an expression that references a named value via hierarchical path.
 class SLANG_EXPORT HierarchicalValueExpression : public ValueExpressionBase {
 public:
-    HierarchicalValueExpression(const ValueSymbol& symbol, SourceRange sourceRange) :
-        ValueExpressionBase(ExpressionKind::HierarchicalValue, symbol, sourceRange) {}
+    /// Information about the hierarchical reference.
+    HierarchicalReference ref;
+
+    HierarchicalValueExpression(const Scope& scope, const ValueSymbol& symbol,
+                                const HierarchicalReference& ref, SourceRange sourceRange);
 
     ConstantValue evalImpl(EvalContext& context) const;
 
@@ -130,8 +134,12 @@ public:
     /// The symbol being referenced.
     not_null<const Symbol*> symbol;
 
-    ArbitrarySymbolExpression(const Symbol& symbol, const Type& type, SourceRange sourceRange) :
-        Expression(ExpressionKind::ArbitrarySymbol, type, sourceRange), symbol(&symbol) {}
+    /// Information about the path used to refer to the symbol,
+    /// if this expression was created via hierarchical reference.
+    HierarchicalReference hierRef;
+
+    ArbitrarySymbolExpression(const Scope& scope, const Symbol& symbol, const Type& type,
+                              const HierarchicalReference* hierRef, SourceRange sourceRange);
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
 
@@ -298,7 +306,8 @@ public:
     Expression& selected() { return *selected_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange,
+                       ConversionKind conversionKind);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 

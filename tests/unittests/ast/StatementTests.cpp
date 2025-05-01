@@ -3,6 +3,8 @@
 
 #include "Test.h"
 
+#include "slang/ast/statements/ConditionalStatements.h"
+#include "slang/ast/statements/MiscStatements.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -282,7 +284,7 @@ module m;
     int unpacked [3];
 
     always begin : block
-        case (foo)
+        case (9'(foo))
             3'd7 + 3'd7: ;
             default;
             9'd9, 9'd8: ;
@@ -305,6 +307,7 @@ module m;
 
         case (null)
             null: ;
+            default;
         endcase
 
         case ("asdf")
@@ -315,7 +318,7 @@ module m;
         endcase
 
         casex (foo)
-            1'bx: ;
+            1'b0: ;
             1'd1: ;
             default;
         endcase
@@ -1277,6 +1280,7 @@ module m;
         @cb i++;
         @(cb) i++;
         @(cb or posedge cb) i++;
+        @(cb iff i > 0) i++;
         @(cb.clk) i++;
     end
 endmodule
@@ -1286,8 +1290,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ClockingBlockEventEdge);
+    CHECK(diags[1].code == diag::ClockingBlockEventIff);
 }
 
 TEST_CASE("Cycle delay errors") {
@@ -1309,6 +1314,27 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ExprMustBeIntegral);
     CHECK(diags[1].code == diag::NoDefaultClocking);
+}
+
+TEST_CASE("Cycle delay in interface") {
+    auto tree = SyntaxTree::fromText(R"(
+interface intf(
+    input clk
+);
+
+    default clocking cb @(posedge clk);
+    endclocking
+
+    task zeroDelay();
+        ##0;
+    endtask
+
+endinterface
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Synchronous drives") {
@@ -1748,7 +1774,7 @@ module m;
     end
 
     initial begin
-        e = instr matches tagged Jmp tagged JmpC '{cc:.c,addr:.a} &&& foo > 1 ? a + 10'(c) : 0;
+        e = instr matches tagged Jmp tagged JmpC '{cc:.c,addr:.a} &&& foo > 1 ? 32'(a + 10'(c)) : 0;
     end
 endmodule
 )");
@@ -2005,4 +2031,77 @@ endfunction
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::RefArgForkJoin);
+}
+
+TEST_CASE("Pattern variable lookup from nested initializers") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    initial begin
+        if (i matches .a) begin
+            begin
+                automatic int b = a;
+            end
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Procedural checker statement restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    checker c;
+    endchecker
+
+    function foo;
+        c c1();
+    endfunction
+
+    initial begin
+        fork
+            c c1();
+        join
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::CheckerNotInProc);
+    CHECK(diags[1].code == diag::CheckerInForkJoin);
+}
+
+TEST_CASE("Conditional statement with pattern and explicit block crash regress") {
+    auto tree = SyntaxTree::fromText(R"(
+always begin union instr:if(instr matches begin c T i:
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Concurrent assertions not allowed in tasks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk, a);
+    task t;
+        assert property (@(posedge clk) a == 1);
+    endtask
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConcurrentAssertNotInProc);
 }

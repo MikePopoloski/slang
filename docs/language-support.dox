@@ -247,15 +247,15 @@ IEEE 1800-2023 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 16.7 | Sequences | v0.8
 {{m-success}} 16.8 | Declaring sequences | v0.8
 {{m-success}} 16.9 | Sequence operations | v0.8
-{{m-success}} 16.10 | Local variables | v0.8
+{{m-warning}} 16.10 | Local variables | partial
 {{m-success}} 16.11 | Calling subroutines on match of sequence | v0.8
 {{m-success}} 16.12 | Declaring properties | v0.8
 {{m-success}} 16.12.22 | Nondegeneracy | v7.0
-{{m-warning}} 16.13 | Multiclock support | partial
+{{m-success}} 16.13 | Multiclock support | v9.0
 {{m-success}} 16.14 | Concurrent assertions | v0.8
-{{m-warning}} 16.14.7 | Inferred value functions | partial
+{{m-success}} 16.14.7 | Inferred value functions | v9.0
 {{m-success}} 16.15 | Disable iff resolution | v0.8
-{{m-danger}}  16.16 | Clock resolution | no
+{{m-success}} 16.16 | Clock resolution | v9.0
 {{m-success}} 16.17 | Expect statement | v0.8
 {{m-dim}}     16.18 | Clocking blocks and concurrent assertions | N/A
 
@@ -400,7 +400,7 @@ IEEE 1800-2023 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 25.6 | Interfaces and specify blocks | v3.0
 {{m-success}} 25.7 | Tasks and functions in interfaces | v2.0
 {{m-success}} 25.8 | Parameterized interfaces | v0.2
-{{m-warning}} 25.9 | Virtual interfaces | partial
+{{m-success}} 25.9 | Virtual interfaces | v8.0
 {{m-success}} 25.10 | Access to interface objects | v0.6
 
 ## 26. Packages

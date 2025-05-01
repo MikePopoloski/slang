@@ -261,12 +261,14 @@ public:
         std::string_view inputs;
         char state = 0;
         char output = 0;
+        bool isEdgeSensitive = false;
     };
 
     std::span<const PrimitivePortSymbol* const> ports;
     std::span<const TableEntry> table;
     const ConstantValue* initVal = nullptr;
     bool isSequential = false;
+    bool isEdgeSensitive = false;
     enum PrimitiveKind { UserDefined, Fixed, NInput, NOutput, BiDiSwitch } primitiveKind;
 
     PrimitiveSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
@@ -387,6 +389,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClockingBlock; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        getEvent().visit(visitor);
+    }
 
 private:
     mutable const TimingControl* event = nullptr;
@@ -573,8 +580,6 @@ public:
                         }
                         break;
                     }
-                    default:
-                        SLANG_UNREACHABLE;
                 }
             }
 

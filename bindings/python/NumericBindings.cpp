@@ -32,8 +32,17 @@ static SVInt SVIntFromPyInt(const py::int_& value) {
     size_t numBytes = ((bits - 1) / 32 + 1) * 4;
     std::vector<byte> mem(numBytes);
 
-    int r = _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(value.ptr()),
-                                reinterpret_cast<unsigned char*>(mem.data()), numBytes, 1, 1);
+    int r = -1;
+#if PY_VERSION_HEX < 0x030D0000
+    r = _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(value.ptr()),
+                            reinterpret_cast<unsigned char*>(mem.data()), numBytes, 1, 1);
+#else
+    // fix build error with python 3.13
+    r = _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(value.ptr()),
+                            reinterpret_cast<unsigned char*>(mem.data()), numBytes, 1, 1, 0);
+    // No exception is thrown here because it will be done later.
+#endif
+
     if (r == -1)
         throw py::error_already_set();
 
@@ -143,6 +152,8 @@ void registerNumeric(py::module_& m) {
         .def("getMinRepresentedBits", &SVInt::getMinRepresentedBits)
         .def("countLeadingZeros", &SVInt::countLeadingZeros)
         .def("countLeadingOnes", &SVInt::countLeadingOnes)
+        .def("countLeadingUnknowns", &SVInt::countLeadingUnknowns)
+        .def("countLeadingZs", &SVInt::countLeadingZs)
         .def("countOnes", &SVInt::countOnes)
         .def("countZeros", &SVInt::countZeros)
         .def("countXs", &SVInt::countXs)

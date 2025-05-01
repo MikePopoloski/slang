@@ -13,14 +13,15 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/syntax/SyntaxFwd.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/Function.h"
-#include "slang/util/Hash.h"
 
 namespace slang::ast {
 
 class ASTContext;
 class Constraint;
 class Expression;
+class ForwardingTypedefSymbol;
 class GenericClassDefSymbol;
 
 class SLANG_EXPORT ClassPropertySymbol : public VariableSymbol {
@@ -61,6 +62,10 @@ public:
 
     /// Set to true if this class is marked final (i.e. it cannot be extended).
     bool isFinal = false;
+
+    /// Set to true if this class type was created from an uninstantiated
+    /// specialization of a generic class.
+    bool isUninstantiated = false;
 
     ClassType(Compilation& compilation, std::string_view name, SourceLocation loc);
 
@@ -163,8 +168,7 @@ namespace detail {
 // when that's the case so it's separated here for now.
 class ClassSpecializationKey {
 public:
-    ClassSpecializationKey(const GenericClassDefSymbol& def,
-                           std::span<const ConstantValue* const> paramValues,
+    ClassSpecializationKey(std::span<const ConstantValue* const> paramValues,
                            std::span<const Type* const> typeParams);
 
     size_t hash() const { return savedHash; }
@@ -172,7 +176,6 @@ public:
     bool operator==(const ClassSpecializationKey& other) const;
 
 private:
-    const GenericClassDefSymbol* definition;
     std::span<const ConstantValue* const> paramValues;
     std::span<const Type* const> typeParams;
     size_t savedHash;
@@ -202,7 +205,7 @@ public:
 
     /// Gets the default specialization for the class, or nullptr if the generic
     /// class has no default specialization (because some parameters are not defaulted).
-    const Type* getDefaultSpecialization() const;
+    const Type* getDefaultSpecialization(const Scope& scope) const;
 
     /// Gets the specialization for the class given the specified parameter value
     /// assignments. The result is cached and reused if requested more than once.
@@ -250,6 +253,7 @@ private:
     using SpecMap = flat_hash_map<detail::ClassSpecializationKey, const Type*,
                                   detail::ClassSpecializationHasher>;
     mutable SpecMap specMap;
+    mutable SpecMap uninstantiatedSpecMap;
     mutable std::optional<const Type*> defaultSpecialization;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
     mutable uint32_t recursionDepth = 0;

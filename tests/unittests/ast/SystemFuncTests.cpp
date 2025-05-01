@@ -864,7 +864,7 @@ module m;
 
     sequence s;
         int i;
-        $past(i);
+        $past(i) > 0;
     endsequence
 endmodule
 
@@ -926,6 +926,40 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::GlobalClockEventExpr);
     CHECK(diags[1].code == diag::NoGlobalClocking);
+}
+
+TEST_CASE("Global clocking in cached instance") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    n n1();
+    o o1();
+endmodule
+
+module n;
+    wire clk;
+    global clocking cb @clk; endclocking
+
+    p p1();
+endmodule
+
+module o;
+    p p2();
+endmodule
+
+module p;
+    int i;
+    initial begin
+        @($global_clock) i++;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NoGlobalClocking);
 }
 
 TEST_CASE("System call output args in disallowed context") {
@@ -1172,11 +1206,7 @@ endclass
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-
-    // TODO: also shouldn't warn about sign
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::SignConversion);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Array map method") {

@@ -1,6 +1,7 @@
 name: CI Build
 
 on:
+  workflow_dispatch:
   push:
     branches: [ master ]
   pull_request:
@@ -15,7 +16,7 @@ jobs:
           - preset: clang-sanitize
             os: ubuntu-latest
           - preset: gcc-release
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
           - preset: gcc-11-release
             os: ubuntu-latest
           - preset: gcc-debug-shared
@@ -40,10 +41,10 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main"
+        sudo add-apt-repository "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main"
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt-get update
-        sudo apt-get install -y g++-13 g++-11 clang-18 clang-tidy-18
+        sudo apt-get install -y g++-14 g++-11 clang-20 clang-tidy-20
     - uses: ilammy/msvc-dev-cmd@v1
       if: matrix.os == 'windows-latest'
     - uses: maxim-lobanov/setup-xcode@v1
@@ -51,67 +52,8 @@ jobs:
       with:
         xcode-version: 'latest'
     - name: Configure
-      run: cmake --preset ${{ matrix.preset }} -DSLANG_CI_BUILD=ON
+      run: cmake --preset ${{ matrix.preset }} -DSLANG_CI_BUILD=ON -DSLANG_INCLUDE_UVM_TEST=ON
     - name: Build
       run: cmake --build build/${{ matrix.preset }} -j8
     - name: Run tests
       run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure --no-tests=error -j8
-
-  linux-coverage:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Install dependencies
-      run: |
-        sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-        sudo apt-get update
-        sudo apt-get install -y g++-13 lcov
-    - name: Configure
-      run: cmake --preset=ci-coverage
-    - name: Build
-      run: cmake --build build/ci-coverage -j8
-    - name: Run tests
-      run: ctest --test-dir build/ci-coverage --output-on-failure --no-tests=error -j8
-    - name: Process coverage info
-      run: cmake --build build/ci-coverage -t coverage
-    - name: Submit to codecov.io
-      uses: codecov/codecov-action@v4
-      with:
-        files: build/ci-coverage/coverage.info
-        token: ${{ secrets.CODECOV_TOKEN }}
-        verbose: true
-
-  bindings:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - uses: ilammy/msvc-dev-cmd@v1
-    - name: Configure
-      run: cmake -B build -DSLANG_INCLUDE_PYLIB=ON
-    - name: Build
-      run: cmake --build build --config Release -j8
-    - name: Run tests
-      run: ctest --test-dir build --output-on-failure -C Release --no-tests=error -j8
-
-  conan:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Install dependencies
-      run: |
-        pip3 install conan
-        conan profile detect
-    - name: Configure
-      run: |
-        conan install . -b missing
-        cmake --preset conan-gcc-x86_64-release
-    - name: Build
-      run: cmake --build --preset conan-gcc-x86_64-release -j8
-    - name: Run tests
-      run: ctest --preset conan-gcc-x86_64-release --output-on-failure --no-tests=error -j8

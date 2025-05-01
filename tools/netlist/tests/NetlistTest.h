@@ -3,15 +3,25 @@
 
 #include "Netlist.h"
 #include "PathFinder.h"
-#include "Test.h"
 #include "visitors/NetlistVisitor.h"
 #include <string>
 
+#include "slang/ast/Compilation.h"
+
 using namespace netlist;
 
-inline Netlist createNetlist(Compilation& compilation) {
+inline Netlist createNetlist(ast::Compilation& compilation) {
     Netlist netlist;
-    NetlistVisitor visitor(compilation, netlist);
+    NetlistVisitorOptions options;
+    NetlistVisitor visitor(compilation, netlist, options);
+    compilation.getRoot().visit(visitor);
+    netlist.split();
+    return netlist;
+}
+
+inline Netlist createNetlist(ast::Compilation& compilation, NetlistVisitorOptions const& options) {
+    Netlist netlist;
+    NetlistVisitor visitor(compilation, netlist, options);
     compilation.getRoot().visit(visitor);
     netlist.split();
     return netlist;

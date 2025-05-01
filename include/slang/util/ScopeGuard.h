@@ -35,4 +35,7 @@ private:
     bool valid = true;
 };
 
+template<typename F>
+explicit ScopeGuard(F&& f) -> ScopeGuard<F>;
+
 } // namespace slang

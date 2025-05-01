@@ -23,7 +23,7 @@ void registerSymbols(py::module_& m) {
     EXPOSE_ENUM(m, SystemTimingCheckKind);
 
     py::enum_<LookupFlags>(m, "LookupFlags")
-        .value("None", LookupFlags::None)
+        .value("None_", LookupFlags::None)
         .value("Type", LookupFlags::Type)
         .value("AllowDeclaredAfter", LookupFlags::AllowDeclaredAfter)
         .value("DisallowWildcardImport", LookupFlags::DisallowWildcardImport)
@@ -42,7 +42,7 @@ void registerSymbols(py::module_& m) {
         .value("DisallowUnitReferences", LookupFlags::DisallowUnitReferences);
 
     py::enum_<LookupResultFlags>(m, "LookupResultFlags")
-        .value("None", LookupResultFlags::None)
+        .value("None_", LookupResultFlags::None)
         .value("WasImported", LookupResultFlags::WasImported)
         .value("IsHierarchical", LookupResultFlags::IsHierarchical)
         .value("SuppressUndeclared", LookupResultFlags::SuppressUndeclared)
@@ -116,16 +116,11 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("randMode", &Symbol::getRandMode)
         .def_property_readonly("nextSibling", &Symbol::getNextSibling)
         .def_property_readonly("sourceLibrary", &Symbol::getSourceLibrary)
-        .def_property_readonly("hierarchicalPath",
-                               [](const Symbol& self) {
-                                   std::string str;
-                                   self.getHierarchicalPath(str);
-                                   return str;
-                               })
+        .def_property_readonly("hierarchicalPath", &Symbol::getHierarchicalPath)
         .def_property_readonly("lexicalPath",
                                [](const Symbol& self) {
                                    std::string str;
-                                   self.getLexicalPath(str);
+                                   self.appendLexicalPath(str);
                                    return str;
                                })
         .def("isDeclaredBefore",
@@ -194,6 +189,7 @@ void registerSymbols(py::module_& m) {
         .def_readonly("definitionKind", &DefinitionSymbol::definitionKind)
         .def_readonly("defaultLifetime", &DefinitionSymbol::defaultLifetime)
         .def_readonly("unconnectedDrive", &DefinitionSymbol::unconnectedDrive)
+        .def_readonly("cellDefine", &DefinitionSymbol::cellDefine)
         .def_readonly("timeScale", &DefinitionSymbol::timeScale)
         .def_property_readonly("defaultNetType",
                                [](const DefinitionSymbol& self) { return &self.defaultNetType; })
@@ -226,9 +222,9 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("isUnidirectionalPort", &ValueDriver::isUnidirectionalPort)
         .def_property_readonly("isClockVar", &ValueDriver::isClockVar)
         .def_property_readonly("isLocalVarFormalArg", &ValueDriver::isLocalVarFormalArg)
-        .def_property_readonly("isInSingleDriverProcedure", &ValueDriver::isInSingleDriverProcedure)
-        .def_property_readonly("isInSubroutine", &ValueDriver::isInSubroutine)
-        .def_property_readonly("isInInitialBlock", &ValueDriver::isInInitialBlock);
+        .def_property_readonly("isInProcedure", &ValueDriver::isInProcedure)
+        .def_property_readonly("isInSingleDriverProcedure",
+                               &ValueDriver::isInSingleDriverProcedure);
 
     py::class_<EnumValueSymbol, ValueSymbol>(m, "EnumValueSymbol")
         .def_property_readonly("value",
@@ -272,7 +268,7 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("pathDest", &SpecparamSymbol::getPathDest);
 
     py::enum_<VariableFlags>(m, "VariableFlags")
-        .value("None", VariableFlags::None)
+        .value("None_", VariableFlags::None)
         .value("Const", VariableFlags::Const)
         .value("CompilerGenerated", VariableFlags::CompilerGenerated)
         .value("ImmutableCoverageOption", VariableFlags::ImmutableCoverageOption)
@@ -302,7 +298,7 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("driveStrength", &NetSymbol::getDriveStrength);
 
     py::enum_<NetSymbol::ExpansionHint>(netSymbol, "ExpansionHint")
-        .value("None", NetSymbol::None)
+        .value("None_", NetSymbol::None)
         .value("Vectored", NetSymbol::Vectored)
         .value("Scalared", NetSymbol::Scalared)
         .export_values();
@@ -327,7 +323,7 @@ void registerSymbols(py::module_& m) {
         .def_readonly("randMode", &ClassPropertySymbol::randMode);
 
     py::enum_<MethodFlags>(m, "MethodFlags")
-        .value("None", MethodFlags::None)
+        .value("None_", MethodFlags::None)
         .value("Virtual", MethodFlags::Virtual)
         .value("Pure", MethodFlags::Pure)
         .value("Static", MethodFlags::Static)
@@ -413,6 +409,8 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("isInterface", &InstanceSymbol::isInterface)
         .def_property_readonly("portConnections", &InstanceSymbol::getPortConnections)
         .def_property_readonly("body", [](const InstanceSymbol& self) { return &self.body; })
+        .def_property_readonly("canonicalBody",
+                               [](const InstanceSymbol& self) { return self.getCanonicalBody(); })
         .def("getPortConnection",
              py::overload_cast<const PortSymbol&>(&InstanceSymbol::getPortConnection, py::const_),
              byrefint, "port"_a)
@@ -700,7 +698,7 @@ void registerSymbols(py::module_& m) {
         .def_readonly("repeatKind", &CoverageBinSymbol::TransRangeList::repeatKind);
 
     py::enum_<CoverageBinSymbol::TransRangeList::RepeatKind>(transRangeList, "RepeatKind")
-        .value("None", CoverageBinSymbol::TransRangeList::None)
+        .value("None_", CoverageBinSymbol::TransRangeList::None)
         .value("Consecutive", CoverageBinSymbol::TransRangeList::Consecutive)
         .value("Nonconsecutive", CoverageBinSymbol::TransRangeList::Nonconsecutive)
         .value("GoTo", CoverageBinSymbol::TransRangeList::GoTo)

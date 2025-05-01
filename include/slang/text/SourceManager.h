@@ -19,7 +19,7 @@
 #include <vector>
 
 #include "slang/text/SourceLocation.h"
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
@@ -107,6 +107,12 @@ public:
     /// Determines whether the given location is from a macro expansion or an include file.
     bool isPreprocessedLoc(SourceLocation location) const;
 
+    /// Determines whether the @a left location comes before the @a right location
+    /// within the "compilation unit space", which is a hypothetical source space where
+    /// all macros and include files have been expanded out into a flat file.
+    /// Returns std::nullopt if the locations are in unrelated compilation units.
+    std::optional<bool> isBeforeInCompilationUnit(SourceLocation left, SourceLocation right) const;
+
     /// Gets the expansion location of a given macro location.
     SourceLocation getExpansionLoc(SourceLocation location) const;
 
@@ -119,6 +125,9 @@ public:
     /// Gets the actual original location where source is written, given a location
     /// inside a macro. Otherwise just returns the location itself.
     SourceLocation getFullyOriginalLoc(SourceLocation location) const;
+
+    /// Build the original location range where source is written.
+    SourceRange getFullyOriginalRange(SourceRange range) const;
 
     /// If the given location is a macro location, fully expands it out to its actual
     /// file expansion location. Otherwise just returns the location itself.
@@ -202,7 +211,7 @@ public:
     /// iterable collection of DiagnosticDirectiveInfos.
     template<typename Func>
     void visitDiagnosticDirectives(Func&& func) const {
-        std::shared_lock lock(mutex);
+        std::shared_lock<std::shared_mutex> lock(mutex);
         for (auto& [buffer, directives] : diagDirectives)
             func(buffer, directives);
     }
@@ -212,6 +221,9 @@ public:
     /// to store; the underlying data can be mutated by a call to
     /// @a addDiagnosticDirective and invalidate the span.
     std::span<const DiagnosticDirectiveInfo> getDiagnosticDirectives(BufferID buffer) const;
+
+    /// Clears all diagnostic directives registered with the sourcemanager.
+    void clearDiagnosticDirectives();
 
     /// Returns a list of buffers (files and macros) that have been created in the
     /// source manager.
@@ -250,7 +262,7 @@ private:
         FileData* data = nullptr;
         const SourceLibrary* library = nullptr;
         SourceLocation includedFrom;
-        uint64_t sortKey;
+        uint64_t sortKey = 0;
         std::vector<LineDirectiveInfo> lineDirectives;
 
         FileInfo() {}

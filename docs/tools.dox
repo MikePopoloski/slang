@@ -1,0 +1,17 @@
+/** @page tools Tools
+@brief Documentation for ancillary tools included with slang
+
+slang includes several tools besides the main command line driver tool (which is documented in
+@ref command-line-ref ). Many of these tools are contributions that may not be as complete or
+well supported as the main slang library.
+
+@tableofcontents
+
+\include{doc} tools/hier/README.md
+\include{doc} tools/netlist/README.md
+\include{doc} tools/reflect/README.md
+\include{doc} tools/rewriter/README.md
+\include{doc} tools/threadtest/README.md
+\include{doc} tools/tidy/README.md
+
+*/

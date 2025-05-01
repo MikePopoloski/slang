@@ -17,7 +17,7 @@ namespace slang::ast::builtins {
 
 class Clog2Function : public SystemSubroutine {
 public:
-    Clog2Function() : SystemSubroutine("$clog2", SubroutineKind::Function) {}
+    Clog2Function() : SystemSubroutine(KnownSystemName::Clog2, SubroutineKind::Function) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -45,7 +45,7 @@ public:
 
 class CountBitsFunction : public SystemSubroutine {
 public:
-    CountBitsFunction() : SystemSubroutine("$countbits", SubroutineKind::Function) {}
+    CountBitsFunction() : SystemSubroutine(KnownSystemName::CountBits, SubroutineKind::Function) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -120,7 +120,7 @@ public:
 
 class CountOnesFunction : public SystemSubroutine {
 public:
-    CountOnesFunction() : SystemSubroutine("$countones", SubroutineKind::Function) {}
+    CountOnesFunction() : SystemSubroutine(KnownSystemName::CountOnes, SubroutineKind::Function) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -153,8 +153,8 @@ class BooleanBitVectorFunction : public SystemSubroutine {
 public:
     enum BVFKind { OneHot, OneHot0, IsUnknown };
 
-    BooleanBitVectorFunction(const std::string& name, BVFKind kind) :
-        SystemSubroutine(name, SubroutineKind::Function), kind(kind) {}
+    BooleanBitVectorFunction(KnownSystemName knownNameId, BVFKind kind) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), kind(kind) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -185,9 +185,8 @@ public:
                 return SVInt(1, uint64_t(iv.countOnes() <= 1), false);
             case IsUnknown:
                 return SVInt(1, uint64_t(iv.hasUnknown()), false);
-            default:
-                SLANG_UNREACHABLE;
         }
+        SLANG_UNREACHABLE;
     }
 
 private:
@@ -197,8 +196,8 @@ private:
 template<double Func(double)>
 class RealMath1Function : public SimpleSystemSubroutine {
 public:
-    RealMath1Function(const Builtins& builtins, const std::string& name) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, {&builtins.realType},
+    RealMath1Function(const Builtins& builtins, KnownSystemName knownNameId) :
+        SimpleSystemSubroutine(knownNameId, SubroutineKind::Function, 1, {&builtins.realType},
                                builtins.realType, false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -215,8 +214,8 @@ public:
 template<double Func(double, double)>
 class RealMath2Function : public SimpleSystemSubroutine {
 public:
-    RealMath2Function(const Builtins& builtins, const std::string& name) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 2,
+    RealMath2Function(const Builtins& builtins, KnownSystemName knownNameId) :
+        SimpleSystemSubroutine(knownNameId, SubroutineKind::Function, 2,
                                {&builtins.realType, &builtins.realType}, builtins.realType, false) {
     }
 
@@ -233,6 +232,8 @@ public:
 };
 
 void Builtins::registerMathFuncs() {
+    using parsing::KnownSystemName;
+
     addSystemSubroutine(std::make_shared<Clog2Function>());
     addSystemSubroutine(std::make_shared<CountBitsFunction>());
     addSystemSubroutine(std::make_shared<CountOnesFunction>());
@@ -241,40 +242,40 @@ void Builtins::registerMathFuncs() {
     addSystemSubroutine(     \
         std::make_shared<BooleanBitVectorFunction>(name, BooleanBitVectorFunction::kind))
 
-    REGISTER("$onehot", OneHot);
-    REGISTER("$onehot0", OneHot0);
-    REGISTER("$isunknown", IsUnknown);
+    REGISTER(KnownSystemName::OneHot, OneHot);
+    REGISTER(KnownSystemName::OneHot0, OneHot0);
+    REGISTER(KnownSystemName::IsUnknown, IsUnknown);
 
 #undef REGISTER
 #define REGISTER(name, func) \
     addSystemSubroutine(std::make_shared<RealMath1Function<(func)>>(*this, name))
 
-    REGISTER("$ln", std::log);
-    REGISTER("$log10", std::log10);
-    REGISTER("$exp", std::exp);
-    REGISTER("$sqrt", std::sqrt);
-    REGISTER("$floor", std::floor);
-    REGISTER("$ceil", std::ceil);
-    REGISTER("$sin", std::sin);
-    REGISTER("$cos", std::cos);
-    REGISTER("$tan", std::tan);
-    REGISTER("$asin", std::asin);
-    REGISTER("$acos", std::acos);
-    REGISTER("$atan", std::atan);
-    REGISTER("$sinh", std::sinh);
-    REGISTER("$cosh", std::cosh);
-    REGISTER("$tanh", std::tanh);
-    REGISTER("$asinh", std::asinh);
-    REGISTER("$acosh", std::acosh);
-    REGISTER("$atanh", std::atanh);
+    REGISTER(KnownSystemName::Ln, std::log);
+    REGISTER(KnownSystemName::Log10, std::log10);
+    REGISTER(KnownSystemName::Exp, std::exp);
+    REGISTER(KnownSystemName::Sqrt, std::sqrt);
+    REGISTER(KnownSystemName::Floor, std::floor);
+    REGISTER(KnownSystemName::Ceil, std::ceil);
+    REGISTER(KnownSystemName::Sin, std::sin);
+    REGISTER(KnownSystemName::Cos, std::cos);
+    REGISTER(KnownSystemName::Tan, std::tan);
+    REGISTER(KnownSystemName::Asin, std::asin);
+    REGISTER(KnownSystemName::Acos, std::acos);
+    REGISTER(KnownSystemName::Atan, std::atan);
+    REGISTER(KnownSystemName::Sinh, std::sinh);
+    REGISTER(KnownSystemName::Cosh, std::cosh);
+    REGISTER(KnownSystemName::Tanh, std::tanh);
+    REGISTER(KnownSystemName::Asinh, std::asinh);
+    REGISTER(KnownSystemName::Acosh, std::acosh);
+    REGISTER(KnownSystemName::Atanh, std::atanh);
 
 #undef REGISTER
 #define REGISTER(name, func) \
     addSystemSubroutine(std::make_shared<RealMath2Function<(func)>>(*this, name))
 
-    REGISTER("$pow", std::pow);
-    REGISTER("$atan2", std::atan2);
-    REGISTER("$hypot", std::hypot);
+    REGISTER(KnownSystemName::Pow, std::pow);
+    REGISTER(KnownSystemName::Atan2, std::atan2);
+    REGISTER(KnownSystemName::Hypot, std::hypot);
 
 #undef REGISTER
 }

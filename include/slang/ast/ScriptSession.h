@@ -45,6 +45,9 @@ public:
     /// result as a constant value.
     void evalStatement(const syntax::StatementSyntax& expr);
 
+    /// Copies the packages from the given compilation into this session.
+    void copyPackagesFrom(const Compilation& other);
+
     /// Gets any diagnostics that have been issued during evaluation calls.
     Diagnostics getDiagnostics();
 

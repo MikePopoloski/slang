@@ -372,6 +372,12 @@ public:
         return countLeadingOnesSlowCase();
     }
 
+    /// Count the number of leading unknown bits.
+    bitwidth_t countLeadingUnknowns() const;
+
+    /// Count the number of leading Z bits.
+    bitwidth_t countLeadingZs() const;
+
     /// Count the number of 1 bits in the number.
     bitwidth_t countOnes() const;
 

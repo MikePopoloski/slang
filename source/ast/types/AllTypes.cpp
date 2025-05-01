@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/types/AllTypes.h"
 
+#include <fmt/format.h>
+
 #include "slang/ast/ASTContext.h"
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
@@ -40,8 +42,8 @@ bitwidth_t getWidth(PredefinedIntegerType::Kind kind) {
         case PredefinedIntegerType::Byte: return 8;
         case PredefinedIntegerType::Integer: return 32;
         case PredefinedIntegerType::Time: return 64;
-        default: SLANG_UNREACHABLE;
     }
+    SLANG_UNREACHABLE;
 }
 
 bool getSigned(PredefinedIntegerType::Kind kind) {
@@ -52,8 +54,8 @@ bool getSigned(PredefinedIntegerType::Kind kind) {
         case PredefinedIntegerType::Byte: return true;
         case PredefinedIntegerType::Integer: return true;
         case PredefinedIntegerType::Time: return false;
-        default: SLANG_UNREACHABLE;
     }
+    SLANG_UNREACHABLE;
 }
 
 bool getFourState(PredefinedIntegerType::Kind kind) {
@@ -64,8 +66,8 @@ bool getFourState(PredefinedIntegerType::Kind kind) {
         case PredefinedIntegerType::Byte: return false;
         case PredefinedIntegerType::Integer: return true;
         case PredefinedIntegerType::Time: return true;
-        default: SLANG_UNREACHABLE;
     }
+    SLANG_UNREACHABLE;
 }
 
 std::string_view getName(PredefinedIntegerType::Kind kind) {
@@ -76,8 +78,8 @@ std::string_view getName(PredefinedIntegerType::Kind kind) {
         case PredefinedIntegerType::Byte: return "byte"sv;
         case PredefinedIntegerType::Integer: return "integer"sv;
         case PredefinedIntegerType::Time: return "time"sv;
-        default: SLANG_UNREACHABLE;
     }
+    SLANG_UNREACHABLE;
 }
 
 std::string_view getName(ScalarType::Kind kind) {
@@ -85,8 +87,8 @@ std::string_view getName(ScalarType::Kind kind) {
         case ScalarType::Bit: return "bit"sv;
         case ScalarType::Logic: return "logic"sv;
         case ScalarType::Reg: return "reg"sv;
-        default: SLANG_UNREACHABLE;
     }
+    SLANG_UNREACHABLE;
 }
 
 std::string_view getName(FloatingType::Kind kind) {
@@ -94,8 +96,8 @@ std::string_view getName(FloatingType::Kind kind) {
         case FloatingType::Real: return "real"sv;
         case FloatingType::ShortReal: return "shortreal"sv;
         case FloatingType::RealTime: return "realtime"sv;
-        default: SLANG_UNREACHABLE;
     }
+    SLANG_UNREACHABLE;
 }
 // clang-format on
 
@@ -280,34 +282,35 @@ static void checkEnumRange(const ASTContext& context, const VariableDimensionSyn
     }
 }
 
-const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
-                                 const ASTContext& context, const Type* typedefTarget) {
+const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax,
+                                 const ASTContext& context,
+                                 function_ref<void(const Symbol&)> insertCB) {
     const Type* base;
     const Type* cb;
-    bitwidth_t bitWidth;
+    bitwidth_t bitWidth = 32;
 
     if (!syntax.baseType) {
         // If no explicit base type is specified we default to an int.
-        base = &compilation.getIntType();
+        base = &comp.getIntType();
         cb = base;
         bitWidth = cb->getBitWidth();
     }
     else {
-        base = &compilation.getType(*syntax.baseType, context);
+        base = &comp.getType(*syntax.baseType, context);
         cb = &base->getCanonicalType();
-        if (cb->isError())
-            return *cb;
-
-        // Error if the named type is invalid for an enum base type. Other invalid types
-        // will have been diagnosed already by the parser.
-        if (!cb->isSimpleBitVector() && syntax.baseType->kind == SyntaxKind::NamedType) {
-            context.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
-                << *base;
-            return compilation.getErrorType();
+        if (!cb->isError()) {
+            // Error if the named type is invalid for an enum base type. Other invalid types
+            // will have been diagnosed already by the parser.
+            if (!cb->isSimpleBitVector() && syntax.baseType->kind == SyntaxKind::NamedType) {
+                context.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
+                    << *base;
+                cb = &comp.getErrorType();
+            }
+            else {
+                bitWidth = cb->getBitWidth();
+                SLANG_ASSERT(bitWidth);
+            }
         }
-
-        bitWidth = cb->getBitWidth();
-        SLANG_ASSERT(bitWidth);
     }
 
     SVInt allOnes(bitWidth, 0, cb->isSigned());
@@ -318,9 +321,15 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     SourceRange previousRange;
     bool first = true;
 
-    auto resultType = compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base,
-                                                    context);
-    resultType->setSyntax(syntax);
+    auto enumType = comp.emplace<EnumType>(comp, syntax.keyword.location(), *base, context);
+    enumType->setSyntax(syntax);
+
+    // If this enum is inside a typedef we want to save the name here so that
+    // when printing the types of our enum values we can refer back to this.
+    if (syntax.parent && syntax.parent->kind == SyntaxKind::TypedefDeclaration)
+        enumType->name = syntax.parent->as<TypedefDeclarationSyntax>().name.valueText();
+
+    auto resultType = cb->isError() ? cb : enumType;
 
     // Enum values must be unique; this set and lambda are used to check that.
     SmallMap<SVInt, SourceLocation, 8> usedValues;
@@ -346,6 +355,8 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         ev.setInitializerSyntax(*initializer.expr, initializer.equals.location());
         auto initExpr = ev.getInitializer();
         SLANG_ASSERT(initExpr);
+        if (initExpr->bad())
+            return;
 
         // Drill down to the original initializer before any conversions are applied.
         initExpr = &initExpr->unwrapImplicitConversions();
@@ -367,12 +378,12 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         }
 
         ev.getValue();
-        if (!initExpr->constant)
+        if (!initExpr->getConstant())
             return;
 
         // An enumerated name with x or z assignments assigned to an enum with no explicit data type
         // or an explicit 2-state declaration shall be a syntax error.
-        auto& value = initExpr->constant->integer();
+        auto& value = initExpr->getConstant()->integer();
         if (!base->isFourState() && value.hasUnknown()) {
             context.addDiag(diag::EnumValueUnknownBits, previousRange) << value << *base;
             return;
@@ -441,8 +452,9 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 
     for (auto member : syntax.members) {
         if (member->dimensions.empty()) {
-            auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, std::nullopt);
-            resultType->addMember(ev);
+            auto& ev = EnumValueSymbol::fromSyntax(comp, *member, *resultType, std::nullopt);
+            enumType->addMember(ev);
+            insertCB(ev);
 
             if (member->initializer)
                 setInitializer(ev, *member->initializer);
@@ -452,19 +464,18 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         else {
             if (member->dimensions.size() > 1) {
                 context.addDiag(diag::EnumRangeMultiDimensional, member->dimensions.sourceRange());
-                return compilation.getErrorType();
             }
 
             auto dim = context.evalUnpackedDimension(*member->dimensions[0]);
             if (!dim.isRange())
-                return compilation.getErrorType();
+                continue;
 
             // Range must be positive.
             if (!context.requirePositive(std::optional(dim.range.left),
                                          member->dimensions[0]->sourceRange()) ||
                 !context.requirePositive(std::optional(dim.range.right),
                                          member->dimensions[0]->sourceRange())) {
-                return compilation.getErrorType();
+                continue;
             }
 
             // Enum ranges must be integer literals.
@@ -474,8 +485,9 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             // don't get the initializer.
             int32_t index = dim.range.left;
             {
-                auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, index);
-                resultType->addMember(ev);
+                auto& ev = EnumValueSymbol::fromSyntax(comp, *member, *resultType, index);
+                enumType->addMember(ev);
+                insertCB(ev);
 
                 if (member->initializer)
                     setInitializer(ev, *member->initializer);
@@ -487,24 +499,16 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             while (index != dim.range.right) {
                 index = down ? index - 1 : index + 1;
 
-                auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, index);
-                resultType->addMember(ev);
+                auto& ev = EnumValueSymbol::fromSyntax(comp, *member, *resultType, index);
+                enumType->addMember(ev);
+                insertCB(ev);
 
                 inferValue(ev, member->sourceRange());
             }
         }
     }
 
-    // If this enum is inside a typedef, override the types of each member to be
-    // the typedef instead of the enum itself. This is done as a separate pass
-    // so that we don't try to access the type of the enum values while we're
-    // still in the middle of resolving it.
-    if (typedefTarget) {
-        for (auto& value : resultType->membersOfType<EnumValueSymbol>())
-            const_cast<EnumValueSymbol&>(value).getDeclaredType()->setType(*typedefTarget);
-    }
-
-    return createPackedDims(context, resultType, syntax.dimensions);
+    return *resultType;
 }
 
 static std::string_view getEnumValueName(Compilation& comp, std::string_view name, int32_t index) {
@@ -521,39 +525,43 @@ static std::string_view getEnumValueName(Compilation& comp, std::string_view nam
     return name;
 }
 
-void EnumType::createDefaultMembers(const ASTContext& context, const EnumTypeSyntax& syntax,
-                                    SmallVectorBase<const Symbol*>& members) {
-    auto& comp = context.getCompilation();
-    for (auto member : syntax.members) {
-        std::string_view name = member->name.valueText();
-        SourceLocation loc = member->name.location();
-
-        if (member->dimensions.empty()) {
-            auto ev = comp.emplace<EnumValueSymbol>(name, loc);
-            ev->setType(comp.getErrorType());
-            members.push_back(ev);
-        }
+const Type& EnumType::findDefinition(Compilation& comp, const EnumTypeSyntax& syntax,
+                                     const ASTContext& context) {
+    // The enum type and all of its values should have already been created and
+    // added to the parent scope. We just need to find it so we can hook up our caller.
+    // To do that we're going to try to look up our first member, which should have
+    // the right type. If we don't find it we know an error must have occurred during
+    // type creation.
+    std::string_view name;
+    if (!syntax.members.empty()) {
+        auto member = *syntax.members.begin();
+        if (member->dimensions.empty())
+            name = member->name.valueText();
         else {
             auto dimList = member->dimensions[0];
             auto dim = context.evalUnpackedDimension(*dimList);
-            if (!dim.isRange())
-                continue;
-
-            SourceRange dimRange = dimList->sourceRange();
-            if (!context.requirePositive(std::optional(dim.range.left), dimRange) ||
-                !context.requirePositive(std::optional(dim.range.right), dimRange)) {
-                continue;
-            }
-
-            int32_t low = dim.range.lower();
-            for (uint32_t i = 0; i < dim.range.width(); i++) {
-                int32_t index = int32_t(i) + low;
-                auto ev = comp.emplace<EnumValueSymbol>(getEnumValueName(comp, name, index), loc);
-                ev->setType(comp.getErrorType());
-                members.push_back(ev);
+            if (dim.isRange()) {
+                SourceRange dimRange = dimList->sourceRange();
+                if (context.requirePositive(std::optional(dim.range.left), dimRange) &&
+                    context.requirePositive(std::optional(dim.range.right), dimRange)) {
+                    name = getEnumValueName(comp, member->name.valueText(), dim.range.lower());
+                }
             }
         }
     }
+
+    auto symbol = context.scope->find(name);
+    if (symbol && symbol->kind == SymbolKind::EnumValue) {
+        auto& type = symbol->as<EnumValueSymbol>().getType().getCanonicalType();
+        if (type.getSyntax() == &syntax)
+            return createPackedDims(context, &type, syntax.dimensions);
+    }
+
+    return comp.getErrorType();
+}
+
+void EnumType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("baseType", baseType);
 }
 
 EnumValueSymbol::EnumValueSymbol(std::string_view name, SourceLocation loc) :
@@ -677,6 +685,11 @@ const Type& PackedArrayType::fromDim(const Scope& scope, const Type& elementType
     return *result;
 }
 
+void PackedArrayType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("elementType", elementType);
+    serializer.write("range", fmt::format("[{}:{}]", range.left, range.right));
+}
+
 FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range,
                                                        uint64_t selectableWidth,
                                                        uint64_t bitstreamWidth) :
@@ -723,12 +736,21 @@ ConstantValue FixedSizeUnpackedArrayType::getDefaultValueImpl() const {
     return std::vector<ConstantValue>(range.width(), elementType.getDefaultValue());
 }
 
+void FixedSizeUnpackedArrayType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("elementType", elementType);
+    serializer.write("range", fmt::format("[{}:{}]", range.left, range.right));
+}
+
 DynamicArrayType::DynamicArrayType(const Type& elementType) :
     Type(SymbolKind::DynamicArrayType, "", SourceLocation()), elementType(elementType) {
 }
 
 ConstantValue DynamicArrayType::getDefaultValueImpl() const {
     return std::vector<ConstantValue>();
+}
+
+void DynamicArrayType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("elementType", elementType);
 }
 
 DPIOpenArrayType::DPIOpenArrayType(const Type& elementType, bool isPacked) :
@@ -740,6 +762,11 @@ ConstantValue DPIOpenArrayType::getDefaultValueImpl() const {
     return nullptr;
 }
 
+void DPIOpenArrayType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("elementType", elementType);
+    serializer.write("isPacked", isPacked);
+}
+
 AssociativeArrayType::AssociativeArrayType(const Type& elementType, const Type* indexType) :
     Type(SymbolKind::AssociativeArrayType, "", SourceLocation()), elementType(elementType),
     indexType(indexType) {
@@ -747,6 +774,12 @@ AssociativeArrayType::AssociativeArrayType(const Type& elementType, const Type* 
 
 ConstantValue AssociativeArrayType::getDefaultValueImpl() const {
     return AssociativeArray();
+}
+
+void AssociativeArrayType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("elementType", elementType);
+    if (indexType)
+        serializer.write("indexType", *indexType);
 }
 
 QueueType::QueueType(const Type& elementType, uint32_t maxBound) :
@@ -758,6 +791,11 @@ ConstantValue QueueType::getDefaultValueImpl() const {
     SVQueue result;
     result.maxBound = maxBound;
     return result;
+}
+
+void QueueType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("elementType", elementType);
+    serializer.write("maxBound", maxBound);
 }
 
 PackedStructType::PackedStructType(Compilation& compilation, bool isSigned, SourceLocation loc,
@@ -785,6 +823,9 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
 
     SmallVector<FieldSymbol*> members;
     for (auto member : syntax.members) {
+        if (member->previewNode)
+            structType->addMembers(*member->previewNode);
+
         const Type& type = comp.getType(*member->type, context);
         structType->isFourState |= type.isFourState();
         issuedError |= type.isError();
@@ -875,6 +916,9 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
     uint64_t bitstreamWidth = 0;
     SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {
+        if (member->previewNode)
+            result->addMembers(*member->previewNode);
+
         RandMode randMode = RandMode::None;
         switch (member->randomQualifier.kind) {
             case TokenKind::RandKeyword:
@@ -950,6 +994,9 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
     ASTContext context(*unionType, LookupLocation::max, parentContext.flags);
 
     for (auto member : syntax.members) {
+        if (member->previewNode)
+            unionType->addMembers(*member->previewNode);
+
         const Type& type = comp.getType(*member->type, context);
         unionType->isFourState |= type.isFourState();
         issuedError |= type.isError();
@@ -1015,6 +1062,11 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
     return createPackedDims(context, unionType, syntax.dimensions);
 }
 
+void PackedUnionType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("isTagged", isTagged);
+    serializer.write("isSoft", isSoft);
+}
+
 UnpackedUnionType::UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
                                      const ASTContext& context) :
     Type(SymbolKind::UnpackedUnionType, "", loc), Scope(compilation, this),
@@ -1051,6 +1103,9 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
 
     SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {
+        if (member->previewNode)
+            result->addMembers(*member->previewNode);
+
         for (auto decl : member->declarators) {
             auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
                                                    0u, (uint32_t)fields.size());
@@ -1088,6 +1143,10 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
 
     result->setSyntax(syntax);
     return *result;
+}
+
+void UnpackedUnionType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("isTagged", isTagged);
 }
 
 ConstantValue NullType::getDefaultValueImpl() const {
@@ -1130,6 +1189,7 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
     auto loc = syntax.name.location();
     auto& iface = InstanceSymbol::createVirtual(context, loc, def->as<DefinitionSymbol>(),
                                                 syntax.parameters);
+    comp.noteVirtualIfaceInstance(iface);
 
     const ModportSymbol* modport = nullptr;
     std::string_view modportName = syntax.modport ? syntax.modport->member.valueText() : ""sv;
@@ -1151,6 +1211,10 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
 
 ConstantValue VirtualInterfaceType::getDefaultValueImpl() const {
     return ConstantValue::NullPlaceholder{};
+}
+
+void VirtualInterfaceType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("target", toString());
 }
 
 ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(

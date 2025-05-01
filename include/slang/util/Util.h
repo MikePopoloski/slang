@@ -9,6 +9,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <source_location>
 #include <stdexcept>
 #include <string_view>
 #include <utility>
@@ -16,25 +17,28 @@
 #include "slang/slang_export.h"
 #include "slang/util/Enum.h"
 
-#if defined(__GNUC__) || defined(__clang__)
-#    define SLANG_ASSERT_FUNCTION __PRETTY_FUNCTION__
-#elif defined(_MSC_VER)
-#    define SLANG_ASSERT_FUNCTION __FUNCSIG__
-#elif defined(__SUNPRO_CC)
-#    define SLANG_ASSERT_FUNCTION __func__
-#else
-#    define SLANG_ASSERT_FUNCTION __FUNCTION__
-#endif
-
 #if __cpp_exceptions
-#    define SLANG_TRY try
-#    define SLANG_CATCH(X) catch (X)
-#    define SLANG_THROW(e) throw(e)
+#    if defined(SLANG_USE_CPPTRACE)
+#        include <cpptrace/from_current.hpp>
+#        define SLANG_TRY CPPTRACE_TRYZ
+#        define SLANG_CATCH(X) CPPTRACE_CATCHZ(X)
+#        define SLANG_THROW(e) throw(e)
+#        define SLANG_REPORT_EXCEPTION(e, msg)                 \
+            do {                                               \
+                slang::OS::printE(fmt::format(msg, e.what())); \
+                cpptrace::from_current_exception().print();    \
+            } while (0)
+#    else
+#        define SLANG_TRY try
+#        define SLANG_CATCH(X) catch (X)
+#        define SLANG_THROW(e) throw(e)
+#        define SLANG_REPORT_EXCEPTION(e, msg) slang::OS::printE(fmt::format(msg, e.what()))
+#    endif
 #else
 #    define SLANG_TRY if (true)
 #    define SLANG_CATCH(X) if (false)
-#    define SLANG_THROW(e) \
-        slang::assert::handleThrow((e).what(), __FILE__, __LINE__, SLANG_ASSERT_FUNCTION)
+#    define SLANG_THROW(e) slang::assert::handleThrow((e).what(), std::source_location::current())
+#    define SLANG_REPORT_EXCEPTION(e, msg)
 #endif
 
 #if defined(__clang__)
@@ -64,20 +68,19 @@
 #endif
 
 #if !defined(SLANG_ASSERT_ENABLED)
-#    if !defined(NDEBUG)
+#    if defined(SLANG_DEBUG)
 #        define SLANG_ASSERT_ENABLED 1
 #    endif
 #endif
 
 #if SLANG_ASSERT_ENABLED
-#    define SLANG_ASSERT(cond)                                                                 \
-        do {                                                                                   \
-            if (!(cond))                                                                       \
-                slang::assert::assertFailed(#cond, __FILE__, __LINE__, SLANG_ASSERT_FUNCTION); \
+#    define SLANG_ASSERT(cond)                                                       \
+        do {                                                                         \
+            if (!(cond))                                                             \
+                slang::assert::assertFailed(#cond, std::source_location::current()); \
         } while (false)
 
-#    define SLANG_UNREACHABLE \
-        slang::assert::handleUnreachable(__FILE__, __LINE__, SLANG_ASSERT_FUNCTION)
+#    define SLANG_UNREACHABLE slang::assert::handleUnreachable(std::source_location::current())
 #else
 #    define SLANG_ASSERT(cond)  \
         do {                    \
@@ -130,18 +133,15 @@ public:
 
 /// A handler that runs when an ASSERT condition fails; it will unconditionally
 /// throw an exception.
-[[noreturn]] SLANG_EXPORT void assertFailed(const char* expr, const char* file, int line,
-                                            const char* func);
+[[noreturn]] SLANG_EXPORT void assertFailed(const char* expr, const std::source_location& location);
 
 /// A handler that runs when an exception is thrown but exceptions are disabled; it will
 /// unconditionally abort the program.
-[[noreturn]] SLANG_EXPORT void handleThrow(const char* msg, const char* file, int line,
-                                           const char* func);
+[[noreturn]] SLANG_EXPORT void handleThrow(const char* msg, const std::source_location& location);
 
 /// A handler that runs when a code path is reached that is supposed to be unreachable.
 /// An exception will be thrown or the program will be aborted.
-[[noreturn]] SLANG_EXPORT void handleUnreachable(const char* file, int line, const char* func);
-
+[[noreturn]] SLANG_EXPORT void handleUnreachable(const std::source_location& location);
 } // namespace assert
 
 /// A wrapper around a pointer that indicates that it should never be null.

@@ -10,6 +10,7 @@
 #include "TidyKind.h"
 #include <algorithm>
 #include <fmt/format.h>
+#include <regex>
 #include <slang/util/TypeTraits.h>
 #include <string>
 #include <unordered_map>
@@ -23,12 +24,17 @@ public:
     /// Configuration values of checks
     struct CheckConfigs {
         std::string clkName;
+        std::string clkNameRegexString;
+        std::regex clkNameRegexPattern;
         std::string resetName;
         bool resetIsActiveHigh;
         std::vector<std::string> inputPortSuffix;
         std::vector<std::string> outputPortSuffix;
         std::vector<std::string> inoutPortSuffix;
         std::string moduleInstantiationPrefix;
+        std::vector<std::string> inputPortPrefix;
+        std::vector<std::string> outputPortPrefix;
+        std::vector<std::string> inoutPortPrefix;
     };
 
     /// Default TidyConfig constructor which will set the default check's configuration values
@@ -94,6 +100,11 @@ private:
             visit(checkConfigs.resetName);
             return;
         }
+        else if (configName == "clkNameRegexString") {
+            visit(checkConfigs.clkNameRegexString);
+            checkConfigs.clkNameRegexPattern = std::regex(checkConfigs.clkNameRegexString);
+            return;
+        }
         else if (configName == "resetIsActiveHigh") {
             visit(checkConfigs.resetIsActiveHigh);
             return;
@@ -112,6 +123,18 @@ private:
         }
         else if (configName == "moduleInstantiationPrefix") {
             visit(checkConfigs.moduleInstantiationPrefix);
+            return;
+        }
+        else if (configName == "inputPortPrefix") {
+            visit(checkConfigs.inputPortPrefix);
+            return;
+        }
+        else if (configName == "outputPortPrefix") {
+            visit(checkConfigs.outputPortPrefix);
+            return;
+        }
+        else if (configName == "inoutPortPrefix") {
+            visit(checkConfigs.inoutPortPrefix);
             return;
         }
         SLANG_THROW(std::invalid_argument(fmt::format("The check: {} does not exist", configName)));

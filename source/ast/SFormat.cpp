@@ -10,8 +10,10 @@
 #include <cmath>
 #include <ieee1800/vpi_user.h>
 
+#include "slang/ast/ASTVisitor.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/text/CharInfo.h"
+#include "slang/text/FormatBuffer.h"
 #include "slang/util/String.h"
 
 static const double log2_10 = std::log2(10.0);
@@ -351,8 +353,186 @@ void formatStrength(std::string& result, const SVInt& value) {
     }
 }
 
-void formatArg(std::string& result, const ConstantValue& arg, char specifier,
-               const FormatOptions& options) {
+struct TypeVisitor {
+    bool abbreviated;
+    bool isStringLiteral;
+
+    TypeVisitor(bool abbreviated, bool isStringLiteral) :
+        abbreviated(abbreviated), isStringLiteral(isStringLiteral) {}
+
+    void visit(const EnumType& type, const ConstantValue& arg) {
+        for (auto& member : type.values()) {
+            if (member.getValue() == arg) {
+                buffer.append(member.name);
+                return;
+            }
+        }
+        buffer.append(arg.toString());
+    }
+
+    void visit(const PackedStructType& type, const ConstantValue& arg) {
+        if (arg) {
+            auto& value = arg.integer();
+            auto currOffset = int32_t(value.getBitWidth());
+
+            buffer.append("'{");
+            for (auto& field : type.membersOfType<FieldSymbol>()) {
+                auto& fieldType = field.getType();
+                auto fieldWidth = int32_t(fieldType.getBitWidth());
+                auto elem = value.slice(currOffset - 1, currOffset - fieldWidth);
+                currOffset -= fieldWidth;
+
+                if (!abbreviated) {
+                    buffer.append(field.name);
+                    buffer.append(":");
+                }
+
+                fieldType.visit(*this, elem);
+
+                buffer.append(",");
+                if (!abbreviated)
+                    buffer.append(" ");
+            }
+
+            buffer.pop_back();
+            if (!abbreviated)
+                buffer.pop_back();
+            buffer.append("}");
+        }
+    }
+
+    void visit(const UnpackedStructType& type, const ConstantValue& arg) {
+        if (arg) {
+            auto elements = arg.elements();
+            auto elemIt = elements.begin();
+
+            buffer.append("'{");
+            for (auto field : type.fields) {
+                SLANG_ASSERT(elemIt != elements.end());
+
+                if (!abbreviated) {
+                    buffer.append(field->name);
+                    buffer.append(":");
+                }
+
+                field->getType().visit(*this, *elemIt++);
+
+                buffer.append(",");
+                if (!abbreviated)
+                    buffer.append(" ");
+            }
+
+            buffer.pop_back();
+            if (!abbreviated)
+                buffer.pop_back();
+            buffer.append("}");
+        }
+    }
+
+    void visit(const PackedUnionType& type, const ConstantValue& arg) {
+        // LRM says the value is printed with the type of the first member.
+        auto fields = type.membersOfType<FieldSymbol>();
+        if (!fields.empty())
+            fields.front().getType().visit(*this, arg);
+    }
+
+    void visit(const UnpackedUnionType& type, const ConstantValue& arg) {
+        if (arg.isUnion()) {
+            auto& u = *arg.unionVal();
+            if (!u.activeMember) {
+                buffer.append("(unset)");
+            }
+            else {
+                auto& field = *type.fields[*u.activeMember];
+                buffer.format("{}", field.name);
+                if (!field.getType().isVoid()) {
+                    buffer.append(":");
+                    field.getType().visit(*this, u.value);
+                }
+            }
+        }
+    }
+
+    void visit(const FixedSizeUnpackedArrayType& type, const ConstantValue& arg) {
+        if (arg)
+            formatArray(type, arg.elements());
+    }
+
+    void visit(const DynamicArrayType& type, const ConstantValue& arg) {
+        if (arg)
+            formatArray(type, arg.elements());
+    }
+
+    void visit(const QueueType& type, const ConstantValue& arg) {
+        if (arg)
+            formatArray(type, *arg.queue());
+    }
+
+    void visit(const AssociativeArrayType& type, const ConstantValue& arg) {
+        if (arg) {
+            buffer.append("'{");
+            for (auto& [key, val] : *arg.map()) {
+                if (type.indexType)
+                    type.indexType->visit(*this, key);
+                else
+                    buffer.append(key.toString());
+
+                buffer.append(":");
+                type.elementType.visit(*this, val);
+
+                buffer.append(",");
+                if (!abbreviated)
+                    buffer.append(" ");
+            }
+
+            buffer.pop_back();
+            if (!abbreviated)
+                buffer.pop_back();
+            buffer.append("}");
+        }
+    }
+
+    void visit(const TypeAliasType& type, const ConstantValue& arg) {
+        type.targetType.getType().visit(*this, arg);
+    }
+
+    template<typename T>
+    void visit(const T&, const ConstantValue& arg) {
+        if (isStringLiteral)
+            buffer.append(arg.convertToStr().toString());
+        else
+            buffer.append(arg.toString());
+    }
+
+    template<typename T>
+    void formatArray(const Type& type, const T& arr) {
+        auto elemType = type.getArrayElementType();
+        SLANG_ASSERT(elemType);
+
+        buffer.append("'{");
+        for (size_t i = 0; i < arr.size(); i++) {
+            if (i != 0) {
+                buffer.append(",");
+                if (!abbreviated)
+                    buffer.append(" ");
+            }
+            elemType->visit(*this, arr[i]);
+        }
+        buffer.append("}");
+    }
+
+    FormatBuffer buffer;
+};
+
+void formatPattern(std::string& result, const ConstantValue& arg, const Type& type,
+                   const FormatOptions& options, bool isStringLiteral) {
+    TypeVisitor visitor(options.zeroPad, isStringLiteral);
+    type.visit(visitor, arg);
+    result += visitor.buffer.str();
+}
+
+void formatArg(std::string& result, const ConstantValue& arg, const Type& type, char specifier,
+               const FormatOptions& options, bool isStringLiteral) {
     switch (charToLower(specifier)) {
         case 'h':
         case 'x':
@@ -392,7 +572,7 @@ void formatArg(std::string& result, const ConstantValue& arg, char specifier,
             formatStrength(result, arg.integer());
             return;
         case 'p':
-            // TODO:
+            formatPattern(result, arg, type, options, isStringLiteral);
             return;
         case 's':
             formatString(result, arg.convertToStr().str(), options);

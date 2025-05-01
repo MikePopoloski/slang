@@ -13,11 +13,8 @@
 #include "fmt/color.h"
 #include "fmt/format.h"
 #include "visitors/NetlistVisitor.h"
-#include <fstream>
 #include <iostream>
 #include <stdexcept>
-#include <unordered_set>
-#include <utility>
 #include <vector>
 
 #include "slang/ast/ASTSerializer.h"
@@ -27,8 +24,6 @@
 #include "slang/driver/Driver.h"
 #include "slang/text/FormatBuffer.h"
 #include "slang/text/Json.h"
-#include "slang/util/String.h"
-#include "slang/util/TimeTrace.h"
 #include "slang/util/Util.h"
 #include "slang/util/VersionInfo.h"
 
@@ -45,14 +40,14 @@ public:
     constexpr auto format(NetlistNode const& node, Context& ctx) const {
         if (node.kind == NodeKind::VariableAlias) {
             auto& aliasNode = node.as<NetlistVariableAlias>();
-            return format_to(ctx.out(), "{}{}", aliasNode.hierarchicalPath, aliasNode.overlap);
+            return fmt::format_to(ctx.out(), "{}{}", aliasNode.hierarchicalPath, aliasNode.overlap);
         }
         else if (node.kind == NodeKind::VariableDeclaration) {
             auto& declNode = node.as<NetlistVariableDeclaration>();
-            return format_to(ctx.out(), "{}", declNode.hierarchicalPath);
+            return fmt::format_to(ctx.out(), "{}", declNode.hierarchicalPath);
         }
         else {
-            return format_to(ctx.out(), "{}", node.getName());
+            return fmt::format_to(ctx.out(), "{}", node.getName());
         }
     }
 };
@@ -212,11 +207,13 @@ int main(int argc, char** argv) {
     std::optional<bool> quiet;
     std::optional<bool> debug;
     std::optional<bool> combLoops;
+    std::optional<bool> unrollForLoops;
     driver.cmdLine.add("-h,--help", showHelp, "Display available options");
     driver.cmdLine.add("--version", showVersion, "Display version information and exit");
     driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
     driver.cmdLine.add("-d,--debug", debug, "Output debugging information");
     driver.cmdLine.add("-c,--comb-loops", combLoops, "Detect combinatorial loops");
+    driver.cmdLine.add("--unroll-for-loops", unrollForLoops, "Unroll procedural for loops");
 
     std::optional<std::string> astJsonFile;
     driver.cmdLine.add(
@@ -276,7 +273,8 @@ int main(int argc, char** argv) {
         bool ok = driver.parseAllSources();
 
         auto compilation = driver.createCompilation();
-        ok &= driver.reportCompilation(*compilation, *quiet);
+        driver.reportCompilation(*compilation, *quiet);
+        ok &= driver.reportDiagnostics(*quiet);
 
         if (!ok) {
             return ok;
@@ -289,7 +287,9 @@ int main(int argc, char** argv) {
 
         // Create the netlist by traversing the AST.
         Netlist netlist;
-        NetlistVisitor visitor(*compilation, netlist);
+        NetlistVisitorOptions options;
+        options.unrollForLoops = unrollForLoops.value_or(false);
+        NetlistVisitor visitor(*compilation, netlist, options);
         compilation->getRoot().visit(visitor);
         netlist.split();
         DEBUG_PRINT("Netlist has {} nodes and {} edges\n", netlist.numNodes(), netlist.numEdges());
@@ -356,9 +356,7 @@ int main(int argc, char** argv) {
         return 1;
     }
     SLANG_CATCH(const std::exception& e) {
-#if __cpp_exceptions
-        OS::printE(fmt::format("{}\n", e.what()));
-#endif
+        SLANG_REPORT_EXCEPTION(e, "{}\n");
         return 1;
     }
 

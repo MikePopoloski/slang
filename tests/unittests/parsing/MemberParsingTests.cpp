@@ -272,9 +272,11 @@ endmodule : m1;
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 2);
-    CHECK(diagnostics[0].code == diag::ImplicitNotAllowed);
-    CHECK(diagnostics[1].code == diag::ExpectedDeclarator);
+    REQUIRE(diagnostics.size() == 4);
+    CHECK(diagnostics[0].code == diag::ExpectedToken);
+    CHECK(diagnostics[1].code == diag::ExpectedToken);
+    CHECK(diagnostics[2].code == diag::UnexpectedEndDelim);
+    CHECK(diagnostics[3].code == diag::ExpectedDeclarator);
 }
 
 TEST_CASE("Errors for directives inside design elements") {
@@ -784,7 +786,7 @@ module m;
     a4: assert property (a |=> in1);
 
     function bit next_window (bit win);
-        if (reset || win && end_flag)
+        if (reset || (win && end_flag))
             return 1'b0;
     endfunction
 
@@ -1488,4 +1490,90 @@ endmodule
 
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::UnexpectedEndDelim);
+}
+
+TEST_CASE("Bad top level constraints") {
+    auto& text = R"(
+constraint A :: A { &&& }
+
+constraint A :: A { matches }
+
+constraint A :: A { soft *) 0 ; }
+
+program A ; final randsequence ( const ) A : A ; endsequence endprogram
+
+constraint A :: A { foreach ( &&& A [ ] ) 0 ; }
+
+program A ; final randcase 0 : matches A = # 0 0 ; endcase endprogram
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 16);
+}
+
+TEST_CASE("Override specifiers on class constructor") {
+    auto& text = R"(
+class cls;
+  function :initial :final new();
+  endfunction
+endclass
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::SpecifiersNotAllowed);
+}
+
+TEST_CASE("Class specifier parsing crash regress") {
+    auto& text = R"(
+task:
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+    REQUIRE(diagnostics.size() == 3);
+}
+
+TEST_CASE("Nested attributes are not allowed") {
+    auto& text = R"(
+(* a1  , a2 = - (* a3 = 2  *) null *) module mod;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::AttributesNotAllowed);
+}
+
+TEST_CASE("Struct type missing brace error recovery") {
+    auto& text = R"(
+module m;
+    struct { logic [3:0][1:0] a;
+    assign i = a[3:1][0];
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedToken);
+}
+
+TEST_CASE("isEquivalentTo wrong result regress") {
+    auto& text1 = R"(
+module m;
+    int i = 1;
+endmodule
+)";
+    auto& node1 = parseCompilationUnit(text1);
+
+    auto& text2 = R"(
+module n;
+    int i = 1;
+endmodule
+)";
+    auto& node2 = parseCompilationUnit(text2);
+
+    CHECK(!node1.isEquivalentTo(node2));
 }

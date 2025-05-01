@@ -301,7 +301,7 @@ const Expression& DefParamSymbol::getInitializer() const {
 }
 
 const ConstantValue& DefParamSymbol::getValue() const {
-    auto v = getInitializer().constant;
+    auto v = getInitializer().getConstant();
     SLANG_ASSERT(v);
     return *v;
 }
@@ -330,8 +330,15 @@ static const Symbol* checkDefparamHierarchy(const Symbol& target, const Scope& d
             // If the defparam is inside a bind instantiation we need
             // to check whether our common ancestor also is.
             if (isInsideBind) {
-                auto inst = (*it)->getContainingInstance();
-                if (!inst || !inst->flags.has(InstanceFlags::ParentFromBind))
+                bitmask<InstanceFlags> instFlags;
+                if (auto inst = (*it)->getContainingInstanceOrChecker()) {
+                    if (inst->kind == SymbolKind::InstanceBody)
+                        instFlags = inst->as<InstanceBodySymbol>().flags;
+                    else
+                        instFlags = inst->as<CheckerInstanceBodySymbol>().flags;
+                }
+
+                if (!instFlags.has(InstanceFlags::ParentFromBind))
                     return &scope->asSymbol();
             }
 
@@ -391,7 +398,8 @@ void DefParamSymbol::resolve() const {
 
     auto makeInvalid = [&] {
         initializer = comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
-        initializer->constant = &ConstantValue::Invalid;
+        context.eval(*initializer);
+        SLANG_ASSERT(initializer->getConstant());
     };
 
     if (!target) {
@@ -433,8 +441,8 @@ void DefParamSymbol::resolve() const {
     }
 
     context.eval(*initializer);
-    if (!initializer->constant)
-        initializer->constant = &ConstantValue::Invalid;
+    if (!initializer->getConstant())
+        makeInvalid();
 }
 
 void DefParamSymbol::serializeTo(ASTSerializer& serializer) const {

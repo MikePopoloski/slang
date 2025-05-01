@@ -79,14 +79,16 @@ use the number of threads supported by the system -- this can be set to some oth
 value to more specifically control the concurrency. Setting it to 1 will disable
 the use of threading.
 
-Note that multithreading only currently applies to the parsing stage of compilation,
-and that it is not supported when running with `--single-unit`
+Note that multithreading *parsing* cannot be supported when running
+with `--single-unit`, though other parts of the compilation process
+may still take advantage of threading where possible.
 
 @section Actions
 
 These options control what action the tool will perform when run.
-They are mutually exclusive. If none of these are provided, the default
-action is to elaborate the design, print any diagnostics, and exit.
+Some of them are mutually exclusive. If none of these are provided,
+the default action is to elaborate the design, print any diagnostics,
+and exit.
 
 `-E,--preprocess`
 
@@ -107,6 +109,13 @@ All diagnostics encountered will be printed.
 `--lint-only`
 
 Only perform linting of code, don't try to elaborate a full hierarchy.
+
+`--disable-analysis`
+
+Disable the post-elaboration analysis pass. This will improve performance, at the
+expense of preventing various errors and warnings from being diagnosed. This option
+should probably not be needed unless there are bugs in the analysis pass that need
+to be worked around.
 
 @section include-paths Include paths and macros
 
@@ -164,6 +173,35 @@ By default library files are independent and will not inherit macros from the ma
 
 Enables use of legacy source protection directives for compatibility with older tools.
 
+`--translate-off-format <common>,<start>,<end>`
+
+Specify the format of a "translate off" directive in a comment that denotes a span
+of text that is skipped from processing (as if it had been commented out). All source
+text between the start comment and the end comment will be skipped.
+
+@note It is generally preferred to use `ifdef` directives instead for this functionality,
+but legacy code may contain these directives in comment form so this option can be
+used for compatibility.
+
+The format of the argument is three comma-separated words containing alphanumeric
+and underscore characters. The first word is the common keyword at the beginning
+of the comment. The second word is the directive that starts a skipped region,
+and the third is the directive that ends the region.
+
+More than one of these options can be provided to skip regions with differing styles
+in the same run of the tool.
+
+For example, using an option like `--translate-off-format pragma,translate_off,translate_on`
+will work with code like the following:
+
+@code{.sv}
+module m;
+    // pragma translate_off
+    ... some code to skip ...
+    // pragma translate_on
+endmodule
+@endcode
+
 `--obfuscate-ids`
 
 Causes all identifiers in the preprocessed output to be replaced with obfuscated
@@ -216,6 +254,11 @@ symbols are dumped.
 
 When dumping AST to JSON, include source line and file information.
 
+`--ast-json-detailed-types`
+
+When dumping AST to JSON, include expanded type information in the output instead of
+condensing all types into a human-friendly string.
+
 @section compilation-limits Compilation
 
 `--top <name>`
@@ -247,6 +290,12 @@ the order in which the libraries are specified to the tool.
 
 Sets the name of the default library. If not set, defaults to "work".
 
+`--disable-instance-caching`
+
+Disable the use of instance caching, which normally allows skipping duplicate instance bodies to
+save time when elaborating. This shouldn't need to be turned off except to work around bugs in
+the caching implementation.
+
 `--max-hierarchy-depth <depth>`
 
 Set the maximum depth of the design hierarchy. Used to detect infinite
@@ -266,7 +315,7 @@ infinite recursion during constant evaluation. The default is 128.
 
 Set the maximum number of steps that can occur during constant evaluation
 before giving up. Used to detect infinite constant evaluation loops.
-The default is 100000.
+The default is 1000000.
 
 `--constexpr-backtrace-limit <limit>`
 
@@ -280,11 +329,11 @@ Set the maximum number of instances allowed in a single instance array.
 The limit exists to prevent runaway compilation times on invalid input.
 The default is 65535.
 
-`--compat vcs`
+`--max-udp-coverage-notes <limit>`
 
-Attempt to increase compatibility with the specified tool. Various options will
-be set and some warnings will be silenced to mimic the given tool as closely as possible.
-Currently only 'vcs' is supported as a value.
+When reporting a warning for a UDP that doesn't cover all possible input
+edge transitions, limit the number of notes printed to this value to avoid
+excessively large diagnostic output. The default is 8.
 
 `-T,--timing min|typ|max`
 
@@ -299,8 +348,64 @@ issued if not all elements have a time scale specified. Example: `--timescale=1n
 
 `-G <name>=<value>`
 
-Override all parameters with the given name in top-level modules to the provided value.
-This option can be specified more than once to override multiple parameters.
+Overrides parameters to the provided value. If the 'name' is a simple undotted name,
+all parameters in all top-level modules that match the given name will be overridden.
+Otherwise, the name is assumed to be hierarchical and will be treated as if it had
+been written in a `defparam` statement in the design.
+
+The 'value' may be any SystemVerilog literal or evaluatable constant expression,
+including references to packages and enums in the design.
+
+@section analysis Analysis
+
+`--dfa-unique-priority`
+
+Respect the 'unique' and 'priority' keywords when analyzing data flow through case statements
+(on by default). This affects things like whether the following example will report a warning
+for an inferred latch or not:
+
+@code{.sv}
+module m(input [3:0] a, output logic b);
+    always_comb begin
+        unique case (a)
+            0: b = 1;
+            1: b = 1;
+        endcase
+    end
+endmodule
+@endcode
+
+The case statement doesn't cover all possible values of `a` but since the `unique`
+keyword is provided it will be assumed that all values are covered in practice and
+no warning will be issued.
+
+`--dfa-four-state`
+
+When set, case statements must include items that cover all possible X and Z bit
+combinations of their input in order to be assumed to be fully covered, meaning
+that things like inferred latches won't be reported if their target is assigned
+in all such case item statements.
+
+By default X and Z bit coverage is not required; having items that cover all possible
+0 and 1 bit combinations is sufficient to assume full coverage of the case input.
+
+`--max-case-analysis-steps <steps>`
+
+The maximum number of steps to take while trying to analyze a wildcard case statement.
+The default is 65535.
+
+Determining whether a list of wildcard case clauses fully cover the entire input space
+is, in general, NP-complete, so there is a limit to prevent exponential explosion in
+analysis time. In practice case statements written by humans will rarely, if ever,
+exhibit this kind of behavior.
+
+@section compat-option Compatibility
+
+`--compat vcs`
+
+Attempt to increase compatibility with the specified tool. Various options will
+be set and some warnings will be silenced to mimic the given tool as closely as possible.
+Currently only 'vcs' is supported as a value.
 
 `--allow-use-before-declare`
 
@@ -311,7 +416,7 @@ of this rule.
 `--allow-hierarchical-const`
 
 Allow hierarchical references in constant expressions. SystemVerilog doesn't permit this,
-but many popular tools allow it anyway so this flag can be used for compatibility purposes.
+but some tools allow it anyway so this flag can be used for compatibility purposes.
 
 `--relax-enum-conversions`
 
@@ -378,6 +483,30 @@ endmodule
 
 Perform strict driver checking, which currently means disabling procedural 'for' @ref loop-unroll
 
+`--cmd-ignore <vendor_cmd>,<N>`
+
+Define rule to ignore vendor command &lt;vendor_cmd> with its following &lt;N> parameters.
+A command of the form +xyz will also match any vendor command of the form +xyz+abc,
+as +abc is the command's argument, and doesn't need to be matched.
+This option is typically used to ignore commands listed in command files that are meant
+for some other tool.
+
+`--cmd-rename <vendor_cmd>,<slang_cmd>`
+
+Define rule to rename vendor command &lt;vendor_cmd> into existing &lt;slang_cmd>.
+Similarly to `--cmd-ignore`, this exists to support existing command files that
+specify options with different names.
+
+`--ignore-directive <vendor_directive>`
+
+Some tool vendors declare custom preprocessor directives, and slang fails when
+encountering those. By using this command line option with the vendor's directive,
+it will be ignored (the vendor directive should be specified without the leading \`
+symbol). It is possible to use this command line option multiple times, to ignore
+multiple vendor directives.
+Please note that any vendor directive ignored also ignores all optional parameters
+until the end of the line.
+
 @section diag-control Diagnostic Control
 
 `--color-diagnostics`
@@ -409,11 +538,21 @@ Show or hide file include stacks in diagnostic output. The default is to show.
 
 Show or hide macro expansion backtraces in diagnostic output. The default is to show.
 
+`--diag-abs-paths`
+
+Display file names as absolute paths in diagnostic output. The default is to display relative paths.
+
 `--diag-hierarchy always|never|auto`
 
 Show or hide hierarchy locations in diagnostic output. The default is 'auto', which decides whether to
 show the hierarchical path based on heuristics. 'always' will show the paths on every diagnostic,
 and 'never' will suppress them.
+
+`--diag-json <file>`
+
+Dump diagnostics in JSON format to the specified file, or '-' for stdout.
+If printing to stdout, the usual text-style diagnostics will be supressed.
+Otherwise, they will be printed like normal.
 
 `--suppress-warnings <file-pattern>[,...]`
 
@@ -462,32 +601,6 @@ Treat warning "foo" as an error.
 `-Wno-error=foo`
 
 Turn warning "foo" into a warning even if `-Werror` is specified.
-
-@section vendor-cmds Legacy Vendor Command Support
-
-`--cmd-ignore <vendor_cmd>,<N>`
-
-Define rule to ignore vendor command &lt;vendor_cmd> with its following &lt;N> parameters.
-A command of the form +xyz will also match any vendor command of the form +xyz+abc,
-as +abc is the command's argument, and doesn't need to be matched.
-This option is typically used to ignore commands listed in command files that are meant
-for some other tool.
-
-`--cmd-rename <vendor_cmd>,<slang_cmd>`
-
-Define rule to rename vendor command &lt;vendor_cmd> into existing &lt;slang_cmd>.
-Similarly to `--cmd-ignore`, this exists to support existing command files that
-specify options with different names.
-
-`--ignore-directive <vendor_directive>`
-
-Some tool vendors declare custom preprocessor directives, and slang fails when
-encountering those. By using this command line option with the vendor's directive,
-it will be ignored (the vendor directive should be specified without the leading \`
-symbol). It is possible to use this command line option multiple times, to ignore
-multiple vendor directives.
-Please note that any vendor directive ignored also ignores all optional parameters
-until the end of the line.
 
 @section clr-profiling Profiling
 

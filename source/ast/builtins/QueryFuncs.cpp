@@ -22,7 +22,7 @@ using namespace syntax;
 
 class BitsFunction : public SystemSubroutine {
 public:
-    BitsFunction() : SystemSubroutine("$bits", SubroutineKind::Function) {}
+    BitsFunction() : SystemSubroutine(KnownSystemName::Bits, SubroutineKind::Function) {}
 
     bool isArgUnevaluated(size_t) const final { return true; }
 
@@ -75,7 +75,7 @@ public:
 
 class TypenameFunction : public SystemSubroutine {
 public:
-    TypenameFunction() : SystemSubroutine("$typename", SubroutineKind::Function) {}
+    TypenameFunction() : SystemSubroutine(KnownSystemName::Typename, SubroutineKind::Function) {}
 
     bool isArgUnevaluated(size_t) const final { return true; }
 
@@ -107,7 +107,8 @@ public:
 
 class IsUnboundedFunction : public SystemSubroutine {
 public:
-    IsUnboundedFunction() : SystemSubroutine("$isunbounded", SubroutineKind::Function) {}
+    IsUnboundedFunction() :
+        SystemSubroutine(KnownSystemName::IsUnbounded, SubroutineKind::Function) {}
 
     bool isArgUnevaluated(size_t) const final { return true; }
 
@@ -365,12 +366,12 @@ protected:
 
 #define FUNC SubroutineKind::Function
 
-SUBROUTINE(LowFunction, ArrayQueryFunction, "$low", FUNC);
-SUBROUTINE(HighFunction, ArrayQueryFunction, "$high", FUNC);
-SUBROUTINE(LeftFunction, ArrayQueryFunction, "$left", FUNC);
-SUBROUTINE(RightFunction, ArrayQueryFunction, "$right", FUNC);
-SUBROUTINE(SizeFunction, ArrayQueryFunction, "$size", FUNC);
-SUBROUTINE(IncrementFunction, ArrayQueryFunction, "$increment", FUNC);
+SUBROUTINE(LowFunction, ArrayQueryFunction, KnownSystemName::Low, FUNC);
+SUBROUTINE(HighFunction, ArrayQueryFunction, KnownSystemName::High, FUNC);
+SUBROUTINE(LeftFunction, ArrayQueryFunction, KnownSystemName::Left, FUNC);
+SUBROUTINE(RightFunction, ArrayQueryFunction, KnownSystemName::Right, FUNC);
+SUBROUTINE(SizeFunction, ArrayQueryFunction, KnownSystemName::Size, FUNC);
+SUBROUTINE(IncrementFunction, ArrayQueryFunction, KnownSystemName::Increment, FUNC);
 
 ConstantValue LowFunction::eval(EvalContext& context, const Args& args, SourceRange,
                                 const CallExpression::SystemCallInfo&) const {
@@ -485,8 +486,8 @@ ConstantValue IncrementFunction::eval(EvalContext& context, const Args& args, So
 
 class ArrayDimensionFunction : public SystemSubroutine {
 public:
-    ArrayDimensionFunction(const std::string& name, bool unpackedOnly) :
-        SystemSubroutine(name, FUNC), unpackedOnly(unpackedOnly) {}
+    ArrayDimensionFunction(KnownSystemName knownNameId, bool unpackedOnly) :
+        SystemSubroutine(knownNameId, FUNC), unpackedOnly(unpackedOnly) {}
 
     bool isArgUnevaluated(size_t) const final { return true; }
 
@@ -543,6 +544,8 @@ private:
 };
 
 void Builtins::registerQueryFuncs() {
+    using parsing::KnownSystemName;
+
 #define REGISTER(name) addSystemSubroutine(std::make_shared<name##Function>())
     REGISTER(Bits);
     REGISTER(Typename);
@@ -555,8 +558,10 @@ void Builtins::registerQueryFuncs() {
     REGISTER(Increment);
 #undef REGISTER
 
-    addSystemSubroutine(std::make_shared<ArrayDimensionFunction>("$dimensions", false));
-    addSystemSubroutine(std::make_shared<ArrayDimensionFunction>("$unpacked_dimensions", true));
+    addSystemSubroutine(
+        std::make_shared<ArrayDimensionFunction>(KnownSystemName::Dimensions, false));
+    addSystemSubroutine(
+        std::make_shared<ArrayDimensionFunction>(KnownSystemName::UnpackedDimensions, true));
 }
 
 } // namespace slang::ast::builtins
