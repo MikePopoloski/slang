@@ -188,6 +188,16 @@ void DataFlowAnalysis::handleFunctionCall(const CallExpression& expr,
     auto drivers = analysis->getDrivers();
     it->second.reserve(drivers.size());
     for (auto& [valueSym, driverList] : drivers) {
+        // The user can disable this inlining of drivers for function locals via a flag.
+        if (options.flags.has(AnalysisFlags::AllowMultiDrivenLocals)) {
+            auto scope = valueSym->getParentScope();
+            while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
+                scope = scope->asSymbol().getParentScope();
+
+            if (scope == &func)
+                continue;
+        }
+
         auto& newDrivers = it->second.emplace_back(valueSym, DriverList{}).second;
         newDrivers.reserve(driverList.size());
 
