@@ -8,14 +8,13 @@
 
 #include "slang/ast/printer/defaultAstPrinter.h"
 
-
 namespace slang::ast {
 
 // case_statement ::= | [ unique_priority ] case_keyword (case_expression )matches
 //                       case_pattern_item { case_pattern_item } endcase
 void AstPrinter::handle(const PatternCaseStatement& t) {
     if (t.check != UniquePriorityCheck::None) {
-        std::string_view priority = toString(t.check);
+        const std::string_view priority = toString(t.check);
         write(lowerFirstLetter(priority));
     }
 
@@ -24,10 +23,10 @@ void AstPrinter::handle(const PatternCaseStatement& t) {
     write("(");
     t.expr.visit(*this);
     write(") matches\n");
-    indentation_level++;
+    ++indentation_level;
 
     // case_pattern_item ::= pattern [ &&& expression ] : statement_or_null
-    for (auto item : t.items) {
+    for (const auto& item : t.items) {
         item.pattern.get()->visit(*this);
         if (item.filter) {
             write("&&&");
@@ -41,11 +40,11 @@ void AstPrinter::handle(const PatternCaseStatement& t) {
     // case_item ::= | default [ : ] statement_or_null
     if (t.defaultCase) {
         write("default :");
-        (*t.defaultCase).visit(*this);
+        t.defaultCase->visit(*this);
         write("\n");
     }
 
-    indentation_level--;
+    --indentation_level;
     write("endcase \n");
 }
 
@@ -59,23 +58,27 @@ void AstPrinter::handle(const TaggedPattern& t) {
 // pattern ::=. variable_identifier
 void AstPrinter::handle(const VariablePattern& t) {
     write(".");
-    
+
     writeName(t.variable, false);
 }
+
 // pattern ::= .*
 void AstPrinter::handle(const WildcardPattern& t) {
     write(".*");
+    visitDefault(t);
 }
 
 // assignment_pattern ::= '{ expression { , expression } }
 void AstPrinter::handle(const StructurePattern& t) {
     write("'{");
-    for (auto field_pattern : t.patterns) {
-        int currentBuffer = changedBuffer;
+    for (const auto& field_pattern : t.patterns) {
+        const int currentBuffer = changedBuffer;
         field_pattern.pattern->visit(*this);
-        if (field_pattern.pattern != t.patterns.back().pattern && changedBuffer != currentBuffer)
+        if (&field_pattern != &(t.patterns.back()) && changedBuffer != currentBuffer) {
             write(",");
+        }
     }
     write("}");
 }
-}
+
+} // namespace slang::ast

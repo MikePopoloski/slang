@@ -20,7 +20,7 @@ std::tuple<std::string, const slang::ast::RootSymbol&> getAst(
 
     jsonPrinter.setIncludeAddresses(false);
     jsonPrinter.setIncludeSourceInfo(false);
-    jsonPrinter.enableMinimalInfo(true);
+    jsonPrinter.setIncludeTypes(false);
 
     jsonPrinter.startObject();
     jsonPrinter.serialize(rootAst);
@@ -29,35 +29,40 @@ std::tuple<std::string, const slang::ast::RootSymbol&> getAst(
     return {std::string(jsonWriter.view()), rootAst};
 }
 
-
 // checks if the ast of the original code is equal to the ast of the generated code
 bool isEqual(std::shared_ptr<slang::syntax::SyntaxTree> tree, std::string name_test = "test") {
     slang::ast::Compilation compilation;
     compilation.addSyntaxTree(tree);
-    auto [old_ast_json, old_rootAst] = getAst(compilation);
+    const auto [old_ast_json, old_rootAst] = getAst(compilation);
 
     // regenerate the code
     slang::ast::AstPrinter printer(compilation);
     old_rootAst.visit(printer);
-    std::string_view new_code = printer.str();
-    std::cout << new_code;
+    const std::string_view new_code = printer.str();
 
     // calculate ast new code
     slang::ast::Compilation new_compilation;
     auto new_tree = slang::syntax::SyntaxTree::fromText(new_code);
     new_compilation.addSyntaxTree(new_tree);
-    auto [new_ast_json, new_rootAst] = getAst(new_compilation);
+    const auto [new_ast_json, new_rootAst] = getAst(new_compilation);
+
+    bool test_passed = (old_ast_json == new_ast_json);
 
     // dump the content to a file if the ast don't match
-    if (new_ast_json != old_ast_json) {
+    if (true) {
         name_test.append(".txt");
         std::ofstream out(name_test);
-        out << "original json:";
+        out << "original json:\n";
         out << old_ast_json;
-        out << "\nnew json:";
+        out << "\nnew json:\n";
         out << new_ast_json;
-        out << "\nnew code:";
+        out << "\nnew code:\n";
         out << new_code << "\n";
+        if (test_passed) {
+          out << "Test result: PASSED" << '\n';
+        } else {
+          out << "Test result: FAILED" << '\n';
+        }
         out.close();
     }
     return old_ast_json == new_ast_json;
@@ -526,7 +531,7 @@ TEST_CASE("all.sv 426_end") {
             }
 
         endgroup
-    endclass    
+    endclass
     )";
     CHECK(isEqual(code, "426_end"));
 }
@@ -561,10 +566,3 @@ module jmagnitudeComparator(AEQB, AGTB, ALTB, A, B);
 endmodule )";
     CHECK(isEqual(code, "inetTest"));
 }
-/*
-TEST_CASE("checker.sv") {
-    fs::path path = findTestDir();
-    path /= "../../unittests/data/printer/test1.sv";
-    auto tree = SyntaxTree::fromFile(path.string());
-    CHECK(isEqual(tree.value(), "checker"));
-}*/

@@ -3,7 +3,7 @@
 #
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
-from syntaxfactory_gen import generateSyntaxFactory
+
 import argparse
 import math
 import os
@@ -58,7 +58,6 @@ def main():
         generatePyBindings(args.dir, alltypes)
     else:
         generateSyntaxClone(args.dir, alltypes, kindmap)
-        generateSyntaxFactory(args.dir, alltypes)
         generateSyntax(args.dir, alltypes, kindmap)
         generateTokenKinds(inputdir, args.dir)
         generateSystemNames(inputdir, args.dir)

@@ -1498,7 +1498,7 @@ void StructuredAssignmentPatternExpression::serializeTo(ASTSerializer& serialize
         serializer.startArray("typeSetters");
         for (auto& setter : typeSetters) {
             serializer.startObject();
-            if (!serializer.getMinimalInfoEnabled())
+            if (serializer.getIncludeTypes())
                 serializer.write("type", *setter.type);
             serializer.write("expr", *setter.expr);
             serializer.endObject();

@@ -1523,7 +1523,7 @@ void PortSymbol::fromSyntax(
 }
 
 void PortSymbol::serializeTo(ASTSerializer& serializer) const {
-    if (!serializer.getMinimalInfoEnabled())
+    if (serializer.getIncludeTypes())
         serializer.write("type", getType());
     serializer.write("direction", toString(direction));
 
@@ -1591,7 +1591,7 @@ const Type& MultiPortSymbol::getType() const {
 }
 
 void MultiPortSymbol::serializeTo(ASTSerializer& serializer) const {
-    if (!serializer.getMinimalInfoEnabled())
+    if (serializer.getIncludeTypes())
         serializer.write("type", getType());
     serializer.write("direction", toString(direction));
 
