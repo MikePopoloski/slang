@@ -104,7 +104,11 @@ struct AnalysisScopeVisitor {
             return;
         }
 
-        result.procedures.emplace_back(context, symbol);
+        if (!manager.getAnalyzedSubroutine(symbol)) {
+            manager.addAnalyzedSubroutine(
+                symbol, std::make_unique<AnalyzedProcedure>(context, symbol, parentProcedure));
+        }
+
         visitMembers(symbol);
     }
 

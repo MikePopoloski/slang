@@ -22,6 +22,7 @@ namespace slang::ast {
 
 class Compilation;
 class Scope;
+class SubroutineSymbol;
 class Symbol;
 class ValueDriver;
 class ValueSymbol;
@@ -103,6 +104,10 @@ public:
     /// Diagnostics collected during analysis.
     Diagnostics diagnostics;
 
+    /// A set of subroutines that are currently being analyzed,
+    /// to avoid infinite recursion.
+    flat_hash_set<const ast::SubroutineSymbol*> activeSubroutines;
+
     /// Constructs a new AnalysisContext object.
     explicit AnalysisContext(AnalysisManager& manager) : manager(&manager) {}
 
@@ -145,7 +150,15 @@ public:
     /// Returns the results of a previous analysis of a scope, if available.
     const AnalyzedScope* getAnalyzedScope(const ast::Scope& scope);
 
-    /// Returns all of the drivers for the given symbol.
+    /// Gets the result of analyzing a subroutine, if available.
+    /// Otherwise returns nullptr.
+    const AnalyzedProcedure* getAnalyzedSubroutine(const ast::SubroutineSymbol& symbol) const;
+
+    /// Adds a new analyzed subroutine to the manager's cache for later lookup.
+    void addAnalyzedSubroutine(const ast::SubroutineSymbol& symbol,
+                               std::unique_ptr<AnalyzedProcedure> procedure);
+
+    /// Returns all of the known drivers for the given symbol.
     std::vector<const ast::ValueDriver*> getDrivers(const ast::ValueSymbol& symbol) const;
 
     /// Collects and returns all issued analysis diagnostics.
@@ -174,6 +187,8 @@ private:
     std::vector<WorkerState> workerStates;
     concurrent_map<const ast::Scope*, std::optional<const AnalyzedScope*>> analyzedScopes;
     concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
+    concurrent_map<const ast::SubroutineSymbol*, std::unique_ptr<AnalyzedProcedure>>
+        analyzedSubroutines;
     BS::thread_pool<> threadPool;
 
     // A mutex for shared state; anything protected by it is declared below.
