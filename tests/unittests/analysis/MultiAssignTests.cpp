@@ -124,6 +124,7 @@ endmodule
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }
 
+// TODO: add more complicated local var test case with recursive calls
 TEST_CASE("Multi-driven subroutine local var option to allow") {
     auto& code = R"(
 module top(input clk, input reset);
@@ -279,9 +280,6 @@ endmodule
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::RangeOOB);
-    CHECK(diags[1].code == diag::ConstantConversion);
 }
 
 TEST_CASE("Modport multi-driven errors") {
@@ -491,11 +489,11 @@ module m;
 endmodule
 )";
 
-    CompilationOptions options;
-    options.flags |= CompilationFlags::AllowDupInitialDrivers;
+    AnalysisOptions options;
+    options.flags |= AnalysisFlags::AllowDupInitialDrivers;
 
-    Compilation compilation(options);
-    AnalysisManager analysisManager;
+    Compilation compilation;
+    AnalysisManager analysisManager(options);
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;

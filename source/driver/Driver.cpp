@@ -181,9 +181,6 @@ void Driver::addStandardArgs() {
                 "Allow string types to convert implicitly to integral types");
     addCompFlag(CompilationFlags::AllowHierarchicalConst, "--allow-hierarchical-const",
                 "Allow hierarchical references in constant expressions");
-    addCompFlag(CompilationFlags::AllowDupInitialDrivers, "--allow-dup-initial-drivers",
-                "Allow signals driven in an always_comb or always_ff block to also be driven "
-                "by initial blocks");
     addCompFlag(CompilationFlags::AllowTopLevelIfacePorts, "--allow-toplevel-iface-ports",
                 "Allow top-level modules to have interface ports");
     addCompFlag(CompilationFlags::AllowRecursiveImplicitCall, "--allow-recursive-implicit-call",
@@ -360,15 +357,18 @@ void Driver::addStandardArgs() {
         cmdLine.add(name, it->second, desc);
     };
 
-    addAnalysisFlag(
-        AnalysisFlags::AllowMultiDrivenLocals, "--allow-multi-driven-locals",
-        "Allow subroutine local variables to be driven from multiple always_comb/_ff blocks");
     addAnalysisFlag(AnalysisFlags::FullCaseUniquePriority, "--dfa-unique-priority",
                     "Respect the 'unique' and 'priority' keywords when analyzing data flow "
                     "through case statements");
     addAnalysisFlag(AnalysisFlags::FullCaseFourState, "--dfa-four-state",
                     "Require that case items cover X and Z bits to assume full coverage "
                     "in data flow analysis");
+    addAnalysisFlag(
+        AnalysisFlags::AllowMultiDrivenLocals, "--allow-multi-driven-locals",
+        "Allow subroutine local variables to be driven from multiple always_comb/_ff blocks");
+    addAnalysisFlag(AnalysisFlags::AllowDupInitialDrivers, "--allow-dup-initial-drivers",
+                    "Allow signals driven in an always_comb or always_ff block to also be driven "
+                    "by initial blocks");
 
     cmdLine.add("--max-case-analysis-steps", options.maxCaseAnalysisSteps,
                 "Maximum number of steps that can occur during case analysis before giving up",

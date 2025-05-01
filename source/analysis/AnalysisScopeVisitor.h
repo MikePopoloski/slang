@@ -493,13 +493,11 @@ private:
                 }
                 else if (curr->containingSymbol != driver.containingSymbol &&
                          curr->isInProcedure() && driver.isInProcedure() &&
-                         (curr->isInSingleDriverProcedure() || driver.isInSingleDriverProcedure())
-                         // TODO:
-                         //   &&
-                         //  (!comp.hasFlag(CompilationFlags::AllowDupInitialDrivers) ||
-                         //   (curr->source != DriverSource::Initial &&
-                         //    driver.source != DriverSource::Initial))
-                ) {
+                         (curr->isInSingleDriverProcedure() ||
+                          driver.isInSingleDriverProcedure()) &&
+                         (!manager.hasFlag(AnalysisFlags::AllowDupInitialDrivers) ||
+                          (curr->source != DriverSource::Initial &&
+                           driver.source != DriverSource::Initial))) {
                     isProblem = true;
                 }
                 else if (curr->isLocalVarFormalArg() && driver.isLocalVarFormalArg()) {
