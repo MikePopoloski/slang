@@ -45,7 +45,6 @@ void registerCompilation(py::module_& m) {
         .value("AllowHierarchicalConst", CompilationFlags::AllowHierarchicalConst)
         .value("RelaxEnumConversions", CompilationFlags::RelaxEnumConversions)
         .value("AllowUseBeforeDeclare", CompilationFlags::AllowUseBeforeDeclare)
-        .value("AllowDupInitialDrivers", CompilationFlags::AllowDupInitialDrivers)
         .value("AllowTopLevelIfacePorts", CompilationFlags::AllowTopLevelIfacePorts)
         .value("StrictDriverChecking", CompilationFlags::StrictDriverChecking)
         .value("LintMode", CompilationFlags::LintMode)

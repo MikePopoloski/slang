@@ -87,48 +87,43 @@ enum class SLANG_EXPORT CompilationFlags {
     /// even if that would otherwise be an error in SystemVerilog.
     AllowUseBeforeDeclare = 1 << 2,
 
-    /// Signals driven by an always_comb are normally not allowed to be driven
-    /// by any other process. This flag allows initial blocks to
-    /// also drive such signals.
-    AllowDupInitialDrivers = 1 << 3,
-
     /// Allow top-level modules to have interface ports. This is not allowed in
     /// standard SystemVerilog but it defaults to true to make using the API in
     /// scripting / programmatic modes more convenient.
-    AllowTopLevelIfacePorts = 1 << 4,
+    AllowTopLevelIfacePorts = 1 << 3,
 
     /// Perform strict checking of variable drivers, which currently
     /// means not taking into account procedural for loop unrolling.
-    StrictDriverChecking = 1 << 5,
+    StrictDriverChecking = 1 << 4,
 
     /// Compile in "linting" mode where we suppress errors that could
     /// be caused by not having an elaborated design.
-    LintMode = 1 << 6,
+    LintMode = 1 << 5,
 
     /// Don't issue an error when encountering an instantiation
     /// for an unknown definition.
-    IgnoreUnknownModules = 1 << 7,
+    IgnoreUnknownModules = 1 << 6,
 
     /// Allow strings to implicitly convert to integers.
-    RelaxStringConversions = 1 << 8,
+    RelaxStringConversions = 1 << 7,
 
     /// Allow implicit call expressions (lacking parentheses) to be recursive function calls.
-    AllowRecursiveImplicitCall = 1 << 9,
+    AllowRecursiveImplicitCall = 1 << 8,
 
     /// Allow module parameter assignments to elide the parentheses.
-    AllowBareValParamAssignment = 1 << 10,
+    AllowBareValParamAssignment = 1 << 9,
 
     /// Allow self-determined streaming concatenation expressions; normally these
     /// can only be used in specific assignment-like contexts.
-    AllowSelfDeterminedStreamConcat = 1 << 11,
+    AllowSelfDeterminedStreamConcat = 1 << 10,
 
     /// Allow merging ANSI port declarations with nets and variables
     /// declared in the module body.
-    AllowMergingAnsiPorts = 1 << 12,
+    AllowMergingAnsiPorts = 1 << 11,
 
     /// Disable the use of instance caching, which normally allows skipping
     /// duplicate instance bodies to save time when elaborating.
-    DisableInstanceCaching = 1 << 13,
+    DisableInstanceCaching = 1 << 12,
 };
 SLANG_BITMASK(CompilationFlags, DisableInstanceCaching)
 
