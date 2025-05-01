@@ -10,6 +10,7 @@
 #include "slang/analysis/AbstractFlowAnalysis.h"
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/LSPUtilities.h"
+#include "slang/analysis/ValueDriver.h"
 #include "slang/util/IntervalMap.h"
 #include "slang/util/SmallMap.h"
 #include "slang/util/SmallVector.h"
@@ -43,6 +44,10 @@ class SLANG_EXPORT DataFlowAnalysis : public AbstractFlowAnalysis<DataFlowAnalys
 public:
     /// The analysis context within which the analysis is being performed.
     AnalysisContext& context;
+
+    /// Set to true if this procedure calls a function recursively,
+    /// directly or indirectly.
+    bool sawRecursiveFunction = false;
 
     /// Constructs a new DataFlowAnalysis object.
     DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol, bool reportDiags);
@@ -106,6 +111,13 @@ public:
     /// Gets all of the lvalues used in the procedure.
     std::span<const LValueSymbol> getLValues() const { return lvalues; }
 
+    using IndirectDriverMap =
+        flat_hash_map<const SubroutineSymbol*, std::vector<SymbolDriverListPair>>;
+
+    /// Gets all of the drivers used indirectly in the procedure,
+    /// via calls to other functions.
+    const IndirectDriverMap& getIndirectDrivers() const { return indirectDrivers; }
+
     /// Performs handling for a timing control contained in the procedure.
     void handleTiming(const TimingControl& timing);
 
@@ -140,6 +152,9 @@ private:
 
     // Sampled value system calls made in the procedure.
     SmallVector<const CallExpression*> sampledValueCalls;
+
+    // Indirectly referenced drivers from called functions.
+    IndirectDriverMap indirectDrivers;
 
     [[nodiscard]] auto saveLValueFlag() {
         auto guard = ScopeGuard([this, savedLVal = isLValue] { isLValue = savedLVal; });
@@ -182,6 +197,7 @@ private:
     void handle(const ProceduralCheckerStatement& stmt);
     void handle(const AssertionInstanceExpression& expr);
     void handle(const EventTriggerStatement& stmt);
+    void handleFunctionCall(const CallExpression& expr, const SubroutineSymbol& func);
 
     // **** State Management ****
 

@@ -11,14 +11,13 @@
 #include <vector>
 
 #include "slang/analysis/AnalyzedAssertion.h"
+#include "slang/analysis/ValueDriver.h"
 #include "slang/util/Util.h"
 
 namespace slang::ast {
 
 class Symbol;
 class TimingControl;
-class ValueDriver;
-class ValueSymbol;
 
 } // namespace slang::ast
 
@@ -39,6 +38,13 @@ public:
     /// Only possible for procedural checker instances.
     const AnalyzedProcedure* parentProcedure;
 
+    /// Set to true to indicate that the procedure can be cached in
+    /// the analysis manager.
+    ///
+    /// This is currently only set to false when analysis of a subroutine finds that
+    /// it is recursive while trying to analyze a calling procedure.
+    bool canCache = true;
+
     /// Constructs a new AnalyzedProcedure object.
     AnalyzedProcedure(AnalysisContext& context, const ast::Symbol& symbol,
                       const AnalyzedProcedure* parentProcedure = nullptr);
@@ -54,16 +60,12 @@ public:
     /// @note These include procedural checkers contained within the procedure.
     std::span<const AnalyzedAssertion> getAssertions() const { return assertions; }
 
-    using DriverBitRange = std::pair<uint64_t, uint64_t>;
-    using Driver = std::pair<const ast::ValueSymbol*,
-                             std::vector<std::pair<const ast::ValueDriver*, DriverBitRange>>>;
-
     /// Gets all of the drivers in the procedure.
-    std::span<const Driver> getDrivers() const { return drivers; }
+    std::span<const SymbolDriverListPair> getDrivers() const { return drivers; }
 
 private:
     const ast::TimingControl* inferredClock = nullptr;
-    std::vector<Driver> drivers;
+    std::vector<SymbolDriverListPair> drivers;
     std::vector<AnalyzedAssertion> assertions;
 };
 
