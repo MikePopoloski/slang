@@ -13,6 +13,7 @@
 
 #include "slang/analysis/AnalysisOptions.h"
 #include "slang/analysis/AnalyzedProcedure.h"
+#include "slang/analysis/ValueDriver.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/ConcurrentMap.h"
@@ -24,8 +25,6 @@ class Compilation;
 class Scope;
 class SubroutineSymbol;
 class Symbol;
-class ValueDriver;
-class ValueSymbol;
 
 } // namespace slang::ast
 
@@ -181,7 +180,11 @@ private:
 
         WorkerState(AnalysisManager& manager) : context(manager), driverAlloc(context.alloc) {}
     };
-    WorkerState& state();
+    WorkerState& getState();
+
+    void addDriversFor(const AnalyzedProcedure& procedure);
+    void addDriver(WorkerState& state, const ast::ValueSymbol& symbol, SymbolDriverMap& driverMap,
+                   const ast::ValueDriver& driver, DriverBitRange bounds);
 
     AnalysisOptions options;
     std::vector<WorkerState> workerStates;
