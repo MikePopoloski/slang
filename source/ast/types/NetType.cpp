@@ -87,16 +87,6 @@ static void validateResolver(const NetType& netType, const SubroutineSymbol& res
         reportError(diag::NTResolveSingleArg) << netTypeType;
         return;
     }
-
-    resolver.getBody();
-
-    auto driverRange = args[0]->drivers();
-    if (!driverRange.empty()) {
-        auto& diag = context.addDiag(diag::NTResolveArgModify,
-                                     (*driverRange.begin())->getSourceRange());
-        diag << netType.name << args[0]->name;
-        diag.addNote(diag::NoteReferencedHere, range);
-    }
 }
 
 const SubroutineSymbol* NetType::getResolutionFunction() const {
