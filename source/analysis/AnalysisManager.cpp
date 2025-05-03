@@ -162,6 +162,28 @@ Diagnostics AnalysisManager::getDiagnostics(const SourceManager* sourceManager) 
 
 PendingAnalysis AnalysisManager::analyzeSymbol(const Symbol& symbol) {
     analyzeScopeAsync(getAsScope(symbol));
+
+    // If this is an instance with a canonical body, record that
+    // relationship in our map.
+    if (symbol.kind == SymbolKind::Instance) {
+        auto& inst = symbol.as<InstanceSymbol>();
+        if (auto canonical = inst.getCanonicalBody()) {
+            std::vector<InstanceState::IfacePortDriver> ifacePortDrivers;
+            auto updater = [&](auto& item) {
+                auto& state = item.second;
+                state.nonCanonicalInstances.push_back(&inst);
+
+                // Copy these out so we can act on them outside of the concurrent visitor.
+                ifacePortDrivers = state.ifacePortDrivers;
+            };
+            instanceMap.try_emplace_and_visit(canonical, updater, updater);
+
+            auto& state = getState();
+            for (auto& ifacePortDriver : ifacePortDrivers)
+                applyInstanceSideEffect(state, ifacePortDriver, inst);
+        }
+    }
+
     return PendingAnalysis(*this, symbol);
 }
 
@@ -194,13 +216,24 @@ void AnalysisManager::wait() {
 
 void AnalysisManager::addDriversFor(const AnalyzedProcedure& procedure) {
     auto& state = getState();
+    SmallVector<std::pair<const HierarchicalReference*, const ValueDriver*>> ifacePortRefs;
     for (auto& [valueSym, drivers] : procedure.getDrivers()) {
         auto updateFunc = [&](auto& elem) {
-            for (auto& [driver, bounds] : drivers)
-                addDriver(state, *elem.first, elem.second, *driver, bounds);
+            for (auto& [driver, bounds] : drivers) {
+                auto ref = addDriver(state, *elem.first, elem.second, *driver, bounds);
+                if (ref) {
+                    // This driver is via an interface port so we need to
+                    // store and then apply it after we're done touching the
+                    // symbolDrivers map.
+                    ifacePortRefs.emplace_back(ref, driver);
+                }
+            }
         };
         symbolDrivers.try_emplace_and_visit(valueSym, updateFunc, updateFunc);
     }
+
+    for (auto& [ref, driver] : ifacePortRefs)
+        noteInterfacePortDriver(state, *ref, *driver);
 }
 
 static std::string getLSPName(const ValueSymbol& symbol, const ValueDriver& driver) {
@@ -209,7 +242,7 @@ static std::string getLSPName(const ValueSymbol& symbol, const ValueDriver& driv
 
     FormatBuffer buf;
     EvalContext evalContext(ASTContext(*scope, LookupLocation::after(symbol)));
-    stringifyLSP(*driver.prefixExpression, evalContext, buf);
+    LSPUtilities::stringifyLSP(*driver.prefixExpression, evalContext, buf);
 
     return buf.str();
 }
@@ -347,9 +380,11 @@ static bool handleOverlap(AnalysisContext& context, const ValueSymbol& symbol,
     return false;
 }
 
-void AnalysisManager::addDriver(WorkerState& state, const ValueSymbol& symbol,
-                                SymbolDriverMap& driverMap, const ValueDriver& driver,
-                                DriverBitRange bounds) {
+const HierarchicalReference* AnalysisManager::addDriver(WorkerState& state,
+                                                        const ValueSymbol& symbol,
+                                                        SymbolDriverMap& driverMap,
+                                                        const ValueDriver& driver,
+                                                        DriverBitRange bounds) {
     auto& context = state.context;
     auto scope = symbol.getParentScope();
     SLANG_ASSERT(scope);
@@ -357,19 +392,17 @@ void AnalysisManager::addDriver(WorkerState& state, const ValueSymbol& symbol,
     // If this driver is made via an interface port connection we want to
     // note that fact as it represents a side effect for the instance that
     // is not captured in the port connections.
-    // bool isIfacePortDriver = false;
-    // if (!driver.isFromSideEffect) {
-    //     visitPrefixExpressions(*driver.prefixExpression, /* includeRoot */ true,
-    //                            [&](const Expression& expr) {
-    //                                if (expr.kind == ExpressionKind::HierarchicalValue) {
-    //                                    auto& hve = expr.as<HierarchicalValueExpression>();
-    //                                    if (hve.ref.isViaIfacePort()) {
-    //                                        isIfacePortDriver = true;
-    //                                        comp.noteInterfacePortDriver(hve.ref, driver);
-    //                                    }
-    //                                }
-    //                            });
-    // }
+    const HierarchicalReference* result = nullptr;
+    if (!driver.isFromSideEffect) {
+        LSPUtilities::visitLSP(*driver.prefixExpression, /* includeRoot */ true,
+                               [&](const Expression& expr) {
+                                   if (expr.kind == ExpressionKind::HierarchicalValue) {
+                                       auto& ref = expr.as<HierarchicalValueExpression>().ref;
+                                       if (ref.isViaIfacePort())
+                                           result = &ref;
+                                   }
+                               });
+    }
 
     if (driverMap.empty()) {
         // The first time we add a driver, check whether there is also an
@@ -403,7 +436,7 @@ void AnalysisManager::addDriver(WorkerState& state, const ValueSymbol& symbol,
 
         if (driverMap.empty()) {
             driverMap.insert(bounds, &driver, state.driverAlloc);
-            return;
+            return result;
         }
     }
 
@@ -483,6 +516,107 @@ void AnalysisManager::addDriver(WorkerState& state, const ValueSymbol& symbol,
     }
 
     driverMap.insert(bounds, &driver, state.driverAlloc);
+    return result;
+}
+
+void AnalysisManager::noteInterfacePortDriver(WorkerState& state, const HierarchicalReference& ref,
+                                              const ValueDriver& driver) {
+    SLANG_ASSERT(ref.isViaIfacePort());
+    SLANG_ASSERT(ref.target);
+    SLANG_ASSERT(ref.expr);
+
+    auto& port = ref.path[0].symbol->as<InterfacePortSymbol>();
+    auto scope = port.getParentScope();
+    SLANG_ASSERT(scope);
+
+    auto& symbol = scope->asSymbol();
+    SLANG_ASSERT(symbol.kind == SymbolKind::InstanceBody);
+
+    InstanceState::IfacePortDriver ifacePortDriver{&ref, &driver};
+    std::vector<const ast::InstanceSymbol*> nonCanonicalInstances;
+    auto updater = [&](auto& item) {
+        auto& state = item.second;
+        state.ifacePortDrivers.push_back(ifacePortDriver);
+
+        // Copy these out so we can act on them outside of the concurrent visitor.
+        nonCanonicalInstances = state.nonCanonicalInstances;
+    };
+    instanceMap.try_emplace_and_visit(&symbol.as<InstanceBodySymbol>(), updater, updater);
+
+    for (auto inst : nonCanonicalInstances)
+        applyInstanceSideEffect(state, ifacePortDriver, *inst);
+
+    // If this driver's target is through another interface port we should
+    // recursively follow it to the parent connection.
+    auto [_, expr] = port.getConnectionAndExpr();
+    if (expr && expr->kind == ExpressionKind::ArbitrarySymbol) {
+        auto& connRef = expr->as<ArbitrarySymbolExpression>().hierRef;
+        if (connRef.isViaIfacePort())
+            noteInterfacePortDriver(state, connRef.join(state.context.alloc, ref), driver);
+    }
+}
+
+void AnalysisManager::applyInstanceSideEffect(WorkerState& state,
+                                              const InstanceState::IfacePortDriver& ifacePortDriver,
+                                              const InstanceSymbol& instance) {
+    auto& ref = *ifacePortDriver.ref;
+    auto& alloc = state.context.alloc;
+    auto scope = instance.getParentScope();
+    SLANG_ASSERT(scope);
+
+    EvalContext evalCtx(ASTContext(*scope, LookupLocation::after(instance)));
+
+    auto addNewDriver = [&](const ValueSymbol& valueSym, const ValueDriver& driver) {
+        // TODO: can we reuse the bounds instead of calculating them again?
+
+        // Note: we specifically use the original target when computing bounds and
+        // calling addDriver because the new target may not have been visited during
+        // elaboration due to caching, and the target types are guaranteed to be the same.
+        SLANG_ASSERT(ref.target);
+        auto& originalTarget = ref.target->as<ValueSymbol>();
+        auto bounds = ValueDriver::getBounds(*driver.prefixExpression, evalCtx,
+                                             originalTarget.getType());
+        if (!bounds)
+            return;
+
+        auto updateFunc = [&](auto& elem) {
+            auto ref = addDriver(state, originalTarget, elem.second, driver, *bounds);
+            SLANG_ASSERT(!ref);
+        };
+        symbolDrivers.try_emplace_and_visit(&valueSym, updateFunc, updateFunc);
+    };
+
+    if (auto target = ref.retargetIfacePort(instance)) {
+        // If we found a modport port we need to translate to the underlying
+        // connection expression.
+        if (target->kind == SymbolKind::ModportPort) {
+
+            auto expr = target->as<ModportPortSymbol>().getConnectionExpr();
+            SLANG_ASSERT(expr);
+
+            auto lsp = ifacePortDriver.driver->prefixExpression.get();
+            if (lsp == ref.expr)
+                lsp = nullptr;
+
+            // TODO: clean this up
+            SmallVector<std::pair<const ValueSymbol*, const Expression*>> prefixes;
+            expr->getLongestStaticPrefixes(prefixes, evalCtx, lsp);
+
+            for (auto& [value, prefix] : prefixes) {
+                auto driver = alloc.emplace<ValueDriver>(*ifacePortDriver.driver);
+                driver->prefixExpression = prefix;
+                driver->containingSymbol = &instance;
+                driver->isFromSideEffect = true;
+                addNewDriver(*value, *driver);
+            }
+        }
+        else {
+            auto driver = alloc.emplace<ValueDriver>(*ifacePortDriver.driver);
+            driver->containingSymbol = &instance;
+            driver->isFromSideEffect = true;
+            addNewDriver(target->as<ValueSymbol>(), *driver);
+        }
+    }
 }
 
 } // namespace slang::analysis

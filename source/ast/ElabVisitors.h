@@ -590,54 +590,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (compilation.hasFlag(CompilationFlags::DisableInstanceCaching))
             return false;
 
-        // Apply any side effects that come from the cached instance
-        // in the context of the current instance.
-        if (sideEffects) {
-            for (auto& ifacePortDriver : sideEffects->ifacePortDrivers)
-                applyInstanceSideEffect(ifacePortDriver, symbol);
-        }
-
         return true;
-    }
-
-    void applyInstanceSideEffect(
-        const Compilation::InstanceSideEffects::IfacePortDriver& ifacePortDriver,
-        const InstanceSymbol& instance) {
-
-        auto& ref = *ifacePortDriver.ref;
-        if (auto target = ref.retargetIfacePort(instance)) {
-            // If we found a modport port we need to translate to the underlying
-            // connection expression.
-            if (target->kind == SymbolKind::ModportPort) {
-                auto scope = instance.getParentScope();
-                SLANG_ASSERT(scope);
-
-                auto expr = target->as<ModportPortSymbol>().getConnectionExpr();
-                SLANG_ASSERT(expr);
-
-                auto lsp = ifacePortDriver.driver->prefixExpression.get();
-                if (lsp == ref.expr)
-                    lsp = nullptr;
-
-                SmallVector<std::pair<const ValueSymbol*, const Expression*>> prefixes;
-                EvalContext evalCtx(ASTContext(*scope, LookupLocation::after(instance)));
-                expr->getLongestStaticPrefixes(prefixes, evalCtx, lsp);
-
-                for (auto& [value, prefix] : prefixes) {
-                    auto driver = compilation.emplace<ValueDriver>(*ifacePortDriver.driver);
-                    driver->prefixExpression = prefix;
-                    driver->containingSymbol = &instance;
-                    driver->isFromSideEffect = true;
-                    value->addDriverFromSideEffect(*driver);
-                }
-            }
-            else {
-                auto driver = compilation.emplace<ValueDriver>(*ifacePortDriver.driver);
-                driver->containingSymbol = &instance;
-                driver->isFromSideEffect = true;
-                target->as<ValueSymbol>().addDriverFromSideEffect(*driver);
-            }
-        }
     }
 
     struct InstanceCacheEntry {

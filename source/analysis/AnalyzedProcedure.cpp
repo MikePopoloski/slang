@@ -95,7 +95,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         if (procedure.procedureKind == ProceduralBlockKind::AlwaysComb) {
             dfa.visitLatches([&](const Symbol&, const Expression& expr) {
                 FormatBuffer buffer;
-                stringifyLSP(expr, dfa.getEvalContext(), buffer);
+                LSPUtilities::stringifyLSP(expr, dfa.getEvalContext(), buffer);
 
                 context.addDiag(procedure, diag::InferredLatch, expr.sourceRange) << buffer.str();
             });

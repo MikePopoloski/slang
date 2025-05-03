@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/VariableSymbols.h"
@@ -98,7 +99,57 @@ struct LSPVisitor {
     }
 };
 
-SLANG_EXPORT void stringifyLSP(const ast::Expression& expr, ast::EvalContext& evalContext,
-                               FormatBuffer& buffer);
+/// A collection of utility methods for working with LSP expressions.
+class SLANG_EXPORT LSPUtilities {
+public:
+    static void stringifyLSP(const ast::Expression& expr, ast::EvalContext& evalContext,
+                             FormatBuffer& buffer);
+
+    template<typename TCallback>
+    static void visitLSP(const ast::Expression& longestStaticPrefix, bool includeRoot,
+                         TCallback&& callback) {
+        using ExpressionKind = ast::ExpressionKind;
+
+        auto expr = &longestStaticPrefix;
+        do {
+            switch (expr->kind) {
+                case ExpressionKind::NamedValue:
+                case ExpressionKind::HierarchicalValue:
+                case ExpressionKind::Call:
+                    if (includeRoot)
+                        callback(*expr);
+                    expr = nullptr;
+                    break;
+                case ExpressionKind::Conversion:
+                    expr = &expr->as<ast::ConversionExpression>().operand();
+                    break;
+                case ExpressionKind::ElementSelect:
+                    callback(*expr);
+                    expr = &expr->as<ast::ElementSelectExpression>().value();
+                    break;
+                case ExpressionKind::RangeSelect:
+                    callback(*expr);
+                    expr = &expr->as<ast::RangeSelectExpression>().value();
+                    break;
+                case ExpressionKind::MemberAccess: {
+                    auto& access = expr->as<ast::MemberAccessExpression>();
+                    if (access.member.kind == ast::SymbolKind::Field) {
+                        callback(*expr);
+                        expr = &access.value();
+                    }
+                    else {
+                        expr = nullptr;
+                    }
+                    break;
+                }
+                default:
+                    SLANG_UNREACHABLE;
+            }
+        } while (expr);
+    }
+
+private:
+    LSPUtilities() = delete;
+};
 
 } // namespace slang::analysis
