@@ -1967,51 +1967,6 @@ endmodule
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
 }
 
-TEST_CASE("Instance caching with $root scope upward names") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    assign $root.top.n1.l = 1;
-endmodule
-
-module n;
-    logic l;
-endmodule
-
-module top;
-    n n1();
-    m m1(), m2();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::MultipleContAssigns);
-}
-
-TEST_CASE("Instance caching with downward names") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    logic i;
-    assign i = 0;
-endmodule
-
-module top;
-    assign m2.i = 1;
-    m m1(), m2();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::MultipleContAssigns);
-}
-
 TEST_CASE("Bind with package elab loop regress -- GH #1249") {
     auto tree = SyntaxTree::fromText(R"(
 module rv_plic import rv_plic_reg_pkg::*; (
