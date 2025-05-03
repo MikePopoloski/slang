@@ -13,6 +13,10 @@
 
 #include "slang/util/Util.h"
 
+namespace slang {
+class BumpAllocator;
+}
+
 namespace slang::ast {
 
 class Compilation;
@@ -79,7 +83,7 @@ public:
 
     /// Returns a new HierarchicalReference that represents the joined
     /// path of this reference and another.
-    const HierarchicalReference& join(Compilation& compilation,
+    const HierarchicalReference& join(BumpAllocator& alloc,
                                       const HierarchicalReference& other) const;
 };
 

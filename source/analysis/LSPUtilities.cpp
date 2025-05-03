@@ -13,7 +13,8 @@ namespace slang::analysis {
 
 using namespace ast;
 
-void stringifyLSP(const Expression& expr, EvalContext& evalContext, FormatBuffer& buffer) {
+void LSPUtilities::stringifyLSP(const Expression& expr, EvalContext& evalContext,
+                                FormatBuffer& buffer) {
     switch (expr.kind) {
         case ExpressionKind::NamedValue:
         case ExpressionKind::HierarchicalValue:
