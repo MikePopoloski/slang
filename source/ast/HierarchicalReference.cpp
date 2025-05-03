@@ -52,6 +52,7 @@ bool HierarchicalReference::isUpward() const {
 }
 
 const Symbol* HierarchicalReference::retargetIfacePort(const InstanceSymbol& base) const {
+    // TODO: add more comments in this function
     if (!isViaIfacePort() || !target)
         return nullptr;
 
@@ -60,6 +61,8 @@ const Symbol* HierarchicalReference::retargetIfacePort(const InstanceSymbol& bas
         return nullptr;
 
     auto [symbol, modport] = port->as<InterfacePortSymbol>().getConnection();
+    std::optional<std::span<const Symbol* const>> instanceArrayElems;
+
     for (size_t i = 1; i < path.size(); i++) {
         if (!symbol)
             return nullptr;
@@ -75,18 +78,20 @@ const Symbol* HierarchicalReference::retargetIfacePort(const InstanceSymbol& bas
                 SLANG_ASSERT(symbol);
             }
         }
+        else if (symbol->kind == SymbolKind::InstanceArray) {
+            instanceArrayElems = symbol->as<InstanceArraySymbol>().elements;
+        }
         else if (!symbol->isScope()) {
             return nullptr;
         }
 
         auto& elem = path[i];
         if (auto index = std::get_if<int32_t>(&elem.selector)) {
-            if (symbol->kind == SymbolKind::InstanceArray) {
-                auto& arr = symbol->as<InstanceArraySymbol>();
-                if (*index < 0 || size_t(*index) >= arr.elements.size())
+            if (instanceArrayElems) {
+                if (*index < 0 || size_t(*index) >= instanceArrayElems->size())
                     return nullptr;
 
-                symbol = arr.elements[size_t(*index)];
+                symbol = (*instanceArrayElems)[size_t(*index)];
             }
             else if (symbol->kind == SymbolKind::GenerateBlockArray) {
                 auto& arr = symbol->as<GenerateBlockArraySymbol>();
@@ -100,24 +105,19 @@ const Symbol* HierarchicalReference::retargetIfacePort(const InstanceSymbol& bas
             }
         }
         else if (auto range = std::get_if<std::pair<int32_t, int32_t>>(&elem.selector)) {
-            if (symbol->kind != SymbolKind::InstanceArray)
+            if (!instanceArrayElems)
                 return nullptr;
 
-            auto& arr = symbol->as<InstanceArraySymbol>();
-            if (range->first < 0 || size_t(range->second) >= arr.elements.size())
+            auto size = instanceArrayElems->size();
+            if (range->first < 0 || size_t(range->second) >= size)
                 return nullptr;
 
-            if (size_t(range->first) >= arr.elements.size() ||
-                size_t(range->second) >= arr.elements.size())
+            if (size_t(range->first) >= size || size_t(range->second) >= size)
                 return nullptr;
 
-            auto elems = arr.elements.subspan(size_t(range->first),
-                                              size_t(range->second - range->first) + 1);
-
-            // Construct a placeholder array symbol that will hold this new sliced array.
-            auto& comp = arr.getCompilation();
-            symbol = comp.emplace<InstanceArraySymbol>(comp, ""sv, SourceLocation::NoLocation,
-                                                       elems, ConstantRange{});
+            instanceArrayElems = instanceArrayElems->subspan(
+                size_t(range->first), size_t(range->second - range->first) + 1);
+            continue;
         }
         else {
             auto name = std::get<std::string_view>(elem.selector);
@@ -132,12 +132,14 @@ const Symbol* HierarchicalReference::retargetIfacePort(const InstanceSymbol& bas
             }
             symbol = next;
         }
+
+        instanceArrayElems.reset();
     }
 
     return symbol;
 }
 
-const HierarchicalReference& HierarchicalReference::join(Compilation& compilation,
+const HierarchicalReference& HierarchicalReference::join(BumpAllocator& alloc,
                                                          const HierarchicalReference& other) const {
     HierarchicalReference result;
     result.target = other.target;
@@ -151,9 +153,9 @@ const HierarchicalReference& HierarchicalReference::join(Compilation& compilatio
     SmallVector<Element> newPath;
     newPath.append_range(path);
     newPath.append_range(otherPath);
-    result.path = newPath.copy(compilation);
+    result.path = newPath.copy(alloc);
 
-    return *compilation.emplace<HierarchicalReference>(result);
+    return *alloc.emplace<HierarchicalReference>(result);
 }
 
 } // namespace slang::ast

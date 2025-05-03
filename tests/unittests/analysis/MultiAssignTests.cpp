@@ -366,7 +366,6 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
-    CHECK_DIAGS_EMPTY;
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);

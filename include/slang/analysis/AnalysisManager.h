@@ -22,6 +22,9 @@
 namespace slang::ast {
 
 class Compilation;
+class HierarchicalReference;
+class InstanceBodySymbol;
+class InstanceSymbol;
 class Scope;
 class SubroutineSymbol;
 class Symbol;
@@ -169,10 +172,7 @@ private:
 
     using SymbolDriverMap = IntervalMap<uint64_t, const ast::ValueDriver*, 5>;
 
-    PendingAnalysis analyzeSymbol(const ast::Symbol& symbol);
-    void analyzeScopeAsync(const ast::Scope& scope);
-    void wait();
-
+    // Per-thread state.
     struct WorkerState {
         AnalysisContext context;
         TypedBumpAllocator<AnalyzedScope> scopeAlloc;
@@ -180,18 +180,46 @@ private:
 
         WorkerState(AnalysisManager& manager) : context(manager), driverAlloc(context.alloc) {}
     };
+
+    // State tracked per canonical instance.
+    struct InstanceState {
+        struct IfacePortDriver {
+            not_null<const ast::HierarchicalReference*> ref;
+            not_null<const ast::ValueDriver*> driver;
+        };
+
+        // Drivers that are applied through interface ports.
+        std::vector<IfacePortDriver> ifacePortDrivers;
+
+        // A list of instances that refer to the canonical one.
+        std::vector<const ast::InstanceSymbol*> nonCanonicalInstances;
+    };
+
+    PendingAnalysis analyzeSymbol(const ast::Symbol& symbol);
+    void analyzeScopeAsync(const ast::Scope& scope);
+    void wait();
     WorkerState& getState();
-
     void addDriversFor(const AnalyzedProcedure& procedure);
-    void addDriver(WorkerState& state, const ast::ValueSymbol& symbol, SymbolDriverMap& driverMap,
-                   const ast::ValueDriver& driver, DriverBitRange bounds);
+    const ast::HierarchicalReference* addDriver(WorkerState& state, const ast::ValueSymbol& symbol,
+                                                SymbolDriverMap& driverMap,
+                                                const ast::ValueDriver& driver,
+                                                DriverBitRange bounds);
+    void noteInterfacePortDriver(WorkerState& state, const ast::HierarchicalReference& ref,
+                                 const ast::ValueDriver& driver);
+    void applyInstanceSideEffect(WorkerState& state,
+                                 const InstanceState::IfacePortDriver& ifacePortDriver,
+                                 const ast::InstanceSymbol& instance);
 
-    AnalysisOptions options;
+    const AnalysisOptions options;
     std::vector<WorkerState> workerStates;
+
     concurrent_map<const ast::Scope*, std::optional<const AnalyzedScope*>> analyzedScopes;
     concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
     concurrent_map<const ast::SubroutineSymbol*, std::unique_ptr<AnalyzedProcedure>>
         analyzedSubroutines;
+
+    concurrent_map<const ast::InstanceBodySymbol*, InstanceState> instanceMap;
+
     BS::thread_pool<> threadPool;
 
     // A mutex for shared state; anything protected by it is declared below.
