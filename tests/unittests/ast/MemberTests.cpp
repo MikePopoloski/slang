@@ -166,7 +166,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 10);
+    REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::DelayNotNumeric);
     CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[2].code == diag::ConstEvalNonConstVariable);
@@ -176,7 +176,6 @@ endmodule
     CHECK(diags[6].code == diag::DynamicNotProcedural);
     CHECK(diags[7].code == diag::Delay3OnVar);
     CHECK(diags[8].code == diag::NonProceduralFuncArg);
-    CHECK(diags[9].code == diag::MultipleContAssigns);
 }
 
 TEST_CASE("User defined nettypes") {
@@ -1261,13 +1260,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::ForkJoinAlwaysComb);
-    CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
-    CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
-    CHECK(diags[3].code == diag::MultipleAlwaysAssigns);
-    CHECK(diags[4].code == diag::ForkJoinAlwaysComb);
-    CHECK(diags[5].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[1].code == diag::ForkJoinAlwaysComb);
+    CHECK(diags[2].code == diag::TimingInFuncNotAllowed);
 }
 
 TEST_CASE("always_ff timing (pass)") {

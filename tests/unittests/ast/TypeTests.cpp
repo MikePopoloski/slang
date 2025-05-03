@@ -1758,7 +1758,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 11);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
     CHECK(diags[2].code == diag::NotASubroutine);
@@ -1769,7 +1769,6 @@ endmodule
     CHECK(diags[7].code == diag::NTResolveClass);
     CHECK(diags[8].code == diag::NTResolveUserDef);
     CHECK(diags[9].code == diag::UndeclaredIdentifier);
-    CHECK(diags[10].code == diag::NTResolveArgModify);
 }
 
 TEST_CASE("Self referential struct / union member types") {

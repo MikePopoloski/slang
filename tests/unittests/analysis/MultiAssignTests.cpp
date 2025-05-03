@@ -714,3 +714,110 @@ endmodule
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
 }
+
+TEST_CASE("Instance caching with $root scope upward names") {
+    auto& code = R"(
+module m;
+    assign $root.top.n1.l = 1;
+endmodule
+
+module n;
+    logic l;
+endmodule
+
+module top;
+    n n1();
+    m m1(), m2();
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+}
+
+TEST_CASE("Instance caching with downward names") {
+    auto& code = R"(
+module m;
+    logic i;
+    assign i = 0;
+endmodule
+
+module top;
+    assign m2.i = 1;
+    m m1(), m2();
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+}
+
+TEST_CASE("Multiple always assigns") {
+    auto& code = R"(
+module m;
+    logic [2:0] a;
+    int b = 1;
+    int c;
+    always_comb begin : boz
+        a[0] = 1;
+        a[1:0] = 2;
+        b = 3;
+        c = 1;
+    end
+
+    wire clk;
+    always_ff @(posedge clk) begin : baz
+        a[1] <= 1;
+    end
+
+    always_latch begin : foo
+        b = 4;
+    end
+
+    always @* c = 3;
+
+    int l = 1;
+    always_ff @(posedge clk) begin
+        l <= 2;
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
+}
+
+TEST_CASE("UDNT resolution func driven arg") {
+    auto& code = R"(
+module m;
+    nettype real nt11 with func8;
+
+    function real func8(real r[]);
+        r[1] = 3.14;
+        return r[1];
+    endfunction
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NTResolveArgModify);
+}

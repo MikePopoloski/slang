@@ -123,6 +123,31 @@ struct AnalysisScopeVisitor {
             spec.visit(*this);
     }
 
+    void visit(const NetType& symbol) {
+        visitExprs(symbol);
+
+        // Check that there are no drivers for the argument to the resolution function.
+        if (auto func = symbol.getResolutionFunction()) {
+            auto proc = manager.getAnalyzedSubroutine(*func);
+            if (!proc) {
+                auto newProc = std::make_unique<AnalyzedProcedure>(context, *func);
+                proc = newProc.get();
+                manager.addAnalyzedSubroutine(*func, std::move(newProc));
+            }
+
+            auto args = func->getArguments();
+            if (args.size() == 1) {
+                auto drivers = manager.getDrivers(*args[0]);
+                if (!drivers.empty()) {
+                    auto& diag = context.addDiag(symbol, diag::NTResolveArgModify,
+                                                 drivers[0]->getSourceRange());
+                    diag << symbol.name << args[0]->name;
+                    diag.addNote(diag::NoteReferencedHere, symbol.location);
+                }
+            }
+        }
+    }
+
     void visit(const NetSymbol& symbol) {
         visitExprs(symbol);
 
@@ -255,7 +280,7 @@ struct AnalysisScopeVisitor {
                     DefParamSymbol, SpecparamSymbol, PrimitiveSymbol, PrimitivePortSymbol,
                     PrimitiveInstanceSymbol, AssertionPortSymbol, CoverpointSymbol,
                     CoverageBinSymbol, TimingPathSymbol, PulseStyleSymbol, SystemTimingCheckSymbol,
-                    NetAliasSymbol, ConfigBlockSymbol, NetType, CheckerInstanceBodySymbol> ||
+                    NetAliasSymbol, ConfigBlockSymbol, CheckerInstanceBodySymbol> ||
             std::is_base_of_v<Type, T>)
     void visit(const T& symbol) {
         visitExprs(symbol);
