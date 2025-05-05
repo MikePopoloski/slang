@@ -33,7 +33,18 @@ void AstPrinter::handle(const PatternCaseStatement& t) {
             item.filter->visit(*this);
         }
         write(":");
-        item.stmt->visit(*this);
+        // TODO for some reasong the PatternCaseStatement creates an extra
+        // inner BlockStatement while only 1 expression is present. This
+        // behaviour has changed over the past iterations. This is temporary
+        // workaround since I don't know if the extra Statement Block is
+        // intended
+        if (item.stmt->kind == slang::ast::StatementKind::Block) {
+          const auto innerStatement = reinterpret_cast<const slang::ast::BlockStatement*>(item.stmt.get());
+          innerStatement->body.visit(*this);
+        } else {
+            item.stmt->visit(*this);
+        }
+
         write("\n");
     }
 

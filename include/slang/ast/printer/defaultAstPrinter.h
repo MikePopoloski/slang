@@ -1008,8 +1008,10 @@ private:
 
     // attempt to get the real hierachical name of an object ex:e.a instead of $root.m.e.a
     // It does this by trying to find the scope in which both the caller and the actual item are visible
+    // TODO still seems to fail when getting the "begin" blockSymbol name in a
+    // PatternCaseStatement
     std::string getRealName(const Symbol& item, const Symbol* caller) {
-        // caller is often this.currSymnol which can be null
+        // caller is often this.currSymbol which can be null
         if (!caller) {
             return std::string(item.name);
         }
@@ -1025,14 +1027,13 @@ private:
         if (parent) {
             auto& parent_symbol = parent->asSymbol();
 
-            std::string parent_path_name = "";
-            std::string item_path_name = "";
             auto grandparent = parent_symbol.getParentScope();
 
             if (grandparent) {
-                grandparent->asSymbol().getHierarchicalPath(parent_path_name);
+                std::string parent_path_name = grandparent->asSymbol().getHierarchicalPath();
+                std::string item_path_name = item.getHierarchicalPath();
+
                 parent_path_name += '.';
-                item.getHierarchicalPath(item_path_name);
 
                 if (parent_path_name.length() < item_path_name.length() &&
                     item_path_name.find(parent_path_name) != std::string::npos) {

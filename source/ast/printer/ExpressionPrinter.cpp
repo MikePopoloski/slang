@@ -26,8 +26,7 @@ void AstPrinter::handle(const InvalidAssertionExpr& t) {
 // hierarchical_identifier ::= [ $root . ] { identifier constant_bit_select . } identifier
 void AstPrinter::handle(const HierarchicalValueExpression& t) {
     // get path
-    std::string path_name = "";
-    t.symbol.getHierarchicalPath(path_name);
+    std::string path_name = t.symbol.getHierarchicalPath();
     write(path_name);
 }
 

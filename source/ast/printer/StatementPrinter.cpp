@@ -248,7 +248,7 @@ void AstPrinter::handle(const CaseStatement& t) {
 
 
 void AstPrinter::handle(const BlockStatement& t) {
-    // foreach creates a Blockstatement automaticly which causes a duplicate block statement 
+    // foreach creates a Blockstatement automaticly which causes a duplicate block statement
     // when trying to print the ast ( the same happens with RandSequence )
     if (t.body.kind == StatementKind::ForeachLoop || t.body.kind == StatementKind::RandSequence) {
         t.body.visit(*this);
@@ -263,7 +263,9 @@ void AstPrinter::handle(const BlockStatement& t) {
         write("fork");
     }
 
-    if (t.blockSymbol) {
+    // TODO The extra check if the name is empty, should not be needed if the name
+    // lookup works and the underlying AST has no erroneous blockSymbols
+    if (t.blockSymbol and getRealName(*(t.blockSymbol), currSymbol) != "") {
         write(":", false);
         writeName(*(t.blockSymbol));
         write("\n");

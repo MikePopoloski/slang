@@ -7,7 +7,6 @@
 #include <string>
 #include <string_view>
 
-#include "slang/ast/Statements.h"
 #include "slang/ast/printer/defaultAstPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/Json.h"
