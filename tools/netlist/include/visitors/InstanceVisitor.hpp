@@ -14,16 +14,14 @@ using namespace slang;
 
 namespace netlist {
 
-/// Visit module and interface instances to perform hookup of external
-/// variables to the corresponding ports and then to internally-scoped
-/// variables mirroring the ports.
+/// Visit module and interface instances to dispatch visitors for procedural
+/// blocks, generate blocks and continuous assignments.
 class InstanceVisitor : public ast::ASTVisitor<InstanceVisitor, true, false> {
 public:
     explicit InstanceVisitor(ast::Compilation& compilation, Netlist& netlist,
                              NetlistVisitorOptions const& options) :
         compilation(compilation), netlist(netlist), options(options) {}
 
-private:
     void connectDeclToVar(NetlistNode& declNode, const ast::Symbol& variable) {
         auto* varNode = netlist.lookupVariable(resolveSymbolHierPath(variable));
         netlist.addEdge(*varNode, declNode);
@@ -81,39 +79,6 @@ private:
         }
     }
 
-    /// Connect the ports of a module instance to their corresponding variables
-    /// occuring in the body of the module.
-    void connectPortInternal(NetlistNode& port) {
-        if (auto* internalSymbol = port.symbol.as<ast::PortSymbol>().internalSymbol) {
-            auto pathBuffer = internalSymbol->getHierarchicalPath();
-
-            auto* variableNode = netlist.lookupVariable(pathBuffer);
-            switch (port.symbol.as<ast::PortSymbol>().direction) {
-                case ast::ArgumentDirection::In:
-                    netlist.addEdge(port, *variableNode);
-                    DEBUG_PRINT("New edge: input port {} -> variable {}\n", port.symbol.name,
-                                pathBuffer);
-                    break;
-                case ast::ArgumentDirection::Out:
-                    netlist.addEdge(*variableNode, port);
-                    DEBUG_PRINT("New edge: variable {} -> output port {}\n", pathBuffer,
-                                port.symbol.name);
-                    break;
-                case ast::ArgumentDirection::InOut:
-                    netlist.addEdge(port, *variableNode);
-                    netlist.addEdge(*variableNode, port);
-                    DEBUG_PRINT("New edges: variable {} <-> inout port {}\n", pathBuffer,
-                                port.symbol.name);
-                    break;
-                case ast::ArgumentDirection::Ref:
-                    break;
-            }
-        }
-        else {
-            SLANG_UNREACHABLE;
-        }
-    }
-
     // Handle making connections from the port connections to the port
     // declarations of an instance.
     auto handleInstanceExtPorts(ast::InstanceSymbol const& symbol) {
@@ -153,41 +118,6 @@ private:
         }
     }
 
-    /// Create instance variable declarations.
-    auto handleInstanceMemberVars(ast::InstanceSymbol const& symbol) {
-
-        for (auto& member : symbol.body.members()) {
-            if (member.kind == ast::SymbolKind::Variable || member.kind == ast::SymbolKind::Net) {
-                netlist.addVariableDeclaration(member);
-            }
-        }
-    }
-
-    /// Create instance port declarations. Must be called after
-    /// handleInstanceMemberVars() in order that ports can be connected to
-    /// their corresponding variables.
-    auto handleInstanceMemberPorts(ast::InstanceSymbol const& symbol) {
-
-        for (auto& member : symbol.body.members()) {
-            if (member.kind == ast::SymbolKind::Port) {
-                // Create the port declaration netlist node and connect it to
-                // the corresponding local variable declaration.
-                auto& portNode = netlist.addPortDeclaration(member);
-                connectPortInternal(portNode);
-            }
-        }
-    }
-
-public:
-    /// Variable declaration (deferred to handleInstanceMemberVars).
-    void handle(const ast::VariableSymbol& symbol) {}
-
-    /// Net declaration (deferred to handleInstanceMemberVars).
-    void handle(const ast::NetSymbol& symbol) {}
-
-    /// Port declaration (deferred to handleInstanceMemberPorts).
-    void handle(const ast::PortSymbol& symbol) {}
-
     /// Instance.
     void handle(const ast::InstanceSymbol& symbol) {
         DEBUG_PRINT("Instance: {}\n", symbol.getHierarchicalPath());
@@ -199,8 +129,6 @@ public:
             return;
         }
 
-        handleInstanceMemberVars(symbol);
-        handleInstanceMemberPorts(symbol);
         handleInstanceExtPorts(symbol);
 
         symbol.body.visit(*this);
