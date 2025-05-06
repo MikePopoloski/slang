@@ -3,9 +3,9 @@ name: CI Build
 on:
   workflow_dispatch:
   push:
-    branches: [ astPrinterRelease ]
+    branches: [ master ]
   pull_request:
-    branches: [ astPrinterRelease ]
+    branches: [ master ]
 
 jobs:
   build:
