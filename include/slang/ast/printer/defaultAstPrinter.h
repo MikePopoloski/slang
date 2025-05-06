@@ -1072,7 +1072,7 @@ private:
             return "";
         }
         std::string new_string = std::string(string);
-        new_string[0] = std::tolower(new_string[0]);
+        new_string[0] = static_cast<unsigned char>(std::tolower(new_string[0]));
         return new_string;
     }
 
