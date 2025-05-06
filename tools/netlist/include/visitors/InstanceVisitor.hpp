@@ -9,6 +9,7 @@
 
 #include "visitors/ContinuousAssignVisitor.hpp"
 #include "visitors/GenerateBlockVisitor.hpp"
+
 #include "slang/ast/Expression.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 
@@ -180,14 +181,14 @@ private:
 
             // Hookup initialisers.
             if (member.kind == ast::SymbolKind::Variable) {
-              auto initialiser = member.as<ast::VariableSymbol>().getInitializer();
-              handleInitialiser(initialiser, member); 
+                auto initialiser = member.as<ast::VariableSymbol>().getInitializer();
+                handleInitialiser(initialiser, member);
             }
 
             // Hookup initialisers.
             if (member.kind == ast::SymbolKind::Net) {
-              auto initialiser = member.as<ast::NetSymbol>().getInitializer();
-              handleInitialiser(initialiser, member); 
+                auto initialiser = member.as<ast::NetSymbol>().getInitializer();
+                handleInitialiser(initialiser, member);
             }
         }
     }
@@ -259,11 +260,11 @@ public:
     }
 
     /// Inline assignment.
-    void handle(const ast::AssignmentExpression &expr) {
-      ast::EvalContext evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
-      SmallVector<NetlistNode*> condVars;
-      ContinuousAssignVisitor visitor(netlist, evalCtx, condVars);
-      visitor.handle(expr);
+    void handle(const ast::AssignmentExpression& expr) {
+        ast::EvalContext evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
+        SmallVector<NetlistNode*> condVars;
+        ContinuousAssignVisitor visitor(netlist, evalCtx, condVars);
+        visitor.handle(expr);
     }
 
 private:

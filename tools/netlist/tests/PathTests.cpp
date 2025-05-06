@@ -704,16 +704,15 @@ endmodule
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     {
-    auto* start = netlist.lookupVariable("t.a");
-    auto* finish = netlist.lookupVariable("t.d");
-    PathFinder pathFinder(netlist);
-    CHECK(pathFinder.find(*start, *finish).empty());
+        auto* start = netlist.lookupVariable("t.a");
+        auto* finish = netlist.lookupVariable("t.d");
+        PathFinder pathFinder(netlist);
+        CHECK(pathFinder.find(*start, *finish).empty());
     }
     {
-    auto* start = netlist.lookupVariable("t.d");
-    auto* finish = netlist.lookupVariable("t.e");
-    PathFinder pathFinder(netlist);
-    CHECK(pathFinder.find(*start, *finish).empty());
+        auto* start = netlist.lookupVariable("t.d");
+        auto* finish = netlist.lookupVariable("t.e");
+        PathFinder pathFinder(netlist);
+        CHECK(pathFinder.find(*start, *finish).empty());
     }
 }
-
