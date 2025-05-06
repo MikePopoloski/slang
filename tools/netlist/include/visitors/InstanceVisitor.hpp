@@ -9,6 +9,8 @@
 
 #include "visitors/ContinuousAssignVisitor.hpp"
 #include "visitors/GenerateBlockVisitor.hpp"
+#include "slang/ast/Expression.h"
+#include "slang/ast/symbols/VariableSymbols.h"
 
 using namespace slang;
 
@@ -153,12 +155,39 @@ private:
         }
     }
 
+    auto handleInitialiser(ast::Expression const* expr, ast::Symbol const& decl) {
+        if (!expr) {
+            return;
+        }
+
+        ast::EvalContext evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
+
+        VariableReferenceVisitor visitor(netlist, evalCtx, false);
+        expr->visit(visitor);
+
+        for (auto* node : visitor.getVars()) {
+            connectVarToDecl(*node, decl);
+        }
+    }
+
     /// Create instance variable declarations.
     auto handleInstanceMemberVars(ast::InstanceSymbol const& symbol) {
 
         for (auto& member : symbol.body.members()) {
             if (member.kind == ast::SymbolKind::Variable || member.kind == ast::SymbolKind::Net) {
                 netlist.addVariableDeclaration(member);
+            }
+
+            // Hookup initialisers.
+            if (member.kind == ast::SymbolKind::Variable) {
+              auto initialiser = member.as<ast::VariableSymbol>().getInitializer();
+              handleInitialiser(initialiser, member); 
+            }
+
+            // Hookup initialisers.
+            if (member.kind == ast::SymbolKind::Net) {
+              auto initialiser = member.as<ast::NetSymbol>().getInitializer();
+              handleInitialiser(initialiser, member); 
             }
         }
     }
@@ -227,6 +256,14 @@ public:
         SmallVector<NetlistNode*> condVars;
         ContinuousAssignVisitor visitor(netlist, evalCtx, condVars);
         symbol.visit(visitor);
+    }
+
+    /// Inline assignment.
+    void handle(const ast::AssignmentExpression &expr) {
+      ast::EvalContext evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
+      SmallVector<NetlistNode*> condVars;
+      ContinuousAssignVisitor visitor(netlist, evalCtx, condVars);
+      visitor.handle(expr);
     }
 
 private:
