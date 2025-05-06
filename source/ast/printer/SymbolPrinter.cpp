@@ -10,7 +10,6 @@
 #include "slang/ast/printer/defaultAstPrinter.h"
 #include "slang/ast/symbols/CoverSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
-#include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/util/Util.h"
 #include "slang/syntax/AllSyntax.h"
 
