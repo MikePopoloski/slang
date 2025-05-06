@@ -28,15 +28,15 @@ public:
         compilation(compilation), netlist(netlist), options(options) {}
 
     void handle(const ast::InstanceSymbol& symbol) {
-        
+
         {
-         InstanceDeclVisitor visitor(compilation, netlist);
-         symbol.visit(visitor);
+            InstanceDeclVisitor visitor(compilation, netlist);
+            symbol.visit(visitor);
         }
-        
+
         {
-        InstanceVisitor visitor(compilation, netlist, options);
-        symbol.visit(visitor);
+            InstanceVisitor visitor(compilation, netlist, options);
+            symbol.visit(visitor);
         }
     }
 

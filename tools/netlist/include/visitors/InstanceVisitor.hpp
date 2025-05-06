@@ -15,7 +15,7 @@ using namespace slang;
 namespace netlist {
 
 /// Visit module and interface instances to dispatch visitors for procedural
-/// blocks, generate blocks and continuous assignments. 
+/// blocks, generate blocks and continuous assignments.
 class InstanceVisitor : public ast::ASTVisitor<InstanceVisitor, true, false> {
 public:
     explicit InstanceVisitor(ast::Compilation& compilation, Netlist& netlist,

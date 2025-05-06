@@ -7,9 +7,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/EvalContext.h"
-
 #include "VariableReferenceVisitor.hpp"
+
+#include "slang/ast/EvalContext.h"
 
 using namespace slang;
 
@@ -24,7 +24,6 @@ public:
         compilation(compilation), netlist(netlist) {}
 
 private:
-
     /// Connect the ports of a module instance to their corresponding variables
     /// occuring in the body of the module.
     void connectPortInternal(NetlistNode& port) {

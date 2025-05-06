@@ -94,7 +94,7 @@ endmodule
 }
 
 TEST_CASE("Declaration order") {
-    // Test that out of order declarations are handled correctly. 
+    // Test that out of order declarations are handled correctly.
     auto tree = SyntaxTree::fromText(R"(
 module top();
     initial begin
