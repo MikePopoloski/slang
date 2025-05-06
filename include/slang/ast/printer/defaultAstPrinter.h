@@ -754,7 +754,7 @@ private:
             case (BinaryOperator::Power):
                 write("**", false);
                 break;
-           case (BinaryOperator::WildcardEquality):
+            case (BinaryOperator::WildcardEquality):
                 write("==", false);
                 break;
             case (BinaryOperator::WildcardInequality):
@@ -810,8 +810,6 @@ private:
             case (UnaryOperator::Plus):
                 write("+", false, true);
                 break;
-            default:
-                SLANG_UNREACHABLE;
         }
     }
 
@@ -829,8 +827,6 @@ private:
             case (ArgumentDirection::Ref):
                 write("ref", false);
                 break;
-            default:
-                SLANG_UNREACHABLE;
         }
     }
 
@@ -877,9 +873,6 @@ private:
             case (CaseStatementCondition::WildcardJustZ):
                 write("casez");
                 break;
-
-            default:
-                SLANG_UNREACHABLE;
         }
     }
 
@@ -946,8 +939,6 @@ private:
             case (BinaryAssertionOperator::Within):
                 write("within");
                 break;
-            default:
-                SLANG_UNREACHABLE;
         }
     }
 
@@ -962,8 +953,6 @@ private:
             case (CoverageBinSymbol::BinKind::IgnoreBins):
                 write("ignore_bins");
                 break;
-            default:
-                SLANG_UNREACHABLE;
         }
     }
 
@@ -980,8 +969,6 @@ private:
             case (CoverageBinSymbol::TransRangeList::RepeatKind::GoTo):
                 write("->");
                 break;
-            default:
-                SLANG_UNREACHABLE;
         }
     }
 
@@ -996,8 +983,6 @@ private:
             case (ValueRangeKind::RelativeTolerance):
                 write("+%-");
                 break;
-            default:
-                SLANG_UNREACHABLE;
         }
     }
 
