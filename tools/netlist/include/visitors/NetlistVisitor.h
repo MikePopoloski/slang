@@ -9,6 +9,7 @@
 
 #include "Netlist.h"
 #include "NetlistVisitorOptions.hpp"
+#include "visitors/InstanceDeclVisitor.hpp"
 #include "visitors/InstanceVisitor.hpp"
 
 #include "slang/ast/ASTVisitor.h"
@@ -27,8 +28,16 @@ public:
         compilation(compilation), netlist(netlist), options(options) {}
 
     void handle(const ast::InstanceSymbol& symbol) {
-        InstanceVisitor visitor(compilation, netlist, options);
-        symbol.visit(visitor);
+
+        {
+            InstanceDeclVisitor visitor(compilation, netlist);
+            symbol.visit(visitor);
+        }
+
+        {
+            InstanceVisitor visitor(compilation, netlist, options);
+            symbol.visit(visitor);
+        }
     }
 
 private:

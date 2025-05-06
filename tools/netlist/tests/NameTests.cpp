@@ -92,3 +92,25 @@ endmodule
     auto netlist = createNetlist(compilation);
     CHECK(netlist.numNodes() > 0);
 }
+
+TEST_CASE("Declaration order") {
+    // Test that out of order declarations are handled correctly.
+    auto tree = SyntaxTree::fromText(R"(
+module top();
+    initial begin
+        m2.c = 1'b0;
+    end
+
+    m1 m2();
+endmodule
+
+module m1();
+    reg c;
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(netlist.numNodes() > 0);
+}
