@@ -680,3 +680,39 @@ endmodule
     auto netlist = createNetlist(compilation);
     CHECK(netlist.lookupVariable("t34.i"));
 }
+
+//===---------------------------------------------------------------------===//
+// Test case for for #1124 (net initialisers).
+//===---------------------------------------------------------------------===//
+
+TEST_CASE("Net initialisers") {
+    auto tree = SyntaxTree::fromText(R"(
+module t;
+reg a, b;
+wire c;
+initial begin
+  a <= 1;
+  b <= a;
+end
+assign c = a;
+wire d = a;
+wire e = d;
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    {
+        auto* start = netlist.lookupVariable("t.a");
+        auto* finish = netlist.lookupVariable("t.d");
+        PathFinder pathFinder(netlist);
+        CHECK(pathFinder.find(*start, *finish).empty());
+    }
+    {
+        auto* start = netlist.lookupVariable("t.d");
+        auto* finish = netlist.lookupVariable("t.e");
+        PathFinder pathFinder(netlist);
+        CHECK(pathFinder.find(*start, *finish).empty());
+    }
+}

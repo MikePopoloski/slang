@@ -10,6 +10,9 @@
 #include "visitors/ContinuousAssignVisitor.hpp"
 #include "visitors/GenerateBlockVisitor.hpp"
 
+#include "slang/ast/Expression.h"
+#include "slang/ast/symbols/VariableSymbols.h"
+
 using namespace slang;
 
 namespace netlist {
@@ -118,6 +121,41 @@ public:
         }
     }
 
+    auto handleInitialiser(ast::Expression const* expr, ast::Symbol const& decl) {
+        if (!expr) {
+            return;
+        }
+
+        ast::EvalContext evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
+
+        VariableReferenceVisitor visitor(netlist, evalCtx, false);
+        expr->visit(visitor);
+
+        for (auto* node : visitor.getVars()) {
+            connectVarToDecl(*node, decl);
+        }
+    }
+
+    /// Create instance variable declarations.
+    auto handleInstanceMemberVars(ast::InstanceSymbol const& symbol) {
+
+        for (auto& member : symbol.body.members()) {
+
+            // Hookup initialisers.
+            if (member.kind == ast::SymbolKind::Variable) {
+                auto initialiser = member.as<ast::VariableSymbol>().getInitializer();
+                handleInitialiser(initialiser, member);
+            }
+
+            // Hookup initialisers.
+            if (member.kind == ast::SymbolKind::Net) {
+                auto initialiser = member.as<ast::NetSymbol>().getInitializer();
+                handleInitialiser(initialiser, member);
+            }
+        }
+    }
+
+public:
     /// Instance.
     void handle(const ast::InstanceSymbol& symbol) {
         DEBUG_PRINT("Instance: {}\n", symbol.getHierarchicalPath());
