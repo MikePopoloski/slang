@@ -195,14 +195,6 @@ public:
         symbol.visit(visitor);
     }
 
-    /// Inline assignment.
-    void handle(const ast::AssignmentExpression& expr) {
-        ast::EvalContext evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
-        SmallVector<NetlistNode*> condVars;
-        ContinuousAssignVisitor visitor(netlist, evalCtx, condVars);
-        visitor.handle(expr);
-    }
-
 private:
     ast::Compilation& compilation;
     Netlist& netlist;
