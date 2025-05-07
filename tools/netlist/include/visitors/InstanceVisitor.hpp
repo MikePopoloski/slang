@@ -121,41 +121,41 @@ public:
         }
     }
 
+    auto handleInitialiser(ast::Expression const* expr, ast::Symbol const& decl) {
+        if (!expr) {
+            return;
+        }
+
+        ast::EvalContext evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
+
+        VariableReferenceVisitor visitor(netlist, evalCtx, false);
+        expr->visit(visitor);
+
+        for (auto* node : visitor.getVars()) {
+            connectVarToDecl(*node, decl);
+        }
+    }
+
     /// Create instance variable declarations.
     auto handleInstanceMemberVars(ast::InstanceSymbol const& symbol) {
 
         for (auto& member : symbol.body.members()) {
-            if (member.kind == ast::SymbolKind::Variable || member.kind == ast::SymbolKind::Net) {
-                netlist.addVariableDeclaration(member);
+
+            // Hookup initialisers.
+            if (member.kind == ast::SymbolKind::Variable) {
+                auto initialiser = member.as<ast::VariableSymbol>().getInitializer();
+                handleInitialiser(initialiser, member);
             }
-        }
-    }
 
-    /// Create instance port declarations. Must be called after
-    /// handleInstanceMemberVars() in order that ports can be connected to
-    /// their corresponding variables.
-    auto handleInstanceMemberPorts(ast::InstanceSymbol const& symbol) {
-
-        for (auto& member : symbol.body.members()) {
-            if (member.kind == ast::SymbolKind::Port) {
-                // Create the port declaration netlist node and connect it to
-                // the corresponding local variable declaration.
-                auto& portNode = netlist.addPortDeclaration(member);
-                connectPortInternal(portNode);
+            // Hookup initialisers.
+            if (member.kind == ast::SymbolKind::Net) {
+                auto initialiser = member.as<ast::NetSymbol>().getInitializer();
+                handleInitialiser(initialiser, member);
             }
         }
     }
 
 public:
-    /// Variable declaration (deferred to handleInstanceMemberVars).
-    void handle(const ast::VariableSymbol& symbol) {}
-
-    /// Net declaration (deferred to handleInstanceMemberVars).
-    void handle(const ast::NetSymbol& symbol) {}
-
-    /// Port declaration (deferred to handleInstanceMemberPorts).
-    void handle(const ast::PortSymbol& symbol) {}
-
     /// Instance.
     void handle(const ast::InstanceSymbol& symbol) {
         DEBUG_PRINT("Instance: {}\n", symbol.getHierarchicalPath());
