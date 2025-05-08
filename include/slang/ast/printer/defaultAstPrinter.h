@@ -33,11 +33,12 @@
 #include <string>
 #include <string_view>
 #include <span>
+#include <concepts>
 
 namespace slang::ast {
 
 template<typename T>
-concept IsFunc = requires(T t) {
+concept IsSubroutine = requires(T t) {
     // selects SubroutineSymbol, MethodPrototypeSymbol
     t.subroutineKind;
 };
@@ -370,12 +371,12 @@ public:
     // state_dependent_path_declaration;
     void handle(const TimingPathSymbol& t);
 
-    // dient voor SubroutineSymbol, MethodPrototypeSymbol
     // method_prototype ::= task_prototype | function_prototype
+    void handle(const MethodPrototypeSymbol& t);
+
     // function_prototype ::= function data_type_or_void function_identifier [ ( [ tf_port_list ] )
-    // ] task_prototype ::= task task_identifier [ ( [ tf_port_list ] ) ]
-    template<IsFunc T>
-    void handle(const T& t);
+    // task_prototype ::= task task_identifier [ ( [ tf_port_list ] ) ]
+    void handle(const SubroutineSymbol& t);
 
     void handle(const FormalArgumentSymbol& t);
 
@@ -458,6 +459,9 @@ public:
     void handle(const DisableSoftConstraint& t);
 
 private:
+    template<IsSubroutine T>
+    void subroutineHandle(const T& t);
+
     std::string buffer;
     std::string* tempBuffer;
     std::list<std::string> writeNextBuffer;

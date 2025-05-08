@@ -705,11 +705,9 @@ void AstPrinter::handle(const TimingPathSymbol& t) {
     write(")");
 }
 
-// method_prototype ::= task_prototype | function_prototype
-// function_prototype ::= function data_type_or_void function_identifier [ ( [ tf_port_list ] ) ]
-// task_prototype ::= task task_identifier [ ( [ tf_port_list ] ) ]
-template<IsFunc T>
-void AstPrinter::handle(const T& t) {
+// This is a helper function for SubroutineSymbol and MethodPrototypeSymbol
+template<IsSubroutine T>
+void AstPrinter::subroutineHandle(const T& t) {
     currSymbol = &t;
     // Ignore built-in methods on class types.
     if (t.flags.has(MethodFlags::BuiltIn | MethodFlags::Randomize)) {
@@ -796,6 +794,17 @@ void AstPrinter::handle(const T& t) {
         write(lowerFirstLetter(toString(t.subroutineKind)), false);
         write("\n", false);
     }
+}
+
+// function_prototype ::= function data_type_or_void function_identifier [ ( [ tf_port_list ] ) ]
+// task_prototype ::= task task_identifier [ ( [ tf_port_list ] ) ]
+void AstPrinter::handle(const SubroutineSymbol& t) {
+  subroutineHandle(t);
+}
+
+// method_prototype ::= task_prototype | function_prototype
+void AstPrinter::handle(const MethodPrototypeSymbol& t) {
+  subroutineHandle(t);
 }
 
 void AstPrinter::handle(const FormalArgumentSymbol& t) {
