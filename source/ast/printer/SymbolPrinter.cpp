@@ -27,7 +27,7 @@ void AstPrinter::handle(const GenvarSymbol& t) {
 void AstPrinter::handle(const AttributeSymbol& t) {
     currSymbol = &t;
     write(t.name);
-    if (auto value = t.getValue(); value) {
+    if (const auto& value = t.getValue(); value) {
         write("=");
         write(value.toString());
     }
@@ -266,7 +266,7 @@ void AstPrinter::handle(const slang::ast::ScalarType& t) {
 void AstPrinter::handle(const slang::ast::VariableSymbol& t) {
     currSymbol = &t;
     // add the direction if this symbol is part of the port declaration
-    if (t.flags.has(VariableFlags::CompilerGenerated) | t.flags.has(VariableFlags::isDuplicate)) {
+    if (t.flags.has(VariableFlags::CompilerGenerated) || t.flags.has(VariableFlags::isDuplicate)) {
         return;
     }
 
@@ -407,8 +407,6 @@ void AstPrinter::handle(const PropertySymbol& t) {
     if (!t.ports.empty()) {
         write("(");
         visitMembers(t.ports);
-        const auto symbol = ((PortSymbol*)t.ports.back())->internalSymbol;
-        member = symbol ? symbol->getNextSibling() : t.ports.back();
         write(")");
     }
 

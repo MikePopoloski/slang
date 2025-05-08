@@ -115,13 +115,13 @@ void AstPrinter::handle(const TypeAliasType& t) {
     printer.append(t);
 
     std::string type_str = printer.toString();
-    std::size_t bracket_loc = type_str.rfind("}");
+    const std::size_t bracket_loc = type_str.rfind('}');
     blockBuffer.append(type_str.substr(0, bracket_loc + 1));
     blockBuffer.append(t.name);
     blockBuffer.append(";\n");
 
     // remove the name of the typealias to make it possible to compare them to getType() types
-    std::size_t dot_loc = type_str.rfind(".");
+    const std::size_t dot_loc = type_str.rfind('.');
     typeConversions.insert({type_str.substr(0, dot_loc), std::string(t.name)});
 }
 
