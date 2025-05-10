@@ -44,9 +44,11 @@ struct SLANG_EXPORT AnalysisOptions {
     /// The number of threads to use for analysis.
     uint32_t numThreads = 0;
 
-    /// The maximum number of case analysis steps to perform
-    /// before giving up.
+    /// The maximum number of case analysis steps to perform before giving up.
     uint32_t maxCaseAnalysisSteps = 65535;
+
+    /// The maximum number of loop analysis steps to perform before giving up.
+    uint32_t maxLoopAnalyisSteps = 65535;
 };
 
 } // namespace slang::analysis
