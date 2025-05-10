@@ -590,6 +590,7 @@ TEST_CASE("Unrollable for loop drivers") {
                     forever begin
                         if (i != 2 || j != 1)
                             #1 baz[i][j].foo = 1;
+                        break;
                     end
                 end
             end
@@ -613,14 +614,13 @@ TEST_CASE("Unrollable for loop drivers") {
  endmodule
 )";
 
-    CompilationOptions options;
-    options.maxConstexprSteps = 10000;
+    AnalysisOptions options;
+    options.maxLoopAnalyisSteps = 8192;
 
-    Compilation compilation(options);
-    AnalysisManager analysisManager;
+    Compilation compilation;
+    AnalysisManager analysisManager(options);
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
-    CHECK_DIAGS_EMPTY;
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[1].code == diag::MultipleAlwaysAssigns);

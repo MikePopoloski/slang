@@ -14,30 +14,77 @@
 
 namespace slang::analysis {
 
+FlowAnalysisBase::FlowAnalysisBase(const Symbol& symbol, AnalysisOptions options,
+                                   Diagnostics* diagnostics) :
+    rootSymbol(symbol), options(options), diagnostics(diagnostics),
+    evalContext(ASTContext(*symbol.getParentScope(), LookupLocation::after(symbol))) {
+
+    evalContext.pushEmptyFrame();
+}
+
 ConstantValue FlowAnalysisBase::tryEvalBool(const Expression& expr) const {
     return expr.eval(evalContext);
 }
 
-bool FlowAnalysisBase::willIterateAtLeastOnce(std::span<const VariableSymbol* const> loopVars,
-                                              const Expression& stopExpr) const {
-    // We can't know for sure whether the loop will actually execute in all
-    // cases, but we can check for a simple case where we have an in-line
-    // loop variable(s) that pass the stop condition on the first iteration.
-    EvalContext speculativeCtx(evalContext);
-    speculativeCtx.pushEmptyFrame();
+bool FlowAnalysisBase::tryGetLoopIterValues(const ForLoopStatement& stmt,
+                                            SmallVector<ConstantValue>& values,
+                                            SmallVector<ConstantValue*>& localPtrs) {
+    if (stmt.loopVars.empty() || !stmt.stopExpr || stmt.steps.empty())
+        return false;
 
-    for (auto var : loopVars) {
-        ConstantValue cv;
-        if (auto init = var->getInitializer()) {
-            cv = init->eval(speculativeCtx);
-            if (!cv)
-                return false;
-        }
+    auto handleFail = [&] {
+        values.clear();
+        for (auto var : stmt.loopVars)
+            evalContext.deleteLocal(var);
+        return false;
+    };
 
-        speculativeCtx.createLocal(var, std::move(cv));
+    for (auto var : stmt.loopVars) {
+        auto init = var->getInitializer();
+        if (!init)
+            return handleFail();
+
+        auto cv = init->eval(evalContext);
+        if (!cv)
+            return handleFail();
+
+        localPtrs.push_back(evalContext.createLocal(var, std::move(cv)));
     }
 
-    return stopExpr.eval(speculativeCtx).isTrue();
+    // Each iteration of this loop will consume the given increment steps,
+    // so that nested loops count more heavily against our limit.
+    const uint32_t increment = std::max(forLoopSteps, 1u);
+
+    bool bodyWillExecute = false;
+    while (true) {
+        auto cv = stmt.stopExpr->eval(evalContext);
+        if (!cv) {
+            handleFail();
+            return bodyWillExecute;
+        }
+
+        if (!cv.isTrue())
+            break;
+
+        bodyWillExecute = true;
+        for (auto local : localPtrs)
+            values.emplace_back(*local);
+
+        for (auto step : stmt.steps) {
+            if (!step->eval(evalContext)) {
+                handleFail();
+                return bodyWillExecute;
+            }
+
+            forLoopSteps += increment;
+            if (forLoopSteps > options.maxLoopAnalyisSteps) {
+                handleFail();
+                return bodyWillExecute;
+            }
+        }
+    }
+
+    return bodyWillExecute;
 }
 
 bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {

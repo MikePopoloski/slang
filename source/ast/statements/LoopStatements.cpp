@@ -122,10 +122,10 @@ public:
         UnrollVisitor visitor(astCtx);
         visitor.visit(loop);
 
-        if (std::ranges::any_of(visitor.driverMap,
-                                [](auto& item) { return !item.second->empty(); })) {
-            visitor.runForReal(loop);
-        }
+        // if (std::ranges::any_of(visitor.driverMap,
+        //                         [](auto& item) { return !item.second->empty(); })) {
+        //     visitor.runForReal(loop);
+        // }
     }
 
     void handle(const ForLoopStatement& loop) {
