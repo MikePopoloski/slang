@@ -37,16 +37,17 @@ public:
 protected:
     /// Constructs a new flow analysis pass.
     FlowAnalysisBase(const Symbol& symbol, AnalysisOptions options,
-                     Diagnostics* diagnostics = nullptr) :
-        rootSymbol(symbol), options(options), diagnostics(diagnostics),
-        evalContext(ASTContext(*symbol.getParentScope(), LookupLocation::after(symbol))) {}
+                     Diagnostics* diagnostics = nullptr);
 
     ConstantValue tryEvalBool(const Expression& expr) const;
 
-    bool willIterateAtLeastOnce(std::span<const VariableSymbol* const> loopVars,
-                                const Expression& stopExpr) const;
+    bool tryGetLoopIterValues(const ForLoopStatement& stmt, SmallVector<ConstantValue>& values,
+                              SmallVector<ConstantValue*>& localPtrs);
 
     bool isFullyCovered(const CaseStatement& stmt) const;
+
+    /// Tracking for how many steps we've taken while analyzing the body of a loop.
+    uint32_t forLoopSteps = 0;
 
     /// An optional diagnostics collection. If provided, warnings encountered during
     /// analysis will be added to it.
@@ -406,6 +407,9 @@ protected:
                 visit(*init);
         }
 
+        SmallVector<ConstantValue> iterValues;
+        SmallVector<ConstantValue*> localPtrs;
+        const bool isOuterLoop = forLoopSteps == 0;
         bool bodyWillExecute = false;
         TState bodyState, exitState;
         if (stmt.stopExpr) {
@@ -413,15 +417,13 @@ protected:
             bodyState = std::move(stateWhenTrue);
             exitState = std::move(stateWhenFalse);
 
-            // If we had a non-constant stop expression we want
-            // to check whether there's at least a guarantee that
-            // we will visit the loop body at least once, because then
-            // we can allow the body state to definitely affect the
-            // post-loop exit state.
-            if (!cv && !stmt.loopVars.empty() &&
-                willIterateAtLeastOnce(stmt.loopVars, *stmt.stopExpr)) {
-                bodyWillExecute = true;
-            }
+            // If we had a non-constant stop expression (which should be pretty rare)
+            // we will try to determine whether the loop will iterate at least once
+            // guaranteed, and if so whether we can know exactly how many times.
+            // If we have a deterministic set of iteration values we can "unroll" the
+            // loop and get finer grained tracking of data flow within it.
+            if (!cv)
+                bodyWillExecute = tryGetLoopIterValues(stmt, iterValues, localPtrs);
         }
         else {
             // If there's no stop expression, the loop is infinite.
@@ -432,10 +434,32 @@ protected:
         auto oldBreakStates = std::move(breakStates);
         breakStates.clear();
         setState(std::move(bodyState));
-        visit(stmt.body);
 
-        for (auto step : stmt.steps)
-            visit(*step);
+        if (iterValues.empty()) {
+            visit(stmt.body);
+            for (auto step : stmt.steps)
+                visit(*step);
+        }
+        else {
+            // We have a set of iteration values that we can use to unroll the loop.
+            for (size_t i = 0; i < iterValues.size();) {
+                for (auto local : localPtrs)
+                    *local = std::move(iterValues[i++]);
+
+                visit(stmt.body);
+                for (auto step : stmt.steps)
+                    visit(*step);
+            }
+        }
+
+        // Clean up any locals we may have created.
+        if (!localPtrs.empty()) {
+            for (auto var : stmt.loopVars)
+                evalContext.deleteLocal(var);
+        }
+
+        if (isOuterLoop)
+            forLoopSteps = 0;
 
         if (bodyWillExecute)
             (DERIVED).meetState(exitState, state);
