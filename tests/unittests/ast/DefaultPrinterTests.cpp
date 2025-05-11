@@ -68,19 +68,19 @@ bool isEqual(std::shared_ptr<slang::syntax::SyntaxTree> tree, std::string name_t
 }
 
 // checks if the ast of the original code is equal to the ast of the generated code
-bool isEqual(std::string original_code, std::string name_test = "test") {
+bool isEqual(const std::string& original_code, const std::string& name_test = "test") {
     // calculate ast original code
     auto tree = slang::syntax::SyntaxTree::fromText(original_code);
     return isEqual(tree, name_test );
 }
 
 TEST_CASE("InstanceSymbol printer") {
-    std::string code = R"(module Foo; endmodule)";
+    const std::string code = R"(module Foo; endmodule)";
     CHECK(isEqual(code));
 };
 
 TEST_CASE("InstanceSymbol with ports") {
-    std::string code = R"(
+    const std::string code = R"(
 module Foo (input a,b);
 endmodule
 )";
@@ -88,7 +88,7 @@ endmodule
 };
 
 TEST_CASE("InstanceSymbol with parameters") {
-    std::string code = R"(
+    const std::string code = R"(
 module Foo #(parameter N=2, parameter DOWN=0)
 (input a,input b);
 endmodule
@@ -97,7 +97,7 @@ endmodule
 };
 
 TEST_CASE("InstanceSymbol with import") {
-    std::string code = R"(
+    const std::string code = R"(
 module automatic m1 import p::*; #(int i = 1)
     (a, b, , .c({a, b[0]}));
     input a;
@@ -108,7 +108,7 @@ endmodule
 };
 
 TEST_CASE("BlockStatement printer") {
-    std::string code = R"(
+    const std::string code = R"(
 module static BAR;
   initial begin
     fork:test_parralel
@@ -121,7 +121,7 @@ endmodule)";
 };
 
 TEST_CASE("all.sv 0-8") {
-    std::string code = R"(
+    const std::string code = R"(
 timeunit 1ns / 1ps;
 timeprecision 1ps;
 (* foo = 1 *) package static p;
@@ -134,7 +134,7 @@ endpackage
 }
 
 TEST_CASE("all.sv 16-20"){
-    std::string code = R"(
+    const std::string code = R"(
 module m2 #(parameter i = 1, localparam j = i)
     (input int a[], (* bar = "asdf" *) output wire b = 1, ref c,
      interface.mod d, .e());
@@ -143,7 +143,7 @@ endmodule)";
 }
 
 TEST_CASE("all.sv 21-26") {
-    std::string code = R"(
+    const std::string code = R"(
 extern interface I(input a, output b);
 
 interface I(.*);
@@ -153,7 +153,7 @@ endinterface)";
 }
 
 TEST_CASE("all.sv 26-80") {
-    std::string code = R"(
+    const std::string code = R"(
 extern interface I(input a, output b);
 
 interface I(.*);
@@ -221,7 +221,7 @@ endmodule : m3)";
 }
 
 TEST_CASE("all.sv 80-120") {
-    std::string code = R"(
+    const std::string code = R"(
 macromodule m3;
     always_comb begin
         typedef union tagged {
@@ -277,7 +277,7 @@ endmodule)";
 }
 
 TEST_CASE("all.sv 129-150") {
-    std::string code = R"(
+    const std::string code = R"(
 macromodule m3;
     always_latch begin
     end
@@ -306,7 +306,7 @@ endmodule
 }
 
 TEST_CASE("all.sv 150_153") {
-    std::string code = R"(
+    const std::string code = R"(
 macromodule m3;
     if (1) begin
         logic a,b,c,d,e,f;
@@ -331,7 +331,7 @@ endmodule
 }
 
 TEST_CASE("all.sv 193_200") {
-    std::string code = R"(
+    const std::string code = R"(
 extern primitive prim(output reg a, input b);
 
 primitive prim(output reg a, input b);
@@ -348,7 +348,7 @@ endprimitive
 
 //ast is the same but the generated source code is o low quality
 TEST_CASE("all.sv 202") {
-    std::string code = R"("
+    const std::string code = R"("
 module m3;
     module m;
     endmodule
@@ -361,7 +361,7 @@ endmodule
 }
 
 TEST_CASE("all.sv 204_210") {
-    std::string code = R"("
+    const std::string code = R"("
 config cfg;
     localparam i = 1;
     design work.m3;
@@ -373,7 +373,7 @@ endconfig
 }
 
 TEST_CASE("all.sv 211_223") {
-    std::string code = R"("
+    const std::string code = R"("
 module ALU(input wire [7:0] i1, i2, input wire [2:1] opcode, output wire [7:0] o1;)
 
     specify
@@ -389,7 +389,7 @@ endmodule
 }
 
 TEST_CASE("all.sv 225_232") {
-    std::string code = R"(
+    const std::string code = R"(
 interface Iface();
     extern function void foo(int i, real r);
     extern forkjoin task t3();
@@ -403,7 +403,7 @@ endinterface
     CHECK(isEqual(code, "225_232"));
 }
 TEST_CASE("all.sv 250_266") {
-    std::string code = R"(
+    const std::string code = R"(
     module m4;
         Iface i1();
         n n1(i1);
@@ -426,7 +426,7 @@ TEST_CASE("all.sv 250_266") {
     CHECK(isEqual(code, "250_266"));
     }
 TEST_CASE("all.sv 309_314") {
-    std::string code = R"(
+    const std::string code = R"(
 module m5;
     logic a, b;
     assert_window1 aw1(1 + 1, a, b);
@@ -438,7 +438,7 @@ endmodule
 
 
 TEST_CASE("all.sv 316_400") {
-    std::string code = R"(
+    const std::string code = R"(
 class C;
     int i;
     static int j;
@@ -496,7 +496,7 @@ endmodule
 
 
 TEST_CASE("all.sv 426_end") {
-    std::string code = R"(
+    const std::string code = R"(
     class C3;
         enum {red, green, blue} color;
         bit [3:0] pixel_adr, pixel_offset, pixel_hue;
@@ -536,7 +536,7 @@ TEST_CASE("all.sv 426_end") {
 }
 
 TEST_CASE("inetTest.sv") {
-    std::string code = R"(
+    const std::string code = R"(
 module jmagnitudeComparator(AEQB, AGTB, ALTB, A, B);
   output reg AEQB, AGTB, ALTB;
   input [3:0] A, B;

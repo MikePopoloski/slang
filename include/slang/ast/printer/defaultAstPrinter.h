@@ -576,7 +576,7 @@ private:
             string = string.substr(0, dollarLocation);
         }
 
-        if ((*writeBuffer).back() == '\n') {
+        if ((*writeBuffer).size() > 0 and (*writeBuffer).back() == '\n') {
             // solves the indentation in new lines
             std::string depth_string = std::string(indentation_level * indentation_multiplier, ' ');
             (*writeBuffer).append(depth_string);
