@@ -393,7 +393,7 @@ public:
 
     void handle(const CheckerInstanceSymbol& t);
 
-    // checker_declaration  { { attribute_instance } checker_or_generate_item } these values get inserted in CheckerSymbol 
+    // checker_declaration  { { attribute_instance } checker_or_generate_item } these values get inserted in CheckerSymbol
     void handle(const CheckerInstanceBodySymbol& t);
 
     // clocking_declaration ::= [ default ] clocking [ clocking_identifier ] clocking_event ;{
