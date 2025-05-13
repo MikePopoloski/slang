@@ -5,11 +5,11 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/ast/printer/defaultAstPrinter.h"
+#include <cstddef>
+
 #include "slang/ast/HierarchicalReference.h"
 #include "slang/ast/expressions/MiscExpressions.h"
-
-#include <cstddef>
+#include "slang/ast/printer/defaultAstPrinter.h"
 
 namespace slang::ast {
 
@@ -79,7 +79,8 @@ void AstPrinter::handle(const AssignmentExpression& t) {
 
     if (t.isNonBlocking()) {
         write("<=", false);
-    } else {
+    }
+    else {
         write("=", false);
     }
 
@@ -109,21 +110,22 @@ void AstPrinter::handle(const BinaryExpression& t) {
 //  ps_or_hierarchical_tf_identifier { attribute_instance } [ ( list_of_arguments ) ]
 //  system_tf_call ::= system_tf_identifier [ ( list_of_arguments ) ]
 void AstPrinter::handle(const CallExpression& t) {
-    bool hasThisClass = t.thisClass() != nullptr ;
-    if (hasThisClass){
+    bool hasThisClass = t.thisClass() != nullptr;
+    if (hasThisClass) {
         t.thisClass()->visit(*this);
-        write(".",false);
+        write(".", false);
     }
 
     if (std::holds_alternative<const SubroutineSymbol*>(t.subroutine)) {
         const auto symbol = std::get<const SubroutineSymbol*>(t.subroutine);
         if (symbol) {
             writeName(*symbol, !hasThisClass);
-        } else {
+        }
+        else {
             write(t.getSubroutineName(), !hasThisClass);
         }
-
-    } else {
+    }
+    else {
         write(t.getSubroutineName(), !hasThisClass);
     }
 
@@ -141,9 +143,11 @@ void AstPrinter::handle(const NamedValueExpression& t) {
 void AstPrinter::handle(const UnbasedUnsizedIntegerLiteral& t) {
     if (t.getLiteralValue().isUnknown()) {
         write("'x");
-    } else if (t.getLiteralValue().value == slang::logic_t::Z_VALUE) {
+    }
+    else if (t.getLiteralValue().value == slang::logic_t::Z_VALUE) {
         write("'z");
-    } else {
+    }
+    else {
         write("'");
         write(std::to_string(t.getLiteralValue().value));
     }
@@ -190,7 +194,8 @@ void AstPrinter::handle(const DistExpression& t) {
         if (dist.weight.has_value()) {
             if (dist.weight.value().kind == DistExpression::DistWeight::PerValue) {
                 write(":=");
-            } else {
+            }
+            else {
                 write(":/");
             }
             dist.weight->expr->visit(*this);
@@ -220,10 +225,10 @@ void AstPrinter::handle(const RangeSelectExpression& t) {
     write("]", false);
 }
 
-//class_new ::=[ class_scope ] new [ ( list_of_arguments ) ]
+// class_new ::=[ class_scope ] new [ ( list_of_arguments ) ]
 void AstPrinter::handle(const NewClassExpression& t) {
     write(t.type->toString());
-    write("::new",false);
+    write("::new", false);
 }
 
 //
@@ -233,13 +238,13 @@ void AstPrinter::handle(const MemberAccessExpression& t) {
     writeName(t.member, false);
 }
 
-void AstPrinter::handle(const SimpleAssignmentPatternExpression& t){
+void AstPrinter::handle(const SimpleAssignmentPatternExpression& t) {
     write("'{");
     visitMembers(t.elements());
     write("}");
 }
 
-void AstPrinter::handle(const BinSelectWithFilterExpr& t){
+void AstPrinter::handle(const BinSelectWithFilterExpr& t) {
     write("(");
     t.expr.visit(*this);
     if (t.matchesExpr) {
@@ -252,12 +257,13 @@ void AstPrinter::handle(const BinSelectWithFilterExpr& t){
     write(")");
 }
 
-//select_condition ::= binsof ( bins_expression ) [ intersect { covergroup_range_list } ]
-void AstPrinter::handle(const BinaryBinsSelectExpr& t){
+// select_condition ::= binsof ( bins_expression ) [ intersect { covergroup_range_list } ]
+void AstPrinter::handle(const BinaryBinsSelectExpr& t) {
     t.left.visit(*this);
     if (t.op == BinaryBinsSelectExpr::And) {
         write("&&");
-    } else {
+    }
+    else {
         write("||");
     }
     t.right.visit(*this);
@@ -266,7 +272,7 @@ void AstPrinter::handle(const UnaryBinsSelectExpr& t) {
     write("!");
     t.expr.visit(*this);
 }
-//select_condition ::= binsof ( bins_expression ) [ intersect { covergroup_range_list } ]
+// select_condition ::= binsof ( bins_expression ) [ intersect { covergroup_range_list } ]
 void AstPrinter::handle(const ConditionBinsSelectExpr& t) {
     write("binsof(");
     writeName(t.target);

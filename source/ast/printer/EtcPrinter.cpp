@@ -5,12 +5,12 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/ast/printer/defaultAstPrinter.h"
-#include "slang/ast/Constraints.h"
-#include "slang/util/Util.h"
-#include "slang/ast/types/TypePrinter.h"
-
 #include <iterator>
+
+#include "slang/ast/Constraints.h"
+#include "slang/ast/printer/defaultAstPrinter.h"
+#include "slang/ast/types/TypePrinter.h"
+#include "slang/util/Util.h"
 
 namespace slang::ast {
 
@@ -81,7 +81,8 @@ void AstPrinter::handle(const SignalEventControl& t) {
 
     if (t.edge == EdgeKind::BothEdges) {
         write("edge");
-    } else if (t.edge != EdgeKind::None){
+    }
+    else if (t.edge != EdgeKind::None) {
         write(lower(toString(t.edge)));
     }
 
@@ -125,7 +126,6 @@ void AstPrinter::handle(const TypeAliasType& t) {
     typeConversions.insert({type_str.substr(0, dot_loc), std::string(t.name)});
 }
 
-
 // class_declaration ::=
 // [ virtual ] class [ lifetime ] class_identifier [ parameter_port_list ]
 // [ extends class_type [ ( list_of_arguments ) ] ]
@@ -150,9 +150,9 @@ void AstPrinter::handle(const ClassType& t) {
         write(t.getBaseClass()->name);
     }
 
-    if (!t.getDeclaredInterfaces().empty()){
+    if (!t.getDeclaredInterfaces().empty()) {
         write("implements");
-        for (const auto& interface: t.getDeclaredInterfaces()) {
+        for (const auto& interface : t.getDeclaredInterfaces()) {
             interface->visit(*this);
         }
     }
@@ -165,7 +165,8 @@ void AstPrinter::handle(const ClassType& t) {
     write("endclass\n");
 }
 
-// covergroup_declaration ::= covergroup covergroup_identifier [ ( [ tf_port_list ] ) ] [ coverage_event ] ;{ coverage_spec_or_option } endgroup [ : covergroup_identifier ]
+// covergroup_declaration ::= covergroup covergroup_identifier [ ( [ tf_port_list ] ) ] [
+// coverage_event ] ;{ coverage_spec_or_option } endgroup [ : covergroup_identifier ]
 void AstPrinter::handle(const CovergroupType& t) {
     write("covergroup");
     write(t.name);
@@ -182,17 +183,16 @@ void AstPrinter::handle(const CovergroupType& t) {
 
     write(";\n");
 
-    visitMembers(t.getArguments().back()->getNextSibling(),";");
+    visitMembers(t.getArguments().back()->getNextSibling(), ";");
 
     write("endgroup\n");
 }
 
 // coverage_option ::= option.member_identifier = expression
 //                      type_option.member_identifier = constant_expression
-void AstPrinter::handle(const CoverageOptionSetter& t){
+void AstPrinter::handle(const CoverageOptionSetter& t) {
     t.getExpression().visit(*this);
 }
-
 
 void AstPrinter::handle(const ConstraintList& t) {
     visitMembers(t.list, ";", true);
@@ -246,27 +246,27 @@ void AstPrinter::handle(const DisableSoftConstraint& t) {
     t.target.visit(*this);
 }
 
-// constraint_expression ::= foreach ( ps_or_hierarchical_array_identifier [ loop_variables ] ) constraint_set
+// constraint_expression ::= foreach ( ps_or_hierarchical_array_identifier [ loop_variables ] )
+// constraint_set
 void AstPrinter::handle(const slang::ast::ForeachConstraint& t) {
-    write("foreach(" );
+    write("foreach(");
     t.arrayRef.visit(*this);
-    if (!t.loopDims.empty()){
-        write("[",false);
+    if (!t.loopDims.empty()) {
+        write("[", false);
         for (const auto& LoopDim : t.loopDims) {
             writeName(*LoopDim.loopVar);
             if (LoopDim.range.has_value()) {
-                write(LoopDim.range.value().toString(),false);
+                write(LoopDim.range.value().toString(), false);
             }
-
         }
-        write("]",false);
+        write("]", false);
     }
-    write(")",false );
-    write("{\n",false);
+    write(")", false);
+    write("{\n", false);
     ++indentation_level;
     t.body.visit(*this);
     --indentation_level;
-    write("}\n",false);
+    write("}\n", false);
 }
 
 } // namespace slang::ast

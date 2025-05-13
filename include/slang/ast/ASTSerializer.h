@@ -168,7 +168,7 @@ public:
 
     /// Writes a property with the given pointer value to the serialized output.
     template<typename T>
-        requires std::is_pointer_v<T>
+    requires std::is_pointer_v<T>
     void write(std::string_view name, T value) = delete;
 
     /// Writes a property with the given value to the serialized output.

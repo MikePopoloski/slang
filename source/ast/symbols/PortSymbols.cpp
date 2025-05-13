@@ -85,7 +85,8 @@ class AnsiPortListBuilder {
 public:
     AnsiPortListBuilder(const Scope& scope,
                         SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
-        comp(scope.getCompilation()), scope(scope), implicitMembers(implicitMembers) {}
+        comp(scope.getCompilation()),
+        scope(scope), implicitMembers(implicitMembers) {}
 
     Symbol* createPort(const ImplicitAnsiPortSyntax& syntax) {
         // Helper function to check if an implicit type syntax is totally empty.
@@ -354,7 +355,8 @@ public:
         const Scope& scope,
         std::span<std::pair<const SyntaxNode*, const Symbol*> const> portDeclarations,
         SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
-        comp(scope.getCompilation()), scope(scope), implicitMembers(implicitMembers) {
+        comp(scope.getCompilation()),
+        scope(scope), implicitMembers(implicitMembers) {
 
         // All port declarations in the scope have been collected; index them for easy lookup.
         for (auto [syntax, insertionPoint] : portDeclarations) {
@@ -486,7 +488,8 @@ private:
 
         PortInfo(const DeclaratorSyntax& syntax,
                  std::span<const AttributeInstanceSyntax* const> attrs) :
-            syntax(&syntax), attrs(attrs) {}
+            syntax(&syntax),
+            attrs(attrs) {}
     };
     SmallMap<std::string_view, PortInfo, 8> portInfos;
 
@@ -765,7 +768,8 @@ class PortConnectionBuilder {
 public:
     PortConnectionBuilder(const InstanceSymbol& instance,
                           const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) :
-        scope(*instance.getParentScope()), instance(instance), comp(scope.getCompilation()),
+        scope(*instance.getParentScope()),
+        instance(instance), comp(scope.getCompilation()),
         lookupLocation(LookupLocation::after(instance)),
         connMap(portConnections, scope, lookupLocation) {
 
@@ -1540,7 +1544,8 @@ void PortSymbol::serializeTo(ASTSerializer& serializer) const {
 MultiPortSymbol::MultiPortSymbol(std::string_view name, SourceLocation loc,
                                  std::span<const PortSymbol* const> ports,
                                  ArgumentDirection direction) :
-    Symbol(SymbolKind::MultiPort, name, loc), ports(ports), direction(direction) {
+    Symbol(SymbolKind::MultiPort, name, loc),
+    ports(ports), direction(direction) {
 }
 
 const Type& MultiPortSymbol::getType() const {
@@ -1693,13 +1698,14 @@ PortConnection::PortConnection(const Symbol& port, bool useDefault) :
 
 PortConnection::PortConnection(const InterfacePortSymbol& port, const IfaceConn& conn,
                                const Expression* expr) :
-    port(port), connectedSymbol(conn.first), expr(expr), modport(conn.second) {
+    port(port),
+    connectedSymbol(conn.first), expr(expr), modport(conn.second) {
 }
 
 PortConnection::PortConnection(const Symbol& port, const Symbol* connectedSymbol,
                                SourceRange implicitNameRange) :
-    port(port), connectedSymbol(connectedSymbol), implicitNameRange(implicitNameRange),
-    isImplicit(true) {
+    port(port),
+    connectedSymbol(connectedSymbol), implicitNameRange(implicitNameRange), isImplicit(true) {
 }
 
 PortConnection::IfaceConn PortConnection::getIfaceConn() const {

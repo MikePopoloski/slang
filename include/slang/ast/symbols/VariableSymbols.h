@@ -42,8 +42,8 @@ enum class SLANG_EXPORT VariableFlags : uint16_t {
 
     /// The variable is a function port with direction 'ref static'.
     RefStatic = 1 << 5,
-    
-    /// This variable contains no new information and should be ingored 
+
+    /// This variable contains no new information and should be ingored
     /// when printing the ast back to source code
     isDuplicate = 1 << 6
 };
@@ -238,7 +238,8 @@ public:
 
 protected:
     TempVarSymbol(SymbolKind childKind, std::string_view name, SourceLocation loc,
-                  VariableLifetime lifetime) : VariableSymbol(childKind, name, loc, lifetime) {}
+                  VariableLifetime lifetime) :
+        VariableSymbol(childKind, name, loc, lifetime) {}
 };
 
 /// Represents an iterator variable created for array manipulation methods.

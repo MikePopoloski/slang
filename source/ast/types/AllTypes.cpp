@@ -124,7 +124,8 @@ const ErrorType ErrorType::Instance;
 
 IntegralType::IntegralType(SymbolKind kind, std::string_view name, SourceLocation loc,
                            bitwidth_t bitWidth_, bool isSigned_, bool isFourState_) :
-    Type(kind, name, loc), bitWidth(bitWidth_), isSigned(isSigned_), isFourState(isFourState_) {
+    Type(kind, name, loc),
+    bitWidth(bitWidth_), isSigned(isSigned_), isFourState(isFourState_) {
 }
 
 bool IntegralType::isKind(SymbolKind kind) {
@@ -693,8 +694,9 @@ void PackedArrayType::serializeTo(ASTSerializer& serializer) const {
 FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range,
                                                        uint64_t selectableWidth,
                                                        uint64_t bitstreamWidth) :
-    Type(SymbolKind::FixedSizeUnpackedArrayType, "", SourceLocation()), elementType(elementType),
-    range(range), selectableWidth(selectableWidth), bitstreamWidth(bitstreamWidth) {
+    Type(SymbolKind::FixedSizeUnpackedArrayType, "", SourceLocation()),
+    elementType(elementType), range(range), selectableWidth(selectableWidth),
+    bitstreamWidth(bitstreamWidth) {
 }
 
 const Type& FixedSizeUnpackedArrayType::fromDims(const Scope& scope, const Type& elementType,
@@ -888,8 +890,8 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
 
 UnpackedStructType::UnpackedStructType(Compilation& compilation, SourceLocation loc,
                                        const ASTContext& context) :
-    Type(SymbolKind::UnpackedStructType, "", loc), Scope(compilation, this),
-    systemId(compilation.getNextStructSystemId()) {
+    Type(SymbolKind::UnpackedStructType, "", loc),
+    Scope(compilation, this), systemId(compilation.getNextStructSystemId()) {
 
     // Struct types don't live as members of the parent scope (they're "owned" by
     // the declaration containing them) but we hook up the parent pointer so that
@@ -1069,8 +1071,8 @@ void PackedUnionType::serializeTo(ASTSerializer& serializer) const {
 
 UnpackedUnionType::UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
                                      const ASTContext& context) :
-    Type(SymbolKind::UnpackedUnionType, "", loc), Scope(compilation, this),
-    systemId(compilation.getNextUnionSystemId()), isTagged(isTagged) {
+    Type(SymbolKind::UnpackedUnionType, "", loc),
+    Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged) {
 
     // Union types don't live as members of the parent scope (they're "owned" by
     // the declaration containing them) but we hook up the parent pointer so that

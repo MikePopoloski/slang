@@ -58,9 +58,10 @@ bool isEqual(std::shared_ptr<slang::syntax::SyntaxTree> tree, std::string name_t
         out << "\nnew code:\n";
         out << new_code << "\n";
         if (test_passed) {
-          out << "Test result: PASSED" << '\n';
-        } else {
-          out << "Test result: FAILED" << '\n';
+            out << "Test result: PASSED" << '\n';
+        }
+        else {
+            out << "Test result: FAILED" << '\n';
         }
         out.close();
     }
@@ -71,7 +72,7 @@ bool isEqual(std::shared_ptr<slang::syntax::SyntaxTree> tree, std::string name_t
 bool isEqual(const std::string& original_code, const std::string& name_test = "test") {
     // calculate ast original code
     auto tree = slang::syntax::SyntaxTree::fromText(original_code);
-    return isEqual(tree, name_test );
+    return isEqual(tree, name_test);
 }
 
 TEST_CASE("InstanceSymbol printer") {
@@ -104,7 +105,7 @@ module automatic m1 import p::*; #(int i = 1)
     output [1:0] b;
 endmodule
 )";
-    CHECK(isEqual(code,"import"));
+    CHECK(isEqual(code, "import"));
 };
 
 TEST_CASE("BlockStatement printer") {
@@ -133,7 +134,7 @@ endpackage
     CHECK(isEqual(code));
 }
 
-TEST_CASE("all.sv 16-20"){
+TEST_CASE("all.sv 16-20") {
     const std::string code = R"(
 module m2 #(parameter i = 1, localparam j = i)
     (input int a[], (* bar = "asdf" *) output wire b = 1, ref c,
@@ -346,7 +347,7 @@ endprimitive
     CHECK(isEqual(code, "sv193_200"));
 }
 
-//ast is the same but the generated source code is o low quality
+// ast is the same but the generated source code is o low quality
 TEST_CASE("all.sv 202") {
     const std::string code = R"("
 module m3;
@@ -424,7 +425,7 @@ TEST_CASE("all.sv 250_266") {
 
 )";
     CHECK(isEqual(code, "250_266"));
-    }
+}
 TEST_CASE("all.sv 309_314") {
     const std::string code = R"(
 module m5;
@@ -435,7 +436,6 @@ endmodule
 )";
     CHECK(isEqual(code, "309_314"));
 }
-
 
 TEST_CASE("all.sv 316_400") {
     const std::string code = R"(
@@ -493,7 +493,6 @@ endmodule
 )";
     CHECK(isEqual(code, "316_4"));
 }
-
 
 TEST_CASE("all.sv 426_end") {
     const std::string code = R"(

@@ -7,6 +7,18 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <algorithm>
+#include <cctype>
+#include <concepts>
+#include <iostream>
+#include <list>
+#include <map>
+#include <set>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
@@ -14,26 +26,14 @@
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/PortSymbols.h"
-#include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
+#include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/ast/types/Type.h"
+#include "slang/ast/types/TypePrinter.h"
 #include "slang/util/LanguageVersion.h"
 #include "slang/util/Util.h"
-#include "slang/ast/types/TypePrinter.h"
-
-#include <cctype>
-#include <iostream>
-#include <list>
-#include <utility>
-#include <algorithm>
-#include <map>
-#include <set>
-#include <string>
-#include <string_view>
-#include <span>
-#include <concepts>
 
 namespace slang::ast {
 
@@ -59,7 +59,8 @@ public:
     // wait_statement ::= wait fork;
     void handle(const WaitForkStatement& t);
 
-    // wait_statement ::= wait_order ( hierarchical_identifier { , hierarchical_identifier } ) action_block
+    // wait_statement ::= wait_order ( hierarchical_identifier { , hierarchical_identifier } )
+    // action_block
     void handle(const WaitOrderStatement& t);
 
     void handle(const InvalidAssertionExpr& t);
@@ -393,7 +394,8 @@ public:
 
     void handle(const CheckerInstanceSymbol& t);
 
-    // checker_declaration  { { attribute_instance } checker_or_generate_item } these values get inserted in CheckerSymbol
+    // checker_declaration  { { attribute_instance } checker_or_generate_item } these values get
+    // inserted in CheckerSymbol
     void handle(const CheckerInstanceBodySymbol& t);
 
     // clocking_declaration ::= [ default ] clocking [ clocking_identifier ] clocking_event ;{
@@ -436,10 +438,10 @@ public:
     // cross_body ::= { { cross_body_item ; } }
     void handle(const CoverCrossBodySymbol& t);
 
-    //severity_system_task ::= $fatal [ ( finish_number [, list_of_arguments ] ) ] ;
-    //                      | $error [ ( [ list_of_arguments ] ) ] ;
-    //                      | $warning [ ( [ list_of_arguments ] ) ] ;
-    //                      | $info [ ( [ list_of_arguments ] ) ] ;
+    // severity_system_task ::= $fatal [ ( finish_number [, list_of_arguments ] ) ] ;
+    //                       | $error [ ( [ list_of_arguments ] ) ] ;
+    //                       | $warning [ ( [ list_of_arguments ] ) ] ;
+    //                       | $info [ ( [ list_of_arguments ] ) ] ;
     void handle(const ElabSystemTaskSymbol& t);
 
     void visitTransList(std::span<const CoverageBinSymbol::TransRangeList> set);
@@ -580,7 +582,8 @@ private:
             // solves the indentation in new lines
             std::string depth_string = std::string(indentation_level * indentation_multiplier, ' ');
             (*writeBuffer).append(depth_string);
-        } else if (add_spacer && (*writeBuffer) != "") {
+        }
+        else if (add_spacer && (*writeBuffer) != "") {
             // buffer == "" is added to ensure the first char of the program does not have a space
             // infront of it
             (*writeBuffer).append(" ");
@@ -629,7 +632,6 @@ private:
             write(";");
         }
     }
-
 
     void write(NetType::NetKind kind) {
         switch (kind) {
@@ -935,7 +937,7 @@ private:
             case (BinaryAssertionOperator::Throughout):
                 write("throughout");
                 break;
-             case (BinaryAssertionOperator::Until):
+            case (BinaryAssertionOperator::Until):
                 write("until");
                 break;
             case (BinaryAssertionOperator::UntilWith):
@@ -991,13 +993,13 @@ private:
         }
     }
 
-
     void writeName(const Symbol& t, bool add_spacer = true) {
         write(getRealName(t, currSymbol), add_spacer);
     }
 
     // attempt to get the real hierachical name of an object ex:e.a instead of $root.m.e.a
-    // It does this by trying to find the scope in which both the caller and the actual item are visible
+    // It does this by trying to find the scope in which both the caller and the actual item are
+    // visible
     // TODO still seems to fail when getting the "begin" blockSymbol name in a
     // PatternCaseStatement
     std::string getRealName(const Symbol& item, const Symbol* caller) {
@@ -1034,11 +1036,14 @@ private:
             }
         }
 
-        // incase item / caller is a class element is check if it needs extra identification ex:super
-       if (item.getParentScope() && (*caller).getParentScope()) {
-            std::pair<const ClassType*, bool> itemClassPair = Lookup::getContainingClass(*item.getParentScope());
-            //check if the caller is a member of the same class
-            std::pair<const ClassType*, bool> callerClassPair = Lookup::getContainingClass((*(*caller).getParentScope()));
+        // incase item / caller is a class element is check if it needs extra identification
+        // ex:super
+        if (item.getParentScope() && (*caller).getParentScope()) {
+            std::pair<const ClassType*, bool> itemClassPair = Lookup::getContainingClass(
+                *item.getParentScope());
+            // check if the caller is a member of the same class
+            std::pair<const ClassType*, bool> callerClassPair = Lookup::getContainingClass(
+                (*(*caller).getParentScope()));
 
             if (itemClassPair.first && callerClassPair.first) {
                 // if they are the same class there is no problem
@@ -1048,14 +1053,14 @@ private:
 
                 if (callerClassPair.first->getBaseClass() == itemClassPair.first) {
                     return "super." + std::string(item.name);
-                } else {
+                }
+                else {
                     return std::string(itemClassPair.first->name) + "::" + std::string(item.name);
                 }
             }
         }
         return std::string(item.name);
     }
-
 
     std::string lowerFirstLetter(const std::string_view string) {
         if (string == "") {
@@ -1073,13 +1078,11 @@ private:
         }
         std::string new_string;
         std::transform(string.begin(), string.end(), std::back_inserter(new_string),
-                       [](unsigned char c) {
-                         return std::tolower(c);
-                       });
+                       [](unsigned char c) { return std::tolower(c); });
         return new_string;
     }
 
-    std::string getTypeStr(const Type& t){
+    std::string getTypeStr(const Type& t) {
         TypePrintingOptions options;
         options.elideScopeNames = true;
         options.skipScopedTypeNames = true;
@@ -1087,7 +1090,7 @@ private:
         printer.options = options;
         printer.append(t);
 
-        return  printer.toString();
+        return printer.toString();
     }
 };
 

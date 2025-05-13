@@ -139,7 +139,8 @@ VariableSymbol::VariableSymbol(std::string_view name, SourceLocation loc,
 
 VariableSymbol::VariableSymbol(SymbolKind childKind, std::string_view name, SourceLocation loc,
                                VariableLifetime lifetime) :
-    ValueSymbol(childKind, name, loc), lifetime(lifetime) {
+    ValueSymbol(childKind, name, loc),
+    lifetime(lifetime) {
     if (lifetime == VariableLifetime::Automatic)
         getDeclaredType()->addFlags(DeclaredTypeFlags::AutomaticInitializer);
 }
@@ -279,7 +280,8 @@ void VariableSymbol::serializeTo(ASTSerializer& serializer) const {
 
 FormalArgumentSymbol::FormalArgumentSymbol(std::string_view name, SourceLocation loc,
                                            ArgumentDirection direction, VariableLifetime lifetime) :
-    VariableSymbol(SymbolKind::FormalArgument, name, loc, lifetime), direction(direction) {
+    VariableSymbol(SymbolKind::FormalArgument, name, loc, lifetime),
+    direction(direction) {
 }
 
 void FormalArgumentSymbol::fromSyntax(const Scope& scope, const PortDeclarationSyntax& syntax,
@@ -583,8 +585,8 @@ PatternVarSymbol::PatternVarSymbol(std::string_view name, SourceLocation loc, co
 ClockVarSymbol::ClockVarSymbol(std::string_view name, SourceLocation loc,
                                ArgumentDirection direction, ClockingSkew inputSkew,
                                ClockingSkew outputSkew) :
-    VariableSymbol(SymbolKind::ClockVar, name, loc, VariableLifetime::Static), direction(direction),
-    inputSkew(inputSkew), outputSkew(outputSkew) {
+    VariableSymbol(SymbolKind::ClockVar, name, loc, VariableLifetime::Static),
+    direction(direction), inputSkew(inputSkew), outputSkew(outputSkew) {
 }
 
 void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& syntax,

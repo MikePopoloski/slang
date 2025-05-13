@@ -39,9 +39,11 @@ void AstPrinter::handle(const PatternCaseStatement& t) {
         // workaround since I don't know if the extra Statement Block is
         // intended
         if (item.stmt->kind == slang::ast::StatementKind::Block) {
-          const auto innerStatement = reinterpret_cast<const slang::ast::BlockStatement*>(item.stmt.get());
-          innerStatement->body.visit(*this);
-        } else {
+            const auto innerStatement = reinterpret_cast<const slang::ast::BlockStatement*>(
+                item.stmt.get());
+            innerStatement->body.visit(*this);
+        }
+        else {
             item.stmt->visit(*this);
         }
 

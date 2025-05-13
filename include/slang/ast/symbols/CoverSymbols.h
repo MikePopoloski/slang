@@ -450,8 +450,8 @@ public:
 
     BinSelectWithFilterExpr(const BinsSelectExpr& expr, const Expression& filter,
                             const Expression* matchesExpr) :
-        BinsSelectExpr(BinsSelectExprKind::WithFilter), expr(expr), filter(filter),
-        matchesExpr(matchesExpr) {}
+        BinsSelectExpr(BinsSelectExprKind::WithFilter),
+        expr(expr), filter(filter), matchesExpr(matchesExpr) {}
 
     static BinsSelectExpr& fromSyntax(const syntax::BinSelectWithFilterExprSyntax& syntax,
                                       const ASTContext& context);

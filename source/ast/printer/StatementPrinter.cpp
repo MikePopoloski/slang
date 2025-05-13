@@ -245,8 +245,6 @@ void AstPrinter::handle(const CaseStatement& t) {
     write("endcase \n");
 }
 
-
-
 void AstPrinter::handle(const BlockStatement& t) {
     // foreach creates a Blockstatement automaticly which causes a duplicate block statement
     // when trying to print the ast ( the same happens with RandSequence )
@@ -297,10 +295,11 @@ void AstPrinter::handle(const BlockStatement& t) {
     }
 }
 
-//immediate_assertion_statement        ::= simple_immediate_assertion_statement | deferred_immediate_assertion_statement
-//simple_immediate_assertion_statement ::= simple_immediate_assert_statement
-//simple_immediate_assert_statement    ::= assert ( expression ) action_block
-//action_block                         ::= statement_or_null | [ statement ] else statement_or_null
+// immediate_assertion_statement        ::= simple_immediate_assertion_statement |
+// deferred_immediate_assertion_statement simple_immediate_assertion_statement ::=
+// simple_immediate_assert_statement simple_immediate_assert_statement    ::= assert ( expression )
+// action_block action_block                         ::= statement_or_null | [ statement ] else
+// statement_or_null
 void AstPrinter::handle(const ImmediateAssertionStatement& t) {
     write(t.assertionKind);
     if (t.isDeferred) {
@@ -343,7 +342,8 @@ void AstPrinter::handle(const ConcurrentAssertionStatement& t) {
     }
     write("\n");
 }
-// randsequence_statement ::= randsequence ( [ production_identifier ] ) production { production } endsequence
+// randsequence_statement ::= randsequence ( [ production_identifier ] ) production { production }
+// endsequence
 void AstPrinter::handle(const RandSequenceStatement& t) {
     write("randsequence(");
     write(t.firstProduction->name);
