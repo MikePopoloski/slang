@@ -615,7 +615,7 @@ TEST_CASE("Unrollable for loop drivers") {
 )";
 
     AnalysisOptions options;
-    options.maxLoopAnalyisSteps = 8192;
+    options.maxLoopAnalysisSteps = 8192;
 
     Compilation compilation;
     AnalysisManager analysisManager(options);
@@ -642,14 +642,13 @@ module m;
 endmodule
 )";
 
-    CompilationOptions options;
-    options.flags |= CompilationFlags::StrictDriverChecking;
+    AnalysisOptions options;
+    options.maxLoopAnalysisSteps = 0;
 
-    Compilation compilation(options);
-    AnalysisManager analysisManager;
+    Compilation compilation;
+    AnalysisManager analysisManager(options);
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
-    CHECK_DIAGS_EMPTY;
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }

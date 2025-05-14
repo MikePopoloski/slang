@@ -26,27 +26,27 @@ ConstantValue FlowAnalysisBase::tryEvalBool(const Expression& expr) const {
     return expr.eval(evalContext);
 }
 
-bool FlowAnalysisBase::tryGetLoopIterValues(const ForLoopStatement& stmt,
-                                            SmallVector<ConstantValue>& values,
-                                            SmallVector<ConstantValue*>& localPtrs) {
-    if (stmt.loopVars.empty() || !stmt.stopExpr || stmt.steps.empty())
-        return false;
+FlowAnalysisBase::WillExecute FlowAnalysisBase::tryGetLoopIterValues(
+    const ForLoopStatement& stmt, SmallVector<ConstantValue>& values,
+    SmallVector<ConstantValue*>& localPtrs) {
 
-    auto handleFail = [&] {
+    if (stmt.loopVars.empty() || !stmt.stopExpr || stmt.steps.empty())
+        return WillExecute::Maybe;
+
+    auto cleanupLocals = ScopeGuard([&] {
         values.clear();
         for (auto var : stmt.loopVars)
             evalContext.deleteLocal(var);
-        return false;
-    };
+    });
 
     for (auto var : stmt.loopVars) {
         auto init = var->getInitializer();
         if (!init)
-            return handleFail();
+            return WillExecute::Maybe;
 
         auto cv = init->eval(evalContext);
         if (!cv)
-            return handleFail();
+            return WillExecute::Maybe;
 
         localPtrs.push_back(evalContext.createLocal(var, std::move(cv)));
     }
@@ -55,36 +55,34 @@ bool FlowAnalysisBase::tryGetLoopIterValues(const ForLoopStatement& stmt,
     // so that nested loops count more heavily against our limit.
     const uint32_t increment = std::max(forLoopSteps, 1u);
 
-    bool bodyWillExecute = false;
+    WillExecute willExec = WillExecute::No;
     while (true) {
         auto cv = stmt.stopExpr->eval(evalContext);
-        if (!cv) {
-            handleFail();
-            return bodyWillExecute;
-        }
+        if (!cv)
+            return WillExecute::Maybe;
 
         if (!cv.isTrue())
             break;
 
-        bodyWillExecute = true;
+        willExec = WillExecute::Yes;
+
         for (auto local : localPtrs)
             values.emplace_back(*local);
 
         for (auto step : stmt.steps) {
-            if (!step->eval(evalContext)) {
-                handleFail();
-                return bodyWillExecute;
-            }
+            if (!step->eval(evalContext))
+                return WillExecute::Yes;
 
             forLoopSteps += increment;
-            if (forLoopSteps > options.maxLoopAnalyisSteps) {
-                handleFail();
-                return bodyWillExecute;
-            }
+            if (forLoopSteps > options.maxLoopAnalysisSteps)
+                return WillExecute::Yes;
         }
     }
 
-    return bodyWillExecute;
+    // The only path through the function that doesn't clean up locals
+    // is when we found a valid false stop expression in the loop above.
+    cleanupLocals.release();
+    return willExec;
 }
 
 bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {

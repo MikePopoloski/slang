@@ -91,14 +91,8 @@ void VariableDeclStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
                                            const ExpressionStatementSyntax& syntax,
                                            const ASTContext& context, StatementContext& stmtCtx) {
-    bitmask<ASTFlags> extraFlags = ASTFlags::AssignmentAllowed | ASTFlags::TopLevelStatement;
-    if (stmtCtx.flags.has(StatementFlags::InForLoop) &&
-        BinaryExpressionSyntax::isKind(syntax.expr->kind) &&
-        !compilation.hasFlag(CompilationFlags::StrictDriverChecking)) {
-        extraFlags |= ASTFlags::NotADriver;
-    }
-
-    auto& expr = Expression::bind(*syntax.expr, context, extraFlags);
+    auto& expr = Expression::bind(*syntax.expr, context,
+                                  ASTFlags::AssignmentAllowed | ASTFlags::TopLevelStatement);
     auto result = compilation.emplace<ExpressionStatement>(expr, syntax.sourceRange());
     if (expr.bad())
         return badStmt(compilation, result);

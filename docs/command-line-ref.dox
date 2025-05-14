@@ -422,6 +422,16 @@ is, in general, NP-complete, so there is a limit to prevent exponential explosio
 analysis time. In practice case statements written by humans will rarely, if ever,
 exhibit this kind of behavior.
 
+`--max-loop-analysis-steps <steps>`
+
+The maximum number of steps to take while trying to unroll for loops during data flow analysis.
+The default is 65535.
+
+This setting controls @ref loop-unroll behavior. When the limit is hit, it is assumed that the
+loop (or loops when nested) cannot be unrolled and are analyzed in one pass instead.
+Setting the limit to zero will prevent loop unrolling at all, which better matches the LRM's
+rules about assigning to lvalues with loop indices used to select subsets of a variable.
+
 @section compat-option Compatibility
 
 `--compat vcs`
@@ -501,10 +511,6 @@ module m(input a, output b);
     assign b = a;
 endmodule
 @endcode
-
-`--strict-driver-checking`
-
-Perform strict driver checking, which currently means disabling procedural 'for' @ref loop-unroll
 
 `--cmd-ignore <vendor_cmd>,<N>`
 

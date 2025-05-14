@@ -193,9 +193,6 @@ void Driver::addStandardArgs() {
     addCompFlag(CompilationFlags::AllowMergingAnsiPorts, "--allow-merging-ansi-ports",
                 "Allow merging ANSI port declarations with nets and variables declared in the "
                 "instance body");
-    addCompFlag(CompilationFlags::StrictDriverChecking, "--strict-driver-checking",
-                "Perform strict driver checking, which currently means disabling "
-                "procedural 'for' loop unrolling");
     addCompFlag(CompilationFlags::LintMode, "--lint-only",
                 "Only perform linting of code, don't try to elaborate a full hierarchy");
     addCompFlag(CompilationFlags::DisableInstanceCaching, "--disable-instance-caching",
@@ -372,6 +369,9 @@ void Driver::addStandardArgs() {
 
     cmdLine.add("--max-case-analysis-steps", options.maxCaseAnalysisSteps,
                 "Maximum number of steps that can occur during case analysis before giving up",
+                "<steps>");
+    cmdLine.add("--max-loop-analysis-steps", options.maxLoopAnalysisSteps,
+                "Maximum number of steps that can occur during loop analysis before giving up",
                 "<steps>");
 }
 
@@ -974,6 +974,8 @@ void Driver::runAnalysis(ast::Compilation& compilation) {
         ao.flags |= AnalysisFlags::CheckUnused;
     if (options.maxCaseAnalysisSteps)
         ao.maxCaseAnalysisSteps = *options.maxCaseAnalysisSteps;
+    if (options.maxLoopAnalysisSteps)
+        ao.maxLoopAnalysisSteps = *options.maxLoopAnalysisSteps;
 
     for (auto& [flag, value] : options.analysisFlags) {
         if (value == true)

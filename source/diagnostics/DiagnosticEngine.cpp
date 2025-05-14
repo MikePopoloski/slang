@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <fmt/args.h>
 
-#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/DiagArgFormatter.h"
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/MetaDiags.h"
@@ -260,12 +259,8 @@ bool DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
     // Notes are ignored if location is "NoLocation" since they frequently make no
     // sense without location information.
     for (const Diagnostic& note : diagnostic.notes) {
-        // At some point we should figure out how to not hardcode these special cases
-        // that allow notes to be issued without a location.
-        if (note.location != SourceLocation::NoLocation || note.code == diag::NoteFromHere2 ||
-            note.code == diag::NoteUdpCoverage) {
+        if (note.location != SourceLocation::NoLocation || note.code.showNoteWithNoLocation())
             issue(note);
-        }
     }
 
     return true;

@@ -412,7 +412,7 @@ TEST_CASE("Driver setting a bunch of compilation options") {
         args += " --max-hierarchy-depth=10 --max-generate-steps=1  --max-constexpr-depth=1";
         args += " --max-constexpr-steps=2 --constexpr-backtrace-limit=4 --max-instance-array=5";
         args += " --ignore-unknown-modules --relax-enum-conversions --allow-hierarchical-const";
-        args += " --allow-dup-initial-drivers --strict-driver-checking --lint-only";
+        args += " --allow-dup-initial-drivers --lint-only";
         args += " --color-diagnostics=false";
         args += " --timescale=10ns/10ps";
 

@@ -709,15 +709,14 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
     // forked processes are effectively not in that loop (and statements like
     // continue and break do not apply to the outer loop).
     auto guard = ScopeGuard([&stmtCtx, savedFlags = stmtCtx.flags] {
-        const auto savableFlags = StatementFlags::InLoop | StatementFlags::InForLoop |
-                                  StatementFlags::InForkJoin;
+        const auto savableFlags = StatementFlags::InLoop | StatementFlags::InForkJoin;
         stmtCtx.flags &= ~savableFlags;
         stmtCtx.flags |= savedFlags & savableFlags;
     });
 
     if (blockKind != StatementBlockKind::Sequential) {
         stmtCtx.flags |= StatementFlags::InForkJoin;
-        stmtCtx.flags &= ~(StatementFlags::InLoop | StatementFlags::InForLoop);
+        stmtCtx.flags &= ~StatementFlags::InLoop;
     }
 
     bool anyBad = false;

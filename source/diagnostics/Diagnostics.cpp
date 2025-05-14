@@ -7,9 +7,21 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/Diagnostics.h"
 
+#include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang {
+
+bool DiagCode::showNoteWithNoLocation() const {
+    return *this == diag::NoteFromHere2 || *this == diag::NoteUdpCoverage;
+}
+
+bool DiagCode::coalesceWithDifferingArgs() const {
+    return *this == diag::MultipleAlwaysAssigns || *this == diag::MultipleContAssigns ||
+           *this == diag::MultipleUDNTDrivers || *this == diag::MultipleUWireDrivers ||
+           *this == diag::MixedVarAssigns;
+}
 
 Diagnostic::Diagnostic() noexcept : location(SourceLocation::NoLocation) {
 }

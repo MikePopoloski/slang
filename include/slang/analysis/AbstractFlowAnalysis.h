@@ -41,8 +41,10 @@ protected:
 
     ConstantValue tryEvalBool(const Expression& expr) const;
 
-    bool tryGetLoopIterValues(const ForLoopStatement& stmt, SmallVector<ConstantValue>& values,
-                              SmallVector<ConstantValue*>& localPtrs);
+    enum class WillExecute { Yes, No, Maybe };
+    WillExecute tryGetLoopIterValues(const ForLoopStatement& stmt,
+                                     SmallVector<ConstantValue>& values,
+                                     SmallVector<ConstantValue*>& localPtrs);
 
     bool isFullyCovered(const CaseStatement& stmt) const;
 
@@ -410,7 +412,7 @@ protected:
         SmallVector<ConstantValue> iterValues;
         SmallVector<ConstantValue*> localPtrs;
         const bool isOuterLoop = forLoopSteps == 0;
-        bool bodyWillExecute = false;
+        auto bodyWillExecute = WillExecute::Maybe;
         TState bodyState, exitState;
         if (stmt.stopExpr) {
             auto cv = visitCondition(*stmt.stopExpr);
@@ -436,6 +438,9 @@ protected:
         setState(std::move(bodyState));
 
         if (iterValues.empty()) {
+            if (bodyWillExecute == WillExecute::No)
+                setUnreachable();
+
             visit(stmt.body);
             for (auto step : stmt.steps)
                 visit(*step);
@@ -461,7 +466,7 @@ protected:
         if (isOuterLoop)
             forLoopSteps = 0;
 
-        if (bodyWillExecute)
+        if (bodyWillExecute == WillExecute::Yes)
             (DERIVED).meetState(exitState, state);
 
         loopTail(std::move(exitState), std::move(oldBreakStates));

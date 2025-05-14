@@ -48,7 +48,7 @@ struct SLANG_EXPORT AnalysisOptions {
     uint32_t maxCaseAnalysisSteps = 65535;
 
     /// The maximum number of loop analysis steps to perform before giving up.
-    uint32_t maxLoopAnalyisSteps = 65535;
+    uint32_t maxLoopAnalysisSteps = 65535;
 };
 
 } // namespace slang::analysis
