@@ -263,6 +263,9 @@ public:
         /// The maximum number of steps to take when analyzing a case statement.
         std::optional<uint32_t> maxCaseAnalysisSteps;
 
+        /// The maximum number of steps to take when analyzing a loop statement.
+        std::optional<uint32_t> maxLoopAnalysisSteps;
+
         /// @}
 
         /// Returns true if the lintMode option is provided.

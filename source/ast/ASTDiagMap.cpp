@@ -37,9 +37,10 @@ Diagnostics ASTDiagMap::coalesce(const SourceManager* sourceManager) {
         const Symbol* inst = nullptr;
         size_t count = 0;
         bool differingArgs = false;
+        const bool checkDifferentArgs = !std::get<0>(key).coalesceWithDifferingArgs();
 
         for (auto& diag : diagList) {
-            if (found && *found != diag) {
+            if (found && checkDifferentArgs && *found != diag) {
                 differingArgs = true;
                 break;
             }
@@ -107,7 +108,7 @@ Diagnostics ASTDiagMap::coalesce(const SourceManager* sourceManager) {
 
             for (++it; it != diagList.end(); ++it) {
                 Diagnostic d = *it;
-                if (d != results.back()) {
+                if (checkDifferentArgs && d != results.back()) {
                     if (differingArgs)
                         d.coalesceCount = 1;
                     results.emplace_back(std::move(d));

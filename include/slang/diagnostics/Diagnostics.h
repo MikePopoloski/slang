@@ -82,6 +82,15 @@ public:
     /// Gets the raw numeric code of this DiagCode, unique within its subsystem.
     constexpr uint16_t getCode() const { return code; }
 
+    /// Returns true if this code is a note that is allowed to be shown with no location.
+    ///
+    /// @note Most notes make no sense without a location so by default they are ignored.
+    bool showNoteWithNoLocation() const;
+
+    /// Returns true if diagnostics with this code can be coalesced even if they have
+    /// different arguments.
+    bool coalesceWithDifferingArgs() const;
+
     /// @brief Checks whether the DiagCode is valid.
     ///
     /// Any DiagCode with a subsystem of DiagSubsystem::Invalid will return false,
