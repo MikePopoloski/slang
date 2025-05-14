@@ -92,38 +92,34 @@ enum class SLANG_EXPORT CompilationFlags {
     /// scripting / programmatic modes more convenient.
     AllowTopLevelIfacePorts = 1 << 3,
 
-    /// Perform strict checking of variable drivers, which currently
-    /// means not taking into account procedural for loop unrolling.
-    StrictDriverChecking = 1 << 4,
-
     /// Compile in "linting" mode where we suppress errors that could
     /// be caused by not having an elaborated design.
-    LintMode = 1 << 5,
+    LintMode = 1 << 4,
 
     /// Don't issue an error when encountering an instantiation
     /// for an unknown definition.
-    IgnoreUnknownModules = 1 << 6,
+    IgnoreUnknownModules = 1 << 5,
 
     /// Allow strings to implicitly convert to integers.
-    RelaxStringConversions = 1 << 7,
+    RelaxStringConversions = 1 << 6,
 
     /// Allow implicit call expressions (lacking parentheses) to be recursive function calls.
-    AllowRecursiveImplicitCall = 1 << 8,
+    AllowRecursiveImplicitCall = 1 << 7,
 
     /// Allow module parameter assignments to elide the parentheses.
-    AllowBareValParamAssignment = 1 << 9,
+    AllowBareValParamAssignment = 1 << 8,
 
     /// Allow self-determined streaming concatenation expressions; normally these
     /// can only be used in specific assignment-like contexts.
-    AllowSelfDeterminedStreamConcat = 1 << 10,
+    AllowSelfDeterminedStreamConcat = 1 << 9,
 
     /// Allow merging ANSI port declarations with nets and variables
     /// declared in the module body.
-    AllowMergingAnsiPorts = 1 << 11,
+    AllowMergingAnsiPorts = 1 << 10,
 
     /// Disable the use of instance caching, which normally allows skipping
     /// duplicate instance bodies to save time when elaborating.
-    DisableInstanceCaching = 1 << 12,
+    DisableInstanceCaching = 1 << 11,
 };
 SLANG_BITMASK(CompilationFlags, DisableInstanceCaching)
 

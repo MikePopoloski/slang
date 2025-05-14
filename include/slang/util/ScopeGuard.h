@@ -30,6 +30,8 @@ public:
             func();
     }
 
+    void release() noexcept { valid = false; }
+
 private:
     F func;
     bool valid = true;
