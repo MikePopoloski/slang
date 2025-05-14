@@ -13,7 +13,6 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/diagnostics/AnalysisDiags.h"
-#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/util/TypeTraits.h"
 
 namespace slang::analysis {

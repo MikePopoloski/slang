@@ -51,7 +51,6 @@ struct ConfigRule;
 struct ResolvedConfig;
 
 using DriverIntervalMap = IntervalMap<uint64_t, const ValueDriver*>;
-using UnrollIntervalMap = IntervalMap<uint64_t, std::monostate>;
 using DriverBitRange = std::pair<uint64_t, uint64_t>;
 
 enum class IntegralFlags : uint8_t;
@@ -744,11 +743,6 @@ public:
     /// Gets the driver map allocator.
     DriverIntervalMap::allocator_type& getDriverMapAllocator() { return driverMapAllocator; }
 
-    /// Gets the unroll interval map allocator.
-    UnrollIntervalMap::allocator_type& getUnrollIntervalMapAllocator() {
-        return unrollIntervalMapAllocator;
-    }
-
     /// Creates an empty ImplicitTypeSyntax object.
     const syntax::ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
 
@@ -828,7 +822,6 @@ private:
     TypedBumpAllocator<PointerMap> pointerMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
     DriverIntervalMap::allocator_type driverMapAllocator;
-    UnrollIntervalMap::allocator_type unrollIntervalMapAllocator;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
     // reg. Two of the entries are not valid and will be nullptr (!fourstate & reg).

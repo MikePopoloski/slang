@@ -39,8 +39,7 @@ namespace slang::ast {
 
 Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
     options(options.getOrDefault<CompilationOptions>()), driverMapAllocator(*this),
-    unrollIntervalMapAllocator(*this), tempDiag({}, {}), netAliasAllocator(*this),
-    defaultLibPtr(defaultLib) {
+    tempDiag({}, {}), netAliasAllocator(*this), defaultLibPtr(defaultLib) {
 
     // Construct all built-in types.
     auto& bi = slang::ast::builtins::Builtins::Instance;

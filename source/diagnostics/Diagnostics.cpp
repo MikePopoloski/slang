@@ -7,8 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/Diagnostics.h"
 
+#include "slang/diagnostics/AnalysisDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
-#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang {
