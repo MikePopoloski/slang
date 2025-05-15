@@ -9,7 +9,6 @@
 
 #include "NonProceduralExprVisitor.h"
 
-#include "slang/analysis/LSPUtilities.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/diagnostics/AnalysisDiags.h"
@@ -86,7 +85,7 @@ struct AnalysisScopeVisitor {
         requires(IsAnyOf<T, ProceduralBlockSymbol, ContinuousAssignSymbol>)
     void visit(const T& symbol) {
         result.procedures.emplace_back(context, symbol, parentProcedure);
-        manager.addDriversFor(result.procedures.back());
+        manager.driverTracker.add(state.context, state.driverAlloc, result.procedures.back());
     }
 
     void visit(const SubroutineSymbol& symbol) {
