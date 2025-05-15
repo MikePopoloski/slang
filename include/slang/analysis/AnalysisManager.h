@@ -13,18 +13,14 @@
 
 #include "slang/analysis/AnalysisOptions.h"
 #include "slang/analysis/AnalyzedProcedure.h"
-#include "slang/analysis/ValueDriver.h"
+#include "slang/analysis/DriverTracker.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/ConcurrentMap.h"
-#include "slang/util/IntervalMap.h"
 
 namespace slang::ast {
 
 class Compilation;
-class HierarchicalReference;
-class InstanceBodySymbol;
-class InstanceSymbol;
 class Scope;
 class SubroutineSymbol;
 class Symbol;
@@ -142,6 +138,13 @@ public:
     ///       before it can be analyzed.
     AnalyzedDesign analyze(const ast::Compilation& compilation);
 
+    /// Returns all of the known drivers for the given symbol.
+    std::vector<const ast::ValueDriver*> getDrivers(const ast::ValueSymbol& symbol) const;
+
+    /// Collects and returns all issued analysis diagnostics.
+    /// If @a sourceManager is provided it will be used to sort the diagnostics.
+    Diagnostics getDiagnostics(const SourceManager* sourceManager);
+
     /// Analyzes the given scope, in blocking fashion.
     ///
     /// @note The result is not stored in the manager and so
@@ -160,65 +163,31 @@ public:
     void addAnalyzedSubroutine(const ast::SubroutineSymbol& symbol,
                                std::unique_ptr<AnalyzedProcedure> procedure);
 
-    /// Returns all of the known drivers for the given symbol.
-    std::vector<const ast::ValueDriver*> getDrivers(const ast::ValueSymbol& symbol) const;
-
-    /// Collects and returns all issued analysis diagnostics.
-    /// If @a sourceManager is provided it will be used to sort the diagnostics.
-    Diagnostics getDiagnostics(const SourceManager* sourceManager);
-
 private:
     friend struct AnalysisScopeVisitor;
-
-    using SymbolDriverMap = IntervalMap<uint64_t, const ast::ValueDriver*, 5>;
 
     // Per-thread state.
     struct WorkerState {
         AnalysisContext context;
         TypedBumpAllocator<AnalyzedScope> scopeAlloc;
-        SymbolDriverMap::allocator_type driverAlloc;
+        DriverTracker::SymbolDriverMap::allocator_type driverAlloc;
 
         WorkerState(AnalysisManager& manager) : context(manager), driverAlloc(context.alloc) {}
-    };
-
-    // State tracked per canonical instance.
-    struct InstanceState {
-        struct IfacePortDriver {
-            not_null<const ast::HierarchicalReference*> ref;
-            not_null<const ast::ValueDriver*> driver;
-        };
-
-        // Drivers that are applied through interface ports.
-        std::vector<IfacePortDriver> ifacePortDrivers;
-
-        // A list of instances that refer to the canonical one.
-        std::vector<const ast::InstanceSymbol*> nonCanonicalInstances;
     };
 
     PendingAnalysis analyzeSymbol(const ast::Symbol& symbol);
     void analyzeScopeAsync(const ast::Scope& scope);
     void wait();
     WorkerState& getState();
-    void addDriversFor(const AnalyzedProcedure& procedure);
-    const ast::HierarchicalReference* addDriver(WorkerState& state, const ast::ValueSymbol& symbol,
-                                                SymbolDriverMap& driverMap,
-                                                const ast::ValueDriver& driver,
-                                                DriverBitRange bounds);
-    void noteInterfacePortDriver(WorkerState& state, const ast::HierarchicalReference& ref,
-                                 const ast::ValueDriver& driver);
-    void applyInstanceSideEffect(WorkerState& state,
-                                 const InstanceState::IfacePortDriver& ifacePortDriver,
-                                 const ast::InstanceSymbol& instance);
 
     const AnalysisOptions options;
     std::vector<WorkerState> workerStates;
 
     concurrent_map<const ast::Scope*, std::optional<const AnalyzedScope*>> analyzedScopes;
-    concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
     concurrent_map<const ast::SubroutineSymbol*, std::unique_ptr<AnalyzedProcedure>>
         analyzedSubroutines;
 
-    concurrent_map<const ast::InstanceBodySymbol*, InstanceState> instanceMap;
+    DriverTracker driverTracker;
 
     BS::thread_pool<> threadPool;
 
