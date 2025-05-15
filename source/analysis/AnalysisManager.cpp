@@ -566,21 +566,17 @@ void AnalysisManager::applyInstanceSideEffect(WorkerState& state,
 
     EvalContext evalCtx(ASTContext(*scope, LookupLocation::after(instance)));
 
+    // TODO: add test for invalid case of module instance in an interface
+    // that is connected and driven through a cached port.
+
     auto addNewDriver = [&](const ValueSymbol& valueSym, const ValueDriver& driver) {
         // TODO: can we reuse the bounds instead of calculating them again?
-
-        // Note: we specifically use the original target when computing bounds and
-        // calling addDriver because the new target may not have been visited during
-        // elaboration due to caching, and the target types are guaranteed to be the same.
-        SLANG_ASSERT(ref.target);
-        auto& originalTarget = ref.target->as<ValueSymbol>();
-        auto bounds = ValueDriver::getBounds(*driver.prefixExpression, evalCtx,
-                                             originalTarget.getType());
+        auto bounds = ValueDriver::getBounds(*driver.prefixExpression, evalCtx, valueSym.getType());
         if (!bounds)
             return;
 
         auto updateFunc = [&](auto& elem) {
-            auto ref = addDriver(state, originalTarget, elem.second, driver, *bounds);
+            auto ref = addDriver(state, *elem.first, elem.second, driver, *bounds);
             SLANG_ASSERT(!ref);
         };
         symbolDrivers.try_emplace_and_visit(&valueSym, updateFunc, updateFunc);
@@ -590,7 +586,6 @@ void AnalysisManager::applyInstanceSideEffect(WorkerState& state,
         // If we found a modport port we need to translate to the underlying
         // connection expression.
         if (target->kind == SymbolKind::ModportPort) {
-
             auto expr = target->as<ModportPortSymbol>().getConnectionExpr();
             SLANG_ASSERT(expr);
 

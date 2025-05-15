@@ -532,6 +532,21 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         }
     }
 
+    static bool isWithinInterface(const InstanceSymbol& symbol) {
+        auto scope = symbol.getParentScope();
+        while (scope) {
+            auto container = scope->getContainingInstance();
+            if (!container || !container->parentInstance)
+                return false;
+
+            if (container->parentInstance->isInterface())
+                return true;
+
+            scope = container->parentInstance->getParentScope();
+        }
+        return false;
+    }
+
     bool tryApplyFromCache(const InstanceSymbol& symbol) {
         if (disableCache)
             return false;
@@ -587,8 +602,18 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // in other instances to facilitate downstream consumers in not needing to recreate
         // this duplication detection logic again.
         symbol.setCanonicalBody(*entry.canonicalBody);
-        if (compilation.hasFlag(CompilationFlags::DisableInstanceCaching))
+
+        // If this is an interface or an instance instantiated within an interface
+        // we want to return false so that we continue visiting the body. This is
+        // because we're very likely going to be connected to a module port and need
+        // all types resolved before we freeze the compilation and move on to the
+        // multithreaded analysis phase.
+        auto defKind = symbol.getDefinition().definitionKind;
+        if (compilation.hasFlag(CompilationFlags::DisableInstanceCaching) ||
+            defKind == DefinitionKind::Interface ||
+            (defKind == DefinitionKind::Program && isWithinInterface(symbol))) {
             return false;
+        }
 
         return true;
     }
