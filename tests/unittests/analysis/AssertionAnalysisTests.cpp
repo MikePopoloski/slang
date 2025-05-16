@@ -1983,7 +1983,7 @@ endmodule
     CHECK(diags[0].code == diag::GFSVMatchItems);
 }
 
-TEST_CASE("Sequence methods and sample functions inside disable condition") {
+TEST_CASE("Sequence methods and sample functions inside disable condition -- negative tests") {
     auto& text = R"(
 module mod_sva_checks;
 
@@ -2018,4 +2018,38 @@ endmodule : mod_sva_checks
     CHECK(diags[0].code == diag::SampledValueFuncClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
     CHECK(diags[2].code == diag::SampledValueFuncClock);
+}
+
+TEST_CASE("Sequence methods and sample functions inside disable condition -- positive tests") {
+    auto& text = R"(
+module mod_sva_checks;
+
+   logic a, b, c, d;
+   logic clk_a, clk_d, clk_e1, clk_e2;
+   logic clk_c, clk_p;
+
+   clocking cb_prog @(posedge clk_p); endclocking
+
+   clocking cb_checker @(posedge clk_c); endclocking
+
+   default clocking cb @(posedge clk_d); endclocking
+
+   sequence e4;
+     @(posedge clk_a) $rose(b, @clk_a) ##1 c;
+   endsequence
+   a5_legal: assert property (
+      @(posedge clk_a) disable iff (e4.triggered) a |=> b);
+   a6_legal: assert property (
+     @(posedge clk_a) disable iff ($rose(a, @clk_a)) a |=> b);
+
+    assert property(e4.triggered);
+      assert property($rose(a));
+endmodule : mod_sva_checks
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 0);
 }
