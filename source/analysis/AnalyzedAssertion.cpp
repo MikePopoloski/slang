@@ -415,7 +415,7 @@ struct ClockVisitor {
         // Our current clock doesn't flow into the disable iff condition,
         // so check it separately for explicit clocking of sequence instances
         // and calls to sampled value functions.
-        NonProceduralExprVisitor visitor(context, parentSymbol);
+        NonProceduralExprVisitor visitor(context, parentSymbol, /*isDisableCondition =*/true);
         expr.condition.visit(visitor);
 
         return expr.expr.visit(*this, outerClock, flags);

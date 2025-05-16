@@ -21,8 +21,10 @@ struct NonProceduralExprVisitor {
     AnalysisContext& context;
     const Symbol& containingSymbol;
 
-    NonProceduralExprVisitor(AnalysisContext& context, const Symbol& containingSymbol) :
-        context(context), containingSymbol(containingSymbol) {}
+    NonProceduralExprVisitor(AnalysisContext& context, const Symbol& containingSymbol,
+                             bool isDisableCondition = false) :
+        context(context), containingSymbol(containingSymbol),
+        isDisableCondition(isDisableCondition) {}
 
     template<typename T>
     void visit(const T& expr) {
@@ -46,7 +48,12 @@ struct NonProceduralExprVisitor {
     }
 
 private:
+    bool isDisableCondition;
+
     const TimingControl* getDefaultClocking() const {
+        if (isDisableCondition)
+            return nullptr;
+
         auto scope = containingSymbol.getParentScope();
         SLANG_ASSERT(scope);
 
