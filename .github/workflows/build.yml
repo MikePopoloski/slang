@@ -38,13 +38,15 @@ jobs:
       with:
         fetch-depth: 0
     - name: Install dependencies
-      if: matrix.os == 'ubuntu-latest'
+      if: contains(matrix.os, 'ubuntu')
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
         sudo add-apt-repository "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main"
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+        wget -O - 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xc8ec952e2a0e1fbdc5090f6a2c277a0a352154e5' | sudo apt-key add -
+        sudo add-apt-repository 'deb https://ppa.launchpadcontent.net/ubuntu-toolchain-r/test/ubuntu plucky main'
         sudo apt-get update
-        sudo apt-get install -y g++-15 g++-11 clang-20 clang-tidy-20
+        sudo apt-get install --no-install-recommends --yes -V g++-15 g++-11 clang-20 clang-tidy-20
     - uses: ilammy/msvc-dev-cmd@v1
       if: matrix.os == 'windows-latest'
     - uses: maxim-lobanov/setup-xcode@v1
