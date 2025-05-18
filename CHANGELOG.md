@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * AST serialization no longer includes uninstantiated scopes in the output
 * `Driver::reportCompilation` method had part of its functionality split out into `Driver::reportDiagnostics` to allow for calling the new `Driver::runAnalysis` method in between. There is a new `Driver::runFullCompilation` method that wraps all of this for convenience if you don't care about controlling when each pass is done.
 * The `DEBUG` macro set for debug builds has been renamed to `SLANG_DEBUG`. `NDEBUG` is no longer used to conditionally control compilation, which should make it much less likely that using slang as a library will result in conflicting `NDEBUG` settings and causing ODR violations.
+* Warning control command line options have been reworked to make them less confusing. Settings for warning groups no longer override more explicit settings for a specific warning, and a bunch of confusing ordering dependence between `-Werror` and the other settings have been removed. This may cause changes to which warnings are enabled if your command line has a particularly constructed set of options. See the [documentation](https://sv-lang.com/command-line-ref.html#clr-warnings) for more information.
 
 ### New Features
 * slang can now optionally use [cpptrace](https://github.com/jeremy-rifkin/cpptrace) (using the `SLANG_USE_CPPTRACE` CMake option) for better backtraces in the event of internal assertions or exceptions thrown
@@ -36,6 +37,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added pyslang bindings for the SyntaxRewriter class (thanks to @parker-research)
 * -Wint-bool-conv now applies to expressions used in assertions, properties, and sequences
 * Added a port prefix rule to slang-tidy, similar to the existing port suffix rule (thanks to @corco)
+* The -G option can now set parameter values hierarchically, and the value can be an expression that uses package members such as enum values
 
 ### Fixes
 * The restriction on interface instances targeted by defparams not being allowed with virtual interfaces was also erroneously applied to interface port connections
@@ -57,6 +59,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Assignments are now correctly disallowed in timing controls
 * Cycle delays are now correctly disallowed in event trigger statements
 * The global future sampled value system functions are now correctly disallowed in assertions with sequence match items
+* slang-netlist: Fixed a crash when visiting certain variable declarations (thanks to @jameshanlon)
+* slang-netlist: Fixed handling of net and variables initializers (thanks to @jameshanlon)
 
 
 ## [v8.0] - 2025-02-05
