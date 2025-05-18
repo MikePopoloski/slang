@@ -267,13 +267,7 @@ void registerUtil(py::module_& m) {
         .def("setWarningsAsErrors", &DiagnosticEngine::setWarningsAsErrors, "set"_a)
         .def("setErrorsAsFatal", &DiagnosticEngine::setErrorsAsFatal, "set"_a)
         .def("setFatalsAsErrors", &DiagnosticEngine::setFatalsAsErrors, "set"_a)
-        .def("setSeverity",
-             py::overload_cast<DiagCode, DiagnosticSeverity>(&DiagnosticEngine::setSeverity),
-             "code"_a, "severity"_a)
-        .def("setSeverity",
-             py::overload_cast<const DiagGroup&, DiagnosticSeverity>(
-                 &DiagnosticEngine::setSeverity),
-             "group"_a, "severity"_a)
+        .def("setSeverity", &DiagnosticEngine::setSeverity, "code"_a, "severity"_a)
         .def("getSeverity", &DiagnosticEngine::getSeverity, "code"_a, "location"_a)
         .def("setMessage", &DiagnosticEngine::setMessage, "code"_a, "message"_a)
         .def("getMessage", &DiagnosticEngine::getMessage, "code"_a)
@@ -284,7 +278,6 @@ void registerUtil(py::module_& m) {
         .def("clearMappings",
              py::overload_cast<DiagnosticSeverity>(&DiagnosticEngine::clearMappings), "severity"_a)
         .def("formatMessage", &DiagnosticEngine::formatMessage, "diag"_a)
-        .def("setDefaultWarnings", &DiagnosticEngine::setDefaultWarnings)
         .def("setWarningOptions", &DiagnosticEngine::setWarningOptions, "options"_a)
         .def("setMappingsFromPragmas",
              py::overload_cast<>(&DiagnosticEngine::setMappingsFromPragmas))

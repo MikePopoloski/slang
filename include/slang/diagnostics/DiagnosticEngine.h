@@ -115,9 +115,6 @@ public:
     /// be used to define a new user-specified diagnostic.
     void setSeverity(DiagCode code, DiagnosticSeverity severity);
 
-    /// Sets the severity for all of diagnostics in the given group.
-    void setSeverity(const DiagGroup& group, DiagnosticSeverity severity);
-
     /// Gets the severity currently mapped for the given diagnostic, at the given
     /// location in the source code.
     DiagnosticSeverity getSeverity(DiagCode code, SourceLocation location) const;
@@ -194,9 +191,6 @@ public:
     /// Formats the given diagnostic using its arguments and the currently mapped
     /// message for its diagnostic code.
     std::string formatMessage(const Diagnostic& diag) const;
-
-    /// Initializes diagnostic warnings to the default group.
-    void setDefaultWarnings();
 
     /// Sets diagnostic options from the given option strings, typically from a list of -W
     /// arguments passed to a command line invocation. Any errors encountered while parsing

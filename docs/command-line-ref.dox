@@ -574,33 +574,56 @@ disable the limit. The default is 64.
 
 Don't issue an error for instantiations of unknown modules, interface, and programs.
 
+@section clr-warnings Warnings
+
+Warnings are diagnostic messages that report constructions that are not inherently illegal according to
+the LRM but that are risky or suggest there may have been a mistake in the source. slang has a minimal
+set of warnings enabled by default, which are selected such that running with the default set should
+rarely result in warnings on most codebases. It is recommended that additional warnings be enabled to
+discover potential errors in the design, with the `-Wextra` group being a good recommended starting set,
+but many more are available. See @ref warning-ref for a complete list of warnings that can be enabled.
+
+Some controllable warning names are actually a "group" of warnings that can be enabled or disabled
+all at once. See @ref WarningGroups for a list of such groups.
+
+Which warnings are enabled can be controlled with the options below. Except where noted, options
+later in the command line override those that came earlier if they target the same warning with
+conflicting settings. If an individual warning and a group that also contains that warning are
+given conflicting settings, the option controlling the individual warning will win out,
+regardless of what order it appears in the command line.
+
 `-Wfoo`
 
-Enable warning "foo". See @ref warning-ref for a complete list of warnings that can be enabled this way.
+Enable warning (or group of warnings) "foo".
 
 `-Wno-foo`
 
-Disable warning "foo".
+Disable warning (or group of warnings) "foo".
 
 `-Wnone`
 
-Disable all warnings.
+Disable all warnings. This does not apply to any warnings that have been explicitly controlled by
+another option, either before or after this one in the command line.
 
 `-Weverything`
 
-Enable all warnings.
+Enable all warnings. This does not apply to any warnings that have been explicitly controlled by
+another option, either before or after this one in the command line.
 
 `-Werror`
 
-Treat all warnings as errors.
+Treat all warnings as errors. This only applies to warnings that are enabled by some other option,
+either before or after this one in the command line.
 
 `-Werror=foo`
 
-Treat warning "foo" as an error.
+Treat warning (or group of warnings) "foo" as an error. This also enables the specified warning.
 
 `-Wno-error=foo`
 
-Turn warning "foo" into a warning even if `-Werror` is specified.
+Treat warning (or group of warnings) "foo" as a warning even if `-Werror` is specified, regardless
+of whether `-Werror` appears before or after in the command line. Note that unlike `-Werror=`, this
+will not turn on the warning if it hasn't been enabled with a separate option.
 
 @section clr-profiling Profiling
 

@@ -476,8 +476,6 @@ TEST_CASE("DiagnosticEngine::setWarningOptions") {
         "empty-stmt"s, "no-extra"s, "asdf"s};
 
     DiagnosticEngine engine(getSourceManager());
-    engine.setDefaultWarnings();
-
     Diagnostics diags = engine.setWarningOptions(options);
     CHECK(diags.size() == 1);
 
@@ -666,4 +664,64 @@ source:9:5: warning: extra ';' has no effect [-Wempty-member]
     ; // warn
     ^
 )");
+}
+
+TEST_CASE("Diagnostic warning option corner cases") {
+    auto createEngine = [](std::vector<std::string> options) {
+        DiagnosticEngine engine(getSourceManager());
+        auto diags = engine.setWarningOptions(options);
+        CHECK(diags.empty());
+        return engine;
+    };
+
+    {
+        auto engine = createEngine({"no-constant-conversion"s, "everything"s});
+        CHECK(engine.getSeverity(diag::ConstantConversion, {}) == DiagnosticSeverity::Ignored);
+    }
+    {
+        auto engine = createEngine({"constant-conversion"s, "none"s});
+        CHECK(engine.getSeverity(diag::ConstantConversion, {}) == DiagnosticSeverity::Warning);
+    }
+    {
+        auto engine = createEngine({"error=constant-conversion"s, "none"s});
+        CHECK(engine.getSeverity(diag::ConstantConversion, {}) == DiagnosticSeverity::Error);
+    }
+    {
+        auto engine = createEngine(
+            {"no-error=constant-conversion"s, "error"s, "constant-conversion"s});
+        CHECK(engine.getSeverity(diag::ConstantConversion, {}) == DiagnosticSeverity::Warning);
+    }
+    {
+        auto engine = createEngine({"error", "constant-conversion"s, "none"s});
+        CHECK(engine.getSeverity(diag::ConstantConversion, {}) == DiagnosticSeverity::Error);
+    }
+    {
+        auto engine = createEngine({"constant-conversion"s, "no-conversion"s});
+        CHECK(engine.getSeverity(diag::ConstantConversion, {}) == DiagnosticSeverity::Warning);
+    }
+    {
+        auto engine = createEngine({"error=constant-conversion"s, "no-error=conversion"s});
+        CHECK(engine.getSeverity(diag::ConstantConversion, {}) == DiagnosticSeverity::Error);
+    }
+    {
+        auto engine = createEngine({"none"s});
+        CHECK(engine.getSeverity(diag::RealLiteralUnderflow, {}) == DiagnosticSeverity::Ignored);
+    }
+    {
+        auto engine = createEngine({"error=constant-conversion"s, "constant-conversion"s});
+        CHECK(engine.getSeverity(diag::ConstantConversion, {}) == DiagnosticSeverity::Error);
+    }
+    {
+        auto engine = createEngine({"no-constant-conversion"s, "no-error=constant-conversion"s});
+        CHECK(engine.getSeverity(diag::ConstantConversion, {}) == DiagnosticSeverity::Ignored);
+    }
+    {
+        auto engine = createEngine(
+            {"error", "no-error=constant-conversion"s, "constant-conversion"s});
+        CHECK(engine.getSeverity(diag::ConstantConversion, {}) == DiagnosticSeverity::Warning);
+    }
+    {
+        auto engine = createEngine({"no-error=constant-conversion"s});
+        CHECK(engine.getSeverity(diag::ConstantConversion, {}) == DiagnosticSeverity::Ignored);
+    }
 }

@@ -584,7 +584,6 @@ bool Driver::processOptions() {
         tdc.showHierarchyInstance(ShowHierarchyPathOption::Never);
 
     diagEngine.setErrorLimit((int)options.errorLimit.value_or(20));
-    diagEngine.setDefaultWarnings();
 
     // Some tools violate the standard in various ways, but in order to allow
     // compatibility with these tools we change the respective errors into a
