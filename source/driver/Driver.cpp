@@ -12,6 +12,7 @@
 #include <fmt/color.h>
 
 #include "slang/analysis/AnalysisManager.h"
+#include "slang/ast/SemanticFacts.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -26,6 +27,7 @@
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/text/FormatBuffer.h"
 #include "slang/text/Json.h"
 #include "slang/util/Random.h"
 #include "slang/util/String.h"
@@ -286,9 +288,7 @@ void Driver::addStandardArgs() {
     cmdLine.add(
         "--libmap",
         [this](std::string_view value) {
-            Bag optionBag;
-            addParseOptions(optionBag);
-            sourceLoader.addLibraryMaps(value, {}, optionBag);
+            sourceLoader.addLibraryMaps(value, {}, createParseOptionBag());
             return "";
         },
         "One or more library map files to parse "
@@ -636,12 +636,9 @@ static std::string generateRandomAlphanumericString(TGenerator& gen, size_t len)
 
 bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool obfuscateIds,
                              bool useFixedObfuscationSeed) {
-    Bag optionBag;
-    addParseOptions(optionBag);
-
     BumpAllocator alloc;
     Diagnostics diagnostics;
-    Preprocessor preprocessor(sourceManager, alloc, diagnostics, optionBag);
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics, createOptionBag());
 
     auto buffers = sourceLoader.loadSources();
     for (auto it = buffers.rbegin(); it != buffers.rend(); it++)
@@ -738,11 +735,61 @@ void Driver::reportMacros() {
     }
 }
 
-bool Driver::parseAllSources() {
-    Bag optionBag;
-    addParseOptions(optionBag);
+std::vector<fs::path> Driver::getDepFiles(bool includesOnly) const {
 
-    syntaxTrees = sourceLoader.loadAndParseSources(optionBag);
+    flat_hash_set<fs::path> includeSet;
+    SLANG_ASSERT(!syntaxTrees.empty());
+
+    for (auto& tree : syntaxTrees) {
+        for (auto& inc : tree->getIncludeDirectives()) {
+            if (inc.isSystem || !inc.buffer)
+                continue;
+
+            includeSet.insert(sourceManager.getFullPath(inc.buffer->id));
+        }
+    }
+    std::vector<fs::path> includePaths(includeSet.begin(), includeSet.end());
+    if (includesOnly) {
+        return includePaths;
+    }
+
+    auto allPaths = sourceLoader.getFilePaths();
+    allPaths.reserve(allPaths.size() + includePaths.size());
+    allPaths.insert(allPaths.end(), includePaths.begin(), includePaths.end());
+    return allPaths;
+}
+
+void Driver::reportFilelist(std::string& outputName, std::vector<fs::path>&& files,
+                            std::optional<std::string>& depfileTarget) {
+    std::vector<std::string> paths;
+    paths.reserve(files.size());
+
+    for (const auto& file : files) {
+        auto relPath = std::filesystem::relative(file, std::filesystem::current_path());
+        paths.push_back(relPath.string());
+    }
+
+    std::sort(paths.begin(), paths.end());
+
+    FormatBuffer buffer;
+    if (depfileTarget) {
+        buffer.format("{}:", *depfileTarget);
+        for (const auto& file : paths) {
+            buffer.format(" {}", file);
+        }
+        buffer.format("\n");
+    }
+    else {
+        for (const auto& file : paths) {
+            buffer.format("{}\n", file);
+        }
+    }
+
+    OS::writeFile(outputName, std::string(buffer.data(), buffer.size()));
+}
+
+bool Driver::parseAllSources() {
+    syntaxTrees = sourceLoader.loadAndParseSources(createParseOptionBag());
     if (!reportLoadErrors())
         return false;
 
@@ -751,6 +798,12 @@ bool Driver::parseAllSources() {
         diagEngine.issue(diag);
 
     return true;
+}
+
+Bag Driver::createParseOptionBag() const {
+    Bag bag;
+    addParseOptions(bag);
+    return bag;
 }
 
 Bag Driver::createOptionBag() const {

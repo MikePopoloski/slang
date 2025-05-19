@@ -242,6 +242,56 @@ __slang__ 1
     CHECK(stdoutContains("__slang_minor__"));
 }
 
+TEST_CASE("Driver includes depfile") {
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto filePath = findTestDir() + "test.sv";
+    const char* argv[] = {"testfoo", filePath.c_str()};
+    CHECK(driver.parseCommandLine(2, argv));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    fs::current_path(findTestDir());
+    CHECK(driver.getDepFiles(true) == std::vector<fs::path>{
+                                          fs::current_path() / "file_defn.svh",
+                                      });
+}
+
+TEST_CASE("Driver all depfile") {
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto filePath = findTestDir() + "test.sv";
+    const char* argv[] = {"testfoo", filePath.c_str()};
+    CHECK(driver.parseCommandLine(2, argv));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    fs::current_path(findTestDir());
+    auto files = driver.getDepFiles();
+    std::sort(files.begin(), files.end());
+    CHECK(files == std::vector<fs::path>{
+                       fs::current_path() / "file_defn.svh",
+                       fs::current_path() / "test.sv",
+                   });
+}
+
+TEST_CASE("Driver module depfile") {
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto filePath = findTestDir() + "test.sv";
+    const char* argv[] = {"testfoo", filePath.c_str()};
+    CHECK(driver.parseCommandLine(2, argv));
+    CHECK(driver.processOptions());
+    fs::current_path(findTestDir());
+    CHECK(driver.sourceLoader.getFilePaths() == std::vector<fs::path>{
+                                                    fs::current_path() / "test.sv",
+                                                });
+}
+
 TEST_CASE("Driver single-unit parsing") {
     Driver driver;
     driver.addStandardArgs();

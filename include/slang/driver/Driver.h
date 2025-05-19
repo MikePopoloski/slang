@@ -331,6 +331,11 @@ public:
     /// Prints all macros from all loaded buffers to stdout.
     void reportMacros();
 
+    std::vector<std::filesystem::path> getDepFiles(bool includesOnly = false) const;
+
+    void reportFilelist(std::string& outputName, std::vector<std::filesystem::path>&& files,
+                        std::optional<std::string>& depfileTarget);
+
     /// @brief Parses all loaded buffers into syntax trees and appends the resulting trees
     /// to the @a syntaxTrees list.
     ///
@@ -339,6 +344,9 @@ public:
 
     /// Creates an options bag from all of the currently set options.
     [[nodiscard]] Bag createOptionBag() const;
+
+    /// Creates an options bag from all of the currently set parser options
+    [[nodiscard]] Bag createParseOptionBag() const;
 
     /// Creates a compilation object from all of the current loaded state of the driver.
     [[nodiscard]] std::unique_ptr<ast::Compilation> createCompilation();
