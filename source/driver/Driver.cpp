@@ -759,8 +759,8 @@ std::vector<fs::path> Driver::getDepFiles(bool includesOnly) const {
     return allPaths;
 }
 
-void Driver::reportFilelist(std::string& outputName, std::vector<fs::path>&& files,
-                            std::optional<std::string>& depfileTarget) {
+std::string Driver::writeDepfiles(const std::vector<fs::path>& files,
+                                  const std::optional<std::string>& depfileTarget) {
     std::vector<std::string> paths;
     paths.reserve(files.size());
 
@@ -785,7 +785,7 @@ void Driver::reportFilelist(std::string& outputName, std::vector<fs::path>&& fil
         }
     }
 
-    OS::writeFile(outputName, std::string(buffer.data(), buffer.size()));
+    return std::string(buffer.data(), buffer.size());
 }
 
 bool Driver::parseAllSources() {

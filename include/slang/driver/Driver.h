@@ -333,8 +333,8 @@ public:
 
     std::vector<std::filesystem::path> getDepFiles(bool includesOnly = false) const;
 
-    void reportFilelist(std::string& outputName, std::vector<std::filesystem::path>&& files,
-                        std::optional<std::string>& depfileTarget);
+    std::string writeDepfiles(const std::vector<std::filesystem::path>& files,
+                              const std::optional<std::string>& depfileTarget);
 
     /// @brief Parses all loaded buffers into syntax trees and appends the resulting trees
     /// to the @a syntaxTrees list.

@@ -193,14 +193,17 @@ int driverMain(int argc, TArgs argv) {
             }
 
             if (includeDepfile) {
-                driver.reportFilelist(*includeDepfile, driver.getDepFiles(true), depfileTarget);
+                OS::writeFile(*includeDepfile,
+                              driver.writeDepfiles(driver.getDepFiles(true), depfileTarget));
             }
             if (moduleDepfile) {
-                driver.reportFilelist(*moduleDepfile, driver.sourceLoader.getFilePaths(),
-                                      depfileTarget);
+                OS::writeFile(*moduleDepfile,
+                              driver.writeDepfiles(driver.sourceLoader.getFilePaths(),
+                                                   depfileTarget));
             }
             if (allDepfile) {
-                driver.reportFilelist(*allDepfile, driver.getDepFiles(), depfileTarget);
+                OS::writeFile(*allDepfile,
+                              driver.writeDepfiles(driver.getDepFiles(), depfileTarget));
             }
 
             if (onlyParse == true) {

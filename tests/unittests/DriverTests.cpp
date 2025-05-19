@@ -253,9 +253,13 @@ TEST_CASE("Driver includes depfile") {
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
     fs::current_path(findTestDir());
-    CHECK(driver.getDepFiles(true) == std::vector<fs::path>{
-                                          fs::current_path() / "file_defn.svh",
-                                      });
+    auto depfiles = driver.getDepFiles(true);
+    CHECK(depfiles == std::vector<fs::path>{
+                          fs::current_path() / "file_defn.svh",
+                      });
+
+    CHECK(driver.writeDepfiles(depfiles, {"target"}) == "target: file_defn.svh\n");
+    CHECK(driver.writeDepfiles(depfiles, std::nullopt) == "file_defn.svh\n");
 }
 
 TEST_CASE("Driver all depfile") {
@@ -275,6 +279,9 @@ TEST_CASE("Driver all depfile") {
                        fs::current_path() / "file_defn.svh",
                        fs::current_path() / "test.sv",
                    });
+    CHECK(driver.writeDepfiles(driver.getDepFiles(), {"target"}) ==
+          "target: file_defn.svh test.sv\n");
+    CHECK(driver.writeDepfiles(driver.getDepFiles(), std::nullopt) == "file_defn.svh\ntest.sv\n");
 }
 
 TEST_CASE("Driver module depfile") {
@@ -290,6 +297,9 @@ TEST_CASE("Driver module depfile") {
     CHECK(driver.sourceLoader.getFilePaths() == std::vector<fs::path>{
                                                     fs::current_path() / "test.sv",
                                                 });
+    CHECK(driver.writeDepfiles(driver.sourceLoader.getFilePaths(), {"target"}) ==
+          "target: test.sv\n");
+    CHECK(driver.writeDepfiles(driver.sourceLoader.getFilePaths(), std::nullopt) == "test.sv\n");
 }
 
 TEST_CASE("Driver single-unit parsing") {
