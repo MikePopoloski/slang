@@ -94,6 +94,11 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
         NEEDS_SKIP_SYMBOL(symbol)
         if (symbol.drivers().empty())
             return;
+            
+        // Skip compiler-generated automatic variables (like loop iteration variables)
+        if (symbol.lifetime == VariableLifetime::Automatic && 
+            symbol.flags.has(VariableFlags::CompilerGenerated))
+            return;
 
         auto firstDriver = *symbol.drivers().begin();
         if (firstDriver && firstDriver->source == DriverSource::AlwaysFF) {
