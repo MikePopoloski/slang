@@ -16,6 +16,11 @@
 
 namespace slang::analysis {
 
+template<typename T>
+concept IsSelectExpr = IsAnyOf<T, ast::ElementSelectExpression, ast::RangeSelectExpression,
+                               ast::MemberAccessExpression, ast::HierarchicalValueExpression,
+                               ast::NamedValueExpression>;
+
 /// A helper class that finds the longest static prefix of expressions.
 template<typename TOwner>
 struct LSPVisitor {
@@ -105,9 +110,19 @@ public:
     static void stringifyLSP(const ast::Expression& expr, ast::EvalContext& evalContext,
                              FormatBuffer& buffer);
 
+    /// Visits the longest static prefix expressions for all of the operands
+    /// in the given expression using the provided callback function.
     template<typename TCallback>
-    static void visitLSP(const ast::Expression& longestStaticPrefix, bool includeRoot,
-                         TCallback&& callback) {
+    static void visitLSPs(const ast::Expression& expr, ast::EvalContext& evalContext,
+                          TCallback&& func, const ast::Expression* initialLSP = nullptr) {
+        LSPHelper<TCallback> lspHelper(evalContext, std::forward<TCallback>(func));
+        lspHelper.visitor.currentLSP = initialLSP;
+        expr.visit(lspHelper);
+    }
+
+    template<typename TCallback>
+    static void visitComponents(const ast::Expression& longestStaticPrefix, bool includeRoot,
+                                TCallback&& callback) {
         using ExpressionKind = ast::ExpressionKind;
 
         auto expr = &longestStaticPrefix;
@@ -150,6 +165,50 @@ public:
 
 private:
     LSPUtilities() = delete;
+
+    template<typename F>
+    struct LSPHelper {
+        LSPVisitor<LSPHelper> visitor;
+        ast::EvalContext& evalCtx;
+        F&& func;
+
+        LSPHelper(ast::EvalContext& evalCtx, F&& func) :
+            visitor(*this), evalCtx(evalCtx), func(std::forward<F>(func)) {}
+
+        ast::EvalContext& getEvalContext() const { return evalCtx; }
+        bool saveLValueFlag() { return false; }
+
+        void noteReference(const ast::ValueSymbol& symbol, const ast::Expression& lsp) {
+            func(symbol, lsp);
+        }
+
+        template<typename T>
+            requires(std::is_base_of_v<ast::Expression, T> && !IsSelectExpr<T>)
+        void visit(const T& expr) {
+            if constexpr (std::is_same_v<T, ast::Expression>) {
+                // We don't have a concrete type, we need to dispatch.
+                expr.visit(*this);
+            }
+            else {
+                visitor.clear();
+
+                if constexpr (requires { expr.visitExprs(*this); }) {
+                    expr.visitExprs(*this);
+                }
+            }
+        }
+
+        template<typename T>
+            requires(IsSelectExpr<T>)
+        void visit(const T& expr) {
+            visitor.handle(expr);
+        }
+
+        void visit(const ast::Pattern&) {}
+        void visit(const ast::TimingControl&) {}
+        void visit(const ast::Constraint&) {}
+        void visit(const ast::AssertionExpr&) {}
+    };
 };
 
 } // namespace slang::analysis

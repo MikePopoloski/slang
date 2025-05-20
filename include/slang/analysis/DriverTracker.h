@@ -13,9 +13,12 @@
 
 namespace slang::ast {
 
+class EvalContext;
+class Expression;
 class HierarchicalReference;
 class InstanceBodySymbol;
 class InstanceSymbol;
+class Symbol;
 
 } // namespace slang::ast
 
@@ -38,6 +41,10 @@ public:
     /// additional drivers should be applied based on the canonical instance.
     void noteNonCanonicalInstance(AnalysisContext& context, DriverAlloc& driverAlloc,
                                   const ast::InstanceSymbol& instance);
+
+    /// Propagates drivers to modport ports down to the targets of the
+    /// modport port connections.
+    void propagateModportDrivers(AnalysisContext& context, DriverAlloc& driverAlloc);
 
     /// Returns all of the tracked drivers for the given symbol.
     std::vector<const ast::ValueDriver*> getDrivers(const ast::ValueSymbol& symbol) const;
@@ -68,9 +75,13 @@ private:
     void applyInstanceSideEffect(AnalysisContext& context, DriverAlloc& driverAlloc,
                                  const InstanceState::IfacePortDriver& ifacePortDriver,
                                  const ast::InstanceSymbol& instance);
+    void propagateModportDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
+                                const ast::Symbol& symbol, const ast::Expression& connectionExpr,
+                                const ast::ValueDriver& originalDriver);
 
     concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
     concurrent_map<const ast::InstanceBodySymbol*, InstanceState> instanceMap;
+    concurrent_map<const ast::ValueSymbol*, DriverList> modportPortDrivers;
 };
 
 } // namespace slang::analysis
