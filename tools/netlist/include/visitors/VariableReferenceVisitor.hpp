@@ -10,6 +10,7 @@
 #include "Netlist.h"
 
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/LSPUtilities.h"
 
 using namespace slang;
 
@@ -61,8 +62,8 @@ public:
             selectors.front()->getLongestStaticPrefixes(prefixes, evalCtx);
             SLANG_ASSERT(prefixes.size() == 1);
             auto [prefixSymbol, prefixExpr] = prefixes.back();
-            auto bounds = slang::ast::ValueDriver::getBounds(*prefixExpr, evalCtx,
-                                                             prefixSymbol->getType());
+            auto bounds = slang::ast::LSPUtilities::getBounds(*prefixExpr, evalCtx,
+                                                              prefixSymbol->getType());
             node.bounds = {static_cast<int32_t>(bounds->first),
                            static_cast<int32_t>(bounds->second)};
         }

@@ -71,7 +71,7 @@ add_library(
   analysis/ClockInference.cpp
   analysis/DataFlowAnalysis.cpp
   analysis/DriverTracker.cpp
-  analysis/LSPUtilities.cpp
+  analysis/ValueDriver.cpp
   diagnostics/DiagnosticClient.cpp
   diagnostics/DiagnosticEngine.cpp
   diagnostics/Diagnostics.cpp

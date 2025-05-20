@@ -14,24 +14,26 @@
 #include "slang/ast/types/Type.h"
 #include "slang/text/FormatBuffer.h"
 
-namespace slang::analysis {
+namespace slang::ast {
 
 template<typename T>
-concept IsSelectExpr = IsAnyOf<T, ast::ElementSelectExpression, ast::RangeSelectExpression,
-                               ast::MemberAccessExpression, ast::HierarchicalValueExpression,
-                               ast::NamedValueExpression>;
+concept IsSelectExpr =
+    IsAnyOf<T, ElementSelectExpression, RangeSelectExpression, MemberAccessExpression,
+            HierarchicalValueExpression, NamedValueExpression>;
+
+using DriverBitRange = std::pair<uint64_t, uint64_t>;
 
 /// A helper class that finds the longest static prefix of expressions.
 template<typename TOwner>
 struct LSPVisitor {
     TOwner& owner;
-    const ast::Expression* currentLSP = nullptr;
+    const Expression* currentLSP = nullptr;
 
     explicit LSPVisitor(TOwner& owner) : owner(owner) {}
 
     void clear() { currentLSP = nullptr; }
 
-    void handle(const ast::ElementSelectExpression& expr) {
+    void handle(const ElementSelectExpression& expr) {
         if (expr.isConstantSelect(owner.getEvalContext())) {
             if (!currentLSP)
                 currentLSP = &expr;
@@ -46,7 +48,7 @@ struct LSPVisitor {
         owner.visit(expr.selector());
     }
 
-    void handle(const ast::RangeSelectExpression& expr) {
+    void handle(const RangeSelectExpression& expr) {
         if (expr.isConstantSelect(owner.getEvalContext())) {
             if (!currentLSP)
                 currentLSP = &expr;
@@ -62,7 +64,7 @@ struct LSPVisitor {
         owner.visit(expr.right());
     }
 
-    void handle(const ast::MemberAccessExpression& expr) {
+    void handle(const MemberAccessExpression& expr) {
         // If this is a selection of a class or covergroup member,
         // the lsp depends only on the selected member and not on
         // the handle itself. Otherwise, the opposite is true.
@@ -72,8 +74,8 @@ struct LSPVisitor {
             if (!lsp)
                 lsp = &expr;
 
-            if (ast::VariableSymbol::isKind(expr.member.kind))
-                owner.noteReference(expr.member.as<ast::VariableSymbol>(), *lsp);
+            if (VariableSymbol::isKind(expr.member.kind))
+                owner.noteReference(expr.member.as<VariableSymbol>(), *lsp);
 
             // Make sure the value gets visited but not as an lvalue anymore.
             [[maybe_unused]] auto guard = owner.saveLValueFlag();
@@ -87,7 +89,7 @@ struct LSPVisitor {
         }
     }
 
-    void handle(const ast::HierarchicalValueExpression& expr) {
+    void handle(const HierarchicalValueExpression& expr) {
         auto lsp = std::exchange(currentLSP, nullptr);
         if (!lsp)
             lsp = &expr;
@@ -95,7 +97,7 @@ struct LSPVisitor {
         owner.noteReference(expr.symbol, *lsp);
     }
 
-    void handle(const ast::NamedValueExpression& expr) {
+    void handle(const NamedValueExpression& expr) {
         auto lsp = std::exchange(currentLSP, nullptr);
         if (!lsp)
             lsp = &expr;
@@ -107,23 +109,27 @@ struct LSPVisitor {
 /// A collection of utility methods for working with LSP expressions.
 class SLANG_EXPORT LSPUtilities {
 public:
-    static void stringifyLSP(const ast::Expression& expr, ast::EvalContext& evalContext,
+    static void stringifyLSP(const Expression& expr, EvalContext& evalContext,
                              FormatBuffer& buffer);
+
+    /// Computes bounds for a driver given its longest static prefix expression.
+    static std::optional<DriverBitRange> getBounds(const Expression& prefixExpression,
+                                                   EvalContext& evalContext, const Type& rootType);
 
     /// Visits the longest static prefix expressions for all of the operands
     /// in the given expression using the provided callback function.
     template<typename TCallback>
-    static void visitLSPs(const ast::Expression& expr, ast::EvalContext& evalContext,
-                          TCallback&& func, const ast::Expression* initialLSP = nullptr) {
+    static void visitLSPs(const Expression& expr, EvalContext& evalContext, TCallback&& func,
+                          const Expression* initialLSP = nullptr) {
         LSPHelper<TCallback> lspHelper(evalContext, std::forward<TCallback>(func));
         lspHelper.visitor.currentLSP = initialLSP;
         expr.visit(lspHelper);
     }
 
     template<typename TCallback>
-    static void visitComponents(const ast::Expression& longestStaticPrefix, bool includeRoot,
+    static void visitComponents(const Expression& longestStaticPrefix, bool includeRoot,
                                 TCallback&& callback) {
-        using ExpressionKind = ast::ExpressionKind;
+        using ExpressionKind = ExpressionKind;
 
         auto expr = &longestStaticPrefix;
         do {
@@ -136,19 +142,19 @@ public:
                     expr = nullptr;
                     break;
                 case ExpressionKind::Conversion:
-                    expr = &expr->as<ast::ConversionExpression>().operand();
+                    expr = &expr->as<ConversionExpression>().operand();
                     break;
                 case ExpressionKind::ElementSelect:
                     callback(*expr);
-                    expr = &expr->as<ast::ElementSelectExpression>().value();
+                    expr = &expr->as<ElementSelectExpression>().value();
                     break;
                 case ExpressionKind::RangeSelect:
                     callback(*expr);
-                    expr = &expr->as<ast::RangeSelectExpression>().value();
+                    expr = &expr->as<RangeSelectExpression>().value();
                     break;
                 case ExpressionKind::MemberAccess: {
-                    auto& access = expr->as<ast::MemberAccessExpression>();
-                    if (access.member.kind == ast::SymbolKind::Field) {
+                    auto& access = expr->as<MemberAccessExpression>();
+                    if (access.member.kind == SymbolKind::Field) {
                         callback(*expr);
                         expr = &access.value();
                     }
@@ -169,23 +175,21 @@ private:
     template<typename F>
     struct LSPHelper {
         LSPVisitor<LSPHelper> visitor;
-        ast::EvalContext& evalCtx;
+        EvalContext& evalCtx;
         F&& func;
 
-        LSPHelper(ast::EvalContext& evalCtx, F&& func) :
+        LSPHelper(EvalContext& evalCtx, F&& func) :
             visitor(*this), evalCtx(evalCtx), func(std::forward<F>(func)) {}
 
-        ast::EvalContext& getEvalContext() const { return evalCtx; }
+        EvalContext& getEvalContext() const { return evalCtx; }
         bool saveLValueFlag() { return false; }
 
-        void noteReference(const ast::ValueSymbol& symbol, const ast::Expression& lsp) {
-            func(symbol, lsp);
-        }
+        void noteReference(const ValueSymbol& symbol, const Expression& lsp) { func(symbol, lsp); }
 
         template<typename T>
-            requires(std::is_base_of_v<ast::Expression, T> && !IsSelectExpr<T>)
+            requires(std::is_base_of_v<Expression, T> && !IsSelectExpr<T>)
         void visit(const T& expr) {
-            if constexpr (std::is_same_v<T, ast::Expression>) {
+            if constexpr (std::is_same_v<T, Expression>) {
                 // We don't have a concrete type, we need to dispatch.
                 expr.visit(*this);
             }
@@ -204,11 +208,11 @@ private:
             visitor.handle(expr);
         }
 
-        void visit(const ast::Pattern&) {}
-        void visit(const ast::TimingControl&) {}
-        void visit(const ast::Constraint&) {}
-        void visit(const ast::AssertionExpr&) {}
+        void visit(const Pattern&) {}
+        void visit(const TimingControl&) {}
+        void visit(const Constraint&) {}
+        void visit(const AssertionExpr&) {}
     };
 };
 
-} // namespace slang::analysis
+} // namespace slang::ast

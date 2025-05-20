@@ -9,9 +9,9 @@
 
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/AnalyzedProcedure.h"
-#include "slang/analysis/LSPUtilities.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/ast/LSPUtilities.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 
 namespace slang::analysis {
@@ -118,7 +118,7 @@ void DriverTracker::propagateModportDriver(AnalysisContext& context, DriverAlloc
     LSPUtilities::visitLSPs(
         connectionExpr, evalCtx,
         [&](const ValueSymbol& symbol, const Expression& lsp) {
-            auto bounds = ValueDriver::getBounds(lsp, evalCtx, symbol.getType());
+            auto bounds = LSPUtilities::getBounds(lsp, evalCtx, symbol.getType());
             if (!bounds)
                 return;
 
@@ -485,8 +485,8 @@ void DriverTracker::applyInstanceSideEffect(AnalysisContext& context, DriverAllo
         // TODO: can we reuse the bounds instead of calculating them again?
         EvalContext evalCtx(instance);
         auto& valueSym = target->as<ValueSymbol>();
-        auto bounds = ValueDriver::getBounds(*driver->prefixExpression, evalCtx,
-                                             valueSym.getType());
+        auto bounds = LSPUtilities::getBounds(*driver->prefixExpression, evalCtx,
+                                              valueSym.getType());
         if (!bounds)
             return;
 
