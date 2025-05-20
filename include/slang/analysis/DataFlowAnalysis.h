@@ -17,11 +17,6 @@
 
 namespace slang::analysis {
 
-template<typename T>
-concept IsSelectExpr =
-    IsAnyOf<T, ElementSelectExpression, RangeSelectExpression, MemberAccessExpression,
-            HierarchicalValueExpression, NamedValueExpression>;
-
 using SymbolBitMap = IntervalMap<uint64_t, std::monostate, 3>;
 using SymbolLSPMap = IntervalMap<uint64_t, const Expression*, 5>;
 
@@ -82,11 +77,6 @@ public:
     /// longest static prefix expression) is referenced anywhere in
     /// the procedure, either as an lvalue or an rvalue.
     bool isReferenced(const ValueSymbol& symbol, const Expression& lsp) const;
-
-    /// Visits the longest static prefix expressions for all of the operands
-    /// in the given expression using the provided callback function.
-    template<typename F>
-    void visitLongestStaticPrefixes(const Expression& expr, F&& func) const;
 
     /// Gets the inferred clock for the procedure, if one exists.
     const TimingControl* inferClock(const AnalyzedProcedure* parentProcedure) const;
@@ -206,45 +196,6 @@ private:
     DataFlowState copyState(const DataFlowState& source);
     DataFlowState unreachableState() const;
     DataFlowState topState() const;
-
-    // **** LSPHelper class ****
-
-    // A helper for implementing the visitLongestStaticPrefixes method.
-    template<typename F>
-    struct LSPHelper {
-        LSPVisitor<LSPHelper> visitor;
-        EvalContext& evalCtx;
-        F&& func;
-
-        LSPHelper(EvalContext& evalCtx, F&& func) :
-            visitor(*this), evalCtx(evalCtx), func(std::forward<F>(func)) {}
-
-        EvalContext& getEvalContext() const { return evalCtx; }
-        bool saveLValueFlag() { return false; }
-
-        void noteReference(const ValueSymbol& symbol, const Expression& lsp) { func(symbol, lsp); }
-
-        template<typename T>
-            requires(std::is_base_of_v<Expression, T> && !IsSelectExpr<T>)
-        void visit(const T& expr) {
-            visitor.clear();
-
-            if constexpr (requires { expr.visitExprs(*this); }) {
-                expr.visitExprs(*this);
-            }
-        }
-
-        template<typename T>
-            requires(IsSelectExpr<T>)
-        void visit(const T& expr) {
-            visitor.handle(expr);
-        }
-
-        void visit(const Pattern&) {}
-        void visit(const TimingControl&) {}
-        void visit(const Constraint&) {}
-        void visit(const AssertionExpr&) {}
-    };
 };
 
 template<typename F>
@@ -285,12 +236,6 @@ void DataFlowAnalysis::visitLatches(F&& func) const {
             func(symbol, **lit);
         }
     }
-}
-
-template<typename F>
-void DataFlowAnalysis::visitLongestStaticPrefixes(const Expression& expr, F&& func) const {
-    LSPHelper<F> lspHelper(getEvalContext(), std::forward<F>(func));
-    expr.visit(lspHelper);
 }
 
 } // namespace slang::analysis

@@ -53,6 +53,10 @@ public:
     explicit EvalContext(const ASTContext& astCtx, bitmask<EvalFlags> flags = {}) :
         astCtx(astCtx), flags(flags) {}
 
+    /// Constructs a new EvalContext instance.
+    explicit EvalContext(const Symbol& symbol, bitmask<EvalFlags> flags = {}) :
+        astCtx(ASTContext(*symbol.getParentScope(), LookupLocation::after(symbol))), flags(flags) {}
+
     /// Gets the compilation associated with the context.
     Compilation& getCompilation() const { return astCtx.getCompilation(); }
 

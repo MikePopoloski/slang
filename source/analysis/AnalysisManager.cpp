@@ -87,12 +87,15 @@ AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
         result.topInstances.emplace_back(analyzeSymbol(*instance));
     wait();
 
+    // Finalize all drivers that are applied through modport ports.
+    auto& state = getState();
+    driverTracker.propagateModportDrivers(state.context, state.driverAlloc);
+
     // Report on unused definitions.
     if (hasFlag(AnalysisFlags::CheckUnused)) {
-        auto& context = getState().context;
         for (auto def : compilation.getUnreferencedDefinitions()) {
             if (!def->name.empty() && def->name != "_"sv && !hasUnusedAttrib(compilation, *def)) {
-                context.addDiag(*def, diag::UnusedDefinition, def->location)
+                state.context.addDiag(*def, diag::UnusedDefinition, def->location)
                     << def->getKindString();
             }
         }
