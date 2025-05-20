@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <unordered_set>
 
+#include "slang/analysis/AnalysisManager.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
 #include "slang/util/VersionInfo.h"
@@ -183,11 +184,13 @@ int main(int argc, char** argv) {
         return 1;
 
     std::unique_ptr<ast::Compilation> compilation;
+    std::unique_ptr<analysis::AnalysisManager> analysisManager;
     bool compilationOk;
     SLANG_TRY {
         compilationOk = driver.parseAllSources();
         compilation = driver.createCompilation();
         driver.reportCompilation(*compilation, true);
+        analysisManager = driver.runAnalysis(*compilation);
         compilationOk &= driver.reportDiagnostics(true);
     }
     SLANG_CATCH(const std::exception& e) {
@@ -220,7 +223,7 @@ int main(int argc, char** argv) {
         driver.diagEngine.setMessage(check->diagCode(), check->diagMessage());
         driver.diagEngine.setSeverity(check->diagCode(), check->diagSeverity());
 
-        auto checkOk = check->check(compilation->getRoot());
+        auto checkOk = check->check(compilation->getRoot(), *analysisManager);
         if (!checkOk) {
             retCode = 1;
 
