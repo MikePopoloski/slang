@@ -3,10 +3,11 @@
 
 #include "Test.h"
 #include "TidyFactory.h"
+#include "TidyTest.h"
 
 TEST_CASE("AlwaysFFAssignmentOutsideConditional: Assignment inside always_ff and outside if "
           "statement with reset") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("AlwaysFFAssignmentOutsideConditional", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -20,23 +21,12 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("AlwaysFFAssignmentOutsideConditional");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("AlwaysFFAssignmentOutsideConditional: All assignments inside either if or else "
           "statements inside the always_ff block") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("AlwaysFFAssignmentOutsideConditional", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -52,16 +42,5 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("AlwaysFFAssignmentOutsideConditional");
-    bool result = visitor->check(root);
     CHECK(result);
 }

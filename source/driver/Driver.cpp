@@ -962,7 +962,7 @@ void Driver::reportCompilation(Compilation& compilation, bool quiet) {
         diagEngine.issue(diag);
 }
 
-void Driver::runAnalysis(ast::Compilation& compilation) {
+std::unique_ptr<AnalysisManager> Driver::runAnalysis(ast::Compilation& compilation) {
     using namespace slang::analysis;
 
     compilation.getAllDiagnostics();
@@ -982,11 +982,13 @@ void Driver::runAnalysis(ast::Compilation& compilation) {
             ao.flags |= flag;
     }
 
-    AnalysisManager analysisManager(ao);
-    analysisManager.analyze(compilation);
+    auto analysisManager = std::make_unique<AnalysisManager>(ao);
+    analysisManager->analyze(compilation);
 
-    for (auto& diag : analysisManager.getDiagnostics(compilation.getSourceManager()))
+    for (auto& diag : analysisManager->getDiagnostics(compilation.getSourceManager()))
         diagEngine.issue(diag);
+
+    return analysisManager;
 }
 
 bool Driver::reportDiagnostics(bool quiet) {

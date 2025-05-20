@@ -37,7 +37,7 @@ class AlwaysCombBlockNamed : public TidyCheck {
 public:
     [[maybe_unused]] explicit AlwaysCombBlockNamed(TidyKind kind) : TidyCheck(kind) {}
 
-    bool check(const ast::RootSymbol& root) override {
+    bool check(const ast::RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);
         root.visit(visitor);
         return diagnostics.empty();

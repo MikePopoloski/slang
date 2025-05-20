@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "slang/analysis/AnalysisManager.h"
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"

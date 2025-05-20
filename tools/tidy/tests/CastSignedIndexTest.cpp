@@ -3,9 +3,10 @@
 
 #include "Test.h"
 #include "TidyFactory.h"
+#include "TidyTest.h"
 
 TEST_CASE("CastSignedIndex: Negative index") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("CastSignedIndex", R"(
 module top;
     logic a [4];
 
@@ -16,22 +17,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("CastSignedIndex");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("CastSignedIndex: Signed index") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("CastSignedIndex", R"(
 module top;
     logic a [4];
 
@@ -42,16 +32,5 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("CastSignedIndex");
-    bool result = visitor->check(root);
     CHECK(result);
 }

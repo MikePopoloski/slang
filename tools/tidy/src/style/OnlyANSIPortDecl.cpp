@@ -28,7 +28,7 @@ class OnlyANSIPortDecl : public TidyCheck {
 public:
     [[maybe_unused]] explicit OnlyANSIPortDecl(TidyKind kind) : TidyCheck(kind) {}
 
-    bool check(const ast::RootSymbol& root) override {
+    bool check(const ast::RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);
         root.visit(visitor);
         return diagnostics.empty();

@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: Michael Popoloski
-// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: MIT
 
 #include "Test.h"
 #include "TidyFactory.h"
+#include "TidyTest.h"
 
 TEST_CASE("GenerateNamed: Unnamed generate block") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("GenerateNamed", R"(
 module eq_n
 	#( parameter N =4)
 	(
@@ -24,22 +25,11 @@ module eq_n
 endmodule
 
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("GenerateNamed");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("GenerateNamed: Named generate block") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("GenerateNamed", R"(
 module eq_n
 	#( parameter N =4)
 	(
@@ -58,22 +48,11 @@ module eq_n
 endmodule
 
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("GenerateNamed");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("GenerateNamed: Unnamed simple generate block") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("GenerateNamed", R"(
 module eq_n
 	#( parameter N =4)
 	(
@@ -91,22 +70,11 @@ module eq_n
 endmodule
 
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("GenerateNamed");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("GenerateNamed: Unnamed for block") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("GenerateNamed", R"(
 module full_adder(
   input a, b, cin,
   output sum, cout
@@ -127,22 +95,11 @@ module ripple_carry_adder #(parameter SIZE = 4) (
   end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("GenerateNamed");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("GenerateNamed: Named for block") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("GenerateNamed", R"(
 module full_adder(
   input a, b, cin,
   output sum, cout
@@ -163,16 +120,5 @@ module ripple_carry_adder #(parameter SIZE = 4) (
   end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("GenerateNamed");
-    bool result = visitor->check(root);
     CHECK(result);
 }

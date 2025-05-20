@@ -19,6 +19,10 @@
 #include "slang/text/SourceManager.h"
 #include "slang/util/Util.h"
 
+namespace slang::analysis {
+class AnalysisManager;
+}
+
 class TidyCheck;
 
 class Registry {
@@ -99,7 +103,8 @@ public:
     virtual ~TidyCheck() = default;
 
     /// Returns true if the check didn't find any errors, false otherwise
-    [[nodiscard]] virtual bool check(const slang::ast::RootSymbol& root) = 0;
+    [[nodiscard]] virtual bool check(const slang::ast::RootSymbol& root,
+                                     const slang::analysis::AnalysisManager& analysisManager) = 0;
 
     virtual std::string name() const = 0;
     virtual std::string description() const = 0;

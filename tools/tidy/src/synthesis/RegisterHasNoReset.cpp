@@ -6,10 +6,12 @@
 #include "TidyFactory.h"
 #include "fmt/color.h"
 
+#include "slang/analysis/AnalysisManager.h"
 #include "slang/syntax/AllSyntax.h"
 
 using namespace slang;
 using namespace slang::ast;
+using namespace slang::analysis;
 
 namespace register_has_no_reset {
 struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
@@ -88,18 +90,23 @@ private:
 };
 
 struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
-    explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
+    const AnalysisManager& analysisManager;
+
+    MainVisitor(Diagnostics& diagnostics, const AnalysisManager& analysisManager) :
+        TidyVisitor(diagnostics), analysisManager(analysisManager) {}
 
     void handle(const VariableSymbol& symbol) {
         NEEDS_SKIP_SYMBOL(symbol)
-        if (symbol.drivers().empty())
+
+        auto drivers = analysisManager.getDrivers(symbol);
+        if (drivers.empty())
             return;
 
         // Skip variables with automatic lifetime
         if (symbol.lifetime == VariableLifetime::Automatic)
             return;
 
-        auto firstDriver = *symbol.drivers().begin();
+        auto firstDriver = drivers[0];
         if (firstDriver && firstDriver->source == DriverSource::AlwaysFF) {
             auto& configs = config.getCheckConfigs();
             AlwaysFFVisitor visitor(symbol.name, configs.resetName, configs.resetIsActiveHigh);
@@ -120,8 +127,8 @@ class RegisterHasNoReset : public TidyCheck {
 public:
     explicit RegisterHasNoReset(TidyKind kind) : TidyCheck(kind) {}
 
-    bool check(const RootSymbol& root) override {
-        MainVisitor visitor(diagnostics);
+    bool check(const RootSymbol& root, const AnalysisManager& analysisManager) override {
+        MainVisitor visitor(diagnostics, analysisManager);
         root.visit(visitor);
         return diagnostics.empty();
     }

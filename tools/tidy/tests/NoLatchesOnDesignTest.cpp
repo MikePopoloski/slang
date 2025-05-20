@@ -3,9 +3,10 @@
 
 #include "Test.h"
 #include "TidyFactory.h"
+#include "TidyTest.h"
 
 TEST_CASE("NoLatchesOnDesign: Design with latch") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoLatchesOnDesign", R"(
 module top (
     input logic a,
     output logic b
@@ -15,22 +16,11 @@ module top (
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoLatchesOnDesign");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("NoLatchesOnDesign: Design without latch") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoLatchesOnDesign", R"(
 module top (
     input logic a,
     output logic b
@@ -40,16 +30,5 @@ module top (
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoLatchesOnDesign");
-    bool result = visitor->check(root);
     CHECK(result);
 }

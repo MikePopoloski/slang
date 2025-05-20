@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: Michael Popoloski
-// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: MIT
 
 #include "Test.h"
 #include "TidyFactory.h"
+#include "TidyTest.h"
 
 TEST_CASE("NoLegacyGenerate: For loop inside generate block") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoLegacyGenerate", R"(
 module eq_n
 	#( parameter N =4)
 	(
@@ -21,22 +22,11 @@ module eq_n
 	endgenerate
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoLegacyGenerate");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("NoLegacyGenerate: For loop inside unnamed generate block") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoLegacyGenerate", R"(
 module eq_n
 	#( parameter N =4)
 	(
@@ -51,22 +41,11 @@ module eq_n
 	endgenerate
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoLegacyGenerate");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("NoLegacyGenerate: For loop, no generate block") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoLegacyGenerate", R"(
 module eq_n
 	#( parameter N =4)
 	(
@@ -78,22 +57,11 @@ module eq_n
         xnor gen_u ( tmp [ i ] , a [ i ] , b [ i ]) ;
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoLegacyGenerate");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("NoLegacyGenerate: For loop inside conditional block") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoLegacyGenerate", R"(
 module eq_n
 	#(
         parameter N = 4,
@@ -113,16 +81,5 @@ module eq_n
 endmodule
 
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoLegacyGenerate");
-    bool result = visitor->check(root);
     CHECK(result);
 }

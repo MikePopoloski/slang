@@ -5,6 +5,7 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
+#include "slang/analysis/AnalysisManager.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/ScriptSession.h"
 #include "slang/ast/SystemSubroutine.h"

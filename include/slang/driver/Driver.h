@@ -38,8 +38,11 @@ enum class CompilationFlags;
 } // namespace slang::ast
 
 namespace slang::analysis {
+
+class AnalysisManager;
 enum class AnalysisFlags;
-}
+
+} // namespace slang::analysis
 
 namespace slang::driver {
 
@@ -374,7 +377,7 @@ public:
     /// @brief Runs analysis on a compilation and reports the results.
     ///
     /// @note The compilation will be frozen after this call.
-    void runAnalysis(ast::Compilation& compilation);
+    std::unique_ptr<analysis::AnalysisManager> runAnalysis(ast::Compilation& compilation);
 
     /// @brief Reports all diagnostics to output.
     ///

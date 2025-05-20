@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: Michael Popoloski
-// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: MIT
 
 #include "Test.h"
 #include "TidyFactory.h"
+#include "TidyTest.h"
 
 TEST_CASE("RegisterHasNoReset: Register not assigned on reset") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("RegisterHasNoReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -21,22 +22,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("RegisterHasNoReset");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("RegisterHasNoReset: Register always assigned") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("RegisterHasNoReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -51,22 +41,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("RegisterHasNoReset");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("RegisterHasNoReset: Register always assigned outside if reset block") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("RegisterHasNoReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -83,22 +62,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("RegisterHasNoReset");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("RegisterHasNoReset: Array always assigned") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("RegisterHasNoReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -118,22 +86,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("RegisterHasNoReset");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("RegisterHasNoReset: Array not assigned on reset") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("RegisterHasNoReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -152,22 +109,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("RegisterHasNoReset");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("RegisterHasNoReset: Struct always assigned") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("RegisterHasNoReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -189,22 +135,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("RegisterHasNoReset");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("RegisterHasNoReset: Struct not assigned on reset") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("RegisterHasNoReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -223,22 +158,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("RegisterHasNoReset");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("RegisterHasNoReset: Struct not assigned on reset, reset signal inverted") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("RegisterHasNoReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -257,17 +181,6 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("RegisterHasNoReset");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 

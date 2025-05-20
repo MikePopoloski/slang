@@ -3,9 +3,10 @@
 
 #include "Test.h"
 #include "TidyFactory.h"
+#include "TidyTest.h"
 
 TEST_CASE("OnlyAssignedOnReset: Only assigned on reset") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("OnlyAssignedOnReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -21,22 +22,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("OnlyAssignedOnReset");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("OnlyAssignedOnReset: Register always assigned") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("OnlyAssignedOnReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -52,22 +42,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("OnlyAssignedOnReset");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("OnlyAssignedOnReset: Register always assigned outside if reset block") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("OnlyAssignedOnReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -84,22 +63,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("OnlyAssignedOnReset");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("OnlyAssignedOnReset: Array always assigned") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("OnlyAssignedOnReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -119,22 +87,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("OnlyAssignedOnReset");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("OnlyAssignedOnReset: Array only assigned on reset") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("OnlyAssignedOnReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -153,22 +110,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("OnlyAssignedOnReset");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("OnlyAssignedOnReset: Struct always assigned") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("OnlyAssignedOnReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -190,22 +136,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("OnlyAssignedOnReset");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("OnlyAssignedOnReset: Struct only assigned on reset") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("OnlyAssignedOnReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -226,22 +161,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("OnlyAssignedOnReset");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("OnlyAssignedOnReset: Struct only assigned on reset, reset signal inversed") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("OnlyAssignedOnReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -262,17 +186,6 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("OnlyAssignedOnReset");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
