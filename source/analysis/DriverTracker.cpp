@@ -10,11 +10,8 @@
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/AnalyzedProcedure.h"
 #include "slang/analysis/LSPUtilities.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
-#include "slang/ast/symbols/InstanceSymbols.h"
-#include "slang/ast/symbols/MemberSymbols.h"
-#include "slang/ast/symbols/PortSymbols.h"
-#include "slang/ast/types/NetType.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 
 namespace slang::analysis {
@@ -63,6 +60,86 @@ void DriverTracker::noteNonCanonicalInstance(AnalysisContext& context, DriverAll
         applyInstanceSideEffect(context, driverAlloc, ifacePortDriver, instance);
 }
 
+void DriverTracker::propagateModportDrivers(AnalysisContext& context, DriverAlloc& driverAlloc) {
+    // TODO: add test for modports that connect through another modport
+    while (true) {
+        concurrent_map<const ast::ValueSymbol*, DriverList> localCopy;
+        std::swap(modportPortDrivers, localCopy);
+        if (localCopy.empty())
+            break;
+
+        localCopy.cvisit_all([&](auto& item) {
+            if (auto expr = item.first->template as<ModportPortSymbol>().getConnectionExpr()) {
+                for (auto& [originalDriver, _] : item.second) {
+                    propagateModportDriver(context, driverAlloc, *item.first, *expr,
+                                           *originalDriver);
+                }
+            }
+        });
+    }
+}
+
+void DriverTracker::propagateModportDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
+                                           const Symbol& symbol, const Expression& connectionExpr,
+                                           const ValueDriver& originalDriver) {
+    // TODO: this is clunky, but we need to be able to glue the outer select
+    // expression to the inner connection expression. Probably the expression AST
+    // should have a way to do this generically.
+    //
+    // For now this works -- the const_casts are sus but we never mutate anything
+    // during analysis so it works out.
+    const Expression* initialLSP = nullptr;
+    switch (originalDriver.prefixExpression->kind) {
+        case ExpressionKind::ElementSelect: {
+            auto& es = originalDriver.prefixExpression->as<ElementSelectExpression>();
+            initialLSP = context.alloc.emplace<ElementSelectExpression>(
+                *es.type, const_cast<Expression&>(connectionExpr), es.selector(), es.sourceRange);
+            break;
+        }
+        case ExpressionKind::RangeSelect: {
+            auto& rs = originalDriver.prefixExpression->as<RangeSelectExpression>();
+            initialLSP = context.alloc.emplace<RangeSelectExpression>(
+                rs.getSelectionKind(), *rs.type, const_cast<Expression&>(connectionExpr), rs.left(),
+                rs.right(), rs.sourceRange);
+            break;
+        }
+        case ExpressionKind::MemberAccess: {
+            auto& ma = originalDriver.prefixExpression->as<MemberAccessExpression>();
+            initialLSP = context.alloc.emplace<MemberAccessExpression>(
+                *ma.type, const_cast<Expression&>(connectionExpr), ma.member, ma.sourceRange);
+            break;
+        }
+        default:
+            break;
+    }
+
+    EvalContext evalCtx(symbol);
+    SmallVector<std::pair<const HierarchicalReference*, const ValueDriver*>> ifacePortRefs;
+    LSPUtilities::visitLSPs(
+        connectionExpr, evalCtx,
+        [&](const ValueSymbol& symbol, const Expression& lsp) {
+            auto bounds = ValueDriver::getBounds(lsp, evalCtx, symbol.getType());
+            if (!bounds)
+                return;
+
+            auto driver = context.alloc.emplace<ValueDriver>(originalDriver.kind, lsp,
+                                                             *originalDriver.containingSymbol,
+                                                             originalDriver.flags);
+
+            auto updateFunc = [&](auto& elem) {
+                if (auto ref = addDriver(context, driverAlloc, *elem.first, elem.second, *driver,
+                                         *bounds)) {
+                    ifacePortRefs.emplace_back(ref, driver);
+                }
+            };
+            symbolDrivers.try_emplace_and_visit(&symbol, updateFunc, updateFunc);
+        },
+        initialLSP);
+
+    for (auto& [ref, driver] : ifacePortRefs)
+        noteInterfacePortDriver(context, driverAlloc, *ref, *driver);
+}
+
 std::vector<const ValueDriver*> DriverTracker::getDrivers(const ValueSymbol& symbol) const {
     std::vector<const ValueDriver*> drivers;
     symbolDrivers.cvisit(&symbol, [&drivers](auto& item) {
@@ -73,13 +150,9 @@ std::vector<const ValueDriver*> DriverTracker::getDrivers(const ValueSymbol& sym
 }
 
 static std::string getLSPName(const ValueSymbol& symbol, const ValueDriver& driver) {
-    auto scope = symbol.getParentScope();
-    SLANG_ASSERT(scope);
-
     FormatBuffer buf;
-    EvalContext evalContext(ASTContext(*scope, LookupLocation::after(symbol)));
+    EvalContext evalContext(symbol);
     LSPUtilities::stringifyLSP(*driver.prefixExpression, evalContext, buf);
-
     return buf.str();
 }
 
@@ -228,14 +301,21 @@ const HierarchicalReference* DriverTracker::addDriver(
     // is not captured in the port connections.
     const HierarchicalReference* result = nullptr;
     if (!driver.isFromSideEffect) {
-        LSPUtilities::visitLSP(*driver.prefixExpression, /* includeRoot */ true,
-                               [&](const Expression& expr) {
-                                   if (expr.kind == ExpressionKind::HierarchicalValue) {
-                                       auto& ref = expr.as<HierarchicalValueExpression>().ref;
-                                       if (ref.isViaIfacePort())
-                                           result = &ref;
-                                   }
-                               });
+        LSPUtilities::visitComponents(
+            *driver.prefixExpression, /* includeRoot */ true, [&](const Expression& expr) {
+                if (expr.kind == ExpressionKind::HierarchicalValue) {
+                    auto& ref = expr.as<HierarchicalValueExpression>().ref;
+                    if (ref.isViaIfacePort())
+                        result = &ref;
+                }
+            });
+    }
+
+    // Keep track of modport ports so we can revisit them at the end of analysis.
+    if (symbol.kind == SymbolKind::ModportPort) {
+        auto updater = [&](auto& item) { item.second.emplace_back(&driver, bounds); };
+        modportPortDrivers.try_emplace_and_visit(&symbol, updater, updater);
+        return result;
     }
 
     if (driverMap.empty()) {
@@ -394,58 +474,27 @@ void DriverTracker::noteInterfacePortDriver(AnalysisContext& context, DriverAllo
 void DriverTracker::applyInstanceSideEffect(AnalysisContext& context, DriverAlloc& driverAlloc,
                                             const InstanceState::IfacePortDriver& ifacePortDriver,
                                             const InstanceSymbol& instance) {
-    auto& ref = *ifacePortDriver.ref;
-    auto& alloc = context.alloc;
-    auto scope = instance.getParentScope();
-    SLANG_ASSERT(scope);
-
-    EvalContext evalCtx(ASTContext(*scope, LookupLocation::after(instance)));
-
     // TODO: add test for invalid case of module instance in an interface
     // that is connected and driven through a cached port.
+    auto& ref = *ifacePortDriver.ref;
+    if (auto target = ref.retargetIfacePort(instance)) {
+        auto driver = context.alloc.emplace<ValueDriver>(*ifacePortDriver.driver);
+        driver->containingSymbol = &instance;
+        driver->isFromSideEffect = true;
 
-    auto addNewDriver = [&](const ValueSymbol& valueSym, const ValueDriver& driver) {
         // TODO: can we reuse the bounds instead of calculating them again?
-        auto bounds = ValueDriver::getBounds(*driver.prefixExpression, evalCtx, valueSym.getType());
+        EvalContext evalCtx(instance);
+        auto& valueSym = target->as<ValueSymbol>();
+        auto bounds = ValueDriver::getBounds(*driver->prefixExpression, evalCtx,
+                                             valueSym.getType());
         if (!bounds)
             return;
 
         auto updateFunc = [&](auto& elem) {
-            auto ref = addDriver(context, driverAlloc, *elem.first, elem.second, driver, *bounds);
+            auto ref = addDriver(context, driverAlloc, *elem.first, elem.second, *driver, *bounds);
             SLANG_ASSERT(!ref);
         };
         symbolDrivers.try_emplace_and_visit(&valueSym, updateFunc, updateFunc);
-    };
-
-    if (auto target = ref.retargetIfacePort(instance)) {
-        // If we found a modport port we need to translate to the underlying
-        // connection expression.
-        if (target->kind == SymbolKind::ModportPort) {
-            auto expr = target->as<ModportPortSymbol>().getConnectionExpr();
-            SLANG_ASSERT(expr);
-
-            auto lsp = ifacePortDriver.driver->prefixExpression.get();
-            if (lsp == ref.expr)
-                lsp = nullptr;
-
-            // TODO: clean this up
-            SmallVector<std::pair<const ValueSymbol*, const Expression*>> prefixes;
-            expr->getLongestStaticPrefixes(prefixes, evalCtx, lsp);
-
-            for (auto& [value, prefix] : prefixes) {
-                auto driver = alloc.emplace<ValueDriver>(*ifacePortDriver.driver);
-                driver->prefixExpression = prefix;
-                driver->containingSymbol = &instance;
-                driver->isFromSideEffect = true;
-                addNewDriver(*value, *driver);
-            }
-        }
-        else {
-            auto driver = alloc.emplace<ValueDriver>(*ifacePortDriver.driver);
-            driver->containingSymbol = &instance;
-            driver->isFromSideEffect = true;
-            addNewDriver(target->as<ValueSymbol>(), *driver);
-        }
     }
 }
 

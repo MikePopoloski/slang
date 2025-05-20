@@ -365,11 +365,11 @@ const TimingControl* DataFlowAnalysis::inferClock(const AnalyzedProcedure* paren
             // This is a valid clock if every term in the expression is
             // unused elsewhere in the procedure.
             bool referenced = false;
-            visitLongestStaticPrefixes(timing.expr,
-                                       [&](const ValueSymbol& symbol, const Expression& lsp) {
-                                           if (isReferenced(symbol, lsp))
-                                               referenced = true;
-                                       });
+            LSPUtilities::visitLSPs(timing.expr, getEvalContext(),
+                                    [&](const ValueSymbol& symbol, const Expression& lsp) {
+                                        if (isReferenced(symbol, lsp))
+                                            referenced = true;
+                                    });
             if (!referenced) {
                 if (inferredClock)
                     return false;
