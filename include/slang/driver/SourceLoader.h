@@ -135,6 +135,7 @@ public:
     /// and false if none have been added to the loader.
     bool hasFiles() const { return !fileEntries.empty(); }
 
+    /// Returns the source paths that have been loaded.
     std::vector<std::filesystem::path> getFilePaths() const;
 
     /// Loads all of the sources that have been added to the loader,

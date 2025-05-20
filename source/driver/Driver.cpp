@@ -638,7 +638,7 @@ bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool 
                              bool useFixedObfuscationSeed) {
     BumpAllocator alloc;
     Diagnostics diagnostics;
-    Preprocessor preprocessor(sourceManager, alloc, diagnostics, createOptionBag());
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics, createParseOptionBag());
 
     auto buffers = sourceLoader.loadSources();
     for (auto it = buffers.rbegin(); it != buffers.rend(); it++)
@@ -735,7 +735,7 @@ void Driver::reportMacros() {
     }
 }
 
-std::vector<fs::path> Driver::getDepFiles(bool includesOnly) const {
+std::vector<fs::path> Driver::getDepfiles(bool includesOnly) const {
 
     flat_hash_set<fs::path> includeSet;
     SLANG_ASSERT(!syntaxTrees.empty());
@@ -759,8 +759,8 @@ std::vector<fs::path> Driver::getDepFiles(bool includesOnly) const {
     return allPaths;
 }
 
-std::string Driver::writeDepfiles(const std::vector<fs::path>& files,
-                                  const std::optional<std::string>& depfileTarget) {
+std::string Driver::serializeDepfiles(const std::vector<fs::path>& files,
+                                      const std::optional<std::string>& depfileTarget) {
     std::vector<std::string> paths;
     paths.reserve(files.size());
 
@@ -777,7 +777,7 @@ std::string Driver::writeDepfiles(const std::vector<fs::path>& files,
         for (const auto& file : paths) {
             buffer.format(" {}", file);
         }
-        buffer.format("\n");
+        buffer.append("\n");
     }
     else {
         for (const auto& file : paths) {

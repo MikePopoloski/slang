@@ -62,6 +62,7 @@ struct SLANG_EXPORT PreprocessorOptions {
     flat_hash_set<std::string_view> ignoreDirectives;
 };
 
+/// Metadata about an include directive that was invoked
 struct IncludeMetadata {
     const syntax::IncludeDirectiveSyntax* syntax;
     std::string_view path;
@@ -161,6 +162,7 @@ public:
     /// Gets all macros that have been defined thus far in the preprocessor.
     std::vector<const syntax::DefineDirectiveSyntax*> getDefinedMacros() const;
 
+    /// Gets all include directives that have been encountered thus far in the preprocessor.
     std::vector<IncludeMetadata> getIncludeDirectives() const;
 
 private:
@@ -433,6 +435,7 @@ private:
     // have been marked pragma once so that we avoid trying to include them more than once.
     flat_hash_set<const char*> includeOnceHeaders;
 
+    /// The include directives that have been encountered thus far in the preprocessor.
     std::vector<IncludeMetadata> includeDirectives;
 
     /// Various state set by preprocessor directives.

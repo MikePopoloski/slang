@@ -321,6 +321,7 @@ void registerSyntax(py::module_& m) {
         .def_property_readonly("root", py::overload_cast<>(&SyntaxTree::root))
         .def_property_readonly("options", &SyntaxTree::options)
         .def_property_readonly("sourceLibrary", &SyntaxTree::getSourceLibrary)
+        .def_property_readonly("getIncludeDirectives", &SyntaxTree::getIncludeDirectives)
         .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref);
 
     py::class_<LexerOptions>(m, "LexerOptions")

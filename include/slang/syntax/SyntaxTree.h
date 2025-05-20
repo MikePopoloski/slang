@@ -212,6 +212,7 @@ public:
     /// Gets the list of macros that were defined at the end of the loaded source file.
     MacroList getDefinedMacros() const { return macros; }
 
+    /// Gets the list of include directives that were encountered while parsing.
     IncludeList getIncludeDirectives() const { return includes; }
 
     /// This is a shared default source manager for cases where the user doesn't

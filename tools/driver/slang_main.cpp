@@ -119,7 +119,7 @@ int driverMain(int argc, TArgs argv) {
         driver.cmdLine.add(
             "--depfile-target", depfileTarget,
             "Use depfile (.d) format for generated dependency files, meaning --M<mode> <name> will "
-            "generate <depfileTarget>.d with <name> as the makefile target.");
+            "generate <depfileTarget> with <name> as the makefile target.");
 
         std::optional<std::string> allDepfile;
         driver.cmdLine.add("--Mall,--all-deps", allDepfile,
@@ -194,16 +194,16 @@ int driverMain(int argc, TArgs argv) {
 
             if (includeDepfile) {
                 OS::writeFile(*includeDepfile,
-                              driver.writeDepfiles(driver.getDepFiles(true), depfileTarget));
+                              driver.serializeDepfiles(driver.getDepfiles(true), depfileTarget));
             }
             if (moduleDepfile) {
                 OS::writeFile(*moduleDepfile,
-                              driver.writeDepfiles(driver.sourceLoader.getFilePaths(),
-                                                   depfileTarget));
+                              driver.serializeDepfiles(driver.sourceLoader.getFilePaths(),
+                                                       depfileTarget));
             }
             if (allDepfile) {
                 OS::writeFile(*allDepfile,
-                              driver.writeDepfiles(driver.getDepFiles(), depfileTarget));
+                              driver.serializeDepfiles(driver.getDepfiles(), depfileTarget));
             }
 
             if (onlyParse == true) {
