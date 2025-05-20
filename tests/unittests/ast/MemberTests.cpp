@@ -1135,6 +1135,25 @@ source:18:29: note: comparison reduces to (12 < 8)
 )");
 }
 
+TEST_CASE("static_assert ignore uninstantiated") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+endmodule
+
+module m;
+    $static_assert(0);
+endmodule
+)");
+
+    CompilationOptions options;
+    options.topModules.insert("top");
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    CHECK(diagnostics.size() == 0);
+}
+
 TEST_CASE("$static_assert with let expression") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
