@@ -15,7 +15,7 @@ namespace register_has_no_reset {
 struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
     explicit AlwaysFFVisitor(const std::string_view name, const std::string_view resetName,
                              const bool resetIsActiveHigh) :
-        name(name), resetName(resetName), resetIsActiveHigh(resetIsActiveHigh) {};
+        name(name), resetName(resetName), resetIsActiveHigh(resetIsActiveHigh){};
 
     void handle(const ConditionalStatement& statement) {
         // Early return, if there's no else clause on the conditional statement
@@ -94,9 +94,9 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
         NEEDS_SKIP_SYMBOL(symbol)
         if (symbol.drivers().empty())
             return;
-            
+
         // Skip compiler-generated automatic variables (like loop iteration variables)
-        if (symbol.lifetime == VariableLifetime::Automatic && 
+        if (symbol.lifetime == VariableLifetime::Automatic &&
             symbol.flags.has(VariableFlags::CompilerGenerated))
             return;
 
