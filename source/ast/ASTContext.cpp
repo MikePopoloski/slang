@@ -14,7 +14,6 @@
 #include "slang/ast/symbols/AttributeSymbol.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
-#include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -28,16 +27,6 @@ namespace slang::ast {
 
 using namespace syntax;
 
-DriverKind ASTContext::getDriverKind() const {
-    if (flags.has(ASTFlags::ProceduralAssign))
-        return DriverKind::Procedural;
-    if (flags.has(ASTFlags::ProceduralForceRelease))
-        return DriverKind::Other;
-    if (flags.has(ASTFlags::NonProcedural))
-        return DriverKind::Continuous;
-    return DriverKind::Procedural;
-}
-
 const InstanceSymbolBase* ASTContext::getInstance() const {
     if (instanceOrProc && instanceOrProc->kind != SymbolKind::ProceduralBlock)
         return (const InstanceSymbolBase*)instanceOrProc;
@@ -47,24 +36,6 @@ const InstanceSymbolBase* ASTContext::getInstance() const {
 const ProceduralBlockSymbol* ASTContext::getProceduralBlock() const {
     if (instanceOrProc && instanceOrProc->kind == SymbolKind::ProceduralBlock)
         return &instanceOrProc->as<ProceduralBlockSymbol>();
-    return nullptr;
-}
-
-const SubroutineSymbol* ASTContext::getContainingSubroutine() const {
-    if (instanceOrProc)
-        return nullptr;
-
-    auto curr = scope.get();
-    do {
-        auto& sym = curr->asSymbol();
-        if (sym.kind == SymbolKind::Subroutine)
-            return &sym.as<SubroutineSymbol>();
-        if (sym.kind != SymbolKind::StatementBlock)
-            break;
-
-        curr = sym.getParentScope();
-    } while (curr);
-
     return nullptr;
 }
 
@@ -129,23 +100,9 @@ void ASTContext::setAttributes(const Expression& expr,
                                    AttributeSymbol::fromSyntax(syntax, *scope, getLocation()));
 }
 
-void ASTContext::addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
-                           bitmask<AssignFlags> assignFlags) const {
+void ASTContext::addDriver(const ValueSymbol&, const Expression&, bitmask<AssignFlags>) const {
     if (flags.has(ASTFlags::NotADriver) || scope->isUninstantiated())
         return;
-
-    symbol.addDriver(getDriverKind(), longestStaticPrefix, getContainingSymbol(), assignFlags);
-}
-
-const Symbol& ASTContext::getContainingSymbol() const {
-    const Symbol* containingSym = getProceduralBlock();
-    if (!containingSym)
-        containingSym = getContainingSubroutine();
-
-    if (!containingSym)
-        containingSym = &scope->asSymbol();
-
-    return *containingSym;
 }
 
 Diagnostic& ASTContext::addDiag(DiagCode code, SourceLocation location) const {

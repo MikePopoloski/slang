@@ -139,7 +139,7 @@ public:
     AnalyzedDesign analyze(const ast::Compilation& compilation);
 
     /// Returns all of the known drivers for the given symbol.
-    std::vector<const ast::ValueDriver*> getDrivers(const ast::ValueSymbol& symbol) const;
+    std::vector<const ValueDriver*> getDrivers(const ast::ValueSymbol& symbol) const;
 
     /// Collects and returns all issued analysis diagnostics.
     /// If @a sourceManager is provided it will be used to sort the diagnostics.

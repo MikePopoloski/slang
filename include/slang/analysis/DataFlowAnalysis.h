@@ -9,8 +9,8 @@
 
 #include "slang/analysis/AbstractFlowAnalysis.h"
 #include "slang/analysis/AnalysisManager.h"
-#include "slang/analysis/LSPUtilities.h"
 #include "slang/analysis/ValueDriver.h"
+#include "slang/ast/LSPUtilities.h"
 #include "slang/util/IntervalMap.h"
 #include "slang/util/SmallMap.h"
 #include "slang/util/SmallVector.h"
@@ -115,7 +115,7 @@ private:
     friend class AbstractFlowAnalysis;
 
     template<typename TOwner>
-    friend struct LSPVisitor;
+    friend struct ast::LSPVisitor;
 
     SymbolBitMap::allocator_type bitMapAllocator;
     SymbolLSPMap::allocator_type lspMapAllocator;

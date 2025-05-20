@@ -202,29 +202,7 @@ void registerSymbols(py::module_& m) {
 
     py::class_<ValueSymbol, Symbol>(m, "ValueSymbol")
         .def_property_readonly("type", &ValueSymbol::getType)
-        .def_property_readonly("initializer", &ValueSymbol::getInitializer)
-        .def(
-            "__iter__",
-            [](const ValueSymbol& self) {
-                auto drivers = self.drivers();
-                return py::make_iterator(drivers.begin(), drivers.end());
-            },
-            py::keep_alive<0, 1>());
-
-    py::class_<ValueDriver>(m, "ValueDriver")
-        .def_readonly("prefixExpression", &ValueDriver::prefixExpression)
-        .def_readonly("containingSymbol", &ValueDriver::containingSymbol)
-        .def_readonly("procCallExpression", &ValueDriver::procCallExpression)
-        .def_readonly("kind", &ValueDriver::kind)
-        .def_readonly("flags", &ValueDriver::flags)
-        .def_property_readonly("sourceRange", &ValueDriver::getSourceRange)
-        .def_property_readonly("isInputPort", &ValueDriver::isInputPort)
-        .def_property_readonly("isUnidirectionalPort", &ValueDriver::isUnidirectionalPort)
-        .def_property_readonly("isClockVar", &ValueDriver::isClockVar)
-        .def_property_readonly("isLocalVarFormalArg", &ValueDriver::isLocalVarFormalArg)
-        .def_property_readonly("isInProcedure", &ValueDriver::isInProcedure)
-        .def_property_readonly("isInSingleDriverProcedure",
-                               &ValueDriver::isInSingleDriverProcedure);
+        .def_property_readonly("initializer", &ValueSymbol::getInitializer);
 
     py::class_<EnumValueSymbol, ValueSymbol>(m, "EnumValueSymbol")
         .def_property_readonly("value",
