@@ -3,9 +3,10 @@
 
 #include "Test.h"
 #include "TidyFactory.h"
+#include "TidyTest.h"
 
 TEST_CASE("NoOldAlwaysSyntax: Use of old always_comb syntax") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoOldAlwaysSyntax", R"(
 module top;
     logic a, b, c;
 
@@ -14,22 +15,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoOldAlwaysSyntax");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("NoOldAlwaysSyntax: Use of old always_ff syntax") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoOldAlwaysSyntax", R"(
 module top;
     logic a, b, c;
 
@@ -38,22 +28,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoOldAlwaysSyntax");
-    bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
 TEST_CASE("NoOldAlwaysSyntax: Use of SV always_ff and always_comb syntax") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoOldAlwaysSyntax", R"(
 module top;
     logic a, b, c;
     logic d, e, f;
@@ -67,22 +46,11 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoOldAlwaysSyntax");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("NoOldAlwaysSyntax: Assertion") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoOldAlwaysSyntax", R"(
 module top(input logic clk, input logic rst);
     logic a, b;
 
@@ -91,22 +59,11 @@ module top(input logic clk, input logic rst);
     )
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoOldAlwaysSyntax");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("NoOldAlwaysSyntax: Sequence") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoOldAlwaysSyntax", R"(
 module top(input logic clk);
     logic a, b;
 
@@ -115,22 +72,11 @@ module top(input logic clk);
     endsequence
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoOldAlwaysSyntax");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("NoOldAlwaysSyntax: Covergroup") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoOldAlwaysSyntax", R"(
 module top(input logic clk, input logic rst);
     logic a;
 
@@ -139,22 +85,11 @@ module top(input logic clk, input logic rst);
     endgroup
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoOldAlwaysSyntax");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("NoOldAlwaysSyntax: Legit use of old always") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoOldAlwaysSyntax", R"(
 module top(input logic clk, input logic rst);
     logic busy, start, n, pause;
 
@@ -186,22 +121,11 @@ module top(input logic clk, input logic rst);
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoOldAlwaysSyntax");
-    bool result = visitor->check(root);
     CHECK(result);
 }
 
 TEST_CASE("NoOldAlwaysSyntax: composite lhs") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("NoOldAlwaysSyntax", R"(
 module top();
     logic n;
 
@@ -210,16 +134,5 @@ module top();
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("NoOldAlwaysSyntax");
-    bool result = visitor->check(root);
     CHECK(result);
 }

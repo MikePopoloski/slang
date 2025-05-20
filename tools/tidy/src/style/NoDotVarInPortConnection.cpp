@@ -46,7 +46,7 @@ class NoDotVarInPortConnection final : public TidyCheck {
 public:
     [[maybe_unused]] explicit NoDotVarInPortConnection(const TidyKind kind) : TidyCheck(kind) {}
 
-    bool check(const RootSymbol& root) override {
+    bool check(const RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);
         root.visit(visitor);
         return diagnostics.empty();
