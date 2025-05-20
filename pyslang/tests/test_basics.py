@@ -85,6 +85,15 @@ source:3:23: warning: arithmetic between operands of different types ('logic' an
     )
 
 
+def test_include_metadata():
+    tree = pyslang.SyntaxTree.fromText(
+        """
+    `include "some_file.svh"
+    """
+    )
+    assert len(tree.getIncludeDirectives()) == 1
+
+
 def test_script_session():
     session = pyslang.ScriptSession()
     session.eval("""integer arr[string] = '{"Hello":4, "World":8, default:-1};""")

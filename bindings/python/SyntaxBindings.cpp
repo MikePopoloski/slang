@@ -255,6 +255,13 @@ void registerSyntax(py::module_& m) {
              })
         .def("__str__", &SyntaxNode::toString);
 
+    py::class_<IncludeMetadata>(m, "IncludeMetadata")
+        .def(py::init<>())
+        .def_readonly("syntax", &IncludeMetadata::syntax)
+        .def_readonly("path", &IncludeMetadata::path)
+        .def_readonly("buffer", &IncludeMetadata::isSystem)
+        .def_readonly("isSystem", &IncludeMetadata::isSystem);
+
     py::class_<SyntaxTree, std::shared_ptr<SyntaxTree>>(m, "SyntaxTree")
         .def_readonly("isLibraryUnit", &SyntaxTree::isLibraryUnit)
         .def_static(
@@ -321,7 +328,7 @@ void registerSyntax(py::module_& m) {
         .def_property_readonly("root", py::overload_cast<>(&SyntaxTree::root))
         .def_property_readonly("options", &SyntaxTree::options)
         .def_property_readonly("sourceLibrary", &SyntaxTree::getSourceLibrary)
-        .def_property_readonly("getIncludeDirectives", &SyntaxTree::getIncludeDirectives)
+        .def("getIncludeDirectives", &SyntaxTree::getIncludeDirectives)
         .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref);
 
     py::class_<LexerOptions>(m, "LexerOptions")
