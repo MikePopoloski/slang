@@ -22,7 +22,7 @@ DataFlowAnalysis::DataFlowAnalysis(AnalysisContext& context, const Symbol& symbo
 }
 
 bool DataFlowAnalysis::isReferenced(const ValueSymbol& symbol, const Expression& lsp) const {
-    auto bounds = ValueDriver::getBounds(lsp, getEvalContext(), symbol.getType());
+    auto bounds = LSPUtilities::getBounds(lsp, getEvalContext(), symbol.getType());
     if (!bounds)
         return isReferenced(symbol);
 
@@ -62,7 +62,7 @@ void DataFlowAnalysis::noteReference(const ValueSymbol& symbol, const Expression
     if (!currState.reachable)
         return;
 
-    auto bounds = ValueDriver::getBounds(lsp, getEvalContext(), symbol.getType());
+    auto bounds = LSPUtilities::getBounds(lsp, getEvalContext(), symbol.getType());
     if (!bounds) {
         // This probably cannot be hit given that we early out elsewhere for
         // invalid expressions.

@@ -38,8 +38,8 @@ const PackageSymbol& createStdPackage(Compilation&);
 namespace slang::ast {
 
 Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
-    options(options.getOrDefault<CompilationOptions>()), driverMapAllocator(*this),
-    tempDiag({}, {}), netAliasAllocator(*this), defaultLibPtr(defaultLib) {
+    options(options.getOrDefault<CompilationOptions>()), tempDiag({}, {}), netAliasAllocator(*this),
+    defaultLibPtr(defaultLib) {
 
     // Construct all built-in types.
     auto& bi = slang::ast::builtins::Builtins::Instance;
@@ -1276,14 +1276,13 @@ void Compilation::noteNameConflict(const Symbol& symbol) {
     nameConflicts.push_back(&symbol);
 }
 
-void Compilation::noteNetAlias(const Scope& scope, const Symbol& firstSym,
-                               DriverBitRange firstRange, const Expression& firstExpr,
-                               const Symbol& secondSym, DriverBitRange secondRange,
-                               const Expression& secondExpr) {
+void Compilation::noteNetAlias(const Scope& scope, const Symbol& firstSym, AliasBitRange firstRange,
+                               const Expression& firstExpr, const Symbol& secondSym,
+                               AliasBitRange secondRange, const Expression& secondExpr) {
     SLANG_ASSERT(!isFrozen());
     SLANG_ASSERT(firstRange.second - firstRange.first == secondRange.second - secondRange.first);
 
-    auto overlaps = [](DriverBitRange a, DriverBitRange b) {
+    auto overlaps = [](AliasBitRange a, AliasBitRange b) {
         return a.first <= b.second && b.first <= a.second;
     };
 
@@ -1356,31 +1355,6 @@ void Compilation::noteUpwardReference(const Scope& initialScope, const Hierarchi
 void Compilation::noteHierarchicalAssignment(const HierarchicalReference& ref) {
     SLANG_ASSERT(!isFrozen());
     hierarchicalAssignments.push_back(&ref);
-}
-
-void Compilation::noteInterfacePortDriver(const HierarchicalReference& ref,
-                                          const ValueDriver& driver) {
-    SLANG_ASSERT(!isFrozen());
-    SLANG_ASSERT(ref.isViaIfacePort());
-    SLANG_ASSERT(ref.target);
-    SLANG_ASSERT(ref.expr);
-
-    auto& port = ref.path[0].symbol->as<InterfacePortSymbol>();
-    auto scope = port.getParentScope();
-    SLANG_ASSERT(scope);
-
-    auto& symbol = scope->asSymbol();
-    SLANG_ASSERT(symbol.kind == SymbolKind::InstanceBody);
-
-    auto& entry = getOrAddSideEffects(symbol);
-    entry.ifacePortDrivers.push_back({&ref, &driver});
-
-    auto [_, expr] = port.getConnectionAndExpr();
-    if (expr && expr->kind == ExpressionKind::ArbitrarySymbol) {
-        auto& connRef = expr->as<ArbitrarySymbolExpression>().hierRef;
-        if (connRef.isViaIfacePort())
-            noteInterfacePortDriver(connRef.join(*this, ref), driver);
-    }
 }
 
 void Compilation::noteVirtualIfaceInstance(const InstanceSymbol& symbol) {

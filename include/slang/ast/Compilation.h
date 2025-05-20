@@ -45,13 +45,9 @@ class Statement;
 class SubroutineSymbol;
 class Symbol;
 class SystemSubroutine;
-class ValueDriver;
 struct AssertionInstanceDetails;
 struct ConfigRule;
 struct ResolvedConfig;
-
-using DriverIntervalMap = IntervalMap<uint64_t, const ValueDriver*>;
-using DriverBitRange = std::pair<uint64_t, uint64_t>;
 
 enum class IntegralFlags : uint8_t;
 enum class SymbolIndex : uint32_t;
@@ -588,11 +584,13 @@ public:
     /// This will cause appropriate errors to be issued.
     void noteNameConflict(const Symbol& symbol);
 
+    using AliasBitRange = std::pair<uint64_t, uint64_t>;
+
     /// Makes note of an alias defined between the bit ranges of the two given symbols.
     /// This is used to check for duplicate aliases between the bit ranges.
-    void noteNetAlias(const Scope& scope, const Symbol& firstSym, DriverBitRange firstRange,
+    void noteNetAlias(const Scope& scope, const Symbol& firstSym, AliasBitRange firstRange,
                       const Expression& firstExpr, const Symbol& secondSym,
-                      DriverBitRange secondRange, const Expression& secondExpr);
+                      AliasBitRange secondRange, const Expression& secondExpr);
 
     /// Notes the existence of the given upward hierarchical reference, which is used,
     /// among other things, to ensure we perform instance caching correctly.
@@ -600,10 +598,6 @@ public:
 
     /// Notes the existence of an assignment to a hierarchical reference.
     void noteHierarchicalAssignment(const HierarchicalReference& ref);
-
-    /// Notes that a symbol is driven through an interface port connection,
-    /// which constitutes a side effect of the instance containing the port.
-    void noteInterfacePortDriver(const HierarchicalReference& ref, const ValueDriver& driver);
 
     /// Notes the existence of a virtual interface type declaration for the given instance.
     void noteVirtualIfaceInstance(const InstanceSymbol& instance);
@@ -740,9 +734,6 @@ public:
     /// Allocates a scope's wildcard import data object.
     Scope::WildcardImportData* allocWildcardImportData();
 
-    /// Gets the driver map allocator.
-    DriverIntervalMap::allocator_type& getDriverMapAllocator() { return driverMapAllocator; }
-
     /// Creates an empty ImplicitTypeSyntax object.
     const syntax::ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
 
@@ -764,14 +755,6 @@ private:
     // Captures the side effects that are applied by an instance indirectly instead
     // of via a port connection.
     struct InstanceSideEffects {
-        struct IfacePortDriver {
-            not_null<const HierarchicalReference*> ref;
-            not_null<const ValueDriver*> driver;
-        };
-
-        // Drivers that are applied through interface ports.
-        std::vector<IfacePortDriver> ifacePortDrivers;
-
         // All upward names that extend out of the instance.
         std::vector<const HierarchicalReference*> upwardNames;
 
@@ -821,7 +804,6 @@ private:
     TypedBumpAllocator<SymbolMap> symbolMapAllocator;
     TypedBumpAllocator<PointerMap> pointerMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
-    DriverIntervalMap::allocator_type driverMapAllocator;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
     // reg. Two of the entries are not valid and will be nullptr (!fourstate & reg).
@@ -1011,7 +993,7 @@ private:
 
     struct NetAlias {
         const Symbol* sym;
-        DriverBitRange range;
+        AliasBitRange range;
         const Expression* firstExpr;
         const Expression* secondExpr;
     };

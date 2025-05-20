@@ -369,10 +369,6 @@ public:
     /// Indicates whether the AST creation is happening inside an unevaluated branch.
     bool inUnevaluatedBranch() const { return flags.has(ASTFlags::UnevaluatedBranch); }
 
-    /// Indicates the kind of driver that each assignment expression created
-    /// using this context should use.
-    DriverKind getDriverKind() const;
-
     /// Gets the parent instance if this context is being used to bind expressions
     /// for an instantiation.
     const InstanceSymbolBase* getInstance() const;
@@ -380,9 +376,6 @@ public:
     /// If this context is within a procedural block, returns a pointer
     /// to that symbol.
     const ProceduralBlockSymbol* getProceduralBlock() const;
-
-    /// If this context is within a subroutine, returns a pointer to that subroutine.
-    const SubroutineSymbol* getContainingSubroutine() const;
 
     /// Indicates whether AST creation is happening within an always_comb
     /// or always_latch procedure.
@@ -418,12 +411,6 @@ public:
     /// @param assignFlags Flags that specify how the driver functions
     void addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
                    bitmask<AssignFlags> assignFlags) const;
-
-    /// @brief Gets the symbol that contains the AST context
-    ///
-    /// @returns Either a parent procedural block or subroutine if one is
-    /// registered, and if not the scope passed to the ASTContext constructor.
-    const Symbol& getContainingSymbol() const;
 
     /// Issues a new diagnostic.
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;

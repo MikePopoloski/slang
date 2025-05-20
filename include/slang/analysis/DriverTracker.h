@@ -30,7 +30,7 @@ class AnalyzedProcedure;
 /// A helper class that tracks drivers for all symbols in a thread-safe manner.
 class DriverTracker {
 public:
-    using SymbolDriverMap = IntervalMap<uint64_t, const ast::ValueDriver*, 5>;
+    using SymbolDriverMap = IntervalMap<uint64_t, const ValueDriver*, 5>;
     using DriverAlloc = SymbolDriverMap::allocator_type;
 
     /// Adds drivers for the given procedure to the tracker.
@@ -47,14 +47,14 @@ public:
     void propagateModportDrivers(AnalysisContext& context, DriverAlloc& driverAlloc);
 
     /// Returns all of the tracked drivers for the given symbol.
-    std::vector<const ast::ValueDriver*> getDrivers(const ast::ValueSymbol& symbol) const;
+    std::vector<const ValueDriver*> getDrivers(const ast::ValueSymbol& symbol) const;
 
 private:
     // State tracked per canonical instance.
     struct InstanceState {
         struct IfacePortDriver {
             not_null<const ast::HierarchicalReference*> ref;
-            not_null<const ast::ValueDriver*> driver;
+            not_null<const ValueDriver*> driver;
         };
 
         // Drivers that are applied through interface ports.
@@ -67,17 +67,15 @@ private:
     const ast::HierarchicalReference* addDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
                                                 const ast::ValueSymbol& symbol,
                                                 SymbolDriverMap& driverMap,
-                                                const ast::ValueDriver& driver,
-                                                DriverBitRange bounds);
+                                                const ValueDriver& driver, DriverBitRange bounds);
     void noteInterfacePortDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
-                                 const ast::HierarchicalReference& ref,
-                                 const ast::ValueDriver& driver);
+                                 const ast::HierarchicalReference& ref, const ValueDriver& driver);
     void applyInstanceSideEffect(AnalysisContext& context, DriverAlloc& driverAlloc,
                                  const InstanceState::IfacePortDriver& ifacePortDriver,
                                  const ast::InstanceSymbol& instance);
     void propagateModportDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
                                 const ast::Symbol& symbol, const ast::Expression& connectionExpr,
-                                const ast::ValueDriver& originalDriver);
+                                const ValueDriver& originalDriver);
 
     concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
     concurrent_map<const ast::InstanceBodySymbol*, InstanceState> instanceMap;

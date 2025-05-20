@@ -15,6 +15,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/LSPUtilities.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
@@ -2360,7 +2361,7 @@ NetAliasSymbol& NetAliasSymbol::fromSyntax(const ASTContext& parentContext,
 struct NetAlias {
     not_null<const ValueSymbol*> sym;
     not_null<const Expression*> expr;
-    DriverBitRange bounds;
+    Compilation::AliasBitRange bounds;
 };
 
 struct NetAliasVisitor {
@@ -2387,8 +2388,8 @@ struct NetAliasVisitor {
                         }
                         else {
                             auto& netSym = sym->template as<NetSymbol>();
-                            if (auto bounds = ValueDriver::getBounds(expr, evalCtx,
-                                                                     netSym.getType())) {
+                            if (auto bounds = LSPUtilities::getBounds(expr, evalCtx,
+                                                                      netSym.getType())) {
                                 netAliases.push_back({&netSym, &expr, *bounds});
                             }
 

@@ -138,10 +138,8 @@ void registerAST(py::module_& m) {
         .def_property_readonly("getCompilation", &ASTContext::getCompilation)
         .def_property_readonly("getLocation", &ASTContext::getLocation)
         .def_property_readonly("inUnevaluatedBranch", &ASTContext::inUnevaluatedBranch)
-        .def_property_readonly("getDriverKind", &ASTContext::getDriverKind)
         .def_property_readonly("getInstance", &ASTContext::getInstance)
         .def_property_readonly("getProceduralBlock", &ASTContext::getProceduralBlock)
-        .def_property_readonly("getContainingSubroutine", &ASTContext::getContainingSubroutine)
         .def_property_readonly("inAlwaysCombLatch", &ASTContext::inAlwaysCombLatch)
         .def("addDiag",
              py::overload_cast<DiagCode, SourceLocation>(&ASTContext::addDiag, py::const_),
