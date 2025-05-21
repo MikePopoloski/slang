@@ -609,9 +609,8 @@ bool Driver::processOptions() {
 }
 
 template<typename TGenerator>
-static std::string generateRandomAlphanumericString(TGenerator& gen, size_t len) {
-    static constexpr auto chars = "0123456789"
-                                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+static std::string generateRandomAlphaString(TGenerator& gen, size_t len) {
+    static constexpr auto chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                   "abcdefghijklmnopqrstuvwxyz"sv;
     auto result = std::string(len, '\0');
     std::ranges::generate_n(begin(result), ptrdiff_t(len), [&] {
@@ -664,7 +663,7 @@ bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool 
             auto name = std::string(token.valueText());
             auto translation = obfuscationMap.find(name);
             if (translation == obfuscationMap.end()) {
-                auto newName = generateRandomAlphanumericString(*rng, 16);
+                auto newName = generateRandomAlphaString(*rng, 16);
                 translation = obfuscationMap.emplace(name, newName).first;
             }
             token = token.withRawText(alloc, translation->second);

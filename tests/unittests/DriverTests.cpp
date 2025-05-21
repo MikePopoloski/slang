@@ -179,10 +179,10 @@ TEST_CASE("Driver file preprocess -- obfuscation") {
     auto output = OS::capturedStdout;
     output = std::regex_replace(output, std::regex("\r\n"), "\n");
 
-    CHECK(output.starts_with("\nmodule ykyD0R1TWLDra6jk;\n"
+    CHECK(output.starts_with("\nmodule AOOpUHNpKPjVcKHQ;\n"
                              "    // hello\n"
-                             "    int N65udx39eEabGtIV = 32'haa_bb??e;\n"
-                             "    string TKs9hBr80Qx0xQD8 = "));
+                             "    int LMxOpJDziyYJoPIV = 32'haa_bb??e;\n"
+                             "    string pmOPtNbMAqvklYVm = "));
 
     CHECK(output.ends_with(";\n"
                            "    begin end\n"
