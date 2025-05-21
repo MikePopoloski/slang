@@ -14,6 +14,7 @@
 #include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/text/SourceLocation.h"
+#include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
 #include "slang/util/SmallMap.h"
 #include "slang/util/SmallVector.h"
@@ -28,6 +29,7 @@ struct MacroActualArgumentSyntax;
 struct MacroFormalArgumentSyntax;
 struct PragmaDirectiveSyntax;
 struct PragmaExpressionSyntax;
+struct IncludeDirectiveSyntax;
 
 } // namespace slang::syntax
 
@@ -58,6 +60,14 @@ struct SLANG_EXPORT PreprocessorOptions {
 
     /// A set of preprocessor directives to be ignored.
     flat_hash_set<std::string_view> ignoreDirectives;
+};
+
+/// Metadata about an include directive that was invoked
+struct IncludeMetadata {
+    const syntax::IncludeDirectiveSyntax* syntax;
+    std::string_view path;
+    SourceManager::BufferOrError buffer;
+    bool isSystem;
 };
 
 /// Preprocessor - Interface between lexer and parser
@@ -151,6 +161,9 @@ public:
 
     /// Gets all macros that have been defined thus far in the preprocessor.
     std::vector<const syntax::DefineDirectiveSyntax*> getDefinedMacros() const;
+
+    /// Gets all include directives that have been encountered thus far in the preprocessor.
+    std::vector<IncludeMetadata> getIncludeDirectives() const;
 
 private:
     Preprocessor(const Preprocessor& other);
@@ -421,6 +434,9 @@ private:
     // A set of files (identified by a pointer to the start of their text buffer) that
     // have been marked pragma once so that we avoid trying to include them more than once.
     flat_hash_set<const char*> includeOnceHeaders;
+
+    /// The include directives that have been encountered thus far in the preprocessor.
+    std::vector<IncludeMetadata> includeDirectives;
 
     /// Various state set by preprocessor directives.
     std::vector<KeywordVersion> keywordVersionStack;

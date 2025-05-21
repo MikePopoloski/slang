@@ -123,10 +123,12 @@ SourceManager& SyntaxTree::getDefaultSourceManager() {
 
 SyntaxTree::SyntaxTree(SyntaxNode* root, const SourceLibrary* library, SourceManager& sourceManager,
                        BumpAllocator&& alloc, Diagnostics&& diagnostics, ParserMetadata&& metadata,
-                       std::vector<const DefineDirectiveSyntax*>&& macros, Bag options) :
+                       std::vector<const DefineDirectiveSyntax*>&& macros,
+                       std::vector<parsing::IncludeMetadata>&& includes, Bag options) :
     rootNode(root), library(library), sourceMan(sourceManager), alloc(std::move(alloc)),
     diagnosticsBuffer(std::move(diagnostics)), options_(std::move(options)),
-    metadata(std::make_unique<ParserMetadata>(std::move(metadata))), macros(std::move(macros)) {
+    metadata(std::make_unique<ParserMetadata>(std::move(metadata))), macros(std::move(macros)),
+    includes(std::move(includes)) {
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
@@ -172,7 +174,8 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
 
     return std::shared_ptr<SyntaxTree>(
         new SyntaxTree(root, library, sourceManager, std::move(alloc), std::move(diagnostics),
-                       parser.getMetadata(), preprocessor.getDefinedMacros(), options));
+                       parser.getMetadata(), preprocessor.getDefinedMacros(),
+                       preprocessor.getIncludeDirectives(), options));
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapFile(std::string_view path,
@@ -213,7 +216,8 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapBuffer(const SourceBuffer&
 
     return std::shared_ptr<SyntaxTree>(
         new SyntaxTree(&root, nullptr, sourceManager, std::move(alloc), std::move(diagnostics),
-                       parser.getMetadata(), preprocessor.getDefinedMacros(), options));
+                       parser.getMetadata(), preprocessor.getDefinedMacros(),
+                       preprocessor.getIncludeDirectives(), options));
 }
 
 } // namespace slang::syntax

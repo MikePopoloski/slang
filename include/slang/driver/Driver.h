@@ -331,6 +331,18 @@ public:
     /// Prints all macros from all loaded buffers to stdout.
     void reportMacros();
 
+    /// @brief Returns a list of all files that were loaded by the driver.
+    /// @param includesOnly If true, only include files that were loaded are returned.
+    std::vector<std::filesystem::path> getDepfiles(bool includesOnly = false) const;
+
+    /// @brief Serializes the given list of files into a depfile format.
+    /// @param files The list of files to serialize.
+    /// @param depfileTarget The target file to use; also implies that makefile format should be
+    /// used, with this string as the target. If not set, it will serialize in filelist format, with
+    /// one file per line.
+    std::string serializeDepfiles(const std::vector<std::filesystem::path>& files,
+                                  const std::optional<std::string>& depfileTarget);
+
     /// @brief Parses all loaded buffers into syntax trees and appends the resulting trees
     /// to the @a syntaxTrees list.
     ///
@@ -339,6 +351,9 @@ public:
 
     /// Creates an options bag from all of the currently set options.
     [[nodiscard]] Bag createOptionBag() const;
+
+    /// Creates an options bag from all of the currently set parser options
+    [[nodiscard]] Bag createParseOptionBag() const;
 
     /// Creates a compilation object from all of the current loaded state of the driver.
     [[nodiscard]] std::unique_ptr<ast::Compilation> createCompilation();

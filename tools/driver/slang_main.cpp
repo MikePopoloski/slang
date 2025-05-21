@@ -14,9 +14,7 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
-#include "slang/syntax/SyntaxTree.h"
 #include "slang/text/Json.h"
-#include "slang/util/String.h"
 #include "slang/util/TimeTrace.h"
 #include "slang/util/VersionInfo.h"
 
@@ -117,6 +115,25 @@ int driverMain(int argc, TArgs argv) {
         driver.cmdLine.add("--ast-json-detailed-types", serializeDetailedTypes,
                            "When dumping AST to JSON, expand out all type information");
 
+        std::optional<std::string> depfileTarget;
+        driver.cmdLine.add(
+            "--depfile-target", depfileTarget,
+            "Use depfile (.d) format for generated dependency files, meaning --M<mode> <name> will "
+            "generate <depfileTarget> with <name> as the makefile target.");
+
+        std::optional<std::string> allDepfile;
+        driver.cmdLine.add("--Mall,--all-deps", allDepfile,
+                           "Generate dependency file list of include files and other files parsed");
+
+        std::optional<std::string> includeDepfile;
+        driver.cmdLine.add(
+            "--Minclude,--include-deps", includeDepfile,
+            "Generate dependency file list of files parsed, excluding include files");
+
+        std::optional<std::string> moduleDepfile;
+        driver.cmdLine.add("--Mmodule,--module-deps", moduleDepfile,
+                           "Generate dependency file list of files parsed, excluding includes");
+
         std::optional<std::string> timeTrace;
         driver.cmdLine.add("--time-trace", timeTrace,
                            "Do performance profiling of the slang compiler and output "
@@ -151,48 +168,73 @@ int driverMain(int argc, TArgs argv) {
             return 3;
         }
 
+        if ((onlyPreprocess || onlyMacros) && (includeDepfile || moduleDepfile || allDepfile)) {
+            OS::printE(fg(driver.textDiagClient->errorColor), "error: ");
+            OS::printE("cannot use dependency file options with --preprocess or --macros-only");
+            return 3;
+        }
+
         if (timeTrace)
             TimeTrace::initialize();
 
+        auto runStages = [&]() {
+            bool ok = true;
+            if (onlyPreprocess == true) {
+                return driver.runPreprocessor(includeComments == true, includeDirectives == true,
+                                              obfuscateIds == true);
+            }
+            if (onlyMacros == true) {
+                driver.reportMacros();
+                return true;
+            }
+            {
+                TimeTraceScope timeScope("parseAllSources"sv, ""sv);
+                ok = driver.parseAllSources();
+            }
+
+            if (includeDepfile) {
+                OS::writeFile(*includeDepfile,
+                              driver.serializeDepfiles(driver.getDepfiles(true), depfileTarget));
+            }
+            if (moduleDepfile) {
+                OS::writeFile(*moduleDepfile,
+                              driver.serializeDepfiles(driver.sourceLoader.getFilePaths(),
+                                                       depfileTarget));
+            }
+            if (allDepfile) {
+                OS::writeFile(*allDepfile,
+                              driver.serializeDepfiles(driver.getDepfiles(), depfileTarget));
+            }
+
+            if (onlyParse == true) {
+                return ok && driver.reportParseDiags();
+            }
+
+            std::unique_ptr<Compilation> compilation;
+            {
+                TimeTraceScope timeScope("elaboration"sv, ""sv);
+                compilation = driver.createCompilation();
+                driver.reportCompilation(*compilation, quiet == true);
+            }
+
+            if (!disableAnalysis.value_or(false)) {
+                TimeTraceScope timeScope("semanticAnalysis"sv, ""sv);
+                driver.runAnalysis(*compilation);
+            }
+
+            ok &= driver.reportDiagnostics(quiet == true);
+
+            if (astJsonFile) {
+                TimeTraceScope timeScope("serialization"sv, ""sv);
+                printJson(*compilation, *astJsonFile, astJsonScopes, includeSourceInfo == true,
+                          serializeDetailedTypes == true);
+            }
+            return ok;
+        };
+
         bool ok = true;
         SLANG_TRY {
-            if (onlyPreprocess == true) {
-                ok = driver.runPreprocessor(includeComments == true, includeDirectives == true,
-                                            obfuscateIds == true);
-            }
-            else if (onlyMacros == true) {
-                driver.reportMacros();
-            }
-            else if (onlyParse == true) {
-                ok = driver.parseAllSources();
-                ok &= driver.reportParseDiags();
-            }
-            else {
-                {
-                    TimeTraceScope timeScope("parseAllSources"sv, ""sv);
-                    ok = driver.parseAllSources();
-                }
-
-                std::unique_ptr<Compilation> compilation;
-                {
-                    TimeTraceScope timeScope("elaboration"sv, ""sv);
-                    compilation = driver.createCompilation();
-                    driver.reportCompilation(*compilation, quiet == true);
-                }
-
-                if (!disableAnalysis.value_or(false)) {
-                    TimeTraceScope timeScope("semanticAnalysis"sv, ""sv);
-                    driver.runAnalysis(*compilation);
-                }
-
-                ok &= driver.reportDiagnostics(quiet == true);
-
-                if (astJsonFile) {
-                    TimeTraceScope timeScope("serialization"sv, ""sv);
-                    printJson(*compilation, *astJsonFile, astJsonScopes, includeSourceInfo == true,
-                              serializeDetailedTypes == true);
-                }
-            }
+            ok = runStages();
         }
         SLANG_CATCH(const std::exception& e) {
             SLANG_REPORT_EXCEPTION(e, "internal compiler error: {}\n");

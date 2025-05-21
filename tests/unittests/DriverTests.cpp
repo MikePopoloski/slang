@@ -242,6 +242,68 @@ __slang__ 1
     CHECK(stdoutContains("__slang_minor__"));
 }
 
+TEST_CASE("Driver includes depfile") {
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto filePath = findTestDir() + "test.sv";
+    const char* argv[] = {"testfoo", filePath.c_str()};
+    CHECK(driver.parseCommandLine(2, argv));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    fs::current_path(findTestDir());
+    auto depfiles = driver.getDepfiles(true);
+    CHECK(depfiles == std::vector<fs::path>{
+                          fs::current_path() / "file_defn.svh",
+                      });
+
+    CHECK(driver.serializeDepfiles(depfiles, {"target"}) == "target: file_defn.svh\n");
+    CHECK(driver.serializeDepfiles(depfiles, std::nullopt) == "file_defn.svh\n");
+}
+
+TEST_CASE("Driver all depfile") {
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto filePath = findTestDir() + "test.sv";
+    const char* argv[] = {"testfoo", filePath.c_str()};
+    CHECK(driver.parseCommandLine(2, argv));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    fs::current_path(findTestDir());
+    auto files = driver.getDepfiles();
+    std::sort(files.begin(), files.end());
+    CHECK(files == std::vector<fs::path>{
+                       fs::current_path() / "file_defn.svh",
+                       fs::current_path() / "test.sv",
+                   });
+    CHECK(driver.serializeDepfiles(driver.getDepfiles(), {"target"}) ==
+          "target: file_defn.svh test.sv\n");
+    CHECK(driver.serializeDepfiles(driver.getDepfiles(), std::nullopt) ==
+          "file_defn.svh\ntest.sv\n");
+}
+
+TEST_CASE("Driver module depfile") {
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto filePath = findTestDir() + "test.sv";
+    const char* argv[] = {"testfoo", filePath.c_str()};
+    CHECK(driver.parseCommandLine(2, argv));
+    CHECK(driver.processOptions());
+    fs::current_path(findTestDir());
+    CHECK(driver.sourceLoader.getFilePaths() == std::vector<fs::path>{
+                                                    fs::current_path() / "test.sv",
+                                                });
+    CHECK(driver.serializeDepfiles(driver.sourceLoader.getFilePaths(), {"target"}) ==
+          "target: test.sv\n");
+    CHECK(driver.serializeDepfiles(driver.sourceLoader.getFilePaths(), std::nullopt) ==
+          "test.sv\n");
+}
+
 TEST_CASE("Driver single-unit parsing") {
     Driver driver;
     driver.addStandardArgs();

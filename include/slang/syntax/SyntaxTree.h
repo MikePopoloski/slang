@@ -12,6 +12,7 @@
 
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/parsing/ParserMetadata.h"
+#include "slang/parsing/Preprocessor.h"
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
 
@@ -41,6 +42,7 @@ public:
     using TreeOrError =
         nonstd::expected<std::shared_ptr<SyntaxTree>, std::pair<std::error_code, std::string_view>>;
     using MacroList = std::span<const DefineDirectiveSyntax* const>;
+    using IncludeList = std::span<const parsing::IncludeMetadata>;
 
     /// Indicates whether this syntax tree represents a "library" compilation unit,
     /// which means that modules declared within it are not automatically instantiated.
@@ -210,6 +212,9 @@ public:
     /// Gets the list of macros that were defined at the end of the loaded source file.
     MacroList getDefinedMacros() const { return macros; }
 
+    /// Gets the list of include directives that were encountered while parsing.
+    IncludeList getIncludeDirectives() const { return includes; }
+
     /// This is a shared default source manager for cases where the user doesn't
     /// care about managing the lifetime of loaded source. Note that all of
     /// the source loaded by this thing will live in memory for the lifetime of
@@ -219,7 +224,8 @@ public:
 private:
     SyntaxTree(SyntaxNode* root, const SourceLibrary* library, SourceManager& sourceManager,
                BumpAllocator&& alloc, Diagnostics&& diagnostics, parsing::ParserMetadata&& metadata,
-               std::vector<const DefineDirectiveSyntax*>&& macros, Bag options);
+               std::vector<const DefineDirectiveSyntax*>&& macros,
+               std::vector<parsing::IncludeMetadata>&& includes, Bag options);
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager,
                                               std::span<const SourceBuffer> source,
@@ -234,6 +240,7 @@ private:
     Bag options_;
     std::unique_ptr<parsing::ParserMetadata> metadata;
     std::vector<const DefineDirectiveSyntax*> macros;
+    std::vector<parsing::IncludeMetadata> includes;
 };
 
 } // namespace slang::syntax

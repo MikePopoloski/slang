@@ -41,6 +41,14 @@ void SourceLoader::addFiles(std::string_view pattern) {
                      /* expandEnvVars */ false);
 }
 
+std::vector<std::filesystem::path> SourceLoader::getFilePaths() const {
+    std::vector<std::filesystem::path> paths;
+    paths.reserve(fileEntries.size());
+    for (const auto& entry : fileEntries)
+        paths.push_back(entry.path);
+    return paths;
+}
+
 void SourceLoader::addLibraryFiles(std::string_view libName, std::string_view pattern) {
     addFilesInternal(pattern, {}, /* isLibraryFile */ true, getOrAddLibrary(libName),
                      /* unit */ nullptr,

@@ -212,6 +212,10 @@ std::vector<const DefineDirectiveSyntax*> Preprocessor::getDefinedMacros() const
     return results;
 }
 
+std::vector<IncludeMetadata> Preprocessor::getIncludeDirectives() const {
+    return includeDirectives;
+}
+
 Token Preprocessor::next() {
     return consume();
 }
@@ -533,6 +537,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
 
     // path should be at least three chars: "a" or <a>
     std::string_view path = fileName.valueText();
+    auto syntax = alloc.emplace<IncludeDirectiveSyntax>(directive, fileName);
     if (path.length() < 3) {
         if (!fileName.isMissing())
             addDiag(diag::ExpectedIncludeFileName, fileName.range());
@@ -555,9 +560,14 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             includeDepth++;
             pushSource(*buffer);
         }
+        includeDirectives.push_back(IncludeMetadata{
+            .syntax = syntax,
+            .path = path,
+            .buffer = buffer,
+            .isSystem = isSystem,
+        });
     }
 
-    auto syntax = alloc.emplace<IncludeDirectiveSyntax>(directive, fileName);
     return Trivia(TriviaKind::Directive, syntax);
 }
 
