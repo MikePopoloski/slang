@@ -2,4 +2,5 @@
   "python.testing.pytestArgs": [],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
+  "testMate.cpp.test.workingDirectory": "${workspaceFolder}",
 }

@@ -715,6 +715,9 @@ void ElabSystemTaskSymbol::issueDiagnostic() const {
     if (!msg)
         return;
 
+    if (scope->isUninstantiated())
+        return;
+
     DiagCode code;
     switch (taskKind) {
         case ElabSystemTaskKind::Fatal:
