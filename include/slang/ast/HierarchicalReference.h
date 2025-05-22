@@ -74,13 +74,6 @@ public:
     /// Returns true if the hierarchical reference traverses upward through the hierarchy.
     bool isUpward() const;
 
-    /// Re-resolves the target symbol starting from the corresponding port in
-    /// the new base instance and following the same path as the original reference.
-    ///
-    /// @returns the resolved symbol, or nullptr if the path could not be followed
-    ///          or this reference does not resolve through an interface port.
-    const Symbol* retargetIfacePort(const InstanceSymbol& base) const;
-
     /// Returns a new HierarchicalReference that represents the joined
     /// path of this reference and another.
     const HierarchicalReference& join(BumpAllocator& alloc,

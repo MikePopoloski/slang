@@ -471,13 +471,118 @@ void DriverTracker::noteInterfacePortDriver(AnalysisContext& context, DriverAllo
     }
 }
 
+static const Symbol* retargetIfacePort(const HierarchicalReference& ref,
+                                       const InstanceSymbol& base) {
+    // This function retargets a hierarchical reference that begins with
+    // an interface port access to a different instance that has the same port,
+    // i.e. performing the same lookup for a different but identical instance.
+    if (!ref.isViaIfacePort() || !ref.target)
+        return nullptr;
+
+    // Should always find the port here unless some other error occurred.
+    auto& path = ref.path;
+    auto port = base.body.findPort(path[0].symbol->name);
+    if (!port)
+        return nullptr;
+
+    auto [symbol, modport] = port->as<InterfacePortSymbol>().getConnection();
+    std::optional<std::span<const Symbol* const>> instanceArrayElems;
+
+    // Walk the path to find the target symbol.
+    for (size_t i = 1; i < path.size(); i++) {
+        if (!symbol)
+            return nullptr;
+
+        // instanceArrayElems is valid when the prior entry in the path
+        // did a range select of an interface instance array. We don't
+        // have a way to represent that range as a symbol, so we track this
+        // as a separate optional span of selected instances.
+        if (!instanceArrayElems) {
+            if (symbol->kind == SymbolKind::Instance) {
+                auto& body = symbol->as<InstanceSymbol>().body;
+                symbol = &body;
+
+                // See lookupDownward in Lookup.cpp for the logic here.
+                if (modport) {
+                    symbol = body.find(modport->name);
+                    modport = nullptr;
+                    SLANG_ASSERT(symbol);
+                }
+            }
+            else if (symbol->kind == SymbolKind::InstanceArray) {
+                instanceArrayElems = symbol->as<InstanceArraySymbol>().elements;
+            }
+            else if (!symbol->isScope()) {
+                return nullptr;
+            }
+        }
+
+        auto& elem = path[i];
+        if (auto index = std::get_if<int32_t>(&elem.selector)) {
+            // We're doing an element select here.
+            if (instanceArrayElems) {
+                // Prior entry was a range select, so select further within it.
+                if (*index < 0 || size_t(*index) >= instanceArrayElems->size())
+                    return nullptr;
+
+                symbol = (*instanceArrayElems)[size_t(*index)];
+            }
+            else if (symbol->kind == SymbolKind::GenerateBlockArray) {
+                auto& arr = symbol->as<GenerateBlockArraySymbol>();
+                if (!arr.valid || *index < 0 || size_t(*index) >= arr.entries.size())
+                    return nullptr;
+
+                symbol = arr.entries[size_t(*index)];
+            }
+            else {
+                return nullptr;
+            }
+        }
+        else if (auto range = std::get_if<std::pair<int32_t, int32_t>>(&elem.selector)) {
+            // We're doing a range select here.
+            if (!instanceArrayElems)
+                return nullptr;
+
+            auto size = instanceArrayElems->size();
+            if (range->first < 0 || size_t(range->second) >= size)
+                return nullptr;
+
+            if (size_t(range->first) >= size || size_t(range->second) >= size)
+                return nullptr;
+
+            // We `continue` here so that we don't reset the instanceArrayElems.
+            instanceArrayElems = instanceArrayElems->subspan(
+                size_t(range->first), size_t(range->second - range->first) + 1);
+            continue;
+        }
+        else {
+            auto name = std::get<std::string_view>(elem.selector);
+            auto next = symbol->as<Scope>().find(name);
+            if (!next && symbol->kind == SymbolKind::Modport) {
+                // See lookupDownward in Lookup.cpp for the logic here.
+                next = symbol->getParentScope()->find(name);
+                if (!next || SemanticFacts::isAllowedInModport(next->kind) ||
+                    next->kind == SymbolKind::Modport) {
+                    return nullptr;
+                }
+            }
+            symbol = next;
+        }
+
+        // Otherwise we're done with the range select if we had one.
+        instanceArrayElems.reset();
+    }
+
+    return symbol;
+}
+
 void DriverTracker::applyInstanceSideEffect(AnalysisContext& context, DriverAlloc& driverAlloc,
                                             const InstanceState::IfacePortDriver& ifacePortDriver,
                                             const InstanceSymbol& instance) {
     // TODO: add test for invalid case of module instance in an interface
     // that is connected and driven through a cached port.
     auto& ref = *ifacePortDriver.ref;
-    if (auto target = ref.retargetIfacePort(instance)) {
+    if (auto target = retargetIfacePort(ref, instance)) {
         auto driver = context.alloc.emplace<ValueDriver>(*ifacePortDriver.driver);
         driver->containingSymbol = &instance;
         driver->isFromSideEffect = true;
