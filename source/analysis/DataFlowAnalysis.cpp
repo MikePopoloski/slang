@@ -137,8 +137,42 @@ static bool shouldAnalyzeFunc(const Symbol& caller) {
 }
 
 void DataFlowAnalysis::handle(const CallExpression& expr) {
-    // TODO: look at output args
-    visitExpr(expr);
+    expr.visitExprsNoArgs(*this);
+
+    if (auto sysCall = std::get_if<CallExpression::SystemCallInfo>(&expr.subroutine)) {
+        auto& sub = *sysCall->subroutine;
+
+        size_t argIndex = 0;
+        for (auto arg : expr.arguments()) {
+            if (!sub.isArgUnevaluated(argIndex))
+                visit(*arg);
+            argIndex++;
+        }
+
+        if (sub.neverReturns)
+            setUnreachable();
+    }
+    else {
+        auto subroutine = std::get<const SubroutineSymbol*>(expr.subroutine);
+        auto formals = subroutine->getArguments();
+        auto args = expr.arguments();
+        SLANG_ASSERT(formals.size() == args.size());
+
+        for (size_t i = 0; i < formals.size(); i++) {
+            // Non-const ref args are special because they don't have an assignment
+            // expression generated for them but still act as output drivers.
+            auto& formal = *formals[i];
+            if (formal.direction == ArgumentDirection::Ref &&
+                !formal.flags.has(VariableFlags::Const)) {
+                isLValue = true;
+                visit(*args[i]);
+                isLValue = false;
+            }
+            else {
+                visit(*args[i]);
+            }
+        }
+    }
 
     // If this is a call to a sampled value function, keep track of
     // it so that we can later verify that it has a clocking event.

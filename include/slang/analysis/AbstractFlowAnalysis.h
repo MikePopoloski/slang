@@ -451,6 +451,7 @@ protected:
                 for (auto local : localPtrs)
                     *local = std::move(iterValues[i++]);
 
+                // TODO: give up if state becomes unreachable?
                 visit(stmt.body);
                 for (auto step : stmt.steps)
                     visit(*step);
