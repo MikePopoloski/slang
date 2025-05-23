@@ -275,3 +275,84 @@ endmodule
     bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
+
+TEST_CASE("OnlyAssignedOnReset: Struct array with for loop in non-reset block") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    logic clk_i;
+    logic rst_ni;
+    struct {
+        logic x;
+        logic z;
+    } k[1:0];
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (~rst_ni) begin
+            k[0].x <= 1'b1;
+            k[0].z <= 1'b1;
+            k[1].x <= 1'b1;
+            k[1].z <= 1'b1;
+        end
+        else begin
+            for (int i = 0; i < 2; i++) begin
+                k[i].x <= 1'b0;
+                k[i].z <= 1'b0;
+            end
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    auto& root = compilation.getRoot();
+
+    TidyConfig config;
+    Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
+    auto visitor = Registry::create("OnlyAssignedOnReset");
+    bool result = visitor->check(root);
+    CHECK(result);
+}
+
+TEST_CASE("OnlyAssignedOnReset: Issue example from problem statement") {
+    auto tree = SyntaxTree::fromText(R"(
+module test;
+    struct {
+        logic x;
+        logic z;
+    } k [1:0];
+    logic clk_i;
+    logic rst_ni;
+    logic a, b, c, d;
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (~rst_ni) begin
+            k[0].x <= 1'b1;
+            k[0].z <= 1'b1;
+            k[1].x <= 1'b1;
+            k[1].z <= 1'b1;
+        end
+        else begin
+            k[0].x <= 1'b0;
+            k[0].z <= 1'b0;
+            k[1].x <= 1'b0;
+            k[1].z <= 1'b0;
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    auto& root = compilation.getRoot();
+
+    TidyConfig config;
+    Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
+    auto visitor = Registry::create("OnlyAssignedOnReset");
+    bool result = visitor->check(root);
+    CHECK(result);
+}
