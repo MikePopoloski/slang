@@ -12,11 +12,6 @@ std::optional<std::string_view> getIdentifier(const slang::ast::Expression& expr
         // Recursively get the base identifier from the value part of the member access
         return getIdentifier(memberAccess.value());
     }
-    else if (slang::ast::ElementSelectExpression::isKind(expr.kind)) {
-        // For array access, get the base identifier from the value part
-        auto& elementSelect = expr.as<slang::ast::ElementSelectExpression>();
-        return getIdentifier(elementSelect.value());
-    }
     else {
         symbol = expr.getSymbolReference();
     }
