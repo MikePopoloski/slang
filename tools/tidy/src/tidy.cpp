@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
                 OS::print("\n");
             OS::print(fmt::format(fmt::emphasis::bold, "[{}]\n\n", check->name()));
             OS::print(fmt::format("Config key: {}-{}\n\n", toLower(toString(check->getKind())),
-                  TidyConfigParser::unformatCheckName(check->name())));
+                                  TidyConfigParser::unformatCheckName(check->name())));
             if (printDescriptions)
                 OS::print(fmt::format("{}\n", check->description()));
             else
