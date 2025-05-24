@@ -189,7 +189,7 @@ int main(int argc, char** argv) {
       }
       OS::print("\n");
 
-      OS::print("Configs:\n");
+      OS::print("CheckConfigs:\n");
       const auto& configValues = tidyConfig.serialise();
       std::vector<std::pair<std::string, std::string>> populatedValues;
       for (auto [name, value] : configValues) {
@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
         populatedValues.push_back({name, value});
       } 
       for (auto it = populatedValues.begin(); it != populatedValues.end(); ++it) {
-        OS::print(fmt::format("  {}: {}", it->first, it->second));
+        OS::print(fmt::format("  {}: \"{}\"", it->first, it->second));
         if (std::next(it) != populatedValues.end()) {
             OS::print(",\n");
         } else {
