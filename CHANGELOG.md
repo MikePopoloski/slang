@@ -12,6 +12,28 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixes
 
 
+## [v8.1] - 2025-05-23
+### Fixes
+* The restriction on interface instances targeted by defparams not being allowed with virtual interfaces was also erroneously applied to interface port connections
+* Fixed a null pointer crash in slang-tidy (thanks to @rhanqtl)
+* Fixed a bug that could cause infinite recursion when instantiating bind targets that force elaboration due to wildcard package imports
+* Fixed the handling of disable region directives declared in block comments (as opposed to single line comments which were working fine)
+* Fixed a spurious error when cycle delays are used in an uninstantiated context that does not have default clocking specified
+* Fixed an issue with how checker formal ports are looked up from within checker instances
+* Fixed ICE with conditional statements that have pattern matching along with a named statement block
+* Recursive typedef declarations now properly report an error instead of crashing
+* Fixed several issues that led to invalid builds on Linux with LTO enabled
+* Fixed a case where no diagnostic would be issued when incorrectly referring to an instance array element from within an expression
+* Fixed SyntaxPrinter printing of directives that have skipped leading trivia
+* Fixed rewiring of interface array port connections with opposite declared range directions
+* Fixed a bug in the constant evaluation of division between two positive signed integers; the sign flag was lost and the result was always treated as unsigned
+* Fixed JSON serialization of definition symbol attributes
+* The `--obfuscate-ids` option has been fixed to not generate invalid SystemVerilog names that start with a digit (thanks to @Sustrak)
+* Fixed slang-tidy's module instantiation prefix check to use the correct diagnostic (thanks to @corco)
+* Fixed $static_asserts triggering in uninstantiated contexts (thanks to @AndrewNolte)
+* Fixed `--allow-use-before-declare` to apply to wildcard port connection expressions
+
+
 ## [v8.0] - 2025-02-05
 ### Language Support
 * Disallow access to protected members from class scoped randomize constraint blocks -- the LRM is unclear about this but other tools seem to have decided this way made the most sense
