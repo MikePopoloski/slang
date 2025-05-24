@@ -669,6 +669,9 @@ source:9:5: warning: extra ';' has no effect [-Wempty-member]
 TEST_CASE("Diagnostic warning option corner cases") {
     auto createEngine = [](std::vector<std::string> options) {
         DiagnosticEngine engine(getSourceManager());
+        engine.setSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
+        engine.setSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);
+
         auto diags = engine.setWarningOptions(options);
         CHECK(diags.empty());
         return engine;
@@ -723,5 +726,25 @@ TEST_CASE("Diagnostic warning option corner cases") {
     {
         auto engine = createEngine({"no-error=constant-conversion"s});
         CHECK(engine.getSeverity(diag::ConstantConversion, {}) == DiagnosticSeverity::Ignored);
+    }
+    {
+        auto engine = createEngine({});
+        CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Error);
+        CHECK(engine.getSeverity(diag::StaticInitializerMustBeExplicit, {}) ==
+              DiagnosticSeverity::Ignored);
+    }
+    {
+        auto engine = createEngine({"none"s});
+        CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Error);
+        CHECK(engine.getSeverity(diag::StaticInitializerMustBeExplicit, {}) ==
+              DiagnosticSeverity::Ignored);
+    }
+    {
+        auto engine = createEngine({"no-error=unknown-sys-name"s});
+        CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Warning);
+    }
+    {
+        auto engine = createEngine({"no-unknown-sys-name"s});
+        CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Ignored);
     }
 }

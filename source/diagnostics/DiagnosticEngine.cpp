@@ -524,7 +524,7 @@ Diagnostics DiagnosticEngine::setWarningOptions(std::span<const std::string> opt
             severity = warningsAsErrors ? DiagnosticSeverity::Error : DiagnosticSeverity::Warning;
 
         for (auto code : group->getDiags())
-            severityTable[code] = severity;
+            severityTable.try_emplace(code, severity);
     };
 
     // If they didn't pass "none" then enable the default set of warnings.
@@ -537,6 +537,16 @@ Diagnostics DiagnosticEngine::setWarningOptions(std::span<const std::string> opt
     // Apply all of the collected settings to the severity table.
     for (auto& [group, set] : groupEnables)
         handleGroup(group, set);
+
+    // Special case for diagnostics with an explicit severity set by API that
+    // the user is now trying to downgrade to be not an error.
+    for (auto& [code, set] : codeErrors) {
+        if (!set) {
+            auto it = severityTable.find(code);
+            if (it != severityTable.end() && it->second == DiagnosticSeverity::Error)
+                it->second = DiagnosticSeverity::Warning;
+        }
+    }
 
     for (auto& [code, set] : codeEnables) {
         if (!set) {
