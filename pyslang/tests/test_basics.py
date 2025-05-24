@@ -91,7 +91,9 @@ def test_include_metadata():
     `include "some_file.svh"
     """
     )
-    assert len(tree.getIncludeDirectives()) == 1
+    includes = tree.getIncludeDirectives()
+    assert len(includes) == 1
+    assert includes[0].path.endswith("some_file.svh")
 
 
 def test_script_session():

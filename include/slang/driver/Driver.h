@@ -352,7 +352,7 @@ public:
     /// Creates an options bag from all of the currently set options.
     [[nodiscard]] Bag createOptionBag() const;
 
-    /// Creates an options bag from all of the currently set parser options
+    /// Creates an options bag from all of the currently set parse options
     [[nodiscard]] Bag createParseOptionBag() const;
 
     /// Creates a compilation object from all of the current loaded state of the driver.

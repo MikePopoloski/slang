@@ -559,13 +559,14 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         else if (includeOnceHeaders.find(buffer->data.data()) == includeOnceHeaders.end()) {
             includeDepth++;
             pushSource(*buffer);
+
+            includeDirectives.push_back(IncludeMetadata{
+                .syntax = syntax,
+                .path = path,
+                .buffer = *buffer,
+                .isSystem = isSystem,
+            });
         }
-        includeDirectives.push_back(IncludeMetadata{
-            .syntax = syntax,
-            .path = path,
-            .buffer = buffer,
-            .isSystem = isSystem,
-        });
     }
 
     return Trivia(TriviaKind::Directive, syntax);

@@ -1147,11 +1147,10 @@ endmodule
 
     CompilationOptions options;
     options.topModules.insert("top");
+
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
-
-    auto& diagnostics = compilation.getAllDiagnostics();
-    CHECK(diagnostics.size() == 0);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("$static_assert with let expression") {
@@ -1283,9 +1282,7 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 0);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("always_ff timing (fail)") {

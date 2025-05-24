@@ -2051,5 +2051,5 @@ endmodule : mod_sva_checks
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 0);
+    CHECK_DIAGS_EMPTY;
 }

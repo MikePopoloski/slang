@@ -243,7 +243,6 @@ __slang__ 1
 }
 
 TEST_CASE("Driver includes depfile") {
-
     Driver driver;
     driver.addStandardArgs();
 
@@ -263,7 +262,6 @@ TEST_CASE("Driver includes depfile") {
 }
 
 TEST_CASE("Driver all depfile") {
-
     Driver driver;
     driver.addStandardArgs();
 
@@ -286,7 +284,6 @@ TEST_CASE("Driver all depfile") {
 }
 
 TEST_CASE("Driver module depfile") {
-
     Driver driver;
     driver.addStandardArgs();
 

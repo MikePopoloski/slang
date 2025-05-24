@@ -116,23 +116,26 @@ int driverMain(int argc, TArgs argv) {
                            "When dumping AST to JSON, expand out all type information");
 
         std::optional<std::string> depfileTarget;
-        driver.cmdLine.add(
-            "--depfile-target", depfileTarget,
-            "Use depfile (.d) format for generated dependency files, meaning --M<mode> <name> will "
-            "generate <depfileTarget> with <name> as the makefile target.");
+        driver.cmdLine.add("--depfile-target", depfileTarget,
+                           "Output depfile lists in makefile format, creating the file with "
+                           "`<target>:` as the make target");
 
         std::optional<std::string> allDepfile;
         driver.cmdLine.add("--Mall,--all-deps", allDepfile,
-                           "Generate dependency file list of include files and other files parsed");
+                           "Generate dependency file list of all files used during parsing",
+                           "<file>", CommandLineFlags::FilePath);
 
         std::optional<std::string> includeDepfile;
         driver.cmdLine.add(
             "--Minclude,--include-deps", includeDepfile,
-            "Generate dependency file list of files parsed, excluding include files");
+            "Generate dependency file list of just include files that were used during parsing",
+            "<file>", CommandLineFlags::FilePath);
 
         std::optional<std::string> moduleDepfile;
-        driver.cmdLine.add("--Mmodule,--module-deps", moduleDepfile,
-                           "Generate dependency file list of files parsed, excluding includes");
+        driver.cmdLine.add(
+            "--Mmodule,--module-deps", moduleDepfile,
+            "Generate dependency file list of source files parsed, excluding include files",
+            "<file>", CommandLineFlags::FilePath);
 
         std::optional<std::string> timeTrace;
         driver.cmdLine.add("--time-trace", timeTrace,
@@ -183,10 +186,12 @@ int driverMain(int argc, TArgs argv) {
                 return driver.runPreprocessor(includeComments == true, includeDirectives == true,
                                               obfuscateIds == true);
             }
+
             if (onlyMacros == true) {
                 driver.reportMacros();
                 return true;
             }
+
             {
                 TimeTraceScope timeScope("parseAllSources"sv, ""sv);
                 ok = driver.parseAllSources();
@@ -196,19 +201,20 @@ int driverMain(int argc, TArgs argv) {
                 OS::writeFile(*includeDepfile,
                               driver.serializeDepfiles(driver.getDepfiles(true), depfileTarget));
             }
+
             if (moduleDepfile) {
                 OS::writeFile(*moduleDepfile,
                               driver.serializeDepfiles(driver.sourceLoader.getFilePaths(),
                                                        depfileTarget));
             }
+
             if (allDepfile) {
                 OS::writeFile(*allDepfile,
                               driver.serializeDepfiles(driver.getDepfiles(), depfileTarget));
             }
 
-            if (onlyParse == true) {
+            if (onlyParse == true)
                 return ok && driver.reportParseDiags();
-            }
 
             std::unique_ptr<Compilation> compilation;
             {

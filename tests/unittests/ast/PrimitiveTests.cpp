@@ -580,9 +580,7 @@ primitive X7 (q, clk, d);
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 0);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("More UDP error cases") {

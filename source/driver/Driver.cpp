@@ -734,22 +734,21 @@ void Driver::reportMacros() {
 }
 
 std::vector<fs::path> Driver::getDepfiles(bool includesOnly) const {
-
     flat_hash_set<fs::path> includeSet;
     SLANG_ASSERT(!syntaxTrees.empty());
 
     for (auto& tree : syntaxTrees) {
         for (auto& inc : tree->getIncludeDirectives()) {
-            if (inc.isSystem || !inc.buffer)
+            if (inc.isSystem)
                 continue;
 
-            includeSet.insert(sourceManager.getFullPath(inc.buffer->id));
+            includeSet.insert(sourceManager.getFullPath(inc.buffer.id));
         }
     }
+
     std::vector<fs::path> includePaths(includeSet.begin(), includeSet.end());
-    if (includesOnly) {
+    if (includesOnly)
         return includePaths;
-    }
 
     auto allPaths = sourceLoader.getFilePaths();
     allPaths.reserve(allPaths.size() + includePaths.size());
@@ -764,7 +763,7 @@ std::string Driver::serializeDepfiles(const std::vector<fs::path>& files,
 
     for (const auto& file : files) {
         auto relPath = std::filesystem::relative(file, std::filesystem::current_path());
-        paths.push_back(relPath.string());
+        paths.push_back(getU8Str(relPath));
     }
 
     std::sort(paths.begin(), paths.end());
@@ -772,18 +771,16 @@ std::string Driver::serializeDepfiles(const std::vector<fs::path>& files,
     FormatBuffer buffer;
     if (depfileTarget) {
         buffer.format("{}:", *depfileTarget);
-        for (const auto& file : paths) {
+        for (const auto& file : paths)
             buffer.format(" {}", file);
-        }
         buffer.append("\n");
     }
     else {
-        for (const auto& file : paths) {
+        for (const auto& file : paths)
             buffer.format("{}\n", file);
-        }
     }
 
-    return std::string(buffer.data(), buffer.size());
+    return buffer.str();
 }
 
 bool Driver::parseAllSources() {

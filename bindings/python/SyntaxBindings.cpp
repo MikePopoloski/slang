@@ -259,7 +259,7 @@ void registerSyntax(py::module_& m) {
         .def(py::init<>())
         .def_readonly("syntax", &IncludeMetadata::syntax)
         .def_readonly("path", &IncludeMetadata::path)
-        .def_readonly("buffer", &IncludeMetadata::isSystem)
+        .def_readonly("buffer", &IncludeMetadata::buffer)
         .def_readonly("isSystem", &IncludeMetadata::isSystem);
 
     py::class_<SyntaxTree, std::shared_ptr<SyntaxTree>>(m, "SyntaxTree")
