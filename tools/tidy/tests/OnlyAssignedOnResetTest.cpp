@@ -190,7 +190,7 @@ endmodule
 }
 
 TEST_CASE("OnlyAssignedOnReset: Struct array with for loop in non-reset block") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("OnlyAssignedOnReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -215,16 +215,5 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("OnlyAssignedOnReset");
-    bool result = visitor->check(root);
     CHECK(result);
 }
