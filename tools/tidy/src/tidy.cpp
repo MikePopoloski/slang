@@ -174,16 +174,38 @@ int main(int argc, char** argv) {
 
     // Print the configuration file for the currently enabled checks.
     if (dumpConfig) {
+
       OS::print("Checks:\n");
-      for (const auto& checkName : Registry::getEnabledChecks()) {
-        const auto check = Registry::create(checkName);
-        OS::print(fmt::format("  {}-{}\n", toLower(toString(check->getKind())),
+      const auto& enabledChecks = Registry::getEnabledChecks();
+      for (auto it = enabledChecks.begin(); it != enabledChecks.end(); ++it) {
+        const auto check = Registry::create(*it);
+        OS::print(fmt::format("  {}-{}", toLower(toString(check->getKind())),
                   TidyConfigParser::unformatCheckName(check->name())));
+        if (std::next(it) != enabledChecks.end()) {
+            OS::print(",\n");
+        } else {
+            OS::print("\n");
+        }
       }
       OS::print("\n");
+
       OS::print("Configs:\n");
-      for (auto [name, value] : tidyConfig.serialise()) {
-        OS::print(fmt::format("  {}: {}\n", name, value));
+      const auto& configValues = tidyConfig.serialise();
+      std::vector<std::pair<std::string, std::string>> populatedValues;
+      for (auto [name, value] : configValues) {
+        if (value.empty()) {
+          // Skip empty entries;
+          continue;
+        }
+        populatedValues.push_back({name, value});
+      } 
+      for (auto it = populatedValues.begin(); it != populatedValues.end(); ++it) {
+        OS::print(fmt::format("  {}: {}", it->first, it->second));
+        if (std::next(it) != populatedValues.end()) {
+            OS::print(",\n");
+        } else {
+            OS::print("\n");
+        }
       }
       return 0;
     }
