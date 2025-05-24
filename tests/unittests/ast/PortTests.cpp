@@ -1798,3 +1798,22 @@ endmodule
     REQUIRE(target);
     CHECK(target->getHierarchicalPath() == "top.top_bus[1].a");
 }
+
+TEST_CASE("Allow use before declare with wildcard connections") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic a);
+endmodule
+
+module n;
+    m m1(.*);
+    logic a;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowUseBeforeDeclare;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

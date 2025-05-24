@@ -1048,7 +1048,9 @@ private:
             return emptyConnection(port);
         }
 
-        if (!symbol->isDeclaredBefore(lookupLocation).value_or(true)) {
+        if (!symbol->isDeclaredBefore(lookupLocation).value_or(true) &&
+            !comp.hasFlag(CompilationFlags::AllowUseBeforeDeclare)) {
+
             auto& diag = scope.addDiag(diag::UsedBeforeDeclared, range);
             diag << port.name;
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
