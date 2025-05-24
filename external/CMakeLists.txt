@@ -4,7 +4,7 @@
 # ~~~
 
 # Required minimum versions for dependencies
-set(fmt_min_version "11.1")
+set(fmt_min_version "11.2")
 set(mimalloc_min_version "2.2")
 set(cpptrace_min_version "0.8")
 set(catch2_min_version "3.8")
@@ -22,7 +22,7 @@ set(FMT_SYSTEM_HEADERS
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 11.1.4
+  GIT_TAG 11.2.0
   GIT_SHALLOW ON
   ${find_pkg_args})
 
