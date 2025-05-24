@@ -122,15 +122,21 @@ void DataFlowAnalysis::handle(const AssignmentExpression& expr) {
         handleTiming(*expr.timingControl);
 }
 
-static bool shouldAnalyzeFunc(const Symbol& caller) {
+static bool shouldAnalyzeFunc(const Symbol& caller, const SubroutineSymbol& subroutine) {
+    if (subroutine.flags.has(MethodFlags::Pure | MethodFlags::InterfaceExtern |
+                             MethodFlags::DPIImport | MethodFlags::Randomize |
+                             MethodFlags::BuiltIn)) {
+        return false;
+    }
+
     // We only analyze functions that are called from procedural blocks
     // or non-class functions.
     if (caller.kind == SymbolKind::ProceduralBlock)
         return true;
 
     if (caller.kind == SymbolKind::Subroutine) {
-        auto& sub = caller.as<SubroutineSymbol>();
-        return sub.subroutineKind == SubroutineKind::Function && sub.thisVar == nullptr;
+        auto& callerSub = caller.as<SubroutineSymbol>();
+        return callerSub.subroutineKind == SubroutineKind::Function && callerSub.thisVar == nullptr;
     }
 
     return false;
@@ -183,8 +189,11 @@ void DataFlowAnalysis::handle(const CallExpression& expr) {
     // we need to analyze the function body for assignments, as they count
     // as lvalue usage in this procedure as well.
     if (!expr.isSystemCall() && !expr.thisClass() &&
-        expr.getSubroutineKind() == SubroutineKind::Function && shouldAnalyzeFunc(rootSymbol)) {
-        handleFunctionCall(expr, *std::get<0>(expr.subroutine));
+        expr.getSubroutineKind() == SubroutineKind::Function) {
+
+        auto& sub = *std::get<0>(expr.subroutine);
+        if (shouldAnalyzeFunc(rootSymbol, sub))
+            handleFunctionCall(expr, sub);
     }
 }
 
