@@ -10,6 +10,7 @@
 #include "TidyKind.h"
 #include <algorithm>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <regex>
 #include <slang/util/TypeTraits.h>
 #include <string>
@@ -62,6 +63,23 @@ public:
     // Adds a new path into the list of skipped paths
     void addSkipPath(const std::string& path);
     void addSkipPath(const std::vector<std::string>& paths);
+    
+    /// Serialise the tidy config for printing in the config file format.
+    std::vector<std::pair<std::string, std::string>> serialise() const {
+      return {
+        {"clkName", getCheckConfigs().clkName},
+        {"resetName", getCheckConfigs().resetName},
+        {"clkNameRegexString", getCheckConfigs().clkNameRegexString},
+        {"resetIsActiveHigh", getCheckConfigs().resetIsActiveHigh ? "true" : "false"},
+        {"inputPortSuffix", fmt::format("{}", fmt::join(getCheckConfigs().inputPortSuffix, "|"))},
+        {"outputPortSuffix", fmt::format("{}", fmt::join(getCheckConfigs().outputPortSuffix, "|"))},
+        {"inoutPortSuffix", fmt::format("{}", fmt::join(getCheckConfigs().inoutPortSuffix, "|"))},
+        {"moduleInstantiationPrefix", getCheckConfigs().moduleInstantiationPrefix},
+        {"inputPortPrefix", fmt::format("{}", fmt::join(getCheckConfigs().inputPortPrefix, "|"))},
+        {"outputPortPrefix", fmt::format("{}", fmt::join(getCheckConfigs().outputPortPrefix, "|"))},
+        {"inoutPortPrefix", fmt::format("{}", fmt::join(getCheckConfigs().inoutPortPrefix, "|"))},
+      };
+    }
 
 private:
     CheckConfigs checkConfigs;

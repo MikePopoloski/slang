@@ -52,6 +52,10 @@ int main(int argc, char** argv) {
     std::optional<std::string> tidyConfigFile;
     driver.cmdLine.add("--config-file", tidyConfigFile,
                        "Path to where the tidy config file is located");
+    
+    std::optional<bool> dumpConfig;
+    driver.cmdLine.add("--dump-config", dumpConfig,
+                       "Dump the configuration options to stdout and exit");
 
     std::vector<std::string> skippedFiles;
     driver.cmdLine.add("--skip-file", skippedFiles, "Files to be skipped by slang-tidy");
@@ -166,6 +170,22 @@ int main(int argc, char** argv) {
     }
     else if (auto path = project_slang_tidy_config()) {
         tidyConfig = TidyConfigParser(path.value()).getConfig();
+    }
+
+    // Print the configuration file for the currently enabled checks.
+    if (dumpConfig) {
+      OS::print("Checks:\n");
+      for (const auto& checkName : Registry::getEnabledChecks()) {
+        const auto check = Registry::create(checkName);
+        OS::print(fmt::format("  {}-{}\n", toLower(toString(check->getKind())),
+                  TidyConfigParser::unformatCheckName(check->name())));
+      }
+      OS::print("\n");
+      OS::print("Configs:\n");
+      for (auto [name, value] : tidyConfig.serialise()) {
+        OS::print(fmt::format("  {}: {}\n", name, value));
+      }
+      return 0;
     }
 
     // Add skipped files provided by the cmd args
