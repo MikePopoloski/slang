@@ -8,8 +8,10 @@
 
 #include "TidyConfigParser.h"
 #include "TidyFactory.h"
+#include "TidyKind.h"
 #include "fmt/color.h"
 #include "fmt/format.h"
+#include <algorithm>
 #include <filesystem>
 #include <unordered_set>
 
@@ -21,6 +23,13 @@
 /// tries on the parent directory until the root.
 std::optional<std::filesystem::path> project_slang_tidy_config();
 using namespace slang;
+
+std::string toLower(const std::string_view input) {
+    std::string result(input);
+    std::transform(result.begin(), result.end(), result.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return result;
+}
 
 int main(int argc, char** argv) {
     OS::setupConsole();
@@ -129,11 +138,13 @@ int main(int argc, char** argv) {
                 first = false;
             else
                 OS::print("\n");
-            OS::print(fmt::format(fmt::emphasis::bold, "[{}]\n", check->name()));
+            OS::print(fmt::format(fmt::emphasis::bold, "[{}]\n\n", check->name()));
+            OS::print(fmt::format("Config key: {}-{}\n\n", toLower(toString(check->getKind())),
+                  TidyConfigParser::unformatCheckName(check->name())));
             if (printDescriptions)
-                OS::print(fmt::format("{}", check->description()));
+                OS::print(fmt::format("{}\n", check->description()));
             else
-                OS::print(fmt::format("{}\n", check->shortDescription()));
+                OS::print(fmt::format("{}\n\n", check->shortDescription()));
         }
         return 0;
     }
