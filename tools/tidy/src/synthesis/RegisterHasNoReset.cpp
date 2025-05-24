@@ -95,6 +95,10 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
         if (symbol.drivers().empty())
             return;
 
+        // Skip variables with automatic lifetime
+        if (symbol.lifetime == VariableLifetime::Automatic)
+            return;
+
         auto firstDriver = *symbol.drivers().begin();
         if (firstDriver && firstDriver->source == DriverSource::AlwaysFF) {
             auto& configs = config.getCheckConfigs();
