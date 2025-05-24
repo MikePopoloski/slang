@@ -95,12 +95,8 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
         if (symbol.drivers().empty())
             return;
 
-        // Skip iterator variables
-        if (symbol.kind == SymbolKind::Iterator)
-            return;
-
-        // Skip common loop iterator variables
-        if (symbol.name == "i" || symbol.name == "j" || symbol.name == "k")
+        // Skip variables with automatic lifetime
+        if (symbol.lifetime == VariableLifetime::Automatic)
             return;
 
         auto firstDriver = *symbol.drivers().begin();
