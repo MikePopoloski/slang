@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
     std::optional<std::string> tidyConfigFile;
     driver.cmdLine.add("--config-file", tidyConfigFile,
                        "Path to where the tidy config file is located");
-    
+
     std::optional<bool> dumpConfig;
     driver.cmdLine.add("--dump-config", dumpConfig,
                        "Dump the configuration options to stdout and exit");
@@ -144,7 +144,7 @@ int main(int argc, char** argv) {
                 OS::print("\n");
             OS::print(fmt::format(fmt::emphasis::bold, "[{}]\n\n", check->name()));
             OS::print(fmt::format("Config key: {}-{}\n\n", toLower(toString(check->getKind())),
-                  TidyConfigParser::unformatCheckName(check->name())));
+                                  TidyConfigParser::unformatCheckName(check->name())));
             if (printDescriptions)
                 OS::print(fmt::format("{}\n", check->description()));
             else
@@ -175,39 +175,41 @@ int main(int argc, char** argv) {
     // Print the configuration file for the currently enabled checks.
     if (dumpConfig) {
 
-      OS::print("Checks:\n");
-      const auto& enabledChecks = Registry::getEnabledChecks();
-      for (auto it = enabledChecks.begin(); it != enabledChecks.end(); ++it) {
-        const auto check = Registry::create(*it);
-        OS::print(fmt::format("  {}-{}", toLower(toString(check->getKind())),
-                  TidyConfigParser::unformatCheckName(check->name())));
-        if (std::next(it) != enabledChecks.end()) {
-            OS::print(",\n");
-        } else {
-            OS::print("\n");
+        OS::print("Checks:\n");
+        const auto& enabledChecks = Registry::getEnabledChecks();
+        for (auto it = enabledChecks.begin(); it != enabledChecks.end(); ++it) {
+            const auto check = Registry::create(*it);
+            OS::print(fmt::format("  {}-{}", toLower(toString(check->getKind())),
+                                  TidyConfigParser::unformatCheckName(check->name())));
+            if (std::next(it) != enabledChecks.end()) {
+                OS::print(",\n");
+            }
+            else {
+                OS::print("\n");
+            }
         }
-      }
-      OS::print("\n");
+        OS::print("\n");
 
-      OS::print("CheckConfigs:\n");
-      const auto& configValues = tidyConfig.serialise();
-      std::vector<std::pair<std::string, std::string>> populatedValues;
-      for (auto [name, value] : configValues) {
-        if (value.empty()) {
-          // Skip empty entries;
-          continue;
+        OS::print("CheckConfigs:\n");
+        const auto& configValues = tidyConfig.serialise();
+        std::vector<std::pair<std::string, std::string>> populatedValues;
+        for (auto [name, value] : configValues) {
+            if (value.empty()) {
+                // Skip empty entries;
+                continue;
+            }
+            populatedValues.push_back({name, value});
         }
-        populatedValues.push_back({name, value});
-      } 
-      for (auto it = populatedValues.begin(); it != populatedValues.end(); ++it) {
-        OS::print(fmt::format("  {}: \"{}\"", it->first, it->second));
-        if (std::next(it) != populatedValues.end()) {
-            OS::print(",\n");
-        } else {
-            OS::print("\n");
+        for (auto it = populatedValues.begin(); it != populatedValues.end(); ++it) {
+            OS::print(fmt::format("  {}: \"{}\"", it->first, it->second));
+            if (std::next(it) != populatedValues.end()) {
+                OS::print(",\n");
+            }
+            else {
+                OS::print("\n");
+            }
         }
-      }
-      return 0;
+        return 0;
     }
 
     // Add skipped files provided by the cmd args

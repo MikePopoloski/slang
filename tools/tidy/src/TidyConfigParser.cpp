@@ -479,8 +479,8 @@ std::string TidyConfigParser::formatCheckName(const std::string& checkName) {
     return name;
 }
 
-std::string TidyConfigParser::unformatCheckName(const std::string &name) {
-  std::string result;
+std::string TidyConfigParser::unformatCheckName(const std::string& name) {
+    std::string result;
 
     for (char ch : name) {
         if (std::isupper(ch)) {
@@ -488,11 +488,11 @@ std::string TidyConfigParser::unformatCheckName(const std::string &name) {
                 result += '-';
             }
             result += std::tolower(ch);
-        } else {
+        }
+        else {
             result += ch;
         }
     }
 
     return result;
 }
-
