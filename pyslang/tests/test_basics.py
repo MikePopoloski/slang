@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
 
+from pathlib import Path
+
 import pyslang
 
 
@@ -88,8 +90,10 @@ source:3:23: warning: arithmetic between operands of different types ('logic' an
 def test_include_metadata():
     tree = pyslang.SyntaxTree.fromText(
         """
-    `include "some_file.svh"
-    """
+    `include "{}/some_file.svh"
+    """.format(
+            Path(__file__).parent
+        )
     )
     includes = tree.getIncludeDirectives()
     assert len(includes) == 1
