@@ -106,11 +106,11 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         // assignments to the return value var.
         auto& subroutine = analyzedSymbol.as<SubroutineSymbol>();
         if (dfa.isReachable() && subroutine.subroutineKind == SubroutineKind::Function &&
-            !subroutine.getReturnType().isVoid() && !subroutine.name.empty()) {
+            !subroutine.getReturnType().isVoid() && !subroutine.name.empty() &&
+            subroutine.returnValVar) {
 
             // Control falls off the end of a non-void function but that is
             // fine if the return value var is definitely assigned here.
-            SLANG_ASSERT(subroutine.returnValVar);
             if (!dfa.isDefinitelyAssigned(*subroutine.returnValVar)) {
                 if (dfa.hasReturnStatements() || dfa.isReferenced(*subroutine.returnValVar)) {
                     context.addDiag(subroutine, diag::IncompleteReturn, subroutine.location)
