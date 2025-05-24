@@ -185,7 +185,7 @@ endmodule
 }
 
 TEST_CASE("RegisterHasNoReset: For loop iterators should not trigger warning") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto result = runCheckTest("RegisterHasNoReset", R"(
 module top;
     logic clk_i;
     logic rst_ni;
@@ -203,16 +203,5 @@ module top;
     end
 endmodule
 )");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    auto& root = compilation.getRoot();
-
-    TidyConfig config;
-    Registry::setConfig(config);
-    Registry::setSourceManager(compilation.getSourceManager());
-    auto visitor = Registry::create("RegisterHasNoReset");
-    bool result = visitor->check(root);
     CHECK(result);
 }
