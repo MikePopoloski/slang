@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
-#include "TidyFactory.h"
 #include "TidyConfigPrinter.h"
-#include "slang/util/OS.h"
-
-#include <iostream>
+#include "TidyFactory.h"
 #include <fstream>
+#include <iostream>
 #include <iterator>
 #include <string>
+
+#include "slang/util/OS.h"
 
 bool filesEqual(const std::string& file1, const std::string& file2) {
     std::ifstream f1(file1, std::ios::binary);
@@ -31,11 +31,9 @@ TEST_CASE("Round trip config file") {
 
     TidyConfig config;
     OS::writeFile("config1", TidyConfigPrinter::dumpConfig(config).str());
-    
-    auto newConfig =
-                TidyConfigParser(std::filesystem::path("config1")).getConfig();
+
+    auto newConfig = TidyConfigParser(std::filesystem::path("config1")).getConfig();
     OS::writeFile("config2", TidyConfigPrinter::dumpConfig(newConfig).str());
 
-    CHECK(filesEqual("config1", "config2")); 
+    CHECK(filesEqual("config1", "config2"));
 }
-

@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
     std::optional<std::string> tidyConfigFile;
     driver.cmdLine.add("--config-file", tidyConfigFile,
                        "Path to where the tidy config file is located");
-    
+
     std::optional<bool> dumpConfig;
     driver.cmdLine.add("--dump-config", dumpConfig,
                        "Dump the configuration options to stdout and exit");
@@ -169,8 +169,8 @@ int main(int argc, char** argv) {
 
     // Print the configuration file for the currently enabled checks.
     if (dumpConfig) {
-      OS::print(TidyConfigPrinter::dumpConfig(tidyConfig).str());
-      return 0;
+        OS::print(TidyConfigPrinter::dumpConfig(tidyConfig).str());
+        return 0;
     }
 
     // Add skipped files provided by the cmd args
