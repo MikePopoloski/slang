@@ -478,3 +478,21 @@ std::string TidyConfigParser::formatCheckName(const std::string& checkName) {
     name.append(capitalizedName.substr(currentPos));
     return name;
 }
+
+std::string TidyConfigParser::unformatCheckName(const std::string& name) {
+    std::string result;
+
+    for (char ch : name) {
+        if (std::isupper(ch)) {
+            if (!result.empty()) {
+                result += '-';
+            }
+            result += std::tolower(ch);
+        }
+        else {
+            result += ch;
+        }
+    }
+
+    return result;
+}

@@ -22,6 +22,10 @@ public:
 
     [[nodiscard]] TidyConfig getConfig() const { return config; };
 
+    /// Translate from config file name format (lower case with hyphens) to the registered name
+    /// format (camel case).
+    static std::string unformatCheckName(const std::string& name);
+
 private:
     /// Reserved keywords of the tidy config parser language
     enum class Keywords { ChecksKeyword, CheckConfigs };
