@@ -10,6 +10,7 @@
 #include "TidyKind.h"
 #include <algorithm>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <regex>
 #include <slang/util/TypeTraits.h>
 #include <string>
@@ -62,6 +63,25 @@ public:
     // Adds a new path into the list of skipped paths
     void addSkipPath(const std::string& path);
     void addSkipPath(const std::vector<std::string>& paths);
+
+    /// Serialise the tidy config for printing in the config file format.
+    std::vector<std::pair<std::string, std::string>> serialise() const {
+        const auto& cfg = getCheckConfigs();
+        auto joinVec = [](const auto& vec) { return fmt::format("{}", fmt::join(vec, "|")); };
+        return {
+            {"clkName", cfg.clkName},
+            {"resetName", cfg.resetName},
+            {"clkNameRegexString", cfg.clkNameRegexString},
+            {"resetIsActiveHigh", cfg.resetIsActiveHigh ? "true" : "false"},
+            {"inputPortSuffix", joinVec(cfg.inputPortSuffix)},
+            {"outputPortSuffix", joinVec(cfg.outputPortSuffix)},
+            {"inoutPortSuffix", joinVec(cfg.inoutPortSuffix)},
+            {"moduleInstantiationPrefix", cfg.moduleInstantiationPrefix},
+            {"inputPortPrefix", joinVec(cfg.inputPortPrefix)},
+            {"outputPortPrefix", joinVec(cfg.outputPortPrefix)},
+            {"inoutPortPrefix", joinVec(cfg.inoutPortPrefix)},
+        };
+    }
 
 private:
     CheckConfigs checkConfigs;
