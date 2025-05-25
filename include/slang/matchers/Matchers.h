@@ -8,10 +8,10 @@
 
 #pragma once
 
+#include "MatchersInternal.h"
+
 #include "slang/ast/Symbol.h"
 #include "slang/ast/symbols/VariableSymbols.h"
-
-#include "MatchersInternal.h"
 
 namespace slang::ast::matchers {
 

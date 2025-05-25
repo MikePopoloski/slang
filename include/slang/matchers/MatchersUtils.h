@@ -28,9 +28,10 @@ struct MemberFunctionArgumentHelper<R (C::*)(Arg0, Args...) const> {
 
 } // namespace detail
 
-template <typename MatcherImp>
+template<typename MatcherImp>
 struct ExtractNodeType {
-    using DeducedArgType = typename detail::MemberFunctionArgumentHelper<decltype(&MatcherImp::matches)>::FirstArgType;
+    using DeducedArgType =
+        typename detail::MemberFunctionArgumentHelper<decltype(&MatcherImp::matches)>::FirstArgType;
     using type = std::remove_cv_t<std::remove_reference_t<DeducedArgType>>;
 };
 } // namespace slang::ast::matchers::internal
