@@ -1,0 +1,41 @@
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+
+#include "Test.h"
+#include "TidyFactory.h"
+#include "TidyConfigPrinter.h"
+#include "slang/util/OS.h"
+
+#include <iostream>
+#include <fstream>
+#include <iterator>
+#include <string>
+
+bool filesEqual(const std::string& file1, const std::string& file2) {
+    std::ifstream f1(file1, std::ios::binary);
+    std::ifstream f2(file2, std::ios::binary);
+
+    if (!f1.is_open() || !f2.is_open()) {
+        std::cerr << "Error opening one of the files.\n";
+        return false;
+    }
+
+    std::istreambuf_iterator<char> begin1(f1);
+    std::istreambuf_iterator<char> begin2(f2);
+    std::istreambuf_iterator<char> end;
+
+    return std::equal(begin1, end, begin2);
+}
+
+TEST_CASE("Round trip config file") {
+
+    TidyConfig config;
+    OS::writeFile("config1", TidyConfigPrinter::dumpConfig(config).str());
+    
+    auto newConfig =
+                TidyConfigParser(std::filesystem::path("config1")).getConfig();
+    OS::writeFile("config2", TidyConfigPrinter::dumpConfig(newConfig).str());
+
+    CHECK(filesEqual("config1", "config2")); 
+}
+

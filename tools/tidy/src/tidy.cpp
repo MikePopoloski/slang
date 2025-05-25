@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 
 #include "TidyConfigParser.h"
+#include "TidyConfigPrinter.h"
 #include "TidyFactory.h"
 #include "TidyKind.h"
 #include "fmt/color.h"
@@ -23,13 +24,6 @@
 /// tries on the parent directory until the root.
 std::optional<std::filesystem::path> project_slang_tidy_config();
 using namespace slang;
-
-std::string toLower(const std::string_view input) {
-    std::string result(input);
-    std::transform(result.begin(), result.end(), result.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    return result;
-}
 
 int main(int argc, char** argv) {
     OS::setupConsole();
@@ -143,7 +137,8 @@ int main(int argc, char** argv) {
             else
                 OS::print("\n");
             OS::print(fmt::format(fmt::emphasis::bold, "[{}]\n\n", check->name()));
-            OS::print(fmt::format("Config key: {}-{}\n\n", toLower(toString(check->getKind())),
+            OS::print(fmt::format("Config key: {}-{}\n\n",
+                                  TidyConfigPrinter::toLower(toString(check->getKind())),
                                   TidyConfigParser::unformatCheckName(check->name())));
             if (printDescriptions)
                 OS::print(fmt::format("{}\n", check->description()));
@@ -174,39 +169,7 @@ int main(int argc, char** argv) {
 
     // Print the configuration file for the currently enabled checks.
     if (dumpConfig) {
-
-      OS::print("Checks:\n");
-      const auto& enabledChecks = Registry::getEnabledChecks();
-      for (auto it = enabledChecks.begin(); it != enabledChecks.end(); ++it) {
-        const auto check = Registry::create(*it);
-        OS::print(fmt::format("  {}-{}", toLower(toString(check->getKind())),
-                  TidyConfigParser::unformatCheckName(check->name())));
-        if (std::next(it) != enabledChecks.end()) {
-            OS::print(",\n");
-        } else {
-            OS::print("\n");
-        }
-      }
-      OS::print("\n");
-
-      OS::print("CheckConfigs:\n");
-      const auto& configValues = tidyConfig.serialise();
-      std::vector<std::pair<std::string, std::string>> populatedValues;
-      for (auto [name, value] : configValues) {
-        if (value.empty()) {
-          // Skip empty entries;
-          continue;
-        }
-        populatedValues.push_back({name, value});
-      } 
-      for (auto it = populatedValues.begin(); it != populatedValues.end(); ++it) {
-        OS::print(fmt::format("  {}: \"{}\"", it->first, it->second));
-        if (std::next(it) != populatedValues.end()) {
-            OS::print(",\n");
-        } else {
-            OS::print("\n");
-        }
-      }
+      OS::print(TidyConfigPrinter::dumpConfig(tidyConfig).str());
       return 0;
     }
 
