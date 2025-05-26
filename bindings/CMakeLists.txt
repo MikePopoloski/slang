@@ -55,9 +55,8 @@ pybind11_add_module(
   ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings2.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings3.cpp)
 
-set_target_properties(
-  _pyslang PROPERTIES COMPILE_DEFINITIONS
-                                VERSION_INFO=${PROJECT_VERSION})
+set_target_properties(_pyslang PROPERTIES COMPILE_DEFINITIONS
+                                          VERSION_INFO=${PROJECT_VERSION})
 
 target_link_libraries(_pyslang PUBLIC slang::slang)
 target_include_directories(_pyslang PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/python)
