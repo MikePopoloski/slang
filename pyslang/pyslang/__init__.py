@@ -1,6 +1,6 @@
-# Import Pybind11 bindings
 import json
 
+# Import Pybind11 bindings
 from _pyslang import *
 
 __all__ = [
@@ -792,8 +792,6 @@ __all__ = [
     "WithFunctionClauseSyntax",
     "WithFunctionSampleSyntax",
     "clog2",
-    "cls",
-    "json",
     "literalBaseFromChar",
     "logic_t",
     "node_to_dict",
