@@ -194,7 +194,7 @@ public:
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
-    /// A base implemention of the method that checks correctness of dynamic casting.
+    /// A base implementation of the method that checks correctness of dynamic casting.
     /// Derived nodes should reimplement this and return true if the provided syntax kind
     /// is compatible with the static type of the object.
     static bool isKind(SyntaxKind) { return true; }

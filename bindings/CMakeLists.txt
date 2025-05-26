@@ -36,9 +36,9 @@ add_custom_command(
   DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
   COMMENT "Generating syntax bindings")
 
-# Add the pyslang module via pybind11
+# Add the _pyslang module via pybind11
 pybind11_add_module(
-  pyslang
+  _pyslang
   MODULE
   python/ASTBindings.cpp
   python/CompBindings.cpp
@@ -54,13 +54,15 @@ pybind11_add_module(
   ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings1.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings2.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings3.cpp)
-set_source_files_properties(
-  python/pyslang.cpp PROPERTIES COMPILE_DEFINITIONS
+
+set_target_properties(
+  _pyslang PROPERTIES COMPILE_DEFINITIONS
                                 VERSION_INFO=${PROJECT_VERSION})
-target_link_libraries(pyslang PUBLIC slang::slang)
-target_include_directories(pyslang PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/python)
+
+target_link_libraries(_pyslang PUBLIC slang::slang)
+target_include_directories(_pyslang PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/python)
 
 install(
-  TARGETS pyslang
+  TARGETS _pyslang
   COMPONENT pylib
   DESTINATION .)
