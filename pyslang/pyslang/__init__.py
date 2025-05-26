@@ -11,6 +11,7 @@ __all__ = [
     "TokenKind",
     "TriviaKind",
     "SourceLocation",
+    "SourceRange",
     "node_to_dict",
 ]
 
