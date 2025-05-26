@@ -13,10 +13,10 @@ def node_to_dict(node):
         return None
 
     cls_name = type(node).__name__
-    
+
     if isinstance(node, (SyntaxKind, TokenKind, TriviaKind)):
-        return str(node).split('.')[-1]
-    
+        return str(node).split(".")[-1]
+
     if isinstance(node, SourceLocation):
         return {
             "type": cls_name,
