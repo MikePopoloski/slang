@@ -4,15 +4,16 @@ import json
 from _pyslang import *
 
 __all__ = [
-    'SyntaxNode',
-    'Token',
-    'Trivia',
-    'SyntaxKind',
-    'TokenKind',
-    'TriviaKind',
-    'SourceLocation',
-    'node_to_dict',
+    "SyntaxNode",
+    "Token",
+    "Trivia",
+    "SyntaxKind",
+    "TokenKind",
+    "TriviaKind",
+    "SourceLocation",
+    "node_to_dict",
 ]
+
 
 # Generic conversion from node to dict
 def node_to_dict(node):
