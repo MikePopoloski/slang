@@ -151,6 +151,9 @@ endmodule
     auto sym = compilation.getRoot().lookupName("top.m1.foo_t");
     auto& typeAlias = sym->as<ast::TypeAliasType>();
     CHECK(typeAlias.targetType.getType().getSyntax() == nullptr);
+    CHECK(typeAlias.targetType.getTypeSyntax() == nullptr);
+    CHECK(typeAlias.targetType.getInitializerSyntax() == nullptr);
+    CHECK(typeAlias.targetType.getDimensionSyntax() == nullptr);
     CHECK(typeAlias.getFirstForwardDecl() == nullptr);
 
     REQUIRE(typeAlias.getSyntax());
