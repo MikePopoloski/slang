@@ -211,6 +211,7 @@ if(SLANG_INCLUDE_INSTALL)
     COMPONENT slang_Development)
   install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
+          ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/KnownSystemName.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slang/parsing/
     COMPONENT slang_Development)
   install(
