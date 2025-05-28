@@ -734,6 +734,44 @@ class C; endclass
     }
 }
 
+struct AstCounter : public slang::ast::ASTVisitor<AstCounter, true, true> {
+
+    template<typename T>
+        requires std::is_base_of_v<slang::ast::Symbol, T>
+    void handle(const T& astNode) {
+        symKinds.insert(astNode.kind);
+        visitDefault(astNode);
+    }
+
+    template<typename T>
+        requires std::is_base_of_v<slang::ast::Expression, T>
+    void handle(const T& exprNode) {
+        exprKinds.insert(exprNode.kind);
+        visitDefault(exprNode);
+    }
+
+    template<typename T>
+        requires std::is_base_of_v<slang::ast::Statement, T>
+    void handle(const T& stmtNode) {
+        stmtKinds.insert(stmtNode.kind);
+        visitDefault(stmtNode);
+    }
+
+    flat_hash_set<ast::SymbolKind> symKinds;
+    flat_hash_set<ast::ExpressionKind> exprKinds;
+    flat_hash_set<ast::StatementKind> stmtKinds;
+};
+
+struct CstCounter : public slang::syntax::SyntaxVisitor<CstCounter> {
+    template<typename T>
+    void handle(const T& syntaxNode) {
+        syntaxKinds.insert(syntaxNode.kind);
+        visitDefault(syntaxNode);
+    }
+
+    flat_hash_set<syntax::SyntaxKind> syntaxKinds;
+};
+
 TEST_CASE("Visit all file") {
     // Load a file containing all the SystemVerilog constructs and visit them
     // just to get coverage of all the visitor methods.
@@ -745,14 +783,18 @@ TEST_CASE("Visit all file") {
     Compilation compilation;
     compilation.addSyntaxTree(*tree);
 
-    int count = 0;
-    compilation.getRoot().visit(makeVisitor([&](auto& v, auto& elem) {
-        count++;
-        v.visitDefault(elem);
-    }));
+    AstCounter symbols;
+    compilation.getRoot().visit(symbols);
 
-    CHECK(count == 1812);
+    CstCounter syntaxes;
+    (*tree)->root().visit(syntaxes);
 
+    // Ideally this should visit all kinds (be zero)
+    CHECK(218 == syntax::SyntaxKind_traits::values.size() - syntaxes.syntaxKinds.size());
+
+    CHECK(42 == ast::SymbolKind_traits::values.size() - symbols.symKinds.size());
+    CHECK(11 == ast::ExpressionKind_traits::values.size() - symbols.exprKinds.size());
+    CHECK(5 == ast::StatementKind_traits::values.size() - symbols.stmtKinds.size());
     compilation.getAllDiagnostics();
     compilation.freeze();
 
