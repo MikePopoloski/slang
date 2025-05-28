@@ -6,6 +6,7 @@
 #include "TidyFactory.h"
 #include <fstream>
 #include <iostream>
+#include <filesystem>
 #include <iterator>
 #include <string>
 
@@ -29,11 +30,16 @@ bool filesEqual(const std::string& file1, const std::string& file2) {
 
 TEST_CASE("Round trip config file") {
 
+    std::error_code ec;
+    auto p = fs::temp_directory_path(ec);
+    fs::current_path(p, ec);
+
     TidyConfig config;
-    OS::writeFile("config1", TidyConfigPrinter::dumpConfig(config).str());
+    OS::writeFile("tidy-config1", TidyConfigPrinter::dumpConfig(config).str());
+    
+    auto newConfig =
+                TidyConfigParser(std::filesystem::path("tidy-config1")).getConfig();
+    OS::writeFile("tidy-config2", TidyConfigPrinter::dumpConfig(newConfig).str());
 
-    auto newConfig = TidyConfigParser(std::filesystem::path("config1")).getConfig();
-    OS::writeFile("config2", TidyConfigPrinter::dumpConfig(newConfig).str());
-
-    CHECK(filesEqual("config1", "config2"));
+    CHECK(filesEqual("tidy-config1", "tidy-config2")); 
 }
