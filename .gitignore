@@ -31,3 +31,4 @@ CMakeUserPresets.json
 .idea/
 .vs/
 *.code-workspace
+.claude
