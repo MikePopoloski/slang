@@ -19,7 +19,7 @@ void registerSyntaxNodes2(py::module_& m);
 void registerSyntaxNodes3(py::module_& m);
 void registerTypes(py::module_& m);
 
-PYBIND11_MODULE(pyslang, m) {
+PYBIND11_MODULE(_pyslang, m) {
     m.doc() = "Python bindings for slang, the SystemVerilog compiler library";
 
 #ifdef VERSION_INFO
