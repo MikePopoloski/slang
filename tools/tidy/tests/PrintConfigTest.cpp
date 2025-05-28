@@ -4,9 +4,9 @@
 #include "Test.h"
 #include "TidyConfigPrinter.h"
 #include "TidyFactory.h"
+#include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <filesystem>
 #include <iterator>
 #include <string>
 
@@ -36,10 +36,9 @@ TEST_CASE("Round trip config file") {
 
     TidyConfig config;
     OS::writeFile("tidy-config1", TidyConfigPrinter::dumpConfig(config).str());
-    
-    auto newConfig =
-                TidyConfigParser(std::filesystem::path("tidy-config1")).getConfig();
+
+    auto newConfig = TidyConfigParser(std::filesystem::path("tidy-config1")).getConfig();
     OS::writeFile("tidy-config2", TidyConfigPrinter::dumpConfig(newConfig).str());
 
-    CHECK(filesEqual("tidy-config1", "tidy-config2")); 
+    CHECK(filesEqual("tidy-config1", "tidy-config2"));
 }
