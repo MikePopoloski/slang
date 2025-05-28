@@ -789,6 +789,18 @@ TEST_CASE("Visit all file") {
     CstCounter syntaxes;
     (*tree)->root().visit(syntaxes);
 
+    auto printMissing = [](const std::string_view name, const auto& kinds, const auto& visited) {
+        for (auto kind : kinds) {
+            if (!visited.contains(kind)) {
+                fmt::print(stdout, "Did not visit {}: {}\n", name, toString(kind));
+            }
+        }
+    };
+    // printMissing("syntax", syntax::SyntaxKind_traits::values, syntaxes.syntaxKinds);
+    // printMissing("symbol", ast::SymbolKind_traits::values, symbols.symKinds);
+    // printMissing("expression", ast::ExpressionKind_traits::values, symbols.exprKinds);
+    // printMissing("statement", ast::StatementKind_traits::values, symbols.stmtKinds);
+
     // Ideally this should visit all kinds (be zero)
     CHECK(218 == syntax::SyntaxKind_traits::values.size() - syntaxes.syntaxKinds.size());
 
