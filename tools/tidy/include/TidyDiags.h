@@ -31,5 +31,6 @@ inline constexpr DiagCode NoLegacyGenerate(DiagSubsystem::Tidy, 16);
 inline constexpr DiagCode AlwaysFFAssignmentOutsideConditional(DiagSubsystem::Tidy, 17);
 inline constexpr DiagCode UnusedSensitiveSignal(DiagSubsystem::Tidy, 18);
 inline constexpr DiagCode EnforcePortPrefix(DiagSubsystem::Tidy, 19);
+inline constexpr DiagCode UndrivenRange(DiagSubsystem::Tidy, 20);
 
 } // namespace slang::diag

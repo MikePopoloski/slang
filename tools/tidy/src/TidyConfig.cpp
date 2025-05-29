@@ -46,6 +46,7 @@ TidyConfig::TidyConfig() {
     synthesisChecks.emplace("CastSignedIndex", CheckStatus::ENABLED);
     synthesisChecks.emplace("AlwaysFFAssignmentOutsideConditional", CheckStatus::ENABLED);
     synthesisChecks.emplace("UnusedSensitiveSignal", CheckStatus::ENABLED);
+    synthesisChecks.emplace("UndrivenRange", CheckStatus::ENABLED);
     checkKinds.insert({slang::TidyKind::Synthesis, synthesisChecks});
 }
 

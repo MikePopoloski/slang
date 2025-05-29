@@ -27,7 +27,8 @@ add_library(
   src/style/NoDotVarInPortConnection.cpp
   src/style/NoLegacyGenerate.cpp
   src/synthesis/AlwaysFFAssignmentOutsideConditional.cpp
-  src/synthesis/UnusedSensitiveSignal.cpp)
+  src/synthesis/UnusedSensitiveSignal.cpp
+  src/synthesis/UndrivenRange.cpp)
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include)
 target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang)
