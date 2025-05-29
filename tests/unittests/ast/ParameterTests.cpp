@@ -7,6 +7,7 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/Type.h"
 
 SVInt testParameter(const std::string& text, uint32_t index = 0) {
@@ -146,6 +147,17 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+
+    auto sym = compilation.getRoot().lookupName("top.m1.foo_t");
+    auto& typeAlias = sym->as<ast::TypeAliasType>();
+    CHECK(typeAlias.targetType.getType().getSyntax() == nullptr);
+    CHECK(typeAlias.targetType.getTypeSyntax() == nullptr);
+    CHECK(typeAlias.targetType.getInitializerSyntax() == nullptr);
+    CHECK(typeAlias.targetType.getDimensionSyntax() == nullptr);
+    CHECK(typeAlias.getFirstForwardDecl() == nullptr);
+
+    REQUIRE(typeAlias.getSyntax());
+    CHECK(typeAlias.getSyntax()->kind == SyntaxKind::TypeAssignment);
 }
 
 TEST_CASE("Type parameters 3") {

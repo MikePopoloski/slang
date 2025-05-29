@@ -77,8 +77,9 @@ public:
     DeclaredType targetType;
     ForwardTypeRestriction typeRestriction;
 
-    TypeParameterSymbol(const Scope& scope, std::string_view name, SourceLocation loc, bool isLocal,
-                        bool isPort, ForwardTypeRestriction typeRestriction);
+    TypeParameterSymbol(const Scope& scope, std::string_view name, SourceLocation loc,
+                        const syntax::SyntaxNode* syntax, bool isLocal, bool isPort,
+                        ForwardTypeRestriction typeRestriction);
 
     static void fromSyntax(const Scope& scope, const syntax::TypeParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort,

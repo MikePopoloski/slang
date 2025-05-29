@@ -205,7 +205,8 @@ static DeclaredTypeFlags getTypeParamFlags(const Scope& scope) {
 }
 
 TypeParameterSymbol::TypeParameterSymbol(const Scope& scope, std::string_view name,
-                                         SourceLocation loc, bool isLocal, bool isPort,
+                                         SourceLocation loc, const syntax::SyntaxNode* syntax,
+                                         bool isLocal, bool isPort,
                                          ForwardTypeRestriction typeRestriction) :
     Symbol(SymbolKind::TypeParameter, name, loc), ParameterSymbolBase(*this, isLocal, isPort),
     targetType(*this, getTypeParamFlags(scope)), typeRestriction(typeRestriction) {
@@ -213,6 +214,8 @@ TypeParameterSymbol::TypeParameterSymbol(const Scope& scope, std::string_view na
     auto alias = scope.getCompilation().emplace<TypeAliasType>(name, loc);
     alias->setParent(scope);
     alias->targetType.setLink(targetType);
+    if (syntax)
+        alias->setSyntax(*syntax);
     typeAlias = alias;
 }
 
@@ -228,7 +231,7 @@ void TypeParameterSymbol::fromSyntax(const Scope& scope,
         auto name = decl->name.valueText();
         auto loc = decl->name.location();
 
-        auto param = comp.emplace<TypeParameterSymbol>(scope, name, loc, isLocal, isPort,
+        auto param = comp.emplace<TypeParameterSymbol>(scope, name, loc, decl, isLocal, isPort,
                                                        typeRestriction);
         param->setSyntax(*decl);
 
