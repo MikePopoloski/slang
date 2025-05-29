@@ -3,7 +3,7 @@
 
 #include "ASTHelperVisitors.h"
 #include "TidyDiags.h"
-#include "fmt/color.h"
+#include "fmt/ranges.h"
 
 #include "slang/syntax/AllSyntax.h"
 
@@ -29,26 +29,32 @@ struct UndrivenRangeVisitor : public TidyVisitor, ASTVisitor<UndrivenRangeVisito
 
           for (auto it=symbol.drivers().begin(); it != symbol.drivers().end(); ++it) {
             auto intervalBounds = it.bounds();
+            //fmt::print("Driver range for {}: [{}:{}]\n", symbol.name, intervalBounds.first, intervalBounds.second);
 
             if (intervalBounds.first > current) {
-              undriven.push_back({current, (int)intervalBounds.first});
+              undriven.push_back({current, (int)intervalBounds.first - 1});
+              //fmt::print("undriven [{}:{}]\n", current, intervalBounds.first - 1);
             }
             
-            current = std::max(current, (int)intervalBounds.second);
+            current = std::max(current, (int)intervalBounds.second + 1);
           }
         
-          if (current < end) {
+          if (current <= end) {
             undriven.push_back({current, end});
+              //fmt::print("undriven [{}:{}]\n", current, end);
           }
         
           // Issue a diagnostic for each undriven range.
+          std::vector<std::string> rangesDesc;
           for (auto &range : undriven) {
-            diags.add(diag::UndrivenRange, 
-                symbol.location)
-              << symbol.name << fmt::format("[{}:{}]", range.lower(), range.upper());
+            if (range.lower() == range.upper()) {
+              rangesDesc.push_back(fmt::format("{}", range.lower()));
+            } else {
+              rangesDesc.push_back(fmt::format("{}:{}", range.lower(), range.upper()));
+            }
           }
+          diags.add(diag::UndrivenRange, symbol.location) << symbol.name << fmt::format("{}", fmt::join(rangesDesc, ", "));;
         }
-
     }
 };
 } // namespace undriven_range
@@ -68,7 +74,7 @@ public:
     DiagCode diagCode() const override { return diag::UndrivenRange; }
 
     std::string diagString() const override {
-        return "a variable has an undriven range";
+        return "variable {} has an undriven range(s): {}";
     }
 
     DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
