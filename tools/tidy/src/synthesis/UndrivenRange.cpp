@@ -16,16 +16,17 @@ struct UndrivenRangeVisitor : public TidyVisitor, ASTVisitor<UndrivenRangeVisito
 
     /// Given a set of constant ranges, format them into a string to display in
     /// a diagnostic.
-    static auto formatRanges(std::vector<ConstantRange> const &ranges) {
-          std::vector<std::string> result;
-          for (auto &range : ranges) {
+    static auto formatRanges(std::vector<ConstantRange> const& ranges) {
+        std::vector<std::string> result;
+        for (auto& range : ranges) {
             if (range.lower() == range.upper()) {
-              result.push_back(fmt::format("{}", range.lower()));
-            } else {
-              result.push_back(fmt::format("{}:{}", range.lower(), range.upper()));
+                result.push_back(fmt::format("{}", range.lower()));
             }
-          }
-          return fmt::format("{}", fmt::join(result, ", "));
+            else {
+                result.push_back(fmt::format("{}:{}", range.lower(), range.upper()));
+            }
+        }
+        return fmt::format("{}", fmt::join(result, ", "));
     }
 
     void handle(const VariableSymbol& symbol) {
@@ -33,33 +34,33 @@ struct UndrivenRangeVisitor : public TidyVisitor, ASTVisitor<UndrivenRangeVisito
         // If the variable has a fixed range, then determine if any ranges are
         // undriven.
         if (symbol.getType().hasFixedRange()) {
-          auto range = symbol.getType().getFixedRange();
-          
-          int start = range.lower();
-          int end = range.upper();
-          int current = start;
-          
-          std::vector<ConstantRange> undriven;
+            auto range = symbol.getType().getFixedRange();
 
-          for (auto it=symbol.drivers().begin(); it != symbol.drivers().end(); ++it) {
-            auto intervalBounds = it.bounds();
+            int start = range.lower();
+            int end = range.upper();
+            int current = start;
 
-            if (intervalBounds.first > current) {
-              undriven.push_back({current, (int)intervalBounds.first - 1});
+            std::vector<ConstantRange> undriven;
+
+            for (auto it = symbol.drivers().begin(); it != symbol.drivers().end(); ++it) {
+                auto intervalBounds = it.bounds();
+
+                if (intervalBounds.first > current) {
+                    undriven.push_back({current, (int)intervalBounds.first - 1});
+                }
+
+                current = std::max(current, (int)intervalBounds.second + 1);
             }
-            
-            current = std::max(current, (int)intervalBounds.second + 1);
-          }
-        
-          if (current <= end) {
-            undriven.push_back({current, end});
-          }
-        
-          if (!undriven.empty()) {
-              // Issue a diagnostic for any undriven ranges.
-              diags.add(diag::UndrivenRange, symbol.location)
-                  << symbol.name << formatRanges(undriven);
-          }
+
+            if (current <= end) {
+                undriven.push_back({current, end});
+            }
+
+            if (!undriven.empty()) {
+                // Issue a diagnostic for any undriven ranges.
+                diags.add(diag::UndrivenRange, symbol.location)
+                    << symbol.name << formatRanges(undriven);
+            }
         }
     }
 };
@@ -79,9 +80,7 @@ public:
 
     DiagCode diagCode() const override { return diag::UndrivenRange; }
 
-    std::string diagString() const override {
-        return "variable {} has undriven bits: {}";
-    }
+    std::string diagString() const override { return "variable {} has undriven bits: {}"; }
 
     DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
 
@@ -90,9 +89,9 @@ public:
     std::string description() const override { return shortDescription(); }
 
     std::string shortDescription() const override {
-        return "One or more bits of a variable are undriven and can be a source of Xs in the design.";
+        return "One or more bits of a variable are undriven and can be a source of Xs in the "
+               "design.";
     }
 };
 
 REGISTER(UndrivenRange, UndrivenRange, TidyKind::Synthesis)
-

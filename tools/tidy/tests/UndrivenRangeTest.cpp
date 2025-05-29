@@ -3,6 +3,7 @@
 
 #include "Test.h"
 #include "TidyFactory.h"
+
 #include "slang/diagnostics/AnalysisDiags.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
@@ -13,8 +14,8 @@ auto reportDiagnostics(std::unique_ptr<TidyCheck> const& check, Compilation cons
     DiagnosticEngine diagEngine(*compilation.getSourceManager());
     diagEngine.setMessage(check->diagCode(), check->diagMessage());
     diagEngine.setSeverity(check->diagCode(), check->diagSeverity());
-    
-    auto & diags = check->getDiagnostics();
+
+    auto& diags = check->getDiagnostics();
 
     auto client = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(client);
@@ -87,4 +88,3 @@ source:3:16: warning: [SYNTHESIS-20] variable a has undriven bits: 8:10, 12:29, 
                ^
 )");
 }
-
