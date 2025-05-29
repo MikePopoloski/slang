@@ -14,6 +14,20 @@ namespace undriven_range {
 struct UndrivenRangeVisitor : public TidyVisitor, ASTVisitor<UndrivenRangeVisitor, true, true> {
     explicit UndrivenRangeVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
+    /// Given a set of constant ranges, format them into a string to display in
+    /// a diagnostic.
+    static auto formatRanges(std::vector<ConstantRange> const &ranges) {
+          std::vector<std::string> result;
+          for (auto &range : ranges) {
+            if (range.lower() == range.upper()) {
+              result.push_back(fmt::format("{}", range.lower()));
+            } else {
+              result.push_back(fmt::format("{}:{}", range.lower(), range.upper()));
+            }
+          }
+          return fmt::format("{}", fmt::join(result, ", "));
+    }
+
     void handle(const VariableSymbol& symbol) {
 
         // If the variable has a fixed range, then determine if any ranges are
@@ -41,16 +55,11 @@ struct UndrivenRangeVisitor : public TidyVisitor, ASTVisitor<UndrivenRangeVisito
             undriven.push_back({current, end});
           }
         
-          // Issue a diagnostic for each undriven range.
-          std::vector<std::string> rangesDesc;
-          for (auto &range : undriven) {
-            if (range.lower() == range.upper()) {
-              rangesDesc.push_back(fmt::format("{}", range.lower()));
-            } else {
-              rangesDesc.push_back(fmt::format("{}:{}", range.lower(), range.upper()));
-            }
+          if (!undriven.empty()) {
+              // Issue a diagnostic for any undriven ranges.
+              diags.add(diag::UndrivenRange, symbol.location)
+                  << symbol.name << formatRanges(undriven);
           }
-          diags.add(diag::UndrivenRange, symbol.location) << symbol.name << fmt::format("{}", fmt::join(rangesDesc, ", "));;
         }
     }
 };
@@ -71,7 +80,7 @@ public:
     DiagCode diagCode() const override { return diag::UndrivenRange; }
 
     std::string diagString() const override {
-        return "variable {} has an undriven range(s): {}";
+        return "variable {} has undriven bits: {}";
     }
 
     DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
@@ -81,7 +90,7 @@ public:
     std::string description() const override { return shortDescription(); }
 
     std::string shortDescription() const override {
-        return "A range of a variable is undriven and can be a source of Xs in the design.";
+        return "One or more bits of a variable are undriven and can be a source of Xs in the design.";
     }
 };
 
