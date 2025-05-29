@@ -28,6 +28,7 @@ add_executable(
   NoLegacyGenerateTest.cpp
   AlwaysFFAssignmentOutsideConditionalTest.cpp
   UnusedSensitiveSignalTest.cpp
+  PrintConfigTest.cpp
   UndrivenRangeTest.cpp)
 
 target_link_libraries(tidy_unittests PRIVATE Catch2::Catch2 slang_tidy_obj_lib)

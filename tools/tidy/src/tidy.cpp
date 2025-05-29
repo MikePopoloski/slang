@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 
 #include "TidyConfigParser.h"
+#include "TidyConfigPrinter.h"
 #include "TidyFactory.h"
 #include "TidyKind.h"
 #include "fmt/color.h"
@@ -23,13 +24,6 @@
 /// tries on the parent directory until the root.
 std::optional<std::filesystem::path> project_slang_tidy_config();
 using namespace slang;
-
-std::string toLower(const std::string_view input) {
-    std::string result(input);
-    std::transform(result.begin(), result.end(), result.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    return result;
-}
 
 int main(int argc, char** argv) {
     OS::setupConsole();
@@ -52,6 +46,10 @@ int main(int argc, char** argv) {
     std::optional<std::string> tidyConfigFile;
     driver.cmdLine.add("--config-file", tidyConfigFile,
                        "Path to where the tidy config file is located");
+
+    std::optional<bool> dumpConfig;
+    driver.cmdLine.add("--dump-config", dumpConfig,
+                       "Dump the configuration options to stdout and exit");
 
     std::vector<std::string> skippedFiles;
     driver.cmdLine.add("--skip-file", skippedFiles, "Files to be skipped by slang-tidy");
@@ -139,7 +137,8 @@ int main(int argc, char** argv) {
             else
                 OS::print("\n");
             OS::print(fmt::format(fmt::emphasis::bold, "[{}]\n\n", check->name()));
-            OS::print(fmt::format("Config key: {}-{}\n\n", toLower(toString(check->getKind())),
+            OS::print(fmt::format("Config key: {}-{}\n\n",
+                                  TidyConfigPrinter::toLower(toString(check->getKind())),
                                   TidyConfigParser::unformatCheckName(check->name())));
             if (printDescriptions)
                 OS::print(fmt::format("{}\n", check->description()));
@@ -166,6 +165,12 @@ int main(int argc, char** argv) {
     }
     else if (auto path = project_slang_tidy_config()) {
         tidyConfig = TidyConfigParser(path.value()).getConfig();
+    }
+
+    // Print the configuration file for the currently enabled checks.
+    if (dumpConfig) {
+        OS::print(TidyConfigPrinter::dumpConfig(tidyConfig).str());
+        return 0;
     }
 
     // Add skipped files provided by the cmd args
