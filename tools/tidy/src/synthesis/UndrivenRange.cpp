@@ -29,11 +29,9 @@ struct UndrivenRangeVisitor : public TidyVisitor, ASTVisitor<UndrivenRangeVisito
 
           for (auto it=symbol.drivers().begin(); it != symbol.drivers().end(); ++it) {
             auto intervalBounds = it.bounds();
-            //fmt::print("Driver range for {}: [{}:{}]\n", symbol.name, intervalBounds.first, intervalBounds.second);
 
             if (intervalBounds.first > current) {
               undriven.push_back({current, (int)intervalBounds.first - 1});
-              //fmt::print("undriven [{}:{}]\n", current, intervalBounds.first - 1);
             }
             
             current = std::max(current, (int)intervalBounds.second + 1);
@@ -41,7 +39,6 @@ struct UndrivenRangeVisitor : public TidyVisitor, ASTVisitor<UndrivenRangeVisito
         
           if (current <= end) {
             undriven.push_back({current, end});
-              //fmt::print("undriven [{}:{}]\n", current, end);
           }
         
           // Issue a diagnostic for each undriven range.
