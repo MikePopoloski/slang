@@ -28,6 +28,7 @@ add_executable(
   ast/SystemFuncTests.cpp
   ast/TypeTests.cpp
   ast/WarningTests.cpp
+  matchers/MatchersTest.cpp
   parsing/DiagnosticTests.cpp
   parsing/ExpressionParsingTests.cpp
   parsing/LexerTests.cpp
