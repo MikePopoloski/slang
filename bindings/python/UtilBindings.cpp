@@ -253,7 +253,7 @@ void registerUtil(py::module_& m) {
              [](const DiagGroup& self) { return fmt::format("DiagGroup({})", self.getName()); });
 
     py::class_<DiagnosticEngine>(m, "DiagnosticEngine")
-        .def(py::init<const SourceManager&>(), "sourceManager"_a)
+        .def(py::init<const SourceManager&>(), py::keep_alive<1, 2>(), "sourceManager"_a)
         .def("addClient", &DiagnosticEngine::addClient, "client"_a)
         .def("clearClients", &DiagnosticEngine::clearClients)
         .def("issue", &DiagnosticEngine::issue, "diagnostic"_a)

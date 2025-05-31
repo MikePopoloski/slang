@@ -52,3 +52,4 @@ def test_token_construction() -> None:
         pyslang.SourceLocation(),
     )
     assert isinstance(t2, pyslang.Token)
+    assert str(t2) == "'{"
