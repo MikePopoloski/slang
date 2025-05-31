@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added [-Wcase-wildcard-2state](https://sv-lang.com/warning-ref.html#case-wildcard-2state) for wildcard case statements that have 2-state conditions and items
 * The `` `celldefine `` directive is now exposed in the API and in AST serialization (thanks to @whitequark)
 * Added new flags `--all-deps`, `--include-deps`, `--module-deps`, and `--depfile-target` to allow outputting various dependency file lists from slang (thanks to @AndrewNolte)
-* slang-tidy: Added new flag `--dump-config` to dump possible configuration options to stdout and exit (thanks to @jameshanlon) 
+* slang-tidy: Added new flag `--dump-config` to dump possible configuration options to stdout and exit (thanks to @jameshanlon)
 
 ### Improvements
 * slang now performs instance caching by default, which means duplicate instance bodies will not be visited during elaboration, which can greatly speed up elaboration times for large projects. This behavior can be disabled with the `--disable-instance-caching` flag, though it should not be needed unless there's a bug in slang -- please open an issue if you find that you need the flag.
