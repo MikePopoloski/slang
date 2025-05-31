@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added [-Wcase-redundant-default](https://sv-lang.com/warning-ref.html#case-redundant-default) for case statements marked `unique` or `priority` that provide a default case
 * Added [-Wcase-wildcard-2state](https://sv-lang.com/warning-ref.html#case-wildcard-2state) for wildcard case statements that have 2-state conditions and items
 * The `` `celldefine `` directive is now exposed in the API and in AST serialization (thanks to @whitequark)
+* Added new flags `--all-deps`, `--include-deps`, `--module-deps`, and `--depfile-target` to allow outputting various dependency file lists from slang (thanks to @AndrewNolte)
+* slang-tidy: Added new flag `--dump-config` to dump possible configuration options to stdout and exit (thanks to @jameshanlon) 
 
 ### Improvements
 * slang now performs instance caching by default, which means duplicate instance bodies will not be visited during elaboration, which can greatly speed up elaboration times for large projects. This behavior can be disabled with the `--disable-instance-caching` flag, though it should not be needed unless there's a bug in slang -- please open an issue if you find that you need the flag.
@@ -38,6 +40,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * -Wint-bool-conv now applies to expressions used in assertions, properties, and sequences
 * Added a port prefix rule to slang-tidy, similar to the existing port suffix rule (thanks to @corco)
 * The -G option can now set parameter values hierarchically, and the value can be an expression that uses package members such as enum values
+* slang-tidy: Printing check descriptions now includes the config key name (thanks to @jameshanlon)
 
 ### Fixes
 * Fixed argument binding for sequence and property instances when using named arguments
@@ -51,6 +54,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * slang-netlist: Fixed a crash when visiting certain variable declarations (thanks to @jameshanlon)
 * slang-netlist: Fixed handling of net and variables initializers (thanks to @jameshanlon)
 * slang-tidy: Fixed OnlyAssignedOnReset false positive with struct arrays and for loops
+* slang-tidy: Fixed RegisterHasNoReset false positive for loop iterator variables
+* Fixed several keep-alive lifetime issues with the Python bindings
 
 
 ## [v8.1] - 2025-05-23
