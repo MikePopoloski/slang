@@ -1482,61 +1482,6 @@ endmodule
     CHECK(diags[3].code == diag::InOutUWireConn);
 }
 
-TEST_CASE("Assigning to input ports") {
-    auto tree = SyntaxTree::fromText(R"(
-module m(input .a(a), input int b, output int c);
-    int a;
-    assign a = 1;
-    assign b = 2;
-endmodule
-
-module n(a[1:0]);
-    input var [3:0] a;
-    assign a[2:1] = 1;
-    assign a[3] = 1;
-endmodule
-
-module o;
-    int a, b, c = 1;
-    m m1(.a, .b, .c);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::InputPortAssign);
-    CHECK(diags[1].code == diag::InputPortAssign);
-    CHECK(diags[2].code == diag::InputPortAssign);
-    CHECK(diags[3].code == diag::MixedVarAssigns);
-}
-
-TEST_CASE("Net port coercion") {
-    auto tree = SyntaxTree::fromText(R"(
-module top;
-    wire in1, out1;
-    m m(in1, out1);
-    assign out1 = 1'b1;
-endmodule
-
-module m (in1, out1);
-    input in1;
-    output out1;        // out1 is driven outside the module and thus used as an input
-    assign in1 = 1'b0 ; // in1 is driven within the module and thus used as an output
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::OutputPortCoercion);
-    CHECK(diags[1].code == diag::InputPortCoercion);
-}
-
 TEST_CASE("Interconnect ports") {
     auto tree = SyntaxTree::fromText(R"(
 module m(interconnect a, b = 1);

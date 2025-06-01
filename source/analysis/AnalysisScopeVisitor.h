@@ -44,6 +44,9 @@ struct AnalysisScopeVisitor {
 
         result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
         visitExprs(symbol);
+
+        for (auto conn : symbol.getPortConnections())
+            manager.driverTracker.add(state.context, state.driverAlloc, *conn, symbol);
     }
 
     void visit(const CheckerInstanceSymbol& symbol) {
