@@ -18,6 +18,7 @@ class Expression;
 class HierarchicalReference;
 class InstanceBodySymbol;
 class InstanceSymbol;
+class PortConnection;
 class Symbol;
 
 } // namespace slang::ast
@@ -36,6 +37,10 @@ public:
     /// Adds drivers for the given procedure to the tracker.
     void add(AnalysisContext& context, DriverAlloc& driverAlloc,
              const AnalyzedProcedure& procedure);
+
+    // Adds drivers for the given port connection to the tracker.
+    void add(AnalysisContext& context, DriverAlloc& driverAlloc,
+             const ast::PortConnection& connection, const ast::Symbol& containingSymbol);
 
     /// Records the existence of a non-canonical instance, which may imply that
     /// additional drivers should be applied based on the canonical instance.
@@ -74,8 +79,12 @@ private:
                                  const InstanceState::IfacePortDriver& ifacePortDriver,
                                  const ast::InstanceSymbol& instance);
     void propagateModportDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
-                                const ast::Symbol& symbol, const ast::Expression& connectionExpr,
+                                const ast::Expression& connectionExpr,
                                 const ValueDriver& originalDriver);
+    void addDrivers(AnalysisContext& context, DriverAlloc& driverAlloc, const ast::Expression& expr,
+                    ast::DriverKind driverKind, bitmask<ast::AssignFlags> assignFlags,
+                    const ast::Symbol& containingSymbol,
+                    const ast::Expression* initialLSP = nullptr);
 
     concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
     concurrent_map<const ast::InstanceBodySymbol*, InstanceState> instanceMap;

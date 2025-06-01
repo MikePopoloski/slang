@@ -41,6 +41,33 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
         noteInterfacePortDriver(context, driverAlloc, *ref, *driver);
 }
 
+void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
+                        const PortConnection& connection, const Symbol& containingSymbol) {
+    auto& port = connection.port;
+    auto expr = connection.getExpression();
+    if (!expr || expr->bad() || port.kind == SymbolKind::InterfacePort)
+        return;
+
+    ArgumentDirection direction;
+    if (port.kind == SymbolKind::Port)
+        direction = port.as<PortSymbol>().direction;
+    else
+        direction = port.as<MultiPortSymbol>().direction;
+
+    // Input ports are not drivers.
+    if (direction == ArgumentDirection::In)
+        return;
+
+    bitmask<AssignFlags> flags;
+    if (direction == ArgumentDirection::Out)
+        flags = AssignFlags::OutputPort;
+
+    if (expr->kind == ExpressionKind::Assignment)
+        expr = &expr->as<AssignmentExpression>().left();
+
+    addDrivers(context, driverAlloc, *expr, DriverKind::Continuous, flags, containingSymbol);
+}
+
 void DriverTracker::noteNonCanonicalInstance(AnalysisContext& context, DriverAlloc& driverAlloc,
                                              const InstanceSymbol& instance) {
     auto canonical = instance.getCanonicalBody();
@@ -70,17 +97,15 @@ void DriverTracker::propagateModportDrivers(AnalysisContext& context, DriverAllo
 
         localCopy.cvisit_all([&](auto& item) {
             if (auto expr = item.first->template as<ModportPortSymbol>().getConnectionExpr()) {
-                for (auto& [originalDriver, _] : item.second) {
-                    propagateModportDriver(context, driverAlloc, *item.first, *expr,
-                                           *originalDriver);
-                }
+                for (auto& [originalDriver, _] : item.second)
+                    propagateModportDriver(context, driverAlloc, *expr, *originalDriver);
             }
         });
     }
 }
 
 void DriverTracker::propagateModportDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
-                                           const Symbol& symbol, const Expression& connectionExpr,
+                                           const Expression& connectionExpr,
                                            const ValueDriver& originalDriver) {
     // TODO: this is clunky, but we need to be able to glue the outer select
     // expression to the inner connection expression. Probably the expression AST
@@ -113,18 +138,25 @@ void DriverTracker::propagateModportDriver(AnalysisContext& context, DriverAlloc
             break;
     }
 
-    EvalContext evalCtx(symbol);
+    addDrivers(context, driverAlloc, connectionExpr, originalDriver.kind, originalDriver.flags,
+               *originalDriver.containingSymbol, initialLSP);
+}
+
+void DriverTracker::addDrivers(AnalysisContext& context, DriverAlloc& driverAlloc,
+                               const Expression& expr, DriverKind driverKind,
+                               bitmask<AssignFlags> assignFlags, const Symbol& containingSymbol,
+                               const Expression* initialLSP) {
+    EvalContext evalCtx(containingSymbol);
     SmallVector<std::pair<const HierarchicalReference*, const ValueDriver*>> ifacePortRefs;
     LSPUtilities::visitLSPs(
-        connectionExpr, evalCtx,
+        expr, evalCtx,
         [&](const ValueSymbol& symbol, const Expression& lsp) {
             auto bounds = LSPUtilities::getBounds(lsp, evalCtx, symbol.getType());
             if (!bounds)
                 return;
 
-            auto driver = context.alloc.emplace<ValueDriver>(originalDriver.kind, lsp,
-                                                             *originalDriver.containingSymbol,
-                                                             originalDriver.flags);
+            auto driver = context.alloc.emplace<ValueDriver>(driverKind, lsp, containingSymbol,
+                                                             assignFlags);
 
             auto updateFunc = [&](auto& elem) {
                 if (auto ref = addDriver(context, driverAlloc, *elem.first, elem.second, *driver,
