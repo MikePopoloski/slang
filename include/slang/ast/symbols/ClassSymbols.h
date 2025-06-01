@@ -47,6 +47,9 @@ public:
     /// a pointer to that generic class definition.
     const GenericClassDefSymbol* genericClass = nullptr;
 
+    /// The list of generic parameters for this class specialization, if any.
+    std::span<const Symbol* const> genericParameters;
+
     /// A variable that points to the instance of this class itself, which is
     /// used by non-static class property initializers that refers to the
     /// special "this" handle. Subroutines and constraint blocks have their

@@ -970,6 +970,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
 
     SourceRange instRange = {instanceLoc, instanceLoc + 1};
 
+    SmallVector<const Symbol*> paramSymbols;
     SmallVector<const ConstantValue*> paramValues;
     SmallVector<const Type*> typeParams;
     for (auto& decl : paramDecls) {
@@ -984,6 +985,8 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
 
         if (!param.isLocalParam()) {
             auto& sym = param.symbol;
+            paramSymbols.push_back(&sym);
+
             if (sym.kind == SymbolKind::Parameter) {
                 auto& ps = sym.as<ParameterSymbol>();
                 paramValues.push_back(&ps.getValue(instRange));
@@ -996,6 +999,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     }
 
     if (!forceInvalidParams) {
+        classType->genericParameters = paramSymbols.copy(comp);
         detail::ClassSpecializationKey key(paramValues.copy(comp), typeParams.copy(comp));
         if (classType->isUninstantiated) {
             // If we're in an uninstantiated scope we save this specialization
