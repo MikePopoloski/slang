@@ -41,11 +41,20 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             SLANG_UNREACHABLE;
     }
 
-    canCache = !dfa.sawRecursiveFunction;
     if (dfa.bad)
         return;
 
-    if (parentProcedure || !dfa.getAssertions().empty() || !dfa.getSampledValueCalls().empty()) {
+    auto dfaCalls = dfa.getCallExpressions();
+    callExpressions.reserve(dfaCalls.size());
+
+    bool hasSampledValueCalls = false;
+    for (auto call : dfaCalls) {
+        callExpressions.push_back(call);
+        if (ClockInference::isSampledValueFuncCall(*call))
+            hasSampledValueCalls = true;
+    }
+
+    if (parentProcedure || !dfa.getAssertions().empty() || hasSampledValueCalls) {
         // All flavors of always and initial blocks can infer a clock.
         if (analyzedSymbol.kind == SymbolKind::ProceduralBlock &&
             analyzedSymbol.as<ProceduralBlockSymbol>().procedureKind !=
@@ -65,7 +74,9 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         if (inferredClock && inferredClock->bad())
             return;
 
-        for (auto& var : dfa.getAssertions()) {
+        auto dfaAssertions = dfa.getAssertions();
+        assertions.reserve(dfaAssertions.size());
+        for (auto& var : dfaAssertions) {
             if (auto stmtPtr = std::get_if<const Statement*>(&var)) {
                 auto& stmt = **stmtPtr;
                 if (stmt.kind == StatementKind::ProceduralChecker) {
@@ -84,9 +95,11 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
 
         // If we have no inferred clock then all sampled value system calls must provide
         // a clocking argument explicitly.
-        if (!inferredClock) {
-            for (auto call : dfa.getSampledValueCalls())
-                ClockInference::checkSampledValueFuncs(context, analyzedSymbol, *call);
+        if (!inferredClock && hasSampledValueCalls) {
+            for (auto call : callExpressions) {
+                if (ClockInference::isSampledValueFuncCall(*call))
+                    ClockInference::checkSampledValueFuncs(context, analyzedSymbol, *call);
+            }
         }
     }
 
@@ -146,11 +159,86 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         drivers.emplace_back(&symbol, std::move(perSymbol));
     }
 
-    for (auto& [_, symDriverList] : dfa.getIndirectDrivers()) {
-        drivers.reserve(drivers.size() + symDriverList.size());
-        for (auto& [valueSym, driverList] : symDriverList)
-            drivers.emplace_back(valueSym, driverList);
+    // Drivers from invoked functions also get added to the procedure,
+    // unless we're analyzing a subroutine.
+    if (analyzedSymbol.kind != SymbolKind::Subroutine) {
+        SmallSet<const SubroutineSymbol*, 2> visited;
+        for (auto call : dfaCalls)
+            addFunctionDrivers(context, *call, visited);
     }
+}
+
+void AnalyzedProcedure::addFunctionDrivers(AnalysisContext& context, const CallExpression& expr,
+                                           SmallSet<const SubroutineSymbol*, 2>& visited) {
+    if (expr.isSystemCall() || expr.thisClass() ||
+        expr.getSubroutineKind() != SubroutineKind::Function) {
+        return;
+    }
+
+    auto& subroutine = *std::get<const SubroutineSymbol*>(expr.subroutine);
+    if (subroutine.flags.has(MethodFlags::Pure | MethodFlags::InterfaceExtern |
+                             MethodFlags::DPIImport | MethodFlags::Randomize |
+                             MethodFlags::BuiltIn)) {
+        return;
+    }
+
+    // The contents of non-static class methods don't get propagated up
+    // to the caller.
+    auto subroutineParent = subroutine.getParentScope();
+    SLANG_ASSERT(subroutineParent);
+    if (subroutineParent->asSymbol().kind == SymbolKind::ClassType) {
+        if (!subroutine.flags.has(MethodFlags::Static))
+            return;
+    }
+
+    // If we've already visited this function then we don't need to
+    // analyze it again.
+    if (!visited.insert(&subroutine).second)
+        return;
+
+    // Get analysis for the function.
+    std::unique_ptr<AnalyzedProcedure> analysisMem;
+    auto analysis = context.manager->getAnalyzedSubroutine(subroutine);
+    if (!analysis) {
+        analysisMem = std::make_unique<AnalyzedProcedure>(context, subroutine);
+        analysis = analysisMem.get();
+        context.manager->addAnalyzedSubroutine(subroutine, std::move(analysisMem));
+    }
+
+    // For each driver in the function, create a new driver that points to the
+    // original driver but has the current procedure as the containing symbol.
+    auto funcDrivers = analysis->getDrivers();
+    drivers.reserve(drivers.size() + funcDrivers.size());
+
+    auto& options = context.manager->getOptions();
+    for (auto& [valueSym, driverList] : funcDrivers) {
+        // The user can disable this inlining of drivers for function locals via a flag.
+        if (options.flags.has(AnalysisFlags::AllowMultiDrivenLocals)) {
+            auto scope = valueSym->getParentScope();
+            while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
+                scope = scope->asSymbol().getParentScope();
+
+            if (scope == &subroutine)
+                continue;
+        }
+
+        DriverList perSymbol;
+        for (auto& [driver, bounds] : driverList) {
+            auto newDriver = context.alloc.emplace<ValueDriver>(driver->kind,
+                                                                *driver->prefixExpression,
+                                                                *analyzedSymbol, AssignFlags::None);
+            newDriver->procCallExpression = &expr;
+
+            perSymbol.emplace_back(newDriver, bounds);
+        }
+
+        drivers.emplace_back(valueSym, std::move(perSymbol));
+    }
+
+    // If this function has any calls, we need to recursively add drivers
+    // from those calls as well.
+    for (auto call : analysis->getCallExpressions())
+        addFunctionDrivers(context, *call, visited);
 }
 
 } // namespace slang::analysis

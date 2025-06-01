@@ -102,10 +102,6 @@ public:
     /// Diagnostics collected during analysis.
     Diagnostics diagnostics;
 
-    /// A set of subroutines that are currently being analyzed,
-    /// to avoid infinite recursion.
-    flat_hash_set<const ast::SubroutineSymbol*> activeSubroutines;
-
     /// Constructs a new AnalysisContext object.
     explicit AnalysisContext(AnalysisManager& manager) : manager(&manager) {}
 

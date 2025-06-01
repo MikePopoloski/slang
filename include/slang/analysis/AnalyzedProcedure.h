@@ -12,10 +12,13 @@
 
 #include "slang/analysis/AnalyzedAssertion.h"
 #include "slang/analysis/ValueDriver.h"
+#include "slang/util/SmallMap.h"
 #include "slang/util/Util.h"
 
 namespace slang::ast {
 
+class CallExpression;
+class SubroutineSymbol;
 class Symbol;
 class TimingControl;
 
@@ -38,13 +41,6 @@ public:
     /// Only possible for procedural checker instances.
     const AnalyzedProcedure* parentProcedure;
 
-    /// Set to true to indicate that the procedure can be cached in
-    /// the analysis manager.
-    ///
-    /// This is currently only set to false when analysis of a subroutine finds that
-    /// it is recursive while trying to analyze a calling procedure.
-    bool canCache = true;
-
     /// Constructs a new AnalyzedProcedure object.
     AnalyzedProcedure(AnalysisContext& context, const ast::Symbol& symbol,
                       const AnalyzedProcedure* parentProcedure = nullptr);
@@ -63,10 +59,19 @@ public:
     /// Gets all of the drivers in the procedure.
     std::span<const SymbolDriverListPair> getDrivers() const { return drivers; }
 
+    /// Gets all of the subroutine calls in the procedure.
+    std::span<const ast::CallExpression* const> getCallExpressions() const {
+        return callExpressions;
+    }
+
 private:
+    void addFunctionDrivers(AnalysisContext& context, const ast::CallExpression& expr,
+                            SmallSet<const ast::SubroutineSymbol*, 2>& visited);
+
     const ast::TimingControl* inferredClock = nullptr;
     std::vector<SymbolDriverListPair> drivers;
     std::vector<AnalyzedAssertion> assertions;
+    std::vector<const ast::CallExpression*> callExpressions;
 };
 
 } // namespace slang::analysis
