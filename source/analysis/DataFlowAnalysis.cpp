@@ -122,26 +122,6 @@ void DataFlowAnalysis::handle(const AssignmentExpression& expr) {
         handleTiming(*expr.timingControl);
 }
 
-static bool shouldAnalyzeFunc(const Symbol& caller, const SubroutineSymbol& subroutine) {
-    if (subroutine.flags.has(MethodFlags::Pure | MethodFlags::InterfaceExtern |
-                             MethodFlags::DPIImport | MethodFlags::Randomize |
-                             MethodFlags::BuiltIn)) {
-        return false;
-    }
-
-    // We only analyze functions that are called from procedural blocks
-    // or non-class functions.
-    if (caller.kind == SymbolKind::ProceduralBlock)
-        return true;
-
-    if (caller.kind == SymbolKind::Subroutine) {
-        auto& callerSub = caller.as<SubroutineSymbol>();
-        return callerSub.subroutineKind == SubroutineKind::Function && callerSub.thisVar == nullptr;
-    }
-
-    return false;
-}
-
 void DataFlowAnalysis::handle(const CallExpression& expr) {
     expr.visitExprsNoArgs(*this);
 
@@ -180,79 +160,7 @@ void DataFlowAnalysis::handle(const CallExpression& expr) {
         }
     }
 
-    // If this is a call to a sampled value function, keep track of
-    // it so that we can later verify that it has a clocking event.
-    if (ClockInference::isSampledValueFuncCall(expr))
-        sampledValueCalls.push_back(&expr);
-
-    // If this is a call to a user defined function from within a procedure
-    // we need to analyze the function body for assignments, as they count
-    // as lvalue usage in this procedure as well.
-    if (!expr.isSystemCall() && !expr.thisClass() &&
-        expr.getSubroutineKind() == SubroutineKind::Function) {
-
-        auto& sub = *std::get<0>(expr.subroutine);
-        if (shouldAnalyzeFunc(rootSymbol, sub))
-            handleFunctionCall(expr, sub);
-    }
-}
-
-void DataFlowAnalysis::handleFunctionCall(const CallExpression& expr,
-                                          const SubroutineSymbol& func) {
-    // See if we have visited this function from this context before.
-    auto [it, inserted] = indirectDrivers.try_emplace(&func);
-    if (!inserted)
-        return;
-
-    // We have not, so get the analysis for it.
-    std::unique_ptr<AnalyzedProcedure> analysisMem;
-    auto analysis = context.manager->getAnalyzedSubroutine(func);
-    if (!analysis) {
-        // Not analyzed yet, so we need to do that. Don't analyze if we're already
-        // analyzing this function somewhere up the call stack, indicating a
-        // recursive call.
-        if (!context.activeSubroutines.emplace(&func).second) {
-            sawRecursiveFunction = true;
-            return;
-        }
-
-        analysisMem = std::make_unique<AnalyzedProcedure>(context, func);
-        analysis = analysisMem.get();
-        context.activeSubroutines.erase(&func);
-
-        if (analysis->canCache)
-            context.manager->addAnalyzedSubroutine(func, std::move(analysisMem));
-        else
-            sawRecursiveFunction = true;
-    }
-
-    // For each driver in the function, create a new driver that points to the
-    // original driver but has the current procedure as the containing symbol.
-    auto drivers = analysis->getDrivers();
-    it->second.reserve(drivers.size());
-    for (auto& [valueSym, driverList] : drivers) {
-        // The user can disable this inlining of drivers for function locals via a flag.
-        if (options.flags.has(AnalysisFlags::AllowMultiDrivenLocals)) {
-            auto scope = valueSym->getParentScope();
-            while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
-                scope = scope->asSymbol().getParentScope();
-
-            if (scope == &func)
-                continue;
-        }
-
-        auto& newDrivers = it->second.emplace_back(valueSym, DriverList{}).second;
-        newDrivers.reserve(driverList.size());
-
-        for (auto& [driver, bounds] : driverList) {
-            auto newDriver = context.alloc.emplace<ValueDriver>(driver->kind,
-                                                                *driver->prefixExpression,
-                                                                rootSymbol, AssignFlags::None);
-            newDriver->procCallExpression = &expr;
-
-            newDrivers.emplace_back(newDriver, bounds);
-        }
-    }
+    callExpressions.push_back(&expr);
 }
 
 void DataFlowAnalysis::handle(const ExpressionStatement& stmt) {

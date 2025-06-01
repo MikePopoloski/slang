@@ -40,10 +40,6 @@ public:
     /// The analysis context within which the analysis is being performed.
     AnalysisContext& context;
 
-    /// Set to true if this procedure calls a function recursively,
-    /// directly or indirectly.
-    bool sawRecursiveFunction = false;
-
     /// Constructs a new DataFlowAnalysis object.
     DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol, bool reportDiags);
 
@@ -62,10 +58,8 @@ public:
         return concurrentAssertions;
     }
 
-    /// Gets all of the sampled value system calls in the procedure.
-    std::span<const CallExpression* const> getSampledValueCalls() const {
-        return sampledValueCalls;
-    }
+    /// Gets all of the subroutine calls in the procedure.
+    std::span<const CallExpression* const> getCallExpressions() const { return callExpressions; }
 
     /// Determines whether the given symbol is referenced anywhere in
     /// the procedure, either as an lvalue or an rvalue.
@@ -101,13 +95,6 @@ public:
     /// Gets all of the lvalues used in the procedure.
     std::span<const LValueSymbol> getLValues() const { return lvalues; }
 
-    using IndirectDriverMap =
-        flat_hash_map<const SubroutineSymbol*, std::vector<SymbolDriverListPair>>;
-
-    /// Gets all of the drivers used indirectly in the procedure,
-    /// via calls to other functions.
-    const IndirectDriverMap& getIndirectDrivers() const { return indirectDrivers; }
-
     /// Performs handling for a timing control contained in the procedure.
     void handleTiming(const TimingControl& timing);
 
@@ -140,11 +127,8 @@ private:
     // All concurrent assertions, checkers, and assertion instance expressions in the procedure.
     SmallVector<std::variant<const Statement*, const Expression*>> concurrentAssertions;
 
-    // Sampled value system calls made in the procedure.
-    SmallVector<const CallExpression*> sampledValueCalls;
-
-    // Indirectly referenced drivers from called functions.
-    IndirectDriverMap indirectDrivers;
+    // All call expressions in the procedure.
+    SmallVector<const CallExpression*> callExpressions;
 
     [[nodiscard]] auto saveLValueFlag() {
         auto guard = ScopeGuard([this, savedLVal = isLValue] { isLValue = savedLVal; });
@@ -187,7 +171,6 @@ private:
     void handle(const ProceduralCheckerStatement& stmt);
     void handle(const AssertionInstanceExpression& expr);
     void handle(const EventTriggerStatement& stmt);
-    void handleFunctionCall(const CallExpression& expr, const SubroutineSymbol& func);
 
     // **** State Management ****
 
