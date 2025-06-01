@@ -176,6 +176,23 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
                 buffer.format("[{}]", int32_t(arrayPath[i]) + instanceDims[i].lower());
         }
     }
+    else if (current->kind == SymbolKind::ClassType) {
+        auto& classType = current->as<ClassType>();
+        if (!classType.genericParameters.empty()) {
+            buffer.append("#(");
+            for (size_t i = 0; i < classType.genericParameters.size(); i++) {
+                if (i > 0)
+                    buffer.append(",");
+
+                auto& param = *classType.genericParameters[i];
+                if (param.kind == SymbolKind::TypeParameter)
+                    buffer.append(param.as<TypeParameterSymbol>().targetType.getType().toString());
+                else
+                    buffer.append(param.as<ParameterSymbol>().getValue().toString());
+            }
+            buffer.append(")");
+        }
+    }
 }
 
 std::string Symbol::getHierarchicalPath() const {
