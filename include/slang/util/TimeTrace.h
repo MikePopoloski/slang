@@ -61,7 +61,7 @@ public:
     TimeTraceScope(std::string_view name, std::string_view detail) {
         if (TimeTrace::isEnabled())
             TimeTrace::beginTrace(name, detail);
-    } // namespace slang
+    }
 
     TimeTraceScope(std::string_view name, function_ref<std::string()> detail) {
         if (TimeTrace::isEnabled())
