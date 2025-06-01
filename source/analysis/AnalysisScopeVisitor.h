@@ -103,8 +103,10 @@ struct AnalysisScopeVisitor {
         visitMembers(symbol);
     }
 
-    void visit(const MethodPrototypeSymbol&) {
+    void visit(const MethodPrototypeSymbol& symbol) {
         // Deliberately don't visit the method prototype's formal arguments.
+        if (auto sub = symbol.getSubroutine())
+            sub->visit(*this);
     }
 
     void visit(const ClassType& symbol) {
