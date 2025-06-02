@@ -2,6 +2,7 @@
 
 #include "DepthFirstSearch.h"
 #include "DirectedGraph.h"
+#include <set>
 #include <unordered_set>
 #include <vector>
 
@@ -15,8 +16,14 @@ struct CycleDetectionVisitor {
         // Detect cycle: targetNode is part of the current recursion stack
         auto cycleStart = std::find(recursionStack.begin(), recursionStack.end(), &node);
         if (cycleStart != recursionStack.end()) {
+            
             // Extract cycle nodes
             std::vector<const NodeType*> cycleNodes(cycleStart, recursionStack.end());
+
+            // Canonicalise the cycle by starting at the lowest node ID.
+            auto minPosition = min_element(cycleNodes.begin(), cycleNodes.end());
+            std::rotate(cycleNodes.begin(), minPosition, cycleNodes.end());
+
             cycles.emplace_back(std::move(cycleNodes));
         }
     }
@@ -27,8 +34,7 @@ struct CycleDetectionVisitor {
 
     void visitEdge(const EdgeType& edge) {}
 
-    /// Returns all detected cycles.
-    const std::vector<std::vector<const NodeType*>>& getCycles() const { return cycles; }
+    auto& getCycles() const { return cycles; }
 
     std::vector<const NodeType*> recursionStack;
     std::vector<std::vector<const NodeType*>> cycles;
@@ -43,7 +49,7 @@ public:
     /// Detect all cycles within the graph.
     /// Returns a vector containing cycles, where each cycle is represented as a vector of nodes.
     auto detectCycles() {
-      std::vector<std::vector<const NodeType*>> cycles;
+        std::set<std::vector<const NodeType*>> cycles;
 
         // Start a DFS traversal from each node
         for (const auto& nodePtr : graph) {
@@ -65,10 +71,12 @@ public:
             }
 
             // Add any cycles that were found.
-            cycles.insert(cycles.end(), visitor.cycles.begin(), visitor.cycles.end());
+            cycles.insert(visitor.cycles.begin(), visitor.cycles.end());
         }
 
-        return cycles;
+        // Return a vector.
+        std::vector<std::vector<const NodeType*>> result(cycles.begin(), cycles.end());
+        return result;
     }
 
 private:

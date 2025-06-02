@@ -36,8 +36,9 @@ endmodule
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     CombLoops combLoops(netlist);
+    combLoops.dumpLoops();
     auto cycles = combLoops.getAllLoops(); 
-    CHECK(cycles.size() >= 1);
+    CHECK(cycles.size() == 1);
     CHECK(cycles[0].size() == 10);
     CHECK(std::count_if(cycles[0].begin(), cycles[0].end(), [](NetlistNode const* node) {
               return node->kind == NodeKind::VariableReference;
@@ -74,6 +75,7 @@ endmodule
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     CombLoops combLoops(netlist);
+    combLoops.dumpLoops();
     auto cycles = combLoops.getAllLoops(); 
     CHECK(cycles.size() >= 1);
     CHECK(cycles[0].size() == 10);
@@ -117,7 +119,8 @@ endmodule
     auto netlist = createNetlist(compilation);
     CombLoops combLoops(netlist);
     auto cycles = combLoops.getAllLoops(); 
-    CHECK(cycles.size() >= 1);
+    combLoops.dumpLoops();
+    CHECK(cycles.size() == 1);
     CHECK(cycles[0].size() == 10);
     CHECK(std::count_if(cycles[0].begin(), cycles[0].end(), [](NetlistNode const *node) {
               return node->kind == NodeKind::VariableReference;

@@ -19,18 +19,18 @@ struct CombEdgePredicate {
 
 class CombLoops {
   Netlist const &netlist;
-  CycleDetector<NetlistNode, NetlistEdge, CombEdgePredicate> detector;
 
 public:
-  CombLoops(Netlist const &netlist) : netlist(netlist), detector(netlist) {}
+  CombLoops(Netlist const &netlist) : netlist(netlist) {}
 
   auto getAllLoops() {
+    CycleDetector<NetlistNode, NetlistEdge, CombEdgePredicate> detector(netlist);
     return detector.detectCycles();
   }
 
   void dumpLoops() {
     size_t count{0};
-    for (auto &cycle: detector.detectCycles()) {
+    for (auto &cycle: getAllLoops()) {
       fmt::print("cycle {}:\n", count++);
       for (auto &node : cycle) {
         fmt::print("{}\n", node->ID);
