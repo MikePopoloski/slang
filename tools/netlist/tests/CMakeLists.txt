@@ -10,6 +10,7 @@ add_executable(
   ../source/Netlist.cpp
   ../source/CombLoops.cpp
   CombLoopsTests.cpp
+  CycleDetectorTests.cpp
   DepthFirstSearchTests.cpp
   DirectedGraphTests.cpp
   NameTests.cpp
