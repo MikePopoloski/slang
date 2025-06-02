@@ -68,6 +68,28 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
     addDrivers(context, driverAlloc, *expr, DriverKind::Continuous, flags, containingSymbol);
 }
 
+void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
+                        const PortSymbol& symbol) {
+    // This method adds driver *from* the port to the *internal*
+    // symbol (or expression) that it connects to.
+    auto dir = symbol.direction;
+    if (dir != ArgumentDirection::In && dir != ArgumentDirection::InOut)
+        return;
+
+    auto flags = dir == ArgumentDirection::In ? AssignFlags::InputPort : AssignFlags::InOutPort;
+    auto scope = symbol.getParentScope();
+    SLANG_ASSERT(scope);
+
+    if (auto expr = symbol.getInternalExpr()) {
+        addDrivers(context, driverAlloc, *expr, DriverKind::Continuous, flags, scope->asSymbol());
+    }
+    else if (auto is = symbol.internalSymbol) {
+        auto nve = context.alloc.emplace<NamedValueExpression>(
+            is->as<ValueSymbol>(), SourceRange{is->location, is->location + is->name.length()});
+        addDrivers(context, driverAlloc, *nve, DriverKind::Continuous, flags, scope->asSymbol());
+    }
+}
+
 void DriverTracker::noteNonCanonicalInstance(AnalysisContext& context, DriverAlloc& driverAlloc,
                                              const InstanceSymbol& instance) {
     auto canonical = instance.getCanonicalBody();

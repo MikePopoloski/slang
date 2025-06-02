@@ -19,6 +19,7 @@ class HierarchicalReference;
 class InstanceBodySymbol;
 class InstanceSymbol;
 class PortConnection;
+class PortSymbol;
 class Symbol;
 
 } // namespace slang::ast
@@ -41,6 +42,9 @@ public:
     // Adds drivers for the given port connection to the tracker.
     void add(AnalysisContext& context, DriverAlloc& driverAlloc,
              const ast::PortConnection& connection, const ast::Symbol& containingSymbol);
+
+    // Adds drivers for the given port symbol to the tracker.
+    void add(AnalysisContext& context, DriverAlloc& driverAlloc, const ast::PortSymbol& symbol);
 
     /// Records the existence of a non-canonical instance, which may imply that
     /// additional drivers should be applied based on the canonical instance.
