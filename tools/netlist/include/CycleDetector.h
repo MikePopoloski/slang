@@ -49,7 +49,8 @@ public:
     /// Detect all cycles within the graph.
     /// Returns a vector containing cycles, where each cycle is represented as a vector of nodes.
     auto detectCycles() {
-        std::set<std::vector<const NodeType*>> cycles;
+        using CycleType = std::vector<const NodeType*>;
+        std::set<CycleType> cycles;
 
         // Start a DFS traversal from each node
         for (const auto& nodePtr : graph) {
@@ -75,7 +76,11 @@ public:
         }
 
         // Return a vector.
-        std::vector<std::vector<const NodeType*>> result(cycles.begin(), cycles.end());
+        std::vector<CycleType> result(cycles.begin(), cycles.end());
+
+        // Canonicalise the result by sorting.
+        std::sort(result.begin(), result.end());
+
         return result;
     }
 

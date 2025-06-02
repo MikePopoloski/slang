@@ -36,8 +36,8 @@ endmodule
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     CombLoops combLoops(netlist);
-    combLoops.dumpLoops();
     auto cycles = combLoops.getAllLoops(); 
+
     CHECK(cycles.size() == 1);
     CHECK(cycles[0].size() == 10);
     CHECK(std::count_if(cycles[0].begin(), cycles[0].end(), [](NetlistNode const* node) {
@@ -75,8 +75,8 @@ endmodule
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     CombLoops combLoops(netlist);
-    combLoops.dumpLoops();
     auto cycles = combLoops.getAllLoops(); 
+
     CHECK(cycles.size() >= 1);
     CHECK(cycles[0].size() == 10);
     CHECK(std::count_if(cycles[0].begin(), cycles[0].end(), [](NetlistNode const*node) {
@@ -119,7 +119,7 @@ endmodule
     auto netlist = createNetlist(compilation);
     CombLoops combLoops(netlist);
     auto cycles = combLoops.getAllLoops(); 
-    combLoops.dumpLoops();
+
     CHECK(cycles.size() == 1);
     CHECK(cycles[0].size() == 10);
     CHECK(std::count_if(cycles[0].begin(), cycles[0].end(), [](NetlistNode const *node) {

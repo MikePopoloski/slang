@@ -430,7 +430,8 @@ public:
 
     NetlistEdge& addEdge(NetlistNode& sourceNode, NetlistNode& targetNode, ast::EdgeKind edgeKind) {
         auto& edge = DirectedGraph<NetlistNode, NetlistEdge>::addEdge(sourceNode, targetNode);
-        targetNode.edgeKind = edgeKind;
+        edge.edgeKind = edgeKind;
+        targetNode.edgeKind = edgeKind; // Can be removed.
         return edge;
     }
 

@@ -31,7 +31,7 @@ public:
   void dumpLoops() {
     size_t count{0};
     for (auto &cycle: getAllLoops()) {
-      fmt::print("cycle {}:\n", count++);
+      fmt::print("Cycle {}:\n", count++);
       for (auto &node : cycle) {
         fmt::print("{}\n", node->ID);
       }
