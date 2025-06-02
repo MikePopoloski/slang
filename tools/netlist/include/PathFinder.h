@@ -31,6 +31,7 @@ private:
     public:
         Visitor(Netlist& netlist, TraversalMap& traversalMap) :
             netlist(netlist), traversalMap(traversalMap) {}
+        void visitedNode(NetlistNode& node) {}
         void visitNode(NetlistNode& node) {}
         void visitEdge(NetlistEdge& edge) {
             auto* sourceNode = &edge.getSourceNode();

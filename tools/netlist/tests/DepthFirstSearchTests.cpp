@@ -32,6 +32,7 @@ struct TestVisitor {
     std::vector<TestNode*> nodes;
     std::vector<TestEdge*> edges;
     TestVisitor() = default;
+    void visitedNode(TestNode& node) { };
     void visitNode(TestNode& node) { nodes.push_back(&node); };
     void visitEdge(TestEdge& edge) { edges.push_back(&edge); };
 };
