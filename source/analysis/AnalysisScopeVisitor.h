@@ -260,6 +260,16 @@ struct AnalysisScopeVisitor {
         }
     }
 
+    void visit(const PortSymbol& symbol) {
+        visitExprs(symbol);
+        manager.driverTracker.add(state.context, state.driverAlloc, symbol);
+    }
+
+    void visit(const MultiPortSymbol& symbol) {
+        for (auto port : symbol.ports)
+            port->visit(*this);
+    }
+
     template<typename T>
         requires(IsAnyOf<T, InstanceArraySymbol, ClockingBlockSymbol, AnonymousProgramSymbol,
                          SpecifyBlockSymbol, CovergroupBodySymbol, CoverCrossSymbol,
@@ -277,13 +287,13 @@ struct AnalysisScopeVisitor {
         requires(
             IsAnyOf<T, InvalidSymbol, RootSymbol, CompilationUnitSymbol, DefinitionSymbol,
                     AttributeSymbol, TransparentMemberSymbol, EmptyMemberSymbol, EnumValueSymbol,
-                    ForwardingTypedefSymbol, PortSymbol, MultiPortSymbol, InterfacePortSymbol,
-                    InstanceBodySymbol, ModportSymbol, ModportPortSymbol, ModportClockingSymbol,
-                    ElabSystemTaskSymbol, UninstantiatedDefSymbol, ConstraintBlockSymbol,
-                    DefParamSymbol, SpecparamSymbol, PrimitiveSymbol, PrimitivePortSymbol,
-                    PrimitiveInstanceSymbol, AssertionPortSymbol, CoverpointSymbol,
-                    CoverageBinSymbol, TimingPathSymbol, PulseStyleSymbol, SystemTimingCheckSymbol,
-                    NetAliasSymbol, ConfigBlockSymbol, CheckerInstanceBodySymbol> ||
+                    ForwardingTypedefSymbol, InterfacePortSymbol, InstanceBodySymbol, ModportSymbol,
+                    ModportPortSymbol, ModportClockingSymbol, ElabSystemTaskSymbol,
+                    UninstantiatedDefSymbol, ConstraintBlockSymbol, DefParamSymbol, SpecparamSymbol,
+                    PrimitiveSymbol, PrimitivePortSymbol, PrimitiveInstanceSymbol,
+                    AssertionPortSymbol, CoverpointSymbol, CoverageBinSymbol, TimingPathSymbol,
+                    PulseStyleSymbol, SystemTimingCheckSymbol, NetAliasSymbol, ConfigBlockSymbol,
+                    CheckerInstanceBodySymbol> ||
             std::is_base_of_v<Type, T>)
     void visit(const T& symbol) {
         visitExprs(symbol);
