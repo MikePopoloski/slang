@@ -9,8 +9,8 @@ namespace netlist {
 
 /// Visitor class for identifying cycles during Depth-First Search.
 template<class NodeType, class EdgeType>
-class CycleDetectionVisitor {
-public:
+struct CycleDetectionVisitor {
+
     void visitedNode(const NodeType& node) {
         // Detect cycle: targetNode is part of the current recursion stack
         auto cycleStart = std::find(recursionStack.begin(), recursionStack.end(), &node);
@@ -21,53 +21,54 @@ public:
         }
     }
 
-    /// Called when visiting a node during DFS traversal.
     void visitNode(const NodeType& node) { 
         recursionStack.push_back(&node);
     }
 
-    /// Called when visiting an edge during DFS traversal.
-    void visitEdge(const EdgeType& edge) {
-    }
+    void visitEdge(const EdgeType& edge) {}
 
     /// Returns all detected cycles.
     const std::vector<std::vector<const NodeType*>>& getCycles() const { return cycles; }
 
-private:
     std::vector<const NodeType*> recursionStack;
     std::vector<std::vector<const NodeType*>> cycles;
 };
 
 /// Class for reporting all cycles in a directed graph.
-template<class NodeType, class EdgeType>
+template<class NodeType, class EdgeType, class EdgePredicate = select_all>
 class CycleDetector {
 public:
     explicit CycleDetector(const DirectedGraph<NodeType, EdgeType>& graph) : graph(graph) {}
 
     /// Detect all cycles within the graph.
     /// Returns a vector containing cycles, where each cycle is represented as a vector of nodes.
-    std::vector<std::vector<const NodeType*>> detectCycles() {
-        CycleDetectionVisitor<NodeType, EdgeType> visitor;
+    auto detectCycles() {
+      std::vector<std::vector<const NodeType*>> cycles;
 
         // Start a DFS traversal from each node
         for (const auto& nodePtr : graph) {
-          const auto * startNode = nodePtr.get();
+            CycleDetectionVisitor<NodeType, EdgeType> visitor;
+            const auto* startNode = nodePtr.get();
             if (visitedNodes.count(startNode) == 0) {
-                
+
                 // Mark the starting node as visited.
                 visitedNodes.insert(startNode);
 
                 // Perform DFS traversal.
-                DepthFirstSearch<NodeType, EdgeType, CycleDetectionVisitor<NodeType, EdgeType>> dfs(
-                    visitor, *nodePtr);
-                
+                DepthFirstSearch<NodeType, EdgeType, CycleDetectionVisitor<NodeType, EdgeType>,
+                                 EdgePredicate>
+                    dfs(visitor, *nodePtr);
+
                 // Additionally, mark all nodes in cycles as visited to avoid
                 // redundant DFS calls.
                 markAllVisitedNodes(visitor);
             }
+
+            // Add any cycles that were found.
+            cycles.insert(cycles.end(), visitor.cycles.begin(), visitor.cycles.end());
         }
 
-        return visitor.getCycles();
+        return cycles;
     }
 
 private:

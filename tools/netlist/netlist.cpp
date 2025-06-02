@@ -158,28 +158,28 @@ void reportPath(Compilation& compilation, const NetlistPath& path) {
     }
 }
 
-void dumpCyclesList(Compilation& compilation, Netlist& netlist,
-                    std::vector<CycleListType>* cycles) {
-    auto s = cycles->size();
-    if (!s) {
-        OS::print("No combinatorial loops detected\n");
-        return;
-    }
-    OS::print(fmt::format("Detected {} combinatorial loop{}:\n", s, (s > 1) ? "s" : ""));
-    NetlistPath path;
-    for (int i = 0; i < s; i++) {
-        auto si = (*cycles)[i].size();
-        for (int j = 0; j < si; j++) {
-            auto& node = netlist.getNode((*cycles)[i][j]);
-            if (node.kind == NodeKind::VariableReference) {
-                path.add(node);
-            }
-        }
-        OS::print(fmt::format("Path length: {}\n", path.size()));
-        reportPath(compilation, path);
-        path.clear();
-    }
-}
+//void dumpCyclesList(Compilation& compilation, Netlist& netlist,
+//                    std::vector<CycleListType>* cycles) {
+//    auto s = cycles->size();
+//    if (!s) {
+//        OS::print("No combinatorial loops detected\n");
+//        return;
+//    }
+//    OS::print(fmt::format("Detected {} combinatorial loop{}:\n", s, (s > 1) ? "s" : ""));
+//    NetlistPath path;
+//    for (int i = 0; i < s; i++) {
+//        auto si = (*cycles)[i].size();
+//        for (int j = 0; j < si; j++) {
+//            auto& node = netlist.getNode((*cycles)[i][j]);
+//            if (node.kind == NodeKind::VariableReference) {
+//                path.add(node);
+//            }
+//        }
+//        OS::print(fmt::format("Path length: {}\n", path.size()));
+//        reportPath(compilation, path);
+//        path.clear();
+//    }
+//}
 
 /// Exand a variable declaration node into a set of aliases if any are defined.
 /// These are used for searching for paths.
@@ -300,11 +300,14 @@ int main(int argc, char** argv) {
             return 0;
         }
 
+        // Find combinatorial loops.
         if (combLoops == true) {
-            ElementaryCyclesSearch ecs(netlist);
-            std::vector<CycleListType>* cycles = ecs.getElementaryCycles();
-            dumpCyclesList(*compilation, netlist, cycles);
+            // FIXME
+            //ElementaryCyclesSearch ecs(netlist);
+            //std::vector<CycleListType>* cycles = ecs.getElementaryCycles();
+            //dumpCyclesList(*compilation, netlist, cycles);
         }
+
         // Find a point-to-point path in the netlist.
         if (fromPointName.has_value() && toPointName.has_value()) {
             if (!fromPointName.has_value()) {

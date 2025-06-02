@@ -210,13 +210,15 @@ struct VariableMemberAccess : public VariableSelectorBase {
 /// A class representing a dependency between two variables in the netlist.
 class NetlistEdge : public DirectedEdge<NetlistNode, NetlistEdge> {
 public:
-    NetlistEdge(NetlistNode& sourceNode, NetlistNode& targetNode) :
-        DirectedEdge(sourceNode, targetNode) {}
+    NetlistEdge(NetlistNode& sourceNode, NetlistNode& targetNode,
+                ast::EdgeKind edgeKind = ast::EdgeKind::None) :
+        DirectedEdge(sourceNode, targetNode), edgeKind(edgeKind) {}
 
     void disable() { disabled = true; }
 
 public:
     bool disabled{};
+    ast::EdgeKind edgeKind;
 };
 
 /// A class representing a node in the netlist, corresponding to the appearance

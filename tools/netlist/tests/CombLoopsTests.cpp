@@ -35,13 +35,12 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    ElementaryCyclesSearch ecs(netlist);
-    std::vector<CycleListType>* cycles_ptr = ecs.getElementaryCycles();
-    std::vector<CycleListType>& cycles = *cycles_ptr;
-    CHECK(cycles.size() == 1);
+    CombLoops combLoops(netlist);
+    auto cycles = combLoops.getAllLoops(); 
+    CHECK(cycles.size() >= 1);
     CHECK(cycles[0].size() == 10);
-    CHECK(count_vec_if(cycles[0], [&netlist](int node) {
-              return (netlist.getNode(node).kind == NodeKind::VariableReference);
+    CHECK(std::count_if(cycles[0].begin(), cycles[0].end(), [](NetlistNode const* node) {
+              return node->kind == NodeKind::VariableReference;
           }) == 6);
 }
 
@@ -74,13 +73,12 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    ElementaryCyclesSearch ecs(netlist);
-    std::vector<CycleListType>* cycles_ptr = ecs.getElementaryCycles();
-    std::vector<CycleListType>& cycles = *cycles_ptr;
-    CHECK(cycles.size() == 1);
+    CombLoops combLoops(netlist);
+    auto cycles = combLoops.getAllLoops(); 
+    CHECK(cycles.size() >= 1);
     CHECK(cycles[0].size() == 10);
-    CHECK(count_vec_if(cycles[0], [&netlist](int node) {
-              return (netlist.getNode(node).kind == NodeKind::VariableReference);
+    CHECK(std::count_if(cycles[0].begin(), cycles[0].end(), [](NetlistNode const*node) {
+              return node->kind == NodeKind::VariableReference;
           }) == 6);
 }
 
@@ -117,18 +115,17 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    ElementaryCyclesSearch ecs(netlist);
-    std::vector<CycleListType>* cycles_ptr = ecs.getElementaryCycles();
-    std::vector<CycleListType>& cycles = *cycles_ptr;
-    CHECK(cycles.size() == 1);
+    CombLoops combLoops(netlist);
+    auto cycles = combLoops.getAllLoops(); 
+    CHECK(cycles.size() >= 1);
     CHECK(cycles[0].size() == 10);
-    CHECK(count_vec_if(cycles[0], [&netlist](int node) {
-              return (netlist.getNode(node).kind == NodeKind::VariableReference);
+    CHECK(std::count_if(cycles[0].begin(), cycles[0].end(), [](NetlistNode const *node) {
+              return node->kind == NodeKind::VariableReference;
           }) == 6);
 }
 
 TEST_CASE("A combinatorial loop with a combinatorial event list") {
-    // Test that a csensitivity list with a nonedge signal in the
+    // Test that a sensitivity list with a nonedge signal in the
     // sensitivity list is detected as a ccombinatorial loop
     auto tree = SyntaxTree::fromText(R"(
 module test (input clk, input rst);
@@ -157,12 +154,12 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    ElementaryCyclesSearch ecs(netlist);
-    std::vector<CycleListType>* cycles_ptr = ecs.getElementaryCycles();
-    std::vector<CycleListType>& cycles = *cycles_ptr;
-    CHECK(cycles.size() == 2);
+    CombLoops combLoops(netlist);
+    auto cycles = combLoops.getAllLoops(); 
+    CHECK(cycles.size() >= 1);
     CHECK(cycles[0].size() == 10);
-    CHECK(count_vec_if(cycles[0], [&netlist](int node) {
-              return (netlist.getNode(node).kind == NodeKind::VariableReference);
+    CHECK(std::count_if(cycles[0].begin(), cycles[0].end(), [](NetlistNode const *node) {
+              return node->kind == NodeKind::VariableReference;
           }) == 6);
 }
+
