@@ -28,22 +28,8 @@ public:
 
     auto getAllLoops() {
         using CycleDetectorType = CycleDetector<NetlistNode, NetlistEdge, CombEdgePredicate>;
-        using CycleType = CycleDetectorType::CycleType;
-
         CycleDetectorType detector(netlist);
-        auto result = detector.detectCycles();
-
-        // Canonicalise the result by sorting by node ID.
-        std::sort(result.begin(), result.end(), [](CycleType const& a, CycleType const& b) {
-            for (size_t i = 0; i < std::min(a.size(), b.size()); i++) {
-                if (a[i]->ID != b[i]->ID) {
-                    return a[i]->ID < b[i]->ID;
-                }
-            }
-            return false;
-        });
-
-        return result;
+        return detector.detectCycles();
     }
 };
 

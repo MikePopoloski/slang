@@ -17,11 +17,12 @@ struct CycleDetectionVisitor {
         auto cycleStart = std::find(recursionStack.begin(), recursionStack.end(), &node);
         if (cycleStart != recursionStack.end()) {
 
-            // Extract cycle nodes
+            // Extract cycle nodes.
             std::vector<const NodeType*> cycleNodes(cycleStart, recursionStack.end());
 
-            // Canonicalise the cycle by starting at the lowest node ID.
-            auto minPosition = min_element(cycleNodes.begin(), cycleNodes.end());
+            // Canonicalise the cycle by starting at the lowest pointer value.
+            auto minPosition = std::min_element(cycleNodes.begin(), cycleNodes.end(),
+                                                [](const NodeType *a, const NodeType *b) { return a->ID < b->ID; });
             std::rotate(cycleNodes.begin(), minPosition, cycleNodes.end());
 
             cycles.emplace_back(std::move(cycleNodes));
@@ -76,6 +77,17 @@ public:
 
         // Return a vector.
         std::vector<CycleType> result(cycles.begin(), cycles.end());
+        
+        // Canonicalise the result by sorting by node ID.
+        std::sort(result.begin(), result.end(), [](CycleType const& a, CycleType const& b) {
+            for (size_t i = 0; i < std::min(a.size(), b.size()); i++) {
+                if (a[i]->ID != b[i]->ID) {
+                    return a[i]->ID < b[i]->ID;
+                }
+            }
+            return false;
+        });
+
 
         return result;
     }

@@ -19,8 +19,8 @@ struct TestNode;
 struct TestEdge;
 
 struct TestNode : public Node<TestNode, TestEdge> {
-    size_t id;
-    TestNode(size_t id) : id(id) {};
+    size_t ID;
+    TestNode(size_t ID) : ID(ID) {};
 };
 
 struct TestEdge : public DirectedEdge<TestNode, TestEdge> {
@@ -91,13 +91,13 @@ TEST_CASE("Multiple cycles in the graph") {
     REQUIRE(cycles.size() == 2);
 
     // Check cycle 1
-    auto& cycle1 = cycles[1];
+    auto& cycle1 = cycles[0];
     REQUIRE(cycle1.size() == 2);
     REQUIRE((cycle1[0] == &node0 || cycle1[0] == &node1));
     REQUIRE((cycle1[1] == &node0 || cycle1[1] == &node1));
 
     // Check cycle 2
-    auto& cycle2 = cycles[0];
+    auto& cycle2 = cycles[1];
     REQUIRE(cycle2.size() == 2);
     REQUIRE((cycle2[0] == &node2 || cycle2[0] == &node3));
     REQUIRE((cycle2[1] == &node2 || cycle2[1] == &node3));
@@ -126,15 +126,15 @@ TEST_CASE("Graph with interconnected cycles") {
     REQUIRE(cycles.size() == 2);
 
     // Check cycle 1
-    auto& cycle2 = cycles[0];
-    REQUIRE(cycle2.size() == 2);
-    REQUIRE((cycle2[0] == &node2 || cycle2[0] == &node3));
-    REQUIRE((cycle2[1] == &node2 || cycle2[1] == &node3));
-
-    // Check cycle 2
-    auto& cycle1 = cycles[1];
+    auto& cycle1 = cycles[0];
     REQUIRE(cycle1.size() == 3);
     REQUIRE((cycle1[0] == &node0 || cycle1[0] == &node1 || cycle1[0] == &node2));
     REQUIRE((cycle1[1] == &node0 || cycle1[1] == &node1 || cycle1[1] == &node2));
     REQUIRE((cycle1[2] == &node0 || cycle1[2] == &node1 || cycle1[2] == &node2));
+
+    // Check cycle 2
+    auto& cycle2 = cycles[1];
+    REQUIRE(cycle2.size() == 2);
+    REQUIRE((cycle2[0] == &node2 || cycle2[0] == &node3));
+    REQUIRE((cycle2[1] == &node2 || cycle2[1] == &node3));
 }
