@@ -264,11 +264,9 @@ public:
 
     /// Verifies that this expression is a valid lvalue and that each element
     /// of that lvalue can be assigned to. If it's not, appropriate diagnostics
-    /// will be issued. Information about the source expression driving the lvalue
-    /// will be registered with the various symbols involved.
+    /// will be issued.
     bool requireLValue(const ASTContext& context, SourceLocation location = {},
-                       bitmask<AssignFlags> flags = {},
-                       const Expression* longestStaticPrefix = nullptr) const;
+                       bitmask<AssignFlags> flags = {}) const;
 
     /// If this expression is a valid lvalue, returns the part(s) of it that
     /// constitutes the "longest static prefix" for purposes of determining

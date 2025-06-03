@@ -244,14 +244,10 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
             assignFlags = AssignFlags::OutputPort;
     }
 
-    bitmask<ASTFlags> astFlags = ASTFlags::OutputArg;
-    if (context.flags.has(ASTFlags::NotADriver))
-        astFlags |= ASTFlags::NotADriver;
-
     SourceRange lhsRange = lhs.sourceRange();
     return AssignmentExpression::fromComponents(comp, std::nullopt, assignFlags, *lhsExpr, *rhsExpr,
                                                 lhsRange, /* timingControl */ nullptr, lhsRange,
-                                                context.resetFlags(astFlags));
+                                                context.resetFlags(ASTFlags::OutputArg));
 }
 
 const Expression& Expression::bindLValue(const ExpressionSyntax& syntax, const ASTContext& context,
@@ -494,32 +490,30 @@ std::optional<ConstantRange> Expression::evalSelector(EvalContext& context,
 }
 
 bool Expression::requireLValue(const ASTContext& context, SourceLocation location,
-                               bitmask<AssignFlags> flags,
-                               const Expression* longestStaticPrefix) const {
+                               bitmask<AssignFlags> flags) const {
     switch (kind) {
         case ExpressionKind::NamedValue:
         case ExpressionKind::HierarchicalValue: {
             auto& ve = as<ValueExpressionBase>();
-            return ve.requireLValueImpl(context, location, flags, longestStaticPrefix);
+            return ve.requireLValueImpl(context, location, flags);
         }
         case ExpressionKind::ElementSelect: {
             auto& select = as<ElementSelectExpression>();
-            return select.requireLValueImpl(context, location, flags, longestStaticPrefix);
+            return select.requireLValueImpl(context, location, flags);
         }
         case ExpressionKind::RangeSelect: {
             auto& select = as<RangeSelectExpression>();
-            return select.requireLValueImpl(context, location, flags, longestStaticPrefix);
+            return select.requireLValueImpl(context, location, flags);
         }
         case ExpressionKind::MemberAccess: {
             auto& access = as<MemberAccessExpression>();
-            return access.requireLValueImpl(context, location, flags, longestStaticPrefix);
+            return access.requireLValueImpl(context, location, flags);
         }
         case ExpressionKind::Concatenation: {
             auto& concat = as<ConcatenationExpression>();
             if (!concat.type->isIntegral())
                 break;
 
-            SLANG_ASSERT(!longestStaticPrefix || flags.has(AssignFlags::SlicedPort));
             for (auto op : concat.operands()) {
                 if (!op->requireLValue(context, location, flags | AssignFlags::InConcat)) {
                     return false;
@@ -530,21 +524,17 @@ bool Expression::requireLValue(const ASTContext& context, SourceLocation locatio
         case ExpressionKind::SimpleAssignmentPattern:
             return as<SimpleAssignmentPatternExpression>().isLValue;
         case ExpressionKind::Streaming: {
-            SLANG_ASSERT(!longestStaticPrefix);
             auto& stream = as<StreamingConcatenationExpression>();
             for (auto& op : stream.streams()) {
-                if (!op.operand->requireLValue(context, location, flags | AssignFlags::InConcat,
-                                               longestStaticPrefix)) {
+                if (!op.operand->requireLValue(context, location, flags | AssignFlags::InConcat))
                     return false;
-                }
             }
             return true;
         }
         case ExpressionKind::Conversion: {
             auto& conv = as<ConversionExpression>();
-            if (conv.isImplicit()) {
-                return conv.operand().requireLValue(context, location, flags, longestStaticPrefix);
-            }
+            if (conv.isImplicit())
+                return conv.operand().requireLValue(context, location, flags);
             break;
         }
         case ExpressionKind::Invalid:

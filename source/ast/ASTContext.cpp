@@ -100,11 +100,6 @@ void ASTContext::setAttributes(const Expression& expr,
                                    AttributeSymbol::fromSyntax(syntax, *scope, getLocation()));
 }
 
-void ASTContext::addDriver(const ValueSymbol&, const Expression&, bitmask<AssignFlags>) const {
-    if (flags.has(ASTFlags::NotADriver) || scope->isUninstantiated())
-        return;
-}
-
 Diagnostic& ASTContext::addDiag(DiagCode code, SourceLocation location) const {
     auto& diag = scope->addDiag(code, location);
     if (assertionInstance)
@@ -494,7 +489,7 @@ ASTContext ASTContext::resetFlags(bitmask<ASTFlags> addedFlags) const {
     static constexpr bitmask<ASTFlags> NonSticky =
         ASTFlags::InsideConcatenation | ASTFlags::AllowDataType | ASTFlags::AssignmentAllowed |
         ASTFlags::StreamingAllowed | ASTFlags::TopLevelStatement | ASTFlags::AllowUnboundedLiteral |
-        ASTFlags::AllowTypeReferences | ASTFlags::AllowClockingBlock | ASTFlags::NotADriver |
+        ASTFlags::AllowTypeReferences | ASTFlags::AllowClockingBlock |
         ASTFlags::AssertionDefaultArg;
 
     ASTContext result(*this);

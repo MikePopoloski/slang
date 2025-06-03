@@ -215,8 +215,7 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
 }
 
 bool ValueExpressionBase::requireLValueImpl(const ASTContext& context, SourceLocation location,
-                                            bitmask<AssignFlags> flags,
-                                            const Expression* longestStaticPrefix) const {
+                                            bitmask<AssignFlags> flags) const {
     if (!location)
         location = sourceRange.start();
 
@@ -268,20 +267,15 @@ bool ValueExpressionBase::requireLValueImpl(const ASTContext& context, SourceLoc
         if (auto expr = modportPort.getConnectionExpr()) {
             // The assignment is actually to the underlying connection expression,
             // so redirect it there.
-            return expr->requireLValue(context, location, flags, longestStaticPrefix);
+            return expr->requireLValue(context, location, flags);
         }
     }
 
-    if (kind == ExpressionKind::HierarchicalValue && !context.flags.has(ASTFlags::NotADriver) &&
-        !context.scope->isUninstantiated()) {
+    if (kind == ExpressionKind::HierarchicalValue && !context.scope->isUninstantiated()) {
         auto& ref = as<HierarchicalValueExpression>().ref;
         if (!ref.isViaIfacePort())
             context.getCompilation().noteHierarchicalAssignment(ref);
     }
-
-    if (!longestStaticPrefix)
-        longestStaticPrefix = this;
-    context.addDriver(symbol, *longestStaticPrefix, flags);
 
     return true;
 }

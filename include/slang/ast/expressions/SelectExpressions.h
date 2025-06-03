@@ -35,7 +35,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
     bool requireLValueImpl(const ASTContext& context, SourceLocation location,
-                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) const;
+                           bitmask<AssignFlags> flags) const;
 
     void getLongestStaticPrefixesImpl(
         SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
@@ -97,7 +97,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
     bool requireLValueImpl(const ASTContext& context, SourceLocation location,
-                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) const;
+                           bitmask<AssignFlags> flags) const;
 
     void getLongestStaticPrefixesImpl(
         SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
@@ -152,7 +152,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
     bool requireLValueImpl(const ASTContext& context, SourceLocation location,
-                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) const;
+                           bitmask<AssignFlags> flags) const;
 
     void getLongestStaticPrefixesImpl(
         SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
