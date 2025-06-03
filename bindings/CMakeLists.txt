@@ -40,6 +40,7 @@ add_custom_command(
 pybind11_add_module(
   pyslang
   MODULE
+  python/AnalysisBindings.cpp
   python/ASTBindings.cpp
   python/CompBindings.cpp
   python/ExpressionBindings.cpp
