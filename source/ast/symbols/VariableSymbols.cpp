@@ -630,37 +630,33 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
         // If there is an initializer expression we take our type from that.
         // Otherwise we need to lookup the signal in our parent scope and
         // take the type from that.
+        const Expression* expr = nullptr;
+        SourceLocation varLoc;
         if (decl->value) {
-            auto& expr = Expression::bind(*decl->value->expr, context);
-            arg->setType(*expr.type);
-            arg->setInitializer(expr);
-
-            if (dir != ArgumentDirection::In)
-                expr.requireLValue(context, decl->value->equals.location(), AssignFlags::ClockVar);
+            expr = &Expression::bind(*decl->value->expr, context);
+            varLoc = decl->value->equals.location();
         }
-        else {
-            auto sym = Lookup::unqualifiedAt(*parent, name.valueText(), ll, name.range());
-            if (sym && sym->kind != SymbolKind::Net && sym->kind != SymbolKind::Variable) {
+        else if (auto sym = Lookup::unqualifiedAt(*parent, name.valueText(), ll, name.range())) {
+            if (sym->kind != SymbolKind::Net && sym->kind != SymbolKind::Variable) {
                 auto& diag = context.addDiag(diag::InvalidClockingSignal, name.range());
                 diag << name.valueText();
                 diag.addNote(diag::NoteDeclarationHere, sym->location);
-                sym = nullptr;
-            }
-
-            if (sym) {
-                auto sourceType = sym->getDeclaredType();
-                SLANG_ASSERT(sourceType);
-                arg->getDeclaredType()->setLink(*sourceType);
-
-                auto& valExpr = ValueExpressionBase::fromSymbol(
-                    context, *sym, nullptr, {arg->location, arg->location + arg->name.length()});
-
-                if (dir != ArgumentDirection::In)
-                    context.addDriver(sym->as<ValueSymbol>(), valExpr, AssignFlags::ClockVar);
             }
             else {
-                arg->getDeclaredType()->setType(comp.getErrorType());
+                expr = &ValueExpressionBase::fromSymbol(
+                    context, *sym, nullptr, {arg->location, arg->location + arg->name.length()});
             }
+        }
+
+        if (expr) {
+            arg->setType(*expr->type);
+            arg->setInitializer(*expr);
+            if (dir != ArgumentDirection::In)
+                expr->requireLValue(context, varLoc, AssignFlags::ClockVar);
+        }
+        else {
+            // If we didn't find a signal, we need to set the type to error.
+            arg->getDeclaredType()->setType(comp.getErrorType());
         }
     }
 }

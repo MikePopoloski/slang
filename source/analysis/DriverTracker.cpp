@@ -90,6 +90,21 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
     }
 }
 
+void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
+                        const ClockVarSymbol& symbol) {
+    // Input clock vars don't have drivers.
+    if (symbol.direction == ArgumentDirection::In)
+        return;
+
+    auto scope = symbol.getParentScope();
+    SLANG_ASSERT(scope);
+
+    if (auto expr = symbol.getInitializer()) {
+        addDrivers(context, driverAlloc, *expr, DriverKind::Continuous, AssignFlags::ClockVar,
+                   scope->asSymbol());
+    }
+}
+
 void DriverTracker::noteNonCanonicalInstance(AnalysisContext& context, DriverAlloc& driverAlloc,
                                              const InstanceSymbol& instance) {
     auto canonical = instance.getCanonicalBody();

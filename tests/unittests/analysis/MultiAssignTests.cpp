@@ -869,3 +869,22 @@ endmodule
     CHECK(diags[0].code == diag::OutputPortCoercion);
     CHECK(diags[1].code == diag::InputPortCoercion);
 }
+
+TEST_CASE("Assigning to output clock var") {
+    auto& code = R"(
+module m(input clk);
+    int j;
+    assign j = 1;
+    clocking cb2 @clk;
+        output j;
+    endclocking
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ClockVarTargetAssign);
+}

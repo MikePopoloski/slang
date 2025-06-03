@@ -13,6 +13,7 @@
 
 namespace slang::ast {
 
+class ClockVarSymbol;
 class EvalContext;
 class Expression;
 class HierarchicalReference;
@@ -45,6 +46,9 @@ public:
 
     // Adds drivers for the given port symbol to the tracker.
     void add(AnalysisContext& context, DriverAlloc& driverAlloc, const ast::PortSymbol& symbol);
+
+    // Adds drivers for the given clock variable to the tracker.
+    void add(AnalysisContext& context, DriverAlloc& driverAlloc, const ast::ClockVarSymbol& symbol);
 
     /// Records the existence of a non-canonical instance, which may imply that
     /// additional drivers should be applied based on the canonical instance.

@@ -194,6 +194,10 @@ struct AnalysisScopeVisitor {
                     checkValueUnused(symbol, diag::UnusedArgument, std::nullopt, std::nullopt);
             }
         }
+        else if (symbol.kind == SymbolKind::ClockVar) {
+            manager.driverTracker.add(state.context, state.driverAlloc,
+                                      symbol.as<ClockVarSymbol>());
+        }
     }
 
     void visit(const ParameterSymbol& symbol) {
