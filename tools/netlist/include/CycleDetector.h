@@ -20,7 +20,7 @@ struct CycleDetectionVisitor {
             // Extract cycle nodes.
             std::vector<const NodeType*> cycleNodes(cycleStart, recursionStack.end());
 
-            // Canonicalise the cycle by starting at the lowest pointer value.
+            // Canonicalise the cycle by starting with the lowest ID.
             auto minPosition = std::min_element(cycleNodes.begin(), cycleNodes.end(),
                                                 [](const NodeType* a, const NodeType* b) {
                                                     return a->ID < b->ID;
