@@ -3,6 +3,8 @@
 
 #include "Test.h"
 
+#include "slang/ast/EvalContext.h"
+#include "slang/ast/LSPUtilities.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -1761,4 +1763,35 @@ endmodule
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("More detailed port slicing tests") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic[8:0] p);
+endmodule
+
+module top;
+  logic [2:4][6:1] a;
+  m marr [2] (a);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto getConnStr = [&](std::string_view path) {
+        auto& inst = compilation.getRoot().lookupName<InstanceSymbol>(path);
+
+        EvalContext evalCtx(inst);
+        FormatBuffer buffer;
+        LSPUtilities::stringifyLSP(*inst.getPortConnections()[0]->getExpression(), evalCtx, buffer);
+        return buffer.str();
+    };
+
+    auto marr0 = getConnStr("top.marr[0]");
+    CHECK(marr0 == "{a[2], a[3][6:4]}");
+
+    auto marr1 = getConnStr("top.marr[1]");
+    CHECK(marr1 == "{a[3][3:1], a[4]}");
 }

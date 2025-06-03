@@ -1710,7 +1710,7 @@ void InsideExpression::serializeTo(ASTSerializer& serializer) const {
     }
 }
 
-Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
+Expression& ConcatenationExpression::fromSyntax(Compilation& comp,
                                                 const ConcatenationExpressionSyntax& syntax,
                                                 const ASTContext& context,
                                                 const Type* assignmentTarget) {
@@ -1719,7 +1719,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     if (assignmentTarget && assignmentTarget->isUnpackedArray()) {
         if (assignmentTarget->isAssociativeArray()) {
             context.addDiag(diag::UnpackedConcatAssociative, syntax.sourceRange());
-            return badExpr(compilation, nullptr);
+            return badExpr(comp, nullptr);
         }
 
         bool bad = false;
@@ -1738,14 +1738,14 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
             }
 
             if (!arg)
-                arg = &create(compilation, *argSyntax, context);
+                arg = &create(comp, *argSyntax, context);
 
             if (arg->bad()) {
                 bad = true;
                 continue;
             }
 
-            if (arg->isImplicitlyAssignableTo(compilation, elemType)) {
+            if (arg->isImplicitlyAssignableTo(comp, elemType)) {
                 buffer.push_back(&convertAssignment(context, elemType, *arg, arg->sourceRange));
                 totalElems++;
                 continue;
@@ -1783,10 +1783,10 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
             bad = true;
         }
 
-        auto result = compilation.emplace<ConcatenationExpression>(type, buffer.ccopy(compilation),
-                                                                   syntax.sourceRange());
+        auto result = comp.emplace<ConcatenationExpression>(type, buffer.copy(comp),
+                                                            syntax.sourceRange());
         if (bad)
-            return badExpr(compilation, result);
+            return badExpr(comp, result);
 
         return *result;
     }
@@ -1804,9 +1804,9 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
         // an additional flag so that it knows it's ok to have that zero count.
         Expression* arg;
         if (argSyntax->kind == SyntaxKind::MultipleConcatenationExpression)
-            arg = &create(compilation, *argSyntax, context, ASTFlags::InsideConcatenation);
+            arg = &create(comp, *argSyntax, context, ASTFlags::InsideConcatenation);
         else
-            arg = &create(compilation, *argSyntax, context);
+            arg = &create(comp, *argSyntax, context);
         buffer.push_back(arg);
 
         if (arg->bad()) {
@@ -1857,7 +1857,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                     selfDetermined(context, expr);
                 }
                 else if (expr->isImplicitString()) {
-                    expr = &ConversionExpression::makeImplicit(context, compilation.getStringType(),
+                    expr = &ConversionExpression::makeImplicit(context, comp.getStringType(),
                                                                ConversionKind::Implicit, *expr,
                                                                nullptr, {});
                 }
@@ -1877,23 +1877,21 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     }
 
     if (errored) {
-        return badExpr(compilation,
-                       compilation.emplace<ConcatenationExpression>(compilation.getErrorType(),
-                                                                    std::span<const Expression*>(),
-                                                                    syntax.sourceRange()));
+        return badExpr(comp, comp.emplace<ConcatenationExpression>(comp.getErrorType(),
+                                                                   std::span<Expression*>(),
+                                                                   syntax.sourceRange()));
     }
 
     const Type* type;
     if (anyStrings)
-        type = &compilation.getStringType();
+        type = &comp.getStringType();
     else
-        type = &compilation.getType(totalWidth, flags);
+        type = &comp.getType(totalWidth, flags);
 
-    return *compilation.emplace<ConcatenationExpression>(*type, buffer.ccopy(compilation),
-                                                         syntax.sourceRange());
+    return *comp.emplace<ConcatenationExpression>(*type, buffer.copy(comp), syntax.sourceRange());
 }
 
-Expression& ConcatenationExpression::fromEmpty(Compilation& compilation,
+Expression& ConcatenationExpression::fromEmpty(Compilation& comp,
                                                const EmptyQueueExpressionSyntax& syntax,
                                                const ASTContext& context,
                                                const Type* assignmentTarget) {
@@ -1901,23 +1899,22 @@ Expression& ConcatenationExpression::fromEmpty(Compilation& compilation,
     if (!assignmentTarget || !assignmentTarget->isUnpackedArray()) {
         if (!assignmentTarget || !assignmentTarget->isError())
             context.addDiag(diag::EmptyConcatNotAllowed, syntax.sourceRange());
-        return badExpr(compilation, nullptr);
+        return badExpr(comp, nullptr);
     }
 
     if (assignmentTarget->isAssociativeArray()) {
         context.addDiag(diag::UnpackedConcatAssociative, syntax.sourceRange());
-        return badExpr(compilation, nullptr);
+        return badExpr(comp, nullptr);
     }
 
     if (assignmentTarget->hasFixedRange()) {
         context.addDiag(diag::UnpackedConcatSize, syntax.sourceRange())
             << *assignmentTarget << assignmentTarget->getFixedRange().width() << 0;
-        return badExpr(compilation, nullptr);
+        return badExpr(comp, nullptr);
     }
 
-    return *compilation.emplace<ConcatenationExpression>(*assignmentTarget,
-                                                         std::span<const Expression* const>{},
-                                                         syntax.sourceRange());
+    return *comp.emplace<ConcatenationExpression>(*assignmentTarget, std::span<Expression*>{},
+                                                  syntax.sourceRange());
 }
 
 ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {

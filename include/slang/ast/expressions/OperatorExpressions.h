@@ -236,12 +236,15 @@ private:
 /// Represents a concatenation expression.
 class SLANG_EXPORT ConcatenationExpression : public Expression {
 public:
-    ConcatenationExpression(const Type& type, std::span<const Expression* const> operands,
+    ConcatenationExpression(const Type& type, std::span<Expression*> operands,
                             SourceRange sourceRange) :
         Expression(ExpressionKind::Concatenation, type, sourceRange), operands_(operands) {}
 
     /// @returns the list of operands in the concatenation
     std::span<const Expression* const> operands() const { return operands_; }
+
+    /// @returns the list of operands in the concatenation
+    std::span<Expression*> operands() { return operands_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
@@ -265,7 +268,7 @@ public:
     }
 
 private:
-    std::span<const Expression* const> operands_;
+    std::span<Expression*> operands_;
 };
 
 /// Represents a replication expression.
