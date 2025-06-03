@@ -34,7 +34,6 @@ void registerCompilation(py::module_& m) {
     EXPOSE_ENUM(m, ElabSystemTaskKind);
     EXPOSE_ENUM(m, RandMode);
     EXPOSE_ENUM(m, PrimitivePortDirection);
-    EXPOSE_ENUM(m, DriverKind);
 
     py::enum_<MinTypMax>(m, "MinTypMax")
         .value("Min", MinTypMax::Min)

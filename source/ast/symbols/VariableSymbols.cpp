@@ -652,7 +652,7 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
             arg->setType(*expr->type);
             arg->setInitializer(*expr);
             if (dir != ArgumentDirection::In)
-                expr->requireLValue(context, varLoc, AssignFlags::ClockVar);
+                expr->requireLValue(context, varLoc);
         }
         else {
             // If we didn't find a signal, we need to set the type to error.

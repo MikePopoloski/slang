@@ -59,7 +59,14 @@ public:
         if (!selectors.empty()) {
             SmallVector<std::pair<const slang::ast::ValueSymbol*, const slang::ast::Expression*>>
                 prefixes;
-            selectors.front()->getLongestStaticPrefixes(prefixes, evalCtx);
+
+            slang::ast::LSPUtilities::visitLSPs(*selectors.front(), evalCtx,
+                                                [&](const slang::ast::ValueSymbol& symbol,
+                                                    const slang::ast::Expression& lsp,
+                                                    bool isLValue) {
+                                                    if (isLValue)
+                                                        prefixes.emplace_back(&symbol, &lsp);
+                                                });
             SLANG_ASSERT(prefixes.size() == 1);
             auto [prefixSymbol, prefixExpr] = prefixes.back();
             auto bounds = slang::ast::LSPUtilities::getBounds(*prefixExpr, evalCtx,

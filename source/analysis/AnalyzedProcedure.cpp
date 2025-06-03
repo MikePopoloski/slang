@@ -152,7 +152,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         for (auto it = lvalue.assigned.begin(); it != lvalue.assigned.end(); ++it) {
             auto bounds = it.bounds();
             auto driver = context.alloc.emplace<ValueDriver>(driverKind, **it, analyzedSymbol,
-                                                             AssignFlags::None);
+                                                             DriverFlags::None);
             perSymbol.emplace_back(driver, bounds);
         }
 
@@ -226,7 +226,7 @@ void AnalyzedProcedure::addFunctionDrivers(AnalysisContext& context, const CallE
         for (auto& [driver, bounds] : driverList) {
             auto newDriver = context.alloc.emplace<ValueDriver>(driver->kind,
                                                                 *driver->prefixExpression,
-                                                                *analyzedSymbol, AssignFlags::None);
+                                                                *analyzedSymbol, DriverFlags::None);
             newDriver->procCallExpression = &expr;
 
             perSymbol.emplace_back(newDriver, bounds);
