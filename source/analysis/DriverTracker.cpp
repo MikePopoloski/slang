@@ -187,7 +187,11 @@ void DriverTracker::addDrivers(AnalysisContext& context, DriverAlloc& driverAllo
     SmallVector<std::pair<const HierarchicalReference*, const ValueDriver*>> ifacePortRefs;
     LSPUtilities::visitLSPs(
         expr, evalCtx,
-        [&](const ValueSymbol& symbol, const Expression& lsp) {
+        [&](const ValueSymbol& symbol, const Expression& lsp, bool isLValue) {
+            // If this is not an lvalue, we don't care about it.
+            if (!isLValue)
+                return;
+
             auto bounds = LSPUtilities::getBounds(lsp, evalCtx, symbol.getType());
             if (!bounds)
                 return;

@@ -317,7 +317,7 @@ const TimingControl* DataFlowAnalysis::inferClock(const AnalyzedProcedure* paren
             // unused elsewhere in the procedure.
             bool referenced = false;
             LSPUtilities::visitLSPs(timing.expr, getEvalContext(),
-                                    [&](const ValueSymbol& symbol, const Expression& lsp) {
+                                    [&](const ValueSymbol& symbol, const Expression& lsp, bool) {
                                         if (isReferenced(symbol, lsp))
                                             referenced = true;
                                     });
