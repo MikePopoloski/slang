@@ -229,7 +229,7 @@ void registerExpressions(py::module_& m) {
         .def_property_readonly("rangeList", &InsideExpression::rangeList);
 
     py::class_<ConcatenationExpression, Expression>(m, "ConcatenationExpression")
-        .def_property_readonly("operands", &ConcatenationExpression::operands);
+        .def_property_readonly("operands", py::overload_cast<>(&ConcatenationExpression::operands));
 
     py::class_<ReplicationExpression, Expression>(m, "ReplicationExpression")
         .def_property_readonly("count", &ReplicationExpression::count)

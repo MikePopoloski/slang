@@ -8,6 +8,7 @@
 #include "slang/ast/LSPUtilities.h"
 
 #include "slang/ast/expressions/ConversionExpression.h"
+#include "slang/ast/expressions/OperatorExpressions.h"
 
 namespace slang::ast {
 
@@ -40,6 +41,20 @@ void LSPUtilities::stringifyLSP(const Expression& expr, EvalContext& evalContext
             if (!buffer.empty())
                 buffer.append(".");
             buffer.append(access.member.name);
+            break;
+        }
+        case ExpressionKind::Concatenation: {
+            auto& concat = expr.as<ConcatenationExpression>();
+            if (!concat.operands().empty()) {
+                buffer.append("{");
+                for (auto op : concat.operands()) {
+                    stringifyLSP(*op, evalContext, buffer);
+                    buffer.append(", ");
+                }
+                buffer.pop_back();
+                buffer.pop_back();
+                buffer.append("}");
+            }
             break;
         }
         default:
