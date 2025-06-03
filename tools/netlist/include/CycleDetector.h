@@ -42,12 +42,13 @@ struct CycleDetectionVisitor {
 template<class NodeType, class EdgeType, class EdgePredicate = select_all>
 class CycleDetector {
 public:
+    using CycleType = std::vector<const NodeType*>;
+    
     explicit CycleDetector(const DirectedGraph<NodeType, EdgeType>& graph) : graph(graph) {}
 
     /// Detect all cycles within the graph.
     /// Returns a vector containing cycles, where each cycle is represented as a vector of nodes.
     auto detectCycles() {
-        using CycleType = std::vector<const NodeType*>;
         std::set<CycleType> cycles;
 
         // Start a DFS traversal from each node
@@ -75,9 +76,6 @@ public:
 
         // Return a vector.
         std::vector<CycleType> result(cycles.begin(), cycles.end());
-
-        // Canonicalise the result by sorting.
-        std::sort(result.begin(), result.end());
 
         return result;
     }
