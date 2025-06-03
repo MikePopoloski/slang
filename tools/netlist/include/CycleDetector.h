@@ -43,7 +43,7 @@ template<class NodeType, class EdgeType, class EdgePredicate = select_all>
 class CycleDetector {
 public:
     using CycleType = std::vector<const NodeType*>;
-    
+
     explicit CycleDetector(const DirectedGraph<NodeType, EdgeType>& graph) : graph(graph) {}
 
     /// Detect all cycles within the graph.
