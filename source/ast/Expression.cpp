@@ -237,12 +237,8 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     }
 
     bitmask<AssignFlags> assignFlags;
-    if (instance) {
-        if (isInout)
-            assignFlags = AssignFlags::InOutPort;
-        else if (instance->kind != SymbolKind::PrimitiveInstance)
-            assignFlags = AssignFlags::OutputPort;
-    }
+    if (instance && isInout)
+        assignFlags = AssignFlags::InOutPort;
 
     SourceRange lhsRange = lhs.sourceRange();
     return AssignmentExpression::fromComponents(comp, std::nullopt, assignFlags, *lhsExpr, *rhsExpr,
@@ -392,16 +388,15 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
 }
 
 bool Expression::checkConnectionDirection(const Expression& expr, ArgumentDirection direction,
-                                          const ASTContext& context, SourceLocation loc,
-                                          bitmask<AssignFlags> flags) {
+                                          const ASTContext& context, SourceLocation loc) {
     switch (direction) {
         case ArgumentDirection::In:
             // All expressions are fine for inputs.
             return true;
         case ArgumentDirection::Out:
-            return expr.requireLValue(context, loc, flags);
+            return expr.requireLValue(context, loc);
         case ArgumentDirection::InOut:
-            return expr.requireLValue(context, loc, flags | AssignFlags::InOutPort);
+            return expr.requireLValue(context, loc, AssignFlags::InOutPort);
         case ArgumentDirection::Ref:
             if (!canConnectToRefArg(context, expr, VariableFlags::None)) {
                 context.addDiag(diag::InvalidRefArg, loc) << expr.sourceRange;
@@ -549,59 +544,6 @@ bool Expression::requireLValue(const ASTContext& context, SourceLocation locatio
     auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
     diag << sourceRange;
     return false;
-}
-
-void Expression::getLongestStaticPrefixes(
-    SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
-    EvalContext& evalContext, const Expression* longestStaticPrefix) const {
-
-    switch (kind) {
-        case ExpressionKind::NamedValue:
-        case ExpressionKind::HierarchicalValue: {
-            auto& ve = as<ValueExpressionBase>();
-            ve.getLongestStaticPrefixesImpl(results, longestStaticPrefix);
-            break;
-        }
-        case ExpressionKind::ElementSelect: {
-            auto& select = as<ElementSelectExpression>();
-            select.getLongestStaticPrefixesImpl(results, evalContext, longestStaticPrefix);
-            break;
-        }
-        case ExpressionKind::RangeSelect: {
-            auto& select = as<RangeSelectExpression>();
-            select.getLongestStaticPrefixesImpl(results, evalContext, longestStaticPrefix);
-            break;
-        }
-        case ExpressionKind::MemberAccess: {
-            auto& access = as<MemberAccessExpression>();
-            access.getLongestStaticPrefixesImpl(results, evalContext, longestStaticPrefix);
-            break;
-        }
-        case ExpressionKind::Concatenation: {
-            auto& concat = as<ConcatenationExpression>();
-            if (concat.type->isIntegral()) {
-                for (auto op : concat.operands())
-                    op->getLongestStaticPrefixes(results, evalContext, nullptr);
-            }
-            break;
-        }
-        case ExpressionKind::Streaming: {
-            SLANG_ASSERT(!longestStaticPrefix);
-            auto& stream = as<StreamingConcatenationExpression>();
-            for (auto& op : stream.streams())
-                op.operand->getLongestStaticPrefixes(results, evalContext, nullptr);
-            break;
-        }
-        case ExpressionKind::Conversion: {
-            auto& conv = as<ConversionExpression>();
-            if (conv.isImplicit())
-                conv.operand().getLongestStaticPrefixes(results, evalContext, longestStaticPrefix);
-            break;
-        }
-        case ExpressionKind::Invalid:
-        default:
-            break;
-    }
 }
 
 std::optional<bitwidth_t> Expression::getEffectiveWidth() const {

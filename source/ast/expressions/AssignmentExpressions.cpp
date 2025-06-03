@@ -420,7 +420,7 @@ Expression& AssignmentExpression::fromComponents(
     }
 
     result->right_ = &convertAssignment(context, *lhs.type, *result->right_, opRange,
-                                        &result->left_, &flags);
+                                        &result->left_);
     if (result->right_->bad())
         return badExpr(compilation, result);
 

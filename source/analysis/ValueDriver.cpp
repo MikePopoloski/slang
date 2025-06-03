@@ -14,7 +14,7 @@ namespace slang::analysis {
 using namespace ast;
 
 ValueDriver::ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
-                         const Symbol& containingSymbol, bitmask<AssignFlags> flags) :
+                         const Symbol& containingSymbol, bitmask<DriverFlags> flags) :
     prefixExpression(&longestStaticPrefix), containingSymbol(&containingSymbol), flags(flags),
     kind(kind) {
 

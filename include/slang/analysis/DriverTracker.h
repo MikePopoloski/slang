@@ -90,7 +90,7 @@ private:
                                 const ast::Expression& connectionExpr,
                                 const ValueDriver& originalDriver);
     void addDrivers(AnalysisContext& context, DriverAlloc& driverAlloc, const ast::Expression& expr,
-                    ast::DriverKind driverKind, bitmask<ast::AssignFlags> assignFlags,
+                    DriverKind driverKind, bitmask<DriverFlags> driverFlags,
                     const ast::Symbol& containingSymbol,
                     const ast::Expression* initialLSP = nullptr);
 

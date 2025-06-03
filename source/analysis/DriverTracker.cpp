@@ -58,9 +58,9 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
     if (direction == ArgumentDirection::In)
         return;
 
-    bitmask<AssignFlags> flags;
+    bitmask<DriverFlags> flags;
     if (direction == ArgumentDirection::Out)
-        flags = AssignFlags::OutputPort;
+        flags = DriverFlags::OutputPort;
 
     if (expr->kind == ExpressionKind::Assignment)
         expr = &expr->as<AssignmentExpression>().left();
@@ -76,7 +76,7 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
     if (dir != ArgumentDirection::In && dir != ArgumentDirection::InOut)
         return;
 
-    auto flags = dir == ArgumentDirection::In ? AssignFlags::InputPort : AssignFlags::InOutPort;
+    auto flags = dir == ArgumentDirection::In ? DriverFlags::InputPort : DriverFlags::None;
     auto scope = symbol.getParentScope();
     SLANG_ASSERT(scope);
 
@@ -100,7 +100,7 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
     SLANG_ASSERT(scope);
 
     if (auto expr = symbol.getInitializer()) {
-        addDrivers(context, driverAlloc, *expr, DriverKind::Continuous, AssignFlags::ClockVar,
+        addDrivers(context, driverAlloc, *expr, DriverKind::Continuous, DriverFlags::ClockVar,
                    scope->asSymbol());
     }
 }
@@ -181,7 +181,7 @@ void DriverTracker::propagateModportDriver(AnalysisContext& context, DriverAlloc
 
 void DriverTracker::addDrivers(AnalysisContext& context, DriverAlloc& driverAlloc,
                                const Expression& expr, DriverKind driverKind,
-                               bitmask<AssignFlags> assignFlags, const Symbol& containingSymbol,
+                               bitmask<DriverFlags> driverFlags, const Symbol& containingSymbol,
                                const Expression* initialLSP) {
     EvalContext evalCtx(containingSymbol);
     SmallVector<std::pair<const HierarchicalReference*, const ValueDriver*>> ifacePortRefs;
@@ -197,7 +197,7 @@ void DriverTracker::addDrivers(AnalysisContext& context, DriverAlloc& driverAllo
                 return;
 
             auto driver = context.alloc.emplace<ValueDriver>(driverKind, lsp, containingSymbol,
-                                                             assignFlags);
+                                                             driverFlags);
 
             auto updateFunc = [&](auto& elem) {
                 if (auto ref = addDriver(context, driverAlloc, *elem.first, elem.second, *driver,
@@ -246,7 +246,7 @@ static bool handleOverlap(AnalysisContext& context, const ValueSymbol& symbol,
         (!isNet && (curr.isInputPort() || driver.isInputPort()))) {
         auto code = diag::InputPortAssign;
         if (isNet) {
-            if (curr.flags.has(AssignFlags::InputPort))
+            if (curr.flags.has(DriverFlags::InputPort))
                 code = diag::InputPortCoercion;
             else
                 code = diag::OutputPortCoercion;
@@ -258,7 +258,7 @@ static bool handleOverlap(AnalysisContext& context, const ValueSymbol& symbol,
         // site and we'd rather that be considered the "port declaration".
         auto portRange = currRange;
         auto assignRange = driverRange;
-        if (driver.isInputPort() || curr.flags.has(AssignFlags::OutputPort))
+        if (driver.isInputPort() || curr.flags.has(DriverFlags::OutputPort))
             std::swap(portRange, assignRange);
 
         auto& diag = context.addDiag(symbol, code, assignRange);
@@ -288,13 +288,6 @@ static bool handleOverlap(AnalysisContext& context, const ValueSymbol& symbol,
         auto& diag = context.addDiag(symbol, diag::ClockVarTargetAssign, driverRange);
         diag << symbol.name;
         diag.addNote(diag::NoteReferencedHere, currRange);
-        return false;
-    }
-
-    if (curr.isLocalVarFormalArg() && driver.isLocalVarFormalArg()) {
-        auto& diag = context.addDiag(symbol, diag::LocalFormalVarMultiAssign, driverRange);
-        diag << symbol.name;
-        diag.addNote(diag::NoteAssignedHere, currRange);
         return false;
     }
 
@@ -401,7 +394,7 @@ const HierarchicalReference* DriverTracker::addDriver(
             DriverBitRange initBounds{0, symbol.getType().getSelectableWidth() - 1};
             auto initDriver = context.alloc.emplace<ValueDriver>(driverKind, valExpr,
                                                                  scope->asSymbol(),
-                                                                 AssignFlags::None);
+                                                                 DriverFlags::None);
 
             driverMap.insert(initBounds, initDriver, driverAlloc);
         };
@@ -473,13 +466,9 @@ const HierarchicalReference* DriverTracker::addDriver(
         if (curr->isUnidirectionalPort() != driver.isUnidirectionalPort()) {
             isProblem = true;
         }
-        else if (checkOverlap && driver.kind != DriverKind::Other &&
-                 curr->kind != DriverKind::Other) {
+        else if (checkOverlap) {
             if (driver.kind == DriverKind::Continuous || curr->kind == DriverKind::Continuous) {
-                if (!driver.flags.has(AssignFlags::SlicedPort) ||
-                    !curr->flags.has(AssignFlags::SlicedPort)) {
-                    isProblem = true;
-                }
+                isProblem = true;
             }
             else if (curr->containingSymbol != driver.containingSymbol && curr->isInProcedure() &&
                      driver.isInProcedure() &&
@@ -487,9 +476,6 @@ const HierarchicalReference* DriverTracker::addDriver(
                      (!context.manager->hasFlag(AnalysisFlags::AllowDupInitialDrivers) ||
                       (curr->source != DriverSource::Initial &&
                        driver.source != DriverSource::Initial))) {
-                isProblem = true;
-            }
-            else if (curr->isLocalVarFormalArg() && driver.isLocalVarFormalArg()) {
                 isProblem = true;
             }
         }

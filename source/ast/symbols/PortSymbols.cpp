@@ -1305,18 +1305,16 @@ const Type& PortSymbol::getType() const {
             if (auto select = prs.select) {
                 internalExpr = &Expression::bindSelector(valExpr, *select, context);
                 type = internalExpr->type;
+
+                if (direction == ArgumentDirection::In || direction == ArgumentDirection::InOut) {
+                    auto flags = direction == ArgumentDirection::InOut ? AssignFlags::InOutPort
+                                                                       : AssignFlags::None;
+                    internalExpr->requireLValue(context, {}, flags);
+                }
             }
         }
 
         internalSymbol->as<ValueSymbol>().addPortBackref(*this);
-        if (direction == ArgumentDirection::In || direction == ArgumentDirection::InOut) {
-            // Ensure that this driver gets registered with the internal symbol.
-            auto flags = direction == ArgumentDirection::In ? AssignFlags::InputPort
-                                                            : AssignFlags::InOutPort;
-            if (internalExpr) {
-                internalExpr->requireLValue(context, {}, flags);
-            }
-        }
     }
     else if (isNullPort) {
         type = &scope->getCompilation().getVoidType();
@@ -1351,10 +1349,7 @@ const Type& PortSymbol::getType() const {
         type = internalExpr->type;
 
         if (!internalExpr->bad()) {
-            Expression::checkConnectionDirection(*internalExpr, checkDir, context, location,
-                                                 direction == ArgumentDirection::In
-                                                     ? AssignFlags::InputPort
-                                                     : AssignFlags::None);
+            Expression::checkConnectionDirection(*internalExpr, checkDir, context, location);
 
             PortBackrefVisitor visitor(*this);
             internalExpr->visit(visitor);
@@ -1759,10 +1754,6 @@ const Expression* PortConnection::getExpression() const {
             Expression* e = &ValueExpressionBase::fromSymbol(context, *connectedSymbol, nullptr,
                                                              implicitNameRange);
 
-            bitmask<AssignFlags> assignFlags;
-            if (direction == ArgumentDirection::Out)
-                assignFlags = AssignFlags::OutputPort;
-
             if (!e->type->isEquivalent(*type)) {
                 auto& comp = context.getCompilation();
                 auto exprType = e->type;
@@ -1771,8 +1762,7 @@ const Expression* PortConnection::getExpression() const {
                 }
                 else if (direction != ArgumentDirection::Ref) {
                     auto rhs = comp.emplace<EmptyArgumentExpression>(*type, implicitNameRange);
-                    Expression::convertAssignment(context, *e->type, *rhs, implicitNameRange, &e,
-                                                  &assignFlags);
+                    Expression::convertAssignment(context, *e->type, *rhs, implicitNameRange, &e);
                 }
 
                 // We should warn for this case unless convertAssignment already issued an error,
@@ -1794,7 +1784,7 @@ const Expression* PortConnection::getExpression() const {
             expr = e;
             if (!expr->bad()) {
                 Expression::checkConnectionDirection(*expr, direction, context,
-                                                     expr->sourceRange.start(), assignFlags);
+                                                     expr->sourceRange.start());
             }
         }
         else {

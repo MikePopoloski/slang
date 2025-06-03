@@ -7,10 +7,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/SemanticFacts.h"
 #include "slang/ast/Symbol.h"
 #include "slang/ast/types/DeclaredType.h"
-#include "slang/util/IntervalMap.h"
 
 namespace slang::ast {
 

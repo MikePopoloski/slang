@@ -87,10 +87,6 @@ SLANG_ENUM(RandMode, MODE)
 SLANG_ENUM(PrimitivePortDirection, DIRECTION)
 #undef DIRECTION
 
-#define DRIVER(x) x(Procedural) x(Continuous) x(Other)
-SLANG_ENUM_SIZED(DriverKind, uint8_t, DRIVER)
-#undef DRIVER
-
 #define PSK(x) x(OnEvent) x(OnDetect) x(ShowCancelled) x(NoShowCancelled)
 SLANG_ENUM(PulseStyleKind, PSK)
 #undef PSK
@@ -122,28 +118,10 @@ enum class SLANG_EXPORT AssignFlags : uint8_t {
     /// The assignment is occurring inside a concatenation.
     InConcat = 1 << 1,
 
-    /// The assignment is for an input port of a module / interface / program
-    /// (the assignment to the internal symbol from the port itself).
-    InputPort = 1 << 2,
-
-    /// The assignment is for an output port of a module / interface / program
-    /// (the assignment from the internal symbol from the port itself).
-    OutputPort = 1 << 3,
-
     /// The assignment is for an inout port of a module / interface / program.
-    InOutPort = 1 << 4,
-
-    /// The assignment is from a clocking block signal.
-    ClockVar = 1 << 5,
-
-    /// The assignment is from an assertion instance's local variable formal argument.
-    AssertionLocalVarFormalArg = 1 << 6,
-
-    /// The assignment is for an output port that was sliced due to an array of instances
-    /// being connected to an array argument.
-    SlicedPort = 1 << 7
+    InOutPort = 1 << 2
 };
-SLANG_BITMASK(AssignFlags, SlicedPort)
+SLANG_BITMASK(AssignFlags, InOutPort)
 
 /// A helper class that can extract semantic AST information from
 /// tokens and syntax nodes.

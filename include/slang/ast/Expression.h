@@ -147,8 +147,7 @@ public:
     /// Checks that the given expression is valid for the specified connection direction.
     /// @returns true if the connection is valid and false otherwise.
     static bool checkConnectionDirection(const Expression& expr, ArgumentDirection direction,
-                                         const ASTContext& context, SourceLocation loc,
-                                         bitmask<AssignFlags> flags = {});
+                                         const ASTContext& context, SourceLocation loc);
 
     /// Binds an initializer expression for an implicitly typed parameter.
     ///
@@ -225,13 +224,9 @@ public:
     /// @param lhsExpr If the conversion is for an output port, this is a pointer to
     ///                the left-hand side expression. The pointer will be reassigned if
     ///                array port slicing occurs.
-    /// @param assignFlags If @a lhsExpr is provided, this parameter must also be provided.
-    ///                    It will the @a AssignFlags::SlicedPort flag added to it if array
-    ///                    port slicing occurs.
     static Expression& convertAssignment(const ASTContext& context, const Type& type,
                                          Expression& expr, SourceRange assignmentRange,
-                                         Expression** lhsExpr = nullptr,
-                                         bitmask<AssignFlags>* assignFlags = nullptr);
+                                         Expression** lhsExpr = nullptr);
 
     /// Indicates whether the expression is invalid.
     bool bad() const;
@@ -267,15 +262,6 @@ public:
     /// will be issued.
     bool requireLValue(const ASTContext& context, SourceLocation location = {},
                        bitmask<AssignFlags> flags = {}) const;
-
-    /// If this expression is a valid lvalue, returns the part(s) of it that
-    /// constitutes the "longest static prefix" for purposes of determining
-    /// duplicate assignments / drivers to a portion of a value, for each
-    /// such lvalue (usually one unless there is an lvalue concatenation).
-    /// If there are no lvalues the vector will not have any entries added to it.
-    void getLongestStaticPrefixes(
-        SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
-        EvalContext& evalContext, const Expression* longestStaticPrefix = nullptr) const;
 
     /// Returns true if this expression can be implicitly assigned to a value
     /// of the given type.

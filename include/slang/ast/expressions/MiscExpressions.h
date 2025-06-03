@@ -27,9 +27,6 @@ public:
 
     bool requireLValueImpl(const ASTContext& context, SourceLocation location,
                            bitmask<AssignFlags> flags) const;
-    void getLongestStaticPrefixesImpl(
-        SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
-        const Expression* longestStaticPrefix) const;
 
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
 

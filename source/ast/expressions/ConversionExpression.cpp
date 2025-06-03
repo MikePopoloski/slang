@@ -135,7 +135,7 @@ bool Expression::isImplicitlyAssignableTo(Compilation& compilation, const Type& 
 
 Expression& Expression::convertAssignment(const ASTContext& context, const Type& type,
                                           Expression& expr, SourceRange assignmentRange,
-                                          Expression** lhsExpr, bitmask<AssignFlags>* assignFlags) {
+                                          Expression** lhsExpr) {
     if (expr.bad())
         return expr;
 
@@ -183,13 +183,8 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
                 Expression* conn = tryConnectPortArray(context, *rt, **lhsExpr, *instance);
                 if (conn) {
                     selfDetermined(context, conn);
-                    *lhsExpr = conn;
-
-                    SLANG_ASSERT(assignFlags);
-                    if (assignFlags)
-                        *assignFlags |= AssignFlags::SlicedPort;
-
                     selfDetermined(context, result);
+                    *lhsExpr = conn;
                     return *result;
                 }
             }
@@ -228,8 +223,7 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
             auto convert = [&](Expression& expr) -> Expression& {
                 if (expr.kind == ExpressionKind::UnboundedLiteral)
                     return expr;
-                return convertAssignment(context, type, expr, assignmentRange, lhsExpr,
-                                         assignFlags);
+                return convertAssignment(context, type, expr, assignmentRange, lhsExpr);
             };
 
             auto& vre = expr.as<ValueRangeExpression>();

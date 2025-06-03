@@ -280,21 +280,6 @@ bool ValueExpressionBase::requireLValueImpl(const ASTContext& context, SourceLoc
     return true;
 }
 
-void ValueExpressionBase::getLongestStaticPrefixesImpl(
-    SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
-    const Expression* longestStaticPrefix) const {
-
-    // Automatic variables don't need to have drivers tracked.
-    if (VariableSymbol::isKind(symbol.kind) &&
-        symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
-        return;
-    }
-
-    if (!longestStaticPrefix)
-        longestStaticPrefix = this;
-    results.push_back({&symbol, longestStaticPrefix});
-}
-
 bool ValueExpressionBase::checkVariableAssignment(const ASTContext& context,
                                                   const VariableSymbol& var,
                                                   bitmask<AssignFlags> flags,
