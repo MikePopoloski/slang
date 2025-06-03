@@ -60,10 +60,10 @@ TEST_CASE("Single cycle in the graph") {
 
     // One cycle should be detected
     REQUIRE(cycles.size() == 1);
-    
+
     auto& cycle = cycles[0];
-    REQUIRE(cycles[0].size() == 2); 
-    
+    REQUIRE(cycles[0].size() == 2);
+
     // Cycle nodes match
     REQUIRE((cycle[0] == &node0 || cycle[0] == &node1));
     REQUIRE((cycle[1] == &node0 || cycle[1] == &node1));

@@ -59,14 +59,15 @@ private:
                 auto& targetNode = edge->getTargetNode();
                 nodeIt++;
                 if (!edgePredicate(*edge)) {
-                  // Skip this edge.
-                  continue;
+                    // Skip this edge.
+                    continue;
                 }
 
                 if (visitedNodes.count(&targetNode) != 0) {
                     // This node has already been visited.
                     visitor.visitedNode(targetNode);
-                } else {
+                }
+                else {
                     // Push a new 'current' node onto the stack and mark it as visited.
                     visitStack.push_back(VisitStackElement(targetNode, targetNode.begin()));
                     visitedNodes.insert(&targetNode);

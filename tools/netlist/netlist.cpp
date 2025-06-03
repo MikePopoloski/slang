@@ -105,7 +105,8 @@ void printDOT(const Netlist& netlist, const std::string& fileName) {
                 auto& varRef = node->as<NetlistVariableReference>();
                 if (!varRef.isLeftOperand()) {
                     buffer.format("  N{} [label=\"{}\\n\"]\n", node->ID, varRef.toString());
-                } else {
+                }
+                else {
                     buffer.format("  N{} [label=\"{}\\n[Assigned to]\"]\n", node->ID,
                                   varRef.toString());
                 }
@@ -140,8 +141,8 @@ void reportPath(Compilation& compilation, const NetlistPath& path) {
         auto* SM = compilation.getSourceManager();
         auto& location = node->symbol.location;
         auto bufferID = location.buffer();
-        if(node->kind != NodeKind::VariableReference) {
-          continue;
+        if (node->kind != NodeKind::VariableReference) {
+            continue;
         }
         const auto& varRefNode = node->as<NetlistVariableReference>();
         Diagnostic diagnostic(diag::VariableReference, varRefNode.expression.sourceRange.start());
@@ -167,7 +168,7 @@ void dumpCyclesList(Compilation& compilation, Netlist& netlist,
     OS::print(fmt::format("Detected {} combinatorial loop{}:\n", cycles.size(),
                           cycles.size() > 1 ? "s" : ""));
     NetlistPath path;
-    for (auto const &cycle : cycles) {
+    for (auto const& cycle : cycles) {
         NetlistPath path(cycle);
         OS::print(fmt::format("Path length: {}\n", path.size()));
         reportPath(compilation, path);
@@ -296,7 +297,7 @@ int main(int argc, char** argv) {
         // Find combinatorial loops.
         if (combLoops == true) {
             CombLoops combLoops(netlist);
-            auto const &cycles = combLoops.getAllLoops();
+            auto const& cycles = combLoops.getAllLoops();
             dumpCyclesList(*compilation, netlist, cycles);
         }
 

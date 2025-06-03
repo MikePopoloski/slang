@@ -7,27 +7,28 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "Netlist.h"
 #include "CycleDetector.h"
+#include "Netlist.h"
 
 namespace netlist {
-    
+
 struct CombEdgePredicate {
-      CombEdgePredicate() = default;
-      bool operator()(const NetlistEdge& edge) { return !edge.disabled && edge.edgeKind == ast::EdgeKind::None; }
-  };
-
-class CombLoops {
-  Netlist const &netlist;
-
-public:
-  CombLoops(Netlist const &netlist) : netlist(netlist) {}
-
-  auto getAllLoops() {
-    CycleDetector<NetlistNode, NetlistEdge, CombEdgePredicate> detector(netlist);
-    return detector.detectCycles();
-  }
+    CombEdgePredicate() = default;
+    bool operator()(const NetlistEdge& edge) {
+        return !edge.disabled && edge.edgeKind == ast::EdgeKind::None;
+    }
 };
 
-}
+class CombLoops {
+    Netlist const& netlist;
 
+public:
+    CombLoops(Netlist const& netlist) : netlist(netlist) {}
+
+    auto getAllLoops() {
+        CycleDetector<NetlistNode, NetlistEdge, CombEdgePredicate> detector(netlist);
+        return detector.detectCycles();
+    }
+};
+
+} // namespace netlist

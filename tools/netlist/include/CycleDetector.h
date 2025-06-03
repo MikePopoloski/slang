@@ -16,7 +16,7 @@ struct CycleDetectionVisitor {
         // Detect cycle: targetNode is part of the current recursion stack
         auto cycleStart = std::find(recursionStack.begin(), recursionStack.end(), &node);
         if (cycleStart != recursionStack.end()) {
-            
+
             // Extract cycle nodes
             std::vector<const NodeType*> cycleNodes(cycleStart, recursionStack.end());
 
@@ -28,9 +28,7 @@ struct CycleDetectionVisitor {
         }
     }
 
-    void visitNode(const NodeType& node) { 
-        recursionStack.push_back(&node);
-    }
+    void visitNode(const NodeType& node) { recursionStack.push_back(&node); }
 
     void visitEdge(const EdgeType& edge) {}
 
