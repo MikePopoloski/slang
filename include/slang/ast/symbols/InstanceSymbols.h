@@ -120,8 +120,8 @@ public:
     /// Otherwise returns nullptr.
     const InstanceBodySymbol* getCanonicalBody() const { return canonicalBody; }
 
-    void setCanonicalBody(const InstanceBodySymbol& newCanonical) const {
-        canonicalBody = &newCanonical;
+    void setCanonicalBody(const InstanceBodySymbol* newCanonical) const {
+        canonicalBody = newCanonical;
     }
 
     void serializeTo(ASTSerializer& serializer) const;

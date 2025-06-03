@@ -469,16 +469,24 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
         // For all hierarchical assignments, make sure we actually visited their
         // target instances and didn't skip them due to caching.
-        if (!compilation.hierarchicalAssignments.empty()) {
+        while (!compilation.hierarchicalAssignments.empty()) {
             disableCache = true;
-            auto hierarchicalAssignments = compilation.hierarchicalAssignments;
+            auto hierarchicalAssignments = std::move(compilation.hierarchicalAssignments);
+            compilation.hierarchicalAssignments.clear();
+
             for (auto hierRef : hierarchicalAssignments) {
                 // Walk the path and visit all instances we find that were previously cached.
                 for (auto& [sym, _] : hierRef->path) {
                     if (sym->kind == SymbolKind::Instance) {
+                        // If this instance has a canonical pointer it means we previously
+                        // determined we could cache it, so we need to visit it here.
+                        // Additionally we will unset the canonical pointer so that
+                        // we don't try to cache it again in the future.
                         auto& inst = sym->as<InstanceSymbol>();
-                        if (inst.getCanonicalBody() != nullptr)
+                        if (inst.getCanonicalBody() != nullptr) {
+                            inst.setCanonicalBody(nullptr);
                             inst.visit(*this);
+                        }
                     }
                 }
             }
@@ -486,7 +494,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
         // Check the validity of virtual interface assignments.
         while (!compilation.virtualInterfaceInstances.empty()) {
-            auto vii = compilation.virtualInterfaceInstances;
+            auto vii = std::move(compilation.virtualInterfaceInstances);
             compilation.virtualInterfaceInstances.clear();
 
             for (auto inst : vii) {
@@ -601,7 +609,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // Assuming we find an appropriately cached instance, we will store a pointer to it
         // in other instances to facilitate downstream consumers in not needing to recreate
         // this duplication detection logic again.
-        symbol.setCanonicalBody(*entry.canonicalBody);
+        symbol.setCanonicalBody(entry.canonicalBody);
 
         // If this is an interface or an instance instantiated within an interface
         // we want to return false so that we continue visiting the body. This is
