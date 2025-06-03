@@ -200,7 +200,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
 
     // Perform checking on the connected symbol to make sure it's allowed
     // given the modport's direction.
-    ASTContext checkCtx = context.resetFlags(ASTFlags::NonProcedural | ASTFlags::NotADriver);
+    ASTContext checkCtx = context.resetFlags(ASTFlags::NonProcedural);
     if (direction != ArgumentDirection::In) {
         checkCtx.flags |= ASTFlags::LValue;
         if (direction == ArgumentDirection::InOut)
@@ -220,7 +220,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
 ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext,
                                                  ArgumentDirection direction,
                                                  const ModportExplicitPortSyntax& syntax) {
-    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural | ASTFlags::NotADriver);
+    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
     auto& comp = context.getCompilation();
     auto name = syntax.name;
     auto result = comp.emplace<ModportPortSymbol>(name.valueText(), name.location(), direction);
@@ -2429,8 +2429,7 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
     SLANG_ASSERT(scope && syntax);
 
     SmallVector<const Expression*> buffer;
-    ASTContext context(*scope, LookupLocation::after(*this),
-                       ASTFlags::NonProcedural | ASTFlags::NotADriver);
+    ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NonProcedural);
     EvalContext evalCtx(context);
     NetAliasVisitor visitor(context, evalCtx);
     SmallVector<SmallVector<NetAlias>> netAliases;

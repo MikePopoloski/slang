@@ -26,7 +26,7 @@ public:
     const ValueSymbol& symbol;
 
     bool requireLValueImpl(const ASTContext& context, SourceLocation location,
-                           bitmask<AssignFlags> flags, const Expression* longestStaticPrefix) const;
+                           bitmask<AssignFlags> flags) const;
     void getLongestStaticPrefixesImpl(
         SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
         const Expression* longestStaticPrefix) const;

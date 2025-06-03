@@ -352,7 +352,7 @@ const Expression* FormalArgumentSymbol::getDefaultValue() const {
     auto scope = getParentScope();
     SLANG_ASSERT(scope);
 
-    ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NotADriver);
+    ASTContext context(*scope, LookupLocation::after(*this));
     defaultVal = &Expression::bindArgument(getType(), direction, flags, *defaultValSyntax, context);
     return defaultVal;
 }

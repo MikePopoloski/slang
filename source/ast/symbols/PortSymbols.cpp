@@ -1316,9 +1316,6 @@ const Type& PortSymbol::getType() const {
             if (internalExpr) {
                 internalExpr->requireLValue(context, {}, flags);
             }
-            else {
-                context.addDriver(internalSymbol->as<ValueSymbol>(), valExpr, flags);
-            }
         }
     }
     else if (isNullPort) {
