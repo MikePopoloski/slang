@@ -238,7 +238,7 @@ public:
     template<typename T>
     const T& as() const {
         SLANG_ASSERT(T::isKind(kind));
-        return const_cast<T&>(this->as<T>());
+        return *static_cast<const T *>(this);
     }
 
     /// Return the out degree of this node, including only enabled edges.
