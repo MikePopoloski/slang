@@ -22,7 +22,9 @@ struct CycleDetectionVisitor {
 
             // Canonicalise the cycle by starting at the lowest pointer value.
             auto minPosition = std::min_element(cycleNodes.begin(), cycleNodes.end(),
-                                                [](const NodeType *a, const NodeType *b) { return a->ID < b->ID; });
+                                                [](const NodeType* a, const NodeType* b) {
+                                                    return a->ID < b->ID;
+                                                });
             std::rotate(cycleNodes.begin(), minPosition, cycleNodes.end());
 
             cycles.emplace_back(std::move(cycleNodes));
@@ -77,7 +79,7 @@ public:
 
         // Return a vector.
         std::vector<CycleType> result(cycles.begin(), cycles.end());
-        
+
         // Canonicalise the result by sorting by node ID.
         std::sort(result.begin(), result.end(), [](CycleType const& a, CycleType const& b) {
             for (size_t i = 0; i < std::min(a.size(), b.size()); i++) {
@@ -87,7 +89,6 @@ public:
             }
             return false;
         });
-
 
         return result;
     }
