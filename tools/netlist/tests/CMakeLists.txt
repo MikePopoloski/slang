@@ -8,7 +8,6 @@ add_executable(
   ../../../tests/unittests/main.cpp
   ../../../tests/unittests/Test.cpp
   ../source/Netlist.cpp
-  ../source/CombLoops.cpp
   CombLoopsTests.cpp
   CycleDetectorTests.cpp
   DepthFirstSearchTests.cpp

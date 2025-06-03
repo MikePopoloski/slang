@@ -226,7 +226,7 @@ public:
 class NetlistNode : public Node<NetlistNode, NetlistEdge> {
 public:
     NetlistNode(NodeKind kind, const ast::Symbol& symbol) :
-        ID(++nextID), kind(kind), symbol(symbol), edgeKind(ast::EdgeKind::None) {};
+        ID(++nextID), kind(kind), symbol(symbol) {};
     ~NetlistNode() override = default;
 
     template<typename T>
@@ -258,7 +258,6 @@ public:
     size_t ID;
     NodeKind kind;
     const ast::Symbol& symbol;
-    ast::EdgeKind edgeKind;
     bool blocked{};
 
 private:
@@ -431,7 +430,6 @@ public:
     NetlistEdge& addEdge(NetlistNode& sourceNode, NetlistNode& targetNode, ast::EdgeKind edgeKind) {
         auto& edge = DirectedGraph<NetlistNode, NetlistEdge>::addEdge(sourceNode, targetNode);
         edge.edgeKind = edgeKind;
-        targetNode.edgeKind = edgeKind; // Can be removed.
         return edge;
     }
 
