@@ -44,7 +44,7 @@ struct LSPVisitor {
 
         owner.visit(expr.value());
 
-        [[maybe_unused]] auto guard = owner.saveLValueFlag();
+        auto guard = owner.saveLValueFlag();
         owner.visit(expr.selector());
     }
 
@@ -59,7 +59,7 @@ struct LSPVisitor {
 
         owner.visit(expr.value());
 
-        [[maybe_unused]] auto guard = owner.saveLValueFlag();
+        auto guard = owner.saveLValueFlag();
         owner.visit(expr.left());
         owner.visit(expr.right());
     }
@@ -78,7 +78,7 @@ struct LSPVisitor {
                 owner.noteReference(expr.member.as<VariableSymbol>(), *lsp);
 
             // Make sure the value gets visited but not as an lvalue anymore.
-            [[maybe_unused]] auto guard = owner.saveLValueFlag();
+            auto guard = owner.saveLValueFlag();
             owner.visit(expr.value());
         }
         else {
@@ -177,14 +177,22 @@ private:
         LSPVisitor<LSPHelper> visitor;
         EvalContext& evalCtx;
         F&& func;
+        bool isLValue = true;
 
         LSPHelper(EvalContext& evalCtx, F&& func) :
             visitor(*this), evalCtx(evalCtx), func(std::forward<F>(func)) {}
 
         EvalContext& getEvalContext() const { return evalCtx; }
-        bool saveLValueFlag() { return false; }
 
-        void noteReference(const ValueSymbol& symbol, const Expression& lsp) { func(symbol, lsp); }
+        [[nodiscard]] auto saveLValueFlag() {
+            auto guard = ScopeGuard([this, savedLVal = isLValue] { isLValue = savedLVal; });
+            isLValue = false;
+            return guard;
+        }
+
+        void noteReference(const ValueSymbol& symbol, const Expression& lsp) {
+            func(symbol, lsp, isLValue);
+        }
 
         template<typename T>
             requires(std::is_base_of_v<Expression, T> && !IsSelectExpr<T>)
