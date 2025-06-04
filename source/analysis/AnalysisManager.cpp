@@ -141,7 +141,7 @@ void AnalysisManager::addAnalyzedSubroutine(const SubroutineSymbol& symbol,
     analyzedSubroutines.try_emplace(&symbol, std::move(procedure));
 }
 
-std::vector<const ValueDriver*> AnalysisManager::getDrivers(const ValueSymbol& symbol) const {
+DriverList AnalysisManager::getDrivers(const ValueSymbol& symbol) const {
     return driverTracker.getDrivers(symbol);
 }
 

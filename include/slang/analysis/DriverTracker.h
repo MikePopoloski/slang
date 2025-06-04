@@ -60,7 +60,7 @@ public:
     void propagateModportDrivers(AnalysisContext& context, DriverAlloc& driverAlloc);
 
     /// Returns all of the tracked drivers for the given symbol.
-    std::vector<const ValueDriver*> getDrivers(const ast::ValueSymbol& symbol) const;
+    DriverList getDrivers(const ast::ValueSymbol& symbol) const;
 
 private:
     // State tracked per canonical instance.

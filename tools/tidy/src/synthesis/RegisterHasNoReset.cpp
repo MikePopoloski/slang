@@ -106,7 +106,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
         if (symbol.lifetime == VariableLifetime::Automatic)
             return;
 
-        auto firstDriver = drivers[0];
+        auto firstDriver = drivers[0].first;
         if (firstDriver && firstDriver->source == DriverSource::AlwaysFF) {
             auto& configs = config.getCheckConfigs();
             AlwaysFFVisitor visitor(symbol.name, configs.resetName, configs.resetIsActiveHigh);
