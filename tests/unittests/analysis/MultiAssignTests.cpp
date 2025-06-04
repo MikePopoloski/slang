@@ -124,7 +124,6 @@ endmodule
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }
 
-// TODO: add more complicated local var test case with recursive calls
 TEST_CASE("Multi-driven subroutine local var option to allow") {
     auto& code = R"(
 module top(input clk, input reset);
@@ -887,4 +886,77 @@ endmodule
     auto [diags, design] = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ClockVarTargetAssign);
+}
+
+TEST_CASE("Assign to invalid mod instance in interface instance") {
+    auto& code = R"(
+module m;
+    int i;
+endmodule
+
+interface I;
+    m m1();
+endinterface
+
+module n(I i);
+    assign i.m1.i = 1;
+endmodule
+
+module top;
+    m m1();
+
+    I i();
+    n n1(i);
+
+    I i2();
+    n n2(i2);
+endmodule
+)";
+
+    // The code here is invalid because module instances are not allowed in
+    // interfaces, but we want to make sure we don't crash in the analysis
+    // manager when analyzing this code.
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto tree = SyntaxTree::fromText(code);
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    compilation.freeze();
+
+    analysisManager.analyze(compilation);
+    auto diags = analysisManager.getDiagnostics(compilation.getSourceManager());
+
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Assigning to modport through modport") {
+    auto& code = R"(
+interface I;
+    int i;
+    modport m(output i);
+endinterface
+
+interface J(I.m m);
+    modport n(output .q(m.i));
+endinterface
+
+module m(J.n n);
+    assign n.q = 1;
+endmodule
+
+module top;
+    I i1();
+    J j1(i1);
+    m m1(j1);
+    m m2(j1);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
 }

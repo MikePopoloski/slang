@@ -125,7 +125,6 @@ void DriverTracker::noteNonCanonicalInstance(AnalysisContext& context, DriverAll
 }
 
 void DriverTracker::propagateModportDrivers(AnalysisContext& context, DriverAlloc& driverAlloc) {
-    // TODO: add test for modports that connect through another modport
     while (true) {
         concurrent_map<const ast::ValueSymbol*, DriverList> localCopy;
         std::swap(modportPortDrivers, localCopy);
@@ -561,6 +560,12 @@ static const Symbol* retargetIfacePort(const HierarchicalReference& ref,
                 auto& body = symbol->as<InstanceSymbol>().body;
                 symbol = &body;
 
+                // We should never see a module instance on this path
+                // unless there is an error, because modules can't be
+                // instantiated in interfaces,
+                if (body.getDefinition().definitionKind == DefinitionKind::Module)
+                    return nullptr;
+
                 // See lookupDownward in Lookup.cpp for the logic here.
                 if (modport) {
                     symbol = body.find(modport->name);
@@ -638,15 +643,12 @@ static const Symbol* retargetIfacePort(const HierarchicalReference& ref,
 void DriverTracker::applyInstanceSideEffect(AnalysisContext& context, DriverAlloc& driverAlloc,
                                             const InstanceState::IfacePortDriver& ifacePortDriver,
                                             const InstanceSymbol& instance) {
-    // TODO: add test for invalid case of module instance in an interface
-    // that is connected and driven through a cached port.
     auto& ref = *ifacePortDriver.ref;
     if (auto target = retargetIfacePort(ref, instance)) {
         auto driver = context.alloc.emplace<ValueDriver>(*ifacePortDriver.driver);
         driver->containingSymbol = &instance;
         driver->isFromSideEffect = true;
 
-        // TODO: can we reuse the bounds instead of calculating them again?
         EvalContext evalCtx(instance);
         auto& valueSym = target->as<ValueSymbol>();
         auto bounds = LSPUtilities::getBounds(*driver->prefixExpression, evalCtx,
