@@ -2,6 +2,10 @@
 @brief Root of the @ref slang library
 */
 
+/** @dir include/slang/analysis
+@brief Post-elaboration analysis framework
+*/
+
 /** @dir include/slang/ast
 @brief The SystemVerilog AST
 */
@@ -48,6 +52,10 @@
 
 /** @namespace slang
 @brief Root namespace
+*/
+
+/** @namespace slang::analysis
+@brief Post-elaboration analysis framework
 */
 
 /** @namespace slang::assert
