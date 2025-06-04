@@ -210,13 +210,15 @@ struct VariableMemberAccess : public VariableSelectorBase {
 /// A class representing a dependency between two variables in the netlist.
 class NetlistEdge : public DirectedEdge<NetlistNode, NetlistEdge> {
 public:
-    NetlistEdge(NetlistNode& sourceNode, NetlistNode& targetNode) :
-        DirectedEdge(sourceNode, targetNode) {}
+    NetlistEdge(NetlistNode& sourceNode, NetlistNode& targetNode,
+                ast::EdgeKind edgeKind = ast::EdgeKind::None) :
+        DirectedEdge(sourceNode, targetNode), edgeKind(edgeKind) {}
 
     void disable() { disabled = true; }
 
 public:
     bool disabled{};
+    ast::EdgeKind edgeKind;
 };
 
 /// A class representing a node in the netlist, corresponding to the appearance
@@ -224,7 +226,7 @@ public:
 class NetlistNode : public Node<NetlistNode, NetlistEdge> {
 public:
     NetlistNode(NodeKind kind, const ast::Symbol& symbol) :
-        ID(++nextID), kind(kind), symbol(symbol), edgeKind(ast::EdgeKind::None) {};
+        ID(++nextID), kind(kind), symbol(symbol) {};
     ~NetlistNode() override = default;
 
     template<typename T>
@@ -236,7 +238,7 @@ public:
     template<typename T>
     const T& as() const {
         SLANG_ASSERT(T::isKind(kind));
-        return const_cast<T&>(this->as<T>());
+        return *static_cast<const T*>(this);
     }
 
     /// Return the out degree of this node, including only enabled edges.
@@ -256,7 +258,6 @@ public:
     size_t ID;
     NodeKind kind;
     const ast::Symbol& symbol;
-    ast::EdgeKind edgeKind;
     bool blocked{};
 
 private:
@@ -428,7 +429,7 @@ public:
 
     NetlistEdge& addEdge(NetlistNode& sourceNode, NetlistNode& targetNode, ast::EdgeKind edgeKind) {
         auto& edge = DirectedGraph<NetlistNode, NetlistEdge>::addEdge(sourceNode, targetNode);
-        targetNode.edgeKind = edgeKind;
+        edge.edgeKind = edgeKind;
         return edge;
     }
 

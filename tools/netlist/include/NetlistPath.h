@@ -16,7 +16,7 @@ namespace netlist {
 /// A class represening a path traversing nodes in the netlist.
 class NetlistPath {
 public:
-    using NodeListType = std::vector<NetlistNode*>;
+    using NodeListType = std::vector<NetlistNode const*>;
     using iterator = typename NodeListType::iterator;
     using const_iterator = typename NodeListType::const_iterator;
 
@@ -45,7 +45,7 @@ public:
     /// variable name and selectors) and appears on the left-hand side of an
     /// assignment (ie a target).
     std::optional<size_t> findVariable(std::string syntax) {
-        auto match = [this, &syntax](NetlistNode* node) {
+        auto match = [this, &syntax](NetlistNode const* node) {
             if (node->kind == NodeKind::VariableReference) {
                 auto& varRefNode = node->as<NetlistVariableReference>();
                 auto hierPath = varRefNode.symbol.getHierarchicalPath();
