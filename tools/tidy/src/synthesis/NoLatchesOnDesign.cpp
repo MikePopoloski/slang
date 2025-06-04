@@ -26,7 +26,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
         if (drivers.empty())
             return;
 
-        auto firstDriver = drivers[0];
+        auto firstDriver = drivers[0].first;
         if (firstDriver && firstDriver->source == DriverSource::AlwaysLatch) {
             diags.add(diag::NoLatchesOnDesign, symbol.location);
         }

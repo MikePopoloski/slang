@@ -68,7 +68,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
         if (drivers.empty())
             return;
 
-        auto firstDriver = drivers[0];
+        auto firstDriver = drivers[0].first;
         if (firstDriver && firstDriver->source == DriverSource::AlwaysFF) {
             AlwaysFFVisitor visitor(symbol.name, config.getCheckConfigs().resetName);
             firstDriver->containingSymbol->visit(visitor);

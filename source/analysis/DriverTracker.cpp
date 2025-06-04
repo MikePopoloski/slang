@@ -213,11 +213,11 @@ void DriverTracker::addDrivers(AnalysisContext& context, DriverAlloc& driverAllo
         noteInterfacePortDriver(context, driverAlloc, *ref, *driver);
 }
 
-std::vector<const ValueDriver*> DriverTracker::getDrivers(const ValueSymbol& symbol) const {
-    std::vector<const ValueDriver*> drivers;
+DriverList DriverTracker::getDrivers(const ValueSymbol& symbol) const {
+    DriverList drivers;
     symbolDrivers.cvisit(&symbol, [&drivers](auto& item) {
         for (auto it = item.second.begin(); it != item.second.end(); ++it)
-            drivers.push_back(*it);
+            drivers.emplace_back(*it, it.bounds());
     });
     return drivers;
 }

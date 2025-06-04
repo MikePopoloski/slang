@@ -5,14 +5,19 @@
 #include "TidyDiags.h"
 #include "fmt/ranges.h"
 
+#include "slang/analysis/AnalysisManager.h"
 #include "slang/syntax/AllSyntax.h"
 
 using namespace slang;
 using namespace slang::ast;
+using namespace slang::analysis;
 
 namespace undriven_range {
 struct UndrivenRangeVisitor : public TidyVisitor, ASTVisitor<UndrivenRangeVisitor, true, true> {
-    explicit UndrivenRangeVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
+    const AnalysisManager& analysisManager;
+
+    UndrivenRangeVisitor(Diagnostics& diagnostics, const AnalysisManager& analysisManager) :
+        TidyVisitor(diagnostics), analysisManager(analysisManager) {}
 
     /// Given a set of constant ranges, format them into a string to display in
     /// a diagnostic.
@@ -42,14 +47,13 @@ struct UndrivenRangeVisitor : public TidyVisitor, ASTVisitor<UndrivenRangeVisito
 
             std::vector<ConstantRange> undriven;
 
-            for (auto it = symbol.drivers().begin(); it != symbol.drivers().end(); ++it) {
-                auto intervalBounds = it.bounds();
-
-                if (intervalBounds.first > current) {
-                    undriven.push_back({current, (int)intervalBounds.first - 1});
+            auto drivers = analysisManager.getDrivers(symbol);
+            for (auto [driver, bounds] : drivers) {
+                if (bounds.first > current) {
+                    undriven.push_back({current, (int)bounds.first - 1});
                 }
 
-                current = std::max(current, (int)intervalBounds.second + 1);
+                current = std::max(current, (int)bounds.second + 1);
             }
 
             if (current <= end) {
@@ -72,8 +76,8 @@ class UndrivenRange : public TidyCheck {
 public:
     [[maybe_unused]] explicit UndrivenRange(TidyKind kind) : TidyCheck(kind) {}
 
-    bool check(const RootSymbol& root) override {
-        UndrivenRangeVisitor visitor(diagnostics);
+    bool check(const RootSymbol& root, const AnalysisManager& analysisManager) override {
+        UndrivenRangeVisitor visitor(diagnostics, analysisManager);
         root.visit(visitor);
         return diagnostics.empty();
     }
