@@ -12,11 +12,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Implemented rules for which kinds of sequences and properties can be declared in clocking blocks
 * Implemented rules for dynamic variable access from within checker procedures
 
-### Potentially Breaking Changes
+### Notable Breaking Changes
 * AST serialization no longer includes uninstantiated scopes in the output
 * `Driver::reportCompilation` method had part of its functionality split out into `Driver::reportDiagnostics` to allow for calling the new `Driver::runAnalysis` method in between. There is a new `Driver::runFullCompilation` method that wraps all of this for convenience if you don't care about controlling when each pass is done.
 * The `DEBUG` macro set for debug builds has been renamed to `SLANG_DEBUG`. `NDEBUG` is no longer used to conditionally control compilation, which should make it much less likely that using slang as a library will result in conflicting `NDEBUG` settings and causing ODR violations.
 * Warning control command line options have been reworked to make them less confusing. Settings for warning groups no longer override more explicit settings for a specific warning, and a bunch of confusing ordering dependence between `-Werror` and the other settings have been removed. This may cause changes to which warnings are enabled if your command line has a particularly constructed set of options. See the [documentation](https://sv-lang.com/command-line-ref.html#clr-warnings) for more information.
+* Tracking of net and variable drivers has moved to the new analysis layer. If you were using that portion of the AST API you'll need to change to get that information post-analysis.
+* The `--strict-driver-checking` flag has been removed. Its behavior can be regained by setting the new `--max-loop-analysis-steps` to 0.
 
 ### New Features
 * slang can now optionally use [cpptrace](https://github.com/jeremy-rifkin/cpptrace) (using the `SLANG_USE_CPPTRACE` CMake option) for better backtraces in the event of internal assertions or exceptions thrown
@@ -30,17 +32,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added [-Wcase-wildcard-2state](https://sv-lang.com/warning-ref.html#case-wildcard-2state) for wildcard case statements that have 2-state conditions and items
 * The `` `celldefine `` directive is now exposed in the API and in AST serialization (thanks to @whitequark)
 * Added new flags `--all-deps`, `--include-deps`, `--module-deps`, and `--depfile-target` to allow outputting various dependency file lists from slang (thanks to @AndrewNolte)
-* slang-tidy: Added new flag `--dump-config` to dump possible configuration options to stdout and exit (thanks to @jameshanlon)
+* Added [-Winferred-latch](https://sv-lang.com/warning-ref.html#inferred-latch) which detects signals that are not assigned on all control paths through `always_comb` blocks
 
 ### Improvements
 * slang now performs instance caching by default, which means duplicate instance bodies will not be visited during elaboration, which can greatly speed up elaboration times for large projects. This behavior can be disabled with the `--disable-instance-caching` flag, though it should not be needed unless there's a bug in slang -- please open an issue if you find that you need the flag.
-* Added some initial documentation and an API reference for the pyslang bindings (thanks to @parker-research)
-* Added a bunch more tests for the pyslang bindings (thanks to @parker-research)
-* Added pyslang bindings for the SyntaxRewriter class (thanks to @parker-research)
 * -Wint-bool-conv now applies to expressions used in assertions, properties, and sequences
-* Added a port prefix rule to slang-tidy, similar to the existing port suffix rule (thanks to @corco)
 * The -G option can now set parameter values hierarchically, and the value can be an expression that uses package members such as enum values
-* slang-tidy: Printing check descriptions now includes the config key name (thanks to @jameshanlon)
+* Hierarchical path strings for members of generic class types now include the specialization parameter values
+* Instance array port slicing of packed types has been reworked. Each instance's port connection now has an expression tree selecting the appropriate bits of the potentially multi-dimensional packed type.
 
 ### Fixes
 * Fixed argument binding for sequence and property instances when using named arguments
@@ -51,11 +50,26 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Assignments are now correctly disallowed in timing controls
 * Cycle delays are now correctly disallowed in event trigger statements
 * The global future sampled value system functions are now correctly disallowed in assertions with sequence match items
-* slang-netlist: Fixed a crash when visiting certain variable declarations (thanks to @jameshanlon)
-* slang-netlist: Fixed handling of net and variables initializers (thanks to @jameshanlon)
-* slang-tidy: Fixed OnlyAssignedOnReset false positive with struct arrays and for loops
-* slang-tidy: Fixed RegisterHasNoReset false positive for loop iterator variables
+
+### Tools & Bindings
+#### pyslang
+* Added some initial documentation and an API reference for the Python bindings (thanks to @parker-research)
+* Added a bunch more tests for the Python bindings (thanks to @parker-research)
+* Added Python bindings for the SyntaxRewriter class (thanks to @parker-research)
 * Fixed several keep-alive lifetime issues with the Python bindings
+
+#### slang-tidy
+* Added new flag `--dump-config` to dump possible configuration options to stdout and exit (thanks to @jameshanlon)
+* Printing check descriptions now includes the config key name (thanks to @jameshanlon)
+* Added a new port prefix rule, similar to the existing port suffix rule (thanks to @corco)
+* Added a new undriven range rule (thanks to @jameshanlon)
+* Fixed OnlyAssignedOnReset false positive with struct arrays and for loops
+* Fixed RegisterHasNoReset false positive for loop iterator variables
+
+#### slang-netlist
+* Fixed a crash when visiting certain variable declarations (thanks to @jameshanlon)
+* Fixed handling of net and variables initializers (thanks to @jameshanlon)
+* Fixed issues with combinatorial cycle detection (thanks to @jameshanlon)
 
 
 ## [v8.1] - 2025-05-23
