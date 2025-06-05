@@ -117,7 +117,7 @@ const AnalyzedScope& AnalysisManager::analyzeScopeBlocking(
     return result;
 }
 
-const AnalyzedScope* AnalysisManager::getAnalyzedScope(const Scope& scope) {
+const AnalyzedScope* AnalysisManager::getAnalyzedScope(const Scope& scope) const {
     const AnalyzedScope* result = nullptr;
     analyzedScopes.cvisit(&scope, [&result](auto& item) {
         if (item.second)

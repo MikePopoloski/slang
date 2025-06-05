@@ -149,7 +149,7 @@ public:
                                               const AnalyzedProcedure* parentProcedure = nullptr);
 
     /// Returns the results of a previous analysis of a scope, if available.
-    const AnalyzedScope* getAnalyzedScope(const ast::Scope& scope);
+    const AnalyzedScope* getAnalyzedScope(const ast::Scope& scope) const;
 
     /// Gets the result of analyzing a subroutine, if available.
     /// Otherwise returns nullptr.
