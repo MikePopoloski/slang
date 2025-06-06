@@ -181,4 +181,6 @@ TEST_CASE("In-memory glob matching") {
     CHECK(!svGlobMatches("foo/bar/baz.txt", "foo/bar/*.dat"));
     CHECK(!svGlobMatches("foo/bar/baz.txt", "foo/...bat.txt"));
     CHECK(svGlobMatches("foo/bar/baz.txt", "...baz.txt"));
+    CHECK(svGlobMatches("../../foo/bar/baz.txt", "...bar/..."));
+    CHECK(svGlobMatches("../../foo/bar/baz.txt", ".../bar/..."));
 }

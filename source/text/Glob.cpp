@@ -284,10 +284,14 @@ SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
     return rank;
 }
 
+static bool isSeparator(char c) {
+    // NOLINTNEXTLINE
+    return c == fs::path::preferred_separator || c == '/';
+}
+
 static std::string_view nextSegment(std::string_view& path) {
     for (size_t i = 0; i < path.size(); i++) {
-        // NOLINTNEXTLINE
-        if (path[i] == fs::path::preferred_separator || path[i] == '/') {
+        if (isSeparator(path[i])) {
             auto result = path.substr(0, i);
             path = path.substr(i + 1);
             return result;
@@ -304,6 +308,9 @@ static bool svGlobMatchesInternal(std::string_view path, std::string_view patter
         // Special case for recursive directory search.
         if (pattern.starts_with("..."sv)) {
             pattern = pattern.substr(3);
+            if (!pattern.empty() && isSeparator(pattern[0]))
+                pattern = pattern.substr(1);
+
             do {
                 if (svGlobMatchesInternal(path, pattern))
                     return true;
