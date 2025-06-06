@@ -197,12 +197,10 @@ void AnalyzedProcedure::addFunctionDrivers(AnalysisContext& context, const CallE
         return;
 
     // Get analysis for the function.
-    std::unique_ptr<AnalyzedProcedure> analysisMem;
     auto analysis = context.manager->getAnalyzedSubroutine(subroutine);
     if (!analysis) {
-        analysisMem = std::make_unique<AnalyzedProcedure>(context, subroutine);
-        analysis = analysisMem.get();
-        context.manager->addAnalyzedSubroutine(subroutine, std::move(analysisMem));
+        auto proc = std::make_unique<AnalyzedProcedure>(context, subroutine);
+        analysis = context.manager->addAnalyzedSubroutine(subroutine, std::move(proc));
     }
 
     // For each driver in the function, create a new driver that points to the

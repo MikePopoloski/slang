@@ -134,8 +134,7 @@ struct AnalysisScopeVisitor {
             auto proc = manager.getAnalyzedSubroutine(*func);
             if (!proc) {
                 auto newProc = std::make_unique<AnalyzedProcedure>(context, *func);
-                proc = newProc.get();
-                manager.addAnalyzedSubroutine(*func, std::move(newProc));
+                proc = manager.addAnalyzedSubroutine(*func, std::move(newProc));
             }
 
             auto args = func->getArguments();

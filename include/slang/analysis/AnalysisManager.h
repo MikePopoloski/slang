@@ -156,8 +156,8 @@ public:
     const AnalyzedProcedure* getAnalyzedSubroutine(const ast::SubroutineSymbol& symbol) const;
 
     /// Adds a new analyzed subroutine to the manager's cache for later lookup.
-    void addAnalyzedSubroutine(const ast::SubroutineSymbol& symbol,
-                               std::unique_ptr<AnalyzedProcedure> procedure);
+    const AnalyzedProcedure* addAnalyzedSubroutine(const ast::SubroutineSymbol& symbol,
+                                                   std::unique_ptr<AnalyzedProcedure> procedure);
 
 private:
     friend struct AnalysisScopeVisitor;

@@ -134,11 +134,24 @@ const AnalyzedProcedure* AnalysisManager::getAnalyzedSubroutine(
     return result;
 }
 
-void AnalysisManager::addAnalyzedSubroutine(const SubroutineSymbol& symbol,
-                                            std::unique_ptr<AnalyzedProcedure> procedure) {
-    auto& state = getState();
-    driverTracker.add(state.context, state.driverAlloc, *procedure);
-    analyzedSubroutines.try_emplace(&symbol, std::move(procedure));
+const AnalyzedProcedure* AnalysisManager::addAnalyzedSubroutine(
+    const SubroutineSymbol& symbol, std::unique_ptr<AnalyzedProcedure> procedure) {
+
+    const AnalyzedProcedure* result = nullptr;
+    auto updater = [&result](auto& item) { result = item.second.get(); };
+
+    if (analyzedSubroutines.try_emplace_and_cvisit(&symbol, std::move(procedure), updater,
+                                                   updater)) {
+        // If we successfully inserted a new procedure, we need to
+        // add it to the driver tracker. If not, someone else already
+        // did it for us.
+        SLANG_ASSERT(result);
+
+        auto& state = getState();
+        driverTracker.add(state.context, state.driverAlloc, *result);
+    }
+
+    return result;
 }
 
 DriverList AnalysisManager::getDrivers(const ValueSymbol& symbol) const {
