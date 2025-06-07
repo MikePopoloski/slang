@@ -12,6 +12,7 @@
 #include <filesystem>
 
 #include "slang/ast/ASTVisitor.h"
+#include "slang/text/Glob.h"
 
 #define NEEDS_SKIP_SYMBOL(__symbol)                            \
     if (skip(sourceManager->getFileName((__symbol).location))) \
@@ -35,10 +36,25 @@ protected:
         auto parentPath = weakly_canonical(std::filesystem::path(path).parent_path());
         const auto& skipFiles = config.getSkipFiles();
         const auto& skipPaths = config.getSkipPaths();
-        return std::find(skipFiles.begin(), skipFiles.end(), file) != skipFiles.end() ||
-               std::find_if(skipPaths.begin(), skipPaths.end(), [&](auto& path) {
-                   return parentPath.string().find(path) != std::string::npos;
-               }) != skipPaths.end();
+        const auto& skipPatterns = config.getSkipPatterns();
+
+        // Check skip files and skip paths (existing logic)
+        if (std::find(skipFiles.begin(), skipFiles.end(), file) != skipFiles.end() ||
+            std::find_if(skipPaths.begin(), skipPaths.end(), [&](auto& skipPath) {
+                return parentPath.string().find(skipPath) != std::string::npos;
+            }) != skipPaths.end()) {
+            return true;
+        }
+
+        // Check skip patterns using glob matching
+        auto fullPath = std::filesystem::path(path);
+        for (const auto& pattern : skipPatterns) {
+            if (slang::svGlobMatches(fullPath, pattern)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     slang::not_null<const slang::SourceManager*> sourceManager;

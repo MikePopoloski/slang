@@ -9,6 +9,7 @@
 
 #include "TidyKind.h"
 #include <algorithm>
+#include <filesystem>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <regex>
@@ -56,6 +57,11 @@ public:
     // Returns a vector containing the paths names that won't be checked by slang-tidy
     inline const std::vector<std::string>& getSkipPaths() const { return skipPaths; }
 
+    // Returns a vector containing the patterns that won't be checked by slang-tidy
+    inline const std::vector<std::filesystem::path>& getSkipPatterns() const {
+        return skipPatterns;
+    }
+
     // Adds a new file into the list of skipped files
     void addSkipFile(const std::string& path);
     void addSkipFile(const std::vector<std::string>& paths);
@@ -63,6 +69,10 @@ public:
     // Adds a new path into the list of skipped paths
     void addSkipPath(const std::string& path);
     void addSkipPath(const std::vector<std::string>& paths);
+
+    // Adds a new pattern into the list of skipped patterns
+    void addSkipPattern(const std::filesystem::path& pattern);
+    void addSkipPattern(const std::vector<std::filesystem::path>& patterns);
 
     /// Serialise the tidy config for printing in the config file format.
     std::vector<std::pair<std::string, std::string>> serialise() const {
@@ -96,6 +106,9 @@ private:
 
     // List of paths that won't be checked by slang-tidy
     std::vector<std::string> skipPaths;
+
+    // List of patterns that won't be checked by slang-tidy (glob patterns)
+    std::vector<std::filesystem::path> skipPatterns;
 
     /// Enables or disables all the implemented checks based on status
     void toggleAl(CheckStatus status);

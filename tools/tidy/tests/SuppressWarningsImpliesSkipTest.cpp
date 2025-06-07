@@ -1,105 +1,77 @@
+//------------------------------------------------------------------------------
+//! @file SuppressWarningsImpliesSkipTest.cpp
+//! @brief Test that --suppress-warnings implies --skip-file functionality
+//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 
 #include "Test.h"
-#include "TidyFactory.h"
+#include "TidyConfig.h"
 
-#include "slang/analysis/AnalysisManager.h"
 #include "slang/driver/Driver.h"
+#include "slang/text/Glob.h"
 
-// Test that --suppress-warnings files are automatically added as skip files in slang-tidy
-TEST_CASE("Suppress warnings implies skip file") {
+// Test that --suppress-warnings patterns are automatically added as skip patterns in slang-tidy
+TEST_CASE("Suppress warnings implies skip patterns") {
     using namespace slang;
     using namespace slang::driver;
 
-    // Create test source with a style warning that slang-tidy would catch
-    std::string_view code = R"(
-module test_module;
-    logic a;
-    // This uses old always syntax which should trigger NoOldAlwaysSyntax warning
-    always @(a) begin
-        // empty
-    end
-endmodule
-)";
-
-    // Create a driver and add the suppress-warnings option
+    // Create a driver and add the suppress-warnings pattern
     Driver driver;
     driver.addStandardArgs();
 
-    // Simulate adding a file path to suppress-warnings
-    std::error_code ec = driver.diagEngine.addIgnorePaths("test_file.sv");
+    // Simulate adding a pattern to suppress-warnings
+    std::error_code ec = driver.diagEngine.addIgnorePaths("test_*.sv");
     REQUIRE(!ec);
 
-    // Verify that the ignore paths were added
+    // Verify that the ignore patterns were added
     auto ignorePaths = driver.diagEngine.getIgnorePaths();
     REQUIRE(ignorePaths.size() == 1);
 
     // Create a TidyConfig and simulate the logic in tidy.cpp that adds
-    // suppress-warnings paths as skip files
+    // suppress-warnings patterns as skip patterns
     TidyConfig tidyConfig;
-    for (const auto& suppressPath : ignorePaths) {
-        tidyConfig.addSkipFile(suppressPath.string());
-        tidyConfig.addSkipPath(suppressPath.string());
-    }
+    tidyConfig.addSkipPattern(
+        std::vector<std::filesystem::path>(ignorePaths.begin(), ignorePaths.end()));
 
-    // Verify that the path was added to skip files
-    auto skipFiles = tidyConfig.getSkipFiles();
-    auto skipPaths = tidyConfig.getSkipPaths();
+    // Verify that the pattern was added to skip patterns
+    auto skipPatterns = tidyConfig.getSkipPatterns();
+    REQUIRE(skipPatterns.size() == 1);
 
-    REQUIRE(skipFiles.size() == 1);
-    REQUIRE(skipPaths.size() == 1);
+    // Test that pattern matching works with svGlobMatches
+    auto testPath = std::filesystem::path("test_file.sv");
+    CHECK(slang::svGlobMatches(testPath, skipPatterns[0]));
 
-    // The skip files should contain the filename
-    CHECK(skipFiles[0] == "test_file.sv");
+    auto nonMatchingPath = std::filesystem::path("other_file.sv");
+    CHECK_FALSE(slang::svGlobMatches(nonMatchingPath, skipPatterns[0]));
 }
 
-TEST_CASE("Suppress warnings integration test") {
+TEST_CASE("TidyConfig addSkipPattern functionality") {
     using namespace slang;
 
-    // Test source with old always syntax
-    std::string_view code = R"(
-module test_module;
-    logic a;
-    always @(a) begin
-        // This should trigger NoOldAlwaysSyntax warning
-    end
-endmodule
-)";
+    // Create a TidyConfig and test pattern functionality
+    TidyConfig config;
 
-    auto tree = SyntaxTree::fromText(code, "test_file.sv");
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    compilation.freeze();
+    // Test adding single pattern
+    config.addSkipPattern(std::filesystem::path("test_*.sv"));
+    auto patterns = config.getSkipPatterns();
+    REQUIRE(patterns.size() == 1);
 
-    analysis::AnalysisManager analysisManager;
-    analysisManager.analyze(compilation);
+    // Test adding multiple patterns
+    std::vector<std::filesystem::path> morePatterns = {std::filesystem::path("vendor_*.sv"),
+                                                       std::filesystem::path("third_party_*.v")};
+    config.addSkipPattern(morePatterns);
+    patterns = config.getSkipPatterns();
+    REQUIRE(patterns.size() == 3);
 
-    // Test without skip - should find warning
-    {
-        TidyConfig config;
-        Registry::setConfig(config);
-        Registry::setSourceManager(compilation.getSourceManager());
+    // Verify pattern matching works
+    CHECK(slang::svGlobMatches(std::filesystem::path("test_module.sv"), patterns[0]));
+    CHECK(slang::svGlobMatches(std::filesystem::path("vendor_ip.sv"), patterns[1]));
+    CHECK(slang::svGlobMatches(std::filesystem::path("third_party_lib.v"), patterns[2]));
 
-        auto check = Registry::create("NoOldAlwaysSyntax");
-        auto result = check->check(compilation.getRoot(), analysisManager);
-
-        // Should fail (find the warning)
-        CHECK_FALSE(result);
-    }
-
-    // Test with skip file - should not find warning
-    {
-        TidyConfig config;
-        config.addSkipFile("test_file.sv");
-        Registry::setConfig(config);
-        Registry::setSourceManager(compilation.getSourceManager());
-
-        auto check = Registry::create("NoOldAlwaysSyntax");
-        auto result = check->check(compilation.getRoot(), analysisManager);
-
-        // Should pass (skip the warning)
-        CHECK(result);
-    }
+    // Verify non-matching patterns
+    CHECK_FALSE(slang::svGlobMatches(std::filesystem::path("my_module.sv"), patterns[0]));
+    CHECK_FALSE(slang::svGlobMatches(std::filesystem::path("my_module.sv"), patterns[1]));
+    CHECK_FALSE(slang::svGlobMatches(std::filesystem::path("my_module.sv"), patterns[2]));
 }

@@ -183,13 +183,11 @@ int main(int argc, char** argv) {
     if (!driver.processOptions())
         return 1;
 
-    // Add files from --suppress-warnings as skip files
+    // Add patterns from --suppress-warnings as skip patterns
     // This implements the feature where --suppress-warnings implies --skip-file
-    for (const auto& suppressPath : driver.diagEngine.getIgnorePaths()) {
-        // Add both the file and the path to be more flexible with matching
-        tidyConfig.addSkipFile(suppressPath.string());
-        tidyConfig.addSkipPath(suppressPath.string());
-    }
+    auto suppressPatterns = driver.diagEngine.getIgnorePaths();
+    tidyConfig.addSkipPattern(
+        std::vector<std::filesystem::path>(suppressPatterns.begin(), suppressPatterns.end()));
 
     std::unique_ptr<ast::Compilation> compilation;
     std::unique_ptr<analysis::AnalysisManager> analysisManager;

@@ -156,7 +156,7 @@ public:
     /// to an error.
     std::error_code addIgnoreMacroPaths(std::string_view pattern);
 
-    /// Gets the paths for which warnings are suppressed.
+    /// Gets the patterns for which warnings are suppressed.
     std::span<const std::filesystem::path> getIgnorePaths() const { return ignoreWarnPatterns; }
 
     /// Sets a custom formatter function for the given type. This is used to
