@@ -193,7 +193,8 @@ public:
 
         for (auto arg : args) {
             auto sym = arg->getSymbolReference();
-            if (!sym || arg->kind != ExpressionKind::NamedValue) {
+            if (!sym || arg->kind != ExpressionKind::Assignment ||
+                arg->as<AssignmentExpression>().left().kind != ExpressionKind::NamedValue) {
                 context.addDiag(diag::ExpectedVariableName, arg->sourceRange);
                 return comp.getErrorType();
             }

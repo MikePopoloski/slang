@@ -960,3 +960,54 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
+
+TEST_CASE("Multi assign with procedural assign / force, events") {
+    auto& code = R"(
+module m;
+  logic [1:0] a;
+  logic [1:0] b;
+  logic [1:0] c;
+
+  initial begin
+    deassign a;
+    assign b = 2;
+    force c = 3;
+    release c;
+  end
+
+  assign a[0] = 1;
+  always_comb a[1] = 1;
+  always_comb b = 2;
+  always_comb c = 3;
+
+  event e;
+  always_comb -> e;
+  always_comb ->> e;
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+}
+
+TEST_CASE("Multi assign from various syscalls") {
+    auto& code = R"(
+module m;
+    int a;
+    assign a = 1;
+
+    always_comb std::randomize(a);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MixedVarAssigns);
+}

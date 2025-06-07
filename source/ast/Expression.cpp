@@ -248,10 +248,16 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
 
 const Expression& Expression::bindLValue(const ExpressionSyntax& syntax, const ASTContext& context,
                                          bitmask<AssignFlags> assignFlags) {
-    auto& expr = bind(syntax, context, ASTFlags::LValue);
-    if (!expr.requireLValue(context, {}, assignFlags))
-        return badExpr(context.getCompilation(), &expr);
-    return expr;
+    auto& comp = context.getCompilation();
+    auto lhs = &create(comp, syntax, context, ASTFlags::LValue);
+    selfDetermined(context, lhs);
+
+    auto rhs = comp.emplace<EmptyArgumentExpression>(*lhs->type, lhs->sourceRange);
+
+    return AssignmentExpression::fromComponents(comp, std::nullopt, assignFlags, *lhs, *rhs,
+                                                lhs->sourceRange, /* timingControl */ nullptr,
+                                                lhs->sourceRange,
+                                                context.resetFlags(ASTFlags::OutputArg));
 }
 
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,

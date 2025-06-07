@@ -105,8 +105,6 @@ void registerAST(py::module_& m) {
         .value("AllowCoverpoint", ASTFlags::AllowCoverpoint)
         .value("AllowNetType", ASTFlags::AllowNetType)
         .value("OutputArg", ASTFlags::OutputArg)
-        .value("ProceduralAssign", ASTFlags::ProceduralAssign)
-        .value("ProceduralForceRelease", ASTFlags::ProceduralForceRelease)
         .value("AllowInterconnect", ASTFlags::AllowInterconnect)
         .value("StreamingWithRange", ASTFlags::StreamingWithRange)
         .value("SpecifyBlock", ASTFlags::SpecifyBlock)

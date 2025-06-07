@@ -110,10 +110,15 @@ void DataFlowAnalysis::noteReference(const ValueSymbol& symbol, const Expression
 void DataFlowAnalysis::handle(const AssignmentExpression& expr) {
     // Note that this method mirrors the logic in the base class
     // handler but we need to track the LValue status of the lhs.
-    SLANG_ASSERT(!isLValue);
-    isLValue = true;
-    visit(expr.left());
-    isLValue = false;
+    if (!prohibitLValue) {
+        SLANG_ASSERT(!isLValue);
+        isLValue = true;
+        visit(expr.left());
+        isLValue = false;
+    }
+    else {
+        visit(expr.left());
+    }
 
     if (!expr.isLValueArg())
         visit(expr.right());

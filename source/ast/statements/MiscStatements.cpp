@@ -502,8 +502,8 @@ void WaitOrderStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
                                              const EventTriggerStatementSyntax& syntax,
                                              const ASTContext& context, StatementContext& stmtCtx) {
-    auto& target = Expression::bindLValue(*syntax.name, context);
-    if (target.bad())
+    auto& target = Expression::bind(*syntax.name, context);
+    if (target.bad() || !target.requireLValue(context))
         return badStmt(compilation, nullptr);
 
     if (!target.type->isEvent()) {
@@ -539,11 +539,10 @@ static bool isValidAssignLVal(const Expression& expr) {
     switch (expr.kind) {
         case ExpressionKind::NamedValue:
         case ExpressionKind::HierarchicalValue:
-            if (auto sym = expr.getSymbolReference()) {
-                if (!VariableSymbol::isKind(sym->kind))
-                    return false;
-            }
-            return true;
+        case ExpressionKind::Assignment:
+            if (auto sym = expr.getSymbolReference())
+                return VariableSymbol::isKind(sym->kind);
+            return false;
         case ExpressionKind::Concatenation:
             for (auto op : expr.as<ConcatenationExpression>().operands()) {
                 if (!isValidAssignLVal(*op))
@@ -579,6 +578,12 @@ static bool isValidForceLVal(const Expression& expr, const ASTContext& context, 
                     return false;
             }
             return true;
+        case ExpressionKind::Assignment: {
+            auto& assign = expr.as<AssignmentExpression>();
+            if (assign.isLValueArg())
+                return isValidForceLVal(assign.left(), context, inSelect);
+            return false;
+        }
         default:
             return false;
     }
@@ -588,13 +593,8 @@ Statement& ProceduralAssignStatement::fromSyntax(Compilation& compilation,
                                                  const ProceduralAssignStatementSyntax& syntax,
                                                  const ASTContext& context) {
     bool isForce = syntax.keyword.kind == TokenKind::ForceKeyword;
-    bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural | ASTFlags::AssignmentAllowed;
-    if (isForce)
-        astFlags |= ASTFlags::ProceduralForceRelease;
-    else
-        astFlags |= ASTFlags::ProceduralAssign;
-
-    auto& assign = Expression::bind(*syntax.expr, context, astFlags);
+    auto& assign = Expression::bind(*syntax.expr, context,
+                                    ASTFlags::NonProcedural | ASTFlags::AssignmentAllowed);
     auto result = compilation.emplace<ProceduralAssignStatement>(assign, isForce,
                                                                  syntax.sourceRange());
     if (assign.bad())
@@ -632,13 +632,13 @@ void ProceduralAssignStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
                                                    const ProceduralDeassignStatementSyntax& syntax,
                                                    const ASTContext& context) {
-    auto ctx = context.resetFlags(ASTFlags::NonProcedural | ASTFlags::ProceduralForceRelease);
-    auto& lvalue = Expression::bindLValue(*syntax.variable, ctx);
+    auto ctx = context.resetFlags(ASTFlags::NonProcedural);
+    auto& lvalue = Expression::bind(*syntax.variable, ctx);
 
     bool isRelease = syntax.keyword.kind == TokenKind::ReleaseKeyword;
     auto result = compilation.emplace<ProceduralDeassignStatement>(lvalue, isRelease,
                                                                    syntax.sourceRange());
-    if (lvalue.bad())
+    if (lvalue.bad() || !lvalue.requireLValue(ctx))
         return badStmt(compilation, result);
 
     if (isRelease) {

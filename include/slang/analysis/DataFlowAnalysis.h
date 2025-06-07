@@ -120,6 +120,7 @@ private:
     // The currently active longest static prefix expression, if there is one.
     LSPVisitor<DataFlowAnalysis> lspVisitor;
     bool isLValue = false;
+    bool prohibitLValue = false;
 
     // All statements that have timing controls associated with them.
     SmallVector<const Statement*> timedStatements;
@@ -162,6 +163,19 @@ private:
 
         timedStatements.push_back(&stmt);
         visitStmt(stmt);
+    }
+
+    void handle(const ProceduralAssignStatement& stmt) {
+        // Procedural force statements don't act as drivers
+        // of their lvalue target.
+        if (stmt.isForce) {
+            prohibitLValue = true;
+            visitStmt(stmt);
+            prohibitLValue = false;
+        }
+        else {
+            visitStmt(stmt);
+        }
     }
 
     void handle(const AssignmentExpression& expr);
