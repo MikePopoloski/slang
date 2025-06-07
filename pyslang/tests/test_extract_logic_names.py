@@ -19,6 +19,27 @@ class LogicDeclarationExtractor:
         """Initialize the extractor with an empty list of logic variable names."""
         self.logic_names = []
 
+    def _is_logic_type(self, var_type) -> bool:
+        """Check if a type represents a logic type, including nested arrays.
+
+        Args:
+            var_type: The type to check (ScalarType or PackedArrayType)
+
+        Returns:
+            True if the type is logic or an array of logic types
+        """
+        # Check if it's a scalar logic type
+        if isinstance(var_type, pyslang.ScalarType):
+            return var_type.scalarKind == pyslang.ScalarType.Kind.Logic
+
+        # Check if it's a packed array type
+        elif isinstance(var_type, pyslang.PackedArrayType):
+            # Recursively check the element type
+            return self._is_logic_type(var_type.elementType)
+
+        # Not a logic type
+        return False
+
     def __call__(self, obj: Union[pyslang.Token, pyslang.SyntaxNode]) -> None:
         """Visit method called for each node in the AST."""
         # Check if this is a variable symbol (includes logic declarations)
@@ -26,11 +47,9 @@ class LogicDeclarationExtractor:
             # Get the type of the variable
             var_type = obj.type
 
-            # Check if it's a scalar type (which includes logic, bit, reg)
-            if isinstance(var_type, pyslang.ScalarType):
-                # Check specifically for logic type
-                if var_type.scalarKind == pyslang.ScalarType.Kind.Logic:
-                    self.logic_names.append(obj.name)
+            # Check if this is a logic type (handles scalars, arrays, and multi-dimensional arrays)
+            if self._is_logic_type(var_type):
+                self.logic_names.append(obj.name)
 
 
 def extract_logic_declaration_names(systemverilog_code: str) -> list[str]:
