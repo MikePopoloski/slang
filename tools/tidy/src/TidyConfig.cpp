@@ -68,6 +68,15 @@ void TidyConfig::addSkipPath(const std::vector<std::string>& paths) {
         skipPaths.push_back(fs::path(path).parent_path().string());
 }
 
+void TidyConfig::addSkipPattern(const std::filesystem::path& pattern) {
+    skipPatterns.push_back(pattern);
+}
+
+void TidyConfig::addSkipPattern(const std::vector<std::filesystem::path>& patterns) {
+    for (const auto& pattern : patterns)
+        skipPatterns.push_back(pattern);
+}
+
 void TidyConfig::toggleAl(CheckStatus status) {
     for (auto& checkKind : checkKinds) {
         for (auto& check : checkKind.second)
