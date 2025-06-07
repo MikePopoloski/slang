@@ -131,7 +131,7 @@ protected:
     static ASTContext unevaluatedContext(const ASTContext& sourceContext);
 
     /// Helper method to register the given expression as an lvalue.
-    static bool registerLValue(const Expression& expr, const ASTContext& context);
+    static void registerLValue(const Expression& expr, const ASTContext& context);
 };
 
 /// An implementation of the SystemSubroutine interface that has

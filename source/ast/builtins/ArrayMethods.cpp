@@ -126,9 +126,6 @@ public:
         if (!checkArgCount(context, true, args, range, 0, 0))
             return comp.getErrorType();
 
-        if (!registerLValue(*args[0], context))
-            return comp.getErrorType();
-
         if (iterExpr) {
             if (!isComparable(*iterExpr->type)) {
                 context.addDiag(diag::ArrayMethodComparable, iterExpr->sourceRange) << name;
@@ -221,9 +218,6 @@ public:
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
-            return comp.getErrorType();
-
-        if (!registerLValue(*args[0], context))
             return comp.getErrorType();
 
         return comp.getVoidType();
@@ -554,8 +548,7 @@ class DynArrayDeleteMethod : public SimpleSystemSubroutine {
 public:
     explicit DynArrayDeleteMethod(const Builtins& builtins) :
         SimpleSystemSubroutine(KnownSystemName::Delete, SubroutineKind::Function, 0, {},
-                               builtins.voidType, true,
-                               /* isFirstArgLValue */ true) {}
+                               builtins.voidType, true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -591,9 +584,6 @@ public:
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 1))
-            return comp.getErrorType();
-
-        if (!registerLValue(*args[0], context))
             return comp.getErrorType();
 
         if (args.size() > 1) {
@@ -737,9 +727,6 @@ public:
         if (!checkArgCount(context, true, args, range, 0, 0))
             return comp.getErrorType();
 
-        if (!registerLValue(*args[0], context))
-            return comp.getErrorType();
-
         return *args[0]->type->getArrayElementType();
     }
 
@@ -796,8 +783,7 @@ public:
         if (!checkArgCount(context, true, args, range, 1, 1))
             return comp.getErrorType();
 
-        if (!registerLValue(*args[0], context))
-            return comp.getErrorType();
+        registerLValue(*args[0], context);
 
         return comp.getVoidType();
     }
@@ -850,8 +836,7 @@ public:
         if (!checkArgCount(context, true, args, range, 2, 2))
             return comp.getErrorType();
 
-        if (!registerLValue(*args[0], context))
-            return comp.getErrorType();
+        registerLValue(*args[0], context);
 
         if (!args[1]->type->isIntegral())
             return badArg(context, *args[1]);
@@ -892,9 +877,6 @@ public:
                                const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 1))
-            return comp.getErrorType();
-
-        if (!registerLValue(*args[0], context))
             return comp.getErrorType();
 
         if (args.size() > 1) {

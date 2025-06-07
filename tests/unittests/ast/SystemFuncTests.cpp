@@ -1123,29 +1123,6 @@ endmodule
     CHECK(diags[0].code == diag::NonstandardSysFunc);
 }
 
-TEST_CASE("System method lvalue requirements") {
-    auto tree = SyntaxTree::fromText(R"(
-typedef int bar_t[];
-function automatic bar_t foo;
-    bar_t i = new [3];
-    return i;
-endfunction
-
-module m;
-    initial begin
-        foo().delete();
-    end
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::ExpressionNotAssignable);
-}
-
 TEST_CASE("Sampled value functions with clocking in always_comb") {
     auto tree = SyntaxTree::fromText(R"(
 module top;
