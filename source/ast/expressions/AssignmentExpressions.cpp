@@ -708,7 +708,7 @@ Expression& NewCovergroupExpression::fromSyntax(Compilation& compilation,
 
     SmallVector<const Expression*> args;
     if (!CallExpression::bindArgs(syntax.argList, coverType.getArguments(), "new"sv, range, context,
-                                  args, /* isBuiltInMethod */ false)) {
+                                  args)) {
         return badExpr(compilation, nullptr);
     }
 

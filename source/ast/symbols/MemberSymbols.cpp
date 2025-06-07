@@ -1993,7 +1993,7 @@ RandSeqProductionSymbol::ProdItem RandSeqProductionSymbol::createProdItem(
 
     SmallVector<const Expression*> args;
     CallExpression::bindArgs(syntax.argList, symbol->arguments, symbol->name, syntax.sourceRange(),
-                             context, args, /* isBuiltInMethod */ false);
+                             context, args);
 
     return ProdItem(symbol, args.copy(context.getCompilation()));
 }

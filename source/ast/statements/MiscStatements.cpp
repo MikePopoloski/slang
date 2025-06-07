@@ -729,7 +729,7 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& comp,
         // Make sure the first production doesn't require arguments.
         SmallVector<const Expression*> args;
         CallExpression::bindArgs(nullptr, firstProd->arguments, firstProd->name, firstProdRange,
-                                 context, args, /* isBuiltInMethod */ false);
+                                 context, args);
     }
 
     // All of the logic for creating productions is in the RandSeqProduction symbol.

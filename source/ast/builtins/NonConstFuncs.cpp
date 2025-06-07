@@ -520,9 +520,8 @@ public:
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
         if (argIndex > 0) {
-            return Expression::bindLValue(syntax, context.getCompilation().getIntType(),
-                                          syntax.getFirstToken().location(), context,
-                                          /* isInout */ false);
+            return Expression::bindArgument(context.getCompilation().getIntType(),
+                                            ArgumentDirection::Out, {}, syntax, context);
         }
         return Expression::bind(syntax, context);
     }

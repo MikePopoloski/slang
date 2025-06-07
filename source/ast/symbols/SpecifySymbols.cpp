@@ -923,9 +923,8 @@ void SystemTimingCheckSymbol::resolve() const {
                 ASTContext nonContinuous = context;
                 nonContinuous.flags &= ~ASTFlags::NonProcedural;
 
-                auto& expr = Expression::bindLValue(exprSyntax, comp.getLogicType(),
-                                                    exprSyntax.getFirstToken().location(),
-                                                    nonContinuous, /* isInout */ false);
+                auto& expr = Expression::bindArgument(comp.getLogicType(), ArgumentDirection::Out,
+                                                      {}, exprSyntax, nonContinuous);
                 argBuf.emplace_back(expr);
                 break;
             }
@@ -996,9 +995,8 @@ void SystemTimingCheckSymbol::resolve() const {
                 }
 
                 auto& exprSyntax = *actual.as<ExpressionTimingCheckArgSyntax>().expr;
-                auto& expr = Expression::bindLValue(exprSyntax, *signalExpr->type,
-                                                    exprSyntax.getFirstToken().location(), context,
-                                                    /* isInout */ false);
+                auto& expr = Expression::bindArgument(*signalExpr->type, ArgumentDirection::Out, {},
+                                                      exprSyntax, context);
                 argBuf.emplace_back(expr);
                 break;
             }
