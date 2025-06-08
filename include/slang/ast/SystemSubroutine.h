@@ -65,15 +65,19 @@ public:
 
     /// @returns true if the subroutine allows an empty argument to be
     /// passed for the given argument index.
-    virtual bool allowEmptyArgument(size_t argIndex) const;
+    virtual bool allowEmptyArgument(size_t) const { return false; }
 
     /// @returns true if the subroutine allows a clocking event to be
     /// passed for the given argument index.
-    virtual bool allowClockingArgument(size_t argIndex) const;
+    virtual bool allowClockingArgument(size_t) const { return false; }
 
     /// @returns true if the given argument is unevaluated by the
     /// subroutine, and false otherwise.
-    virtual bool isArgUnevaluated(size_t argIndex) const;
+    virtual bool isArgUnevaluated(size_t) const { return false; }
+
+    /// @returns true if the given argument is passed by reference,
+    /// and false otherwise.
+    virtual bool isArgByRef(size_t) const { return false; }
 
     /// Allows the subroutine to perform custom argument binding for the given
     /// argument index.

@@ -19,18 +19,6 @@ namespace slang::ast {
 
 using namespace syntax;
 
-bool SystemSubroutine::allowEmptyArgument(size_t) const {
-    return false;
-}
-
-bool SystemSubroutine::allowClockingArgument(size_t) const {
-    return false;
-}
-
-bool SystemSubroutine::isArgUnevaluated(size_t) const {
-    return false;
-}
-
 const Expression& SystemSubroutine::bindArgument(size_t, const ASTContext& context,
                                                  const ExpressionSyntax& syntax,
                                                  const Args&) const {

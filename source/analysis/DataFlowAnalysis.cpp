@@ -135,8 +135,16 @@ void DataFlowAnalysis::handle(const CallExpression& expr) {
 
         size_t argIndex = 0;
         for (auto arg : expr.arguments()) {
-            if (!sub.isArgUnevaluated(argIndex))
-                visit(*arg);
+            if (!sub.isArgUnevaluated(argIndex)) {
+                if (sub.isArgByRef(argIndex)) {
+                    isLValue = true;
+                    visit(*arg);
+                    isLValue = false;
+                }
+                else {
+                    visit(*arg);
+                }
+            }
             argIndex++;
         }
 

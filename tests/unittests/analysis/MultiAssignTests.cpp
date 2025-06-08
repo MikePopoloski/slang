@@ -1001,6 +1001,9 @@ module m;
     assign a = 1;
 
     always_comb std::randomize(a);
+
+    int arr[int];
+    always_comb arr.first(a);
 endmodule
 )";
 
@@ -1008,6 +1011,7 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::MixedVarAssigns);
+    CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
 }
