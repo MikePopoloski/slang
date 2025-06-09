@@ -117,7 +117,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             bool anyLatchInferred = false;
             dfa.visitLatches([&](const Symbol&, const Expression&) { anyLatchInferred = true; });
             if (!anyLatchInferred)
-                context.addDiag(procedure, diag::NoLatchInferred, procedure.location);
+                context.addDiag(procedure, diag::InferredNoLatch, procedure.location);
         }
     }
     else if (analyzedSymbol.kind == SymbolKind::Subroutine) {

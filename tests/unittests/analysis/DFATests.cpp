@@ -322,12 +322,12 @@ endmodule
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 6);
-    CHECK(diags[0].code == diag::NoLatchInferred);
-    CHECK(diags[1].code == diag::NoLatchInferred);
-    CHECK(diags[2].code == diag::NoLatchInferred);
-    CHECK(diags[3].code == diag::NoLatchInferred);
+    CHECK(diags[0].code == diag::InferredNoLatch);
+    CHECK(diags[1].code == diag::InferredNoLatch);
+    CHECK(diags[2].code == diag::InferredNoLatch);
+    CHECK(diags[3].code == diag::InferredNoLatch);
     CHECK(diags[4].code == diag::CaseEnumExplicit);
-    CHECK(diags[5].code == diag::NoLatchInferred);
+    CHECK(diags[5].code == diag::InferredNoLatch);
 }
 
 TEST_CASE("Data flow with class members") {

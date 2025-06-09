@@ -980,7 +980,7 @@ module m(input logic a, output logic b);
 endmodule
 ```
 
--Wno-inferred-latch
+-Winferred-no-latch
 Warns when all signals are assigned on all control paths in
 the always_latch procedure.
 @options --disable-analysis=false
