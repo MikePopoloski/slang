@@ -980,6 +980,18 @@ module m(input logic a, output logic b);
 endmodule
 ```
 
+-Wno-inferred-latch
+Warns when all signals are assigned on all control paths in
+the always_latch procedure.
+@options --disable-analysis=false
+```
+module m(input logic a, output logic b);
+    always_latch begin
+        b = 0;
+    end
+endmodule
+```
+
 -Wmissing-return
 A non-void function has no return statements and does not
 assign to its return value variable.
