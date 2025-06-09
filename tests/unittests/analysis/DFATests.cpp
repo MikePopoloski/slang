@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "AnalysisTests.h"
+
 #include "slang/diagnostics/AnalysisDiags.h"
 
 class TestAnalysis : public AbstractFlowAnalysis<TestAnalysis, int> {
