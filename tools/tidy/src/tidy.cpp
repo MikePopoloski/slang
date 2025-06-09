@@ -52,12 +52,6 @@ int main(int argc, char** argv) {
     driver.cmdLine.add("--dump-config", dumpConfig,
                        "Dump the configuration options to stdout and exit");
 
-    std::vector<std::string> skippedFiles;
-    driver.cmdLine.add("--skip-file", skippedFiles, "Files to be skipped by slang-tidy");
-
-    std::vector<std::string> skippedPaths;
-    driver.cmdLine.add("--skip-path", skippedPaths, "Paths to be skipped by slang-tidy");
-
     std::optional<bool> quietArg;
     driver.cmdLine.add("-q,--quiet", quietArg,
                        "slang-tidy will only print errors. Options that make slang-tidy print "
@@ -173,12 +167,6 @@ int main(int argc, char** argv) {
         OS::print(TidyConfigPrinter::dumpConfig(tidyConfig).str());
         return 0;
     }
-
-    // Add skipped files provided by the cmd args
-    tidyConfig.addSkipFile(skippedFiles);
-
-    // Add skipped paths provided by the cmd args
-    tidyConfig.addSkipPath(skippedPaths);
 
     if (!driver.processOptions())
         return 1;

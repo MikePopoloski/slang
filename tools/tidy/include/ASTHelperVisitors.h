@@ -32,25 +32,24 @@ protected:
         config(Registry::getConfig()) {}
 
     [[nodiscard]] bool skip(std::string_view path) const {
-        auto file = std::filesystem::path(path).filename().string();
-        auto parentPath = weakly_canonical(std::filesystem::path(path).parent_path());
-        const auto& skipFiles = config.getSkipFiles();
-        const auto& skipPaths = config.getSkipPaths();
         const auto& skipPatterns = config.getSkipPatterns();
 
-        // Check skip files and skip paths (existing logic)
-        if (std::find(skipFiles.begin(), skipFiles.end(), file) != skipFiles.end() ||
-            std::find_if(skipPaths.begin(), skipPaths.end(), [&](auto& skipPath) {
-                return parentPath.string().find(skipPath) != std::string::npos;
-            }) != skipPaths.end()) {
-            return true;
-        }
-
         // Check skip patterns using glob matching
-        auto fullPath = std::filesystem::path(path);
+        // Try both the path as-is and the absolute path
+        auto pathObj = std::filesystem::path(path);
         for (const auto& pattern : skipPatterns) {
-            if (slang::svGlobMatches(fullPath, pattern)) {
+            if (slang::svGlobMatches(pathObj, pattern)) {
                 return true;
+            }
+            // Also try with absolute path
+            try {
+                auto absolutePath = std::filesystem::absolute(pathObj);
+                if (slang::svGlobMatches(absolutePath, pattern)) {
+                    return true;
+                }
+            }
+            catch (...) {
+                // Ignore errors in absolute path conversion
             }
         }
 

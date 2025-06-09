@@ -50,24 +50,6 @@ TidyConfig::TidyConfig() {
     checkKinds.insert({slang::TidyKind::Synthesis, synthesisChecks});
 }
 
-void TidyConfig::addSkipFile(const std::string& path) {
-    skipFiles.push_back(fs::path(path).filename().string());
-}
-
-void TidyConfig::addSkipFile(const std::vector<std::string>& paths) {
-    for (const auto& path : paths)
-        skipFiles.push_back(fs::path(path).filename().string());
-}
-
-void TidyConfig::addSkipPath(const std::string& path) {
-    skipPaths.push_back(fs::path(path).parent_path().string());
-}
-
-void TidyConfig::addSkipPath(const std::vector<std::string>& paths) {
-    for (const auto& path : paths)
-        skipPaths.push_back(fs::path(path).parent_path().string());
-}
-
 void TidyConfig::addSkipPattern(const std::filesystem::path& pattern) {
     skipPatterns.push_back(pattern);
 }

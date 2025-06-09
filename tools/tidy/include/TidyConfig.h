@@ -51,24 +51,10 @@ public:
     /// Returns the check config object
     inline CheckConfigs& getCheckConfigs() { return checkConfigs; }
 
-    // Returns a vector containing the file names that won't be checked by slang-tidy
-    inline const std::vector<std::string>& getSkipFiles() const { return skipFiles; }
-
-    // Returns a vector containing the paths names that won't be checked by slang-tidy
-    inline const std::vector<std::string>& getSkipPaths() const { return skipPaths; }
-
     // Returns a vector containing the patterns that won't be checked by slang-tidy
     inline const std::vector<std::filesystem::path>& getSkipPatterns() const {
         return skipPatterns;
     }
-
-    // Adds a new file into the list of skipped files
-    void addSkipFile(const std::string& path);
-    void addSkipFile(const std::vector<std::string>& paths);
-
-    // Adds a new path into the list of skipped paths
-    void addSkipPath(const std::string& path);
-    void addSkipPath(const std::vector<std::string>& paths);
 
     // Adds a new pattern into the list of skipped patterns
     void addSkipPattern(const std::filesystem::path& pattern);
@@ -100,12 +86,6 @@ private:
     enum class CheckStatus { ENABLED, DISABLED };
 
     std::unordered_map<slang::TidyKind, std::unordered_map<std::string, CheckStatus>> checkKinds;
-
-    // List of files that won't be checked by slang-tidy
-    std::vector<std::string> skipFiles;
-
-    // List of paths that won't be checked by slang-tidy
-    std::vector<std::string> skipPaths;
 
     // List of patterns that won't be checked by slang-tidy (glob patterns)
     std::vector<std::filesystem::path> skipPatterns;
