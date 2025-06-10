@@ -140,21 +140,21 @@ void TidyConfigParser::parseInitial() {
 
 auto TidyConfigParser::getSeverity(std::string const& name)
     -> std::optional<slang::DiagnosticSeverity> {
-  if (name.empty())
+    if (name.empty())
+        return std::nullopt;
+    if (name == "ignored")
+        return slang::DiagnosticSeverity::Ignored;
+    if (name == "note")
+        return slang::DiagnosticSeverity::Note;
+    if (name == "warning")
+        return slang::DiagnosticSeverity::Warning;
+    if (name == "error")
+        return slang::DiagnosticSeverity::Error;
+    if (name == "fatal")
+        return slang::DiagnosticSeverity::Fatal;
+    reportErrorAndExit(
+        fmt::format("Invalid severity '{}', expected ignored, note, warning or error", name));
     return std::nullopt;
-  if (name == "ignored")
-      return slang::DiagnosticSeverity::Ignored;
-  if (name == "note")
-      return slang::DiagnosticSeverity::Note;
-  if (name == "warning")
-      return slang::DiagnosticSeverity::Warning;
-  if (name == "error")
-      return slang::DiagnosticSeverity::Error;
-  if (name == "fatal")
-      return slang::DiagnosticSeverity::Fatal;
-  reportErrorAndExit(
-      fmt::format("Invalid severity '{}', expected ignored, note, warning or error", name));
-  return std::nullopt;
 }
 
 void TidyConfigParser::parseChecks() {
@@ -252,20 +252,21 @@ void TidyConfigParser::parseChecks() {
         // Parse check name
         std::string severity;
         auto readSeverity = [&]() {
-                  while (currentChar != '\n' && currentChar != ',' && currentChar != 0) {
-                    severity += currentChar;
-                    currentChar = nextChar();
-                  }
+            while (currentChar != '\n' && currentChar != ',' && currentChar != 0) {
+                severity += currentChar;
+                currentChar = nextChar();
+            }
         };
         bool checkParsed = false;
         bool checkGroupSet = false;
         auto toggleChecks = [&]() {
-                if (checkGroupSet) {
-                  toggleAllGroupChecks(checkGroup, newCheckState, getSeverity(severity));
-                  checkGroupSet = false;
-                } else { 
-                  toggleCheck(checkGroup, checkName, newCheckState, getSeverity(severity));
-                }
+            if (checkGroupSet) {
+                toggleAllGroupChecks(checkGroup, newCheckState, getSeverity(severity));
+                checkGroupSet = false;
+            }
+            else {
+                toggleCheck(checkGroup, checkName, newCheckState, getSeverity(severity));
+            }
         };
         currentChar = nextChar();
         while (true) {
@@ -297,7 +298,7 @@ void TidyConfigParser::parseChecks() {
                 while (peekChar() == '\n')
                     nextChar();
                 if (!checkParsed) {
-                  toggleChecks();
+                    toggleChecks();
                 }
                 parserState = ParserState::Initial;
                 return;
