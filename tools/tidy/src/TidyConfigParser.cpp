@@ -263,16 +263,17 @@ void TidyConfigParser::parseChecks() {
         // Parse check name
         std::string severity;
         auto readSeverity = [&]() {
-            while (currentChar != '\n' && currentChar != ',') {
-                severity += currentChar;
-                currentChar = nextChar();
-            }
+                  while (currentChar != '\n' && currentChar != ',' && currentChar != 0) {
+                    severity += currentChar;
+                    currentChar = nextChar();
+                  }
         };
         bool checkParsed = false;
         currentChar = nextChar();
         while (true) {
             if (currentChar == ',') {
                 toggleCheck(checkGroup, checkName, newCheckState, getSeverity(severity));
+                checkParsed = true;
                 severity.clear();
                 if (nextChar() != '\n') {
                     reportErrorAndExit(fmt::format("Expected new line but found: ({}){}",
@@ -281,16 +282,18 @@ void TidyConfigParser::parseChecks() {
                 break;
             }
             else if (currentChar == '*') {
-                if (peekChar() == '=') {
-                    currentChar = nextChar();
-                    currentChar = nextChar();
-                    readSeverity();
-                }
                 if (checkName.size())
                     reportErrorAndExit("Unexpected '*'");
+                if (peekChar() == '=') {
+                  currentChar = nextChar();
+                  currentChar = nextChar();
+                  readSeverity();
+                } else {
+                  currentChar = nextChar();
+                }
                 toggleAllGroupChecks(checkGroup, newCheckState, getSeverity(severity));
                 checkParsed = true;
-                currentChar = nextChar();
+                severity.clear();
             }
             else if (isalpha(currentChar) || currentChar == '-') {
                 checkName.push_back(currentChar);
