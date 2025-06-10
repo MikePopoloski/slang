@@ -153,6 +153,19 @@ auto TidyConfigParser::getSeverity(std::string const& name)
     reportErrorAndExit(
         fmt::format("Invalid severity '{}', expected ignored, note, warning or error", name));
     return std::nullopt;
+  if (name == "ignored")
+      return slang::DiagnosticSeverity::Ignored;
+  if (name == "note")
+      return slang::DiagnosticSeverity::Note;
+  if (name == "warning")
+      return slang::DiagnosticSeverity::Warning;
+  if (name == "error")
+      return slang::DiagnosticSeverity::Error;
+  if (name == "fatal")
+      return slang::DiagnosticSeverity::Fatal;
+  reportErrorAndExit(
+      fmt::format("Invalid severity '{}', expected ignored, note, warning or error", name));
+  return std::nullopt;
 }
 
 void TidyConfigParser::parseChecks() {
