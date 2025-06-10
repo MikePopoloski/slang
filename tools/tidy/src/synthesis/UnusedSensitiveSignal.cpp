@@ -69,7 +69,7 @@ using namespace unused_sensitive_signal;
 
 class UnusedSensitiveSignal : public TidyCheck {
 public:
-    [[maybe_unused]] explicit UnusedSensitiveSignal(TidyKind kind) : TidyCheck(kind) {}
+    [[maybe_unused]] explicit UnusedSensitiveSignal(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);
@@ -85,7 +85,7 @@ public:
                "or removing it from the sensitivity list";
     }
 
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
 
     std::string name() const override { return "UnusedSensitiveSignal"; }
 

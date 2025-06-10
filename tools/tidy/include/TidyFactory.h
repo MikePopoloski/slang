@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/diagnostics/Diagnostics.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/Util.h"
 
@@ -45,6 +46,12 @@ public:
                     const RegistryFunction& func) {
         checks()[name] = {kind, func};
         return true;
+    }
+
+    /// Lookup the user-specified severity for a check in the config.
+    static auto getSeverity(const slang::TidyKind& kind, const std::string& name)
+        -> std::optional<slang::DiagnosticSeverity> {
+        return config().getCheckSeverity(kind, name);
     }
 
     static std::unique_ptr<TidyCheck> create(const std::string& name) {
@@ -99,7 +106,8 @@ private:
 
 class TidyCheck {
 public:
-    explicit TidyCheck(slang::TidyKind kind) : kind(kind) {}
+    explicit TidyCheck(slang::TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) :
+        kind(kind), severity(severity) {}
     virtual ~TidyCheck() = default;
 
     /// Returns true if the check didn't find any errors, false otherwise
@@ -111,7 +119,7 @@ public:
     virtual std::string shortDescription() const = 0;
 
     virtual slang::DiagCode diagCode() const = 0;
-    virtual slang::DiagnosticSeverity diagSeverity() const = 0;
+    virtual slang::DiagnosticSeverity diagDefaultSeverity() const = 0;
     virtual std::string diagString() const = 0;
 
     std::string diagMessage() const {
@@ -123,11 +131,17 @@ public:
     [[nodiscard]] virtual const slang::Diagnostics& getDiagnostics() const { return diagnostics; }
     [[nodiscard]] virtual const slang::TidyKind getKind() const { return kind; }
 
+    [[nodiscard]] virtual const slang::DiagnosticSeverity diagSeverity() const {
+        return severity.value_or(diagDefaultSeverity());
+    }
+
 protected:
     slang::Diagnostics diagnostics;
     slang::TidyKind kind;
+    std::optional<slang::DiagnosticSeverity> severity;
 };
 
-#define REGISTER(name, class_name, kind)                  \
-    static auto name##_entry = Registry::add(#name, kind, \
-                                             []() { return std::make_unique<class_name>(kind); });
+#define REGISTER(name, class_name, kind)                                              \
+    static auto name##_entry = Registry::add(#name, kind, []() {                      \
+        return std::make_unique<class_name>(kind, Registry::getSeverity(kind, #name)); \
+    });

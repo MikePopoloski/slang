@@ -41,7 +41,7 @@ using namespace no_implicit_port_name_in_port_connection;
 
 class NoImplicitPortNameInPortConnection : public TidyCheck {
 public:
-    [[maybe_unused]] explicit NoImplicitPortNameInPortConnection(TidyKind kind) : TidyCheck(kind) {}
+    [[maybe_unused]] explicit NoImplicitPortNameInPortConnection(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);
@@ -55,7 +55,7 @@ public:
         return "port name not specified. Please use .port_name(net) syntax.";
     }
 
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
 
     std::string name() const override { return "NoImplicitPortNameInPortConnection"; }
 

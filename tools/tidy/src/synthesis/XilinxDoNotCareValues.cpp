@@ -34,7 +34,7 @@ using namespace xilinx_do_not_care_values;
 
 class XilinxDoNotCareValues : public TidyCheck {
 public:
-    explicit XilinxDoNotCareValues(TidyKind kind) : TidyCheck(kind) {}
+    explicit XilinxDoNotCareValues(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);
@@ -48,7 +48,7 @@ public:
         return "use of x'd? for do-not-care values is not recommended use x'b? instead";
     }
 
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
 
     std::string name() const override { return "XilinxDoNotCareValues"; }
 

@@ -118,7 +118,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
 using namespace only_assigned_on_reset;
 class OnlyAssignedOnReset : public TidyCheck {
 public:
-    explicit OnlyAssignedOnReset(TidyKind kind) : TidyCheck(kind) {}
+    explicit OnlyAssignedOnReset(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const AnalysisManager& analysisManager) override {
         MainVisitor visitor(diagnostics, analysisManager);
@@ -130,7 +130,7 @@ public:
 
     std::string diagString() const override { return "register '{}' is only assigned on reset"; }
 
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
 
     std::string name() const override { return "OnlyAssignedOnReset"; }
 

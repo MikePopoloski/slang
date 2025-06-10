@@ -225,18 +225,28 @@ int main(int argc, char** argv) {
 
         auto checkOk = check->check(compilation->getRoot(), *analysisManager);
         if (!checkOk) {
-            retCode = 1;
 
             if (!quiet) {
-                if (check->diagSeverity() == DiagnosticSeverity::Warning) {
+                if (check->diagSeverity() == DiagnosticSeverity::Ignored) {
+                  // Skip.
+                }
+                else if (check->diagSeverity() == DiagnosticSeverity::Note) {
+                    OS::print(fmt::emphasis::bold |
+                                  fmt::fg(tdc.getSeverityColor(DiagnosticSeverity::Note)),
+                              " NOTE\n");
+                }
+                else if (check->diagSeverity() == DiagnosticSeverity::Warning) {
                     OS::print(fmt::emphasis::bold |
                                   fmt::fg(tdc.getSeverityColor(DiagnosticSeverity::Warning)),
                               " WARN\n");
                 }
-                else if (check->diagSeverity() == DiagnosticSeverity::Error) {
+                else if (check->diagSeverity() == DiagnosticSeverity::Error ||
+                    check->diagSeverity() == DiagnosticSeverity::Fatal) {
                     OS::print(fmt::emphasis::bold |
                                   fmt::fg(tdc.getSeverityColor(DiagnosticSeverity::Error)),
                               " FAIL\n");
+                    // Any errors are propagated to the return code.
+                    retCode = 1;
                 }
                 else {
                     SLANG_UNREACHABLE;

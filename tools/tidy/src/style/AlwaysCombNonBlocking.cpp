@@ -35,7 +35,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
 using namespace always_comb_non_blocking;
 class AlwaysCombNonBlocking : public TidyCheck {
 public:
-    [[maybe_unused]] explicit AlwaysCombNonBlocking(TidyKind kind) : TidyCheck(kind) {}
+    [[maybe_unused]] explicit AlwaysCombNonBlocking(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
 
     bool check(const ast::RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);
@@ -44,7 +44,7 @@ public:
     }
 
     DiagCode diagCode() const override { return diag::AlwaysCombNonBlocking; }
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
     std::string diagString() const override {
         return "use of a non blocking assignment inside always_comb";
     }

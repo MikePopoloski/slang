@@ -42,7 +42,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
 using namespace no_legacy_generate;
 class NoLegacyGenerate : public TidyCheck {
 public:
-    [[maybe_unused]] explicit NoLegacyGenerate(TidyKind kind) : TidyCheck(kind) {}
+    [[maybe_unused]] explicit NoLegacyGenerate(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
 
     bool check(const ast::RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);
@@ -51,7 +51,7 @@ public:
     }
 
     DiagCode diagCode() const override { return diag::NoLegacyGenerate; }
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
     std::string diagString() const override { return "usage of generate block is deprecated"; }
     std::string name() const override { return "NoLegacyGenerate"; }
     std::string description() const override { return shortDescription(); }

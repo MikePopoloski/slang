@@ -44,7 +44,7 @@ using namespace no_dot_var_in_port_connection;
 
 class NoDotVarInPortConnection final : public TidyCheck {
 public:
-    [[maybe_unused]] explicit NoDotVarInPortConnection(const TidyKind kind) : TidyCheck(kind) {}
+    [[maybe_unused]] explicit NoDotVarInPortConnection(const TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);
@@ -58,7 +58,7 @@ public:
         return "use of '{}' in port connection list, consider using '{}({})' instead";
     }
 
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
 
     std::string name() const override { return "NoDotVarInPortConnection"; }
 
