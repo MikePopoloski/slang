@@ -16,7 +16,7 @@ config                ::= section+
 section               ::= checks_config_section | checks_section
 checks_section        ::= "Checks:" [EOL] rule+
 rule                  ::= ["-"] ((check_or_all ",")* | check_or_all) END
-check_or_all          ::= "*" | check_group "-" check_name_or_all
+check_or_all          ::= "*" | check_group "-" check_name_or_all ["=" severity_name]
 check_group           ::= identifier
 check_name_or_all     ::= "*" | identifier
 checks_config_section ::= "CheckConfigs:" [EOL] config+
@@ -24,6 +24,7 @@ config                ::= ((config_tuple ",")* | config_tuple) END
 config_tuple          ::= config_name ":" config_value
 config_name           ::= identifier
 config_value          ::= expression | "[" ((expression ",")* expression)? "]"
+severity_name         ::= "ignore" | "info" | "warning" | "error" | "fatal"
 identifier            ::= { A-Z | a-z }+
 expression            ::= { A-Z | a-z | 0-9 | "_" }+
 EOL                   ::= '\n' | '\r' | '\r\n'
@@ -51,6 +52,14 @@ Enable all: *
 
 Disable all: -*
 ```
+
+Each check identifier is composed of a group name, eg `style`, followed by a
+hyphen `-` and the check name in lower case with hyphens. See the output of
+`--print-descriptions` to see the available checks and their config keys.
+
+Additionally, each check or group of checks can specify a severity level that
+diagnostics are reported with. These levels are `ignore`, `info`, `warning`,
+`error` and `fatal`.
 
 The `CheckConfigs` is a dictionary like, `config: value`, comma separated list of options for the different checks.
 The available options are:
