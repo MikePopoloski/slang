@@ -138,20 +138,21 @@ void TidyConfigParser::parseInitial() {
     }
 }
 
-auto TidyConfigParser::getSeverity(std::string const &name) -> std::optional<slang::DiagnosticSeverity> {
-  if (name.empty())
+auto TidyConfigParser::getSeverity(std::string const& name)
+    -> std::optional<slang::DiagnosticSeverity> {
+    if (name.empty())
+        return std::nullopt;
+    if (name == "ignored")
+        return slang::DiagnosticSeverity::Ignored;
+    if (name == "note")
+        return slang::DiagnosticSeverity::Note;
+    if (name == "warning")
+        return slang::DiagnosticSeverity::Warning;
+    if (name == "error")
+        return slang::DiagnosticSeverity::Error;
+    reportErrorAndExit(
+        fmt::format("Invalid severity '{}', expected ignored, note, warning or error", name));
     return std::nullopt;
-  if (name == "ignored")
-      return slang::DiagnosticSeverity::Ignored;
-  if (name == "note")
-      return slang::DiagnosticSeverity::Note;
-  if (name == "warning")
-      return slang::DiagnosticSeverity::Warning;
-  if (name == "error")
-      return slang::DiagnosticSeverity::Error;
-  reportErrorAndExit(
-      fmt::format("Invalid severity '{}', expected ignored, note, warning or error", name));
-  return std::nullopt;
 }
 
 void TidyConfigParser::parseChecks() {
@@ -249,10 +250,10 @@ void TidyConfigParser::parseChecks() {
         // Parse check name
         std::string severity;
         auto readSeverity = [&]() {
-                  while (currentChar != '\n' && currentChar != ',') {
-                    severity += currentChar;
-                    currentChar = nextChar();
-                  }
+            while (currentChar != '\n' && currentChar != ',') {
+                severity += currentChar;
+                currentChar = nextChar();
+            }
         };
         bool checkParsed = false;
         currentChar = nextChar();
@@ -268,9 +269,9 @@ void TidyConfigParser::parseChecks() {
             }
             else if (currentChar == '*') {
                 if (peekChar() == '=') {
-                  currentChar = nextChar();
-                  currentChar = nextChar();
-                  readSeverity();
+                    currentChar = nextChar();
+                    currentChar = nextChar();
+                    readSeverity();
                 }
                 if (checkName.size())
                     reportErrorAndExit("Unexpected '*'");
@@ -283,8 +284,8 @@ void TidyConfigParser::parseChecks() {
                 currentChar = nextChar();
             }
             else if (currentChar == '=') {
-              currentChar = nextChar();
-              readSeverity();
+                currentChar = nextChar();
+                readSeverity();
             }
             else if (currentChar == '\n' || currentChar == 0) {
                 while (peekChar() == '\n')
@@ -392,7 +393,8 @@ void TidyConfigParser::toggleAllChecks(TidyConfig::CheckStatus status) {
 }
 
 void TidyConfigParser::toggleAllGroupChecks(const std::string& groupName,
-                                            TidyConfig::CheckStatus status, std::optional<slang::DiagnosticSeverity> severity) {
+                                            TidyConfig::CheckStatus status,
+                                            std::optional<slang::DiagnosticSeverity> severity) {
     auto kind = slang::tidyKindFromStr(groupName);
     if (!kind)
         reportErrorAndExit(fmt::format("Group {} does not exist", groupName));
@@ -401,7 +403,8 @@ void TidyConfigParser::toggleAllGroupChecks(const std::string& groupName,
 }
 
 void TidyConfigParser::toggleCheck(const std::string& groupName, const std::string& checkName,
-                                   TidyConfig::CheckStatus status, std::optional<slang::DiagnosticSeverity> severity) {
+                                   TidyConfig::CheckStatus status,
+                                   std::optional<slang::DiagnosticSeverity> severity) {
     if (checkName.empty()) {
         reportWarning(fmt::format(
             "Empty check name in group {0}, you can toggle the whole group with {0}-*", groupName));

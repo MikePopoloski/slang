@@ -118,7 +118,8 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
 using namespace only_assigned_on_reset;
 class OnlyAssignedOnReset : public TidyCheck {
 public:
-    explicit OnlyAssignedOnReset(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
+    explicit OnlyAssignedOnReset(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const AnalysisManager& analysisManager) override {
         MainVisitor visitor(diagnostics, analysisManager);

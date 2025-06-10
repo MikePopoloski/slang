@@ -35,7 +35,9 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
 using namespace always_comb_non_blocking;
 class AlwaysCombNonBlocking : public TidyCheck {
 public:
-    [[maybe_unused]] explicit AlwaysCombNonBlocking(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
+    [[maybe_unused]] explicit AlwaysCombNonBlocking(
+        TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const ast::RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);

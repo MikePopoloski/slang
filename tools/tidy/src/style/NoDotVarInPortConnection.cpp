@@ -44,7 +44,9 @@ using namespace no_dot_var_in_port_connection;
 
 class NoDotVarInPortConnection final : public TidyCheck {
 public:
-    [[maybe_unused]] explicit NoDotVarInPortConnection(const TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
+    [[maybe_unused]] explicit NoDotVarInPortConnection(
+        const TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);

@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
 #include "slang/diagnostics/Diagnostics.h"
 
 class TidyConfig {
@@ -89,18 +90,17 @@ public:
     }
 
 private:
-    
     /// Possible status of the checks.
     enum class CheckStatus { ENABLED, DISABLED };
 
     /// Configuration for each check.
     struct CheckOptions {
 
-      // Whether the check is enabled or disabled.
-      CheckStatus status{CheckStatus::ENABLED};
+        // Whether the check is enabled or disabled.
+        CheckStatus status{CheckStatus::ENABLED};
 
-      // Whether there is a user-specified severity.
-      std::optional<slang::DiagnosticSeverity> severity; 
+        // Whether there is a user-specified severity.
+        std::optional<slang::DiagnosticSeverity> severity;
     };
 
     CheckConfigs checkConfigs;
@@ -117,12 +117,14 @@ private:
     void toggleAl(CheckStatus status);
 
     /// Enables or disables all the checks implemented in the TidyKind provided based on status
-    void toggleGroup(slang::TidyKind kind, CheckStatus status, std::optional<slang::DiagnosticSeverity> severity);
+    void toggleGroup(slang::TidyKind kind, CheckStatus status,
+                     std::optional<slang::DiagnosticSeverity> severity);
 
     /// Disables or enables a particular check implemented in the TidyKind provided based on status.
     /// It will return false if the check do not exist.
     [[nodiscard]] bool toggleCheck(slang::TidyKind kind, const std::string& checkName,
-                                   CheckStatus status, std::optional<slang::DiagnosticSeverity> severity);
+                                   CheckStatus status,
+                                   std::optional<slang::DiagnosticSeverity> severity);
 
     /// Visits the value of a check config. Will throw an invalid_argument exception
     /// if the configName is unknown

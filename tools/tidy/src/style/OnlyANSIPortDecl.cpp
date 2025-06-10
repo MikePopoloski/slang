@@ -26,7 +26,9 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
 using namespace no_ansi_port_decl;
 class OnlyANSIPortDecl : public TidyCheck {
 public:
-    [[maybe_unused]] explicit OnlyANSIPortDecl(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
+    [[maybe_unused]] explicit OnlyANSIPortDecl(TidyKind kind,
+                                               std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const ast::RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);

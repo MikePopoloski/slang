@@ -228,7 +228,7 @@ int main(int argc, char** argv) {
 
             if (!quiet) {
                 if (check->diagSeverity() == DiagnosticSeverity::Ignored) {
-                  // Skip.
+                    // Skip.
                 }
                 else if (check->diagSeverity() == DiagnosticSeverity::Note) {
                     OS::print(fmt::emphasis::bold |
@@ -241,7 +241,7 @@ int main(int argc, char** argv) {
                               " WARN\n");
                 }
                 else if (check->diagSeverity() == DiagnosticSeverity::Error ||
-                    check->diagSeverity() == DiagnosticSeverity::Fatal) {
+                         check->diagSeverity() == DiagnosticSeverity::Fatal) {
                     OS::print(fmt::emphasis::bold |
                                   fmt::fg(tdc.getSeverityColor(DiagnosticSeverity::Error)),
                               " FAIL\n");

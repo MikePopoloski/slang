@@ -41,7 +41,9 @@ using namespace no_implicit_port_name_in_port_connection;
 
 class NoImplicitPortNameInPortConnection : public TidyCheck {
 public:
-    [[maybe_unused]] explicit NoImplicitPortNameInPortConnection(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
+    [[maybe_unused]] explicit NoImplicitPortNameInPortConnection(
+        TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);

@@ -42,7 +42,9 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
 using namespace no_legacy_generate;
 class NoLegacyGenerate : public TidyCheck {
 public:
-    [[maybe_unused]] explicit NoLegacyGenerate(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
+    [[maybe_unused]] explicit NoLegacyGenerate(TidyKind kind,
+                                               std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const ast::RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);

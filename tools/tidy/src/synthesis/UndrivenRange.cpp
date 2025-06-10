@@ -74,7 +74,9 @@ using namespace undriven_range;
 
 class UndrivenRange : public TidyCheck {
 public:
-    [[maybe_unused]] explicit UndrivenRange(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
+    [[maybe_unused]] explicit UndrivenRange(TidyKind kind,
+                                            std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const AnalysisManager& analysisManager) override {
         UndrivenRangeVisitor visitor(diagnostics, analysisManager);

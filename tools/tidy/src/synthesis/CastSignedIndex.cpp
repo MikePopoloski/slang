@@ -26,7 +26,9 @@ using namespace cast_signed_index;
 
 class CastSignedIndex : public TidyCheck {
 public:
-    [[maybe_unused]] explicit CastSignedIndex(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
+    [[maybe_unused]] explicit CastSignedIndex(TidyKind kind,
+                                              std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);

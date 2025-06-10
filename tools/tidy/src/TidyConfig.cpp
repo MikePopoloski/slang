@@ -75,15 +75,16 @@ void TidyConfig::toggleAl(CheckStatus status) {
     }
 }
 
-void TidyConfig::toggleGroup(slang::TidyKind kind, CheckStatus status, std::optional<slang::DiagnosticSeverity> severity) {
+void TidyConfig::toggleGroup(slang::TidyKind kind, CheckStatus status,
+                             std::optional<slang::DiagnosticSeverity> severity) {
     for (auto& check : checkKinds.at(kind)) {
         check.second.status = status;
         check.second.severity = severity;
     }
 }
 
-bool TidyConfig::toggleCheck(slang::TidyKind kind, const std::string& checkName,
-                             CheckStatus status, std::optional<slang::DiagnosticSeverity> severity) {
+bool TidyConfig::toggleCheck(slang::TidyKind kind, const std::string& checkName, CheckStatus status,
+                             std::optional<slang::DiagnosticSeverity> severity) {
     auto registeredChecks = Registry::getRegisteredChecks();
     if (std::find(registeredChecks.begin(), registeredChecks.end(), checkName) ==
         registeredChecks.end()) {

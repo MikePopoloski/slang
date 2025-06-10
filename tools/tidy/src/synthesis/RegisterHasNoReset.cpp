@@ -125,7 +125,8 @@ using namespace register_has_no_reset;
 
 class RegisterHasNoReset : public TidyCheck {
 public:
-    explicit RegisterHasNoReset(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
+    explicit RegisterHasNoReset(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const AnalysisManager& analysisManager) override {
         MainVisitor visitor(diagnostics, analysisManager);

@@ -141,7 +141,7 @@ protected:
     std::optional<slang::DiagnosticSeverity> severity;
 };
 
-#define REGISTER(name, class_name, kind)                                              \
-    static auto name##_entry = Registry::add(#name, kind, []() {                      \
+#define REGISTER(name, class_name, kind)                                               \
+    static auto name##_entry = Registry::add(#name, kind, []() {                       \
         return std::make_unique<class_name>(kind, Registry::getSeverity(kind, #name)); \
     });

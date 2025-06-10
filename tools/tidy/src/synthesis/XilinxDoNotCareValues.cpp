@@ -34,7 +34,9 @@ using namespace xilinx_do_not_care_values;
 
 class XilinxDoNotCareValues : public TidyCheck {
 public:
-    explicit XilinxDoNotCareValues(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) : TidyCheck(kind, severity) {}
+    explicit XilinxDoNotCareValues(TidyKind kind,
+                                   std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);

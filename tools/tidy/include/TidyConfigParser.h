@@ -8,12 +8,13 @@
 #pragma once
 
 #include "TidyConfig.h"
-#include "slang/diagnostics/Diagnostics.h"
 #include <filesystem>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+
+#include "slang/diagnostics/Diagnostics.h"
 
 class TidyConfigParser {
 public:
@@ -107,13 +108,14 @@ private:
 
     /// Toggles the specified check with the status provided
     void toggleCheck(const std::string& groupName, const std::string& checkName,
-                     TidyConfig::CheckStatus status, std::optional<slang::DiagnosticSeverity> severity);
+                     TidyConfig::CheckStatus status,
+                     std::optional<slang::DiagnosticSeverity> severity);
 
     /// Sets the check config with the provided value
     void setCheckConfig(const std::string& configName, std::vector<std::string> configValue);
 
     /// Return the DiagnosticSeverity type corresponding to name.
-    auto getSeverity(std::string const &name) -> std::optional<slang::DiagnosticSeverity>;
+    auto getSeverity(std::string const& name) -> std::optional<slang::DiagnosticSeverity>;
 
     /// The name format of the checks provided by the user are required to be: this-is-my-check
     /// but the registered names in the TidyFactory are ThisIsMyCheck. This function translates from
