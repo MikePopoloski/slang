@@ -140,18 +140,7 @@ void TidyConfigParser::parseInitial() {
 
 auto TidyConfigParser::getSeverity(std::string const& name)
     -> std::optional<slang::DiagnosticSeverity> {
-    if (name.empty())
-        return std::nullopt;
-    if (name == "ignored")
-        return slang::DiagnosticSeverity::Ignored;
-    if (name == "note")
-        return slang::DiagnosticSeverity::Note;
-    if (name == "warning")
-        return slang::DiagnosticSeverity::Warning;
-    if (name == "error")
-        return slang::DiagnosticSeverity::Error;
-    reportErrorAndExit(
-        fmt::format("Invalid severity '{}', expected ignored, note, warning or error", name));
+  if (name.empty())
     return std::nullopt;
   if (name == "ignored")
       return slang::DiagnosticSeverity::Ignored;
@@ -269,31 +258,32 @@ void TidyConfigParser::parseChecks() {
                   }
         };
         bool checkParsed = false;
+        bool checkGroupSet = false;
+        auto toggleChecks = [&]() {
+                if (checkGroupSet) {
+                  toggleAllGroupChecks(checkGroup, newCheckState, getSeverity(severity));
+                  checkGroupSet = false;
+                } else { 
+                  toggleCheck(checkGroup, checkName, newCheckState, getSeverity(severity));
+                }
+        };
         currentChar = nextChar();
         while (true) {
             if (currentChar == ',') {
-                toggleCheck(checkGroup, checkName, newCheckState, getSeverity(severity));
+                toggleChecks();
                 checkParsed = true;
-                severity.clear();
                 if (nextChar() != '\n') {
                     reportErrorAndExit(fmt::format("Expected new line but found: ({}){}",
                                                    +currentChar, currentChar));
                 }
+                // Done.
                 break;
             }
             else if (currentChar == '*') {
                 if (checkName.size())
                     reportErrorAndExit("Unexpected '*'");
-                if (peekChar() == '=') {
-                  currentChar = nextChar();
-                  currentChar = nextChar();
-                  readSeverity();
-                } else {
-                  currentChar = nextChar();
-                }
-                toggleAllGroupChecks(checkGroup, newCheckState, getSeverity(severity));
-                checkParsed = true;
-                severity.clear();
+                checkGroupSet = true;
+                currentChar = nextChar();
             }
             else if (isalpha(currentChar) || currentChar == '-') {
                 checkName.push_back(currentChar);
@@ -306,8 +296,9 @@ void TidyConfigParser::parseChecks() {
             else if (currentChar == '\n' || currentChar == 0) {
                 while (peekChar() == '\n')
                     nextChar();
-                if (!checkParsed)
-                    toggleCheck(checkGroup, checkName, newCheckState, getSeverity(severity));
+                if (!checkParsed) {
+                  toggleChecks();
+                }
                 parserState = ParserState::Initial;
                 return;
             }

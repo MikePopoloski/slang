@@ -3,6 +3,7 @@
 
 #include "Test.h"
 #include "TidyConfigParser.h"
+#include "TidyFactory.h"
 #include "slang/diagnostics/Diagnostics.h"
 
 TEST_CASE("TidyParser: Enable all") {
@@ -223,13 +224,13 @@ TEST_CASE("TidyParser: single check error severity") {
 
 TEST_CASE("TidyParser: single group error severity") {
     auto config_str = std::string(R"(Checks:
-  synthesis-*=error,
-  -style-*)");
+  -*,
+  synthesis-*=error)");
     TidyConfigParser parser(config_str);
     auto config = parser.getConfig();
+    Registry::setConfig(config);
 
-    auto checks = {"UndrivenRange", "AlwaysFFAssignmentOutsideConditional", "UnusedSensitiveSignal", "CastSignedIndex", "OnlyAssignedOnReset"};
-    for (auto *check : checks) {
+    for (auto const &check : Registry::getEnabledChecks()) {
       CHECK(config.getCheckSeverity(slang::TidyKind::Synthesis, check) == slang::DiagnosticSeverity::Error);
     }
 }
@@ -245,10 +246,16 @@ TEST_CASE("TidyParser: single check various severities") {
     TidyConfigParser parser(config_str);
     auto config = parser.getConfig();
 
-    CHECK(config.getCheckSeverity(slang::TidyKind::Synthesis, "UndrivenRange") == slang::DiagnosticSeverity::Ignored);
-    CHECK(config.getCheckSeverity(slang::TidyKind::Synthesis, "AlwaysFFAssignmentOutsideConditional") == slang::DiagnosticSeverity::Note);
-    CHECK(config.getCheckSeverity(slang::TidyKind::Synthesis, "UnusedSensitiveSignal") == slang::DiagnosticSeverity::Warning);
-    CHECK(config.getCheckSeverity(slang::TidyKind::Style, "NoLegacyGenerate") == slang::DiagnosticSeverity::Error);
-    CHECK(config.getCheckSeverity(slang::TidyKind::Style, "NoDotVarInPortConnection") == slang::DiagnosticSeverity::Fatal);
+    CHECK(config.getCheckSeverity(slang::TidyKind::Synthesis, "UndrivenRange") ==
+          slang::DiagnosticSeverity::Ignored);
+    CHECK(config.getCheckSeverity(slang::TidyKind::Synthesis,
+                                  "AlwaysFFAssignmentOutsideConditional") ==
+          slang::DiagnosticSeverity::Note);
+    CHECK(config.getCheckSeverity(slang::TidyKind::Synthesis, "UnusedSensitiveSignal") ==
+          slang::DiagnosticSeverity::Warning);
+    CHECK(config.getCheckSeverity(slang::TidyKind::Style, "NoLegacyGenerate") ==
+          slang::DiagnosticSeverity::Error);
+    CHECK(config.getCheckSeverity(slang::TidyKind::Style, "NoDotVarInPortConnection") ==
+          slang::DiagnosticSeverity::Fatal);
 }
 
