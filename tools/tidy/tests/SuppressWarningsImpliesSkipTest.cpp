@@ -32,8 +32,9 @@ TEST_CASE("Suppress warnings implies skip patterns") {
     // Create a TidyConfig and simulate the logic in tidy.cpp that adds
     // suppress-warnings patterns as skip patterns
     TidyConfig tidyConfig;
-    tidyConfig.addSkipPattern(
-        std::vector<std::filesystem::path>(ignorePaths.begin(), ignorePaths.end()));
+    for (const auto& pattern : ignorePaths) {
+        tidyConfig.addSkipPattern(pattern);
+    }
 
     // Verify that the pattern was added to skip patterns
     auto skipPatterns = tidyConfig.getSkipPatterns();
@@ -61,7 +62,9 @@ TEST_CASE("TidyConfig addSkipPattern functionality") {
     // Test adding multiple patterns
     std::vector<std::filesystem::path> morePatterns = {std::filesystem::path("vendor_*.sv"),
                                                        std::filesystem::path("third_party_*.v")};
-    config.addSkipPattern(morePatterns);
+    for (const auto& pattern : morePatterns) {
+        config.addSkipPattern(pattern);
+    }
     patterns = config.getSkipPatterns();
     REQUIRE(patterns.size() == 3);
 

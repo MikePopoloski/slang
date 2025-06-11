@@ -37,19 +37,18 @@ protected:
         // Check skip patterns using glob matching
         // Try both the path as-is and the absolute path
         auto pathObj = std::filesystem::path(path);
+
+        // Calculate absolute path once, outside the loop
+        std::error_code ec;
+        auto absolutePath = std::filesystem::absolute(pathObj, ec);
+
         for (const auto& pattern : skipPatterns) {
             if (slang::svGlobMatches(pathObj, pattern)) {
                 return true;
             }
-            // Also try with absolute path
-            try {
-                auto absolutePath = std::filesystem::absolute(pathObj);
-                if (slang::svGlobMatches(absolutePath, pattern)) {
-                    return true;
-                }
-            }
-            catch (...) {
-                // Ignore errors in absolute path conversion
+            // Also try with absolute path if conversion succeeded
+            if (!ec && slang::svGlobMatches(absolutePath, pattern)) {
+                return true;
             }
         }
 

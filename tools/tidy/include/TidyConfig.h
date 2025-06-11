@@ -58,7 +58,6 @@ public:
 
     // Adds a new pattern into the list of skipped patterns
     void addSkipPattern(const std::filesystem::path& pattern);
-    void addSkipPattern(const std::vector<std::filesystem::path>& patterns);
 
     /// Serialise the tidy config for printing in the config file format.
     std::vector<std::pair<std::string, std::string>> serialise() const {
