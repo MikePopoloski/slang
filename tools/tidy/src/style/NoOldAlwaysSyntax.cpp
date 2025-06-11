@@ -43,7 +43,9 @@ using namespace no_old_always_syntax;
 
 class NoOldAlwaysSyntax : public TidyCheck {
 public:
-    [[maybe_unused]] explicit NoOldAlwaysSyntax(TidyKind kind) : TidyCheck(kind) {}
+    [[maybe_unused]] explicit NoOldAlwaysSyntax(TidyKind kind,
+                                                std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);
@@ -55,7 +57,7 @@ public:
 
     std::string diagString() const override { return "use of old always verilog syntax"; }
 
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
 
     std::string name() const override { return "NoOldAlwaysSyntax"; }
 

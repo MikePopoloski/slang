@@ -6,6 +6,7 @@
 #include "fmt/format.h"
 #include <fstream>
 
+#include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/OS.h"
 
 template<typename T>
@@ -137,6 +138,25 @@ void TidyConfigParser::parseInitial() {
     }
 }
 
+auto TidyConfigParser::getSeverity(std::string const& name)
+    -> std::optional<slang::DiagnosticSeverity> {
+    if (name.empty())
+        return std::nullopt;
+    if (name == "ignored")
+        return slang::DiagnosticSeverity::Ignored;
+    if (name == "note")
+        return slang::DiagnosticSeverity::Note;
+    if (name == "warning")
+        return slang::DiagnosticSeverity::Warning;
+    if (name == "error")
+        return slang::DiagnosticSeverity::Error;
+    if (name == "fatal")
+        return slang::DiagnosticSeverity::Fatal;
+    reportErrorAndExit(
+        fmt::format("Invalid severity '{}', expected ignored, note, warning or error", name));
+    return std::nullopt;
+}
+
 void TidyConfigParser::parseChecks() {
     while (!fileStream.eof()) {
         TidyConfig::CheckStatus newCheckState = TidyConfig::CheckStatus::ENABLED;
@@ -230,31 +250,56 @@ void TidyConfigParser::parseChecks() {
         }
 
         // Parse check name
+        std::string severity;
+        auto readSeverity = [&]() {
+            while (currentChar != '\n' && currentChar != ',' && currentChar != 0) {
+                severity += currentChar;
+                currentChar = nextChar();
+            }
+        };
         bool checkParsed = false;
+        bool checkGroupSet = false;
+        auto toggleChecks = [&]() {
+            if (checkGroupSet) {
+                toggleAllGroupChecks(checkGroup, newCheckState, getSeverity(severity));
+                checkGroupSet = false;
+            }
+            else {
+                toggleCheck(checkGroup, checkName, newCheckState, getSeverity(severity));
+            }
+        };
+        currentChar = nextChar();
         while (true) {
-            currentChar = nextChar();
             if (currentChar == ',') {
-                toggleCheck(checkGroup, checkName, newCheckState);
+                toggleChecks();
+                checkParsed = true;
                 if (nextChar() != '\n') {
                     reportErrorAndExit(fmt::format("Expected new line but found: ({}){}",
                                                    +currentChar, currentChar));
                 }
+                // Done.
                 break;
             }
             else if (currentChar == '*') {
                 if (checkName.size())
                     reportErrorAndExit("Unexpected '*'");
-                toggleAllGroupChecks(checkGroup, newCheckState);
-                checkParsed = true;
+                checkGroupSet = true;
+                currentChar = nextChar();
             }
             else if (isalpha(currentChar) || currentChar == '-') {
                 checkName.push_back(currentChar);
+                currentChar = nextChar();
+            }
+            else if (currentChar == '=') {
+                currentChar = nextChar();
+                readSeverity();
             }
             else if (currentChar == '\n' || currentChar == 0) {
                 while (peekChar() == '\n')
                     nextChar();
-                if (!checkParsed)
-                    toggleCheck(checkGroup, checkName, newCheckState);
+                if (!checkParsed) {
+                    toggleChecks();
+                }
                 parserState = ParserState::Initial;
                 return;
             }
@@ -356,16 +401,18 @@ void TidyConfigParser::toggleAllChecks(TidyConfig::CheckStatus status) {
 }
 
 void TidyConfigParser::toggleAllGroupChecks(const std::string& groupName,
-                                            TidyConfig::CheckStatus status) {
+                                            TidyConfig::CheckStatus status,
+                                            std::optional<slang::DiagnosticSeverity> severity) {
     auto kind = slang::tidyKindFromStr(groupName);
     if (!kind)
         reportErrorAndExit(fmt::format("Group {} does not exist", groupName));
 
-    config.toggleGroup(kind.value(), status);
+    config.toggleGroup(kind.value(), status, severity);
 }
 
 void TidyConfigParser::toggleCheck(const std::string& groupName, const std::string& checkName,
-                                   TidyConfig::CheckStatus status) {
+                                   TidyConfig::CheckStatus status,
+                                   std::optional<slang::DiagnosticSeverity> severity) {
     if (checkName.empty()) {
         reportWarning(fmt::format(
             "Empty check name in group {0}, you can toggle the whole group with {0}-*", groupName));
@@ -375,7 +422,7 @@ void TidyConfigParser::toggleCheck(const std::string& groupName, const std::stri
     auto kind = slang::tidyKindFromStr(groupName);
     if (!kind)
         reportErrorAndExit(fmt::format("Group {} does not exist", groupName));
-    bool found = config.toggleCheck(kind.value(), formatCheckName(checkName), status);
+    bool found = config.toggleCheck(kind.value(), formatCheckName(checkName), status, severity);
 
     if (!found)
         reportWarning(

@@ -46,7 +46,9 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
 using namespace always_ff_blocking;
 class AlwaysFFBlocking : public TidyCheck {
 public:
-    [[maybe_unused]] explicit AlwaysFFBlocking(TidyKind kind) : TidyCheck(kind) {}
+    [[maybe_unused]] explicit AlwaysFFBlocking(TidyKind kind,
+                                               std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const ast::RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);
@@ -55,7 +57,7 @@ public:
     }
 
     DiagCode diagCode() const override { return diag::AlwaysFFBlocking; }
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
     std::string diagString() const override {
         return "use of a blocking assignment for a non local variables inside always_ff";
     }

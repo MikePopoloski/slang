@@ -74,7 +74,9 @@ using namespace undriven_range;
 
 class UndrivenRange : public TidyCheck {
 public:
-    [[maybe_unused]] explicit UndrivenRange(TidyKind kind) : TidyCheck(kind) {}
+    [[maybe_unused]] explicit UndrivenRange(TidyKind kind,
+                                            std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const AnalysisManager& analysisManager) override {
         UndrivenRangeVisitor visitor(diagnostics, analysisManager);
@@ -86,7 +88,7 @@ public:
 
     std::string diagString() const override { return "variable {} has undriven bits: {}"; }
 
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
 
     std::string name() const override { return "UndrivenRange"; }
 

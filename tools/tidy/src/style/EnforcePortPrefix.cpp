@@ -54,7 +54,9 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
 using namespace enforce_port_prefix;
 class EnforcePortPrefix : public TidyCheck {
 public:
-    [[maybe_unused]] explicit EnforcePortPrefix(TidyKind kind) : TidyCheck(kind) {}
+    [[maybe_unused]] explicit EnforcePortPrefix(TidyKind kind,
+                                                std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const ast::RootSymbol& root, const slang::analysis::AnalysisManager&) override {
         MainVisitor visitor(diagnostics);
@@ -63,7 +65,7 @@ public:
     }
 
     DiagCode diagCode() const override { return diag::EnforcePortPrefix; }
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
     std::string diagString() const override {
         return "port '{}' is not correctly prefixed with prefix: {}";
     }

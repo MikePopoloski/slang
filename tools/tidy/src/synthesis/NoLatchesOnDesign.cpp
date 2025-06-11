@@ -38,7 +38,9 @@ using namespace no_latches_on_design;
 
 class NoLatchesOnDesign : public TidyCheck {
 public:
-    [[maybe_unused]] explicit NoLatchesOnDesign(TidyKind kind) : TidyCheck(kind) {}
+    [[maybe_unused]] explicit NoLatchesOnDesign(TidyKind kind,
+                                                std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const AnalysisManager& analysisManager) override {
         MainVisitor visitor(diagnostics, analysisManager);
@@ -50,7 +52,7 @@ public:
 
     std::string diagString() const override { return "latches are not allowed in this design"; }
 
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Error; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Error; }
 
     std::string name() const override { return "NoLatchesOnDesign"; }
 

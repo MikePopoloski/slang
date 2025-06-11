@@ -86,7 +86,9 @@ using namespace always_ff_assignment_outside_conditional;
 
 class AlwaysFFAssignmentOutsideConditional : public TidyCheck {
 public:
-    explicit AlwaysFFAssignmentOutsideConditional(TidyKind kind) : TidyCheck(kind) {}
+    explicit AlwaysFFAssignmentOutsideConditional(
+        TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) :
+        TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const AnalysisManager& analysisManager) override {
         MainVisitor visitor(diagnostics, analysisManager);
@@ -102,7 +104,7 @@ public:
                "inside the conditional block";
     }
 
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
 
     std::string name() const override { return "AlwaysFFAssignmentOutsideConditional"; }
 
