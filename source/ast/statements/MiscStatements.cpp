@@ -511,6 +511,9 @@ Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
         return badStmt(compilation, nullptr);
     }
 
+    if (auto sym = target.getSymbolReference())
+        compilation.noteReference(*sym, /* isLValue */ true);
+
     const TimingControl* timing = nullptr;
     if (syntax.timing) {
         timing = &TimingControl::bind(*syntax.timing, context);

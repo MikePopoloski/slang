@@ -218,7 +218,7 @@ module m(output v);
     wire integer y = z;
     initial $dumpvars(m.y);
 
-    event e[4] = '{default: null};
+    event e[4];
     initial begin
        for (int i = 0; i < 4; i++) begin
            ->e[i];
