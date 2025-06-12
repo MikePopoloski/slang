@@ -162,9 +162,16 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
         if (decl.hasSyntax && decl.typeSyntax && decl.typeSyntax->typeRestriction)
             typeRestriction = SemanticFacts::getTypeRestriction(*decl.typeSyntax->typeRestriction);
 
+        const SyntaxNode* aliasSyntax = nullptr;
+        if (decl.typeDecl) {
+            aliasSyntax = decl.typeDecl;
+        }
+        else if (decl.valueDecl) {
+            aliasSyntax = decl.valueDecl;
+        }
         auto param = comp.emplace<TypeParameterSymbol>(newScope, decl.name, decl.location,
-                                                       decl.isLocalParam, decl.isPortParam,
-                                                       typeRestriction);
+                                                       aliasSyntax, decl.isLocalParam,
+                                                       decl.isPortParam, typeRestriction);
         param->setAttributes(scope, decl.attributes);
 
         if (decl.hasSyntax) {
