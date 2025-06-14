@@ -772,7 +772,8 @@ module m;
     end
 
     always_latch begin : foo
-        b = 4;
+        if (b)
+            b = 4;
     end
 
     always @* c = 3;
