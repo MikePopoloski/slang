@@ -35,6 +35,12 @@ struct NonProceduralExprVisitor {
                 if (getDefaultClocking() == nullptr)
                     ClockInference::checkSampledValueFuncs(context, containingSymbol, expr);
             }
+
+            std::vector<SymbolDriverListPair> drivers;
+            context.manager->getFunctionDrivers(expr, containingSymbol, visitedSubroutines,
+                                                drivers);
+            if (!drivers.empty())
+                context.manager->noteDrivers(drivers);
         }
         else if constexpr (std::is_same_v<T, AssertionInstanceExpression>) {
             // We might want to find a place to store these analyzed assertions created in
@@ -48,6 +54,7 @@ struct NonProceduralExprVisitor {
     }
 
 private:
+    SmallSet<const SubroutineSymbol*, 2> visitedSubroutines;
     bool isDisableCondition;
 
     const TimingControl* getDefaultClocking() const {

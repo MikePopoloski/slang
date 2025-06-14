@@ -154,6 +154,87 @@ const AnalyzedProcedure* AnalysisManager::addAnalyzedSubroutine(
     return result;
 }
 
+void AnalysisManager::noteDriver(const Expression& expr, const Symbol& containingSymbol) {
+    auto& state = getState();
+    driverTracker.add(state.context, state.driverAlloc, expr, containingSymbol);
+}
+
+void AnalysisManager::noteDrivers(std::span<const SymbolDriverListPair> drivers) {
+    auto& state = getState();
+    driverTracker.add(state.context, state.driverAlloc, drivers);
+}
+
+void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbol& containingSymbol,
+                                         SmallSet<const SubroutineSymbol*, 2>& visited,
+                                         std::vector<SymbolDriverListPair>& drivers) {
+    if (expr.isSystemCall() || expr.thisClass() ||
+        expr.getSubroutineKind() != SubroutineKind::Function) {
+        return;
+    }
+
+    auto& subroutine = *std::get<const SubroutineSymbol*>(expr.subroutine);
+    if (subroutine.flags.has(MethodFlags::Pure | MethodFlags::InterfaceExtern |
+                             MethodFlags::DPIImport | MethodFlags::Randomize |
+                             MethodFlags::BuiltIn)) {
+        return;
+    }
+
+    // The contents of non-static class methods don't get propagated up
+    // to the caller.
+    auto subroutineParent = subroutine.getParentScope();
+    SLANG_ASSERT(subroutineParent);
+    if (subroutineParent->asSymbol().kind == SymbolKind::ClassType) {
+        if (!subroutine.flags.has(MethodFlags::Static))
+            return;
+    }
+
+    // If we've already visited this function then we don't need to
+    // analyze it again.
+    if (!visited.insert(&subroutine).second)
+        return;
+
+    // Get analysis for the function.
+    auto& context = getState().context;
+    auto analysis = getAnalyzedSubroutine(subroutine);
+    if (!analysis) {
+        auto proc = std::make_unique<AnalyzedProcedure>(context, subroutine);
+        analysis = addAnalyzedSubroutine(subroutine, std::move(proc));
+    }
+
+    // For each driver in the function, create a new driver that points to the
+    // original driver but has the current procedure as the containing symbol.
+    auto funcDrivers = analysis->getDrivers();
+    drivers.reserve(drivers.size() + funcDrivers.size());
+
+    for (auto& [valueSym, driverList] : funcDrivers) {
+        // The user can disable this inlining of drivers for function locals via a flag.
+        if (hasFlag(AnalysisFlags::AllowMultiDrivenLocals)) {
+            auto scope = valueSym->getParentScope();
+            while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
+                scope = scope->asSymbol().getParentScope();
+
+            if (scope == &subroutine)
+                continue;
+        }
+
+        DriverList perSymbol;
+        for (auto& [driver, bounds] : driverList) {
+            auto newDriver = context.alloc.emplace<ValueDriver>(
+                driver->kind, *driver->prefixExpression, containingSymbol, DriverFlags::None);
+            newDriver->procCallExpression = &expr;
+
+            perSymbol.emplace_back(newDriver, bounds);
+        }
+
+        drivers.emplace_back(valueSym, std::move(perSymbol));
+    }
+
+    // If this function has any calls, we need to recursively add drivers
+    // from those calls as well.
+    for (auto call : analysis->getCallExpressions())
+        getFunctionDrivers(*call, containingSymbol, visited, drivers);
+}
+
 DriverList AnalysisManager::getDrivers(const ValueSymbol& symbol) const {
     return driverTracker.getDrivers(symbol);
 }

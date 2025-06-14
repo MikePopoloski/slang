@@ -17,6 +17,7 @@
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/ConcurrentMap.h"
+#include "slang/util/SmallMap.h"
 
 namespace slang::ast {
 
@@ -158,6 +159,17 @@ public:
     /// Adds a new analyzed subroutine to the manager's cache for later lookup.
     const AnalyzedProcedure* addAnalyzedSubroutine(const ast::SubroutineSymbol& symbol,
                                                    std::unique_ptr<AnalyzedProcedure> procedure);
+
+    /// Notes that the given expression is a driver and should be added to the driver tracker.
+    void noteDriver(const ast::Expression& expr, const ast::Symbol& containingSymbol);
+
+    /// Notes the existence of the given symbol value drivers.
+    void noteDrivers(std::span<const SymbolDriverListPair> drivers);
+
+    /// Helper method to get the indirect drivers from a call to a function.
+    void getFunctionDrivers(const ast::CallExpression& expr, const ast::Symbol& containingSymbol,
+                            SmallSet<const ast::SubroutineSymbol*, 2>& visited,
+                            std::vector<SymbolDriverListPair>& drivers);
 
 private:
     friend struct AnalysisScopeVisitor;

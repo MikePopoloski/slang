@@ -1015,3 +1015,68 @@ endmodule
     CHECK(diags[0].code == diag::MixedVarAssigns);
     CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
 }
+
+TEST_CASE("Multi assign from non-procedural contexts") {
+    auto& code = R"(
+module n(input k);
+endmodule
+
+primitive p(output a, input b, input c);
+    table
+        0 0 : 0;
+        1 1 : 1;
+    endtable
+endprimitive
+
+module m;
+    int i, j, k, l;
+    function f1;
+        i = 1;
+        return i;
+    endfunction
+
+    function f2;
+        j = 1;
+        return j;
+    endfunction
+
+    function f3;
+        k = 1;
+        return k;
+    endfunction
+
+    always_comb begin
+        i = 1;
+        j = 2;
+        k = 3;
+        l = 4;
+    end
+
+    logic r;
+    assign r = f1();
+    wire s = f2();
+
+    checker c(output int o);
+    endchecker
+
+    c c1(r);
+    initial c c2(r);
+
+    n n1(f3());
+
+    p p1(l, 0, 1);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[3].code == diag::MultipleContAssigns);
+    CHECK(diags[4].code == diag::MultipleContAssigns);
+    CHECK(diags[5].code == diag::MixedVarAssigns);
+}

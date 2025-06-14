@@ -56,6 +56,24 @@ struct AnalysisScopeVisitor {
 
         result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
         visitExprs(symbol);
+
+        for (auto& conn : symbol.getPortConnections()) {
+            if (conn.formal.kind == SymbolKind::FormalArgument && conn.actual.index() == 0) {
+                manager.driverTracker.add(state.context, state.driverAlloc,
+                                          *std::get<0>(conn.actual), symbol);
+            }
+        }
+    }
+
+    void visit(const PrimitiveInstanceSymbol& symbol) {
+        visitExprs(symbol);
+
+        for (auto expr : symbol.getPortConnections()) {
+            if (expr->kind == ExpressionKind::Assignment) {
+                auto& assign = expr->as<AssignmentExpression>();
+                manager.driverTracker.add(state.context, state.driverAlloc, assign.left(), symbol);
+            }
+        }
     }
 
     void visit(const PackageSymbol& symbol) {
@@ -293,10 +311,9 @@ struct AnalysisScopeVisitor {
                     ForwardingTypedefSymbol, InterfacePortSymbol, InstanceBodySymbol, ModportSymbol,
                     ModportPortSymbol, ModportClockingSymbol, ElabSystemTaskSymbol,
                     UninstantiatedDefSymbol, ConstraintBlockSymbol, DefParamSymbol, SpecparamSymbol,
-                    PrimitiveSymbol, PrimitivePortSymbol, PrimitiveInstanceSymbol,
-                    AssertionPortSymbol, CoverpointSymbol, CoverageBinSymbol, TimingPathSymbol,
-                    PulseStyleSymbol, SystemTimingCheckSymbol, NetAliasSymbol, ConfigBlockSymbol,
-                    CheckerInstanceBodySymbol> ||
+                    PrimitiveSymbol, PrimitivePortSymbol, AssertionPortSymbol, CoverpointSymbol,
+                    CoverageBinSymbol, TimingPathSymbol, PulseStyleSymbol, SystemTimingCheckSymbol,
+                    NetAliasSymbol, ConfigBlockSymbol, CheckerInstanceBodySymbol> ||
             std::is_base_of_v<Type, T>)
     void visit(const T& symbol) {
         visitExprs(symbol);

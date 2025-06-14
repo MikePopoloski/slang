@@ -57,13 +57,16 @@ enum class SLANG_EXPORT DriverFlags : uint8_t {
     InputPort = 1 << 1,
 
     /// The assignment is for an output port of a module / interface / program
-    /// (the assignment from the internal symbol from the port itself).
+    /// (the assignment from the port connection).
     OutputPort = 1 << 2,
 
     /// The assignment is from a clocking block signal.
-    ClockVar = 1 << 3
+    ClockVar = 1 << 3,
+
+    /// The driver is for a net or variable initializer.
+    Initializer = 1 << 4
 };
-SLANG_BITMASK(DriverFlags, ClockVar)
+SLANG_BITMASK(DriverFlags, Initializer)
 
 /// Represents an expression that drives a value by assigning
 /// to some range of its type.
@@ -106,9 +109,6 @@ public:
 
     /// Indicates whether the driver is for a clocking variable.
     bool isClockVar() const { return flags.has(DriverFlags::ClockVar); }
-
-    /// Indicates whether the driver is inside a procedural block.
-    bool isInProcedure() const { return source <= DriverSource::AlwaysFF; }
 
     /// Indicates whether the driver is inside a single-driver procedure (such as always_comb).
     bool isInSingleDriverProcedure() const {

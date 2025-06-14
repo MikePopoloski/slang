@@ -12,7 +12,6 @@
 
 #include "slang/analysis/AnalyzedAssertion.h"
 #include "slang/analysis/ValueDriver.h"
-#include "slang/util/SmallMap.h"
 #include "slang/util/Util.h"
 
 namespace slang::ast {
@@ -65,9 +64,6 @@ public:
     }
 
 private:
-    void addFunctionDrivers(AnalysisContext& context, const ast::CallExpression& expr,
-                            SmallSet<const ast::SubroutineSymbol*, 2>& visited);
-
     const ast::TimingControl* inferredClock = nullptr;
     std::vector<SymbolDriverListPair> drivers;
     std::vector<AnalyzedAssertion> assertions;

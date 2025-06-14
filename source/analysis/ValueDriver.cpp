@@ -18,15 +18,17 @@ ValueDriver::ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
     prefixExpression(&longestStaticPrefix), containingSymbol(&containingSymbol), flags(flags),
     kind(kind) {
 
-    if (containingSymbol.kind == SymbolKind::ProceduralBlock) {
-        source = static_cast<DriverSource>(
-            containingSymbol.as<ProceduralBlockSymbol>().procedureKind);
-    }
-    else if (containingSymbol.kind == SymbolKind::Subroutine) {
-        source = DriverSource::Subroutine;
-    }
-    else {
-        source = DriverSource::Other;
+    switch (containingSymbol.kind) {
+        case SymbolKind::ProceduralBlock:
+            source = static_cast<DriverSource>(
+                containingSymbol.as<ProceduralBlockSymbol>().procedureKind);
+            break;
+        case SymbolKind::Subroutine:
+            source = DriverSource::Subroutine;
+            break;
+        default:
+            source = DriverSource::Other;
+            break;
     }
 }
 

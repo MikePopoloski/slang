@@ -503,8 +503,16 @@ AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingContr
                                      const AnalyzedProcedure& procedure, const Statement& stmt,
                                      const Symbol* checkerInstance) {
     if (checkerInstance) {
-        checkerScope = &context.manager->analyzeScopeBlocking(
-            checkerInstance->as<CheckerInstanceSymbol>().body, &procedure);
+        auto& inst = checkerInstance->as<CheckerInstanceSymbol>();
+        checkerScope = &context.manager->analyzeScopeBlocking(inst.body, &procedure);
+
+        NonProceduralExprVisitor visitor(context, inst);
+        inst.visitExprs(visitor);
+
+        for (auto& conn : inst.getPortConnections()) {
+            if (conn.formal.kind == SymbolKind::FormalArgument && conn.actual.index() == 0)
+                context.manager->noteDriver(*std::get<0>(conn.actual), inst);
+        }
     }
     else {
         ClockVisitor visitor(context, &procedure, *procedure.analyzedSymbol);

@@ -50,6 +50,14 @@ public:
     // Adds drivers for the given clock variable to the tracker.
     void add(AnalysisContext& context, DriverAlloc& driverAlloc, const ast::ClockVarSymbol& symbol);
 
+    // Adds drivers for the given expression to the tracker.
+    void add(AnalysisContext& context, DriverAlloc& driverAlloc, const ast::Expression& expr,
+             const ast::Symbol& containingSymbol);
+
+    /// Adds the given drivers to the tracker.
+    void add(AnalysisContext& context, DriverAlloc& driverAlloc,
+             std::span<const SymbolDriverListPair> drivers);
+
     /// Records the existence of a non-canonical instance, which may imply that
     /// additional drivers should be applied based on the canonical instance.
     void noteNonCanonicalInstance(AnalysisContext& context, DriverAlloc& driverAlloc,

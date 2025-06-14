@@ -105,6 +105,26 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
     }
 }
 
+void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc, const Expression& expr,
+                        const Symbol& containingSymbol) {
+    addDrivers(context, driverAlloc, expr, DriverKind::Continuous, DriverFlags::None,
+               containingSymbol);
+}
+
+void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
+                        std::span<const SymbolDriverListPair> symbolDriverList) {
+    for (auto& [valueSym, drivers] : symbolDriverList) {
+        auto updateFunc = [&](auto& elem) {
+            for (auto& [driver, bounds] : drivers) {
+                auto ref = addDriver(context, driverAlloc, *elem.first, elem.second, *driver,
+                                     bounds);
+                SLANG_ASSERT(!ref);
+            }
+        };
+        symbolDrivers.try_emplace_and_visit(valueSym, updateFunc, updateFunc);
+    }
+}
+
 void DriverTracker::noteNonCanonicalInstance(AnalysisContext& context, DriverAlloc& driverAlloc,
                                              const InstanceSymbol& instance) {
     auto canonical = instance.getCanonicalBody();
@@ -393,7 +413,7 @@ const HierarchicalReference* DriverTracker::addDriver(
             DriverBitRange initBounds{0, symbol.getType().getSelectableWidth() - 1};
             auto initDriver = context.alloc.emplace<ValueDriver>(driverKind, valExpr,
                                                                  scope->asSymbol(),
-                                                                 DriverFlags::None);
+                                                                 DriverFlags::Initializer);
 
             driverMap.insert(initBounds, initDriver, driverAlloc);
         };
@@ -440,6 +460,16 @@ const HierarchicalReference* DriverTracker::addDriver(
                               isUWire || isSingleDriverUDNT ||
                               symbol.kind == SymbolKind::LocalAssertionVar;
 
+    const bool allowDupInitialDrivers = context.manager->hasFlag(
+        AnalysisFlags::AllowDupInitialDrivers);
+
+    auto shouldIgnore = [&](const ValueDriver& vd) {
+        // We ignore drivers from subroutines and from initializers.
+        // We also ignore initial blocks if the user has set a flag.
+        return vd.source == DriverSource::Subroutine || vd.flags.has(DriverFlags::Initializer) ||
+               (vd.source == DriverSource::Initial && allowDupInitialDrivers);
+    };
+
     // TODO: try to clean these conditions up a bit more
     auto end = driverMap.end();
     for (auto it = driverMap.find(bounds); it != end; ++it) {
@@ -469,12 +499,9 @@ const HierarchicalReference* DriverTracker::addDriver(
             if (driver.kind == DriverKind::Continuous || curr->kind == DriverKind::Continuous) {
                 isProblem = true;
             }
-            else if (curr->containingSymbol != driver.containingSymbol && curr->isInProcedure() &&
-                     driver.isInProcedure() &&
-                     (curr->isInSingleDriverProcedure() || driver.isInSingleDriverProcedure()) &&
-                     (!context.manager->hasFlag(AnalysisFlags::AllowDupInitialDrivers) ||
-                      (curr->source != DriverSource::Initial &&
-                       driver.source != DriverSource::Initial))) {
+            else if (curr->containingSymbol != driver.containingSymbol && !shouldIgnore(*curr) &&
+                     !shouldIgnore(driver) &&
+                     (curr->isInSingleDriverProcedure() || driver.isInSingleDriverProcedure())) {
                 isProblem = true;
             }
         }

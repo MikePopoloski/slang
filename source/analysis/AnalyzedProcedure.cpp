@@ -164,79 +164,8 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
     if (analyzedSymbol.kind != SymbolKind::Subroutine) {
         SmallSet<const SubroutineSymbol*, 2> visited;
         for (auto call : dfaCalls)
-            addFunctionDrivers(context, *call, visited);
+            context.manager->getFunctionDrivers(*call, analyzedSymbol, visited, drivers);
     }
-}
-
-void AnalyzedProcedure::addFunctionDrivers(AnalysisContext& context, const CallExpression& expr,
-                                           SmallSet<const SubroutineSymbol*, 2>& visited) {
-    if (expr.isSystemCall() || expr.thisClass() ||
-        expr.getSubroutineKind() != SubroutineKind::Function) {
-        return;
-    }
-
-    auto& subroutine = *std::get<const SubroutineSymbol*>(expr.subroutine);
-    if (subroutine.flags.has(MethodFlags::Pure | MethodFlags::InterfaceExtern |
-                             MethodFlags::DPIImport | MethodFlags::Randomize |
-                             MethodFlags::BuiltIn)) {
-        return;
-    }
-
-    // The contents of non-static class methods don't get propagated up
-    // to the caller.
-    auto subroutineParent = subroutine.getParentScope();
-    SLANG_ASSERT(subroutineParent);
-    if (subroutineParent->asSymbol().kind == SymbolKind::ClassType) {
-        if (!subroutine.flags.has(MethodFlags::Static))
-            return;
-    }
-
-    // If we've already visited this function then we don't need to
-    // analyze it again.
-    if (!visited.insert(&subroutine).second)
-        return;
-
-    // Get analysis for the function.
-    auto analysis = context.manager->getAnalyzedSubroutine(subroutine);
-    if (!analysis) {
-        auto proc = std::make_unique<AnalyzedProcedure>(context, subroutine);
-        analysis = context.manager->addAnalyzedSubroutine(subroutine, std::move(proc));
-    }
-
-    // For each driver in the function, create a new driver that points to the
-    // original driver but has the current procedure as the containing symbol.
-    auto funcDrivers = analysis->getDrivers();
-    drivers.reserve(drivers.size() + funcDrivers.size());
-
-    auto& options = context.manager->getOptions();
-    for (auto& [valueSym, driverList] : funcDrivers) {
-        // The user can disable this inlining of drivers for function locals via a flag.
-        if (options.flags.has(AnalysisFlags::AllowMultiDrivenLocals)) {
-            auto scope = valueSym->getParentScope();
-            while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
-                scope = scope->asSymbol().getParentScope();
-
-            if (scope == &subroutine)
-                continue;
-        }
-
-        DriverList perSymbol;
-        for (auto& [driver, bounds] : driverList) {
-            auto newDriver = context.alloc.emplace<ValueDriver>(driver->kind,
-                                                                *driver->prefixExpression,
-                                                                *analyzedSymbol, DriverFlags::None);
-            newDriver->procCallExpression = &expr;
-
-            perSymbol.emplace_back(newDriver, bounds);
-        }
-
-        drivers.emplace_back(valueSym, std::move(perSymbol));
-    }
-
-    // If this function has any calls, we need to recursively add drivers
-    // from those calls as well.
-    for (auto call : analysis->getCallExpressions())
-        addFunctionDrivers(context, *call, visited);
 }
 
 } // namespace slang::analysis

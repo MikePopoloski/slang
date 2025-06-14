@@ -54,7 +54,6 @@ void registerAnalysis(py::module_& m) {
         .def_property_readonly("isInputPort", &ValueDriver::isInputPort)
         .def_property_readonly("isUnidirectionalPort", &ValueDriver::isUnidirectionalPort)
         .def_property_readonly("isClockVar", &ValueDriver::isClockVar)
-        .def_property_readonly("isInProcedure", &ValueDriver::isInProcedure)
         .def_property_readonly("isInSingleDriverProcedure",
                                &ValueDriver::isInSingleDriverProcedure);
 
