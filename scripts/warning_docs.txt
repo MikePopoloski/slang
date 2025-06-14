@@ -981,7 +981,7 @@ endmodule
 ```
 
 -Winferred-no-latch
-Warns when all signals are assigned on all control paths in
+Warns when any signal epxression prefix are assigned on all control paths in
 the always_latch procedure.
 @options --disable-analysis=false
 ```

@@ -315,19 +315,40 @@ module n(I.m i);
         i.a = 1;
     end
 endmodule
+
+module test10(out);
+  output reg [2:0] out;
+  reg en;
+
+  always_latch begin
+    out[1] <= 1;
+    case (en)
+      2'b00 : out[1] <= 1'b1;
+      2'b10 : out[2] <= 1'b1;
+      default : ;
+    endcase
+  end
+endmodule // test
 )";
 
     Compilation compilation;
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 13);
     CHECK(diags[0].code == diag::InferredNoLatch);
     CHECK(diags[1].code == diag::InferredNoLatch);
     CHECK(diags[2].code == diag::InferredNoLatch);
     CHECK(diags[3].code == diag::InferredNoLatch);
-    CHECK(diags[4].code == diag::CaseEnumExplicit);
+    CHECK(diags[4].code == diag::InferredNoLatch);
     CHECK(diags[5].code == diag::InferredNoLatch);
+    CHECK(diags[6].code == diag::InferredNoLatch);
+    CHECK(diags[7].code == diag::InferredNoLatch);
+    CHECK(diags[8].code == diag::InferredNoLatch);
+    CHECK(diags[9].code == diag::CaseEnumExplicit);
+    CHECK(diags[10].code == diag::InferredNoLatch);
+    CHECK(diags[11].code == diag::InferredNoLatch);
+    CHECK(diags[12].code == diag::InferredNoLatch);
 }
 
 TEST_CASE("Data flow with class members") {

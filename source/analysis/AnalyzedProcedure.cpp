@@ -113,12 +113,6 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
                 context.addDiag(procedure, diag::InferredLatch, expr.sourceRange) << buffer.str();
             });
         }
-        else if (procedure.procedureKind == ProceduralBlockKind::AlwaysLatch) {
-            bool anyLatchInferred = false;
-            dfa.visitLatches([&](const Symbol&, const Expression&) { anyLatchInferred = true; });
-            if (!anyLatchInferred)
-                context.addDiag(procedure, diag::InferredNoLatch, procedure.location);
-        }
     }
     else if (analyzedSymbol.kind == SymbolKind::Subroutine) {
         // Diagnose missing return statements and/or incomplete
@@ -171,6 +165,23 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         SmallSet<const SubroutineSymbol*, 2> visited;
         for (auto call : dfaCalls)
             addFunctionDrivers(context, *call, visited);
+    }
+
+    if (analyzedSymbol.kind == SymbolKind::ProceduralBlock) {
+        auto& procedure = analyzedSymbol.as<ProceduralBlockSymbol>();
+        if (procedure.procedureKind == ProceduralBlockKind::AlwaysLatch) {
+            SmallSet<const Expression*, 2> latchedLSP;
+            dfa.visitLatches(
+                [&](const Symbol&, const Expression& expr) { latchedLSP.insert(&expr); });
+            for (const auto& symDrivers : getDrivers()) {
+                for (const auto& driver : symDrivers.second) {
+                    if (latchedLSP.contains(driver.first->prefixExpression))
+                        continue;
+                    context.addDiag(procedure, diag::InferredNoLatch,
+                                    driver.first->prefixExpression->sourceRange);
+                }
+            }
+        }
     }
 }
 
