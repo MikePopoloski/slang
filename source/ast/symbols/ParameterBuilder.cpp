@@ -169,8 +169,11 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
 
         if (decl.hasSyntax) {
             handlePreviewNodes(*decl.typeSyntax);
-            if (decl.typeDecl && decl.typeDecl->assignment)
-                param->defaultValSyntax = decl.typeDecl->assignment->type;
+            if (decl.typeDecl) {
+                param->setTypeSyntax(*decl.typeDecl);
+                if (decl.typeDecl->assignment)
+                    param->defaultValSyntax = decl.typeDecl->assignment->type;
+            }
         }
 
         auto& tt = param->targetType;

@@ -247,6 +247,10 @@ void TypeParameterSymbol::fromSyntax(const Scope& scope,
     }
 }
 
+void TypeParameterSymbol::setTypeSyntax(const syntax::SyntaxNode& syntax) {
+    typeAlias->setSyntax(syntax);
+}
+
 void TypeParameterSymbol::checkTypeRestriction() const {
     if (typeRestriction != ForwardTypeRestriction::None) {
         auto& type = targetType.getType();
