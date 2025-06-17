@@ -3,6 +3,8 @@ timeprecision 1ps;
 
 (* foo = 1 *) package static p;
     timeunit 1ns;
+    parameter int x = 1;
+    parameter type y = logic[x:0];
     program; endprogram
     export *::*;
 endpackage
