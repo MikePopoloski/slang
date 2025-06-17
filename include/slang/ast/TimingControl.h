@@ -114,7 +114,7 @@ protected:
 ///
 /// Usually generated and return as a timing control due
 /// to violation of language semantics or type checking.
-class SLANG_EXPORT InvalidTimingControl : public TimingControl {
+class SLANG_EXPORT InvalidTimingControl final : public TimingControl {
 public:
     const TimingControl* child;
 
@@ -127,7 +127,7 @@ public:
 };
 
 /// Represents a delay time control.
-class SLANG_EXPORT DelayControl : public TimingControl {
+class SLANG_EXPORT DelayControl final : public TimingControl {
 public:
     /// An expression denoting the length of time to delay.
     const Expression& expr;
@@ -153,7 +153,7 @@ public:
 };
 
 /// Represents multiple delays associated with a single gate primitive.
-class SLANG_EXPORT Delay3Control : public TimingControl {
+class SLANG_EXPORT Delay3Control final : public TimingControl {
 public:
     /// The first delay (the rise delay).
     const Expression& expr1;
@@ -191,7 +191,7 @@ public:
 };
 
 /// Represents a signal event control.
-class SLANG_EXPORT SignalEventControl : public TimingControl {
+class SLANG_EXPORT SignalEventControl final : public TimingControl {
 public:
     /// The expression denoting the event on which to trigger.
     const Expression& expr;
@@ -241,7 +241,7 @@ private:
 };
 
 /// Represents a list of timing controls to wait on.
-class SLANG_EXPORT EventListControl : public TimingControl {
+class SLANG_EXPORT EventListControl final : public TimingControl {
 public:
     /// The list of child timing controls.
     std::span<const TimingControl* const> events;
@@ -264,7 +264,7 @@ public:
 };
 
 /// Represents an implicit event control (i.e. the @* construct).
-class SLANG_EXPORT ImplicitEventControl : public TimingControl {
+class SLANG_EXPORT ImplicitEventControl final : public TimingControl {
 public:
     explicit ImplicitEventControl(SourceRange sourceRange) :
         TimingControl(TimingControlKind::ImplicitEvent, sourceRange) {}
@@ -279,7 +279,7 @@ public:
 };
 
 /// Represents a `repeat` event control.
-class SLANG_EXPORT RepeatedEventControl : public TimingControl {
+class SLANG_EXPORT RepeatedEventControl final : public TimingControl {
 public:
     /// An expression denoting the number of times to repeat.
     const Expression& expr;
@@ -307,7 +307,7 @@ public:
 };
 
 /// Represents the built-in `1step` delay.
-class SLANG_EXPORT OneStepDelayControl : public TimingControl {
+class SLANG_EXPORT OneStepDelayControl final : public TimingControl {
 public:
     explicit OneStepDelayControl(SourceRange sourceRange) :
         TimingControl(TimingControlKind::OneStepDelay, sourceRange) {}
@@ -318,7 +318,7 @@ public:
 };
 
 /// Represents a cycle-based delay control.
-class SLANG_EXPORT CycleDelayControl : public TimingControl {
+class SLANG_EXPORT CycleDelayControl final : public TimingControl {
 public:
     /// An expression denoting the number of cycles to delay.
     const Expression& expr;
@@ -340,7 +340,7 @@ public:
 };
 
 /// Represents a list of block events (used within coverage events).
-class SLANG_EXPORT BlockEventListControl : public TimingControl {
+class SLANG_EXPORT BlockEventListControl final : public TimingControl {
 public:
     /// A single block event.
     struct Event {

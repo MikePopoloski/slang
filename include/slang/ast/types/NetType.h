@@ -22,7 +22,7 @@ class SubroutineSymbol;
 /// system. Most nets will be one of the built in types, but user defined net types can
 /// exist too.
 ///
-class SLANG_EXPORT NetType : public Symbol {
+class SLANG_EXPORT NetType final : public Symbol {
 public:
     /// The declared type of the net.
     DeclaredType declaredType;

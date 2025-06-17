@@ -430,7 +430,7 @@ private:
 ///
 /// Usually generated and inserted into an expression tree due
 /// to violation of language semantics or type checking.
-class SLANG_EXPORT InvalidExpression : public Expression {
+class SLANG_EXPORT InvalidExpression final : public Expression {
 public:
     /// A wrapped sub-expression that is considered invalid.
     const Expression* child;

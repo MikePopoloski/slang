@@ -13,7 +13,7 @@
 namespace slang::ast {
 
 /// Represents a single element selection expression.
-class SLANG_EXPORT ElementSelectExpression : public Expression {
+class SLANG_EXPORT ElementSelectExpression final : public Expression {
 public:
     ElementSelectExpression(const Type& type, Expression& value, const Expression& selector,
                             SourceRange sourceRange) :
@@ -64,7 +64,7 @@ private:
 };
 
 /// Represents a range selection expression.
-class SLANG_EXPORT RangeSelectExpression : public Expression {
+class SLANG_EXPORT RangeSelectExpression final : public Expression {
 public:
     RangeSelectExpression(RangeSelectionKind selectionKind, const Type& type, Expression& value,
                           const Expression& left, const Expression& right,
@@ -125,7 +125,7 @@ private:
 };
 
 /// Represents an access of a structure variable's members.
-class SLANG_EXPORT MemberAccessExpression : public Expression {
+class SLANG_EXPORT MemberAccessExpression final : public Expression {
 public:
     /// The member being accessed.
     const Symbol& member;

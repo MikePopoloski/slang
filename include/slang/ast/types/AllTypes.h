@@ -58,7 +58,7 @@ protected:
 };
 
 /// Represents the single-bit scalar types.
-class SLANG_EXPORT ScalarType : public IntegralType {
+class SLANG_EXPORT ScalarType final : public IntegralType {
 public:
     /// The kind of scalar type.
     enum Kind { Bit, Logic, Reg } scalarKind;
@@ -72,7 +72,7 @@ public:
 };
 
 /// Represents the predefined integer types, which are essentially predefined vector types.
-class SLANG_EXPORT PredefinedIntegerType : public IntegralType {
+class SLANG_EXPORT PredefinedIntegerType final : public IntegralType {
 public:
     /// The kind of predefined integer type.
     enum Kind { ShortInt, Int, LongInt, Byte, Integer, Time } integerKind;
@@ -89,7 +89,7 @@ public:
 
 /// Represents one of the predefined floating point types,
 /// which are used for representing real numbers.
-class SLANG_EXPORT FloatingType : public Type {
+class SLANG_EXPORT FloatingType final : public Type {
 public:
     /// The kind of floating point type.
     enum Kind { Real, ShortReal, RealTime } floatKind;
@@ -105,7 +105,7 @@ public:
 class EnumValueSymbol;
 
 /// Represents an enumerated type.
-class SLANG_EXPORT EnumType : public IntegralType, public Scope {
+class SLANG_EXPORT EnumType final : public IntegralType, public Scope {
 public:
     /// The base type of the enum.
     const Type& baseType;
@@ -133,7 +133,7 @@ public:
 };
 
 /// Represents an enumerated value / member.
-class SLANG_EXPORT EnumValueSymbol : public ValueSymbol {
+class SLANG_EXPORT EnumValueSymbol final : public ValueSymbol {
 public:
     EnumValueSymbol(std::string_view name, SourceLocation loc);
 
@@ -158,7 +158,7 @@ private:
 
 /// Represents a packed array of some simple element type
 /// (vectors, packed structures, other packed arrays).
-class SLANG_EXPORT PackedArrayType : public IntegralType {
+class SLANG_EXPORT PackedArrayType final : public IntegralType {
 public:
     /// The underlying element type.
     const Type& elementType;
@@ -182,7 +182,7 @@ public:
 
 /// Represents a fixed size unpacked array (as opposed to a
 /// dynamically sized unpacked array, associative array, or queue).
-class SLANG_EXPORT FixedSizeUnpackedArrayType : public Type {
+class SLANG_EXPORT FixedSizeUnpackedArrayType final : public Type {
 public:
     /// The underlying element type.
     const Type& elementType;
@@ -214,7 +214,7 @@ public:
 };
 
 /// Represents a dynamically sized unpacked array.
-class SLANG_EXPORT DynamicArrayType : public Type {
+class SLANG_EXPORT DynamicArrayType final : public Type {
 public:
     /// The underlying element type.
     const Type& elementType;
@@ -229,7 +229,7 @@ public:
 
 /// A special case for DPI imports that have "open array" typed arguments.
 /// It's not otherwise possible to declare a variable with this type.
-class SLANG_EXPORT DPIOpenArrayType : public Type {
+class SLANG_EXPORT DPIOpenArrayType final : public Type {
 public:
     /// The underlying element type.
     const Type& elementType;
@@ -246,7 +246,7 @@ public:
 };
 
 /// Represents an unpacked array that provides associative lookup.
-class SLANG_EXPORT AssociativeArrayType : public Type {
+class SLANG_EXPORT AssociativeArrayType final : public Type {
 public:
     /// The underlying element type.
     const Type& elementType;
@@ -266,7 +266,7 @@ public:
 };
 
 /// Represents an unpacked array that provides queue semantics.
-class SLANG_EXPORT QueueType : public Type {
+class SLANG_EXPORT QueueType final : public Type {
 public:
     /// The underlying element type.
     const Type& elementType;
@@ -283,7 +283,7 @@ public:
 };
 
 /// Represents a packed structure of members.
-class SLANG_EXPORT PackedStructType : public IntegralType, public Scope {
+class SLANG_EXPORT PackedStructType final : public IntegralType, public Scope {
 public:
     /// The system-generated ID.
     int systemId;
@@ -301,7 +301,7 @@ public:
 };
 
 /// Represents an unpacked structure of members.
-class SLANG_EXPORT UnpackedStructType : public Type, public Scope {
+class SLANG_EXPORT UnpackedStructType final : public Type, public Scope {
 public:
     /// The fields contained in the struct.
     std::span<const FieldSymbol* const> fields;
@@ -328,7 +328,7 @@ public:
 };
 
 /// Represents a packed union of members.
-class SLANG_EXPORT PackedUnionType : public IntegralType, public Scope {
+class SLANG_EXPORT PackedUnionType final : public IntegralType, public Scope {
 public:
     /// The system-generated ID.
     int systemId;
@@ -356,7 +356,7 @@ public:
 };
 
 /// Represents an unpacked union of members.
-class SLANG_EXPORT UnpackedUnionType : public Type, public Scope {
+class SLANG_EXPORT UnpackedUnionType final : public Type, public Scope {
 public:
     /// The fields contained in the union.
     std::span<const FieldSymbol* const> fields;
@@ -390,7 +390,7 @@ public:
 ///
 /// This can be used as the return type of functions
 /// and as the type of members in tagged unions.
-class SLANG_EXPORT VoidType : public Type {
+class SLANG_EXPORT VoidType final : public Type {
 public:
     VoidType() : Type(SymbolKind::VoidType, "void", SourceLocation()) {}
 
@@ -404,7 +404,7 @@ public:
 ///
 /// This can be used as a literal for setting class handles and
 /// chandles to null (or the default value).
-class SLANG_EXPORT NullType : public Type {
+class SLANG_EXPORT NullType final : public Type {
 public:
     NullType() : Type(SymbolKind::NullType, "null", SourceLocation()) {}
 
@@ -415,7 +415,7 @@ public:
 };
 
 /// Represents storage for pointers passed using the DPI (a "C" compatible handle).
-class SLANG_EXPORT CHandleType : public Type {
+class SLANG_EXPORT CHandleType final : public Type {
 public:
     CHandleType() : Type(SymbolKind::CHandleType, "chandle", SourceLocation()) {}
 
@@ -426,7 +426,7 @@ public:
 };
 
 /// Represents the built-in ASCII string type.
-class SLANG_EXPORT StringType : public Type {
+class SLANG_EXPORT StringType final : public Type {
 public:
     StringType() : Type(SymbolKind::StringType, "string", SourceLocation()) {}
 
@@ -438,7 +438,7 @@ public:
 
 /// Represents a SystemVerilog event handle, which is used for synchronization between
 /// asynchronous processes.
-class SLANG_EXPORT EventType : public Type {
+class SLANG_EXPORT EventType final : public Type {
 public:
     EventType() : Type(SymbolKind::EventType, "event", SourceLocation()) {}
 
@@ -450,7 +450,7 @@ public:
 
 /// Represents the '$' special token that is a standin for the unbounded end
 /// of a queue or range selection.
-class SLANG_EXPORT UnboundedType : public Type {
+class SLANG_EXPORT UnboundedType final : public Type {
 public:
     UnboundedType() : Type(SymbolKind::UnboundedType, "$", SourceLocation()) {}
 
@@ -461,7 +461,7 @@ public:
 };
 
 /// Represents the result of a type reference expression, i.e. the type() operator.
-class SLANG_EXPORT TypeRefType : public Type {
+class SLANG_EXPORT TypeRefType final : public Type {
 public:
     TypeRefType() : Type(SymbolKind::TypeRefType, "type reference", SourceLocation()) {}
 
@@ -472,7 +472,7 @@ public:
 };
 
 /// Represents an 'untyped' type, which is used for e.g. arguments of sequences.
-class SLANG_EXPORT UntypedType : public Type {
+class SLANG_EXPORT UntypedType final : public Type {
 public:
     UntypedType() : Type(SymbolKind::UntypedType, "untyped", SourceLocation()) {}
 
@@ -483,7 +483,7 @@ public:
 };
 
 /// Represents the type of sequence instances and arguments.
-class SLANG_EXPORT SequenceType : public Type {
+class SLANG_EXPORT SequenceType final : public Type {
 public:
     SequenceType() : Type(SymbolKind::SequenceType, "sequence", SourceLocation()) {}
 
@@ -494,7 +494,7 @@ public:
 };
 
 /// Represents the type of property instances and arguments.
-class SLANG_EXPORT PropertyType : public Type {
+class SLANG_EXPORT PropertyType final : public Type {
 public:
     PropertyType() : Type(SymbolKind::PropertyType, "property", SourceLocation()) {}
 
@@ -505,7 +505,7 @@ public:
 };
 
 /// Represents a virtual interface type.
-class SLANG_EXPORT VirtualInterfaceType : public Type {
+class SLANG_EXPORT VirtualInterfaceType final : public Type {
 public:
     /// The type of interfaces that can be assigned to this virtual interface.
     const InstanceSymbol& iface;
@@ -536,7 +536,7 @@ public:
 /// A given type name can have an arbitrary number of forward declarations
 /// in the same scope, so each symbol forms a linked list, headed by the
 /// actual type definition.
-class SLANG_EXPORT ForwardingTypedefSymbol : public Symbol {
+class SLANG_EXPORT ForwardingTypedefSymbol final : public Symbol {
 public:
     /// An optional restriction for the kind of type this can resolve to.
     ForwardTypeRestriction typeRestriction;
@@ -569,7 +569,7 @@ private:
 };
 
 /// Represents a type alias, which is introduced via a typedef or type parameter.
-class SLANG_EXPORT TypeAliasType : public Type {
+class SLANG_EXPORT TypeAliasType final : public Type {
 public:
     /// The declared type target of the alias.
     DeclaredType targetType;
@@ -605,7 +605,7 @@ private:
 
 /// An empty type symbol that indicates an error occurred while trying to
 /// resolve the type of some expression or declaration.
-class SLANG_EXPORT ErrorType : public Type {
+class SLANG_EXPORT ErrorType final : public Type {
 public:
     ErrorType() : Type(SymbolKind::ErrorType, "", SourceLocation()) {}
 

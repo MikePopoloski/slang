@@ -23,7 +23,7 @@ SLANG_ENUM(UniquePriorityCheck, UNIQUE_PRIORITY)
 // clang-format on
 
 /// Represents a conditional statement.
-class SLANG_EXPORT ConditionalStatement : public Statement {
+class SLANG_EXPORT ConditionalStatement final : public Statement {
 public:
     /// A condition.
     struct Condition {
@@ -80,7 +80,7 @@ public:
 };
 
 /// Represents a case statement.
-class SLANG_EXPORT CaseStatement : public Statement {
+class SLANG_EXPORT CaseStatement final : public Statement {
 public:
     /// A group of items in a case statement.
     struct ItemGroup {
@@ -146,7 +146,7 @@ public:
 };
 
 /// Represents a pattern case statement.
-class SLANG_EXPORT PatternCaseStatement : public Statement {
+class SLANG_EXPORT PatternCaseStatement final : public Statement {
 public:
     /// A group of items in a pattern case statement.
     struct ItemGroup {

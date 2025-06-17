@@ -24,7 +24,7 @@ class Expression;
 class ForwardingTypedefSymbol;
 class GenericClassDefSymbol;
 
-class SLANG_EXPORT ClassPropertySymbol : public VariableSymbol {
+class SLANG_EXPORT ClassPropertySymbol final : public VariableSymbol {
 public:
     Visibility visibility;
     RandMode randMode = RandMode::None;
@@ -41,7 +41,7 @@ public:
 };
 
 /// Represents a class definition type.
-class SLANG_EXPORT ClassType : public Type, public Scope {
+class SLANG_EXPORT ClassType final : public Type, public Scope {
 public:
     /// If the class type was specialized from a generic class, this is
     /// a pointer to that generic class definition.
@@ -193,7 +193,7 @@ struct ClassSpecializationHasher {
 /// Represents a generic class definition, which is a parameterized class that has not
 /// yet had its parameter values specified. This is a not a type -- the generic class
 /// must first be specialized in order to be a type usable in expressions and declarations.
-class SLANG_EXPORT GenericClassDefSymbol : public Symbol {
+class SLANG_EXPORT GenericClassDefSymbol final : public Symbol {
 public:
     using SpecializeFunc = function_ref<void(Compilation&, ClassType&, SourceLocation)>;
 
@@ -299,7 +299,7 @@ enum class SLANG_EXPORT ConstraintBlockFlags : uint8_t {
 SLANG_BITMASK(ConstraintBlockFlags, Final)
 
 /// Represents a named constraint block declaration within a class.
-class SLANG_EXPORT ConstraintBlockSymbol : public Symbol, public Scope {
+class SLANG_EXPORT ConstraintBlockSymbol final : public Symbol, public Scope {
 public:
     /// If this is a non-static constraint block, this is a variable
     /// that represents the 'this' class handle.

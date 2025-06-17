@@ -121,7 +121,7 @@ protected:
 ///
 /// Usually generated and inserted into an pattern tree due
 /// to violation of language semantics or type checking.
-class SLANG_EXPORT InvalidPattern : public Pattern {
+class SLANG_EXPORT InvalidPattern final : public Pattern {
 public:
     /// A wrapped child pattern that is considered invalid.
     const Pattern* child;
@@ -142,7 +142,7 @@ public:
 };
 
 /// Represents a wildcard pattern that matches anything.
-class SLANG_EXPORT WildcardPattern : public Pattern {
+class SLANG_EXPORT WildcardPattern final : public Pattern {
 public:
     explicit WildcardPattern(SourceRange sourceRange) :
         Pattern(PatternKind::Wildcard, sourceRange) {}
@@ -162,7 +162,7 @@ public:
 };
 
 /// Reresents a pattern that matches a given constant expression.
-class SLANG_EXPORT ConstantPattern : public Pattern {
+class SLANG_EXPORT ConstantPattern final : public Pattern {
 public:
     /// The constant expression to match against.
     const Expression& expr;
@@ -187,7 +187,7 @@ public:
 };
 
 /// Represents a pattern that stores its match in a pattern variable.
-class SLANG_EXPORT VariablePattern : public Pattern {
+class SLANG_EXPORT VariablePattern final : public Pattern {
 public:
     /// The pattern variable that receives the result of the match.
     const PatternVarSymbol& variable;
@@ -210,7 +210,7 @@ public:
 };
 
 /// Represents a pattern that matches a member of a tagged union.
-class SLANG_EXPORT TaggedPattern : public Pattern {
+class SLANG_EXPORT TaggedPattern final : public Pattern {
 public:
     /// The union member to match.
     const FieldSymbol& member;
@@ -242,7 +242,7 @@ public:
 };
 
 /// Represents a pattern that matches a structure.
-class SLANG_EXPORT StructurePattern : public Pattern {
+class SLANG_EXPORT StructurePattern final : public Pattern {
 public:
     /// A pattern over a struct field.
     struct FieldPattern {

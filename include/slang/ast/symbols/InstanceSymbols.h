@@ -90,7 +90,7 @@ protected:
 };
 
 /// Represents an instance of a module, interface, or program.
-class SLANG_EXPORT InstanceSymbol : public InstanceSymbolBase {
+class SLANG_EXPORT InstanceSymbol final : public InstanceSymbolBase {
 public:
     const InstanceBodySymbol& body;
 
@@ -173,7 +173,7 @@ private:
     mutable const InstanceBodySymbol* canonicalBody = nullptr;
 };
 
-class SLANG_EXPORT InstanceBodySymbol : public Symbol, public Scope {
+class SLANG_EXPORT InstanceBodySymbol final : public Symbol, public Scope {
 public:
     /// The parent instance for which this is the body.
     const InstanceSymbol* parentInstance = nullptr;
@@ -231,7 +231,7 @@ private:
     std::span<const ParameterSymbolBase* const> parameters;
 };
 
-class SLANG_EXPORT InstanceArraySymbol : public Symbol, public Scope {
+class SLANG_EXPORT InstanceArraySymbol final : public Symbol, public Scope {
 public:
     std::span<const Symbol* const> elements;
     ConstantRange range;
@@ -256,7 +256,7 @@ public:
 /// Represents an instance of a definition (module / interface / program / checker)
 /// that is not actually instantiated in the design. This is a placeholder
 /// in the AST to record this instance and capture its port expressions.
-class SLANG_EXPORT UninstantiatedDefSymbol : public Symbol {
+class SLANG_EXPORT UninstantiatedDefSymbol final : public Symbol {
 public:
     /// The name of the definition.
     std::string_view definitionName;
@@ -320,7 +320,7 @@ private:
     mutable bool mustBeChecker = false;
 };
 
-class SLANG_EXPORT PrimitiveInstanceSymbol : public InstanceSymbolBase {
+class SLANG_EXPORT PrimitiveInstanceSymbol final : public InstanceSymbolBase {
 public:
     const PrimitiveSymbol& primitiveType;
 
@@ -356,7 +356,7 @@ private:
     mutable std::optional<const TimingControl*> delay;
 };
 
-class SLANG_EXPORT CheckerInstanceSymbol : public InstanceSymbolBase {
+class SLANG_EXPORT CheckerInstanceSymbol final : public InstanceSymbolBase {
 public:
     const CheckerInstanceBodySymbol& body;
 
@@ -421,7 +421,7 @@ private:
     mutable bool connectionsResolved = false;
 };
 
-class SLANG_EXPORT CheckerInstanceBodySymbol : public Symbol, public Scope {
+class SLANG_EXPORT CheckerInstanceBodySymbol final : public Symbol, public Scope {
 public:
     /// The parent instance for which this is the body.
     const CheckerInstanceSymbol* parentInstance = nullptr;

@@ -15,7 +15,7 @@ class VariableSymbol;
 class RandSeqProductionSymbol;
 
 /// Represents an empty statement, used as a placeholder or an anchor for attributes.
-class SLANG_EXPORT EmptyStatement : public Statement {
+class SLANG_EXPORT EmptyStatement final : public Statement {
 public:
     explicit EmptyStatement(SourceRange sourceRange) :
         Statement(StatementKind::Empty, sourceRange) {}
@@ -28,7 +28,7 @@ public:
 };
 
 /// Represents a disable statement.
-class SLANG_EXPORT DisableStatement : public Statement {
+class SLANG_EXPORT DisableStatement final : public Statement {
 public:
     /// The target of the disable.
     const Expression& target;
@@ -48,7 +48,7 @@ public:
 };
 
 /// Represents a variable declaration in a statement context.
-class SLANG_EXPORT VariableDeclStatement : public Statement {
+class SLANG_EXPORT VariableDeclStatement final : public Statement {
 public:
     /// The variable that was declared.
     const VariableSymbol& symbol;
@@ -64,7 +64,7 @@ public:
 };
 
 /// Represents an expression that is executed as a standalone statement.
-class SLANG_EXPORT ExpressionStatement : public Statement {
+class SLANG_EXPORT ExpressionStatement final : public Statement {
 public:
     /// The expression to execute.
     const Expression& expr;
@@ -93,7 +93,7 @@ public:
 };
 
 /// Represents a statement that has an associated timing control.
-class SLANG_EXPORT TimedStatement : public Statement {
+class SLANG_EXPORT TimedStatement final : public Statement {
 public:
     /// The timing that controls the statement.
     const TimingControl& timing;
@@ -126,7 +126,7 @@ public:
 };
 
 /// Represents an immediate assertion statement.
-class SLANG_EXPORT ImmediateAssertionStatement : public Statement {
+class SLANG_EXPORT ImmediateAssertionStatement final : public Statement {
 public:
     /// The assertion condition.
     const Expression& cond;
@@ -177,7 +177,7 @@ public:
 };
 
 /// Represents a concurrent assertion statement.
-class SLANG_EXPORT ConcurrentAssertionStatement : public Statement {
+class SLANG_EXPORT ConcurrentAssertionStatement final : public Statement {
 public:
     /// The assertion body.
     const AssertionExpr& propertySpec;
@@ -222,7 +222,7 @@ public:
 };
 
 /// Represents a `disable fork` statement.
-class SLANG_EXPORT DisableForkStatement : public Statement {
+class SLANG_EXPORT DisableForkStatement final : public Statement {
 public:
     explicit DisableForkStatement(SourceRange sourceRange) :
         Statement(StatementKind::DisableFork, sourceRange) {}
@@ -238,7 +238,7 @@ public:
 };
 
 /// Represents a `wait` statement.
-class SLANG_EXPORT WaitStatement : public Statement {
+class SLANG_EXPORT WaitStatement final : public Statement {
 public:
     /// The wait condition.
     const Expression& cond;
@@ -271,7 +271,7 @@ public:
 };
 
 /// Represents a `wait fork` statement.
-class SLANG_EXPORT WaitForkStatement : public Statement {
+class SLANG_EXPORT WaitForkStatement final : public Statement {
 public:
     explicit WaitForkStatement(SourceRange sourceRange) :
         Statement(StatementKind::WaitFork, sourceRange) {}
@@ -288,7 +288,7 @@ public:
 };
 
 /// Represents a `wait_order` statement.
-class SLANG_EXPORT WaitOrderStatement : public Statement {
+class SLANG_EXPORT WaitOrderStatement final : public Statement {
 public:
     /// A list of expressions denoting the events on which to wait, in order.
     std::span<const Expression* const> events;
@@ -330,7 +330,7 @@ public:
 };
 
 /// Represents an event triggering statement.
-class SLANG_EXPORT EventTriggerStatement : public Statement {
+class SLANG_EXPORT EventTriggerStatement final : public Statement {
 public:
     /// An expression denoting the target event to trigger.
     const Expression& target;
@@ -365,7 +365,7 @@ public:
 };
 
 /// Represents a procedural `assign` statement.
-class SLANG_EXPORT ProceduralAssignStatement : public Statement {
+class SLANG_EXPORT ProceduralAssignStatement final : public Statement {
 public:
     /// The assignment expression.
     const Expression& assignment;
@@ -394,7 +394,7 @@ public:
 };
 
 /// Represents a procedural `deassign` statement.
-class SLANG_EXPORT ProceduralDeassignStatement : public Statement {
+class SLANG_EXPORT ProceduralDeassignStatement final : public Statement {
 public:
     /// The target lvalue to deassign.
     const Expression& lvalue;
@@ -423,7 +423,7 @@ public:
 };
 
 /// Represents a `randcase` statement.
-class SLANG_EXPORT RandCaseStatement : public Statement {
+class SLANG_EXPORT RandCaseStatement final : public Statement {
 public:
     /// An item in the randcase list.
     struct Item {
@@ -464,7 +464,7 @@ public:
 };
 
 /// Represents a `randsequence` statement.
-class SLANG_EXPORT RandSequenceStatement : public Statement {
+class SLANG_EXPORT RandSequenceStatement final : public Statement {
 public:
     /// A pointer to the first production that starts the random sequence,
     /// or nullptr if the sequence is empty.
@@ -491,7 +491,7 @@ public:
 };
 
 /// Represents a procedural checker instantiation statement.
-class SLANG_EXPORT ProceduralCheckerStatement : public Statement {
+class SLANG_EXPORT ProceduralCheckerStatement final : public Statement {
 public:
     /// A list of checkers to instantiate.
     std::span<const Symbol* const> instances;

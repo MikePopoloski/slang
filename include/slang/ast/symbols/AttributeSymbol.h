@@ -16,7 +16,7 @@ namespace slang::ast {
 class ASTSerializer;
 class Scope;
 
-class SLANG_EXPORT AttributeSymbol : public Symbol {
+class SLANG_EXPORT AttributeSymbol final : public Symbol {
 public:
     AttributeSymbol(std::string_view name, SourceLocation loc, const Symbol& symbol,
                     const syntax::ExpressionSyntax& expr);

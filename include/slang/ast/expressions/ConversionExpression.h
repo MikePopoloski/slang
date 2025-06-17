@@ -12,7 +12,7 @@
 namespace slang::ast {
 
 /// Represents a type conversion expression (implicit or explicit).
-class SLANG_EXPORT ConversionExpression : public Expression {
+class SLANG_EXPORT ConversionExpression final : public Expression {
 public:
     /// The kind of conversion.
     const ConversionKind conversionKind;
