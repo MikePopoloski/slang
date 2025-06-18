@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The `` `celldefine `` directive is now exposed in the API and in AST serialization (thanks to @whitequark)
 * Added new flags `--all-deps`, `--include-deps`, `--module-deps`, and `--depfile-target` to allow outputting various dependency file lists from slang (thanks to @AndrewNolte)
 * Added [-Winferred-latch](https://sv-lang.com/warning-ref.html#inferred-latch) which detects signals that are not assigned on all control paths through `always_comb` blocks
+* Added new flag `--disallow-refs-to-unknown-instances` which causes errors to be issued when there are hierarchical references to ignored unknown module instances that were allowed via the existing `--ignore-unknown-modules` flag
 
 ### Improvements
 * slang now performs instance caching by default, which means duplicate instance bodies will not be visited during elaboration, which can greatly speed up elaboration times for large projects. This behavior can be disabled with the `--disable-instance-caching` flag, though it should not be needed unless there's a bug in slang -- please open an issue if you find that you need the flag.
@@ -50,6 +51,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Assignments are now correctly disallowed in timing controls
 * Cycle delays are now correctly disallowed in event trigger statements
 * The global future sampled value system functions are now correctly disallowed in assertions with sequence match items
+* Fixed some confusing behavior with glob file patterns involving '.../'
 
 ### Tools & Bindings
 #### pyslang
@@ -65,11 +67,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added a new undriven range rule (thanks to @jameshanlon)
 * Fixed OnlyAssignedOnReset false positive with struct arrays and for loops
 * Fixed RegisterHasNoReset false positive for loop iterator variables
+* Added support for user specified severities on individual checks (thanks to @jameshanlon)
 
 #### slang-netlist
-* Fixed a crash when visiting certain variable declarations (thanks to @jameshanlon)
-* Fixed handling of net and variables initializers (thanks to @jameshanlon)
-* Fixed issues with combinatorial cycle detection (thanks to @jameshanlon)
+* The netlist tool has been removed from the repo -- it will be moved to its own standalone repo for further development
 
 
 ## [v8.1] - 2025-05-23
