@@ -90,9 +90,9 @@ ConstantValue ScriptSession::eval(std::string_view text) {
             else {
                 // If this throws, ScriptSession doesn't currently support whatever construct
                 // you were trying to evaluate. Add support to the case above.
-                throw std::runtime_error(
+                SLANG_THROW(std::runtime_error(
                     fmt::format("ScriptSession does not support evaluating nodes of kind {}",
-                                toString(node.kind)));
+                                toString(node.kind))));
             }
     }
 }
