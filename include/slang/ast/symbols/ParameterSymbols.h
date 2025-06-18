@@ -87,13 +87,14 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeParameter; }
 
     const Type& getTypeAlias() const { return *typeAlias; }
+    void setTypeSyntax(const syntax::SyntaxNode& syntax);
     bool isOverridden() const;
     void checkTypeRestriction() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
 private:
-    const Type* typeAlias;
+    Type* typeAlias;
 };
 
 /// Represents a defparam directive.
