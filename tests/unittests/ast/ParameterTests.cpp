@@ -156,7 +156,7 @@ endmodule
     CHECK(typeAlias.targetType.getDimensionSyntax() == nullptr);
     CHECK(typeAlias.getFirstForwardDecl() == nullptr);
 
-    REQUIRE(typeAlias.getSyntax());
+    REQUIRE(typeAlias.getSyntax() != nullptr);
     CHECK(typeAlias.getSyntax()->kind == SyntaxKind::TypeAssignment);
 }
 
