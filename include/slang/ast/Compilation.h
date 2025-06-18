@@ -305,6 +305,14 @@ public:
     /// Indicates whether the design has been compiled and can no longer accept modifications.
     bool isFinalized() const { return finalized; }
 
+    /// Indicates whether the design has been elaborated such that the AST is fully
+    /// resolved and all symbols have been created. This is distinct from being finalized,
+    /// which only means that the design has been parsed and syntax trees have been added.
+    ///
+    /// This is only set once getAllDiagnostics() is called, after which point the compilation
+    /// is functionally immutable.
+    bool isElaborated() const { return cachedAllDiagnostics.has_value(); }
+
     /// Gets the diagnostics produced during lexing, preprocessing, and syntax parsing.
     const Diagnostics& getParseDiagnostics();
 

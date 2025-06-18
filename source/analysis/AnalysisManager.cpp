@@ -52,9 +52,10 @@ AnalysisManager::AnalysisManager(AnalysisOptions options) :
 }
 
 AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
-    SLANG_ASSERT(compilation.isFinalized());
-    SLANG_ASSERT(compilation.isFrozen());
+    if (!compilation.isElaborated())
+        SLANG_THROW(std::runtime_error("Compilation must be elaborated before analysis"));
 
+    SLANG_ASSERT(compilation.isFrozen());
     if (compilation.hasFatalErrors())
         return {};
 

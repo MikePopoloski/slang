@@ -80,6 +80,7 @@ void registerCompilation(py::module_& m) {
         .def(py::init<const Bag&>(), "options"_a)
         .def_property_readonly("options", &Compilation::getOptions)
         .def_property_readonly("isFinalized", &Compilation::isFinalized)
+        .def_property_readonly("isElaborated", &Compilation::isElaborated)
         .def_property_readonly("sourceManager", &Compilation::getSourceManager)
         .def_property_readonly("defaultLibrary", &Compilation::getDefaultLibrary)
         .def("addSyntaxTree", &Compilation::addSyntaxTree, "tree"_a)
