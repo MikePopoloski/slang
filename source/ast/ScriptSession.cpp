@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/ScriptSession.h"
 
+#include <fmt/format.h>
+
 #include "slang/ast/Expression.h"
 #include "slang/ast/Statement.h"
 #include "slang/ast/symbols/BlockSymbols.h"
@@ -44,6 +46,7 @@ ConstantValue ScriptSession::eval(std::string_view text) {
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::HierarchyInstantiation:
         case SyntaxKind::TypedefDeclaration:
+        case SyntaxKind::PackageDeclaration:
             scope.addMembers(node);
             return nullptr;
         case SyntaxKind::DataDeclaration: {
@@ -87,7 +90,9 @@ ConstantValue ScriptSession::eval(std::string_view text) {
             else {
                 // If this throws, ScriptSession doesn't currently support whatever construct
                 // you were trying to evaluate. Add support to the case above.
-                SLANG_UNREACHABLE;
+                throw std::runtime_error(
+                    fmt::format("ScriptSession does not support evaluating nodes of kind {}",
+                                toString(node.kind)));
             }
     }
 }

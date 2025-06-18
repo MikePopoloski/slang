@@ -2633,3 +2633,15 @@ TEST_CASE("Eval static cast type propagation") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Package eval regress -- GH #1410") {
+    ScriptSession session;
+    session.eval(R"(
+package pkg_test;
+    localparam TEST=42;
+endpackage)");
+
+    CHECK(session.eval("pkg_test::TEST").integer() == 42);
+
+    NO_SESSION_ERRORS;
+}
