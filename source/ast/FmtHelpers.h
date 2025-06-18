@@ -36,7 +36,7 @@ public:
     static std::optional<std::string> formatDisplay(const Scope& scope, EvalContext& context,
                                                     const std::span<const Expression* const>& args);
 
-    static bool checkFinishNum(const ASTContext& context, const Expression& arg);
+    static void checkFinishNum(const ASTContext& context, const Expression& arg);
 
 private:
     FmtHelpers() = default;

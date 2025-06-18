@@ -611,9 +611,8 @@ std::optional<std::string_view> ElabSystemTaskSymbol::getMessage() const {
     if (!argSpan.empty()) {
         if (taskKind == ElabSystemTaskKind::Fatal) {
             // If this is a $fatal task, check the finish number. We don't use this
-            // for anything, but enforce that it's 0, 1, or 2.
-            if (!FmtHelpers::checkFinishNum(astCtx, *argSpan[0]))
-                return {};
+            // for anything, but verify that it's 0, 1, or 2.
+            FmtHelpers::checkFinishNum(astCtx, *argSpan[0]);
 
             argSpan = argSpan.subspan(1);
         }

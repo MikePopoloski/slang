@@ -114,10 +114,8 @@ public:
         if (!checkArgCount(context, false, args, range, 0, 1))
             return comp.getErrorType();
 
-        if (args.size() == 1) {
-            if (!FmtHelpers::checkFinishNum(context, *args[0]))
-                return comp.getErrorType();
-        }
+        if (args.size() == 1)
+            FmtHelpers::checkFinishNum(context, *args[0]);
 
         return comp.getVoidType();
     }
@@ -202,8 +200,7 @@ public:
             if (args[0]->bad())
                 return comp.getErrorType();
 
-            if (!FmtHelpers::checkFinishNum(context, *args[0]))
-                return comp.getErrorType();
+            FmtHelpers::checkFinishNum(context, *args[0]);
 
             if (!FmtHelpers::checkDisplayArgs(context, args.subspan(1)))
                 return comp.getErrorType();

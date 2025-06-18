@@ -378,16 +378,15 @@ std::optional<std::string> FmtHelpers::formatDisplay(
     return result;
 }
 
-bool FmtHelpers::checkFinishNum(const ASTContext& context, const Expression& arg) {
+void FmtHelpers::checkFinishNum(const ASTContext& context, const Expression& arg) {
     ConstantValue cv = context.tryEval(arg);
     if (cv.isInteger()) {
         auto& val = cv.integer();
         if (val == 0 || val == 1 || val == 2)
-            return true;
+            return;
     }
 
     context.addDiag(diag::BadFinishNum, arg.sourceRange);
-    return false;
 }
 
 } // namespace slang::ast
