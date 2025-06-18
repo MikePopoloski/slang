@@ -1086,9 +1086,11 @@ TEST_CASE("Multi assign via mutually referential interfaces") {
 interface I;
     int q;
     J j(m.i);
+
+    modport m(output q);
 endinterface
 
-interface J(I i);
+interface J(I.m i);
     assign i.j.i.j.i.q = 1;
 endinterface
 

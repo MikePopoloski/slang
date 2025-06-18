@@ -22,7 +22,8 @@ static bool isEligibleForCaching(const InstanceSymbol& symbol) {
 
 class InstanceCacheKey {
 public:
-    InstanceCacheKey(const InstanceSymbol& symbol, bool& valid);
+    InstanceCacheKey(const InstanceSymbol& symbol, bool& valid,
+                     SmallSet<const InstanceSymbol*, 2>& visitedInstances);
 
     bool operator==(const InstanceCacheKey& other) const;
     bool operator!=(const InstanceCacheKey& other) const { return !(*this == other); }
@@ -576,7 +577,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // restrictions on defparams, bind directives, and config rules. This is checked
         // in the InstanceCacheKey constructor and returned in the 'valid' parameter.
         bool valid = true;
-        InstanceCacheKey key(symbol, valid);
+        SmallSet<const InstanceSymbol*, 2> visitedInstances;
+        InstanceCacheKey key(symbol, valid, visitedInstances);
         if (!valid)
             return false;
 
@@ -756,7 +758,9 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     const InstanceSymbol* hierarchyProblem = nullptr;
 };
 
-InstanceCacheKey::InstanceCacheKey(const InstanceSymbol& symbol, bool& valid) : symbol(&symbol) {
+InstanceCacheKey::InstanceCacheKey(const InstanceSymbol& symbol, bool& valid,
+                                   SmallSet<const InstanceSymbol*, 2>& visitedInstances) :
+    symbol(&symbol) {
     size_t h = 0;
     hash_combine(h, &symbol.getDefinition());
 
@@ -780,12 +784,13 @@ InstanceCacheKey::InstanceCacheKey(const InstanceSymbol& symbol, bool& valid) : 
 
             if (iface) {
                 auto& ifaceInst = iface->as<InstanceSymbol>();
-                if (!isEligibleForCaching(ifaceInst)) {
+                if (!isEligibleForCaching(ifaceInst) ||
+                    !visitedInstances.insert(&ifaceInst).second) {
                     valid = false;
                     return;
                 }
 
-                InstanceCacheKey ifaceKey(ifaceInst, valid);
+                InstanceCacheKey ifaceKey(ifaceInst, valid, visitedInstances);
                 if (!valid)
                     return;
 

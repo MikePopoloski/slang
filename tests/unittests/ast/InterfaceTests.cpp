@@ -845,3 +845,18 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Self referential interface ports") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I(I i);
+endinterface
+
+module m;
+    I i(.i(m.i));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
