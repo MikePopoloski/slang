@@ -249,7 +249,7 @@ protected:
 ///
 /// Usually generated and inserted into a statement tree due
 /// to violation of language semantics or type checking.
-class SLANG_EXPORT InvalidStatement : public Statement {
+class SLANG_EXPORT InvalidStatement final : public Statement {
 public:
     /// A wrapped sub-statement that is considered invalid.
     const Statement* child;
@@ -267,7 +267,7 @@ public:
 };
 
 /// Represents a list of statements.
-class SLANG_EXPORT StatementList : public Statement {
+class SLANG_EXPORT StatementList final : public Statement {
 public:
     /// The list of child statements.
     std::span<const Statement* const> list;
@@ -291,7 +291,7 @@ public:
 };
 
 /// Represents a sequential or parallel block statement.
-class SLANG_EXPORT BlockStatement : public Statement {
+class SLANG_EXPORT BlockStatement final : public Statement {
 public:
     /// The block body.
     const Statement& body;

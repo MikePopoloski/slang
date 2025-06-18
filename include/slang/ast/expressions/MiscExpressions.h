@@ -52,7 +52,7 @@ protected:
 };
 
 /// Represents an expression that references a named value.
-class SLANG_EXPORT NamedValueExpression : public ValueExpressionBase {
+class SLANG_EXPORT NamedValueExpression final : public ValueExpressionBase {
 public:
     NamedValueExpression(const ValueSymbol& symbol, SourceRange sourceRange) :
         ValueExpressionBase(ExpressionKind::NamedValue, symbol, sourceRange) {}
@@ -67,7 +67,7 @@ private:
 };
 
 /// Represents an expression that references a named value via hierarchical path.
-class SLANG_EXPORT HierarchicalValueExpression : public ValueExpressionBase {
+class SLANG_EXPORT HierarchicalValueExpression final : public ValueExpressionBase {
 public:
     /// Information about the hierarchical reference.
     HierarchicalReference ref;
@@ -85,7 +85,7 @@ public:
 /// This is for cases where both an expression and a data type is
 /// valid; for example, as an argument to a $bits() call or as a
 /// parameter assignment (because of type parameters).
-class SLANG_EXPORT DataTypeExpression : public Expression {
+class SLANG_EXPORT DataTypeExpression final : public Expression {
 public:
     DataTypeExpression(const Type& type, SourceRange sourceRange) :
         Expression(ExpressionKind::DataType, type, sourceRange) {}
@@ -104,7 +104,7 @@ public:
 ///
 /// The result is only allowed in a few places in the grammar, namely in comparisons
 /// with other type reference expressions.
-class SLANG_EXPORT TypeReferenceExpression : public Expression {
+class SLANG_EXPORT TypeReferenceExpression final : public Expression {
 public:
     /// The target type of the type reference.
     const Type& targetType;
@@ -126,7 +126,7 @@ public:
 /// This is for cases like the $printtimescale system function that require a
 /// module name to be passed. This is not a NamedValueExpression because the
 /// symbol in question is not a value and is not normally usable in an expression.
-class SLANG_EXPORT ArbitrarySymbolExpression : public Expression {
+class SLANG_EXPORT ArbitrarySymbolExpression final : public Expression {
 public:
     /// The symbol being referenced.
     not_null<const Symbol*> symbol;
@@ -155,7 +155,7 @@ public:
 ///
 /// It indicates to the constant evaluator that it should look on
 /// the lvalue stack for the value to use.
-class SLANG_EXPORT LValueReferenceExpression : public Expression {
+class SLANG_EXPORT LValueReferenceExpression final : public Expression {
 public:
     LValueReferenceExpression(const Type& type, SourceRange sourceRange) :
         Expression(ExpressionKind::LValueReference, type, sourceRange) {}
@@ -171,7 +171,7 @@ public:
 ///
 /// There's no actual syntax to go along with this, but we use this
 /// as a placeholder to hold the fact that the argument is empty.
-class SLANG_EXPORT EmptyArgumentExpression : public Expression {
+class SLANG_EXPORT EmptyArgumentExpression final : public Expression {
 public:
     EmptyArgumentExpression(const Type& type, SourceRange sourceRange) :
         Expression(ExpressionKind::EmptyArgument, type, sourceRange) {}
@@ -187,7 +187,7 @@ public:
 ///
 /// This is a special kind of expression that is only allowed with the
 /// sampled value system functions and assertion instance arguments.
-class SLANG_EXPORT ClockingEventExpression : public Expression {
+class SLANG_EXPORT ClockingEventExpression final : public Expression {
 public:
     /// The clocking event.
     const TimingControl& timingControl;
@@ -214,7 +214,7 @@ public:
 
 /// Represents an instance of an assertion item, either a sequence, a property,
 /// or a formal argument that is being referenced and expanded.
-class SLANG_EXPORT AssertionInstanceExpression : public Expression {
+class SLANG_EXPORT AssertionInstanceExpression final : public Expression {
 public:
     using ActualArg = std::variant<const Expression*, const AssertionExpr*, const TimingControl*>;
 
@@ -269,7 +269,7 @@ public:
 };
 
 /// Represents a min:typ:max expression.
-class SLANG_EXPORT MinTypMaxExpression : public Expression {
+class SLANG_EXPORT MinTypMaxExpression final : public Expression {
 public:
     MinTypMaxExpression(const Type& type, Expression& min, Expression& typ, Expression& max,
                         Expression* selected, SourceRange sourceRange) :
@@ -331,7 +331,7 @@ private:
 };
 
 /// Represents a `new` expression that copies a class instance.
-class SLANG_EXPORT CopyClassExpression : public Expression {
+class SLANG_EXPORT CopyClassExpression final : public Expression {
 public:
     CopyClassExpression(const Type& type, const Expression& sourceExpr, SourceRange sourceRange) :
         Expression(ExpressionKind::CopyClass, type, sourceRange), sourceExpr_(sourceExpr) {}
@@ -363,7 +363,7 @@ private:
 ///
 /// This can't occur in normal expression code; it's used as part
 /// of constraints and properties (and always has the type 'void').
-class SLANG_EXPORT DistExpression : public Expression {
+class SLANG_EXPORT DistExpression final : public Expression {
 public:
     /// A weight to apply to a distribution.
     struct DistWeight {
@@ -428,7 +428,7 @@ private:
 };
 
 /// Represents a tagged union member setter expression.
-class SLANG_EXPORT TaggedUnionExpression : public Expression {
+class SLANG_EXPORT TaggedUnionExpression final : public Expression {
 public:
     /// The member being set.
     const Symbol& member;

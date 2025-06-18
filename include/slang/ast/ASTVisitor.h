@@ -41,7 +41,7 @@ namespace slang::ast {
 
 /// A placeholder symbol type that represents an unknown or invalid symbol.
 /// This is only used when visiting such a symbol.
-struct SLANG_EXPORT InvalidSymbol : public Symbol {
+struct SLANG_EXPORT InvalidSymbol final : public Symbol {
     InvalidSymbol() : Symbol(SymbolKind::Unknown, "", SourceLocation()) {}
     void serializeTo(ASTSerializer&) const {}
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Unknown; }
@@ -126,6 +126,10 @@ public:
         if constexpr (std::is_same_v<CheckerInstanceSymbol, T>) {
             t.body.visit(DERIVED);
         }
+
+        static_assert((std::is_final_v<T> || std::is_same_v<VariableSymbol, T>),
+                      "Non-leaf class was passed to visitDefault() - use "
+                      "`std::derived_from<SymbolT> auto& node` to visit non-leaf classes.");
     }
 
 #undef DERIVED

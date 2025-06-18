@@ -17,7 +17,7 @@ namespace slang::ast {
 class Pattern;
 
 /// Represents a unary operator expression.
-class SLANG_EXPORT UnaryExpression : public Expression {
+class SLANG_EXPORT UnaryExpression final : public Expression {
 public:
     /// The operator.
     UnaryOperator op;
@@ -64,7 +64,7 @@ private:
 };
 
 /// Represents a binary operator expression.
-class SLANG_EXPORT BinaryExpression : public Expression {
+class SLANG_EXPORT BinaryExpression final : public Expression {
 private:
     Expression* left_;
     Expression* right_;
@@ -124,7 +124,7 @@ public:
 };
 
 /// Represents a conditional operator expression.
-class SLANG_EXPORT ConditionalExpression : public Expression {
+class SLANG_EXPORT ConditionalExpression final : public Expression {
 public:
     /// A condition.
     struct Condition {
@@ -198,7 +198,7 @@ private:
 };
 
 /// Represents a set membership operator expression.
-class SLANG_EXPORT InsideExpression : public Expression {
+class SLANG_EXPORT InsideExpression final : public Expression {
 public:
     InsideExpression(const Type& type, const Expression& left,
                      std::span<const Expression* const> rangeList, SourceRange sourceRange) :
@@ -234,7 +234,7 @@ private:
 };
 
 /// Represents a concatenation expression.
-class SLANG_EXPORT ConcatenationExpression : public Expression {
+class SLANG_EXPORT ConcatenationExpression final : public Expression {
 public:
     ConcatenationExpression(const Type& type, std::span<Expression*> operands,
                             SourceRange sourceRange) :
@@ -272,7 +272,7 @@ private:
 };
 
 /// Represents a replication expression.
-class SLANG_EXPORT ReplicationExpression : public Expression {
+class SLANG_EXPORT ReplicationExpression final : public Expression {
 public:
     ReplicationExpression(const Type& type, const Expression& count, Expression& concat,
                           SourceRange sourceRange) :
@@ -310,7 +310,7 @@ private:
 };
 
 /// Represents a streaming concatenation.
-class SLANG_EXPORT StreamingConcatenationExpression : public Expression {
+class SLANG_EXPORT StreamingConcatenationExpression final : public Expression {
 public:
     /// A single stream expression within the concatenation.
     struct StreamExpression {
@@ -384,7 +384,7 @@ SLANG_ENUM(ValueRangeKind, VRK)
 ///
 /// @note This expression needs special handling in the various places that allow it,
 /// since it doesn't really have a type.
-class SLANG_EXPORT ValueRangeExpression : public Expression {
+class SLANG_EXPORT ValueRangeExpression final : public Expression {
 public:
     ValueRangeKind rangeKind;
 

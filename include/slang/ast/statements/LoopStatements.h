@@ -15,7 +15,7 @@ class IteratorSymbol;
 class VariableSymbol;
 
 /// Represents a return statement.
-class SLANG_EXPORT ReturnStatement : public Statement {
+class SLANG_EXPORT ReturnStatement final : public Statement {
 public:
     /// The return value expression, or nullptr if there is none.
     const Expression* expr;
@@ -41,7 +41,7 @@ public:
 };
 
 /// Represents a break statement.
-class SLANG_EXPORT BreakStatement : public Statement {
+class SLANG_EXPORT BreakStatement final : public Statement {
 public:
     explicit BreakStatement(SourceRange sourceRange) :
         Statement(StatementKind::Break, sourceRange) {}
@@ -58,7 +58,7 @@ public:
 };
 
 /// Represents a continue statement.
-class SLANG_EXPORT ContinueStatement : public Statement {
+class SLANG_EXPORT ContinueStatement final : public Statement {
 public:
     explicit ContinueStatement(SourceRange sourceRange) :
         Statement(StatementKind::Continue, sourceRange) {}
@@ -75,7 +75,7 @@ public:
 };
 
 /// Represents a `for` loop statement.
-class SLANG_EXPORT ForLoopStatement : public Statement {
+class SLANG_EXPORT ForLoopStatement final : public Statement {
 public:
     /// A list of variable initializers (mutually exclusive with @a loopVars )
     std::span<const Expression* const> initializers;
@@ -125,7 +125,7 @@ public:
 };
 
 /// Represents a `repeat` loop statement.
-class SLANG_EXPORT RepeatLoopStatement : public Statement {
+class SLANG_EXPORT RepeatLoopStatement final : public Statement {
 public:
     /// An expression that controls the number of times to repeat the loop.
     const Expression& count;
@@ -158,7 +158,7 @@ public:
 };
 
 /// Represents a `foreach` loop statement.
-class SLANG_EXPORT ForeachLoopStatement : public Statement {
+class SLANG_EXPORT ForeachLoopStatement final : public Statement {
 public:
     /// Describes one dimension that will be iterated by the loop.
     struct LoopDim {
@@ -214,7 +214,7 @@ private:
 };
 
 /// Represents a `while` loop statement.
-class SLANG_EXPORT WhileLoopStatement : public Statement {
+class SLANG_EXPORT WhileLoopStatement final : public Statement {
 public:
     /// A condition that controls whether the loop continues to execute.
     const Expression& cond;
@@ -247,7 +247,7 @@ public:
 };
 
 /// Represents a `do` `while` loop statement.
-class SLANG_EXPORT DoWhileLoopStatement : public Statement {
+class SLANG_EXPORT DoWhileLoopStatement final : public Statement {
 public:
     /// A condition that controls whether the loop continues to execute.
     const Expression& cond;
@@ -280,7 +280,7 @@ public:
 };
 
 /// Represents a `forever` loop statement.
-class SLANG_EXPORT ForeverLoopStatement : public Statement {
+class SLANG_EXPORT ForeverLoopStatement final : public Statement {
 public:
     /// The body of the loop.
     const Statement& body;

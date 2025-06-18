@@ -104,7 +104,7 @@ protected:
 ///
 /// Usually generated and inserted into an constraint tree due
 /// to violation of language semantics or type checking.
-class SLANG_EXPORT InvalidConstraint : public Constraint {
+class SLANG_EXPORT InvalidConstraint final : public Constraint {
 public:
     /// A wrapped child constraint that is considered invalid.
     const Constraint* child;
@@ -121,7 +121,7 @@ public:
 };
 
 /// Represents a list of constraints.
-class SLANG_EXPORT ConstraintList : public Constraint {
+class SLANG_EXPORT ConstraintList final : public Constraint {
 public:
     /// The list of constraints.
     std::span<const Constraint* const> list;
@@ -144,7 +144,7 @@ public:
 };
 
 /// Represents a constraint defined by a logical expression.
-class SLANG_EXPORT ExpressionConstraint : public Constraint {
+class SLANG_EXPORT ExpressionConstraint final : public Constraint {
 public:
     /// The constraint expression.
     const Expression& expr;
@@ -169,7 +169,7 @@ public:
 };
 
 /// Represents a constraint defined by an implication.
-class SLANG_EXPORT ImplicationConstraint : public Constraint {
+class SLANG_EXPORT ImplicationConstraint final : public Constraint {
 public:
     /// The implication predicate.
     const Expression& predicate;
@@ -195,7 +195,7 @@ public:
 };
 
 /// Represents a constraint defined by an if-else condition.
-class SLANG_EXPORT ConditionalConstraint : public Constraint {
+class SLANG_EXPORT ConditionalConstraint final : public Constraint {
 public:
     /// The condition predicate.
     const Expression& predicate;
@@ -228,7 +228,7 @@ public:
 };
 
 /// Represents a constraint that enforces uniqueness of variables.
-class SLANG_EXPORT UniquenessConstraint : public Constraint {
+class SLANG_EXPORT UniquenessConstraint final : public Constraint {
 public:
     /// The set of expressions defining the uniqueness set.
     std::span<const Expression* const> items;
@@ -251,7 +251,7 @@ public:
 };
 
 /// Represents a constraint that disables a soft random variable.
-class SLANG_EXPORT DisableSoftConstraint : public Constraint {
+class SLANG_EXPORT DisableSoftConstraint final : public Constraint {
 public:
     /// The target expression of the disable.
     const Expression& target;
@@ -273,7 +273,7 @@ public:
 };
 
 /// Represents a constraint that enforces ordering of solving variables.
-class SLANG_EXPORT SolveBeforeConstraint : public Constraint {
+class SLANG_EXPORT SolveBeforeConstraint final : public Constraint {
 public:
     /// The list of expressions for variables that should be solved
     /// *before* variables in the @a after list.
@@ -304,7 +304,7 @@ public:
 };
 
 /// Represents a constraint that iterates over the elements of an array.
-class SLANG_EXPORT ForeachConstraint : public Constraint {
+class SLANG_EXPORT ForeachConstraint final : public Constraint {
 public:
     /// The target array of the iteration.
     const Expression& arrayRef;

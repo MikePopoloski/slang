@@ -22,7 +22,7 @@ class ModportSymbol;
 /// Represents the public-facing side of a module / program / interface port.
 /// The port symbol itself is not directly referenceable from within the instance;
 /// it can however connect directly to a symbol that is.
-class SLANG_EXPORT PortSymbol : public Symbol {
+class SLANG_EXPORT PortSymbol final : public Symbol {
 public:
     /// An instance-internal symbol that this port connects to, if any.
     /// Ports that do not connect directly to an internal symbol will have
@@ -95,7 +95,7 @@ private:
 /// Represents a multi-port, which is a port symbol that externally appears as
 /// a single connection but internally connects to multiple names, potentially
 /// with varying directions.
-class SLANG_EXPORT MultiPortSymbol : public Symbol {
+class SLANG_EXPORT MultiPortSymbol final : public Symbol {
 public:
     std::span<const PortSymbol* const> ports;
 
@@ -127,7 +127,7 @@ private:
 
 /// Represents the public-facing side of a module / program / interface port
 /// that is also a connection to an interface instance (optionally with a modport restriction).
-class SLANG_EXPORT InterfacePortSymbol : public Symbol {
+class SLANG_EXPORT InterfacePortSymbol final : public Symbol {
 public:
     using IfaceConn = std::pair<const Symbol*, const ModportSymbol*>;
 

@@ -89,7 +89,7 @@ SLANG_BITMASK(MethodFlags, Final)
 class MethodPrototypeSymbol;
 
 /// Represents a subroutine (task or function).
-class SLANG_EXPORT SubroutineSymbol : public Symbol, public Scope {
+class SLANG_EXPORT SubroutineSymbol final : public Symbol, public Scope {
 public:
     using ArgList = std::span<const FormalArgumentSymbol* const>;
 
@@ -187,7 +187,7 @@ private:
     mutable bool isConstructing = false;
 };
 
-class SLANG_EXPORT MethodPrototypeSymbol : public Symbol, public Scope {
+class SLANG_EXPORT MethodPrototypeSymbol final : public Symbol, public Scope {
 public:
     DeclaredType declaredReturnType;
     SubroutineKind subroutineKind;

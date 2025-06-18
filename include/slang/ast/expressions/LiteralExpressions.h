@@ -13,7 +13,7 @@
 namespace slang::ast {
 
 /// Represents an integer literal.
-class SLANG_EXPORT IntegerLiteral : public Expression {
+class SLANG_EXPORT IntegerLiteral final : public Expression {
 public:
     /// Indicates whether the original token in the source text was declared
     /// unsized; if false, an explicit size was given.
@@ -44,7 +44,7 @@ private:
 };
 
 /// Represents a real number literal.
-class SLANG_EXPORT RealLiteral : public Expression {
+class SLANG_EXPORT RealLiteral final : public Expression {
 public:
     RealLiteral(const Type& type, double value, SourceRange sourceRange) :
         Expression(ExpressionKind::RealLiteral, type, sourceRange), value(value) {}
@@ -66,7 +66,7 @@ private:
 };
 
 /// Represents a time literal.
-class SLANG_EXPORT TimeLiteral : public Expression {
+class SLANG_EXPORT TimeLiteral final : public Expression {
 public:
     TimeLiteral(const Type& type, double value, SourceRange sourceRange) :
         Expression(ExpressionKind::TimeLiteral, type, sourceRange), value(value) {}
@@ -88,7 +88,7 @@ private:
 };
 
 /// Represents an unbased unsized integer literal, which fills all bits in an expression.
-class SLANG_EXPORT UnbasedUnsizedIntegerLiteral : public Expression {
+class SLANG_EXPORT UnbasedUnsizedIntegerLiteral final : public Expression {
 public:
     UnbasedUnsizedIntegerLiteral(const Type& type, logic_t value, SourceRange sourceRange) :
         Expression(ExpressionKind::UnbasedUnsizedIntegerLiteral, type, sourceRange), value(value) {}
@@ -119,7 +119,7 @@ private:
 };
 
 /// Represents a null literal.
-class SLANG_EXPORT NullLiteral : public Expression {
+class SLANG_EXPORT NullLiteral final : public Expression {
 public:
     NullLiteral(const Type& type, SourceRange sourceRange) :
         Expression(ExpressionKind::NullLiteral, type, sourceRange) {}
@@ -135,7 +135,7 @@ public:
 };
 
 /// Represents the unbounded queue or range literal.
-class SLANG_EXPORT UnboundedLiteral : public Expression {
+class SLANG_EXPORT UnboundedLiteral final : public Expression {
 public:
     UnboundedLiteral(const Type& type, SourceRange sourceRange) :
         Expression(ExpressionKind::UnboundedLiteral, type, sourceRange) {}
@@ -151,7 +151,7 @@ public:
 };
 
 /// Represents a string literal.
-class SLANG_EXPORT StringLiteral : public Expression {
+class SLANG_EXPORT StringLiteral final : public Expression {
 public:
     StringLiteral(const Type& type, std::string_view value, std::string_view rawValue,
                   ConstantValue& intVal, SourceRange sourceRange);

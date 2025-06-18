@@ -24,7 +24,7 @@ class InstanceSymbol;
 class Type;
 
 /// The root of a single compilation unit.
-class SLANG_EXPORT CompilationUnitSymbol : public Symbol, public Scope {
+class SLANG_EXPORT CompilationUnitSymbol final : public Symbol, public Scope {
 public:
     std::optional<TimeScale> timeScale;
     const SourceLibrary& sourceLibrary;
@@ -45,7 +45,7 @@ private:
 };
 
 /// A SystemVerilog package construct.
-class SLANG_EXPORT PackageSymbol : public Symbol, public Scope {
+class SLANG_EXPORT PackageSymbol final : public Symbol, public Scope {
 public:
     const NetType& defaultNetType;
     std::optional<TimeScale> timeScale;
@@ -72,7 +72,7 @@ public:
 };
 
 /// Represents the entirety of a design, along with all contained compilation units.
-class SLANG_EXPORT RootSymbol : public Symbol, public Scope {
+class SLANG_EXPORT RootSymbol final : public Symbol, public Scope {
 public:
     std::span<const InstanceSymbol* const> topInstances;
     std::span<const CompilationUnitSymbol* const> compilationUnits;
@@ -86,7 +86,7 @@ public:
 };
 
 /// Represents a module, interface, or program definition.
-class SLANG_EXPORT DefinitionSymbol : public Symbol {
+class SLANG_EXPORT DefinitionSymbol final : public Symbol {
 public:
     /// Information about a single parameter declaration.
     struct ParameterDecl {
@@ -272,7 +272,7 @@ struct SLANG_EXPORT ResolvedConfig {
 };
 
 /// Represents a config block declaration.
-class SLANG_EXPORT ConfigBlockSymbol : public Symbol, public Scope {
+class SLANG_EXPORT ConfigBlockSymbol final : public Symbol, public Scope {
 public:
     struct TopCell {
         const DefinitionSymbol& definition;
