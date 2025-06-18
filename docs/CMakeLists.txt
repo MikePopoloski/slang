@@ -23,7 +23,6 @@ set(DOXYGEN_INPUT_DIR_LIST
     "${CMAKE_CURRENT_BINARY_DIR}/../source/slang/parsing")
 set(DOXYGEN_EXAMPLE_DIR_LIST
     "${PROJECT_SOURCE_DIR}/tools/hier/README.md"
-    "${PROJECT_SOURCE_DIR}/tools/netlist/README.md"
     "${PROJECT_SOURCE_DIR}/tools/reflect/README.md"
     "${PROJECT_SOURCE_DIR}/tools/rewriter/README.md"
     "${PROJECT_SOURCE_DIR}/tools/threadtest/README.md"
