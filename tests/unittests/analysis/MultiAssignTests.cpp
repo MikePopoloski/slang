@@ -1080,3 +1080,28 @@ endmodule
     CHECK(diags[4].code == diag::MultipleContAssigns);
     CHECK(diags[5].code == diag::MixedVarAssigns);
 }
+
+TEST_CASE("Multi assign via mutually referential interfaces") {
+    auto& code = R"(
+interface I;
+    int q;
+    J j(m.i);
+endinterface
+
+interface J(I i);
+    assign i.j.i.j.i.q = 1;
+endinterface
+
+module m;
+    I i();
+    J j(i);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+}

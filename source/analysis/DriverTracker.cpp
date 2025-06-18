@@ -570,11 +570,15 @@ static const Symbol* retargetIfacePort(const HierarchicalReference& ref,
     if (!port)
         return nullptr;
 
-    auto [symbol, modport] = port->as<InterfacePortSymbol>().getConnection();
+    const Symbol* symbol = port;
+    const ModportSymbol* modport = nullptr;
     std::optional<std::span<const Symbol* const>> instanceArrayElems;
 
     // Walk the path to find the target symbol.
     for (size_t i = 1; i < path.size(); i++) {
+        while (symbol && symbol->kind == SymbolKind::InterfacePort)
+            std::tie(symbol, modport) = symbol->as<InterfacePortSymbol>().getConnection();
+
         if (!symbol)
             return nullptr;
 
