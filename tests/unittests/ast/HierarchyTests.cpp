@@ -2036,3 +2036,24 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Disallow hier-ref to uninstantiated defs option") {
+    auto tree = SyntaxTree::fromText(R"(
+module test_top ();
+    foo bar ();
+    assign bar.a = !(bar.b);
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::IgnoreUnknownModules;
+    options.flags |= CompilationFlags::DisallowRefsToUnknownInstances;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::HierarchicalRefUnknownModule);
+    CHECK(diags[1].code == diag::HierarchicalRefUnknownModule);
+}

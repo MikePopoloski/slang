@@ -115,8 +115,13 @@ enum class SLANG_EXPORT CompilationFlags {
     /// Disable the use of instance caching, which normally allows skipping
     /// duplicate instance bodies to save time when elaborating.
     DisableInstanceCaching = 1 << 11,
+
+    /// Disallow references to unknown instances by issuing a diagnostic. This is only
+    /// relevant when using IgnoreUnknownModules, since otherwise there would already
+    /// be errors issued for the unknown instances.
+    DisallowRefsToUnknownInstances = 1 << 12
 };
-SLANG_BITMASK(CompilationFlags, DisableInstanceCaching)
+SLANG_BITMASK(CompilationFlags, DisallowRefsToUnknownInstances)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {

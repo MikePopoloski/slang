@@ -198,6 +198,10 @@ void Driver::addStandardArgs() {
     addCompFlag(CompilationFlags::DisableInstanceCaching, "--disable-instance-caching",
                 "Disable the use of instance caching, which normally allows skipping duplicate "
                 "instance bodies to save time when elaborating");
+    addCompFlag(CompilationFlags::DisallowRefsToUnknownInstances,
+                "--disallow-refs-to-unknown-instances",
+                "When using --ignore-unknown-modules, explicitly disallow references to ignored "
+                "module instances by issuing an error");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "

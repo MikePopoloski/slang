@@ -603,6 +603,12 @@ disable the limit. The default is 64.
 
 Don't issue an error for instantiations of unknown modules, interface, and programs.
 
+`--disallow-refs-to-unknown-instances`
+
+When using `--ignore-unknown-modules`, explicitly disallow references to ignored module
+instances by issuing an error. Otherwise such references will be silently ignored by
+inserting error nodes into the elaborated AST.
+
 @section clr-warnings Warnings
 
 Warnings are diagnostic messages that report constructions that are not inherently illegal according to

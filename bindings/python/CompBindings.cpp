@@ -53,7 +53,8 @@ void registerCompilation(py::module_& m) {
         .value("AllowBareValParamAssignment", CompilationFlags::AllowBareValParamAssignment)
         .value("AllowSelfDeterminedStreamConcat", CompilationFlags::AllowSelfDeterminedStreamConcat)
         .value("AllowMergingAnsiPorts", CompilationFlags::AllowMergingAnsiPorts)
-        .value("DisableInstanceCaching", CompilationFlags::DisableInstanceCaching);
+        .value("DisableInstanceCaching", CompilationFlags::DisableInstanceCaching)
+        .value("DisallowRefsToUnknownInstances", CompilationFlags::DisallowRefsToUnknownInstances);
 
     py::class_<CompilationOptions>(m, "CompilationOptions")
         .def(py::init<>())

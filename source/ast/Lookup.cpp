@@ -364,8 +364,11 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
             symbol->kind == SymbolKind::Checker) {
             // If we found an uninstantiated def, exit silently. An appropriate error was
             // already issued, so no need to pile on.
-            if (symbol->kind == SymbolKind::UninstantiatedDef)
+            if (symbol->kind == SymbolKind::UninstantiatedDef &&
+                !context.getCompilation().hasFlag(
+                    CompilationFlags::DisallowRefsToUnknownInstances)) {
                 return false;
+            }
 
             symbol = unwrapTypeParam(*context.scope, symbol);
             if (!symbol)
@@ -382,22 +385,30 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
             }
 
             DiagCode code;
+            bool includeName;
             if (isType) {
                 code = diag::DotOnType;
+                includeName = false;
             }
             else if (symbol->kind == SymbolKind::Checker ||
                      symbol->kind == SymbolKind::CheckerInstance) {
                 code = diag::CheckerHierarchical;
+                includeName = false;
+            }
+            else if (symbol->kind == SymbolKind::UninstantiatedDef) {
+                code = diag::HierarchicalRefUnknownModule;
+                includeName = true;
             }
             else {
                 code = diag::NotAHierarchicalScope;
+                includeName = true;
             }
 
             auto& diag = result.addDiag(*context.scope, code, it->dotLocation);
             diag << name.range;
             diag << it->name.range;
 
-            if (!isType)
+            if (includeName)
                 diag << name.text;
 
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
