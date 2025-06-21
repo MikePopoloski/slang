@@ -314,6 +314,7 @@ struct SLANG_EXPORT ConstantRange {
     int32_t right = 0;
 
     ConstantRange() = default;
+    ConstantRange(std::pair<int32_t, int32_t> range) : left(range.first), right(range.second) {}
     ConstantRange(int32_t left, int32_t right) : left(left), right(right) {}
 
     /// Gets the width of the range, regardless of the order in which
