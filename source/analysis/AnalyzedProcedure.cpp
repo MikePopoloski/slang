@@ -166,6 +166,23 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         for (auto call : dfaCalls)
             context.manager->getFunctionDrivers(*call, analyzedSymbol, visited, drivers);
     }
+
+    if (analyzedSymbol.kind == SymbolKind::ProceduralBlock) {
+        auto& procedure = analyzedSymbol.as<ProceduralBlockSymbol>();
+        if (procedure.procedureKind == ProceduralBlockKind::AlwaysLatch) {
+            SmallSet<const Expression*, 2> latchedLSP;
+            dfa.visitLatches(
+                [&](const Symbol&, const Expression& expr) { latchedLSP.insert(&expr); });
+            for (const auto& symDrivers : getDrivers()) {
+                for (const auto& driver : symDrivers.second) {
+                    if (latchedLSP.contains(driver.first->prefixExpression))
+                        continue;
+                    context.addDiag(procedure, diag::InferredNoLatch,
+                                    driver.first->prefixExpression->sourceRange);
+                }
+            }
+        }
+    }
 }
 
 } // namespace slang::analysis
