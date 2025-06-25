@@ -22,7 +22,7 @@ namespace slang::syntax {
 /// traversing all children of each node. Add implementations for any specific
 /// node types you want to handle.
 template<typename TDerived>
-class SyntaxVisitor {
+struct SyntaxVisitor {
 public:
     /// Visit the provided node, of static type T.
     template<typename T>
@@ -53,6 +53,32 @@ private:
     // This is to make things compile if the derived class doesn't provide an implementation.
     void visitToken(parsing::Token) {}
 };
+
+/// @brief Creates a SyntaxVisitor out of the provided handler functions.
+///
+/// The provided callable arguments must take two parameters, the first of which
+/// is the visitor object itself (so that you can call visitDefault on it if
+/// desired) and the second is the Syntax type to match against.
+///
+/// For example, to create a visitor that will count all of the HierarchicalInstance nodes
+/// in a Syntax Tree:
+///
+/// @code
+/// int count = 0;
+/// makeVisitor([&](auto& visitor, const HierarchicalInstanceSyntax& node) {
+///     count++;
+///     visitor.visitDefault(node);
+/// })
+/// @endcode
+///
+template<typename... Functions>
+auto makeCstVisitor(Functions... funcs) {
+    struct Result : public Functions..., public SyntaxVisitor<Result> {
+        Result(Functions... funcs) : Functions(std::move(funcs))... {}
+        using Functions::operator()...;
+    };
+    return Result(std::move(funcs)...);
+}
 
 namespace detail {
 
