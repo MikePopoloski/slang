@@ -67,14 +67,14 @@ private:
 ///
 /// @code
 /// int count = 0;
-/// makeVisitor([&](auto& visitor, const HierarchicalInstanceSyntax& node) {
+/// makeSyntaxVisitor([&](auto& visitor, const HierarchicalInstanceSyntax& node) {
 ///     count++;
 ///     visitor.visitDefault(node);
 /// })
 /// @endcode
 ///
 template<typename... Functions>
-auto makeCstVisitor(Functions... funcs) {
+auto makeSyntaxVisitor(Functions... funcs) {
     struct Result : public Functions..., public SyntaxVisitor<Result> {
         Result(Functions... funcs) : Functions(std::move(funcs))... {}
         using Functions::operator()...;

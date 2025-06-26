@@ -763,7 +763,7 @@ TEST_CASE("Visit all file") {
         }));
 
     flat_hash_set<syntax::SyntaxKind> syntaxKinds;
-    (*tree)->root().visit(makeCstVisitor([&](auto& v, const auto& node) {
+    (*tree)->root().visit(makeSyntaxVisitor([&](auto& v, const auto& node) {
         syntaxKinds.insert(node.kind);
         v.visitDefault(node);
     }));
