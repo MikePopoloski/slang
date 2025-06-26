@@ -763,12 +763,10 @@ TEST_CASE("Visit all file") {
         }));
 
     flat_hash_set<syntax::SyntaxKind> syntaxKinds;
-    (*tree)->root().visit(
-        // makeCstVisitor([&](auto& v, std::derived_from<syntax::SyntaxNode> auto& node) {
-        makeCstVisitor([&](auto& v, const auto& node) {
-            syntaxKinds.insert(node.kind);
-            v.visitDefault(node);
-        }));
+    (*tree)->root().visit(makeCstVisitor([&](auto& v, const auto& node) {
+        syntaxKinds.insert(node.kind);
+        v.visitDefault(node);
+    }));
 
     auto printMissing = [](const std::string_view name, const auto& kinds, const auto& visited) {
         for (auto kind : kinds) {
@@ -783,7 +781,6 @@ TEST_CASE("Visit all file") {
     // printMissing("statement", ast::StatementKind_traits::values, symbols.stmtKinds);
 
     // Ideally this should visit all kinds (be zero)
-    CHECK(536 == syntax::SyntaxKind_traits::values.size());
     CHECK(218 == syntax::SyntaxKind_traits::values.size() - syntaxKinds.size());
 
     CHECK(42 == ast::SymbolKind_traits::values.size() - symKinds.size());

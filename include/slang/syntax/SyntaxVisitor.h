@@ -16,7 +16,7 @@
 
 namespace slang::syntax {
 
-#define DERIVED static_cast<TDerived*>(this)
+#define DERIVED *static_cast<TDerived*>(this)
 
 /// Use this type as a base class for syntax tree visitors. It will default to
 /// traversing all children of each node. Add implementations for any specific
@@ -26,25 +26,27 @@ struct SyntaxVisitor {
 public:
     /// Visit the provided node, of static type T.
     template<typename T>
-    void visit(T&& t) {
-        if constexpr (requires { DERIVED->handle(t); })
-            DERIVED->handle(t);
+    void visit(const T& t) {
+        if constexpr (requires { (DERIVED).handle(t); })
+            (DERIVED).handle(t);
+        else if constexpr (requires { (DERIVED)(DERIVED, t); })
+            (DERIVED)(DERIVED, t);
         else
-            DERIVED->visitDefault(t);
+            visitDefault(t);
     }
 
     /// The default handler invoked when no visit() method is overridden for a particular type.
     /// Will visit all child nodes by default.
     template<typename T>
-    void visitDefault(T&& node) {
+    void visitDefault(const T& node) {
         for (uint32_t i = 0; i < node.getChildCount(); i++) {
             auto child = node.childNode(i);
             if (child)
-                child->visit(*DERIVED);
+                child->visit(DERIVED);
             else {
                 auto token = node.childToken(i);
                 if (token)
-                    DERIVED->visitToken(token);
+                    (DERIVED).visitToken(token);
             }
         }
     }
@@ -145,7 +147,7 @@ public:
         commits.clear();
         tempTrees.clear();
 
-        tree->root().visit(*DERIVED);
+        tree->root().visit(DERIVED);
 
         if (commits.empty())
             return tree;
