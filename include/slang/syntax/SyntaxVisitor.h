@@ -16,35 +16,37 @@
 
 namespace slang::syntax {
 
-#define DERIVED static_cast<TDerived*>(this)
+#define DERIVED *static_cast<TDerived*>(this)
 
 /// Use this type as a base class for syntax tree visitors. It will default to
 /// traversing all children of each node. Add implementations for any specific
 /// node types you want to handle.
 template<typename TDerived>
-class SyntaxVisitor {
+struct SyntaxVisitor {
 public:
     /// Visit the provided node, of static type T.
     template<typename T>
-    void visit(T&& t) {
-        if constexpr (requires { DERIVED->handle(t); })
-            DERIVED->handle(t);
+    void visit(const T& t) {
+        if constexpr (requires { (DERIVED).handle(t); })
+            (DERIVED).handle(t);
+        else if constexpr (requires { (DERIVED)(DERIVED, t); })
+            (DERIVED)(DERIVED, t);
         else
-            DERIVED->visitDefault(t);
+            visitDefault(t);
     }
 
     /// The default handler invoked when no visit() method is overridden for a particular type.
     /// Will visit all child nodes by default.
     template<typename T>
-    void visitDefault(T&& node) {
+    void visitDefault(const T& node) {
         for (uint32_t i = 0; i < node.getChildCount(); i++) {
             auto child = node.childNode(i);
             if (child)
-                child->visit(*DERIVED);
+                child->visit(DERIVED);
             else {
                 auto token = node.childToken(i);
                 if (token)
-                    DERIVED->visitToken(token);
+                    (DERIVED).visitToken(token);
             }
         }
     }
@@ -53,6 +55,32 @@ private:
     // This is to make things compile if the derived class doesn't provide an implementation.
     void visitToken(parsing::Token) {}
 };
+
+/// @brief Creates a SyntaxVisitor out of the provided handler functions.
+///
+/// The provided callable arguments must take two parameters, the first of which
+/// is the visitor object itself (so that you can call visitDefault on it if
+/// desired) and the second is the Syntax type to match against.
+///
+/// For example, to create a visitor that will count all of the HierarchicalInstance nodes
+/// in a Syntax Tree:
+///
+/// @code
+/// int count = 0;
+/// makeSyntaxVisitor([&](auto& visitor, const HierarchicalInstanceSyntax& node) {
+///     count++;
+///     visitor.visitDefault(node);
+/// })
+/// @endcode
+///
+template<typename... Functions>
+auto makeSyntaxVisitor(Functions... funcs) {
+    struct Result : public Functions..., public SyntaxVisitor<Result> {
+        Result(Functions... funcs) : Functions(std::move(funcs))... {}
+        using Functions::operator()...;
+    };
+    return Result(std::move(funcs)...);
+}
 
 namespace detail {
 
@@ -119,7 +147,7 @@ public:
         commits.clear();
         tempTrees.clear();
 
-        tree->root().visit(*DERIVED);
+        tree->root().visit(DERIVED);
 
         if (commits.empty())
             return tree;

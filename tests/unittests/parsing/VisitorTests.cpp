@@ -734,16 +734,6 @@ class C; endclass
     }
 }
 
-struct CstCounter : public slang::syntax::SyntaxVisitor<CstCounter> {
-    template<typename T>
-    void handle(const T& syntaxNode) {
-        syntaxKinds.insert(syntaxNode.kind);
-        visitDefault(syntaxNode);
-    }
-
-    flat_hash_set<syntax::SyntaxKind> syntaxKinds;
-};
-
 TEST_CASE("Visit all file") {
     // Load a file containing all the SystemVerilog constructs and visit them
     // just to get coverage of all the visitor methods.
@@ -772,8 +762,11 @@ TEST_CASE("Visit all file") {
             v.visitDefault(node);
         }));
 
-    CstCounter syntaxes;
-    (*tree)->root().visit(syntaxes);
+    flat_hash_set<syntax::SyntaxKind> syntaxKinds;
+    (*tree)->root().visit(makeSyntaxVisitor([&](auto& v, const auto& node) {
+        syntaxKinds.insert(node.kind);
+        v.visitDefault(node);
+    }));
 
     auto printMissing = [](const std::string_view name, const auto& kinds, const auto& visited) {
         for (auto kind : kinds) {
@@ -788,7 +781,7 @@ TEST_CASE("Visit all file") {
     // printMissing("statement", ast::StatementKind_traits::values, symbols.stmtKinds);
 
     // Ideally this should visit all kinds (be zero)
-    CHECK(218 == syntax::SyntaxKind_traits::values.size() - syntaxes.syntaxKinds.size());
+    CHECK(218 == syntax::SyntaxKind_traits::values.size() - syntaxKinds.size());
 
     CHECK(42 == ast::SymbolKind_traits::values.size() - symKinds.size());
     CHECK(11 == ast::ExpressionKind_traits::values.size() - exprKinds.size());

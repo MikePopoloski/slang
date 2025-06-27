@@ -187,12 +187,12 @@ public:
     /// Applies a visitor object to this node by dispatching based on the
     /// dynamic kind. The given @a args are forwarded to the visitor.
     template<typename TVisitor, typename... Args>
-    decltype(auto) visit(TVisitor& visitor, Args&&... args);
+    decltype(auto) visit(TVisitor&& visitor, Args&&... args);
 
     /// Applies a visitor object to this node by dispatching based on the
     /// dynamic kind. The given @a args are forwarded to the visitor.
     template<typename TVisitor, typename... Args>
-    decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
+    decltype(auto) visit(TVisitor&& visitor, Args&&... args) const;
 
     /// A base implemention of the method that checks correctness of dynamic casting.
     /// Derived nodes should reimplement this and return true if the provided syntax kind

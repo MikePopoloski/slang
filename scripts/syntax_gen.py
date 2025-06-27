@@ -698,7 +698,7 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
 
     outf.write("template<typename TNode, typename TVisitor, typename... Args>\n")
     outf.write(
-        "decltype(auto) visitSyntaxNode(TNode* node, TVisitor& visitor, Args&&... args) {\n"
+        "decltype(auto) visitSyntaxNode(TNode* node, TVisitor&& visitor, Args&&... args) {\n"
     )
     outf.write("    static constexpr bool isConst = std::is_const_v<TNode>;")
     outf.write("    switch (node->kind) {\n")
@@ -730,7 +730,7 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
 
     outf.write("template<typename TVisitor, typename... Args>\n")
     outf.write(
-        "decltype(auto) SyntaxNode::visit(TVisitor& visitor, Args&&... args) {\n"
+        "decltype(auto) SyntaxNode::visit(TVisitor&& visitor, Args&&... args) {\n"
     )
     outf.write(
         "    return detail::visitSyntaxNode(this, visitor, std::forward<Args>(args)...);\n"
@@ -739,7 +739,7 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
 
     outf.write("template<typename TVisitor, typename... Args>\n")
     outf.write(
-        "decltype(auto) SyntaxNode::visit(TVisitor& visitor, Args&&... args) const {\n"
+        "decltype(auto) SyntaxNode::visit(TVisitor&& visitor, Args&&... args) const {\n"
     )
     outf.write(
         "    return detail::visitSyntaxNode(this, visitor, std::forward<Args>(args)...);\n"
