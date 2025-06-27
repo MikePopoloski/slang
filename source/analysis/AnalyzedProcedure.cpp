@@ -54,6 +54,13 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             hasSampledValueCalls = true;
     }
 
+    // Store timing control statements from data flow analysis
+    auto dfaTimedStatements = dfa.getTimedStatements();
+    timingControls.reserve(dfaTimedStatements.size());
+    for (auto stmt : dfaTimedStatements) {
+        timingControls.push_back(stmt);
+    }
+
     if (parentProcedure || !dfa.getAssertions().empty() || hasSampledValueCalls) {
         // All flavors of always and initial blocks can infer a clock.
         if (analyzedSymbol.kind == SymbolKind::ProceduralBlock &&
@@ -165,6 +172,33 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         SmallSet<const SubroutineSymbol*, 2> visited;
         for (auto call : dfaCalls)
             context.manager->getFunctionDrivers(*call, analyzedSymbol, visited, drivers);
+        if (analyzedSymbol.kind == SymbolKind::ProceduralBlock) {
+            auto& procedure = analyzedSymbol.as<ProceduralBlockSymbol>();
+            if (procedure.procedureKind == ProceduralBlockKind::Always &&
+                !procedure.isFromAssertion) {
+                // Generic always procedures must have timing controls
+
+                if (timingControls.empty()) {
+                    // Check if any called subroutines have timing controls
+                    bool hasTimingInSubroutines = false;
+                    SmallSet<const SubroutineSymbol*, 2> taskVisited;
+                    std::vector<const ast::Statement*> taskTimingControls;
+                    for (auto call : dfaCalls) {
+                        context.manager->getTaskTimingControls(*call, taskVisited,
+                                                               taskTimingControls);
+                        if (!taskTimingControls.empty()) {
+                            hasTimingInSubroutines = true;
+                            break;
+                        }
+                    }
+
+                    if (!hasTimingInSubroutines) {
+                        context.addDiag(procedure, diag::AlwaysWithoutTimingControl,
+                                        procedure.location);
+                    }
+                }
+            }
+        }
     }
 }
 

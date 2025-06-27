@@ -416,3 +416,75 @@ endmodule
     auto [diags, design] = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Always without timing control analysis") {
+    auto& code = R"(
+module timing_test;
+    logic clk, a, b, c;
+
+    // This should trigger AlwaysWithoutTimingControl
+    always begin
+        a = b;
+    end
+
+    // This should be fine (has timing control)
+    always @(posedge clk) begin
+        b = a;
+    end
+
+    // This should trigger it (assertion doesn't count as timing control)
+    always begin
+        assert property (@(posedge clk) a |=> b);
+    end
+
+    // Test subroutine calls
+    function void my_func();
+        // No timing control in function
+    endfunction
+
+    task my_task();
+        @(posedge clk);  // Has timing control
+    endtask
+
+    task my_task_2();
+        my_task();
+    endtask
+
+    // This should be fine (calls task which calls task with timing)
+    always begin
+        my_task_2();
+    end
+
+    // This should trigger diagnostic (calls function without timing)
+    always begin
+        my_func();
+    end
+
+    // This should be fine (calls task with timing)
+    always begin
+        my_task();
+    end
+
+    // Test with wait statements (should be valid)
+    always begin
+        wait(clk);
+        c = a;
+    end
+
+    // Test with delay control (should be valid)
+    always begin
+        #10 c = b;
+    end
+
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::AlwaysWithoutTimingControl);
+    CHECK(diags[1].code == diag::AlwaysWithoutTimingControl);
+    CHECK(diags[2].code == diag::AlwaysWithoutTimingControl);
+}
