@@ -1927,7 +1927,7 @@ endclass
 TEST_CASE("Ref args in fork-join blocks") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(
-function automatic foo(ref a, ref static b);
+function automatic foo(ref int a, ref static int b);
     fork
         automatic int k = a;
         begin : foo

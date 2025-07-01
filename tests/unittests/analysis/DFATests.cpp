@@ -554,3 +554,23 @@ endmodule // test
     CHECK(diags[11].code == diag::InferredComb);
     CHECK(diags[12].code == diag::InferredComb);
 }
+
+TEST_CASE("DFA with missing function call error -- GH #1426") {
+    auto& code = R"(
+function reg foo0(reg q);
+    return bar(q);
+endfunction
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto tree = SyntaxTree::fromText(code);
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    compilation.freeze();
+
+    auto design = analysisManager.analyze(compilation);
+    auto diags = analysisManager.getDiagnostics(compilation.getSourceManager());
+    CHECK_DIAGS_EMPTY;
+}

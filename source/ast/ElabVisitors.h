@@ -84,10 +84,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
         if constexpr (requires { symbol.getBody().bad(); }) {
             auto& body = symbol.getBody();
-            if (body.bad())
-                return true;
-
-            body.visit(*this);
+            if (!body.bad())
+                body.visit(*this);
         }
 
         visitDefault(symbol);
