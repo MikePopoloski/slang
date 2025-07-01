@@ -43,11 +43,6 @@ public:
     /// Constructs a new DataFlowAnalysis object.
     DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol, bool reportDiags);
 
-    /// Visits all of the symbols that are assigned anywhere in the procedure
-    /// and aren't definitely assigned by the end of the procedure.
-    template<typename F>
-    void visitLatches(F&& func) const;
-
     /// Gets all of the statements in the procedure that have timing controls
     /// associated with them.
     std::span<const Statement* const> getTimedStatements() const { return timedStatements; }
@@ -83,6 +78,16 @@ public:
 
     /// Returns true if the given symbol is definitely assigned at the current point.
     bool isDefinitelyAssigned(const ValueSymbol& symbol) const;
+
+    /// Visits all of the symbols that are assigned anywhere in the procedure
+    /// and aren't definitely assigned by the end of the procedure.
+    template<typename F>
+    void visitPartiallyAssigned(bool skipAutomatic, F&& func) const;
+
+    /// Visits all of the symbols (and LSP ranges) that are definitely assigned at
+    /// the current point in the procedure.
+    template<typename F>
+    void visitDefinitelyAssigned(bool skipAutomatic, F&& func) const;
 
     // Tracks assigned ranges of symbols used as lvalues in the procedure.
     struct LValueSymbol {
@@ -196,12 +201,13 @@ private:
 };
 
 template<typename F>
-void DataFlowAnalysis::visitLatches(F&& func) const {
+void DataFlowAnalysis::visitPartiallyAssigned(bool skipAutomatic, F&& func) const {
+    auto& currState = getState();
     for (size_t index = 0; index < lvalues.size(); index++) {
-        // Skip automatic variables, which can't be inferred latches.
         auto& symbolState = lvalues[index];
         auto& symbol = *symbolState.symbol;
-        if (VariableSymbol::isKind(symbol.kind) &&
+
+        if (skipAutomatic && VariableSymbol::isKind(symbol.kind) &&
             symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
             continue;
         }
@@ -211,7 +217,6 @@ void DataFlowAnalysis::visitLatches(F&& func) const {
 
         // Each interval in the left map is a range that needs to be fully covered
         // by our final state, otherwise that interval is not fully assigned.
-        auto& currState = getState();
         if (currState.assigned.size() <= index) {
             for (auto it = left.begin(); it != left.end(); ++it)
                 func(symbol, **it);
@@ -231,6 +236,40 @@ void DataFlowAnalysis::visitLatches(F&& func) const {
                     continue;
             }
             func(symbol, **lit);
+        }
+    }
+}
+
+template<typename F>
+void DataFlowAnalysis::visitDefinitelyAssigned(bool skipAutomatic, F&& func) const {
+    auto& currState = getState();
+    for (size_t index = 0; index < currState.assigned.size(); index++) {
+        auto& symbolState = lvalues[index];
+        auto& symbol = *symbolState.symbol;
+
+        if (skipAutomatic && VariableSymbol::isKind(symbol.kind) &&
+            symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+            continue;
+        }
+
+        auto& imap = currState.assigned[index];
+        for (auto it = imap.begin(); it != imap.end(); ++it) {
+            // We know this range is definitely assigned. In order to provide an
+            // example expression for the LSP we need to look up a range that
+            // overlaps from the procedure-wide tracking map.
+            std::optional<std::pair<uint64_t, uint64_t>> prevBounds;
+            for (auto lspIt = symbolState.assigned.find(it.bounds());
+                 lspIt != symbolState.assigned.end(); ++lspIt) {
+                // Skip over ranges that partially overlap previously visited ranges,
+                // as it's not clear that there's additional value in reporting them.
+                auto curBounds = lspIt.bounds();
+                if (!prevBounds || prevBounds->first > curBounds.second ||
+                    prevBounds->second < curBounds.first) {
+                    func(symbol, **lspIt);
+                }
+
+                prevBounds = curBounds;
+            }
         }
     }
 }

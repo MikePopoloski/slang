@@ -105,12 +105,23 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
 
     if (analyzedSymbol.kind == SymbolKind::ProceduralBlock) {
         auto& procedure = analyzedSymbol.as<ProceduralBlockSymbol>();
+
         if (procedure.procedureKind == ProceduralBlockKind::AlwaysComb) {
-            dfa.visitLatches([&](const Symbol&, const Expression& expr) {
+            dfa.visitPartiallyAssigned(/* skipAutomatic */ true, [&](const Symbol&,
+                                                                     const Expression& expr) {
                 FormatBuffer buffer;
                 LSPUtilities::stringifyLSP(expr, dfa.getEvalContext(), buffer);
 
                 context.addDiag(procedure, diag::InferredLatch, expr.sourceRange) << buffer.str();
+            });
+        }
+        else if (procedure.procedureKind == ProceduralBlockKind::AlwaysLatch) {
+            dfa.visitDefinitelyAssigned(/* skipAutomatic */ true, [&](const Symbol&,
+                                                                      const Expression& expr) {
+                FormatBuffer buffer;
+                LSPUtilities::stringifyLSP(expr, dfa.getEvalContext(), buffer);
+
+                context.addDiag(procedure, diag::InferredComb, expr.sourceRange) << buffer.str();
             });
         }
     }

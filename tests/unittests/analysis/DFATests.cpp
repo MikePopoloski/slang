@@ -416,3 +416,141 @@ endmodule
     auto [diags, design] = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("No latch inferred for always_latch") {
+    auto& code = R"(
+module m(input clk, input rst, input [2:0] in, output logic out, output logic out1);
+    struct { logic a; logic b; } s, s1;
+    always_latch begin
+        if (rst) begin
+            s.a = 0;
+            s.b = 0;
+        end
+        else begin
+            s.a = 1;
+            s.b = 0;
+        end
+    end
+    always_latch begin
+        if (rst) begin
+            s1.a = 0;
+            s1.b = 0;
+        end
+        // inferred latches on "s1.a" and "s1.b" :: missing else branch
+    end
+    always_latch begin
+        case(in[1:0])
+            2'b00:  out1 = 1'b0;
+            2'b01:  out1 = 1'b1;
+            2'b10:  out1 = 1'b1;
+            // inferred latch "out" :: missing condition 2'b11/default
+        endcase
+    end
+    always_latch begin
+        case(in[1:0])
+            2'b00:  out = 1'b0;
+            2'b01:  out = 1'b1;
+            2'b10:  out = 1'b1;
+            // inferred latch "out" :: missing condition 2'b11/default
+        endcase
+    end
+    logic flop0, flop1, flop2, flop3;
+    logic next0, next1, next2, next3;
+    logic b,c;
+    always_latch begin
+        next0 = flop0;
+        next1 = flop1;
+        // inferred latch "next2" :: missing initial condition
+        next3 = flop3;
+        case(in[2:0])
+            3'b001:             next0 = in[0];
+            3'b010:  if(b)      next1 = in[0];
+            3'b100:  if(c)      next2 = in[0];
+            default: if(!b&&!c) next3 = in[0];
+        endcase
+    end
+    parameter p = 4;
+    logic [p-1:0] slots;
+    logic q,r,t;
+    always_latch begin
+        for (int i = 0; i < p; i++) begin
+            if (b) slots[i] = 1;
+            else   slots[i] = 0;
+        end
+        for (;;) begin
+            q = 1;
+            break;
+        end
+        forever begin
+            r = 1;
+            break;
+            t = 1;
+        end
+    end
+    logic u, v;
+    always_latch begin
+        while (0) begin
+            u = 1;
+        end
+        while (1) begin
+            v = 1;
+            break;
+        end
+    end
+    I iface();
+    n n1(iface);
+    typedef enum logic [2:0] {
+        A, B, C, D,
+        E, F, G, H
+    } e_t;
+    e_t e;
+    logic x;
+    always_latch begin
+        case (e)
+            A, B, C, D: x = 1'b1;
+            default: x = 1'b0;
+        endcase
+    end
+endmodule
+interface I;
+    logic a;
+    modport m(output a);
+endinterface
+module n(I.m i);
+    always_latch begin
+        i.a = 1;
+    end
+endmodule
+module test10(out);
+  output reg [2:0] out;
+  reg en;
+  always_latch begin
+    out[1] <= 1;
+    case (en)
+      2'b00 : out[1] <= 1'b1;
+      2'b10 : out[2] <= 1'b1;
+      default : ;
+    endcase
+  end
+endmodule // test
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 13);
+    CHECK(diags[0].code == diag::InferredComb);
+    CHECK(diags[1].code == diag::InferredComb);
+    CHECK(diags[2].code == diag::InferredComb);
+    CHECK(diags[3].code == diag::InferredComb);
+    CHECK(diags[4].code == diag::InferredComb);
+    CHECK(diags[5].code == diag::InferredComb);
+    CHECK(diags[6].code == diag::InferredComb);
+    CHECK(diags[7].code == diag::InferredComb);
+    CHECK(diags[8].code == diag::InferredComb);
+    CHECK(diags[9].code == diag::CaseEnumExplicit);
+    CHECK(diags[10].code == diag::InferredComb);
+    CHECK(diags[11].code == diag::InferredComb);
+    CHECK(diags[12].code == diag::InferredComb);
+}
