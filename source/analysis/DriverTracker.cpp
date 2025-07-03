@@ -22,7 +22,7 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
                         const AnalyzedProcedure& procedure) {
     SmallVector<std::pair<const HierarchicalReference*, const ValueDriver*>> ifacePortRefs;
     for (auto& [valueSym, drivers] : procedure.getDrivers()) {
-        auto updateFunc = [&](auto& elem) {
+        auto updateFunc = [&, drivers](auto& elem) {
             for (auto& [driver, bounds] : drivers) {
                 auto ref = addDriver(context, driverAlloc, *elem.first, elem.second, *driver,
                                      bounds);
@@ -114,7 +114,7 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc, cons
 void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
                         std::span<const SymbolDriverListPair> symbolDriverList) {
     for (auto& [valueSym, drivers] : symbolDriverList) {
-        auto updateFunc = [&](auto& elem) {
+        auto updateFunc = [&, drivers](auto& elem) {
             for (auto& [driver, bounds] : drivers) {
                 auto ref = addDriver(context, driverAlloc, *elem.first, elem.second, *driver,
                                      bounds);
