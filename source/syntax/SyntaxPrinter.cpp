@@ -21,15 +21,22 @@ SyntaxPrinter::SyntaxPrinter(const SourceManager& sourceManager) : sourceManager
 
 SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
     switch (trivia.kind) {
-        case TriviaKind::Directive:
-            if (includeDirectives)
+        case TriviaKind::Directive: {
+            auto syntax = trivia.syntax();
+
+            bool expand = (syntax->kind == SyntaxKind::MacroUsage && expandMacros) ||
+                          (syntax->kind == SyntaxKind::IncludeDirective && expandIncludes);
+
+            if (includeDirectives && !expand) {
                 print(*trivia.syntax());
-            else if (includePreprocessed) {
-                auto nestedTrivia = trivia.syntax()->getFirstToken().trivia();
+            }
+            else if (includePreprocessed || expand) {
+                auto nestedTrivia = syntax->getFirstToken().trivia();
                 for (const auto& t : nestedTrivia)
                     print(t);
             }
             break;
+        }
         case TriviaKind::SkippedSyntax:
             if (includeSkipped)
                 print(*trivia.syntax());
@@ -58,8 +65,11 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
 
 SyntaxPrinter& SyntaxPrinter::print(Token token) {
     bool excluded = false;
-    if (!includePreprocessed && sourceManager)
-        excluded = sourceManager->isPreprocessedLoc(token.location());
+    if (!includePreprocessed && sourceManager) {
+        bool isMacro = sourceManager->isMacroLoc(token.location());
+        bool isInclude = sourceManager->isIncludedFileLoc(token.location());
+        excluded = (isMacro && !expandMacros) || (isInclude && !expandIncludes);
+    }
 
     if (includeTrivia) {
         if (includePreprocessed || !sourceManager) {
@@ -67,15 +77,20 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
                 print(t);
         }
         else {
-            // Exclude any trivia that is from a preprocessed location as well. In order
-            // to know that we need to skip over any trivia that is implicitly located
-            // relative to something ahead of it (a directive or the token itself).
+            // Exclude any trivia that is from a preprocessed location based on our flags.
+            // In order to know that we need to skip over any trivia that is implicitly
+            // located relative to something ahead of it (a directive or the token itself).
             SmallVector<const Trivia*> pending;
             for (const auto& trivia : token.trivia()) {
                 pending.push_back(&trivia);
                 auto loc = trivia.getExplicitLocation();
                 if (loc) {
-                    if (!sourceManager->isPreprocessedLoc(*loc)) {
+                    bool isMacro = sourceManager->isMacroLoc(*loc);
+                    bool isInclude = sourceManager->isIncludedFileLoc(*loc);
+                    bool shouldExclude = (isMacro && !expandMacros) ||
+                                         (isInclude && !expandIncludes);
+
+                    if (!shouldExclude) {
                         for (auto t : pending)
                             print(*t);
                     }

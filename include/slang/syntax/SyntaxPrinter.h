@@ -82,6 +82,27 @@ public:
         return *this;
     }
 
+    /// Sets whether to expand include directives when printing syntax.
+    /// @return a reference to this object, to allow chaining additional method calls.
+    SyntaxPrinter& setExpandIncludes(bool expand) {
+        expandIncludes = expand;
+        return *this;
+    }
+
+    /// Sets whether to expand macro directives when printing syntax.
+    /// @return a reference to this object, to allow chaining additional method calls.
+    SyntaxPrinter& setExpandMacros(bool expand) {
+        expandMacros = expand;
+        return *this;
+    }
+
+    /// Sets conflicting settings for use when expanding macros or includes.
+    /// @return a reference to this object, to allow chaining additional method calls.
+    SyntaxPrinter& setExpansionMode() {
+        includePreprocessed = false;
+        includeDirectives = true;
+        return *this;
+    }
     /// Sets whether to include comments when printing syntax.
     /// @return a reference to this object, to allow chaining additional method calls.
     SyntaxPrinter& setIncludeComments(bool include) {
@@ -112,6 +133,8 @@ private:
     bool includeSkipped = false;
     bool includeDirectives = false;
     bool includePreprocessed = true;
+    bool expandIncludes = false;
+    bool expandMacros = false;
     bool includeComments = true;
     bool squashNewlines = true;
 };
