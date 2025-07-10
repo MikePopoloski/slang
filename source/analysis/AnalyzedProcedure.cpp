@@ -54,6 +54,11 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             hasSampledValueCalls = true;
     }
 
+    // Store timing control statements from data flow analysis
+    auto dfaTimedStatements = dfa.getTimedStatements();
+    timingControls.insert(timingControls.end(), dfaTimedStatements.begin(),
+                          dfaTimedStatements.end());
+
     if (parentProcedure || !dfa.getAssertions().empty() || hasSampledValueCalls) {
         // All flavors of always and initial blocks can infer a clock.
         if (analyzedSymbol.kind == SymbolKind::ProceduralBlock &&
@@ -123,6 +128,27 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
 
                 context.addDiag(procedure, diag::InferredComb, expr.sourceRange) << buffer.str();
             });
+        }
+        else if (procedure.procedureKind == ProceduralBlockKind::Always) {
+            // Generic always procedures must have timing controls
+            if (!procedure.isFromAssertion && timingControls.empty()) {
+                // Check if any called subroutines have timing controls
+                bool hasTimingInSubroutines = false;
+                SmallSet<const SubroutineSymbol*, 2> taskVisited;
+                std::vector<const ast::Statement*> taskTimingControls;
+                for (auto call : dfaCalls) {
+                    context.manager->getTaskTimingControls(*call, taskVisited, taskTimingControls);
+                    if (!taskTimingControls.empty()) {
+                        hasTimingInSubroutines = true;
+                        break;
+                    }
+                }
+
+                if (!hasTimingInSubroutines) {
+                    context.addDiag(procedure, diag::AlwaysWithoutTimingControl,
+                                    procedure.location);
+                }
+            }
         }
     }
     else if (analyzedSymbol.kind == SymbolKind::Subroutine) {

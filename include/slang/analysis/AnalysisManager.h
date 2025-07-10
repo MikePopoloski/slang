@@ -171,6 +171,11 @@ public:
                             SmallSet<const ast::SubroutineSymbol*, 2>& visited,
                             std::vector<SymbolDriverListPair>& drivers);
 
+    /// Helper method to get all timing controls from a call to a task.
+    void getTaskTimingControls(const ast::CallExpression& expr,
+                               SmallSet<const ast::SubroutineSymbol*, 2>& visited,
+                               std::vector<const ast::Statement*>& controls);
+
 private:
     friend struct AnalysisScopeVisitor;
 
