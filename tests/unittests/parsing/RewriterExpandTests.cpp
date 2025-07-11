@@ -198,4 +198,43 @@ module test;
 endmodule)";
         CHECK(resultStr == expected);
     }
+
+    SECTION("Test expandMacros with macro in include") {
+        // Create a custom SourceManager and add include file content
+        SourceManager sourceManager;
+        sourceManager.setDisableProximatePaths(true);
+
+        // Add the include file content to SourceManager
+        sourceManager.assignText("test_header.svh", R"(
+`define SAFE_DEFINE(__name__, __value__=) \
+    `ifndef __name__ \
+        `define __name__ __value__ \
+    `endif
+
+`SAFE_DEFINE(SOME_VALUE)
+)");
+
+        // Test case where with token from macro, but also in include
+        auto combinedTestText = R"(
+`include "test_header.svh"
+
+module test;
+endmodule
+)";
+
+        // Parse the test file with our custom SourceManager
+        auto tree = SyntaxTree::fromText(combinedTestText, sourceManager);
+        REQUIRE(tree != nullptr);
+
+        // Test with both options enabled
+        SyntaxPrinter printer(tree->sourceManager());
+        printer.setExpansionMode();
+        printer.setExpandMacros(true);
+
+        auto result = printer.print(*tree);
+        auto resultStr = result.str();
+
+        // Should not see SOME_VALUE token
+        CHECK(resultStr.find("SOME_VALUE") == std::string::npos);
+    }
 }
