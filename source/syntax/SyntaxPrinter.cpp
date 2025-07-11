@@ -24,17 +24,40 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
         case TriviaKind::Directive: {
             auto syntax = trivia.syntax();
 
-            bool expand = (syntax->kind == SyntaxKind::MacroUsage && expandMacros) ||
-                          (syntax->kind == SyntaxKind::IncludeDirective && expandIncludes);
+            if (expandMacros || expandIncludes) {
+                bool expand = false;
+                if (syntax->kind == SyntaxKind::MacroUsage && expandMacros) {
+                    if (expandIncludes) {
+                        expand = true;
+                    }
+                    else {
+                        expand = !sourceManager->isIncludedFileLoc(
+                            syntax->getFirstToken().location());
+                        // make sure we're not in an include directive
+                    }
+                }
+                else if (syntax->kind == SyntaxKind::IncludeDirective && expandIncludes) {
+                    expand = true;
+                }
 
-            if (includeDirectives && !expand) {
-                print(*trivia.syntax());
+                if (!expand) {
+                    print(*trivia.syntax());
+                }
+                else {
+                    for (const auto& t : syntax->getFirstToken().trivia())
+                        print(t);
+                }
             }
-            else if (includePreprocessed || expand) {
-                auto nestedTrivia = syntax->getFirstToken().trivia();
-                for (const auto& t : nestedTrivia)
-                    print(t);
+            else {
+                if (includeDirectives) {
+                    print(*trivia.syntax());
+                }
+                else if (includePreprocessed) {
+                    for (const auto& t : syntax->getFirstToken().trivia())
+                        print(t);
+                }
             }
+
             break;
         }
         case TriviaKind::SkippedSyntax:
@@ -69,6 +92,11 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
         bool isMacro = sourceManager->isMacroLoc(token.location());
         bool isInclude = sourceManager->isIncludedFileLoc(token.location());
         excluded = (isMacro && !expandMacros) || (isInclude && !expandIncludes);
+        if (isMacro && expandMacros && !expandIncludes && isInclude) {
+            // If we're expanding macros but not includes, we still want to print
+            // the token if it's a macro that is not an include directive.
+            excluded = true;
+        }
     }
 
     if (includeTrivia) {
