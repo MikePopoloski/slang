@@ -32,7 +32,7 @@ Changelog = "https://github.com/MikePopoloski/slang/blob/master/CHANGELOG.md"
 test = ["pytest"]
 
 [build-system]
-requires = ["pybind11", "scikit-build-core"]
+requires = ["pybind11 == 2.13.*", "scikit-build-core"]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
