@@ -63,11 +63,15 @@ public:
         return callExpressions;
     }
 
+    /// Gets all of the timing control statements directly in the procedure
+    std::span<const ast::Statement* const> getTimingControls() const { return timingControls; }
+
 private:
     const ast::TimingControl* inferredClock = nullptr;
     std::vector<SymbolDriverListPair> drivers;
     std::vector<AnalyzedAssertion> assertions;
     std::vector<const ast::CallExpression*> callExpressions;
+    std::vector<const ast::Statement*> timingControls;
 };
 
 } // namespace slang::analysis

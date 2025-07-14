@@ -236,6 +236,42 @@ void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbo
         getFunctionDrivers(*call, containingSymbol, visited, drivers);
 }
 
+void AnalysisManager::getTaskTimingControls(const CallExpression& expr,
+                                            SmallSet<const SubroutineSymbol*, 2>& visited,
+                                            std::vector<const ast::Statement*>& controls) {
+    if (expr.getSubroutineKind() != SubroutineKind::Task || expr.isSystemCall()) {
+        return;
+    }
+
+    auto& subroutine = *std::get<const SubroutineSymbol*>(expr.subroutine);
+    if (subroutine.flags.has(MethodFlags::Pure | MethodFlags::InterfaceExtern |
+                             MethodFlags::DPIImport | MethodFlags::Randomize |
+                             MethodFlags::BuiltIn)) {
+        return;
+    }
+
+    // If we've already visited this task then we don't need to
+    // analyze it again.
+    if (!visited.insert(&subroutine).second)
+        return;
+
+    // Get analysis for the task.
+    auto analysis = getAnalyzedSubroutine(subroutine);
+    if (!analysis) {
+        auto proc = std::make_unique<AnalyzedProcedure>(getState().context, subroutine);
+        analysis = addAnalyzedSubroutine(subroutine, std::move(proc));
+    }
+
+    // Add timing controls from the task to our list.
+    auto taskTimingControls = analysis->getTimingControls();
+    controls.insert(controls.end(), taskTimingControls.begin(), taskTimingControls.end());
+
+    // If this task has any calls, we need to recursively add timing controls
+    // from those calls as well.
+    for (auto call : analysis->getCallExpressions())
+        getTaskTimingControls(*call, visited, controls);
+}
+
 DriverList AnalysisManager::getDrivers(const ValueSymbol& symbol) const {
     return driverTracker.getDrivers(symbol);
 }
