@@ -374,7 +374,7 @@ endmodule
     REQUIRE(type.kind == SymbolKind::EnumType);
     CHECK(type.getBitWidth() == 5);
 
-    const Type& s1_t = instance.memberAt<VariableSymbol>(6).getType().getCanonicalType();
+    const Type& s1_t = instance.memberAt<VariableSymbol>(5).getType().getCanonicalType();
     CHECK(s1_t.getBitWidth() == 10);
 
     const auto& s2_t = instance.find<TypeAliasType>("s2_t");

@@ -188,9 +188,9 @@ public:
     static void fromSyntax(const Scope& scope, const syntax::NetDeclarationSyntax& syntax,
                            SmallVectorBase<const NetSymbol*>& results);
 
-    static void fromSyntax(const Scope& scope,
+    static void fromSyntax(const ASTContext& context,
                            const syntax::UserDefinedNetDeclarationSyntax& syntax,
-                           const Symbol* netTypeSym, SmallVectorBase<const NetSymbol*>& results);
+                           SmallVectorBase<const NetSymbol*>& results);
 
     static NetSymbol& createImplicit(Compilation& compilation,
                                      const syntax::IdentifierNameSyntax& syntax,

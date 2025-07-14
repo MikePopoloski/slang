@@ -56,8 +56,6 @@ using namespace syntax;
 static size_t countMembers(const SyntaxNode& syntax);
 static bool declaresModportExports(const ModportDeclarationSyntax& syntax);
 static std::string_view getIdentifierName(const NamedTypeSyntax& syntax);
-static bool treatAsNonAnsiPort(const Scope& scope, const DataDeclarationSyntax& syntax,
-                               const DefinitionSymbol*& foundDef);
 
 Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
     compilation(compilation_), thisSym(thisSym_), nameMap(compilation.allocSymbolMap()) {
@@ -289,8 +287,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addDeferredMembers(syntax);
             break;
         case SyntaxKind::EnumType:
+        case SyntaxKind::UserDefinedNetDeclaration:
             addDeferredMembers(syntax);
-            hasEnums = true;
+            needsPrepass = true;
             break;
         case SyntaxKind::PortDeclaration:
             addDeferredMembers(syntax);
@@ -314,12 +313,13 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::DataDeclaration: {
-            // If this declaration has a named type we need to do a lookup here to see if it's
-            // actually a user-defined nettype or a non-ansi interface port declaration.
+            // If this declaration has a named type we need to defer adding it because it
+            // may actually be a user-defined net declaration or malformed interface port decl.
             auto& dataDecl = syntax.as<DataDeclarationSyntax>();
             if (dataDecl.type->kind == SyntaxKind::NamedType && dataDecl.modifiers.empty()) {
-                if (handleDataDeclaration(dataDecl))
-                    break;
+                addDeferredMembers(syntax);
+                needsPrepass = true;
+                break;
             }
 
             SmallVector<VariableSymbol*> symbols;
@@ -329,9 +329,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 addMember(*symbol);
             break;
         }
-        case SyntaxKind::UserDefinedNetDeclaration:
-            handleUserDefinedNet(syntax.as<UserDefinedNetDeclarationSyntax>());
-            break;
         case SyntaxKind::NetDeclaration: {
             SmallVector<const NetSymbol*> nets;
             NetSymbol::fromSyntax(*this, syntax.as<NetDeclarationSyntax>(), nets);
@@ -832,63 +829,6 @@ void Scope::elaborate() const {
     if (isUncacheable)
         compilation.noteCannotCache(*this);
 
-    // Enums need to be handled first because their value members may need
-    // to be looked up by methods below.
-    if (hasEnums) {
-        for (auto symbol = firstMember; symbol; symbol = symbol->nextInScope) {
-            if (symbol->kind != SymbolKind::DeferredMember)
-                continue;
-
-            auto& node = symbol->as<DeferredMemberSymbol>().node;
-            if (node.kind != SyntaxKind::EnumType)
-                continue;
-
-            ASTContext context(*this, LookupLocation::before(*symbol));
-            EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), context,
-                                 [this, &symbol](const Symbol& member) {
-                                     auto wrapped = compilation.emplace<TransparentMemberSymbol>(
-                                         member);
-                                     insertMember(wrapped, symbol, true, false);
-                                     symbol = wrapped;
-                                 });
-        }
-    }
-
-    // Allow interfaces to implicitly declare extern methods for
-    // exported subroutines that are only declared in modports.
-    if (hasModportExports)
-        handleExportedMethods();
-
-    SmallVector<std::pair<const SyntaxNode*, const Symbol*>> nonAnsiPortDecls;
-    if (thisSym->kind == SymbolKind::ClassType) {
-        // If this is a class type being elaborated, let it inherit members from parent classes.
-        thisSym->as<ClassType>().inheritMembers(
-            [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
-    }
-    else if (thisSym->kind == SymbolKind::CovergroupType) {
-        // If this is a covergroup type being elaborated, let it inherit members from parent
-        // classes.
-        thisSym->as<CovergroupType>().inheritMembers(
-            [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
-    }
-    else if (thisSym->kind == SymbolKind::InstanceBody) {
-        // If this is an instance body with non-ansi ports we need to
-        // find all port declarations in the body for later elaboration.
-        if (thisSym->as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
-            for (auto symbol = firstMember; symbol; symbol = symbol->nextInScope) {
-                if (symbol->kind == SymbolKind::DeferredMember) {
-                    const DefinitionSymbol* unused;
-                    auto& node = symbol->as<DeferredMemberSymbol>().node;
-                    if (node.kind == SyntaxKind::PortDeclaration ||
-                        (node.kind == SyntaxKind::DataDeclaration &&
-                         treatAsNonAnsiPort(*this, node.as<DataDeclarationSyntax>(), unused))) {
-                        nonAnsiPortDecls.push_back({&node, symbol});
-                    }
-                }
-            }
-        }
-    }
-
     auto insertMembers = [this](auto& members, const Symbol* at) {
         // When we originally inserted the DeferredMemberSymbol we made room
         // in the index space for these new members. Back the index up by
@@ -916,41 +856,69 @@ void Scope::elaborate() const {
         }
     };
 
-    // This checks for unused non-ansi port declarations, which can
-    // happen for erroneous port decls in ansi modules, or modules
-    // that don't have any ports at all.
-    bool usedPorts = false;
-    auto checkUnusedPort = [&](const SyntaxNode& syntax) {
-        // If this is a non-ansi module then there's no problem.
-        if (!nonAnsiPortDecls.empty())
-            return;
+    const bool hasNonAnsiPorts = thisSym->kind == SymbolKind::InstanceBody &&
+                                 thisSym->as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts;
+    SmallVector<std::pair<const SyntaxNode*, const Symbol*>> nonAnsiPortDecls;
+    if (needsPrepass || hasNonAnsiPorts) {
+        for (auto symbol = firstMember; symbol; symbol = symbol->nextInScope) {
+            if (symbol->kind != SymbolKind::DeferredMember)
+                continue;
 
-        // Otherwise, there's a problem. Choose the error
-        // based on whether we have any ports at all or not.
-        if (usedPorts) {
-            addDiag(diag::PortDeclInANSIModule, syntax.sourceRange());
-        }
-        else {
-            auto& declarators = syntax.kind == SyntaxKind::PortDeclaration
-                                    ? syntax.as<PortDeclarationSyntax>().declarators
-                                    : syntax.as<DataDeclarationSyntax>().declarators;
-            for (auto decl : declarators) {
-                // We'll report an error for just the first decl in each syntax entry,
-                // because it should be clear to the user that there aren't any ports
-                // at all in the module header.
-                auto name = decl->name.valueText();
-                if (!name.empty()) {
-                    addDiag(diag::UnusedPortDecl, decl->sourceRange()) << name;
+            ASTContext context(*this, LookupLocation::before(*symbol));
+            auto& node = symbol->as<DeferredMemberSymbol>().node;
+            switch (node.kind) {
+                case SyntaxKind::UserDefinedNetDeclaration: {
+                    SmallVector<const NetSymbol*> nets;
+                    NetSymbol::fromSyntax(context, node.as<UserDefinedNetDeclarationSyntax>(),
+                                          nets);
+                    insertMembers(nets, symbol);
                     break;
                 }
+                case SyntaxKind::EnumType: {
+                    EnumType::fromSyntax(
+                        compilation, node.as<EnumTypeSyntax>(), context,
+                        [this, &symbol](const Symbol& member) {
+                            auto wrapped = compilation.emplace<TransparentMemberSymbol>(member);
+                            insertMember(wrapped, symbol, true, false);
+                            symbol = wrapped;
+                        });
+                    break;
+                }
+                case SyntaxKind::DataDeclaration:
+                    handleDataDeclaration(context, node.as<DataDeclarationSyntax>(), symbol,
+                                          nonAnsiPortDecls);
+                    break;
+                case SyntaxKind::PortDeclaration:
+                    nonAnsiPortDecls.push_back({&node, symbol});
+                    break;
+                default:
+                    break;
             }
         }
-    };
+    }
+
+    // Allow interfaces to implicitly declare extern methods for
+    // exported subroutines that are only declared in modports.
+    if (hasModportExports)
+        handleExportedMethods();
+
+    if (thisSym->kind == SymbolKind::ClassType) {
+        // If this is a class type being elaborated, let it inherit members from parent classes.
+        thisSym->as<ClassType>().inheritMembers(
+            [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
+    }
+    else if (thisSym->kind == SymbolKind::CovergroupType) {
+        // If this is a covergroup type being elaborated, let it inherit members from parent
+        // classes.
+        thisSym->as<CovergroupType>().inheritMembers(
+            [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
+    }
 
     // Go through deferred instances and elaborate them now.
     SmallVector<const ModuleDeclarationSyntax*> nestedDefs;
     const Symbol* prev = nullptr;
     uint32_t constructIndex = 1;
+    bool usedPorts = false;
 
     for (auto symbol = firstMember; symbol; symbol = symbol->nextInScope) {
         if (symbol->kind != SymbolKind::DeferredMember) {
@@ -1105,23 +1073,28 @@ void Scope::elaborate() const {
                 break;
             }
             case SyntaxKind::PortDeclaration:
-                checkUnusedPort(member.node);
-                break;
-            case SyntaxKind::DataDeclaration: {
-                const DefinitionSymbol* defSym = nullptr;
-                auto& dds = member.node.as<DataDeclarationSyntax>();
-                if (treatAsNonAnsiPort(*this, dds, defSym)) {
-                    checkUnusedPort(dds);
+                // If this is a non-ansi module then there's no problem.
+                if (hasNonAnsiPorts)
+                    break;
+
+                // Otherwise, there's a problem. Choose the error
+                // based on whether we have any ports at all or not.
+                if (usedPorts) {
+                    addDiag(diag::PortDeclInANSIModule, member.node.sourceRange());
                 }
-                else if (defSym) {
-                    // Assume this is malformed instantiation syntax and create
-                    // the instances anyway.
-                    SmallVector<const Symbol*> instances;
-                    InstanceSymbol::fromFixupSyntax(compilation, *defSym, dds, context, instances);
-                    insertMembers(instances, symbol);
+                else {
+                    for (auto decl : member.node.as<PortDeclarationSyntax>().declarators) {
+                        // We'll report an error for just the first decl in each syntax entry,
+                        // because it should be clear to the user that there aren't any ports
+                        // at all in the module header.
+                        auto name = decl->name.valueText();
+                        if (!name.empty()) {
+                            addDiag(diag::UnusedPortDecl, decl->sourceRange()) << name;
+                            break;
+                        }
+                    }
                 }
                 break;
-            }
             case SyntaxKind::ModuleDeclaration:
             case SyntaxKind::ProgramDeclaration:
                 // These have to wait until we've seen all instantiations.
@@ -1163,6 +1136,8 @@ void Scope::elaborate() const {
                 break;
             }
             case SyntaxKind::EnumType:
+            case SyntaxKind::UserDefinedNetDeclaration:
+            case SyntaxKind::DataDeclaration:
                 // Already handled above.
                 break;
             case SyntaxKind::BindDirective:
@@ -1215,28 +1190,35 @@ void Scope::elaborate() const {
         TimeTrace::endTrace();
 }
 
-bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
+void Scope::handleDataDeclaration(
+    const ASTContext& context, const DataDeclarationSyntax& syntax, const Symbol*& insertionPoint,
+    SmallVector<std::pair<const SyntaxNode*, const Symbol*>>& nonAnsiPortDecls) const {
+
+    auto insertMembers = [this, &insertionPoint](auto& members) {
+        SLANG_ASSERT(insertionPoint);
+        insertionPoint->indexInScope -= (uint32_t)members.size();
+        for (auto member : members) {
+            insertMember(member, insertionPoint, true, true);
+            insertionPoint = member;
+        }
+    };
+
+    // Try to look up the named type.
     auto& namedType = syntax.type->as<NamedTypeSyntax>();
     std::string_view name = getIdentifierName(namedType);
-    if (name.empty())
-        return false;
-
-    // We aren't elaborated yet so can't do a normal lookup in this scope.
-    // Temporarily swap out the deferred member index so that the lookup
-    // doesn't trigger elaboration.
-    auto savedFlag = std::exchange(needsElaboration, false);
     auto symbol = Lookup::unqualified(*this, name);
-    needsElaboration = savedFlag;
 
-    // If we found a net type, this is actually one or more net symbols.
+    // If we find a net type, this is actually one or more net symbols.
     if (symbol && symbol->kind == SymbolKind::NetType) {
         auto& netType = symbol->as<NetType>();
+        insertionPoint->indexInScope -= (uint32_t)syntax.declarators.size();
         for (auto decl : syntax.declarators) {
             auto net = compilation.emplace<NetSymbol>(decl->name.valueText(), decl->name.location(),
                                                       netType);
             net->setFromDeclarator(*decl);
             net->setAttributes(*this, syntax.attributes);
-            addMember(*net);
+            insertMember(net, insertionPoint, true, true);
+            insertionPoint = net;
         }
 
         // Make sure we're not declared within a checker.
@@ -1254,52 +1236,40 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
             currScope = sym.getParentScope();
         } while (currScope);
 
-        return true;
+        return;
     }
 
-    // No user-defined net type found. If this is a simple name and no symbol at all
-    // was found we should continue on to see if this is a non-ansi interface port.
-    if (symbol || namedType.name->kind != SyntaxKind::IdentifierName)
-        return false;
+    if (!symbol && namedType.name->kind == SyntaxKind::IdentifierName) {
+        auto def = compilation.tryGetDefinition(name, *this).definition;
+        if (def && def->kind == SymbolKind::Definition) {
+            auto& defSym = def->as<DefinitionSymbol>();
+            if (defSym.definitionKind == DefinitionKind::Interface &&
+                thisSym->kind == SymbolKind::InstanceBody &&
+                thisSym->as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
+                // If we're in an instance and have non-ansi ports then assume that this is
+                // a non-ansi interface port definition.
+                nonAnsiPortDecls.push_back({&syntax, insertionPoint});
+                return;
+            }
 
-    // If we're in an instance and have non-ansi ports then assume that this is
-    // a non-ansi interface port definition.
-    const DefinitionSymbol* defSym = nullptr;
-    if (treatAsNonAnsiPort(*this, syntax, defSym)) {
-        // Save for later when we process the ports.
-        addDeferredMembers(syntax);
-        return true;
+            // If we made it this far it's probably a malformed instantiation -- the user forgot
+            // to include the parentheses. Let's just treat it like an instantiation instead, as
+            // long as there are no decl initializers (which would never look like an
+            // instantiation).
+            if (std::ranges::none_of(syntax.declarators,
+                                     [](auto decl) { return decl->initializer != nullptr; })) {
+                SmallVector<const Symbol*> instances;
+                InstanceSymbol::fromFixupSyntax(compilation, defSym, syntax, context, instances);
+                insertMembers(instances);
+                return;
+            }
+        }
     }
 
-    // If not a definition then nothing to fixup.
-    if (!defSym)
-        return false;
-
-    // If we made it this far it's probably a malformed instantiation -- the user forgot
-    // to include the parentheses. Let's just treat it like an instantiation instead, as
-    // long as there are no decl initializers (which would never look like an instantiation).
-    for (auto decl : syntax.declarators) {
-        if (decl->initializer)
-            return false;
-    }
-
-    addDeferredMembers(syntax);
-    return true;
-}
-
-void Scope::handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax) {
-    // We aren't elaborated yet so can't do a normal lookup in this scope.
-    // Temporarily swap out the deferred member index so that the lookup
-    // doesn't trigger elaboration.
-    auto savedFlag = std::exchange(needsElaboration, false);
-    auto symbol = Lookup::unqualifiedAt(*this, syntax.netType.valueText(), LookupLocation::max,
-                                        syntax.netType.range());
-    needsElaboration = savedFlag;
-
-    SmallVector<const NetSymbol*> results;
-    NetSymbol::fromSyntax(*this, syntax, symbol, results);
-    for (auto sym : results)
-        addMember(*sym);
+    // Otherwise it's just a normal variable declaration.
+    SmallVector<VariableSymbol*> symbols;
+    VariableSymbol::fromSyntax(compilation, syntax, *this, /* isCheckerFreeVar */ false, symbols);
+    insertMembers(symbols);
 }
 
 void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const {
@@ -1445,25 +1415,6 @@ static std::string_view getIdentifierName(const NamedTypeSyntax& syntax) {
     return ""sv;
 }
 
-static bool treatAsNonAnsiPort(const Scope& scope, const DataDeclarationSyntax& syntax,
-                               const DefinitionSymbol*& foundDef) {
-    auto& namedType = syntax.type->as<NamedTypeSyntax>();
-    std::string_view name = getIdentifierName(namedType);
-    auto def = scope.getCompilation().tryGetDefinition(name, scope).definition;
-    if (!def || def->kind != SymbolKind::Definition)
-        return false;
-
-    auto& defSym = def->as<DefinitionSymbol>();
-    foundDef = &defSym;
-    if (defSym.definitionKind == DefinitionKind::Interface &&
-        scope.asSymbol().kind == SymbolKind::InstanceBody &&
-        scope.asSymbol().as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
-        return true;
-    }
-
-    return false;
-}
-
 static size_t countGenMembers(const SyntaxNode& syntax) {
     switch (syntax.kind) {
         case SyntaxKind::IfGenerate: {
@@ -1517,6 +1468,8 @@ static size_t countMembers(const SyntaxNode& syntax) {
             return syntax.as<ModportDeclarationSyntax>().items.size();
         case SyntaxKind::DataDeclaration:
             return syntax.as<DataDeclarationSyntax>().declarators.size();
+        case SyntaxKind::UserDefinedNetDeclaration:
+            return syntax.as<UserDefinedNetDeclarationSyntax>().declarators.size();
         case SyntaxKind::PortDeclaration:
             return syntax.as<PortDeclarationSyntax>().declarators.size();
         case SyntaxKind::ClockingItem:

@@ -280,8 +280,10 @@ private:
     void handleNameConflict(const Symbol& member) const;
     void handleNameConflict(const Symbol& member, const Symbol*& existing,
                             bool isElaborating) const;
-    bool handleDataDeclaration(const syntax::DataDeclarationSyntax& syntax);
-    void handleUserDefinedNet(const syntax::UserDefinedNetDeclarationSyntax& syntax);
+    void handleDataDeclaration(
+        const ASTContext& context, const syntax::DataDeclarationSyntax& syntax,
+        const Symbol*& insertionPoint,
+        SmallVector<std::pair<const syntax::SyntaxNode*, const Symbol*>>& nonAnsiPortDecls) const;
     void handleNestedDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
     void handleExportedMethods() const;
     void checkImportConflict(const Symbol& member, const Symbol& existing) const;
@@ -312,8 +314,9 @@ private:
     // its members can be accessed.
     mutable bool needsElaboration = false;
 
-    // Indicates whether any enums have been registered in the scope.
-    bool hasEnums = false;
+    // Indicates whether elaboration needs to do a prepass to add things like
+    // enum values, deferred data declarations, etc.
+    bool needsPrepass = false;
 
     // Indicates whether this scope is uncacheable, for instance if
     // it contains an extern iface method implementation.

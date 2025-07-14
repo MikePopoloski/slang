@@ -417,11 +417,14 @@ void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& synta
     }
 }
 
-void NetSymbol::fromSyntax(const Scope& scope, const UserDefinedNetDeclarationSyntax& syntax,
-                           const Symbol* netTypeSym, SmallVectorBase<const NetSymbol*>& results) {
-    auto& comp = scope.getCompilation();
+void NetSymbol::fromSyntax(const ASTContext& context, const UserDefinedNetDeclarationSyntax& syntax,
+                           SmallVectorBase<const NetSymbol*>& results) {
+    auto& comp = context.getCompilation();
+    auto netTypeSym = Lookup::unqualifiedAt(*context.scope, syntax.netType.valueText(),
+                                            context.getLocation(), syntax.netType.range());
+
     if (netTypeSym && netTypeSym->kind != SymbolKind::NetType) {
-        scope.addDiag(diag::VarDeclWithDelay, syntax.delay->sourceRange());
+        context.addDiag(diag::VarDeclWithDelay, syntax.delay->sourceRange());
         netTypeSym = nullptr;
     }
 
@@ -435,7 +438,7 @@ void NetSymbol::fromSyntax(const Scope& scope, const UserDefinedNetDeclarationSy
         auto net = comp.emplace<NetSymbol>(declarator->name.valueText(),
                                            declarator->name.location(), *netType);
         net->setFromDeclarator(*declarator);
-        net->setAttributes(scope, syntax.attributes);
+        net->setAttributes(*context.scope, syntax.attributes);
         results.push_back(net);
     }
 }

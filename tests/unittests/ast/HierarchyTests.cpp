@@ -2057,3 +2057,23 @@ endmodule
     CHECK(diags[0].code == diag::HierarchicalRefUnknownModule);
     CHECK(diags[1].code == diag::HierarchicalRefUnknownModule);
 }
+
+TEST_CASE("Package ordering dependency -- GH #1424") {
+    auto tree = SyntaxTree::fromText(R"(
+package A_pkg;
+  import B_pkg::*;
+  bstruct_t bstruct;
+endpackage
+
+package B_pkg;
+  typedef struct {
+    logic b0;
+    logic b1;
+  } bstruct_t;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
