@@ -1150,7 +1150,7 @@ error MultipleUDNTDrivers "net '{}' with user-defined nettype '{}' cannot have m
 error InputPortAssign "cannot assign to input port '{}'"
 error ClockVarTargetAssign "cannot write to '{}' with a continuous assignment since it's associated with an output clocking signal"
 error LocalFormalVarMultiAssign "cannot bind local variable '{}' to more than one output or inout local variable formal argument"
-error AlwaysWithoutTimingControl "'always' procedure does not advance time and so will create a simulation deadlock."
+error AlwaysWithoutTimingControl "'always' procedure does not advance time and so will create a simulation deadlock"
 note NoteRequiredHere "required here"
 note NoteClockHere "clock here"
 warning unused-def UnusedDefinition "{} definition is unused"
