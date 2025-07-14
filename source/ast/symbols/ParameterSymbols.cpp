@@ -133,7 +133,8 @@ const ConstantValue& ParameterSymbol::getValue(SourceRange referencingRange) con
 
             auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
             diag.addNote(diag::NoteReferencedHere, referencingRange);
-            return ConstantValue::Invalid;
+            value = &ConstantValue::Invalid;
+            return *value;
         }
 
         evaluating = true;

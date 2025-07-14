@@ -456,6 +456,17 @@ InstanceSymbol& InstanceSymbol::createVirtual(
     // the instantiation scope. This "virtual" instance never actually gets
     // added to the scope the proper way as a member.
     result.setParent(*context.scope);
+
+    // Force all parameter values to resolve. This is necessary because otherwise we
+    // can get into tricky loops when doing type checking against other virtual
+    // interface type usages.
+    for (auto param : result.body.getParameters()) {
+        if (param->symbol.kind == SymbolKind::Parameter)
+            param->symbol.as<ParameterSymbol>().getValue();
+        else
+            param->symbol.as<TypeParameterSymbol>().targetType.getType();
+    }
+
     return result;
 }
 
