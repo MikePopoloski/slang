@@ -355,9 +355,11 @@ bool CommandLine::parse(std::span<const std::string_view> args, ParseOptions opt
         if (!cmdIgnore.empty() || !cmdRename.empty()) {
             std::string_view ignoreArg = arg;
             std::string_view remainder;
+            bool isPlusArg = false;
             if (arg[0] == '+') {
                 // If we ignore a vendor command of the form +xx ,
                 // we match on any +xx+yyy command as +yy is the command's argument.
+                isPlusArg = true;
                 size_t plusIndex = arg.find_first_of('+', 1);
                 if (plusIndex != std::string_view::npos) {
                     ignoreArg = arg.substr(0, plusIndex);
@@ -381,8 +383,33 @@ bool CommandLine::parse(std::span<const std::string_view> args, ParseOptions opt
             }
 
             if (auto it = cmdRename.find(lookupStr); it != cmdRename.end()) {
-                // If yes, rename argument.
                 auto renamed = it->second + std::string(remainder);
+                if (!it->second.empty() && !remainder.empty()) {
+                    if (isPlusArg && it->second[0] != '+') {
+                        // Renaming a plus arg to a non-plus arg.
+                        remainder = remainder.substr(1);
+                        while (!remainder.empty()) {
+                            size_t plusIndex = remainder.find_first_of('+');
+                            renamed = it->second + '=' +
+                                      std::string(remainder.substr(0, plusIndex));
+
+                            handleArg(renamed, expectingVal, expectingValName, hadUnknowns,
+                                      options);
+
+                            if (plusIndex == std::string_view::npos)
+                                break;
+
+                            remainder = remainder.substr(plusIndex + 1);
+                        }
+                        continue;
+                    }
+
+                    if (!isPlusArg && it->second[0] == '+') {
+                        // Renaming a non-plus arg to a plus arg.
+                        renamed = it->second + '+' + std::string(remainder.substr(1));
+                    }
+                }
+
                 handleArg(renamed, expectingVal, expectingValName, hadUnknowns, options);
                 continue;
             }
