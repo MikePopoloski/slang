@@ -178,7 +178,7 @@ SyntaxPrinter& SyntaxPrinter::append(std::string_view text) {
     return *this;
 }
 
-bool SyntaxPrinter::shouldPrint(SourceLocation loc) {
+bool SyntaxPrinter::shouldPrint(SourceLocation loc) const {
     if (!sourceManager)
         return true;
 
@@ -199,7 +199,7 @@ bool SyntaxPrinter::shouldPrint(SourceLocation loc) {
     return true;
 }
 
-bool SyntaxPrinter::shouldPrint(SyntaxNode& /* DirectiveSyntax& */ syntax) {
+bool SyntaxPrinter::shouldPrint(SyntaxNode& /* DirectiveSyntax& */ syntax) const {
     if (!sourceManager)
         return includeDirectives;
 

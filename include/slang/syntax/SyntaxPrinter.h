@@ -114,8 +114,8 @@ public:
     static std::string printFile(const SyntaxTree& tree);
 
 private:
-    bool shouldPrint(SyntaxNode& syntax);
-    bool shouldPrint(SourceLocation loc);
+    bool shouldPrint(SyntaxNode& syntax) const;
+    bool shouldPrint(SourceLocation loc) const;
 
     std::string buffer;
     const SourceManager* sourceManager = nullptr;
