@@ -69,16 +69,25 @@ public:
     }
 
     /// Sets whether to include preprocessor directives when printing syntax.
+    /// For controlling expansion of macros and includes, use `setExpandIncludes` and
+    /// `setExpandMacros`.
     /// @return a reference to this object, to allow chaining additional method calls.
     SyntaxPrinter& setIncludeDirectives(bool include) {
         includeDirectives = include;
         return *this;
     }
 
-    /// Sets whether to include preprocessor-expanded tokens when printing syntax.
+    /// Sets whether to expand include directives when printing syntax.
     /// @return a reference to this object, to allow chaining additional method calls.
-    SyntaxPrinter& setIncludePreprocessed(bool include) {
-        includePreprocessed = include;
+    SyntaxPrinter& setExpandIncludes(bool expand) {
+        expandIncludes = expand;
+        return *this;
+    }
+
+    /// Sets whether to expand macro directives when printing syntax.
+    /// @return a reference to this object, to allow chaining additional method calls.
+    SyntaxPrinter& setExpandMacros(bool expand) {
+        expandMacros = expand;
         return *this;
     }
 
@@ -105,13 +114,17 @@ public:
     static std::string printFile(const SyntaxTree& tree);
 
 private:
+    bool shouldPrint(SyntaxNode& syntax) const;
+    bool shouldPrint(SourceLocation loc) const;
+
     std::string buffer;
     const SourceManager* sourceManager = nullptr;
     bool includeTrivia = true;
     bool includeMissing = false;
     bool includeSkipped = false;
     bool includeDirectives = false;
-    bool includePreprocessed = true;
+    bool expandIncludes = false;
+    bool expandMacros = false;
     bool includeComments = true;
     bool squashNewlines = true;
 };

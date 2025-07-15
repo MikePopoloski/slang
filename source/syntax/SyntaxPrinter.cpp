@@ -10,6 +10,7 @@
 #include "slang/parsing/ParserMetadata.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/text/SourceLocation.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang::syntax {
@@ -21,15 +22,19 @@ SyntaxPrinter::SyntaxPrinter(const SourceManager& sourceManager) : sourceManager
 
 SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
     switch (trivia.kind) {
-        case TriviaKind::Directive:
-            if (includeDirectives)
-                print(*trivia.syntax());
-            else if (includePreprocessed) {
-                auto nestedTrivia = trivia.syntax()->getFirstToken().trivia();
-                for (const auto& t : nestedTrivia)
+        case TriviaKind::Directive: {
+            auto& syntax = *trivia.syntax();
+
+            if (shouldPrint(syntax)) {
+                print(syntax);
+            }
+            else {
+                for (const auto& t : syntax.getFirstToken().trivia())
                     print(t);
             }
+
             break;
+        }
         case TriviaKind::SkippedSyntax:
             if (includeSkipped)
                 print(*trivia.syntax());
@@ -57,25 +62,24 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
 }
 
 SyntaxPrinter& SyntaxPrinter::print(Token token) {
-    bool excluded = false;
-    if (!includePreprocessed && sourceManager)
-        excluded = sourceManager->isPreprocessedLoc(token.location());
+    bool excluded = !shouldPrint(token.location());
 
     if (includeTrivia) {
-        if (includePreprocessed || !sourceManager) {
+        if (!sourceManager) {
             for (const auto& t : token.trivia())
                 print(t);
         }
         else {
-            // Exclude any trivia that is from a preprocessed location as well. In order
-            // to know that we need to skip over any trivia that is implicitly located
-            // relative to something ahead of it (a directive or the token itself).
+            // Exclude any trivia that is from a preprocessed location based on our flags.
+            // In order to know that we need to skip over any trivia that is implicitly
+            // located relative to something ahead of it (a directive or the token itself).
             SmallVector<const Trivia*> pending;
             for (const auto& trivia : token.trivia()) {
                 pending.push_back(&trivia);
                 auto loc = trivia.getExplicitLocation();
                 if (loc) {
-                    if (!sourceManager->isPreprocessedLoc(*loc)) {
+
+                    if (shouldPrint(*loc)) {
                         for (auto t : pending)
                             print(*t);
                     }
@@ -129,7 +133,6 @@ std::string SyntaxPrinter::printFile(const SyntaxTree& tree) {
         .setIncludeDirectives(true)
         .setIncludeSkipped(true)
         .setIncludeTrivia(true)
-        .setIncludePreprocessed(false)
         .setSquashNewlines(false)
         .print(tree)
         .str();
@@ -173,6 +176,52 @@ SyntaxPrinter& SyntaxPrinter::append(std::string_view text) {
 
     buffer.append(text);
     return *this;
+}
+
+bool SyntaxPrinter::shouldPrint(SourceLocation loc) const {
+    if (!sourceManager)
+        return true;
+
+    if (sourceManager->isMacroLoc(loc)) {
+        if (!expandMacros) {
+            return false;
+        }
+        if (expandIncludes)
+            return true;
+        // If we're expanding macros but not includes,
+        // we don't want macros invoked in included files to be printed.
+        return !sourceManager->isIncludedFileLoc(loc);
+    }
+    else if (sourceManager->isIncludedFileLoc(loc)) {
+        return expandIncludes;
+    }
+    // Not a preprocessed location, so we should print it.
+    return true;
+}
+
+bool SyntaxPrinter::shouldPrint(SyntaxNode& /* DirectiveSyntax& */ syntax) const {
+    if (!sourceManager)
+        return includeDirectives;
+
+    if (syntax.kind == SyntaxKind::MacroUsage) {
+        if (!expandMacros) {
+            return true;
+        }
+
+        if (expandIncludes) {
+            return false;
+        }
+        else {
+            // If we're expanding macros but not includes,
+            // we don't want macros invoked in included files to be printed.
+            return sourceManager->isIncludedFileLoc(syntax.getFirstToken().location());
+        }
+    }
+    else if (syntax.kind == SyntaxKind::IncludeDirective) {
+        return !expandIncludes;
+    }
+
+    return includeDirectives;
 }
 
 } // namespace slang::syntax

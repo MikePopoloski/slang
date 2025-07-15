@@ -328,6 +328,12 @@ private:
     FileInfo* getFileInfo(BufferID buffer, TLock& lock);
 
     template<IsLock TLock>
+    bool isIncludedFileLocImpl(SourceLocation location, TLock& lock) const;
+
+    template<IsLock TLock>
+    SourceLocation getIncludedFromImpl(BufferID buffer, TLock& lock) const;
+
+    template<IsLock TLock>
     const FileInfo* getFileInfo(BufferID buffer, TLock& lock) const;
 
     SourceBuffer createBufferEntry(FileData* fd, SourceLocation includedFrom,
