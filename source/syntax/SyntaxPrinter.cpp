@@ -65,7 +65,7 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
     bool excluded = !shouldPrint(token.location());
 
     if (includeTrivia) {
-        if (!includeDirectives || !sourceManager) {
+        if (!sourceManager) {
             for (const auto& t : token.trivia())
                 print(t);
         }
@@ -186,19 +186,19 @@ bool SyntaxPrinter::shouldPrint(SourceLocation loc) {
     if (!sourceManager)
         return true;
 
-    if (!sourceManager->isPreprocessedLoc(loc))
-        return true;
-
-    if (expandMacros) {
+    if (sourceManager->isMacroLoc(loc)) {
+        if (!expandMacros) {
+            return false;
+        }
         if (expandIncludes)
             return true;
         return !sourceManager->isIncludedFileLoc(loc);
     }
-
-    if (expandIncludes) {
-        return sourceManager->isIncludedFileLoc(loc);
+    else if (sourceManager->isIncludedFileLoc(loc)) {
+        return expandIncludes;
     }
-    return !includeDirectives;
+    // Not a preprocessed location, so we should print it.
+    return true;
 }
 
 bool SyntaxPrinter::shouldPrint(SyntaxNode& /* DirectiveSyntax& */ syntax) {

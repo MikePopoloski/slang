@@ -69,6 +69,8 @@ public:
     }
 
     /// Sets whether to include preprocessor directives when printing syntax.
+    /// For controlling expansion of macros and includes, use `setExpandIncludes` and
+    /// `setExpandMacros`.
     /// @return a reference to this object, to allow chaining additional method calls.
     SyntaxPrinter& setIncludeDirectives(bool include) {
         includeDirectives = include;
@@ -86,13 +88,6 @@ public:
     /// @return a reference to this object, to allow chaining additional method calls.
     SyntaxPrinter& setExpandMacros(bool expand) {
         expandMacros = expand;
-        return *this;
-    }
-
-    /// Sets conflicting settings for use when expanding macros or includes.
-    /// @return a reference to this object, to allow chaining additional method calls.
-    SyntaxPrinter& setExpansionMode() {
-        includeDirectives = true;
         return *this;
     }
 

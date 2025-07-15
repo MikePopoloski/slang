@@ -28,7 +28,7 @@ endmodule)";
 
         // Test with expandMacros enabled
         SyntaxPrinter printer(tree->sourceManager());
-        printer.setExpansionMode();
+        printer.setIncludeDirectives(true);
         printer.setExpandMacros(true);
 
         auto result = printer.print(*tree);
@@ -55,7 +55,7 @@ endmodule)";
 
         // Test with expandMacros disabled (default)
         SyntaxPrinter printer(tree->sourceManager());
-        printer.setExpansionMode();
+        printer.setIncludeDirectives(true);
         printer.setExpandMacros(false);
 
         auto result = printer.print(*tree);
@@ -65,6 +65,33 @@ endmodule)";
         auto expected = R"(`define MY_MACRO 42
 `define FUNC_MACRO(x) (x + 1)
 `define SIMPLE_MACRO 200
+module test;
+    int a = `MY_MACRO;
+    int b = `FUNC_MACRO(5);
+    int c = `MY_MACRO + `FUNC_MACRO(10);
+    int d = `SIMPLE_MACRO;
+endmodule)";
+        CHECK(resultStr == expected);
+    }
+
+    SECTION("Test macro round trip") {
+        // Parse the test file
+        auto tree = SyntaxTree::fromText(testText);
+        // Note: root could be CompilationUnit or ModuleDeclaration depending on parsing
+        REQUIRE(tree != nullptr);
+
+        // Test with expandMacros disabled (default)
+        SyntaxPrinter printer(tree->sourceManager());
+
+        auto result = printer.print(*tree);
+        auto resultStr = result.str();
+
+        // This had issues with a shortcut for printing triva-
+        // `FUNC_MACRO(10); would turn into `FUNC_MACRO(10)    ;, since trivia was not handled
+        // correctly
+
+        // When macros are not expanded, we should see the macro names
+        auto expected = R"(
 module test;
     int a = `MY_MACRO;
     int b = `FUNC_MACRO(5);
@@ -98,7 +125,7 @@ endmodule)";
 
         // Test with expandIncludes enabled
         SyntaxPrinter printer(tree->sourceManager());
-        printer.setExpansionMode();
+        printer.setIncludeDirectives(true);
         printer.setExpandIncludes(true);
 
         auto result = printer.print(*tree);
@@ -139,7 +166,7 @@ endmodule)";
 
         // Test with expandIncludes disabled (default)
         SyntaxPrinter printer(tree->sourceManager());
-        printer.setExpansionMode();
+        printer.setIncludeDirectives(true);
         printer.setExpandIncludes(false);
 
         auto result = printer.print(*tree);
@@ -180,7 +207,7 @@ endmodule)";
 
         // Test with both options enabled
         SyntaxPrinter printer(tree->sourceManager());
-        printer.setExpansionMode();
+        printer.setIncludeDirectives(true);
         printer.setExpandIncludes(true);
         printer.setExpandMacros(true);
 
@@ -228,7 +255,7 @@ endmodule
 
         // Test with both options enabled
         SyntaxPrinter printer(tree->sourceManager());
-        printer.setExpansionMode();
+        printer.setIncludeDirectives(true);
         printer.setExpandMacros(true);
 
         auto result = printer.print(*tree);
