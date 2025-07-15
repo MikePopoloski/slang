@@ -78,12 +78,8 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
                 pending.push_back(&trivia);
                 auto loc = trivia.getExplicitLocation();
                 if (loc) {
-                    bool isMacro = sourceManager->isMacroLoc(*loc);
-                    bool isInclude = sourceManager->isIncludedFileLoc(*loc);
-                    bool shouldExclude = (isMacro && !expandMacros) ||
-                                         (isInclude && !expandIncludes);
 
-                    if (!shouldExclude) {
+                    if (shouldPrint(*loc)) {
                         for (auto t : pending)
                             print(*t);
                     }
@@ -192,6 +188,8 @@ bool SyntaxPrinter::shouldPrint(SourceLocation loc) {
         }
         if (expandIncludes)
             return true;
+        // If we're expanding macros but not includes,
+        // we don't want macros invoked in included files to be printed.
         return !sourceManager->isIncludedFileLoc(loc);
     }
     else if (sourceManager->isIncludedFileLoc(loc)) {
@@ -202,7 +200,6 @@ bool SyntaxPrinter::shouldPrint(SourceLocation loc) {
 }
 
 bool SyntaxPrinter::shouldPrint(SyntaxNode& /* DirectiveSyntax& */ syntax) {
-    // No sm implies expanding everything
     if (!sourceManager)
         return includeDirectives;
 
@@ -215,8 +212,8 @@ bool SyntaxPrinter::shouldPrint(SyntaxNode& /* DirectiveSyntax& */ syntax) {
             return false;
         }
         else {
-            // If we're expanding macros but not includes, we still want to print
-            // the token if it's a macro that is not an include directive.
+            // If we're expanding macros but not includes,
+            // we don't want macros invoked in included files to be printed.
             return sourceManager->isIncludedFileLoc(syntax.getFirstToken().location());
         }
     }
