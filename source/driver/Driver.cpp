@@ -301,7 +301,7 @@ void Driver::addStandardArgs() {
         CommandLineFlags::CommaList);
 
     cmdLine.add(
-        "-Y,--libext",
+        "-Y,--libext,+libext",
         [this](std::string_view value) {
             sourceLoader.addSearchExtension(value);
             return "";

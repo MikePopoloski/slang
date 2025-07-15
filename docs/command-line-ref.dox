@@ -257,6 +257,7 @@ parsed in its entirety, and the algorithm will be triggered again on any new nam
 See @ref library-search for more details.
 
 `-Y,--libext <ext>`
+`+libext+<ext>[+<ext>...]`
 
 Add the given extension to the list of extensions tried when searching for files to satisfy
 unknown module instantiations and package imports. This list automatically includes '.v' and '.sv' by default.
