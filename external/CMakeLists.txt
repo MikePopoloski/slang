@@ -12,7 +12,7 @@ set(catch2_min_version "3.8")
 # --- fmt lib ---
 set(find_pkg_args "")
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "OVERRIDE_FIND_PACKAGE" "${fmt_min_version}")
+  set(find_pkg_args "FIND_PACKAGE_ARGS" "${fmt_min_version}")
 endif()
 
 set(FMT_SYSTEM_HEADERS
