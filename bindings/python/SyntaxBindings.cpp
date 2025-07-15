@@ -394,8 +394,8 @@ void registerSyntax(py::module_& m) {
         .def("setIncludeMissing", &SyntaxPrinter::setIncludeMissing, byrefint, "include"_a)
         .def("setIncludeSkipped", &SyntaxPrinter::setIncludeSkipped, byrefint, "include"_a)
         .def("setIncludeDirectives", &SyntaxPrinter::setIncludeDirectives, byrefint, "include"_a)
-        .def("setIncludePreprocessed", &SyntaxPrinter::setIncludePreprocessed, byrefint,
-             "include"_a)
+        .def("setExpandMacros", &SyntaxPrinter::setExpandMacros, byrefint, "expand"_a)
+        .def("setExpandIncludes", &SyntaxPrinter::setExpandIncludes, byrefint, "expand"_a)
         .def("setIncludeComments", &SyntaxPrinter::setIncludeComments, byrefint, "include"_a)
         .def("setSquashNewlines", &SyntaxPrinter::setSquashNewlines, byrefint, "include"_a)
         .def("str", &SyntaxPrinter::str)
