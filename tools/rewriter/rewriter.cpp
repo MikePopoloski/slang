@@ -35,6 +35,7 @@ int main(int argc, char** argv) {
         // 1-1 mapping with selected SyntaxPrinter options
         std::optional<bool> expandIncludes;
         std::optional<bool> expandMacros;
+        std::optional<bool> excludeDirectives;
 
         // Defaulted to true in SyntaxPrinter; we should rephrase those eventually
         std::optional<bool> excludeComments;
@@ -53,6 +54,11 @@ int main(int argc, char** argv) {
                            "Expand include directives to show included content");
         driver.cmdLine.add("--expand-macros", expandMacros,
                            "Expand macro usages to show expanded content");
+
+        // Directive options
+        driver.cmdLine.add(
+            "--exclude-directives", excludeDirectives,
+            "Exclude other directives in output (Doesn't control include and macro directives)");
 
         // Trivia options
         driver.cmdLine.add("--exclude-comments", excludeComments, "Exclude comments in output");
@@ -112,6 +118,8 @@ int main(int argc, char** argv) {
             printer.setIncludeComments(false);
         if (squashNewlines == true)
             printer.setSquashNewlines(true);
+        if (excludeDirectives == true)
+            printer.setIncludeDirectives(false);
 
         if (includeMissing == true)
             printer.setIncludeMissing(true);
