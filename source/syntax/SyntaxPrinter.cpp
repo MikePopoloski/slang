@@ -10,6 +10,7 @@
 #include "slang/parsing/ParserMetadata.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/text/SourceLocation.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang::syntax {
@@ -22,40 +23,14 @@ SyntaxPrinter::SyntaxPrinter(const SourceManager& sourceManager) : sourceManager
 SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
     switch (trivia.kind) {
         case TriviaKind::Directive: {
-            auto syntax = trivia.syntax();
+            auto& syntax = *trivia.syntax();
 
-            if (expandMacros || expandIncludes) {
-                bool expand = false;
-                if (syntax->kind == SyntaxKind::MacroUsage && expandMacros) {
-                    if (expandIncludes) {
-                        expand = true;
-                    }
-                    else {
-                        expand = !sourceManager->isIncludedFileLoc(
-                            syntax->getFirstToken().location());
-                        // make sure we're not in an include directive
-                    }
-                }
-                else if (syntax->kind == SyntaxKind::IncludeDirective && expandIncludes) {
-                    expand = true;
-                }
-
-                if (!expand) {
-                    print(*trivia.syntax());
-                }
-                else {
-                    for (const auto& t : syntax->getFirstToken().trivia())
-                        print(t);
-                }
+            if (shouldPrint(syntax)) {
+                print(syntax);
             }
             else {
-                if (includeDirectives) {
-                    print(*trivia.syntax());
-                }
-                else if (includePreprocessed) {
-                    for (const auto& t : syntax->getFirstToken().trivia())
-                        print(t);
-                }
+                for (const auto& t : syntax.getFirstToken().trivia())
+                    print(t);
             }
 
             break;
@@ -87,20 +62,10 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
 }
 
 SyntaxPrinter& SyntaxPrinter::print(Token token) {
-    bool excluded = false;
-    if (!includePreprocessed && sourceManager) {
-        bool isMacro = sourceManager->isMacroLoc(token.location());
-        bool isInclude = sourceManager->isIncludedFileLoc(token.location());
-        excluded = (isMacro && !expandMacros) || (isInclude && !expandIncludes);
-        if (isMacro && expandMacros && !expandIncludes && isInclude) {
-            // If we're expanding macros but not includes, we still want to print
-            // the token if it's a macro that is not an include directive.
-            excluded = true;
-        }
-    }
+    bool excluded = !shouldPrint(token.location());
 
     if (includeTrivia) {
-        if (includePreprocessed || !sourceManager) {
+        if (!includeDirectives || !sourceManager) {
             for (const auto& t : token.trivia())
                 print(t);
         }
@@ -172,7 +137,6 @@ std::string SyntaxPrinter::printFile(const SyntaxTree& tree) {
         .setIncludeDirectives(true)
         .setIncludeSkipped(true)
         .setIncludeTrivia(true)
-        .setIncludePreprocessed(false)
         .setSquashNewlines(false)
         .print(tree)
         .str();
@@ -216,6 +180,51 @@ SyntaxPrinter& SyntaxPrinter::append(std::string_view text) {
 
     buffer.append(text);
     return *this;
+}
+
+bool SyntaxPrinter::shouldPrint(SourceLocation loc) {
+    if (!sourceManager)
+        return true;
+
+    if (!sourceManager->isPreprocessedLoc(loc))
+        return true;
+
+    if (expandMacros) {
+        if (expandIncludes)
+            return true;
+        return !sourceManager->isIncludedFileLoc(loc);
+    }
+
+    if (expandIncludes) {
+        return sourceManager->isIncludedFileLoc(loc);
+    }
+    return !includeDirectives;
+}
+
+bool SyntaxPrinter::shouldPrint(SyntaxNode& /* DirectiveSyntax& */ syntax) {
+    // No sm implies expanding everything
+    if (!sourceManager)
+        return includeDirectives;
+
+    if (syntax.kind == SyntaxKind::MacroUsage) {
+        if (!expandMacros) {
+            return true;
+        }
+
+        if (expandIncludes) {
+            return false;
+        }
+        else {
+            // If we're expanding macros but not includes, we still want to print
+            // the token if it's a macro that is not an include directive.
+            return sourceManager->isIncludedFileLoc(syntax.getFirstToken().location());
+        }
+    }
+    else if (syntax.kind == SyntaxKind::IncludeDirective) {
+        return !expandIncludes;
+    }
+
+    return includeDirectives;
 }
 
 } // namespace slang::syntax

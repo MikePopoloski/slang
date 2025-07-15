@@ -98,7 +98,6 @@ int main(int argc, char** argv) {
         SyntaxPrinter printer(driver.sourceManager);
 
         // These get in the way of expandMacros and expandIncludes, so hold these
-        printer.setIncludePreprocessed(false);
         printer.setIncludeDirectives(true);
         // Really should be false by default
         printer.setSquashNewlines(false);
