@@ -186,9 +186,9 @@ bool SourceManager::isIncludedFileLocImpl(SourceLocation location, TLock& lock) 
 
     SLANG_ASSERT(buffer.getId() < bufferEntries.size());
     auto info = std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]);
-    if (info) {
+    if (info)
         return isIncludedFileLocImpl(info->expansionRange.start(), lock);
-    }
+
     return getIncludedFromImpl(location.buffer(), lock).valid();
 }
 

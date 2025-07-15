@@ -24,7 +24,6 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
     switch (trivia.kind) {
         case TriviaKind::Directive: {
             auto& syntax = *trivia.syntax();
-
             if (shouldPrint(syntax)) {
                 print(syntax);
             }
@@ -32,7 +31,6 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
                 for (const auto& t : syntax.getFirstToken().trivia())
                     print(t);
             }
-
             break;
         }
         case TriviaKind::SkippedSyntax:
@@ -78,7 +76,6 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
                 pending.push_back(&trivia);
                 auto loc = trivia.getExplicitLocation();
                 if (loc) {
-
                     if (shouldPrint(*loc)) {
                         for (auto t : pending)
                             print(*t);
@@ -183,43 +180,42 @@ bool SyntaxPrinter::shouldPrint(SourceLocation loc) const {
         return true;
 
     if (sourceManager->isMacroLoc(loc)) {
-        if (!expandMacros) {
+        if (!expandMacros)
             return false;
-        }
+
         if (expandIncludes)
             return true;
+
         // If we're expanding macros but not includes,
         // we don't want macros invoked in included files to be printed.
         return !sourceManager->isIncludedFileLoc(loc);
     }
-    else if (sourceManager->isIncludedFileLoc(loc)) {
+
+    if (sourceManager->isIncludedFileLoc(loc))
         return expandIncludes;
-    }
+
     // Not a preprocessed location, so we should print it.
     return true;
 }
 
-bool SyntaxPrinter::shouldPrint(SyntaxNode& /* DirectiveSyntax& */ syntax) const {
+bool SyntaxPrinter::shouldPrint(const SyntaxNode& syntax) const {
     if (!sourceManager)
         return includeDirectives;
 
     if (syntax.kind == SyntaxKind::MacroUsage) {
-        if (!expandMacros) {
+        if (!expandMacros)
             return true;
-        }
 
-        if (expandIncludes) {
+        if (expandIncludes)
             return false;
-        }
-        else {
-            // If we're expanding macros but not includes,
-            // we don't want macros invoked in included files to be printed.
-            return sourceManager->isIncludedFileLoc(syntax.getFirstToken().location());
-        }
+
+        // If we're expanding macros but not includes,
+        // we don't want macros invoked in included files to be printed.
+        return sourceManager->isIncludedFileLoc(syntax.getFirstToken().location());
     }
-    else if (syntax.kind == SyntaxKind::IncludeDirective) {
+
+    if (syntax.kind == SyntaxKind::IncludeDirective)
         return !expandIncludes;
-    }
 
     return includeDirectives;
 }

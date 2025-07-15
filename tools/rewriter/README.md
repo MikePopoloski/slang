@@ -7,9 +7,9 @@ A simple tool that prints a given input file, showcasing the round-trip ability 
 By default, rewriter prints the input file exactly as is. This tool can be used to:
 - Modify files before use in other tools
 - Better understand what the preprocessor is doing
-- Test the round-trip capability of the Slang library
+- Test the round-trip capability of the slang library
 
-The tool accepts standard Slang arguments like include directories. When a macro or include is not found, it will be skipped.
+The tool accepts standard slang arguments like include directories. When a macro or include is not found, it will be skipped.
 
 ## Usage
 

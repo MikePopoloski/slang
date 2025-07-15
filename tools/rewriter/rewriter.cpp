@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
         // Directive options
         driver.cmdLine.add(
             "--exclude-directives", excludeDirectives,
-            "Exclude other directives in output (Doesn't control include and macro directives)");
+            "Exclude other directives in output (doesn't control include and macro directives)");
 
         // Trivia options
         driver.cmdLine.add("--exclude-comments", excludeComments, "Exclude comments in output");
@@ -75,10 +75,9 @@ int main(int argc, char** argv) {
             return 1;
 
         auto printHelp = [&]() {
-            OS::print(fmt::format(
-                "{}",
-                driver.cmdLine.getHelpText(
-                    "SystemVerilog rewriter- by default prints the input tree exactly as given.")));
+            OS::print(fmt::format("{}", driver.cmdLine.getHelpText(
+                                            "SystemVerilog rewriter - by default prints the input "
+                                            "tree exactly as given.")));
         };
 
         if (showHelp == true) {
@@ -103,9 +102,7 @@ int main(int argc, char** argv) {
 
         SyntaxPrinter printer(driver.sourceManager);
 
-        // These get in the way of expandMacros and expandIncludes, so hold these
         printer.setIncludeDirectives(true);
-        // Really should be false by default
         printer.setSquashNewlines(false);
 
         // Apply command line overrides to defaults
