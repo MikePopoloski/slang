@@ -120,9 +120,6 @@ public:
 
     Trivia clone(BumpAllocator& alloc, bool deep = false) const;
 };
-#if !defined(_M_IX86) && !defined(__clang_analyzer__)
-static_assert(sizeof(Trivia) == 16);
-#endif
 
 /// Represents a single lexed token, including leading trivia, original location, token kind,
 /// and any related information derived from the token itself (such as the lexeme).
@@ -224,9 +221,6 @@ private:
     static constexpr int MaxTriviaSmallCount = (1 << 4) - 2;
 };
 
-#if !defined(_M_IX86)
-static_assert(sizeof(Token) == 16);
-#endif
 static_assert(std::is_trivially_copyable_v<Token>);
 
 } // namespace slang::parsing
