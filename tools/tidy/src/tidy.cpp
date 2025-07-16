@@ -52,12 +52,6 @@ int main(int argc, char** argv) {
     driver.cmdLine.add("--dump-config", dumpConfig,
                        "Dump the configuration options to stdout and exit");
 
-    std::vector<std::string> skippedFiles;
-    driver.cmdLine.add("--skip-file", skippedFiles, "Files to be skipped by slang-tidy");
-
-    std::vector<std::string> skippedPaths;
-    driver.cmdLine.add("--skip-path", skippedPaths, "Paths to be skipped by slang-tidy");
-
     std::optional<bool> quietArg;
     driver.cmdLine.add("-q,--quiet", quietArg,
                        "slang-tidy will only print errors. Options that make slang-tidy print "
@@ -174,14 +168,14 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    // Add skipped files provided by the cmd args
-    tidyConfig.addSkipFile(skippedFiles);
-
-    // Add skipped paths provided by the cmd args
-    tidyConfig.addSkipPath(skippedPaths);
-
     if (!driver.processOptions())
         return 1;
+
+    // Add patterns from --suppress-warnings as skip patterns
+    auto suppressPatterns = driver.diagEngine.getIgnorePaths();
+    for (const auto& pattern : suppressPatterns) {
+        tidyConfig.addSkipPattern(pattern);
+    }
 
     std::unique_ptr<ast::Compilation> compilation;
     std::unique_ptr<analysis::AnalysisManager> analysisManager;
