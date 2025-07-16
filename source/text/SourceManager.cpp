@@ -506,7 +506,7 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
     // If no sort key is provided we use the bufferID, but shifted up
     // so that the bottom 32 bits are reserved for custom sort keys.
     if (sortKey == UINT64_MAX)
-        sortKey = bufferEntries.size() << 32;
+        sortKey = (uint64_t)bufferEntries.size() << 32;
 
     bufferEntries.emplace_back(FileInfo(fd, library, includedFrom, sortKey));
     return SourceBuffer{std::string_view(fd->mem.data(), fd->mem.size()), library,

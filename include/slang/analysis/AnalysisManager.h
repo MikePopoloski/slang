@@ -7,7 +7,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <BS_thread_pool.hpp>
+#if defined(SLANG_USE_THREADS)
+#    include <BS_thread_pool.hpp>
+#endif
 #include <mutex>
 #include <optional>
 
@@ -202,11 +204,13 @@ private:
 
     DriverTracker driverTracker;
 
+#if defined(SLANG_USE_THREADS)
     BS::thread_pool<> threadPool;
 
     // A mutex for shared state; anything protected by it is declared below.
     std::mutex mutex;
     std::exception_ptr pendingException;
+#endif
 };
 
 } // namespace slang::analysis

@@ -70,6 +70,7 @@ option(SLANG_CI_BUILD "Enable longer running tests for CI builds" OFF)
 option(SLANG_FUZZ_TARGET "Enables changes to make binaries easier to fuzz test"
        OFF)
 option(BUILD_SHARED_LIBS "Generate shared libraries instead of static" OFF)
+option(SLANG_USE_THREADS "Enable use of threads" ON)
 option(SLANG_USE_MIMALLOC "Enable use of the mimalloc library" ON)
 option(SLANG_USE_CPPTRACE "Enable use of the cpptrace library" OFF)
 
@@ -143,6 +144,11 @@ endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   add_compile_options(/utf-8 /bigobj /permissive-)
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "WASI")
+  add_compile_definitions(_WASI_EMULATED_SIGNAL)
+  add_link_options(-lwasi-emulated-signal)
 endif()
 
 if(SLANG_FUZZ_TARGET)
