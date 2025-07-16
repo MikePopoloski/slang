@@ -8,7 +8,6 @@
 //------------------------------------------------------------------------------
 #include "slang/driver/Driver.h"
 
-#include <BS_thread_pool.hpp>
 #include <fmt/color.h>
 
 #include "slang/analysis/AnalysisManager.h"
@@ -119,8 +118,12 @@ void Driver::addStandardArgs() {
                 "Maximum number of errors that can occur during lexing before the rest of the file "
                 "is skipped",
                 "<count>");
+#if defined(SLANG_USE_THREADS)
     cmdLine.add("-j,--threads", options.numThreads,
                 "The number of threads to use to parallelize parsing", "<count>");
+#else
+    options.numThreads = 1;
+#endif
 
     cmdLine.add(
         "-C",

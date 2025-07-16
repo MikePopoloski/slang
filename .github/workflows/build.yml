@@ -31,6 +31,8 @@ jobs:
             os: windows-latest
           - preset: win64-debug-noexcept
             os: windows-latest
+          - preset: wasi-sdk
+            os: ubuntu-latest
           - preset: wasi-sdk-pthread
             os: ubuntu-latest
 
@@ -59,7 +61,7 @@ jobs:
       run: cmake --preset ${{ matrix.preset }} -DSLANG_CI_BUILD=ON -DSLANG_INCLUDE_UVM_TEST=ON
       if: ${{ !startsWith(matrix.preset, 'wasi-') }}
     - name: Configure
-      run: cmake -B build/${{ matrix.preset }} -DCMAKE_TOOLCHAIN_FILE=${WASI_SDK_PATH}/share/cmake/${{ matrix.preset }}.cmake -DSLANG_USE_MIMALLOC=OFF -DSLANG_INCLUDE_TOOLS=OFF -DSLANG_INCLUDE_TESTS=OFF
+      run: cmake -B build/${{ matrix.preset }} -DCMAKE_TOOLCHAIN_FILE=${WASI_SDK_PATH}/share/cmake/${{ matrix.preset }}.cmake -DSLANG_USE_THREADS=${{ contains(matrix.preset, 'pthread') && 'ON' || 'OFF' }} -DSLANG_USE_MIMALLOC=OFF -DSLANG_INCLUDE_TOOLS=OFF -DSLANG_INCLUDE_TESTS=OFF
       if: ${{ startsWith(matrix.preset, 'wasi-') }}
     - name: Build
       run: cmake --build build/${{ matrix.preset }} -j8
