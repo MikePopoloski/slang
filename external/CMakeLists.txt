@@ -22,7 +22,7 @@ set(FMT_SYSTEM_HEADERS
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 11.2.0
+  GIT_TAG 553ec11ec06fbe0beebfbb45f9dc3c9eabd83d28
   GIT_SHALLOW ON
   ${find_pkg_args})
 

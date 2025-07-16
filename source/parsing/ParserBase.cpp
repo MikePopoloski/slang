@@ -109,7 +109,7 @@ Token ParserBase::expect(TokenKind kind) {
             // become unbalanced and flush it.
             openDelims.clear();
         }
-        lastPoppedDelims = {};
+        lastPoppedDelims = {Token(), Token()};
     }
 
     Token result = Token::createExpected(alloc, getDiagnostics(), peek(), kind, window.lastConsumed,
