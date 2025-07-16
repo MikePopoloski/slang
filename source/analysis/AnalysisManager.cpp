@@ -44,11 +44,19 @@ Diagnostic& AnalysisContext::addDiag(const Symbol& symbol, DiagCode code, Source
 }
 
 AnalysisManager::AnalysisManager(AnalysisOptions options) :
+#if defined(SLANG_USE_THREADS)
     options(options), threadPool(options.numThreads) {
+#else
+    options(options) {
+#endif
 
+#if defined(SLANG_USE_THREADS)
     workerStates.reserve(threadPool.get_thread_count() + 1);
     for (size_t i = 0; i < threadPool.get_thread_count() + 1; i++)
         workerStates.emplace_back(*this);
+#else
+    workerStates.emplace_back(*this);
+#endif
 }
 
 AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
@@ -310,6 +318,7 @@ void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
     // Kick off a new analysis task if we haven't already seen
     // this scope before.
     if (analyzedScopes.try_emplace(&scope, std::nullopt)) {
+#if defined(SLANG_USE_THREADS)
         threadPool.detach_task([this, &scope] {
             SLANG_TRY {
                 auto& result = analyzeScopeBlocking(scope);
@@ -320,17 +329,27 @@ void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
                 pendingException = std::current_exception();
             }
         });
+#else
+        auto& result = analyzeScopeBlocking(scope);
+        analyzedScopes.visit(&scope, [&result](auto& item) { item.second = &result; });
+#endif
     }
 }
 
 AnalysisManager::WorkerState& AnalysisManager::getState() {
+#if defined(SLANG_USE_THREADS)
     return workerStates[BS::this_thread::get_index().value_or(workerStates.size() - 1)];
+#else
+    return workerStates[0];
+#endif
 }
 
 void AnalysisManager::wait() {
+#if defined(SLANG_USE_THREADS)
     threadPool.wait();
     if (pendingException)
         std::rethrow_exception(pendingException);
+#endif
 }
 
 } // namespace slang::analysis
