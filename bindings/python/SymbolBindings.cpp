@@ -40,6 +40,7 @@ void registerSymbols(py::module_& m) {
         .value("TypeReference", LookupFlags::TypeReference)
         .value("AlwaysAllowUpward", LookupFlags::AlwaysAllowUpward)
         .value("DisallowUnitReferences", LookupFlags::DisallowUnitReferences)
+        .value("AllowUnnamedGenerate", LookupFlags::AllowUnnamedGenerate)
         .finalize();
 
     py::native_enum<LookupResultFlags>(m, "LookupResultFlags", "enum.Flag")

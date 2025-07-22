@@ -205,6 +205,8 @@ void Driver::addStandardArgs() {
                 "--disallow-refs-to-unknown-instances",
                 "When using --ignore-unknown-modules, explicitly disallow references to ignored "
                 "module instances by issuing an error");
+    addCompFlag(CompilationFlags::AllowUnnamedGenerate, "--allow-genblk-reference",
+                "Allow the use of unnamed generate blocks (e.g. genblk1)");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "

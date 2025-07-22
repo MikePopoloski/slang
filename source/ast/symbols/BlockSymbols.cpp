@@ -11,6 +11,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/Symbol.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/statements/LoopStatements.h"
 #include "slang/ast/statements/MiscStatements.h"
@@ -636,7 +637,11 @@ static std::string createGenBlkName(uint32_t constructIndex, const Scope& parent
     std::string base = "genblk";
     std::string index = std::to_string(constructIndex);
     std::string current = base + index;
-    while (parent.find(current)) {
+    while (auto symbol = parent.find(current)) {
+        // Sibling generate from if or case statement and not actually a name collision
+        if (symbol->kind == SymbolKind::GenerateBlock &&
+            symbol->as<GenerateBlockSymbol>().isUnnamed)
+            return current;
         base += '0';
         current = base + index;
     }
