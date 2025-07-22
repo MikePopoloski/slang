@@ -22,6 +22,7 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/GeneralDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
@@ -75,6 +76,7 @@ void LookupResult::clear() {
     selectors.clear();
     path.clear();
     diagnostics.clear();
+    // Intentionally not clearing unnamedGenerate
 }
 
 void LookupResult::reportDiags(const ASTContext& context) const {
@@ -246,6 +248,30 @@ const Symbol* getContainingPackage(const Symbol& symbol) {
     }
 }
 
+bool badGenblkAccess(const Symbol* symbol, const Scope& scope, bitmask<LookupFlags> flags,
+                     LookupResult& result) {
+    if (flags.has(LookupFlags::AllowUnnamedGenerate) ||
+        scope.getCompilation().getOptions().flags.has(CompilationFlags::AllowUnnamedGenerate))
+        return false;
+
+    bool disallowedGenerateAccess = false;
+    if (auto block = symbol->as_if<GenerateBlockSymbol>()) {
+        if (block->isUnnamed)
+            disallowedGenerateAccess = true;
+    }
+    else if (auto array = symbol->as_if<GenerateBlockArraySymbol>()) {
+        if (array->isUnnamed)
+            disallowedGenerateAccess = true;
+    }
+    if (disallowedGenerateAccess) {
+        result.clear();
+        result.unnamedGenerate = symbol;
+        return true;
+    }
+
+    return false;
+}
+
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
@@ -273,6 +299,8 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
     for (auto it = nameParts.rbegin(); it != nameParts.rend(); it++) {
         if (!checkClassParams(name))
             return false;
+        if (badGenblkAccess(symbol, *context.scope, flags, result))
+            return true;
 
         auto isValueLike = [&](const Symbol*& symbol) {
             switch (symbol->kind) {
@@ -512,6 +540,8 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
 
     if (!checkClassParams(name))
         return false;
+    if (badGenblkAccess(symbol, *context.scope, flags, result))
+        return true;
 
     if (result.flags.has(LookupResultFlags::IsHierarchical | LookupResultFlags::IfacePort) &&
         symbol) {
@@ -1731,8 +1761,10 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         // declared before use). Callables and block names can be referenced anywhere in the
         // scope, so the location doesn't matter for them.
         symbol = it->second;
-        bool locationGood = LookupLocation::before(*symbol) < location;
-        if (!locationGood) {
+
+        bool badGenblk = badGenblkAccess(symbol, scope, flags, result);
+        bool locationGood = LookupLocation::before(*symbol) < location && !badGenblk;
+        if (!locationGood && !badGenblk) {
             // A type alias can have forward definitions, so check those locations as well.
             // The forward decls form a linked list that are always ordered by location,
             // so we only need to check the first one.
@@ -2179,10 +2211,23 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
     // downward lookup (if any), so it's fine to just return it as is. If we never found any
     // symbol originally, issue an appropriate error for that.
     result = originalResult;
-    if (!result.found && !result.hasError()) {
+    if (!reportUnnamedGenerate(*context.scope, syntax, result) && !result.found &&
+        !result.hasError()) {
         reportUndeclared(scope, name, first.range,
                          flags | LookupFlags::NoUndeclaredErrorIfUninstantiated, true, result);
     }
+}
+
+bool Lookup::reportUnnamedGenerate(const Scope& scope, const syntax::NameSyntax& syntax,
+                                   LookupResult& result) {
+    if (!result.found && result.unnamedGenerate) {
+        auto& diag = result.addDiag(scope, diag::UnnamedGenerateReference, syntax.sourceRange());
+        diag << syntax.sourceRange();
+        diag << syntax.toString();
+        diag.addNote(diag::NoteDeclarationHere, result.unnamedGenerate->location);
+        return true;
+    }
+    return false;
 }
 
 void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, SourceRange range,

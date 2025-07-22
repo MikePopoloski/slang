@@ -5,6 +5,7 @@
 
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/ast/Lookup.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/statements/MiscStatements.h"
@@ -14,6 +15,7 @@
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
+#include "slang/diagnostics/LookupDiags.h"
 #include "slang/syntax/SyntaxTree.h"
 
 TEST_CASE("Explicit import lookup") {
@@ -576,6 +578,127 @@ endmodule
     REQUIRE(foo);
     CHECK(foo->kind == SymbolKind::Variable);
     CHECK(foo->as<VariableSymbol>().getType().isMatching(compilation.getLogicType()));
+}
+
+TEST_CASE("Unnamed generate array indexing") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    for (genvar i = 1; i < 10; i *= 2) begin
+        logic foo;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto foo = compilation.getRoot().lookupName("m.genblk1[8].foo", LookupLocation::max,
+                                                LookupFlags::AllowUnnamedGenerate);
+    REQUIRE(foo);
+    CHECK(foo->kind == SymbolKind::Variable);
+    CHECK(foo->as<VariableSymbol>().getType().isMatching(compilation.getLogicType()));
+}
+
+TEST_CASE("Unnamed if generate lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    if (1) begin
+        logic foo;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto foo = compilation.getRoot().lookupName("m.genblk1.foo", LookupLocation::max,
+                                                LookupFlags::AllowUnnamedGenerate);
+    REQUIRE(foo);
+    CHECK(foo->kind == SymbolKind::Variable);
+    CHECK(foo->as<VariableSymbol>().getType().isMatching(compilation.getLogicType()));
+}
+
+TEST_CASE("Unnamed else generate lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    if (0) begin
+        logic foo;
+    end else begin
+        logic bar;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto foo = compilation.getRoot().lookupName("m.genblk1.bar", LookupLocation::max,
+                                                LookupFlags::AllowUnnamedGenerate);
+    REQUIRE(foo);
+    CHECK(foo->kind == SymbolKind::Variable);
+    CHECK(foo->as<VariableSymbol>().getType().isMatching(compilation.getLogicType()));
+}
+
+TEST_CASE("Unnamed case generate lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int switch = 1;
+    case (switch)
+        1: begin
+            logic foo;
+        end
+    endcase
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto foo = compilation.getRoot().lookupName("m.genblk1.foo", LookupLocation::max,
+                                                LookupFlags::AllowUnnamedGenerate);
+    REQUIRE(foo);
+    CHECK(foo->kind == SymbolKind::Variable);
+    CHECK(foo->as<VariableSymbol>().getType().isMatching(compilation.getLogicType()));
+}
+
+TEST_CASE("Unnamed generate not allowed") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    for (genvar i = 1; i < 10; i *= 2) begin
+        logic foo;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    LookupResult result;
+    ASTContext context(compilation.getRoot(), LookupLocation::max);
+    Lookup::name(compilation.parseName("m.genblk1[8].foo"), context, LookupFlags::None, result);
+    REQUIRE(!result.found);
+}
+
+TEST_CASE("Unnamed generate first not allowed") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    for (genvar i = 1; i < 10; i *= 2) begin
+        logic foo;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto foo = compilation.getRoot().topInstances[0]->body.lookupName("genblk1[8].foo");
+    REQUIRE(!foo);
 }
 
 TEST_CASE("Generate array indexing errors") {
@@ -2285,4 +2408,85 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::PackageExportNotImported);
+}
+
+TEST_CASE("Upwards genblk collision") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int a = 0;
+endmodule
+
+module top;
+    m genblk1();
+    n n1();
+endmodule
+
+module n;
+    if (1) begin
+        wire a = 1;
+    end
+
+    int b = genblk1.a;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Unqualified genblk collision") {
+    auto tree = SyntaxTree::fromText(R"(
+struct { int a; } genblk1;
+
+module m;
+    if (1) begin end
+
+    int b;
+    always_comb b = genblk1.a;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Genblk access not allowed") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    if (1) begin
+        logic foo;
+    end
+
+    initial $display(genblk1.foo);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == diag::UnnamedGenerateReference);
+    CHECK(it == diags.end());
+}
+
+TEST_CASE("Allow genblk access") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    if (1) begin
+        logic foo;
+    end
+
+    initial $display(genblk1.foo);
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowUnnamedGenerate;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

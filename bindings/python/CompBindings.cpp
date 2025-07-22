@@ -56,6 +56,7 @@ void registerCompilation(py::module_& m) {
         .value("AllowMergingAnsiPorts", CompilationFlags::AllowMergingAnsiPorts)
         .value("DisableInstanceCaching", CompilationFlags::DisableInstanceCaching)
         .value("DisallowRefsToUnknownInstances", CompilationFlags::DisallowRefsToUnknownInstances)
+        .value("AllowUnnamedGenerate", CompilationFlags::AllowUnnamedGenerate)
         .finalize();
 
     py::classh<CompilationOptions>(m, "CompilationOptions")

@@ -83,10 +83,13 @@ enum class SLANG_EXPORT LookupFlags {
     /// the $unit compilation unit scope.
     DisallowUnitReferences = 1 << 14,
 
+    /// Allow unnamed generate blocks to be looked up by their external name.
+    AllowUnnamedGenerate = 1 << 15,
+
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated
 };
-SLANG_BITMASK(LookupFlags, DisallowUnitReferences)
+SLANG_BITMASK(LookupFlags, AllowUnnamedGenerate)
 
 /// Flags that indicate additional details about the result of a lookup operation.
 enum class SLANG_EXPORT LookupResultFlags : uint8_t {
@@ -173,6 +176,9 @@ struct SLANG_EXPORT LookupResult {
     /// steps upward through the hierarchy we had to take before we started
     /// traversing back down to the found symbol.
     uint32_t upwardCount = 0;
+
+    /// Lookup hit a disallowed, unnamed generate reference
+    const Symbol* unnamedGenerate = nullptr;
 
     /// Flags that specify additional information about the result of the lookup.
     bitmask<LookupResultFlags> flags;
@@ -327,6 +333,9 @@ public:
     /// local variable matching the given name. If one is found, populates @a result
     /// and returns true. Otherwise returns false.
     static bool findAssertionLocalVar(const ASTContext& context, const syntax::NameSyntax& name,
+                                      LookupResult& result);
+
+    static bool reportUnnamedGenerate(const Scope& scope, const syntax::NameSyntax& syntax,
                                       LookupResult& result);
 
 private:

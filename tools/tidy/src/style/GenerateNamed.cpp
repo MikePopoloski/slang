@@ -5,6 +5,7 @@
 #include "TidyDiags.h"
 #include "fmt/color.h"
 
+#include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
 using namespace slang;
@@ -23,11 +24,11 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false, fa
 
         auto& parSymbol = symbol.getParentScope()->asSymbol();
 
-        bool isUnnamed = symbol.name.empty();
-        if (parSymbol.kind == SymbolKind::GenerateBlockArray) {
+        bool isUnnamed = symbol.isUnnamed;
+        if (auto array = parSymbol.as_if<GenerateBlockArraySymbol>()) {
             if (symbol.constructIndex != 0)
                 return;
-            isUnnamed = parSymbol.name.empty();
+            isUnnamed = array->isUnnamed;
         }
 
         if (isUnnamed) {
