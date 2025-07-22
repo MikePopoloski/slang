@@ -61,7 +61,7 @@ private:
     char* ptr;
 };
 
-template<typename T, size_t N, size_t Align = alignof(std::max_align_t)>
+template<typename T, size_t N, size_t Align = alignof(T)>
 class StackAllocator {
 public:
     using value_type = T;

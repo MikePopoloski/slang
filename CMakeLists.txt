@@ -145,6 +145,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   add_compile_options(/utf-8 /bigobj /permissive-)
 endif()
 
+if(CMAKE_SYSTEM_NAME MATCHES "WASI")
+  add_compile_definitions(_WASI_EMULATED_SIGNAL)
+  add_link_options(-lwasi-emulated-signal)
+  # https://github.com/fmtlib/fmt/issues/4496#issuecomment-3094630184
+  add_compile_definitions(FMT_USE_FCNTL=0)
+endif()
+
 if(SLANG_FUZZ_TARGET)
   add_compile_definitions(SLANG_ASSERT_ENABLED)
 endif()
