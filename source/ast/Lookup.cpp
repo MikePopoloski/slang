@@ -257,13 +257,32 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
     // Helper function to check whether class parameter assignments have been
     // incorrectly supplied for a non-class symbol.
     auto checkClassParams = [&](const NameComponents& nc) {
-        if (symbol && symbol->kind != SymbolKind::GenericClassDef && nc.paramAssignments) {
-            auto& diag = result.addDiag(*context.scope, diag::NotAGenericClass,
-                                        nc.paramAssignments->getFirstToken().location());
-            diag << nc.range;
-            diag << symbol->name;
-            diag.addNote(diag::NoteDeclarationHere, symbol->location);
-            return false;
+        if (symbol) {
+            if (symbol->kind != SymbolKind::GenericClassDef && nc.paramAssignments) {
+                auto& diag = result.addDiag(*context.scope, diag::NotAGenericClass,
+                                            nc.paramAssignments->getFirstToken().location());
+                diag << nc.range;
+                diag << symbol->name;
+                diag.addNote(diag::NoteDeclarationHere, symbol->location);
+                return false;
+            }
+
+            bool disallowedGenerateAccess = false;
+            if (auto block = symbol->as_if<GenerateBlockSymbol>()) {
+                if (block->isUnnamed && !flags.has(LookupFlags::AllowUnnamedGenerate))
+                    disallowedGenerateAccess = true;
+            }
+            else if (auto array = symbol->as_if<GenerateBlockArraySymbol>()) {
+                if (array->isUnnamed && !flags.has(LookupFlags::AllowUnnamedGenerate))
+                    disallowedGenerateAccess = true;
+            }
+            if (disallowedGenerateAccess) {
+                auto& diag = result.addDiag(*context.scope, diag::UnnamedGenerateAccess,
+                                            symbol->location);
+                diag << symbol->getSyntax()->sourceRange();
+                diag << symbol->name;
+                return false;
+            }
         }
         return true;
     };
