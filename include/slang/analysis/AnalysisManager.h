@@ -8,7 +8,7 @@
 #pragma once
 
 #if defined(SLANG_USE_THREADS)
-#include <BS_thread_pool.hpp>
+#    include <BS_thread_pool.hpp>
 #endif
 #include <mutex>
 #include <optional>
