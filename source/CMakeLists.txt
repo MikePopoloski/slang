@@ -141,9 +141,13 @@ target_include_directories(
   PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../external/>")
 
 # Link libraries
-find_package(Threads)
-target_link_libraries(slang_slang PUBLIC fmt::fmt Boost::headers
-                                         ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(slang_slang PUBLIC fmt::fmt Boost::headers)
+
+if(SLANG_USE_THREADS)
+  find_package(Threads REQUIRED)
+  target_link_libraries(slang_slang PUBLIC ${CMAKE_THREAD_LIBS_INIT})
+  target_compile_definitions(slang_slang PUBLIC SLANG_USE_THREADS)
+endif()
 
 if(SLANG_USE_MIMALLOC)
   target_link_libraries(slang_slang PUBLIC ${mimalloc_target})
