@@ -105,8 +105,15 @@ public:
         return *this;
     }
 
+    /// Sets whether to squash blank lines down into one when printing syntax.
+    /// @return a reference to this object, to allow chaining additional method calls.
+    SyntaxPrinter& setSquashBlanklines(bool squash) {
+        squashBlankLines = squash;
+        return *this;
+    }
+
     /// @return a copy of the internal text buffer.
-    std::string str() const { return buffer; }
+    std::string str() const;
 
     /// A helper method that assists in printing an entire syntax tree back to source
     /// text. A SyntaxPrinter with useful defaults is constructed, the tree is printed,
@@ -127,6 +134,7 @@ private:
     bool expandMacros = false;
     bool includeComments = true;
     bool squashNewlines = true;
+    bool squashBlankLines = false;
 };
 
 } // namespace slang::syntax

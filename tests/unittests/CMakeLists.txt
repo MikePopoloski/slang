@@ -34,7 +34,7 @@ add_executable(
   parsing/LexerTests.cpp
   parsing/MemberParsingTests.cpp
   parsing/PreprocessorTests.cpp
-  parsing/RewriterExpandTests.cpp
+  parsing/SyntaxPrinterTests.cpp
   parsing/VisitorTests.cpp
   parsing/StatementParsingTests.cpp
   util/CommandLineTests.cpp
