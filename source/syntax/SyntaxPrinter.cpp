@@ -138,6 +138,62 @@ std::string SyntaxPrinter::printFile(const SyntaxTree& tree) {
         .str();
 }
 
+std::string SyntaxPrinter::str() const {
+    if (!squashBlankLines) {
+        return buffer;
+    }
+    // Split buffer into lines and process each one
+    std::string result;
+    result.reserve(buffer.size());
+
+    std::istringstream stream(buffer);
+    std::string line;
+    bool lastLineWasEmpty = false;
+    bool firstLine = true;
+
+    while (std::getline(stream, line)) {
+        // Check if line is empty or contains only whitespace
+        bool isEmpty = line.empty();
+        if (!isEmpty) {
+            isEmpty = true;
+            for (char c : line) {
+                if (c != ' ' && c != '\t') {
+                    isEmpty = false;
+                    break;
+                }
+            }
+        }
+
+        if (!isEmpty) {
+            // Line has content, always include it with full indentation
+            if (!firstLine) {
+                result.push_back('\n');
+            }
+            result.append(line);
+            lastLineWasEmpty = false;
+        }
+        else if (!lastLineWasEmpty) {
+            // First empty line in a sequence, include it as a single empty line (no
+            // indentation)
+            if (!firstLine) {
+                result.push_back('\n');
+            }
+            // For empty lines, don't include whitespace - just make it truly empty
+            lastLineWasEmpty = true;
+        }
+        // Skip subsequent empty/whitespace-only lines in sequence
+
+        firstLine = false;
+    }
+
+    // Handle the case where buffer doesn't end with newline
+    if (!buffer.empty() && (buffer.back() == '\n' || buffer.back() == '\r')) {
+        result.push_back('\n');
+    }
+
+    return result;
+}
+
 SyntaxPrinter& SyntaxPrinter::append(std::string_view text) {
     if (!squashNewlines) {
         buffer.append(text);

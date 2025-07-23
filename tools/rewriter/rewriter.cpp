@@ -62,8 +62,8 @@ int main(int argc, char** argv) {
 
         // Trivia options
         driver.cmdLine.add("--exclude-comments", excludeComments, "Exclude comments in output");
-        driver.cmdLine.add("--squash-newlines", squashNewlines,
-                           "Squash adjacent newlines into one");
+        driver.cmdLine.add("--squash-blanklines", squashNewlines,
+                           "Squash adjacent blank lines into one");
 
         // Missing/skipped node options
         driver.cmdLine.add("--include-missing", includeMissing,
@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
         if (excludeComments == true)
             printer.setIncludeComments(false);
         if (squashNewlines == true)
-            printer.setSquashNewlines(true);
+            printer.setSquashBlanklines(true);
         if (excludeDirectives == true)
             printer.setIncludeDirectives(false);
 

@@ -265,3 +265,155 @@ endmodule
         CHECK(resultStr.find("SOME_VALUE") == std::string::npos);
     }
 }
+
+TEST_CASE("SyntaxPrinter newline squashing functionality") {
+    SECTION("Test setSquashBlanklines enabled") {
+        auto testText = R"(module test;
+
+
+    int a = 1;
+
+
+    int b = 2;
+
+
+
+    int c = 3;
+endmodule)";
+
+        auto tree = SyntaxTree::fromText(testText);
+        REQUIRE(tree != nullptr);
+
+        SyntaxPrinter printer(tree->sourceManager());
+        printer.setSquashNewlines(false);
+        printer.setSquashBlanklines(true);
+
+        auto result = printer.print(*tree);
+        auto resultStr = result.str();
+
+        // Multiple consecutive newlines and whitespace-only lines should be squashed to single
+        // newlines
+        auto expected = R"(module test;
+
+    int a = 1;
+
+    int b = 2;
+
+    int c = 3;
+endmodule)";
+        CHECK(resultStr == expected);
+    }
+
+    SECTION("Test setSquashBlanklines disabled") {
+        auto testText = R"(module test;
+
+
+    int a = 1;
+
+
+    int b = 2;
+
+
+
+    int c = 3;
+endmodule)";
+
+        auto tree = SyntaxTree::fromText(testText);
+        REQUIRE(tree != nullptr);
+
+        SyntaxPrinter printer(tree->sourceManager());
+        printer.setSquashNewlines(false);
+        printer.setSquashBlanklines(false);
+
+        auto result = printer.print(*tree);
+        auto resultStr = result.str();
+
+        // All original newlines and whitespace should be preserved
+        CHECK(resultStr == testText);
+    }
+
+    SECTION("Test squashing with different whitespace patterns") {
+        auto testText = R"(module test;
+
+    int a = 1;
+
+
+
+    int b = 2;
+endmodule)";
+
+        auto tree = SyntaxTree::fromText(testText);
+        REQUIRE(tree != nullptr);
+
+        SyntaxPrinter printer(tree->sourceManager());
+        printer.setSquashNewlines(false);
+        printer.setSquashBlanklines(true);
+
+        auto result = printer.print(*tree);
+        auto resultStr = result.str();
+
+        // Lines with only spaces/tabs should be treated as empty and squashed
+        auto expected = R"(module test;
+
+    int a = 1;
+
+    int b = 2;
+endmodule)";
+        CHECK(resultStr == expected);
+    }
+
+    SECTION("Test squashing preserves meaningful spacing") {
+        auto testText = R"(module test;
+    int a = 1;
+    int b = 2;
+
+    int c = 3;
+endmodule)";
+
+        auto tree = SyntaxTree::fromText(testText);
+        REQUIRE(tree != nullptr);
+
+        SyntaxPrinter printer(tree->sourceManager());
+        printer.setSquashNewlines(false);
+        printer.setSquashBlanklines(true);
+
+        auto result = printer.print(*tree);
+        auto resultStr = result.str();
+
+        // Single blank lines should be preserved for readability
+        auto expected = R"(module test;
+    int a = 1;
+    int b = 2;
+
+    int c = 3;
+endmodule)";
+        CHECK(resultStr == expected);
+    }
+
+    SECTION("Test squashing with only empty/whitespace lines") {
+        auto testText = R"(
+
+
+
+
+
+
+
+)";
+
+        auto tree = SyntaxTree::fromText(testText);
+        REQUIRE(tree != nullptr);
+
+        SyntaxPrinter printer(tree->sourceManager());
+        printer.setSquashNewlines(false);
+        printer.setSquashBlanklines(true);
+
+        auto result = printer.print(*tree);
+        auto resultStr = result.str();
+
+        // Should result in a single newline
+        auto expected = R"(
+)";
+        CHECK(resultStr == expected);
+    }
+}
