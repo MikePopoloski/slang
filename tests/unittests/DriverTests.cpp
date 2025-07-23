@@ -3,6 +3,7 @@
 
 #include "Test.h"
 #include <fmt/core.h>
+#include <fstream>
 #include <regex>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -252,35 +253,13 @@ TEST_CASE("Driver includes depfile") {
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
     fs::current_path(findTestDir());
-    auto depfiles = driver.getDepfiles(true);
+    auto depfiles = driver.getIncludePaths();
     CHECK(depfiles == std::vector<fs::path>{
                           fs::current_path() / "file_defn.svh",
                       });
 
     CHECK(driver.serializeDepfiles(depfiles, {"target"}) == "target: file_defn.svh\n");
     CHECK(driver.serializeDepfiles(depfiles, std::nullopt) == "file_defn.svh\n");
-}
-
-TEST_CASE("Driver all depfile") {
-    Driver driver;
-    driver.addStandardArgs();
-
-    auto filePath = findTestDir() + "test.sv";
-    const char* argv[] = {"testfoo", filePath.c_str()};
-    CHECK(driver.parseCommandLine(2, argv));
-    CHECK(driver.processOptions());
-    CHECK(driver.parseAllSources());
-    fs::current_path(findTestDir());
-    auto files = driver.getDepfiles();
-    std::sort(files.begin(), files.end());
-    CHECK(files == std::vector<fs::path>{
-                       fs::current_path() / "file_defn.svh",
-                       fs::current_path() / "test.sv",
-                   });
-    CHECK(driver.serializeDepfiles(driver.getDepfiles(), {"target"}) ==
-          "target: file_defn.svh test.sv\n");
-    CHECK(driver.serializeDepfiles(driver.getDepfiles(), std::nullopt) ==
-          "file_defn.svh\ntest.sv\n");
 }
 
 TEST_CASE("Driver module depfile") {
@@ -772,4 +751,294 @@ TEST_CASE("Driver JSON diag output") {
     "symbolPath": "\\$root "
   }
 )"));
+}
+
+TEST_CASE("Driver dependency tracking and pruning") {
+    auto testDir = findTestDir();
+
+    // Test case 1: Request only moduleB as top module
+    // Should return moduleB, moduleA (dependency), but not moduleC or moduleD
+    {
+        Driver driver;
+        driver.addStandardArgs();
+
+        auto moduleA = testDir + "dep_moduleA.sv";
+        auto moduleB = testDir + "dep_moduleB.sv";
+        auto moduleC = testDir + "dep_moduleC.sv";
+        auto moduleD = testDir + "dep_moduleD.sv";
+
+        const char* argv[] = {"testfoo",       "--top=moduleB", moduleA.c_str(),
+                              moduleB.c_str(), moduleC.c_str(), moduleD.c_str()};
+
+        CHECK(driver.parseCommandLine(6, argv));
+        CHECK(driver.processOptions());
+        CHECK(driver.parseAllSources());
+
+        auto result = driver.getReferencedDeps();
+
+        // Should find moduleB and its dependency moduleA
+        CHECK(result.depTrees.size() == 2);
+
+        // Check that we have the right modules
+        bool foundA = false, foundB = false, foundC = false, foundD = false;
+
+        for (const auto& tree : result.depTrees) {
+            auto bufferIds = tree->getSourceBufferIds();
+            CHECK(!bufferIds.empty());
+
+            for (auto bufferId : bufferIds) {
+                auto fileName = tree->sourceManager().getFileName(SourceLocation(bufferId, 0));
+                if (fileName.find("dep_moduleA.sv") != std::string::npos)
+                    foundA = true;
+                else if (fileName.find("dep_moduleB.sv") != std::string::npos)
+                    foundB = true;
+                else if (fileName.find("dep_moduleC.sv") != std::string::npos)
+                    foundC = true;
+                else if (fileName.find("dep_moduleD.sv") != std::string::npos)
+                    foundD = true;
+            }
+        }
+
+        CHECK(foundA);  // moduleB depends on moduleA
+        CHECK(foundB);  // moduleB is the top module
+        CHECK(!foundC); // moduleC should be pruned (not needed for moduleB)
+        CHECK(!foundD); // moduleD should be pruned (independent)
+
+        // Should have no missing dependencies
+        CHECK(result.missingNames.empty());
+        CHECK(result.missingTops.empty());
+    }
+
+    // Test case 2: Request moduleC as top module
+    // Should return moduleC, moduleB, moduleA (all dependencies), but not moduleD
+    {
+        Driver driver2;
+        driver2.addStandardArgs();
+
+        auto moduleA = testDir + "dep_moduleA.sv";
+        auto moduleB = testDir + "dep_moduleB.sv";
+        auto moduleC = testDir + "dep_moduleC.sv";
+        auto moduleD = testDir + "dep_moduleD.sv";
+
+        const char* argv[] = {"testfoo",       "--top=moduleC", moduleA.c_str(),
+                              moduleB.c_str(), moduleC.c_str(), moduleD.c_str()};
+
+        CHECK(driver2.parseCommandLine(6, argv));
+        CHECK(driver2.processOptions());
+        CHECK(driver2.parseAllSources());
+
+        auto result2 = driver2.getReferencedDeps();
+
+        // Should find moduleC and its dependencies (B and A)
+        CHECK(result2.depTrees.size() == 3);
+
+        bool foundA = false, foundB = false, foundC = false, foundD = false;
+
+        for (const auto& tree : result2.depTrees) {
+            auto bufferIds = tree->getSourceBufferIds();
+            CHECK(!bufferIds.empty());
+
+            for (auto bufferId : bufferIds) {
+                auto fileName = tree->sourceManager().getFileName(SourceLocation(bufferId, 0));
+                if (fileName.find("dep_moduleA.sv") != std::string::npos)
+                    foundA = true;
+                else if (fileName.find("dep_moduleB.sv") != std::string::npos)
+                    foundB = true;
+                else if (fileName.find("dep_moduleC.sv") != std::string::npos)
+                    foundC = true;
+                else if (fileName.find("dep_moduleD.sv") != std::string::npos)
+                    foundD = true;
+            }
+        }
+
+        CHECK(foundA);  // moduleC -> moduleB -> moduleA
+        CHECK(foundB);  // moduleC -> moduleB
+        CHECK(foundC);  // moduleC is the top module
+        CHECK(!foundD); // moduleD should be pruned (independent)
+    }
+
+    // Test case 3: Request non-existent module
+    // Should report missing top module
+    {
+        Driver driver3;
+        driver3.addStandardArgs();
+
+        auto moduleA = testDir + "dep_moduleA.sv";
+        auto moduleB = testDir + "dep_moduleB.sv";
+
+        const char* argv[] = {"testfoo", "--top=nonexistent", moduleA.c_str(), moduleB.c_str()};
+
+        CHECK(driver3.parseCommandLine(4, argv));
+        CHECK(driver3.processOptions());
+        CHECK(driver3.parseAllSources());
+
+        auto result3 = driver3.getReferencedDeps();
+
+        // Should have no trees but report missing top
+        CHECK(result3.depTrees.empty());
+        CHECK(!result3.missingTops.empty());
+        CHECK(std::find(result3.missingTops.begin(), result3.missingTops.end(), "nonexistent") !=
+              result3.missingTops.end());
+    }
+}
+
+TEST_CASE("DepTracker topological sort ordering") {
+    auto testDir = findTestDir();
+
+    // Test complex dependency chain with proper topological ordering
+    {
+        Driver driver;
+        driver.addStandardArgs();
+
+        auto leafA = testDir + "topo/topo_leafA.sv";
+        auto leafB = testDir + "topo/topo_leafB.sv";
+        auto mid = testDir + "topo/topo_mid.sv";
+        auto top = testDir + "topo/topo_top.sv";
+
+        const char* argv[] = {"testfoo",     "--top=top", leafA.c_str(),
+                              leafB.c_str(), mid.c_str(), top.c_str()};
+
+        CHECK(driver.parseCommandLine(6, argv));
+        CHECK(driver.processOptions());
+        CHECK(driver.parseAllSources());
+
+        auto result = driver.getReferencedDeps();
+
+        // Should find all 4 modules: top -> mid -> (leafA, leafB)
+        CHECK(result.depTrees.size() == 4);
+
+        // Verify topological ordering: dependencies must come before dependents
+        std::vector<std::string> fileOrder;
+        for (const auto& tree : result.depTrees) {
+            auto bufferIds = tree->getSourceBufferIds();
+            CHECK(!bufferIds.empty());
+
+            for (auto bufferId : bufferIds) {
+                auto fileName = tree->sourceManager().getFileName(SourceLocation(bufferId, 0));
+                if (fileName.find("topo_leafA.sv") != std::string::npos)
+                    fileOrder.push_back("leafA");
+                else if (fileName.find("topo_leafB.sv") != std::string::npos)
+                    fileOrder.push_back("leafB");
+                else if (fileName.find("topo_mid.sv") != std::string::npos)
+                    fileOrder.push_back("mid");
+                else if (fileName.find("topo_top.sv") != std::string::npos)
+                    fileOrder.push_back("top");
+            }
+        }
+
+        // Verify ordering constraints
+        auto leafAPos = std::find(fileOrder.begin(), fileOrder.end(), "leafA");
+        auto leafBPos = std::find(fileOrder.begin(), fileOrder.end(), "leafB");
+        auto midPos = std::find(fileOrder.begin(), fileOrder.end(), "mid");
+        auto topPos = std::find(fileOrder.begin(), fileOrder.end(), "top");
+
+        CHECK(leafAPos != fileOrder.end());
+        CHECK(leafBPos != fileOrder.end());
+        CHECK(midPos != fileOrder.end());
+        CHECK(topPos != fileOrder.end());
+
+        // Both leaves must come before mid
+        CHECK(leafAPos < midPos);
+        CHECK(leafBPos < midPos);
+
+        // Mid must come before top
+        CHECK(midPos < topPos);
+    }
+}
+
+TEST_CASE("DepTracker circular dependency handling") {
+    auto testDir = findTestDir();
+
+    // Test circular dependency detection and handling
+    {
+        Driver driver;
+        driver.addStandardArgs();
+
+        auto cycleA = testDir + "topo/topo_cycleA.sv";
+        auto cycleB = testDir + "topo/topo_cycleB.sv";
+
+        const char* argv[] = {"testfoo", "--top=cycleA", cycleA.c_str(), cycleB.c_str()};
+
+        CHECK(driver.parseCommandLine(4, argv));
+        CHECK(driver.processOptions());
+        CHECK(driver.parseAllSources());
+
+        auto result = driver.getReferencedDeps();
+
+        // Should still include both modules despite circular dependency
+        CHECK(result.depTrees.size() == 2);
+
+        bool foundCycleA = false, foundCycleB = false;
+
+        for (const auto& tree : result.depTrees) {
+            auto bufferIds = tree->getSourceBufferIds();
+            CHECK(!bufferIds.empty());
+
+            for (auto bufferId : bufferIds) {
+                auto fileName = tree->sourceManager().getFileName(SourceLocation(bufferId, 0));
+                if (fileName.find("topo_cycleA.sv") != std::string::npos)
+                    foundCycleA = true;
+                else if (fileName.find("topo_cycleB.sv") != std::string::npos)
+                    foundCycleB = true;
+            }
+        }
+
+        CHECK(foundCycleA);
+        CHECK(foundCycleB);
+
+        // Algorithm should handle the cycle gracefully without infinite loop
+        CHECK(result.missingNames.empty());
+        CHECK(result.missingTops.empty());
+    }
+}
+
+TEST_CASE("DepTracker partial dependency tree") {
+    auto testDir = findTestDir();
+
+    // Test requesting only mid-level module to verify partial tree extraction
+    {
+        Driver driver;
+        driver.addStandardArgs();
+
+        auto leafA = testDir + "topo/topo_leafA.sv";
+        auto leafB = testDir + "topo/topo_leafB.sv";
+        auto mid = testDir + "topo/topo_mid.sv";
+        auto top = testDir + "topo/topo_top.sv";
+
+        const char* argv[] = {"testfoo",     "--top=mid", leafA.c_str(),
+                              leafB.c_str(), mid.c_str(), top.c_str()};
+
+        CHECK(driver.parseCommandLine(6, argv));
+        CHECK(driver.processOptions());
+        CHECK(driver.parseAllSources());
+
+        auto result = driver.getReferencedDeps();
+
+        // Should find 3 modules: mid -> (leafA, leafB), but NOT top
+        CHECK(result.depTrees.size() == 3);
+
+        bool foundLeafA = false, foundLeafB = false, foundMid = false, foundTop = false;
+
+        for (const auto& tree : result.depTrees) {
+            auto bufferIds = tree->getSourceBufferIds();
+            CHECK(!bufferIds.empty());
+
+            for (auto bufferId : bufferIds) {
+                auto fileName = tree->sourceManager().getFileName(SourceLocation(bufferId, 0));
+                if (fileName.find("topo_leafA.sv") != std::string::npos)
+                    foundLeafA = true;
+                else if (fileName.find("topo_leafB.sv") != std::string::npos)
+                    foundLeafB = true;
+                else if (fileName.find("topo_mid.sv") != std::string::npos)
+                    foundMid = true;
+                else if (fileName.find("topo_top.sv") != std::string::npos)
+                    foundTop = true;
+            }
+        }
+
+        CHECK(foundLeafA); // mid depends on leafA
+        CHECK(foundLeafB); // mid depends on leafB
+        CHECK(foundMid);   // mid is the requested top module
+        CHECK(!foundTop);  // top should be pruned (not needed for mid)
+    }
 }

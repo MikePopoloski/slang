@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include <fmt/color.h>
+#include <fmt/ranges.h>
 #include <fstream>
 #include <iostream>
 
@@ -138,6 +139,10 @@ int driverMain(int argc, TArgs argv) {
             "Generate dependency file list of source files parsed, excluding include files",
             "<file>", CommandLineFlags::FilePath);
 
+        std::optional<bool> depfileTrim;
+        driver.cmdLine.add("--depfile-trim", depfileTrim,
+                           "Trim unreferenced files before generating dependency lists");
+
         std::optional<std::string> timeTrace;
         driver.cmdLine.add("--time-trace", timeTrace,
                            "Do performance profiling of the slang compiler and output "
@@ -163,18 +168,25 @@ int driverMain(int argc, TArgs argv) {
         if (!driver.processOptions())
             return 2;
 
+        auto printError = [&](const std::string& message) {
+            OS::printE(fg(driver.textDiagClient->errorColor), "error: ");
+            OS::printE(message);
+        };
+        auto printWarning = [&](const std::string& message) {
+            OS::printE(fg(driver.textDiagClient->warningColor), "warning: ");
+            OS::printE(message);
+        };
+
         if (onlyParse.has_value() + onlyPreprocess.has_value() + onlyMacros.has_value() +
                 driver.options.lintMode() >
             1) {
-            OS::printE(fg(driver.textDiagClient->errorColor), "error: ");
-            OS::printE("can only specify one of --preprocess, --macros-only, "
+            printError("can only specify one of --preprocess, --macros-only, "
                        "--parse-only, --lint-only");
             return 3;
         }
 
         if ((onlyPreprocess || onlyMacros) && (includeDepfile || moduleDepfile || allDepfile)) {
-            OS::printE(fg(driver.textDiagClient->errorColor), "error: ");
-            OS::printE("cannot use dependency file options with --preprocess or --macros-only");
+            printError("cannot use dependency file options with --preprocess or --macros-only");
             return 3;
         }
 
@@ -197,21 +209,58 @@ int driverMain(int argc, TArgs argv) {
                 TimeTraceScope timeScope("parseAllSources"sv, ""sv);
                 ok = driver.parseAllSources();
             }
+            if (depfileTrim == true) {
+                DepTracker::DepResult result = driver.getReferencedDeps();
+                // Since we're not elaborated, it's ok to have missing names
+                if (!result.missingTops.empty()) {
+                    printError(fmt::format("Top modules '{}' not found in source files",
+                                           fmt::join(result.missingTops, ", ")));
+                    ok = false;
+                }
+                if (!result.missingNames.empty()) {
+                    printWarning(fmt::format("Referenced name(s) '{}' not found in source files",
+                                             fmt::join(result.missingNames, ", ")));
+                }
 
-            if (includeDepfile) {
-                OS::writeFile(*includeDepfile,
-                              driver.serializeDepfiles(driver.getDepfiles(true), depfileTarget));
+                if (includeDepfile) {
+                    OS::writeFile(*includeDepfile,
+                                  driver.serializeDepfiles(driver.getIncludePaths(result.depTrees),
+                                                           includeDepfile));
+                }
+                if (moduleDepfile) {
+                    std::vector<std::filesystem::path> moduleFiles;
+
+                    auto paths = driver.getFilePaths(result.depTrees);
+
+                    OS::writeFile(*moduleDepfile, driver.serializeDepfiles(paths, depfileTarget));
+                }
+                if (allDepfile) {
+                    auto paths = driver.getIncludePaths(result.depTrees);
+
+                    auto modulePaths = driver.getFilePaths(result.depTrees);
+                    paths.insert(paths.end(), modulePaths.begin(), modulePaths.end());
+
+                    OS::writeFile(*allDepfile, driver.serializeDepfiles(paths, depfileTarget));
+                }
             }
+            else {
+                if (includeDepfile) {
+                    OS::writeFile(*includeDepfile, driver.serializeDepfiles(
+                                                       driver.getIncludePaths(), depfileTarget));
+                }
 
-            if (moduleDepfile) {
-                OS::writeFile(*moduleDepfile,
-                              driver.serializeDepfiles(driver.sourceLoader.getFilePaths(),
-                                                       depfileTarget));
-            }
+                if (moduleDepfile) {
+                    OS::writeFile(*moduleDepfile,
+                                  driver.serializeDepfiles(driver.sourceLoader.getFilePaths(),
+                                                           depfileTarget));
+                }
 
-            if (allDepfile) {
-                OS::writeFile(*allDepfile,
-                              driver.serializeDepfiles(driver.getDepfiles(), depfileTarget));
+                if (allDepfile) {
+                    auto incPaths = driver.getIncludePaths();
+                    auto paths = driver.sourceLoader.getFilePaths();
+                    incPaths.insert(incPaths.end(), paths.begin(), paths.end());
+                    OS::writeFile(*allDepfile, driver.serializeDepfiles(incPaths, depfileTarget));
+                }
             }
 
             if (onlyParse == true)
