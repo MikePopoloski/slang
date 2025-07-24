@@ -351,7 +351,7 @@ public:
         std::vector<std::shared_ptr<syntax::SyntaxTree>> trees) const;
 
     /// @brief Returns the include files that were loaded in the given syntax trees.
-    std::vector<std::filesystem::path> getIncludePaths() const;
+    std::vector<std::filesystem::path> getLoadedIncludePaths() const;
 
     /// @brief Returns the set of dependencies referenced by the given syntax trees, along with
     /// missing top modules and referenced modules.

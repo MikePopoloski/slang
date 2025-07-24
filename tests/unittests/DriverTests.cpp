@@ -253,7 +253,7 @@ TEST_CASE("Driver includes depfile") {
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
     fs::current_path(findTestDir());
-    auto depfiles = driver.getIncludePaths();
+    auto depfiles = driver.getLoadedIncludePaths();
     CHECK(depfiles == std::vector<fs::path>{
                           fs::current_path() / "file_defn.svh",
                       });

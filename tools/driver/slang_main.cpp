@@ -245,8 +245,9 @@ int driverMain(int argc, TArgs argv) {
             }
             else {
                 if (includeDepfile) {
-                    OS::writeFile(*includeDepfile, driver.serializeDepfiles(
-                                                       driver.getIncludePaths(), depfileTarget));
+                    OS::writeFile(*includeDepfile,
+                                  driver.serializeDepfiles(driver.getLoadedIncludePaths(),
+                                                           depfileTarget));
                 }
 
                 if (moduleDepfile) {
@@ -256,7 +257,7 @@ int driverMain(int argc, TArgs argv) {
                 }
 
                 if (allDepfile) {
-                    auto incPaths = driver.getIncludePaths();
+                    auto incPaths = driver.getLoadedIncludePaths();
                     auto paths = driver.sourceLoader.getFilePaths();
                     incPaths.insert(incPaths.end(), paths.begin(), paths.end());
                     OS::writeFile(*allDepfile, driver.serializeDepfiles(incPaths, depfileTarget));

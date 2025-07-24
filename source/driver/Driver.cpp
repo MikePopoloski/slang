@@ -788,7 +788,7 @@ std::vector<fs::path> Driver::getIncludePaths(
     return includePaths;
 }
 
-std::vector<fs::path> Driver::getIncludePaths() const {
+std::vector<fs::path> Driver::getLoadedIncludePaths() const {
     return getIncludePaths(syntaxTrees);
 }
 
