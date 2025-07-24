@@ -156,5 +156,6 @@ DepTracker::DepResult DepTracker::getTreesFor(const std::vector<RC<SyntaxTree>>&
     }
 
     return {std::move(result),
-            std::vector<std::string_view>(missingVisited.begin(), missingVisited.end())};
+            std::vector<std::string_view>(missingVisited.begin(), missingVisited.end()),
+            {}};
 }

@@ -226,12 +226,6 @@ public:
     /// the process.
     static SourceManager& getDefaultSourceManager();
 
-    std::filesystem::path getFilePath() const {
-        if (sourceBufferIds.empty())
-            return {};
-        return sourceMan.getFullPath(sourceBufferIds[0]);
-    }
-
 private:
     SyntaxTree(SyntaxNode* root, const SourceLibrary* library, SourceManager& sourceManager,
                BumpAllocator&& alloc, Diagnostics&& diagnostics, parsing::ParserMetadata&& metadata,
