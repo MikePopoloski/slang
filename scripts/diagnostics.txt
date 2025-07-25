@@ -989,6 +989,7 @@ error InvalidHierarchicalIfacePortConn "cannot connect interface port hierarchic
 warning unknown-sys-name UnknownSystemName "unknown system name '{}'"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 warning duplicate-definition DuplicateDefinition "duplicate definition of '{}'"
+warning unnamed-generate-access UnnamedGenerateAccess "accessing or ambiguously referencing an unnamed generate block"
 
 subsystem SysFuncs
 error BadSystemSubroutineArg "invalid argument type {} to system {}"

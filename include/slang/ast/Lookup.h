@@ -83,10 +83,13 @@ enum class SLANG_EXPORT LookupFlags {
     /// the $unit compilation unit scope.
     DisallowUnitReferences = 1 << 14,
 
+    /// Allow unnamed generate blocks to be looked up by their external name.
+    AllowUnnamedGenerate = 1 << 15,
+
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated
 };
-SLANG_BITMASK(LookupFlags, DisallowUnitReferences)
+SLANG_BITMASK(LookupFlags, AllowUnnamedGenerate)
 
 /// Flags that indicate additional details about the result of a lookup operation.
 enum class SLANG_EXPORT LookupResultFlags : uint8_t {

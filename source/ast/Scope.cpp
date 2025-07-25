@@ -26,6 +26,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/util/SmallVector.h"
 #include "slang/util/TimeTrace.h"
 
 namespace {
@@ -916,6 +917,7 @@ void Scope::elaborate() const {
 
     // Go through deferred instances and elaborate them now.
     SmallVector<const ModuleDeclarationSyntax*> nestedDefs;
+    SmallVector<Symbol*> unnamedUninstantiatedGenblks, unnamedGenblks;
     const Symbol* prev = nullptr;
     uint32_t constructIndex = 1;
     bool usedPorts = false;
@@ -985,6 +987,14 @@ void Scope::elaborate() const {
                                                 blocks);
                 constructIndex++;
                 insertMembers(blocks, symbol);
+                for (auto block : blocks) {
+                    if (block->name.empty()) {
+                        if (block->isUninstantiated)
+                            unnamedUninstantiatedGenblks.push_back(block);
+                        else
+                            unnamedGenblks.push_back(block);
+                    }
+                }
                 break;
             }
             case SyntaxKind::CaseGenerate: {
@@ -994,23 +1004,38 @@ void Scope::elaborate() const {
                                                 blocks);
                 constructIndex++;
                 insertMembers(blocks, symbol);
+                for (auto block : blocks) {
+                    if (block->name.empty()) {
+                        if (block->isUninstantiated)
+                            unnamedUninstantiatedGenblks.push_back(block);
+                        else
+                            unnamedGenblks.push_back(block);
+                    }
+                }
                 break;
             }
-            case SyntaxKind::LoopGenerate:
-                insertMember(&GenerateBlockArraySymbol::fromSyntax(
-                                 compilation, member.node.as<LoopGenerateSyntax>(),
-                                 symbol->getIndex(), context, constructIndex),
-                             symbol, true, true);
+            case SyntaxKind::LoopGenerate: {
+                auto array = &GenerateBlockArraySymbol::fromSyntax(
+                    compilation, member.node.as<LoopGenerateSyntax>(), symbol->getIndex(), context,
+                    constructIndex);
+                insertMember(array, symbol, true, true);
+                if (array->name.empty())
+                    unnamedGenblks.push_back(array);
                 constructIndex++;
                 break;
-            case SyntaxKind::GenerateBlock:
+            }
+            case SyntaxKind::GenerateBlock: {
                 // This case is invalid according to the spec but the parser only issues a
                 // warning since some existing code does this anyway.
-                insertMember(&GenerateBlockSymbol::fromSyntax(
-                                 *this, member.node.as<GenerateBlockSyntax>(), constructIndex),
-                             symbol, true, true);
+                auto block = &GenerateBlockSymbol::fromSyntax(*this,
+                                                              member.node.as<GenerateBlockSyntax>(),
+                                                              constructIndex);
+                insertMember(block, symbol, true, true);
+                if (block->name.empty())
+                    unnamedGenblks.push_back(block);
                 constructIndex++;
                 break;
+            }
             case SyntaxKind::AnsiPortList:
             case SyntaxKind::NonAnsiPortList: {
                 SmallVector<const Symbol*> ports;
@@ -1162,6 +1187,29 @@ void Scope::elaborate() const {
             lastMember = symbol->nextInScope;
             if (!lastMember)
                 lastMember = prev;
+        }
+    }
+
+    // Unnamed generate blocks must be handled last to detect genblk name collisions
+    // Uninstantiated unnamed generate blocks must be handled first so that they don't incorrectly
+    // detect a name collision with their instantiated counterparts
+    SmallVector<SmallVector<Symbol*>*> vecs{&unnamedUninstantiatedGenblks, &unnamedGenblks};
+    for (auto vec : vecs) {
+        for (auto symbol : *vec) {
+            auto updateName = [&](Symbol* symbol, const std::string& externalName,
+                                  bool isUninstantiated = false) {
+                char* mem = (char*)getCompilation().allocate(externalName.size(), 1);
+                memcpy(mem, externalName.data(), externalName.size());
+                symbol->name = std::string_view(mem, externalName.size());
+                if (!isUninstantiated)
+                    nameMap->emplace(symbol->name, symbol);
+            };
+            if (auto block = symbol->as_if<GenerateBlockSymbol>()) {
+                updateName(block, block->getExternalName(), block->isUninstantiated);
+            }
+            else if (auto array = symbol->as_if<GenerateBlockArraySymbol>()) {
+                updateName(array, array->getExternalName());
+            }
         }
     }
 

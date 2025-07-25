@@ -39,7 +39,8 @@ void registerSymbols(py::module_& m) {
         .value("ForceHierarchical", LookupFlags::ForceHierarchical)
         .value("TypeReference", LookupFlags::TypeReference)
         .value("AlwaysAllowUpward", LookupFlags::AlwaysAllowUpward)
-        .value("DisallowUnitReferences", LookupFlags::DisallowUnitReferences);
+        .value("DisallowUnitReferences", LookupFlags::DisallowUnitReferences)
+        .value("AllowUnnamedGenerate", LookupFlags::AllowUnnamedGenerate);
 
     py::enum_<LookupResultFlags>(m, "LookupResultFlags")
         .value("None_", LookupResultFlags::None)
