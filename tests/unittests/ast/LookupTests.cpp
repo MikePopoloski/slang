@@ -600,6 +600,71 @@ endmodule
     CHECK(foo->as<VariableSymbol>().getType().isMatching(compilation.getLogicType()));
 }
 
+TEST_CASE("Unnamed if generate lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    if (1) begin
+        logic foo;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto foo = compilation.getRoot().lookupName("m.genblk1.foo", LookupLocation::max,
+                                                LookupFlags::AllowUnnamedGenerate);
+    REQUIRE(foo);
+    CHECK(foo->kind == SymbolKind::Variable);
+    CHECK(foo->as<VariableSymbol>().getType().isMatching(compilation.getLogicType()));
+}
+
+TEST_CASE("Unnamed else generate lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    if (0) begin
+        logic foo;
+    end else begin
+        logic bar;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto foo = compilation.getRoot().lookupName("m.genblk1.bar", LookupLocation::max,
+                                                LookupFlags::AllowUnnamedGenerate);
+    REQUIRE(foo);
+    CHECK(foo->kind == SymbolKind::Variable);
+    CHECK(foo->as<VariableSymbol>().getType().isMatching(compilation.getLogicType()));
+}
+
+TEST_CASE("Unnamed case generate lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int switch = 1;
+    case (switch)
+        1: begin
+            logic foo;
+        end
+    endcase
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto foo = compilation.getRoot().lookupName("m.genblk1.foo", LookupLocation::max,
+                                                LookupFlags::AllowUnnamedGenerate);
+    REQUIRE(foo);
+    CHECK(foo->kind == SymbolKind::Variable);
+    CHECK(foo->as<VariableSymbol>().getType().isMatching(compilation.getLogicType()));
+}
+
 TEST_CASE("Unnamed generate not allowed") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -2344,7 +2409,11 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == diag::UnnamedGenerateAccess);
+    CHECK(it == diags.end());
 }
 
 TEST_CASE("Unqualified genblk collision") {
@@ -2361,5 +2430,9 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == diag::UnnamedGenerateAccess);
+    CHECK(it == diags.end());
 }

@@ -277,6 +277,7 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
                     disallowedGenerateAccess = true;
             }
             if (disallowedGenerateAccess) {
+                result.clear();
                 auto& diag = result.addDiag(*context.scope, diag::UnnamedGenerateAccess,
                                             symbol->location);
                 diag << symbol->getSyntax()->sourceRange();

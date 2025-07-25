@@ -986,10 +986,10 @@ error IllegalReferenceToProgramItem "cannot reference program item from outside 
 error HierarchicalFromPackage "cannot use hierarchical reference from within a package"
 error CompilationUnitFromPackage "cannot reference compilation unit item from within a package"
 error InvalidHierarchicalIfacePortConn "cannot connect interface port hierarchically through a generate block or instance array"
-error UnnamedGenerateAccess "accessing an unnamed generate block"
 warning unknown-sys-name UnknownSystemName "unknown system name '{}'"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 warning duplicate-definition DuplicateDefinition "duplicate definition of '{}'"
+warning unnamed-generate-access UnnamedGenerateAccess "accessing or ambiguously referencing an unnamed generate block"
 
 subsystem SysFuncs
 error BadSystemSubroutineArg "invalid argument type {} to system {}"
