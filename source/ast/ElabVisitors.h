@@ -17,7 +17,7 @@ namespace slang::ast {
 
 static bool isEligibleForCaching(const InstanceSymbol& symbol) {
     return !symbol.resolvedConfig && !symbol.body.hierarchyOverrideNode &&
-           symbol.body.flags == InstanceFlags::None;
+           !symbol.body.flags.has(InstanceFlags::PreventsCaching);
 }
 
 class InstanceCacheKey {

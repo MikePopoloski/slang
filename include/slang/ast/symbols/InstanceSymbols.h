@@ -58,7 +58,10 @@ enum class SLANG_EXPORT InstanceFlags : uint8_t {
     ParentFromBind = 1 << 2,
 
     /// The instance is the target of a bind instantiation.
-    TargetedByBind = 1 << 3
+    TargetedByBind = 1 << 3,
+
+    /// Flags that prevent caching of this instance in the elaboration cache.
+    PreventsCaching = Uninstantiated | FromBind | ParentFromBind
 };
 SLANG_BITMASK(InstanceFlags, TargetedByBind)
 

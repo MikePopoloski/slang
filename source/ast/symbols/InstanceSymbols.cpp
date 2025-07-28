@@ -1097,10 +1097,8 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
     }
 
     if (!definition.bindDirectives.empty()) {
-        if (!definition.bindDirectives.empty()) {
-            result->setNeedElaboration();
-            result->flags |= InstanceFlags::TargetedByBind;
-        }
+        result->setNeedElaboration();
+        result->flags |= InstanceFlags::TargetedByBind;
         comp.noteInstanceWithDefBind(*result);
     }
 
@@ -1124,8 +1122,7 @@ void InstanceBodySymbol::finishElaboration(function_ref<void(const Symbol&)> ins
         }
     }
 
-    // If there are bind directives, reach up into the instance body
-    // and pull out the extra bind metadata from its override node.
+    // If there are bind directives targeting this instance we need to apply them now.
     if (flags.has(InstanceFlags::TargetedByBind)) {
         SmallSet<const BindDirectiveSyntax*, 4> seenBindDirectives;
         ASTContext context(*this, LookupLocation::max);
