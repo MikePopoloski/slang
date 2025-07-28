@@ -147,10 +147,26 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "WASI")
+  add_compile_options(-fno-exceptions)
+
   add_compile_definitions(_WASI_EMULATED_SIGNAL)
   add_link_options(-lwasi-emulated-signal)
+  set(CATCH_CONFIG_NO_POSIX_SIGNALS ON)
+
   # https://github.com/fmtlib/fmt/issues/4496#issuecomment-3094630184
   add_compile_definitions(FMT_USE_FCNTL=0)
+
+  # to make stack overflows crash instead of silently corrupt memory
+  add_link_options(-Wl,--stack-first -Wl,-z,stack-size=1048576)
+
+  # required for growable memory in multithreaded builds
+  add_link_options(-Wl,--max-memory=4294967296)
+
+  # to have CTest invoke a Wasm engine when running tests
+  set(mappings --dir=/ --dir=${CMAKE_CURRENT_SOURCE_DIR}/tests::tests)
+  set(CMAKE_TEST_LAUNCHER
+      wasmtime run -S threads ${mappings}
+      CACHE STRING "")
 endif()
 
 if(SLANG_FUZZ_TARGET)

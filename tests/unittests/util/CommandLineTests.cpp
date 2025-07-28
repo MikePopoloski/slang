@@ -460,7 +460,11 @@ TEST_CASE("Test CommandLine -- file names") {
 
     CHECK(cmdLine.parse("prog +foo+../something/bar/baz"));
 
+    // On WASI, it is not possible to expand a path starting with `..` into
+    // an absolute path.
+#if !defined(__wasi__)
     CHECK(fs::path(*foo).is_absolute());
+#endif
 }
 
 TEST_CASE("Test CommandLine -- ignore duplicates") {
