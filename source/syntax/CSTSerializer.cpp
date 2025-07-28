@@ -38,14 +38,6 @@ struct CSTJsonVisitor : public SyntaxVisitor<CSTJsonVisitor> {
         writer.startObject();
         writer.writeProperty("kind");
         writer.writeValue(std::string_view(toString(node.kind)));
-
-        writer.writeProperty("parentKind");
-        if (node.parent) {
-            writer.writeValue(std::string_view(toString(node.parent->kind)));
-        }
-        else {
-            writer.writeNull();
-        }
     }
 
     void writePropertyAndToken(std::string_view name, parsing::Token token) {
