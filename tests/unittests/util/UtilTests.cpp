@@ -37,6 +37,8 @@ TEST_CASE("createRandomGenerator construction") {
     auto rng = createRandomGenerator<std::mt19937>();
 }
 
+#if defined(SLANG_USE_THREADS)
+
 TEST_CASE("TimeTrace tests") {
     TimeTrace::initialize();
 
@@ -64,3 +66,5 @@ TEST_CASE("TimeTrace tests") {
     std::ostringstream sstr;
     TimeTrace::write(sstr);
 }
+
+#endif
