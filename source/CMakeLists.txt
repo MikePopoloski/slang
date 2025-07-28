@@ -40,6 +40,7 @@ add_custom_command(
          ${CMAKE_CURRENT_BINARY_DIR}/SyntaxClone.cpp
          ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxFwd.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/CSTJsonVisitorGen.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/KnownSystemName.h
          ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
@@ -100,6 +101,7 @@ add_library(
   syntax/SyntaxPrinter.cpp
   syntax/SyntaxTree.cpp
   syntax/SyntaxVisitor.cpp
+  syntax/CSTSerializer.cpp
   text/CharInfo.cpp
   text/Glob.cpp
   text/Json.cpp

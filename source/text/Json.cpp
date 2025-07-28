@@ -96,6 +96,16 @@ void JsonWriter::writeValue(bool value) {
     endValue();
 }
 
+void JsonWriter::writeNull() {
+    buffer->append("null");
+    endValue();
+}
+
+void JsonWriter::writeEmptyArray() {
+    buffer->append("[]");
+    endValue();
+}
+
 void JsonWriter::writeNewLine() {
     buffer->append("\n");
 }

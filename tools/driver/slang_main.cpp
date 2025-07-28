@@ -15,6 +15,7 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
+#include "slang/syntax/CSTSerializer.h"
 #include "slang/text/Json.h"
 #include "slang/util/TimeTrace.h"
 #include "slang/util/VersionInfo.h"
@@ -51,6 +52,27 @@ void printJson(Compilation& compilation, const std::string& fileName,
                 serializer.serialize(*sym);
         }
     }
+
+    writer.writeNewLine();
+    OS::writeFile(fileName, writer.view());
+}
+
+void printCSTJson(Driver& driver, const std::string& fileName) {
+    JsonWriter writer;
+    writer.setPrettyPrint(true);
+
+    syntax::CSTSerializer converter(writer);
+
+    writer.startObject();
+    writer.writeProperty("syntaxTrees");
+    writer.startArray();
+
+    for (auto& tree : driver.syntaxTrees) {
+        converter.serialize(*tree);
+    }
+
+    writer.endArray();
+    writer.endObject();
 
     writer.writeNewLine();
     OS::writeFile(fileName, writer.view());
@@ -100,6 +122,12 @@ int driverMain(int argc, TArgs argv) {
         driver.cmdLine.add(
             "--ast-json", astJsonFile,
             "Dump the compiled AST in JSON format to the specified file, or '-' for stdout",
+            "<file>", CommandLineFlags::FilePath);
+
+        std::optional<std::string> cstJsonFile;
+        driver.cmdLine.add(
+            "--cst-json", cstJsonFile,
+            "Dump the parsed syntax trees in JSON format to the specified file, or '-' for stdout",
             "<file>", CommandLineFlags::FilePath);
 
         std::vector<std::string> astJsonScopes;
@@ -212,6 +240,11 @@ int driverMain(int argc, TArgs argv) {
             if (allDepfile) {
                 OS::writeFile(*allDepfile,
                               driver.serializeDepfiles(driver.getDepfiles(), depfileTarget));
+            }
+
+            if (cstJsonFile) {
+                TimeTraceScope timeScope("cstSerialization"sv, ""sv);
+                printCSTJson(driver, *cstJsonFile);
             }
 
             if (onlyParse == true)

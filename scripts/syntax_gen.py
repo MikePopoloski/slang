@@ -58,9 +58,11 @@ def main():
         generatePyBindings(args.dir, alltypes)
     else:
         generateSyntaxClone(args.dir, alltypes, kindmap)
-        generateSyntax(args.dir, alltypes, kindmap)
+        # generateSyntax modifies alltypes
+        generateSyntax(args.dir, alltypes.copy(), kindmap)
         generateTokenKinds(inputdir, args.dir)
         generateSystemNames(inputdir, args.dir)
+        generateCSTJson(args.dir, alltypes)
 
 
 def loadalltypes(ourdir):
@@ -1253,6 +1255,92 @@ void registerSyntaxNodes{0}(py::module_& m) {{
             outf.write(";\n\n")
 
         outf.write("}\n")
+
+
+def generateCSTJson(builddir, alltypes):
+    # Make sure the output directory exists.
+    # Start the source file.
+    cppf = open(os.path.join(builddir, "slang", "syntax", "CSTJsonVisitorGen.h"), "w")
+
+    # Generate handle() methods for all syntax types that have members (including inherited)
+    count = 0
+    total_types = 0
+    final_types = 0
+    with_members = 0
+
+    for typename, typeinfo in sorted(alltypes.items()):
+        total_types += 1
+        if typename == "SyntaxNode":
+            continue
+        # Only generate for types that have final implementations (not abstract base classes)
+        if typeinfo.final == "":
+            continue
+        final_types += 1
+        if not typeinfo.combinedMembers:
+            continue
+        with_members += 1
+
+        count += 1
+        cppf.write(
+            f"""
+    void handle(const {typename}& node) {{
+        startSyntaxObject(node);
+
+    """
+        )
+
+        # Generate code for each member (including inherited)
+        for member in typeinfo.combinedMembers:
+            memberType, memberName = member[0], member[1]
+
+            # Check if member is optional
+            isOptional = memberName in typeinfo.optionalMembers
+
+            if isOptional:
+                if memberType == "Token":
+                    cppf.write(
+                        f'        writeOptionalToken("{memberName}", node.{memberName});\n'
+                    )
+                else:
+                    cppf.write(
+                        f'        writeOptionalNode("{memberName}", node.{memberName});\n'
+                    )
+            else:
+                if memberType == "Token":
+                    cppf.write(
+                        f'        writePropertyAndToken("{memberName}", node.{memberName});\n'
+                    )
+                elif memberType.startswith("SeparatedSyntaxList<"):
+                    # Handle SeparatedSyntaxList - include both elements and separators
+                    cppf.write(
+                        f'        writeSeparatedSyntaxList("{memberName}", node.{memberName});\n'
+                    )
+                elif memberType.startswith("SyntaxList<"):
+                    # Handle regular SyntaxList
+                    cppf.write(
+                        f'        writeSyntaxList("{memberName}", node.{memberName});\n'
+                    )
+                elif memberType == "TokenList":
+                    # Handle TokenList members - serialize as array of tokens
+                    cppf.write(
+                        f'        writeTokenList("{memberName}", node.{memberName});\n'
+                    )
+                else:
+                    # Handle other pointer/reference members - check if it's a reference or pointer
+                    if memberName in typeinfo.notNullMembers:
+                        # not_null members need .get() to extract the pointer
+                        cppf.write(
+                            f'        writePropertyAndNode("{memberName}", node.{memberName}.get());\n'
+                        )
+                    else:
+                        # Regular pointer members
+                        cppf.write(
+                            f'        writePropertyAndNode("{memberName}", node.{memberName});\n'
+                        )
+
+        cppf.write("        writer.endObject();\n")
+        cppf.write("    }\n")
+        cppf.write("    \n")
 
 
 if __name__ == "__main__":
