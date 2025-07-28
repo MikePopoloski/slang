@@ -57,11 +57,12 @@ void printJson(Compilation& compilation, const std::string& fileName,
     OS::writeFile(fileName, writer.view());
 }
 
-void printCSTJson(Driver& driver, const std::string& fileName) {
+void printCSTJson(Driver& driver, const std::string& fileName,
+                  const syntax::CSTSerializationOptions& options = {}) {
     JsonWriter writer;
     writer.setPrettyPrint(true);
 
-    syntax::CSTSerializer converter(writer);
+    syntax::CSTSerializer converter(writer, options);
 
     writer.startObject();
     writer.writeProperty("syntaxTrees");
@@ -129,6 +130,12 @@ int driverMain(int argc, TArgs argv) {
             "--cst-json", cstJsonFile,
             "Dump the parsed syntax trees in JSON format to the specified file, or '-' for stdout",
             "<file>", CommandLineFlags::FilePath);
+
+        std::optional<std::string> cstJsonMode;
+        driver.cmdLine.add("--cst-json-mode", cstJsonMode,
+                           "CST JSON output mode: 'full' (default), 'simple-trivia', 'no-trivia', "
+                           "or 'simple-tokens'",
+                           "<mode>");
 
         std::vector<std::string> astJsonScopes;
         driver.cmdLine.add("--ast-json-scope", astJsonScopes,
@@ -244,7 +251,32 @@ int driverMain(int argc, TArgs argv) {
 
             if (cstJsonFile) {
                 TimeTraceScope timeScope("cstSerialization"sv, ""sv);
-                printCSTJson(driver, *cstJsonFile);
+                syntax::CSTSerializationOptions cstOptions;
+
+                // Handle CST JSON mode
+                if (cstJsonMode) {
+                    if (*cstJsonMode == "full") {
+                        cstOptions.mode = syntax::CSTJsonMode::Full;
+                    }
+                    else if (*cstJsonMode == "simple-trivia") {
+                        cstOptions.mode = syntax::CSTJsonMode::SimpleTrivia;
+                    }
+                    else if (*cstJsonMode == "no-trivia") {
+                        cstOptions.mode = syntax::CSTJsonMode::NoTrivia;
+                    }
+                    else if (*cstJsonMode == "simple-tokens") {
+                        cstOptions.mode = syntax::CSTJsonMode::SimpleTokens;
+                    }
+                    else {
+                        std::cerr << "Error: Invalid value for --cst-json-mode: " << *cstJsonMode
+                                  << "\n";
+                        std::cerr
+                            << "Valid values are: full, simple-trivia, no-trivia, simple-tokens\n";
+                        return false;
+                    }
+                }
+
+                printCSTJson(driver, *cstJsonFile, cstOptions);
             }
 
             if (onlyParse == true)

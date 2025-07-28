@@ -16,7 +16,8 @@
 
 namespace slang::syntax {
 
-CSTSerializer::CSTSerializer(JsonWriter& writer) : writer(writer) {
+CSTSerializer::CSTSerializer(JsonWriter& writer, const CSTSerializationOptions& options) :
+    writer(writer), options(options) {
 }
 
 void CSTSerializer::serialize(const SyntaxTree& tree) {
@@ -30,8 +31,9 @@ void CSTSerializer::serialize(const SyntaxTree& tree) {
 
 struct CSTJsonVisitor : public SyntaxVisitor<CSTJsonVisitor> {
     JsonWriter& writer;
+    const CSTSerializationOptions& options;
 
-    CSTJsonVisitor(JsonWriter& w) : writer(w) {}
+    CSTJsonVisitor(JsonWriter& w, const CSTSerializationOptions& opts) : writer(w), options(opts) {}
 
     // Helper methods for common patterns
     void startSyntaxObject(const SyntaxNode& node) {
@@ -126,25 +128,42 @@ struct CSTJsonVisitor : public SyntaxVisitor<CSTJsonVisitor> {
             return;
         }
 
+        // If simple-tokens mode, just write the text value
+        if (options.mode == CSTJsonMode::SimpleTokens) {
+            writer.writeValue(std::string_view(token.rawText()));
+            return;
+        }
+
         writer.startObject();
         writer.writeProperty("kind");
         writer.writeValue(std::string_view(toString(token.kind)));
         writer.writeProperty("text");
         writer.writeValue(std::string_view(token.rawText()));
 
-        // Only include trivia if there are any
-        if (!token.trivia().empty()) {
+        // Handle trivia based on mode
+        if (options.mode != CSTJsonMode::NoTrivia && !token.trivia().empty()) {
             writer.writeProperty("trivia");
-            writer.startArray();
-            for (auto trivia : token.trivia()) {
-                writer.startObject();
-                writer.writeProperty("kind");
-                writer.writeValue(std::string_view(toString(trivia.kind)));
-                writer.writeProperty("text");
-                writer.writeValue(std::string_view(trivia.getRawText()));
-                writer.endObject();
+            if (options.mode == CSTJsonMode::SimpleTrivia) {
+                // Just write the concatenated trivia text
+                std::string triviaText;
+                for (auto trivia : token.trivia()) {
+                    triviaText += trivia.getRawText();
+                }
+                writer.writeValue(std::string_view(triviaText));
             }
-            writer.endArray();
+            else {
+                // Write trivia kind and value
+                writer.startArray();
+                for (auto trivia : token.trivia()) {
+                    writer.startObject();
+                    writer.writeProperty("kind");
+                    writer.writeValue(std::string_view(toString(trivia.kind)));
+                    writer.writeProperty("text");
+                    writer.writeValue(std::string_view(trivia.getRawText()));
+                    writer.endObject();
+                }
+                writer.endArray();
+            }
         }
 
         writer.endObject();
@@ -155,7 +174,7 @@ struct CSTJsonVisitor : public SyntaxVisitor<CSTJsonVisitor> {
 };
 
 void CSTSerializer::serialize(const SyntaxNode& node) {
-    CSTJsonVisitor visitor(writer);
+    CSTJsonVisitor visitor(writer, options);
     node.visit(visitor);
 }
 
