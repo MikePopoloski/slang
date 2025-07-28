@@ -16,8 +16,30 @@
 
 namespace slang::syntax {
 
-CSTSerializer::CSTSerializer(JsonWriter& writer, const CSTSerializationOptions& options) :
-    writer(writer), options(options) {
+// Define traits and utility functions for CSTJsonMode
+const std::array<CSTJsonMode, 4> CSTJsonMode_traits::values = {
+    CSTJsonMode::Full, CSTJsonMode::SimpleTrivia, CSTJsonMode::NoTrivia, CSTJsonMode::SimpleTokens};
+
+std::ostream& operator<<(std::ostream& os, CSTJsonMode mode) {
+    return os << toString(mode);
+}
+
+std::string_view toString(CSTJsonMode mode) {
+    switch (mode) {
+        case CSTJsonMode::Full:
+            return "Full";
+        case CSTJsonMode::SimpleTrivia:
+            return "SimpleTrivia";
+        case CSTJsonMode::NoTrivia:
+            return "NoTrivia";
+        case CSTJsonMode::SimpleTokens:
+            return "SimpleTokens";
+        default:
+            return "Unknown";
+    }
+}
+
+CSTSerializer::CSTSerializer(JsonWriter& writer, CSTJsonMode mode) : writer(writer), mode(mode) {
 }
 
 void CSTSerializer::serialize(const SyntaxTree& tree) {
@@ -31,9 +53,9 @@ void CSTSerializer::serialize(const SyntaxTree& tree) {
 
 struct CSTJsonVisitor : public SyntaxVisitor<CSTJsonVisitor> {
     JsonWriter& writer;
-    const CSTSerializationOptions& options;
+    CSTJsonMode mode;
 
-    CSTJsonVisitor(JsonWriter& w, const CSTSerializationOptions& opts) : writer(w), options(opts) {}
+    CSTJsonVisitor(JsonWriter& w, CSTJsonMode m) : writer(w), mode(m) {}
 
     // Helper methods for common patterns
     void startSyntaxObject(const SyntaxNode& node) {
@@ -129,7 +151,7 @@ struct CSTJsonVisitor : public SyntaxVisitor<CSTJsonVisitor> {
         }
 
         // If simple-tokens mode, just write the text value
-        if (options.mode == CSTJsonMode::SimpleTokens) {
+        if (mode == CSTJsonMode::SimpleTokens) {
             writer.writeValue(std::string_view(token.rawText()));
             return;
         }
@@ -141,9 +163,9 @@ struct CSTJsonVisitor : public SyntaxVisitor<CSTJsonVisitor> {
         writer.writeValue(std::string_view(token.rawText()));
 
         // Handle trivia based on mode
-        if (options.mode != CSTJsonMode::NoTrivia && !token.trivia().empty()) {
+        if (mode != CSTJsonMode::NoTrivia && !token.trivia().empty()) {
             writer.writeProperty("trivia");
-            if (options.mode == CSTJsonMode::SimpleTrivia) {
+            if (mode == CSTJsonMode::SimpleTrivia) {
                 // Just write the concatenated trivia text
                 std::string triviaText;
                 for (auto trivia : token.trivia()) {
@@ -174,7 +196,7 @@ struct CSTJsonVisitor : public SyntaxVisitor<CSTJsonVisitor> {
 };
 
 void CSTSerializer::serialize(const SyntaxNode& node) {
-    CSTJsonVisitor visitor(writer, options);
+    CSTJsonVisitor visitor(writer, mode);
     node.visit(visitor);
 }
 
