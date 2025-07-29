@@ -13,11 +13,12 @@ using namespace slang::ast;
 using namespace slang::analysis;
 
 namespace undriven_range {
-struct UndrivenRangeVisitor : public TidyVisitor, ASTVisitor<UndrivenRangeVisitor, 
-/*visitStatements=*/true,
-/*visitExprerssions=*/true,
-/*visitBad=*/false,
-/*visitCanonical=*/true> {
+struct UndrivenRangeVisitor : public TidyVisitor,
+                              ASTVisitor<UndrivenRangeVisitor,
+                                         /*visitStatements=*/true,
+                                         /*visitExprerssions=*/true,
+                                         /*visitBad=*/false,
+                                         /*visitCanonical=*/true> {
     const AnalysisManager& analysisManager;
 
     UndrivenRangeVisitor(Diagnostics& diagnostics, const AnalysisManager& analysisManager) :
@@ -59,7 +60,7 @@ struct UndrivenRangeVisitor : public TidyVisitor, ASTVisitor<UndrivenRangeVisito
                 // warnings.
                 return;
             }
-            
+
             for (auto [driver, bounds] : drivers) {
                 if (bounds.first > current) {
                     undriven.push_back({current, (int)bounds.first - 1});
