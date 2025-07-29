@@ -58,11 +58,11 @@ void printJson(Compilation& compilation, const std::string& fileName,
 }
 
 void printCSTJson(Driver& driver, const std::string& fileName,
-                  const syntax::CSTSerializationOptions& options = {}) {
+                  syntax::CSTJsonMode mode = syntax::CSTJsonMode::Full) {
     JsonWriter writer;
     writer.setPrettyPrint(true);
 
-    syntax::CSTSerializer converter(writer, options);
+    syntax::CSTSerializer converter(writer, mode);
 
     writer.startObject();
     writer.writeProperty("syntaxTrees");
@@ -251,21 +251,21 @@ int driverMain(int argc, TArgs argv) {
 
             if (cstJsonFile) {
                 TimeTraceScope timeScope("cstSerialization"sv, ""sv);
-                syntax::CSTSerializationOptions cstOptions;
+                syntax::CSTJsonMode cstMode = syntax::CSTJsonMode::Full;
 
                 // Handle CST JSON mode
                 if (cstJsonMode) {
                     if (*cstJsonMode == "full") {
-                        cstOptions.mode = syntax::CSTJsonMode::Full;
+                        cstMode = syntax::CSTJsonMode::Full;
                     }
                     else if (*cstJsonMode == "simple-trivia") {
-                        cstOptions.mode = syntax::CSTJsonMode::SimpleTrivia;
+                        cstMode = syntax::CSTJsonMode::SimpleTrivia;
                     }
                     else if (*cstJsonMode == "no-trivia") {
-                        cstOptions.mode = syntax::CSTJsonMode::NoTrivia;
+                        cstMode = syntax::CSTJsonMode::NoTrivia;
                     }
                     else if (*cstJsonMode == "simple-tokens") {
-                        cstOptions.mode = syntax::CSTJsonMode::SimpleTokens;
+                        cstMode = syntax::CSTJsonMode::SimpleTokens;
                     }
                     else {
                         std::cerr << "Error: Invalid value for --cst-json-mode: " << *cstJsonMode
@@ -276,7 +276,7 @@ int driverMain(int argc, TArgs argv) {
                     }
                 }
 
-                printCSTJson(driver, *cstJsonFile, cstOptions);
+                printCSTJson(driver, *cstJsonFile, cstMode);
             }
 
             if (onlyParse == true)
