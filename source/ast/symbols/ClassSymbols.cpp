@@ -185,32 +185,19 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
     auto& int_t = comp.getIntType();
     auto& string_t = comp.getStringType();
 
-    auto checkOverride = [](auto& s) {
-        return s.subroutineKind == SubroutineKind::Function && s.getArguments().empty() &&
-               s.getReturnType().isVoid() && s.visibility == Visibility::Public &&
-               s.flags == MethodFlags::None;
-    };
-
     auto& scopeNameMap = getUnelaboratedNameMap();
     auto makeFunc = [&](std::string_view funcName, const Type& returnType, bool allowOverride,
                         bitmask<MethodFlags> extraFlags = MethodFlags::None,
                         SubroutineKind subroutineKind =
                             SubroutineKind::Function) -> std::optional<MethodBuilder> {
         if (auto it = scopeNameMap.find(funcName); it != scopeNameMap.end()) {
-            auto existing = it->second;
-            if (allowOverride) {
-                bool ok = false;
-                if (existing->kind == SymbolKind::Subroutine)
-                    ok = checkOverride(existing->as<SubroutineSymbol>());
-                else if (existing->kind == SymbolKind::MethodPrototype)
-                    ok = checkOverride(existing->as<MethodPrototypeSymbol>());
+            // If the function already exists, check if it can be overridden.
+            // If not we error. If so, we defer further checking until elaboration time.
+            if (!allowOverride)
+                scope.addDiag(diag::InvalidMethodOverride, it->second->location) << funcName;
+            else
+                setNeedElaboration();
 
-                if (!ok)
-                    scope.addDiag(diag::InvalidRandomizeOverride, existing->location) << funcName;
-            }
-            else {
-                scope.addDiag(diag::InvalidMethodOverride, existing->location) << funcName;
-            }
             return {};
         }
 
@@ -258,6 +245,34 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
 }
 
 void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const {
+    // Check for invalid overrides of the special pre and post randomize methods.
+    auto checkOverride = [](auto& s) {
+        return s.subroutineKind == SubroutineKind::Function && s.getArguments().empty() &&
+               s.getReturnType().isVoid() && s.visibility == Visibility::Public &&
+               s.flags == MethodFlags::None;
+    };
+
+    auto checkPrePost = [&](std::string_view funcName) {
+        auto sym = find(funcName);
+        SLANG_ASSERT(sym);
+
+        if (sym->kind == SymbolKind::Subroutine) {
+            auto& s = sym->as<SubroutineSymbol>();
+            if (s.flags.has(MethodFlags::BuiltIn) || checkOverride(s))
+                return;
+        }
+        else if (sym->kind == SymbolKind::MethodPrototype) {
+            auto& s = sym->as<MethodPrototypeSymbol>();
+            if (checkOverride(s))
+                return;
+        }
+
+        addDiag(diag::InvalidRandomizeOverride, sym->location) << funcName;
+    };
+
+    checkPrePost("pre_randomize");
+    checkPrePost("post_randomize");
+
     auto syntax = getSyntax();
     SLANG_ASSERT(syntax);
 

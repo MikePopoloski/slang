@@ -2058,7 +2058,7 @@ endmodule
     CHECK(diags[1].code == diag::HierarchicalRefUnknownModule);
 }
 
-TEST_CASE("Package ordering dependency -- GH #1424") {
+TEST_CASE("Package ordering dependency 1 -- GH #1424") {
     auto tree = SyntaxTree::fromText(R"(
 package A_pkg;
   import B_pkg::*;
@@ -2070,6 +2070,82 @@ package B_pkg;
     logic b0;
     logic b1;
   } bstruct_t;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Package ordering dependency 2 -- GH #1449") {
+    auto tree = SyntaxTree::fromText(R"(
+package P;
+    typedef class C2;
+
+    import uvm_pkg::*;
+
+    class C1 extends uvm_sequence_item;
+        function new(string name = "C1");
+            super.new(name);
+        endfunction
+
+        function void pre_randomize();
+            C2 sqr;
+        endfunction
+    endclass
+
+    class C2 extends uvm_sequencer #(C1);
+    endclass
+endpackage
+
+package uvm_pkg;
+    class uvm_sequence_item;
+        function new(string name); endfunction
+    endclass
+
+    class uvm_component;
+    endclass
+
+    class uvm_sequencer #(type C);
+    endclass
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Package ordering dependency 3 -- GH #1449") {
+    auto tree = SyntaxTree::fromText(R"(
+package P;
+    typedef class C2;
+
+    class C1 extends uvm_pkg::uvm_sequence_item;
+        function new(string name = "C1");
+            super.new(name);
+        endfunction
+
+        function void pre_randomize();
+            C2 sqr;
+        endfunction
+    endclass
+
+    class C2 extends uvm_pkg::uvm_sequencer #(C1);
+    endclass
+endpackage
+
+package uvm_pkg;
+    class uvm_sequence_item;
+        function new(string name); endfunction
+    endclass
+
+    class uvm_component;
+    endclass
+
+    class uvm_sequencer #(type C);
+    endclass
 endpackage
 )");
 
