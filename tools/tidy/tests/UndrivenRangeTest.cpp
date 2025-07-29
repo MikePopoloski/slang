@@ -51,3 +51,14 @@ source:3:16: warning: [SYNTHESIS-20] variable a has undriven bits: 8:10, 12:29, 
                ^
 )");
 }
+
+TEST_CASE("Undriven range: ignore fully undriven variables") {
+    std::string output;
+    auto result = runCheckTest("UndrivenRange", R"(
+module top;
+  logic [31:0] a;
+endmodule
+)",
+                               {}, &output);
+    CHECK(result);
+}
