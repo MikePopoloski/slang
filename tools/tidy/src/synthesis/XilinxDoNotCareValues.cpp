@@ -14,7 +14,7 @@ using namespace slang::ast;
 using namespace slang::syntax;
 
 namespace xilinx_do_not_care_values {
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true, false, true> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const IntegerLiteral& expr) {

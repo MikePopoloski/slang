@@ -12,7 +12,7 @@ using namespace slang::ast;
 
 namespace always_comb_non_blocking {
 
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false, false, true> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const ProceduralBlockSymbol& symbol) {

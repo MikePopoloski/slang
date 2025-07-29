@@ -14,7 +14,7 @@ using namespace slang::ast;
 using namespace slang::analysis;
 
 namespace always_ff_assignment_outside_conditional {
-struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
+struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true, false, true> {
     explicit AlwaysFFVisitor(const std::string_view name, const std::string_view resetName) :
         name(name), resetName(resetName) {};
 
@@ -55,7 +55,7 @@ private:
     std::optional<SourceLocation> errorLocation;
 };
 
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true, false, true> {
     const AnalysisManager& analysisManager;
 
     MainVisitor(Diagnostics& diagnostics, const AnalysisManager& analysisManager) :

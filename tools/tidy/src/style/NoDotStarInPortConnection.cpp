@@ -20,7 +20,7 @@ public:
     std::vector<const WildcardPortConnectionSyntax*> foundPorts;
 };
 
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true, false, true> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const InstanceBodySymbol& symbol) {

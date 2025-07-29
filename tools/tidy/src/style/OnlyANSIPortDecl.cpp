@@ -10,7 +10,7 @@ using namespace slang;
 using namespace slang::ast;
 
 namespace no_ansi_port_decl {
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false, false, true> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const PortSymbol& port) {
