@@ -68,7 +68,7 @@ TEST_CASE("Undriven range: AST must be traversed with VisitCanonical=true") {
     auto result = runCheckTest("UndrivenRange", R"(
 module foo(input logic i_data,
            output logic o_data);
-  assign o_data = data_q;
+  assign o_data = i_data;
 endmodule
 
 module top();
