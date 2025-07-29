@@ -80,8 +80,8 @@ module top();
   foo foo1(.i_data(data[1]),
            .o_data(data[2]));
 endmodule
-)", {}, &output);
-    
+)",
+                               {}, &output);
+
     CHECK(result);
 }
-
