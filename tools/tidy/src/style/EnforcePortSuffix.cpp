@@ -12,7 +12,7 @@ using namespace slang;
 using namespace slang::ast;
 
 namespace enforce_port_suffix {
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false, false, true> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const PortSymbol& port) {

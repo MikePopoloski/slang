@@ -13,7 +13,7 @@ using namespace slang::ast;
 using namespace slang::analysis;
 
 namespace no_latches_on_design {
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false, false, true> {
     const AnalysisManager& analysisManager;
 
     MainVisitor(Diagnostics& diagnostics, const AnalysisManager& analysisManager) :

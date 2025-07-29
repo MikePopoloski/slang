@@ -13,7 +13,7 @@ using namespace slang::ast;
 using namespace slang::analysis;
 
 namespace only_assigned_on_reset {
-struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
+struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true, false, true> {
     explicit AlwaysFFVisitor(const std::string_view name, const std::string_view resetName,
                              const bool resetIsActiveHigh) :
         name(name), resetName(resetName), resetIsActiveHigh(resetIsActiveHigh) {};
@@ -87,7 +87,7 @@ private:
     std::optional<SourceLocation> errorLocation;
 };
 
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true, false, true> {
     const AnalysisManager& analysisManager;
 
     MainVisitor(Diagnostics& diagnostics, const AnalysisManager& analysisManager) :

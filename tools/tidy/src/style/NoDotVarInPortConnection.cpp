@@ -22,7 +22,7 @@ struct PortConnectionVisitor : SyntaxVisitor<PortConnectionVisitor> {
     std::vector<const NamedPortConnectionSyntax*> foundPorts;
 };
 
-struct MainVisitor : TidyVisitor, ASTVisitor<MainVisitor, true, true> {
+struct MainVisitor : TidyVisitor, ASTVisitor<MainVisitor, true, true, false, true> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const InstanceBodySymbol& symbol) const {

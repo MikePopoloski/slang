@@ -62,3 +62,26 @@ endmodule
                                {}, &output);
     CHECK(result);
 }
+
+TEST_CASE("Undriven range: AST must be traversed with VisitCanonical=true") {
+    std::string output;
+    auto result = runCheckTest("UndrivenRange", R"(
+module foo(input logic i_data,
+           output logic o_data);
+  assign o_data = i_data;
+endmodule
+
+module top();
+  logic data [2:0];
+  assign data[0] = 1;
+  foo foo0(.i_data(data[0]),
+           .o_data(data[1]));
+
+  foo foo1(.i_data(data[1]),
+           .o_data(data[2]));
+endmodule
+)",
+                               {}, &output);
+
+    CHECK(result);
+}
