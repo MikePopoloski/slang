@@ -73,7 +73,7 @@ endmodule
 
 module top();
   logic data [2:0];
-
+  assign data[0] = 1;
   foo foo0(.i_data(data[0]),
            .o_data(data[1]));
 
