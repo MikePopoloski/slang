@@ -13,7 +13,12 @@ using namespace slang::ast;
 using namespace slang::analysis;
 
 namespace undriven_range {
-struct UndrivenRangeVisitor : public TidyVisitor, ASTVisitor<UndrivenRangeVisitor, true, true> {
+struct UndrivenRangeVisitor : public TidyVisitor,
+                              ASTVisitor<UndrivenRangeVisitor,
+                                         /*visitStatements=*/true,
+                                         /*visitExprerssions=*/true,
+                                         /*visitBad=*/false,
+                                         /*visitCanonical=*/true> {
     const AnalysisManager& analysisManager;
 
     UndrivenRangeVisitor(Diagnostics& diagnostics, const AnalysisManager& analysisManager) :
@@ -48,6 +53,14 @@ struct UndrivenRangeVisitor : public TidyVisitor, ASTVisitor<UndrivenRangeVisito
             std::vector<ConstantRange> undriven;
 
             auto drivers = analysisManager.getDrivers(symbol);
+
+            if (drivers.size() == 0) {
+                // Ignore entirely undriven variables since these will be
+                // flagged with slang's 'undriven-net' or 'undriven-port'
+                // warnings.
+                return;
+            }
+
             for (auto [driver, bounds] : drivers) {
                 if (bounds.first > current) {
                     undriven.push_back({current, (int)bounds.first - 1});
