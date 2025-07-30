@@ -9,6 +9,8 @@
 //------------------------------------------------------------------------------
 
 #include <cstdio>
+
+#include "slang/text/CharInfo.h"
 #if defined(_WIN32)
 #    include <fcntl.h>
 #    include <io.h>
@@ -27,53 +29,44 @@ using namespace slang;
 using namespace slang::syntax;
 using namespace slang::parsing;
 
-// Post-process text to squash consecutive blank lines into single blank lines
+// squash consecutive blank lines into single blank lines
 std::string squashBlankLines(const std::string& input) {
     std::istringstream stream(input);
-    std::string result;
-    std::string line;
-    bool lastLineWasEmpty = false;
-    bool firstLine = true;
 
+    std::string result;
     result.reserve(input.size());
 
-    while (std::getline(stream, line)) {
-        // Check if line is empty or contains only whitespace
-        bool isEmpty = line.empty();
-        if (!isEmpty) {
-            isEmpty = true;
-            for (char c : line) {
-                if (c != ' ' && c != '\t') {
-                    isEmpty = false;
-                    break;
-                }
-            }
+    std::string line;
+    bool lastLineWasEmpty = false;
+
+    // Handle first line separately to avoid firstLine tracking
+    if (std::getline(stream, line)) {
+        lastLineWasEmpty = std::ranges::all_of(line, isWhitespace);
+        if (!lastLineWasEmpty) {
+            result.append(line);
         }
+    }
+
+    // Process remaining lines
+    while (std::getline(stream, line)) {
+        const bool isEmpty = std::ranges::all_of(line, isWhitespace);
 
         if (!isEmpty) {
             // Line has content, always include it with full indentation
-            if (!firstLine) {
-                result.push_back('\n');
-            }
+            result.push_back('\n');
             result.append(line);
             lastLineWasEmpty = false;
         }
         else if (!lastLineWasEmpty) {
             // First empty line in a sequence, include it as a single empty line
-            if (!firstLine) {
-                result.push_back('\n');
-            }
-            // For empty lines, don't include whitespace - just make it truly empty
+            result.push_back('\n');
             lastLineWasEmpty = true;
         }
-        // Skip subsequent empty/whitespace-only lines in sequence
-
-        firstLine = false;
     }
 
-    // Handle the case where input doesn't end with newline
-    if (!input.empty() && (input.back() == '\n' || input.back() == '\r')) {
-        result.push_back('\n');
+    // Handle final newline if input had one
+    if (!input.empty() && isNewline(input.back())) {
+        result.push_back(input.back());
     }
 
     return result;
