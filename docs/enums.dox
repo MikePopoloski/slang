@@ -1,0 +1,1297 @@
+/** @enum slang::ast::SymbolKind
+@brief Enumerates possible kinds of symbols
+
+@var slang::ast::SymbolKind::Unknown
+@brief Unknown or unset symbol kind
+
+@var slang::ast::SymbolKind::Root
+@brief The root symbol of a design tree
+
+@var slang::ast::SymbolKind::Definition
+@brief Module, interface, or program definition
+
+@var slang::ast::SymbolKind::CompilationUnit
+@brief Compilation unit
+
+@var slang::ast::SymbolKind::DeferredMember
+@brief Deferred member -- internal to the library
+
+@var slang::ast::SymbolKind::TransparentMember
+@brief Transparent member -- internal to the library
+
+@var slang::ast::SymbolKind::EmptyMember
+@brief Empty member symbol (like an empty semicolon)
+
+@var slang::ast::SymbolKind::PredefinedIntegerType
+@brief Predefined integer type
+
+@var slang::ast::SymbolKind::ScalarType
+@brief Scalar type (bit and logic)
+
+@var slang::ast::SymbolKind::FloatingType
+@brief Floating type
+
+@var slang::ast::SymbolKind::EnumType
+@brief Enum type
+
+@var slang::ast::SymbolKind::EnumValue
+@brief Enum value
+
+@var slang::ast::SymbolKind::PackedArrayType
+@brief Packed array type
+
+@var slang::ast::SymbolKind::FixedSizeUnpackedArrayType
+@brief Fixed size unpacked array type
+
+@var slang::ast::SymbolKind::DynamicArrayType
+@brief Dynamic array type
+
+@var slang::ast::SymbolKind::DPIOpenArrayType
+@brief DPI open array type
+
+@var slang::ast::SymbolKind::AssociativeArrayType
+@brief Associative array type
+
+@var slang::ast::SymbolKind::QueueType
+@brief Queue type
+
+@var slang::ast::SymbolKind::PackedStructType
+@brief Packed struct type
+
+@var slang::ast::SymbolKind::UnpackedStructType
+@brief Unpacked struct type
+
+@var slang::ast::SymbolKind::PackedUnionType
+@brief Packed union type
+
+@var slang::ast::SymbolKind::UnpackedUnionType
+@brief Unpacked union type
+
+@var slang::ast::SymbolKind::ClassType
+@brief Class type
+
+@var slang::ast::SymbolKind::CovergroupType
+@brief Covergroup type
+
+@var slang::ast::SymbolKind::VoidType
+@brief Void type
+
+@var slang::ast::SymbolKind::NullType
+@brief Null type
+
+@var slang::ast::SymbolKind::CHandleType
+@brief chandle type
+
+@var slang::ast::SymbolKind::StringType
+@brief String type
+
+@var slang::ast::SymbolKind::EventType
+@brief Event type
+
+@var slang::ast::SymbolKind::UnboundedType
+@brief Unbounded type ($)
+
+@var slang::ast::SymbolKind::TypeRefType
+@brief Type reference type
+
+@var slang::ast::SymbolKind::UntypedType
+@brief Untyped type
+
+@var slang::ast::SymbolKind::SequenceType
+@brief Sequence type
+
+@var slang::ast::SymbolKind::PropertyType
+@brief Property type
+
+@var slang::ast::SymbolKind::VirtualInterfaceType
+@brief Virtual interface type
+
+@var slang::ast::SymbolKind::TypeAlias
+@brief Type alias
+
+@var slang::ast::SymbolKind::ErrorType
+@brief Error type
+
+@var slang::ast::SymbolKind::ForwardingTypedef
+@brief Forwarding typedef
+
+@var slang::ast::SymbolKind::NetType
+@brief Net type
+
+@var slang::ast::SymbolKind::Parameter
+@brief Parameter
+
+@var slang::ast::SymbolKind::TypeParameter
+@brief Type parameter
+
+@var slang::ast::SymbolKind::Port
+@brief Port
+
+@var slang::ast::SymbolKind::MultiPort
+@brief Multi-port
+
+@var slang::ast::SymbolKind::InterfacePort
+@brief Interface port
+
+@var slang::ast::SymbolKind::Modport
+@brief Modport
+
+@var slang::ast::SymbolKind::ModportPort
+@brief Modport port
+
+@var slang::ast::SymbolKind::ModportClocking
+@brief Modport clocking block
+
+@var slang::ast::SymbolKind::Instance
+@brief Module, interface, or program instance
+
+@var slang::ast::SymbolKind::InstanceBody
+@brief The body of an instance
+
+@var slang::ast::SymbolKind::InstanceArray
+@brief An array of instances
+
+@var slang::ast::SymbolKind::Package
+@brief Package
+
+@var slang::ast::SymbolKind::ExplicitImport
+@brief Explicit import
+
+@var slang::ast::SymbolKind::WildcardImport
+@brief Wildcard import
+
+@var slang::ast::SymbolKind::Attribute
+@brief Attribute
+
+@var slang::ast::SymbolKind::Genvar
+@brief Genvar
+
+@var slang::ast::SymbolKind::GenerateBlock
+@brief Generate block
+
+@var slang::ast::SymbolKind::GenerateBlockArray
+@brief Generate block array
+
+@var slang::ast::SymbolKind::ProceduralBlock
+@brief Procedural block
+
+@var slang::ast::SymbolKind::StatementBlock
+@brief Statement block
+
+@var slang::ast::SymbolKind::Net
+@brief Net
+
+@var slang::ast::SymbolKind::Variable
+@brief Variable
+
+@var slang::ast::SymbolKind::FormalArgument
+@brief Formal argument
+
+@var slang::ast::SymbolKind::Field
+@brief Struct or union field
+
+@var slang::ast::SymbolKind::ClassProperty
+@brief Class property
+
+@var slang::ast::SymbolKind::Subroutine
+@brief Subroutine (task or function)
+
+@var slang::ast::SymbolKind::ContinuousAssign
+@brief Continuous assign statement
+
+@var slang::ast::SymbolKind::ElabSystemTask
+@brief Elaboration system task
+
+@var slang::ast::SymbolKind::GenericClassDef
+@brief Generic class definition
+
+@var slang::ast::SymbolKind::MethodPrototype
+@brief Method prototype
+
+@var slang::ast::SymbolKind::UninstantiatedDef
+@brief Unknown and/or uninstantiated definition
+
+@var slang::ast::SymbolKind::Iterator
+@brief Special method iterator
+
+@var slang::ast::SymbolKind::PatternVar
+@brief Pattern variable
+
+@var slang::ast::SymbolKind::ConstraintBlock
+@brief Constraint block
+
+@var slang::ast::SymbolKind::DefParam
+@brief Defparam
+
+@var slang::ast::SymbolKind::Specparam
+@brief Specparam
+
+@var slang::ast::SymbolKind::Primitive
+@brief User-defined primitive
+
+@var slang::ast::SymbolKind::PrimitivePort
+@brief User-defined primitive port
+
+@var slang::ast::SymbolKind::PrimitiveInstance
+@brief User-defined primitive instance
+
+@var slang::ast::SymbolKind::SpecifyBlock
+@brief Specify block
+
+@var slang::ast::SymbolKind::Sequence
+@brief Sequence
+
+@var slang::ast::SymbolKind::Property
+@brief Property
+
+@var slang::ast::SymbolKind::AssertionPort
+@brief Assertion port
+
+@var slang::ast::SymbolKind::ClockingBlock
+@brief Clocking block
+
+@var slang::ast::SymbolKind::ClockVar
+@brief Clock variable
+
+@var slang::ast::SymbolKind::LocalAssertionVar
+@brief Local assertion variable
+
+@var slang::ast::SymbolKind::LetDecl
+@brief Let declaration
+
+@var slang::ast::SymbolKind::Checker
+@brief Checker definition
+
+@var slang::ast::SymbolKind::CheckerInstance
+@brief Checker instance
+
+@var slang::ast::SymbolKind::CheckerInstanceBody
+@brief The body of a checker instance
+
+@var slang::ast::SymbolKind::RandSeqProduction
+@brief Randseq production
+
+@var slang::ast::SymbolKind::CovergroupBody
+@brief Covergroup body
+
+@var slang::ast::SymbolKind::Coverpoint
+@brief Coverpoint
+
+@var slang::ast::SymbolKind::CoverCross
+@brief Cover cross
+
+@var slang::ast::SymbolKind::CoverCrossBody
+@brief Cover cross body
+
+@var slang::ast::SymbolKind::CoverageBin
+@brief Coverage bin
+
+@var slang::ast::SymbolKind::TimingPath
+@brief Timing path
+
+@var slang::ast::SymbolKind::PulseStyle
+@brief Pulse style declaration
+
+@var slang::ast::SymbolKind::SystemTimingCheck
+@brief System timing check
+
+@var slang::ast::SymbolKind::AnonymousProgram
+@brief Anonymous program
+
+@var slang::ast::SymbolKind::NetAlias
+@brief Net alias
+
+@var slang::ast::SymbolKind::ConfigBlock
+@brief Config block
+**/
+
+/** @enum slang::ast::Visibility
+@brief Specifies the visibility of a symbol or member
+
+@var slang::ast::Visibility::Public
+@brief Publicly visible
+
+@var slang::ast::Visibility::Protected
+@brief Protected visibility
+
+@var slang::ast::Visibility::Local
+@brief Private visibility
+
+**/
+
+/** @enum slang::ast::VariableLifetime
+@brief Specifies the lifetime of a variable
+
+@var slang::ast::VariableLifetime::Automatic
+@brief Automatic lifetime
+
+@var slang::ast::VariableLifetime::Static
+@brief Static lifetime
+
+**/
+
+/** @enum slang::ast::ProceduralBlockKind
+@brief Specifies possible procedural block kinds
+
+@var slang::ast::ProceduralBlockKind::Initial
+@brief Initial block
+
+@var slang::ast::ProceduralBlockKind::Always
+@brief Always block
+
+@var slang::ast::ProceduralBlockKind::Final
+@brief Final block
+
+**/
+
+/** @enum slang::ast::UnaryOperator
+@brief Specifies possible unary operator kinds
+
+@var slang::ast::UnaryOperator::Plus
+@brief Unary plus
+
+@var slang::ast::UnaryOperator::Minus
+@brief Unary minus
+
+@var slang::ast::UnaryOperator::BitwiseNot
+@brief Bitwise NOT
+
+@var slang::ast::UnaryOperator::BitwiseAnd
+@brief Bitwise AND
+
+@var slang::ast::UnaryOperator::BitwiseOr
+@brief Bitwise OR
+
+@var slang::ast::UnaryOperator::BitwiseXor
+@brief Bitwise XOR
+
+@var slang::ast::UnaryOperator::BitwiseNand
+@brief Bitwise NAND
+
+@var slang::ast::UnaryOperator::BitwiseNor
+@brief Bitwise NOR
+
+@var slang::ast::UnaryOperator::BitwiseXnor
+@brief Bitwise XNOR
+
+@var slang::ast::UnaryOperator::LogicalNot
+@brief Logical NOT
+
+@var slang::ast::UnaryOperator::Preincrement
+@brief Pre-increment
+
+@var slang::ast::UnaryOperator::Predecrement
+@brief Pre-decrement
+
+@var slang::ast::UnaryOperator::Postincrement
+@brief Post-increment
+
+@var slang::ast::UnaryOperator::Postdecrement
+@brief Post-decrement
+
+**/
+
+/** @enum slang::ast::BinaryOperator
+@brief Specifies possible binary operator kinds
+
+@var slang::ast::BinaryOperator::Add
+@brief Addition
+
+@var slang::ast::BinaryOperator::Subtract
+@brief Subtraction
+
+@var slang::ast::BinaryOperator::Multiply
+@brief Multiplication
+
+@var slang::ast::BinaryOperator::Divide
+@brief Division
+
+@var slang::ast::BinaryOperator::Mod
+@brief Modulo
+
+@var slang::ast::BinaryOperator::BinaryAnd
+@brief Bitwise AND
+
+@var slang::ast::BinaryOperator::BinaryOr
+@brief Bitwise OR
+
+@var slang::ast::BinaryOperator::BinaryXor
+@brief Bitwise XOR
+
+@var slang::ast::BinaryOperator::BinaryXnor
+@brief Bitwise XNOR
+
+@var slang::ast::BinaryOperator::Equality
+@brief Equality comparison
+
+@var slang::ast::BinaryOperator::Inequality
+@brief Inequality comparison
+
+@var slang::ast::BinaryOperator::CaseEquality
+@brief Case equality comparison
+
+@var slang::ast::BinaryOperator::CaseInequality
+@brief Case inequality comparison
+
+@var slang::ast::BinaryOperator::GreaterThanEqual
+@brief Greater than or equal comparison
+
+@var slang::ast::BinaryOperator::GreaterThan
+@brief Greater than comparison
+
+@var slang::ast::BinaryOperator::LessThanEqual
+@brief Less than or equal comparison
+
+@var slang::ast::BinaryOperator::LessThan
+@brief Less than comparison
+
+@var slang::ast::BinaryOperator::WildcardEquality
+@brief Wildcard equality comparison
+
+@var slang::ast::BinaryOperator::WildcardInequality
+@brief Wildcard inequality comparison
+
+@var slang::ast::BinaryOperator::LogicalAnd
+@brief Logical AND
+
+@var slang::ast::BinaryOperator::LogicalOr
+@brief Logical OR
+
+@var slang::ast::BinaryOperator::LogicalImplication
+@brief Logical implication
+
+@var slang::ast::BinaryOperator::LogicalEquivalence
+@brief Logical equivalence
+
+@var slang::ast::BinaryOperator::LogicalShiftLeft
+@brief Logical shift left
+
+@var slang::ast::BinaryOperator::LogicalShiftRight
+@brief Logical shift right
+
+@var slang::ast::BinaryOperator::ArithmeticShiftLeft
+@brief Arithmetic shift left
+
+@var slang::ast::BinaryOperator::ArithmeticShiftRight
+@brief Arithmetic shift right
+
+@var slang::ast::BinaryOperator::Power
+@brief Power
+**/
+
+/** @enum slang::ast::ArgumentDirection
+@brief Specifies the direction of an argument passed to a port or subroutine
+
+@var slang::ast::ArgumentDirection::In
+@brief Input argument
+
+@var slang::ast::ArgumentDirection::Out
+@brief Output argument
+
+@var slang::ast::ArgumentDirection::InOut
+@brief Bidirectional argument
+
+@var slang::ast::ArgumentDirection::Ref
+@brief Reference argument
+**/
+
+/** @enum slang::ast::StatementBlockKind
+@brief Specifies the kind of a statement block
+
+@var slang::ast::StatementBlockKind::Sequential
+@brief Sequential block
+
+@var slang::ast::StatementBlockKind::JoinAll
+@brief Parallel block with "join all" behavior
+
+@var slang::ast::StatementBlockKind::JoinAny
+@brief Parallel block with "join any" behavior
+
+@var slang::ast::StatementBlockKind::JoinNone
+@brief Parallel block with "join none" behavior
+**/
+
+/** @enum slang::ast::DefinitionKind
+@brief Specifies the kind of a definition
+
+@var slang::ast::DefinitionKind::Module
+@brief Module definition
+
+@var slang::ast::DefinitionKind::Interface
+@brief Interface definition
+
+@var slang::ast::DefinitionKind::Program
+@brief Program definition
+**/
+
+/** @enum slang::ast::UnconnectedDrive
+@brief Specifies possible unconnected drive settings
+
+@var slang::ast::UnconnectedDrive::None
+@brief No unconnected drive
+
+@var slang::ast::UnconnectedDrive::Pull0
+@brief Pull0 drive
+
+@var slang::ast::UnconnectedDrive::Pull1
+@brief Pull1 drive
+**/
+
+/** @enum slang::ast::EdgeKind
+@brief Specifies possible edge kinds
+
+@var slang::ast::EdgeKind::None
+@brief No edge
+
+@var slang::ast::EdgeKind::PosEdge
+@brief Positive edge
+
+@var slang::ast::EdgeKind::NegEdge
+@brief Negative edge
+
+@var slang::ast::EdgeKind::BothEdges
+@brief Both positive and negative edges
+**/
+
+/** @enum slang::ast::SubroutineKind
+@brief Specifies possible subroutine kinds
+
+@var slang::ast::SubroutineKind::Function
+@brief Function
+
+@var slang::ast::SubroutineKind::Task
+@brief Task
+**/
+
+/** @enum slang::ast::AssertionKind
+@brief Specifies possible assertion kinds
+
+@var slang::ast::AssertionKind::Assert
+@brief Regular assertion
+
+@var slang::ast::AssertionKind::Assume
+@brief Assume
+
+@var slang::ast::AssertionKind::CoverProperty
+@brief Cover property
+
+@var slang::ast::AssertionKind::CoverSequence
+@brief Cover sequence
+
+@var slang::ast::AssertionKind::Restrict
+@brief Restrict
+
+@var slang::ast::AssertionKind::Expect
+@brief Expect
+**/
+
+/** @enum slang::ast::ElabSystemTaskKind
+@brief Specifies possible elaboration system task kinds
+
+@var slang::ast::ElabSystemTaskKind::Fatal
+@brief Fatal system task
+
+@var slang::ast::ElabSystemTaskKind::Error
+@brief Error system task
+
+@var slang::ast::ElabSystemTaskKind::Warning
+@brief Warning system task
+
+@var slang::ast::ElabSystemTaskKind::Info
+@brief Info system task
+
+@var slang::ast::ElabSystemTaskKind::StaticAssert
+@brief Static assert system task
+**/
+
+/** @enum slang::ast::RandMode
+@brief Specifies possible randomization modes
+
+@var slang::ast::RandMode::None
+@brief No randomization
+
+@var slang::ast::RandMode::Rand
+@brief Normal randomization
+
+@var slang::ast::RandMode::RandC
+@brief Cyclic randomization
+**/
+
+/** @enum slang::ast::PrimitivePortDirection
+@brief Specifies possible directions of primitive ports
+
+@var slang::ast::PrimitivePortDirection::In
+@brief Input port
+
+@var slang::ast::PrimitivePortDirection::Out
+@brief Output port
+
+@var slang::ast::PrimitivePortDirection::OutReg
+@brief Output register port
+
+@var slang::ast::PrimitivePortDirection::InOut
+@brief Bidirectional port
+**/
+
+/** @enum slang::ast::PulseStyleKind
+@brief Specifies possible pulse style kinds
+
+@var slang::ast::PulseStyleKind::OnEvent
+@brief On event pulse style
+
+@var slang::ast::PulseStyleKind::OnDetect
+@brief On detect pulse style
+
+@var slang::ast::PulseStyleKind::ShowCancelled
+@brief Show cancelled pulse style
+
+@var slang::ast::PulseStyleKind::NoShowCancelled
+@brief No show cancelled pulse style
+**/
+
+/** @enum slang::ast::ChargeStrength
+@brief Specifies possible charge strengths
+
+@var slang::ast::ChargeStrength::Small
+@brief Small charge strength
+
+@var slang::ast::ChargeStrength::Medium
+@brief Medium charge strength
+
+@var slang::ast::ChargeStrength::Large
+@brief Large charge strength
+**/
+
+/** @enum slang::ast::DriveStrength
+@brief Specifies possible drive strengths
+
+@var slang::ast::DriveStrength::Supply
+@brief Supply drive strength
+
+@var slang::ast::DriveStrength::Strong
+@brief Strong drive strength
+
+@var slang::ast::DriveStrength::Pull
+@brief Pull drive strength
+
+@var slang::ast::DriveStrength::Weak
+@brief Weak drive strength
+
+@var slang::ast::DriveStrength::HighZ
+@brief High impedance drive strength
+**/
+
+/** @enum slang::ast::ForwardTypeRestriction
+@brief Specifies possible forward type restrictions
+
+@var slang::ast::ForwardTypeRestriction::None
+@brief No restriction
+
+@var slang::ast::ForwardTypeRestriction::Enum
+@brief Enum restriction
+
+@var slang::ast::ForwardTypeRestriction::Struct
+@brief Struct restriction
+
+@var slang::ast::ForwardTypeRestriction::Union
+@brief Union restriction
+
+@var slang::ast::ForwardTypeRestriction::Class
+@brief Class restriction
+
+@var slang::ast::ForwardTypeRestriction::InterfaceClass
+@brief Interface class restriction
+**/
+
+/** @enum slang::ast::CaseStatementCondition
+@brief Specifies possible case statement condition kinds
+
+@var slang::ast::CaseStatementCondition::Normal
+@brief Normal case matching
+
+@var slang::ast::CaseStatementCondition::WildcardXOrZ
+@brief Xs and Zs are wildcards
+
+@var slang::ast::CaseStatementCondition::WildcardJustZ
+@brief Just Zs are wildcards
+
+@var slang::ast::CaseStatementCondition::Inside
+@brief Case-inside matching
+**/
+
+/** @enum slang::ast::ExpressionKind
+@brief Specifies possible expression kinds
+
+@var slang::ast::ExpressionKind::Invalid
+@brief Invalid expression
+
+@var slang::ast::ExpressionKind::IntegerLiteral
+@brief Integer literal
+
+@var slang::ast::ExpressionKind::RealLiteral
+@brief Real literal
+
+@var slang::ast::ExpressionKind::TimeLiteral
+@brief Time literal
+
+@var slang::ast::ExpressionKind::UnbasedUnsizedIntegerLiteral
+@brief Unbased unsized integer literal
+
+@var slang::ast::ExpressionKind::NullLiteral
+@brief Null literal
+
+@var slang::ast::ExpressionKind::UnboundedLiteral
+@brief Unbounded literal
+
+@var slang::ast::ExpressionKind::StringLiteral
+@brief String literal
+
+@var slang::ast::ExpressionKind::NamedValue
+@brief Named value
+
+@var slang::ast::ExpressionKind::HierarchicalValue
+@brief Hierarchical value
+
+@var slang::ast::ExpressionKind::UnaryOp
+@brief Unary operator
+
+@var slang::ast::ExpressionKind::BinaryOp
+@brief Binary operator
+
+@var slang::ast::ExpressionKind::ConditionalOp
+@brief Conditional operator
+
+@var slang::ast::ExpressionKind::Inside
+@brief Inside
+
+@var slang::ast::ExpressionKind::Assignment
+@brief Assignment
+
+@var slang::ast::ExpressionKind::Concatenation
+@brief Concatenation
+
+@var slang::ast::ExpressionKind::Replication
+@brief Replication
+
+@var slang::ast::ExpressionKind::Streaming
+@brief Streaming concatenation
+
+@var slang::ast::ExpressionKind::ElementSelect
+@brief Element select
+
+@var slang::ast::ExpressionKind::RangeSelect
+@brief Range select
+
+@var slang::ast::ExpressionKind::MemberAccess
+@brief Member access
+
+@var slang::ast::ExpressionKind::Call
+@brief Call
+
+@var slang::ast::ExpressionKind::Conversion
+@brief Conversion
+
+@var slang::ast::ExpressionKind::DataType
+@brief Data type
+
+@var slang::ast::ExpressionKind::TypeReference
+@brief Type reference
+
+@var slang::ast::ExpressionKind::ArbitrarySymbol
+@brief Arbitrary symbol
+
+@var slang::ast::ExpressionKind::LValueReference
+@brief LValue reference
+
+@var slang::ast::ExpressionKind::SimpleAssignmentPattern
+@brief Simple assignment pattern
+
+@var slang::ast::ExpressionKind::StructuredAssignmentPattern
+@brief Structured assignment pattern
+
+@var slang::ast::ExpressionKind::ReplicatedAssignmentPattern
+@brief Replicated assignment pattern
+
+@var slang::ast::ExpressionKind::EmptyArgument
+@brief Empty argument
+
+@var slang::ast::ExpressionKind::ValueRange
+@brief Value range
+
+@var slang::ast::ExpressionKind::Dist
+@brief Distribution
+
+@var slang::ast::ExpressionKind::NewArray
+@brief New array
+
+@var slang::ast::ExpressionKind::NewClass
+@brief New class
+
+@var slang::ast::ExpressionKind::NewCovergroup
+@brief New covergroup
+
+@var slang::ast::ExpressionKind::CopyClass
+@brief Copy class
+
+@var slang::ast::ExpressionKind::MinTypMax
+@brief MinTypMax
+
+@var slang::ast::ExpressionKind::ClockingEvent
+@brief Clocking event
+
+@var slang::ast::ExpressionKind::AssertionInstance
+@brief Assertion instance
+
+@var slang::ast::ExpressionKind::TaggedUnion
+@brief Tagged union
+**/
+
+/** @enum slang::ast::RangeSelectionKind
+@brief Specifies possible kinds of range selection
+
+@var slang::ast::RangeSelectionKind::Simple
+@brief Simple range selection
+
+@var slang::ast::RangeSelectionKind::IndexedUp
+@brief Indexed up range selection
+
+@var slang::ast::RangeSelectionKind::IndexedDown
+@brief Indexed down range selection
+**/
+
+/** @enum slang::ast::ConversionKind
+@brief Specifies possible kinds of conversions
+
+@var slang::ast::ConversionKind::Implicit
+@brief Implicit conversion
+
+@var slang::ast::ConversionKind::Propagated
+@brief Propagated conversion
+
+@var slang::ast::ConversionKind::StreamingConcat
+@brief Streaming concatenation conversion
+
+@var slang::ast::ConversionKind::Explicit
+@brief Explicit conversion
+
+@var slang::ast::ConversionKind::BitstreamCast
+@brief Bitstream cast conversion
+**/
+
+/** @enum slang::ast::StatementKind
+@brief Specifies possible kinds of statements
+
+@var slang::ast::StatementKind::Invalid
+@brief Invalid statement
+
+@var slang::ast::StatementKind::Empty
+@brief Empty statement
+
+@var slang::ast::StatementKind::List
+@brief List statement
+
+@var slang::ast::StatementKind::Block
+@brief Block statement
+
+@var slang::ast::StatementKind::ExpressionStatement
+@brief Expression statement
+
+@var slang::ast::StatementKind::VariableDeclaration
+@brief Variable declaration statement
+
+@var slang::ast::StatementKind::Return
+@brief Return statement
+
+@var slang::ast::StatementKind::Continue
+@brief Continue statement
+
+@var slang::ast::StatementKind::Break
+@brief Break statement
+
+@var slang::ast::StatementKind::Disable
+@brief Disable statement
+
+@var slang::ast::StatementKind::Conditional
+@brief Conditional statement
+
+@var slang::ast::StatementKind::Case
+@brief Case statement
+
+@var slang::ast::StatementKind::PatternCase
+@brief Pattern case statement
+
+@var slang::ast::StatementKind::ForLoop
+@brief For loop statement
+
+@var slang::ast::StatementKind::RepeatLoop
+@brief Repeat loop statement
+
+@var slang::ast::StatementKind::ForeachLoop
+@brief Foreach loop statement
+
+@var slang::ast::StatementKind::WhileLoop
+@brief While loop statement
+
+@var slang::ast::StatementKind::DoWhileLoop
+@brief Do-while loop statement
+
+@var slang::ast::StatementKind::ForeverLoop
+@brief Forever loop statement
+
+@var slang::ast::StatementKind::Timed
+@brief Timed statement
+
+@var slang::ast::StatementKind::ImmediateAssertion
+@brief Immediate assertion statement
+
+@var slang::ast::StatementKind::ConcurrentAssertion
+@brief Concurrent assertion statement
+
+@var slang::ast::StatementKind::DisableFork
+@brief Disable fork statement
+
+@var slang::ast::StatementKind::Wait
+@brief Wait statement
+
+@var slang::ast::StatementKind::WaitFork
+@brief Wait fork statement
+
+@var slang::ast::StatementKind::WaitOrder
+@brief Wait order statement
+
+@var slang::ast::StatementKind::EventTrigger
+@brief Event trigger statement
+
+@var slang::ast::StatementKind::ProceduralAssign
+@brief Procedural assign statement
+
+@var slang::ast::StatementKind::ProceduralDeassign
+@brief Procedural deassign statement
+
+@var slang::ast::StatementKind::RandCase
+@brief RandCase statement
+
+@var slang::ast::StatementKind::RandSequence
+@brief RandSequence statement
+
+@var slang::ast::StatementKind::ProceduralChecker
+@brief Procedural checker statement
+**/
+
+/** @enum slang::ast::ConstraintKind
+@brief Specifies possible kinds of constraints
+
+@var slang::ast::ConstraintKind::Invalid
+@brief Invalid constraint
+
+@var slang::ast::ConstraintKind::List
+@brief List constraint
+
+@var slang::ast::ConstraintKind::Expression
+@brief Expression constraint
+
+@var slang::ast::ConstraintKind::Implication
+@brief Implication constraint
+
+@var slang::ast::ConstraintKind::Conditional
+@brief Conditional constraint
+
+@var slang::ast::ConstraintKind::Uniqueness
+@brief Uniqueness constraint
+
+@var slang::ast::ConstraintKind::DisableSoft
+@brief Disable soft constraint
+
+@var slang::ast::ConstraintKind::SolveBefore
+@brief Solve before constraint
+
+@var slang::ast::ConstraintKind::Foreach
+@brief Foreach constraint
+**/
+
+/** @enum slang::ast::PatternKind
+@brief Specifies possible kinds of patterns
+
+@var slang::ast::PatternKind::Invalid
+@brief Invalid pattern
+
+@var slang::ast::PatternKind::Wildcard
+@brief Wildcard pattern
+
+@var slang::ast::PatternKind::Constant
+@brief Constant pattern
+
+@var slang::ast::PatternKind::Variable
+@brief Variable pattern
+
+@var slang::ast::PatternKind::Tagged
+@brief Tagged pattern
+
+@var slang::ast::PatternKind::Structure
+@brief Structure pattern
+**/
+
+/** @enum slang::ast::DimensionKind
+@brief Specifies possible kinds of dimensions
+
+@var slang::ast::DimensionKind::AbbreviatedRange
+@brief Abbreviated range dimension
+
+@var slang::ast::DimensionKind::Dynamic
+@brief Dynamic dimension
+
+@var slang::ast::DimensionKind::Associative
+@brief Associative dimension
+
+@var slang::ast::DimensionKind::Queue
+@brief Queue dimension
+
+@var slang::ast::DimensionKind::DPIOpenArray
+@brief DPI open array dimension
+**/
+
+/** @enum slang::DiagnosticSeverity
+@brief Specifies the severity of a diagnostic
+
+@var slang::DiagnosticSeverity::Ignored
+@brief Ignored
+
+@var slang::DiagnosticSeverity::Note
+@brief Note
+
+@var slang::DiagnosticSeverity::Warning
+@brief Warning
+
+@var slang::DiagnosticSeverity::Error
+@brief Error
+
+@var slang::DiagnosticSeverity::Fatal
+@brief Fatal
+**/
+
+/** @enum slang::ast::ValueRangeKind
+@brief Specifies possible kinds of value ranges
+
+@var slang::ast::ValueRangeKind::Simple
+@brief Simple value range
+
+@var slang::ast::ValueRangeKind::AbsoluteTolerance
+@brief Absolute tolerance value range
+
+@var slang::ast::ValueRangeKind::RelativeTolerance
+@brief Relative tolerance value range
+**/
+
+/** @enum slang::ast::BinsSelectExprKind
+@brief Specifies possible kinds of bins select expressions
+
+@var slang::ast::BinsSelectExprKind::Invalid
+@brief Invalid bins select expression
+
+@var slang::ast::BinsSelectExprKind::Condition
+@brief Condition bins select expression
+
+@var slang::ast::BinsSelectExprKind::Unary
+@brief Unary bins select expression
+
+@var slang::ast::BinsSelectExprKind::Binary
+@brief Binary bins select expression
+
+@var slang::ast::BinsSelectExprKind::SetExpr
+@brief Set expression bins select expression
+
+@var slang::ast::BinsSelectExprKind::WithFilter
+@brief With filter bins select expression
+
+@var slang::ast::BinsSelectExprKind::CrossId
+@brief Cross ID bins select expression
+**/
+
+/** @enum slang::ast::AssertionExprKind
+@brief Specifies possible kinds of assertion expressions
+
+@var slang::ast::AssertionExprKind::Invalid
+@brief Invalid assertion expression
+
+@var slang::ast::AssertionExprKind::Simple
+@brief Simple assertion expression
+
+@var slang::ast::AssertionExprKind::SequenceConcat
+@brief Sequence concatenation assertion expression
+
+@var slang::ast::AssertionExprKind::SequenceWithMatch
+@brief Sequence with match assertion expression
+
+@var slang::ast::AssertionExprKind::Unary
+@brief Unary assertion expression
+
+@var slang::ast::AssertionExprKind::Binary
+@brief Binary assertion expression
+
+@var slang::ast::AssertionExprKind::FirstMatch
+@brief First match assertion expression
+
+@var slang::ast::AssertionExprKind::Clocking
+@brief Clocking assertion expression
+
+@var slang::ast::AssertionExprKind::StrongWeak
+@brief Strong/Weak assertion expression
+
+@var slang::ast::AssertionExprKind::Abort
+@brief Abort assertion expression
+
+@var slang::ast::AssertionExprKind::Conditional
+@brief Conditional assertion expression
+
+@var slang::ast::AssertionExprKind::Case
+@brief Case assertion expression
+
+@var slang::ast::AssertionExprKind::DisableIff
+@brief Disable iff assertion expression
+**/
+
+/** @enum slang::ast::UnaryAssertionOperator
+@brief Specifies possible kinds of unary assertion operators
+
+@var slang::ast::UnaryAssertionOperator::Not
+@brief NOT unary assertion operator
+
+@var slang::ast::UnaryAssertionOperator::NextTime
+@brief Nexttime unary assertion operator
+
+@var slang::ast::UnaryAssertionOperator::SNextTime
+@brief SNexttime unary assertion operator
+
+@var slang::ast::UnaryAssertionOperator::Always
+@brief Always unary assertion operator
+
+@var slang::ast::UnaryAssertionOperator::SAlways
+@brief SAlways unary assertion operator
+
+@var slang::ast::UnaryAssertionOperator::Eventually
+@brief Eventually unary assertion operator
+
+@var slang::ast::UnaryAssertionOperator::SEventually
+@brief SEventually unary assertion operator
+**/
+
+/** @enum slang::ast::BinaryAssertionOperator
+@brief Specifies possible kinds of binary assertion operators
+
+@var slang::ast::BinaryAssertionOperator::And
+@brief AND binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::Or
+@brief OR binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::Intersect
+@brief Intersect binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::Throughout
+@brief Throughout binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::Within
+@brief Within binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::Iff
+@brief Iff binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::Until
+@brief Until binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::SUntil
+@brief SUntil binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::UntilWith
+@brief UntilWith binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::SUntilWith
+@brief SUntilWith binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::Implies
+@brief Implies binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::OverlappedImplication
+@brief Overlapped implication binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::NonOverlappedImplication
+@brief Non-overlapped implication binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::OverlappedFollowedBy
+@brief Overlapped followed by binary assertion operator
+
+@var slang::ast::BinaryAssertionOperator::NonOverlappedFollowedBy
+@brief Non-overlapped followed by binary assertion operator
+**/
+
+/** @enum slang::ast::TimingControlKind
+@brief Specifies possible kinds of timing controls
+
+@var slang::ast::TimingControlKind::Invalid
+@brief Invalid timing control
+
+@var slang::ast::TimingControlKind::Delay
+@brief Delay timing control
+
+@var slang::ast::TimingControlKind::SignalEvent
+@brief Signal event timing control
+
+@var slang::ast::TimingControlKind::EventList
+@brief Event list timing control
+
+@var slang::ast::TimingControlKind::ImplicitEvent
+@brief Implicit event timing control
+
+@var slang::ast::TimingControlKind::RepeatedEvent
+@brief Repeated event timing control
+
+@var slang::ast::TimingControlKind::Delay3
+@brief Delay3 timing control
+
+@var slang::ast::TimingControlKind::OneStepDelay
+@brief One step delay timing control
+
+@var slang::ast::TimingControlKind::CycleDelay
+@brief Cycle delay timing control
+
+@var slang::ast::TimingControlKind::BlockEventList
+@brief Block event list timing control
+**/
+
+/** @enum slang::ast::SystemTimingCheckKind
+@brief Specifies possible kinds of system timing checks
+
+@var slang::ast::SystemTimingCheckKind::Skew
+@brief Skew timing check
+
+@var slang::ast::SystemTimingCheckKind::TimeSkew
+@brief Time skew timing check
+
+@var slang::ast::SystemTimingCheckKind::FullSkew
+@brief Full skew timing check
+
+@var slang::ast::SystemTimingCheckKind::Period
+@brief Period timing check
+
+@var slang::ast::SystemTimingCheckKind::Width
+@brief Width timing check
+
+@var slang::ast::SystemTimingCheckKind::NoChange
+@brief No change timing check
+**/
+
+/** @enum slang::ast::UniquePriorityCheck
+@brief Specifies possible kinds of unique/priority checks for case statements
+
+@var slang::ast::UniquePriorityCheck::None
+@brief No unique/priority check
+
+@var slang::ast::UniquePriorityCheck::Unique
+@brief Unique check
+
+@var slang::ast::UniquePriorityCheck::Unique0
+@brief Unique0 check
+
+@var slang::ast::UniquePriorityCheck::Priority
+@brief Priority check
+**/

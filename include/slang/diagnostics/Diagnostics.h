@@ -51,8 +51,6 @@ class Symbol;
 SLANG_ENUM_SIZED(DiagSubsystem, uint16_t, DS)
 #undef DS
 
-/// The severity of a given diagnostic. This is not tied to the diagnostic itself;
-/// it can be configured on a per-diagnostic basis at runtime.
 #define DS(x) \
     x(Ignored) \
     x(Note) \

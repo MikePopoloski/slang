@@ -2472,7 +2472,9 @@ INCLUDE_FILE_PATTERNS  =
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
 PREDEFINED             = SLANG_EXPORT= \
-                         __DOXYGEN__
+                         __DOXYGEN__ \
+                         "SLANG_UTIL_ENUM_ELEMENT(x)=x," \
+                         "SLANG_ENUM(name, x)=enum class name { x(SLANG_UTIL_ENUM_ELEMENT) };"
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The

@@ -23,67 +23,54 @@ class Type;
 enum class SymbolKind;
 
 #define LIFETIME(x) x(Automatic) x(Static)
-/// Specifies the storage lifetime of a variable.
 SLANG_ENUM(VariableLifetime, LIFETIME)
 #undef LIFETIME
 
 #define VISIBILITY(x) x(Public) x(Protected) x(Local)
-/// Specifies the visibility of class members.
 SLANG_ENUM(Visibility, VISIBILITY)
 #undef VISIBILITY
 
 #define DIRECTION(x) x(In) x(Out) x(InOut) x(Ref)
-/// Specifies behavior of an argument passed to a subroutine.
 SLANG_ENUM(ArgumentDirection, DIRECTION)
 #undef DIRECTION
 
 #define BLOCK(x) x(Initial) x(Final) x(Always) x(AlwaysComb) x(AlwaysLatch) x(AlwaysFF)
-/// Specifies possible procedural block kinds.
 SLANG_ENUM(ProceduralBlockKind, BLOCK)
 #undef BLOCK
 
 #define BLOCK(x) x(Sequential) x(JoinAll) x(JoinAny) x(JoinNone)
-/// Specifies possible statement block kinds.
 SLANG_ENUM(StatementBlockKind, BLOCK)
 #undef BLOCK
 
 #define DEF(x) x(Module) x(Interface) x(Program)
-/// Specifies possible definition kinds.
 SLANG_ENUM(DefinitionKind, DEF)
 #undef DEF
 
 #define UD(x) x(None) x(Pull0) x(Pull1)
-/// Specifies possible unconnected drive settings.
 SLANG_ENUM(UnconnectedDrive, UD)
 #undef UD
 
 #define EDGE(x) x(None) x(PosEdge) x(NegEdge) x(BothEdges)
-/// Specifies possible edge kinds.
 SLANG_ENUM(EdgeKind, EDGE)
 #undef EDGE
 
 #define SRK(x) x(Function) x(Task)
-/// Specifies possible subroutine kinds.
 SLANG_ENUM(SubroutineKind, SRK)
 #undef SRK
 
 #define ASK(x) x(Assert) x(Assume) x(CoverProperty) x(CoverSequence) x(Restrict) x(Expect)
-/// Specifies possible assertion kinds.
 SLANG_ENUM(AssertionKind, ASK)
 #undef ASK
 
 #define ELAB(x) x(Fatal) x(Error) x(Warning) x(Info) x(StaticAssert)
-/// Specifies possible elaboration system task kinds.
 SLANG_ENUM(ElabSystemTaskKind, ELAB)
 #undef ELAB
 
 #define MODE(x) x(None) x(Rand) x(RandC)
-/// Specifies possible assertion kinds.
 SLANG_ENUM(RandMode, MODE)
 #undef MODE
 
 #define DIRECTION(x) x(In) x(Out) x(OutReg) x(InOut)
-/// Specifies behavior of a primitive port.
 SLANG_ENUM(PrimitivePortDirection, DIRECTION)
 #undef DIRECTION
 
