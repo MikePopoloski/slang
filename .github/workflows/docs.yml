@@ -25,7 +25,7 @@ jobs:
         wget --quiet https://sourceforge.net/projects/doxygen/files/rel-1.13.2/doxygen-1.13.2.linux.bin.tar.gz
         tar -xf doxygen-1.13.2.linux.bin.tar.gz
         cp doxygen-1.13.2/bin/doxygen /usr/local/bin
-    - name: Build slang and pyslang docs via CMake
+    - name: Build docs
       run: |
         cmake -B build -DSLANG_INCLUDE_DOCS=ON -DSLANG_INCLUDE_TESTS=OFF
         cmake --build build --target docs -j8

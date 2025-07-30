@@ -61,6 +61,8 @@ option(SLANG_INCLUDE_TESTS "Include test targets in the build"
        ${SLANG_MASTER_PROJECT})
 option(SLANG_INCLUDE_DOCS "Include documentation targets in the build" OFF)
 option(SLANG_INCLUDE_PYLIB "Include the pyslang python module in the build" OFF)
+option(SLANG_INCLUDE_PYTHON_DOCS
+       "Include Python binding documentation in the build" OFF)
 option(SLANG_INCLUDE_INSTALL "Include installation targets"
        ${SLANG_MASTER_PROJECT})
 option(SLANG_INCLUDE_COVERAGE "Enable code coverage" OFF)

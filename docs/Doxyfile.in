@@ -44,7 +44,6 @@
 ##! M_LINKS_NAVBAR2 = \
 ##!  "api-reference namespaces annotated files" \
 ##!  "<a href="https://sv-lang.com/explore/">Try It</a>" \
-##!  "<a href="https://sv-lang.com/pyslang/">Pyslang Docs</a>" \
 ##!  "<a href="https://github.com/MikePopoloski/slang">GitHub</a>"
 ##! M_PAGE_FINE_PRINT = \
 ##!  <p>slang SystemVerilog language services. Copyright (C) 2015-2025 Michael Popoloski.</br> \

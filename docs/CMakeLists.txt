@@ -70,25 +70,28 @@ add_custom_command(
 add_custom_target(docs ALL DEPENDS ${DOXYGEN_INDEX_FILE})
 
 # --- Python documentation with virtual environment ---
-set(PYTHON_DOCS_DIR ${CMAKE_CURRENT_BINARY_DIR}/html/pyslang)
-set(PYTHON_VENV_DIR ${PROJECT_BINARY_DIR}/venv)
+if(SLANG_INCLUDE_PYTHON_DOCS)
+  set(PYTHON_DOCS_DIR ${CMAKE_CURRENT_BINARY_DIR}/html/pyslang)
+  set(PYTHON_VENV_DIR ${PROJECT_BINARY_DIR}/venv)
 
-add_custom_command(
-  OUTPUT ${PYTHON_DOCS_DIR}/index.html
-  COMMAND ${Python_EXECUTABLE} -m venv ${PYTHON_VENV_DIR}
-  COMMAND ${PYTHON_VENV_DIR}/bin/python -m pip install --upgrade pip
-  COMMAND ${PYTHON_VENV_DIR}/bin/python -m pip install jinja2 pygments docutils
-  COMMAND
-    ${PYTHON_VENV_DIR}/bin/python -m pip install . -v
-    "--config-settings=build-dir=${CMAKE_CURRENT_BINARY_DIR}/../pyslang/{wheel_tag}"
-  COMMAND DOC_OUTPUT_DIR=${PYTHON_DOCS_DIR} ${PYTHON_VENV_DIR}/bin/python
-          ${MCSS_PYTHONPY_PATH} ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  DEPENDS ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py ${DOXYGEN_INDEX_FILE}
-  COMMENT "Generating Python docs in virtual environment"
-  VERBATIM)
+  add_custom_command(
+    OUTPUT ${PYTHON_DOCS_DIR}/index.html
+    COMMAND ${Python_EXECUTABLE} -m venv ${PYTHON_VENV_DIR}
+    COMMAND ${PYTHON_VENV_DIR}/bin/python -m pip install --upgrade pip
+    COMMAND ${PYTHON_VENV_DIR}/bin/python -m pip install jinja2 pygments
+            docutils
+    COMMAND
+      ${PYTHON_VENV_DIR}/bin/python -m pip install . -v
+      "--config-settings=build-dir=${CMAKE_CURRENT_BINARY_DIR}/../pyslang/{wheel_tag}"
+    COMMAND DOC_OUTPUT_DIR=${PYTHON_DOCS_DIR} ${PYTHON_VENV_DIR}/bin/python
+            ${MCSS_PYTHONPY_PATH} ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    DEPENDS ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py ${DOXYGEN_INDEX_FILE}
+    COMMENT "Generating Python docs in virtual environment"
+    VERBATIM)
 
-add_custom_target(python_docs DEPENDS ${PYTHON_DOCS_DIR}/index.html)
+  add_custom_target(python_docs DEPENDS ${PYTHON_DOCS_DIR}/index.html)
 
-# Make sure both docs and python_docs are built with `make docs`
-add_dependencies(docs python_docs)
+  # Make sure both docs and python_docs are built with `make docs`
+  add_dependencies(docs python_docs)
+endif()
