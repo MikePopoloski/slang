@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Hierarchical path strings for members of generic class types now include the specialization parameter values
 * Instance array port slicing of packed types has been reworked. Each instance's port connection now has an expression tree selecting the appropriate bits of the potentially multi-dimensional packed type.
 * `+libext` has been added as an alias for `--libext`
+* slang can now build for WASI targets (thanks to @whitequark)
 
 ### Fixes
 * Fixed argument binding for sequence and property instances when using named arguments
