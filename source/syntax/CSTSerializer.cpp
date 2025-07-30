@@ -34,8 +34,6 @@ std::string_view toString(CSTJsonMode mode) {
             return "NoTrivia";
         case CSTJsonMode::SimpleTokens:
             return "SimpleTokens";
-        default:
-            return "Unknown";
     }
 }
 

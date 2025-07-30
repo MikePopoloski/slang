@@ -15,10 +15,9 @@ def test_cst_json_basic():
     tree = pyslang.SyntaxTree.fromText(test_code)
 
     # Test default serialization (full mode)
-    json_str = pyslang.cst_to_json(tree)
+    json_str = tree.to_json()
     assert isinstance(json_str, str)
-    assert "syntaxTrees" in json_str
-    assert "CompilationUnit" in json_str
+    assert "SyntaxTree" in json_str
     assert "ModuleDeclaration" in json_str
 
 
@@ -28,28 +27,20 @@ def test_cst_json_modes():
     tree = pyslang.SyntaxTree.fromText(test_code)
 
     # Test full mode (default)
-    options_full = pyslang.CSTSerializationOptions(pyslang.CSTJsonMode.Full)
-    json_full = pyslang.cst_to_json(tree, options_full)
+    json_full = tree.to_json(pyslang.CSTJsonMode.Full)
     assert "trivia" in json_full
 
     # Test simple trivia mode
-    options_simple_trivia = pyslang.CSTSerializationOptions(
-        pyslang.CSTJsonMode.SimpleTrivia
-    )
-    json_simple_trivia = pyslang.cst_to_json(tree, options_simple_trivia)
+    json_simple_trivia = tree.to_json(pyslang.CSTJsonMode.SimpleTrivia)
     assert isinstance(json_simple_trivia, str)
 
     # Test no trivia mode
-    options_no_trivia = pyslang.CSTSerializationOptions(pyslang.CSTJsonMode.NoTrivia)
-    json_no_trivia = pyslang.cst_to_json(tree, options_no_trivia)
+    json_no_trivia = tree.to_json(pyslang.CSTJsonMode.NoTrivia)
     # Should not contain trivia arrays
     assert '"trivia"' not in json_no_trivia
 
     # Test simple tokens mode
-    options_simple_tokens = pyslang.CSTSerializationOptions(
-        pyslang.CSTJsonMode.SimpleTokens
-    )
-    json_simple_tokens = pyslang.cst_to_json(tree, options_simple_tokens)
+    json_simple_tokens = tree.to_json(pyslang.CSTJsonMode.SimpleTokens)
     # Should have tokens as simple strings
     assert isinstance(json_simple_tokens, str)
 
@@ -59,26 +50,27 @@ def test_cst_node_serialization():
     test_code = "module test; endmodule"
     tree = pyslang.SyntaxTree.fromText(test_code)
 
-    root_node = tree.root()
-    node_json = pyslang.cst_node_to_json(root_node)
+    root_node = tree.root
+    node_json = root_node.to_json()
 
     assert isinstance(node_json, str)
-    assert "CompilationUnit" in node_json
+    assert "ModuleDeclaration" in node_json
 
 
-def test_cst_serialization_options():
-    """Test CSTSerializationOptions class."""
-    # Test default constructor
-    options = pyslang.CSTSerializationOptions()
-    assert options.mode == pyslang.CSTJsonMode.Full
+def test_cst_node_modes():
+    """Test different CST JSON modes on syntax nodes."""
+    test_code = "module test; endmodule"
+    tree = pyslang.SyntaxTree.fromText(test_code)
+    root_node = tree.root
 
-    # Test constructor with mode
-    options = pyslang.CSTSerializationOptions(pyslang.CSTJsonMode.SimpleTokens)
-    assert options.mode == pyslang.CSTJsonMode.SimpleTokens
+    # Test different modes on syntax nodes
+    json_full = root_node.to_json(pyslang.CSTJsonMode.Full)
+    json_simple = root_node.to_json(pyslang.CSTJsonMode.SimpleTokens)
 
-    # Test mode assignment
-    options.mode = pyslang.CSTJsonMode.NoTrivia
-    assert options.mode == pyslang.CSTJsonMode.NoTrivia
+    assert isinstance(json_full, str)
+    assert isinstance(json_simple, str)
+    assert "ModuleDeclaration" in json_full
+    assert "ModuleDeclaration" in json_simple
 
 
 def test_cst_json_mode_enum():
