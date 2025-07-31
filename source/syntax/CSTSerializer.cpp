@@ -35,6 +35,7 @@ std::string_view toString(CSTJsonMode mode) {
         case CSTJsonMode::SimpleTokens:
             return "SimpleTokens";
     }
+    SLANG_UNREACHABLE;
 }
 
 CSTSerializer::CSTSerializer(JsonWriter& writer, CSTJsonMode mode) : writer(writer), mode(mode) {
