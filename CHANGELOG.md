@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+### Notable Breaking Changes
+### New Features
+### Improvements
+### Fixes
+### Tools & Bindings
+
+
+## [v9.0] - 2025-07-30
+### Language Support
 * Added support for clock flow, clock resolution, and clock inference rules in checkers and assertions
   * Various cases of invalid clock usage will now issue appropriate errors
   * Clock resolution is also performed for the sampled value system functions
