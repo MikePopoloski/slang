@@ -1,6 +1,6 @@
 // This version targets C++11 and later.
 //
-// Copyright (C) 2016-2020 Martin Moene.
+// Copyright (C) 2016-2025 Martin Moene.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -13,7 +13,7 @@
 #define NONSTD_EXPECTED_LITE_HPP
 
 #define expected_lite_MAJOR  0
-#define expected_lite_MINOR  8
+#define expected_lite_MINOR  9
 #define expected_lite_PATCH  0
 
 #define expected_lite_VERSION  expected_STRINGIFY(expected_lite_MAJOR) "." expected_STRINGIFY(expected_lite_MINOR) "." expected_STRINGIFY(expected_lite_PATCH)
@@ -1241,11 +1241,11 @@ nsel_constexpr auto invoke( F && f, Args && ... args )
 }
 
 template< typename F, typename ... Args >
-using invoke_result_nocvref_t = typename std20::remove_cvref< decltype( invoke( std::declval< F >(), std::declval< Args >()... ) ) >::type;
+using invoke_result_nocvref_t = typename std20::remove_cvref< decltype( ::nonstd::expected_lite::detail::invoke( std::declval< F >(), std::declval< Args >()... ) ) >::type;
 
 #if nsel_P2505R >= 5
 template< typename F, typename ... Args >
-using transform_invoke_result_t = typename std::remove_cv< decltype( invoke( std::declval< F >(), std::declval< Args >()... ) ) >::type;
+using transform_invoke_result_t = typename std::remove_cv< decltype( ::nonstd::expected_lite::detail::invoke( std::declval< F >(), std::declval< Args >()... ) ) >::type;
 #else
 template< typename F, typename ... Args >
 using transform_invoke_result_t = invoke_result_nocvref_t
@@ -1662,12 +1662,12 @@ make_unexpected_from_current_exception() -> unexpected_type< std::exception_ptr 
 /// x.x.6, x.x.7 expected access error
 
 template< typename E >
-class bad_expected_access;
+class nsel_NODISCARD bad_expected_access;
 
 /// x.x.7 bad_expected_access<void>: expected access error
 
 template <>
-class bad_expected_access< void > : public std::exception
+class nsel_NODISCARD bad_expected_access< void > : public std::exception
 {
 public:
     explicit bad_expected_access()
@@ -1680,7 +1680,7 @@ public:
 #if !nsel_CONFIG_NO_EXCEPTIONS
 
 template< typename E >
-class bad_expected_access : public bad_expected_access< void >
+class nsel_NODISCARD bad_expected_access : public bad_expected_access< void >
 {
 public:
     using error_type = E;
@@ -2294,7 +2294,6 @@ public:
             ? ( contained.value() )
             : ( error_traits<error_type>::rethrow( contained.error() ), contained.value() );
     }
-    nsel_RESTORE_MSVC_WARNINGS()
 
 #if !nsel_COMPILER_GNUC_VERSION || nsel_COMPILER_GNUC_VERSION >= 490
 
@@ -2313,6 +2312,7 @@ public:
     }
 
 #endif
+    nsel_RESTORE_MSVC_WARNINGS()
 
     constexpr error_type const & error() const &
     {

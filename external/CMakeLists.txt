@@ -6,8 +6,8 @@
 # Required minimum versions for dependencies
 set(fmt_min_version "11.2")
 set(mimalloc_min_version "2.2")
-set(cpptrace_min_version "0.8")
-set(catch2_min_version "3.8")
+set(cpptrace_min_version "1.0")
+set(catch2_min_version "3.9")
 
 # --- fmt lib ---
 set(find_pkg_args "")
@@ -99,7 +99,7 @@ if(SLANG_USE_MIMALLOC)
   FetchContent_Declare(
     mimalloc
     GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
-    GIT_TAG v2.2.3
+    GIT_TAG v2.2.4
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(mimalloc)
@@ -163,7 +163,7 @@ if(SLANG_USE_CPPTRACE)
   FetchContent_Declare(
     cpptrace
     GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
-    GIT_TAG v0.8.3
+    GIT_TAG v1.0.4
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(cpptrace)
@@ -190,7 +190,7 @@ if(SLANG_INCLUDE_TESTS)
   FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.8.1
+    GIT_TAG v3.9.0
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(Catch2)

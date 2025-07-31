@@ -20,8 +20,8 @@
 #if __cpp_exceptions
 #    if defined(SLANG_USE_CPPTRACE)
 #        include <cpptrace/from_current.hpp>
-#        define SLANG_TRY CPPTRACE_TRYZ
-#        define SLANG_CATCH(X) CPPTRACE_CATCHZ(X)
+#        define SLANG_TRY CPPTRACE_TRY
+#        define SLANG_CATCH(X) CPPTRACE_CATCH(X)
 #        define SLANG_THROW(e) throw(e)
 #        define SLANG_REPORT_EXCEPTION(e, msg)                 \
             do {                                               \
