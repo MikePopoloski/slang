@@ -116,7 +116,7 @@ void registerSyntax(py::module_& m) {
     EXPOSE_ENUM(m, SyntaxKind);
     EXPOSE_ENUM(m, KnownSystemName);
 
-    py::class_<Trivia>(m, "Trivia")
+    py::classh<Trivia>(m, "Trivia")
         .def(py::init<>())
         .def(py::init<TriviaKind, std::string_view>(), "kind"_a, "rawText"_a)
         .def_readonly("kind", &Trivia::kind)
@@ -128,7 +128,7 @@ void registerSyntax(py::module_& m) {
             return fmt::format("Trivia(TriviaKind.{})", toString(self.kind));
         });
 
-    py::class_<Token>(m, "Token")
+    py::classh<Token>(m, "Token")
         .def(py::init<>())
         .def(py::init([](BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
                          std::string_view rawText, SourceLocation location) {
@@ -245,7 +245,7 @@ void registerSyntax(py::module_& m) {
         size_t index;
     };
 
-    py::class_<SyntaxNode>(m, "SyntaxNode")
+    py::classh<SyntaxNode>(m, "SyntaxNode")
         .def_readonly("parent", &SyntaxNode::parent)
         .def_readonly("kind", &SyntaxNode::kind)
         .def("getFirstToken", &SyntaxNode::getFirstToken)
@@ -280,14 +280,14 @@ void registerSyntax(py::module_& m) {
              })
         .def("__str__", &SyntaxNode::toString);
 
-    py::class_<IncludeMetadata>(m, "IncludeMetadata")
+    py::classh<IncludeMetadata>(m, "IncludeMetadata")
         .def(py::init<>())
         .def_readonly("syntax", &IncludeMetadata::syntax)
         .def_readonly("path", &IncludeMetadata::path)
         .def_readonly("buffer", &IncludeMetadata::buffer)
         .def_readonly("isSystem", &IncludeMetadata::isSystem);
 
-    py::class_<SyntaxTree, std::shared_ptr<SyntaxTree>>(m, "SyntaxTree")
+    py::classh<SyntaxTree>(m, "SyntaxTree")
         .def_readonly("isLibraryUnit", &SyntaxTree::isLibraryUnit)
         .def_static(
             "fromFile",
@@ -360,12 +360,12 @@ void registerSyntax(py::module_& m) {
         .def("getIncludeDirectives", &SyntaxTree::getIncludeDirectives)
         .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref);
 
-    py::class_<LexerOptions>(m, "LexerOptions")
+    py::classh<LexerOptions>(m, "LexerOptions")
         .def(py::init<>())
         .def_readwrite("maxErrors", &LexerOptions::maxErrors)
         .def_readwrite("languageVersion", &LexerOptions::languageVersion);
 
-    py::class_<PreprocessorOptions>(m, "PreprocessorOptions")
+    py::classh<PreprocessorOptions>(m, "PreprocessorOptions")
         .def(py::init<>())
         .def_readwrite("maxIncludeDepth", &PreprocessorOptions::maxIncludeDepth)
         .def_readwrite("languageVersion", &PreprocessorOptions::languageVersion)
@@ -375,12 +375,12 @@ void registerSyntax(py::module_& m) {
         .def_readwrite("additionalIncludePaths", &PreprocessorOptions::additionalIncludePaths)
         .def_readwrite("ignoreDirectives", &PreprocessorOptions::ignoreDirectives);
 
-    py::class_<ParserOptions>(m, "ParserOptions")
+    py::classh<ParserOptions>(m, "ParserOptions")
         .def(py::init<>())
         .def_readwrite("maxRecursionDepth", &ParserOptions::maxRecursionDepth)
         .def_readwrite("languageVersion", &ParserOptions::languageVersion);
 
-    py::class_<SyntaxPrinter>(m, "SyntaxPrinter")
+    py::classh<SyntaxPrinter>(m, "SyntaxPrinter")
         .def(py::init<>())
         .def(py::init<const SourceManager&>(), py::keep_alive<1, 2>(), "sourceManager"_a)
         .def("append", &SyntaxPrinter::append, byrefint, "text"_a)
@@ -401,7 +401,7 @@ void registerSyntax(py::module_& m) {
         .def("str", &SyntaxPrinter::str)
         .def_static("printFile", &SyntaxPrinter::printFile, "tree"_a);
 
-    py::class_<PySyntaxRewriter>(m, "SyntaxRewriter")
+    py::classh<PySyntaxRewriter>(m, "SyntaxRewriter")
         .def("remove", &PySyntaxRewriter::py_remove)
         .def("replace", &PySyntaxRewriter::py_replace)
         .def("insert_before", &PySyntaxRewriter::py_insertBefore)

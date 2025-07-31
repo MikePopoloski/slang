@@ -1239,7 +1239,7 @@ void registerSyntaxNodes{0}(py::module_& m) {{
             if class_name == "SyntaxNode":
                 continue
 
-            outf.write(f'    py::class_<{class_name}, {v.base}>(m, "{class_name}")')
+            outf.write(f'    py::classh<{class_name}, {v.base}>(m, "{class_name}")')
             for member_name in v.members:
                 python_member_name = member_name[1]
 

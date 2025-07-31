@@ -7,6 +7,7 @@
 
 #include <fmt/core.h>
 #include <pybind11/cast.h>
+#include <pybind11/native_enum.h>
 #include <pybind11/operators.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -31,13 +32,14 @@ using namespace slang::ast;
 
 #define EXPOSE_ENUM(handle, name)                                \
     do {                                                         \
-        py::enum_<name> e(handle, #name);                        \
+        py::native_enum<name> e(handle, #name, "enum.Enum");     \
         for (auto member : name##_traits::values) {              \
             std::string nameStr = std::string(toString(member)); \
             if (nameStr == "None")                               \
                 nameStr = "None_";                               \
             e.value(nameStr.c_str(), member);                    \
         }                                                        \
+        e.finalize();                                            \
     } while (0)
 
 static constexpr auto byref = py::return_value_policy::reference;

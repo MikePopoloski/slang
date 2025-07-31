@@ -22,7 +22,7 @@ void registerSymbols(py::module_& m) {
     EXPOSE_ENUM(m, PulseStyleKind);
     EXPOSE_ENUM(m, SystemTimingCheckKind);
 
-    py::enum_<LookupFlags>(m, "LookupFlags")
+    py::native_enum<LookupFlags>(m, "LookupFlags", "enum.Flag")
         .value("None_", LookupFlags::None)
         .value("Type", LookupFlags::Type)
         .value("AllowDeclaredAfter", LookupFlags::AllowDeclaredAfter)
@@ -39,17 +39,19 @@ void registerSymbols(py::module_& m) {
         .value("ForceHierarchical", LookupFlags::ForceHierarchical)
         .value("TypeReference", LookupFlags::TypeReference)
         .value("AlwaysAllowUpward", LookupFlags::AlwaysAllowUpward)
-        .value("DisallowUnitReferences", LookupFlags::DisallowUnitReferences);
+        .value("DisallowUnitReferences", LookupFlags::DisallowUnitReferences)
+        .finalize();
 
-    py::enum_<LookupResultFlags>(m, "LookupResultFlags")
+    py::native_enum<LookupResultFlags>(m, "LookupResultFlags", "enum.Flag")
         .value("None_", LookupResultFlags::None)
         .value("WasImported", LookupResultFlags::WasImported)
         .value("IsHierarchical", LookupResultFlags::IsHierarchical)
         .value("SuppressUndeclared", LookupResultFlags::SuppressUndeclared)
         .value("FromTypeParam", LookupResultFlags::FromTypeParam)
-        .value("FromForwardTypedef", LookupResultFlags::FromForwardTypedef);
+        .value("FromForwardTypedef", LookupResultFlags::FromForwardTypedef)
+        .finalize();
 
-    py::class_<LookupLocation>(m, "LookupLocation")
+    py::classh<LookupLocation>(m, "LookupLocation")
         .def(py::init<>())
         .def(py::init<const Scope*, uint32_t>(), "scope"_a, "index"_a)
         .def_property_readonly("scope", &LookupLocation::getScope)
@@ -61,7 +63,7 @@ void registerSymbols(py::module_& m) {
         .def(py::self == py::self)
         .def(py::self != py::self);
 
-    py::class_<LookupResult> lookupResult(m, "LookupResult");
+    py::classh<LookupResult> lookupResult(m, "LookupResult");
     lookupResult.def(py::init<>())
         .def_readonly("found", &LookupResult::found)
         .def_readonly("systemSubroutine", &LookupResult::systemSubroutine)
@@ -74,12 +76,12 @@ void registerSymbols(py::module_& m) {
         .def("reportDiags", &LookupResult::reportDiags, "context"_a)
         .def("errorIfSelectors", &LookupResult::errorIfSelectors, "context"_a);
 
-    py::class_<LookupResult::MemberSelector>(lookupResult, "MemberSelector")
+    py::classh<LookupResult::MemberSelector>(lookupResult, "MemberSelector")
         .def_readonly("name", &LookupResult::MemberSelector::name)
         .def_readonly("dotLocation", &LookupResult::MemberSelector::dotLocation)
         .def_readonly("nameRange", &LookupResult::MemberSelector::nameRange);
 
-    py::class_<Lookup>(m, "Lookup")
+    py::classh<Lookup>(m, "Lookup")
         .def_static("name", &Lookup::name, "syntax"_a, "context"_a, "flags"_a, "result"_a)
         .def_static("unqualified", &Lookup::unqualified, byrefint, "scope"_a, "name"_a,
                     "flags"_a = LookupFlags::None)
@@ -102,7 +104,7 @@ void registerSymbols(py::module_& m) {
         .def_static("findAssertionLocalVar", &Lookup::findAssertionLocalVar, "context"_a, "name"_a,
                     "result"_a);
 
-    py::class_<Symbol>(m, "Symbol")
+    py::classh<Symbol>(m, "Symbol")
         .def_readonly("kind", &Symbol::kind)
         .def_readonly("name", &Symbol::name)
         .def_readonly("location", &Symbol::location)
@@ -132,7 +134,7 @@ void registerSymbols(py::module_& m) {
             return fmt::format("Symbol(SymbolKind.{}, \"{}\")", toString(self.kind), self.name);
         });
 
-    py::class_<Scope>(m, "Scope")
+    py::classh<Scope>(m, "Scope")
         .def_property_readonly("compilation", &Scope::getCompilation)
         .def_property_readonly("defaultNetType", &Scope::getDefaultNetType)
         .def_property_readonly("timeScale", &Scope::getTimeScale)
@@ -166,13 +168,13 @@ void registerSymbols(py::module_& m) {
             },
             py::keep_alive<0, 1>());
 
-    py::class_<AttributeSymbol, Symbol>(m, "AttributeSymbol")
+    py::classh<AttributeSymbol, Symbol>(m, "AttributeSymbol")
         .def_property_readonly("value", &AttributeSymbol::getValue);
 
-    py::class_<CompilationUnitSymbol, Symbol, Scope>(m, "CompilationUnitSymbol")
+    py::classh<CompilationUnitSymbol, Symbol, Scope>(m, "CompilationUnitSymbol")
         .def_readonly("timeScale", &CompilationUnitSymbol::timeScale);
 
-    py::class_<PackageSymbol, Symbol, Scope>(m, "PackageSymbol")
+    py::classh<PackageSymbol, Symbol, Scope>(m, "PackageSymbol")
         .def_property_readonly("defaultNetType",
                                [](const PackageSymbol& self) { return &self.defaultNetType; })
         .def_readonly("timeScale", &PackageSymbol::timeScale)
@@ -181,11 +183,11 @@ void registerSymbols(py::module_& m) {
         .def_readonly("hasExportAll", &PackageSymbol::hasExportAll)
         .def("findForImport", &PackageSymbol::findForImport, byrefint, "name"_a);
 
-    py::class_<RootSymbol, Symbol, Scope>(m, "RootSymbol")
+    py::classh<RootSymbol, Symbol, Scope>(m, "RootSymbol")
         .def_readonly("topInstances", &RootSymbol::topInstances)
         .def_readonly("compilationUnits", &RootSymbol::compilationUnits);
 
-    py::class_<DefinitionSymbol, Symbol>(m, "DefinitionSymbol")
+    py::classh<DefinitionSymbol, Symbol>(m, "DefinitionSymbol")
         .def_readonly("definitionKind", &DefinitionSymbol::definitionKind)
         .def_readonly("defaultLifetime", &DefinitionSymbol::defaultLifetime)
         .def_readonly("unconnectedDrive", &DefinitionSymbol::unconnectedDrive)
@@ -200,38 +202,38 @@ void registerSymbols(py::module_& m) {
             return fmt::format("DefinitionSymbol(\"{}\")", self.name);
         });
 
-    py::class_<ValueSymbol, Symbol>(m, "ValueSymbol")
+    py::classh<ValueSymbol, Symbol>(m, "ValueSymbol")
         .def_property_readonly("type", &ValueSymbol::getType)
         .def_property_readonly("initializer", &ValueSymbol::getInitializer);
 
-    py::class_<EnumValueSymbol, ValueSymbol>(m, "EnumValueSymbol")
+    py::classh<EnumValueSymbol, ValueSymbol>(m, "EnumValueSymbol")
         .def_property_readonly("value",
                                [](const EnumValueSymbol& self) { return self.getValue(); });
 
-    py::class_<ParameterSymbolBase>(m, "ParameterSymbolBase")
+    py::classh<ParameterSymbolBase>(m, "ParameterSymbolBase")
         .def_property_readonly("isLocalParam", &ParameterSymbolBase::isLocalParam)
         .def_property_readonly("isPortParam", &ParameterSymbolBase::isPortParam)
         .def_property_readonly("isBodyParam", &ParameterSymbolBase::isBodyParam);
 
-    py::class_<ParameterSymbol, ValueSymbol, ParameterSymbolBase>(m, "ParameterSymbol")
+    py::classh<ParameterSymbol, ValueSymbol, ParameterSymbolBase>(m, "ParameterSymbol")
         .def_property_readonly("value", [](const ParameterSymbol& self) { return self.getValue(); })
         .def_property_readonly("isOverridden", &ParameterSymbol::isOverridden);
 
-    py::class_<TypeParameterSymbol, Symbol, ParameterSymbolBase>(m, "TypeParameterSymbol")
+    py::classh<TypeParameterSymbol, Symbol, ParameterSymbolBase>(m, "TypeParameterSymbol")
         .def_property_readonly("targetType",
                                [](const TypeParameterSymbol& self) { return &self.targetType; })
         .def_property_readonly("typeAlias",
                                [](const TypeParameterSymbol& self) { return &self.getTypeAlias(); })
         .def_property_readonly("isOverridden", &TypeParameterSymbol::isOverridden);
 
-    py::class_<DefParamSymbol, Symbol>(m, "DefParamSymbol")
+    py::classh<DefParamSymbol, Symbol>(m, "DefParamSymbol")
         .def_property_readonly("target",
                                [](const DefParamSymbol& self) { return self.getTarget(); })
         .def_property_readonly("initializer",
                                [](const DefParamSymbol& self) { return &self.getInitializer(); })
         .def_property_readonly("value", [](const DefParamSymbol& self) { return self.getValue(); });
 
-    py::class_<SpecparamSymbol, ValueSymbol>(m, "SpecparamSymbol")
+    py::classh<SpecparamSymbol, ValueSymbol>(m, "SpecparamSymbol")
         .def_readonly("isPathPulse", &SpecparamSymbol::isPathPulse)
         .def_property_readonly("value", [](const SpecparamSymbol& self) { return self.getValue(); })
         .def_property_readonly("pulseRejectLimit",
@@ -245,29 +247,30 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("pathSource", &SpecparamSymbol::getPathSource)
         .def_property_readonly("pathDest", &SpecparamSymbol::getPathDest);
 
-    py::enum_<VariableFlags>(m, "VariableFlags")
+    py::native_enum<VariableFlags>(m, "VariableFlags", "enum.Flag")
         .value("None_", VariableFlags::None)
         .value("Const", VariableFlags::Const)
         .value("CompilerGenerated", VariableFlags::CompilerGenerated)
         .value("ImmutableCoverageOption", VariableFlags::ImmutableCoverageOption)
         .value("CoverageSampleFormal", VariableFlags::CoverageSampleFormal)
         .value("CheckerFreeVariable", VariableFlags::CheckerFreeVariable)
-        .value("RefStatic", VariableFlags::RefStatic);
+        .value("RefStatic", VariableFlags::RefStatic)
+        .finalize();
 
-    py::class_<VariableSymbol, ValueSymbol>(m, "VariableSymbol")
+    py::classh<VariableSymbol, ValueSymbol>(m, "VariableSymbol")
         .def_readonly("lifetime", &VariableSymbol::lifetime)
         .def_readonly("flags", &VariableSymbol::flags);
 
-    py::class_<FormalArgumentSymbol, VariableSymbol>(m, "FormalArgumentSymbol")
+    py::classh<FormalArgumentSymbol, VariableSymbol>(m, "FormalArgumentSymbol")
         .def_readonly("direction", &FormalArgumentSymbol::direction)
         .def_property_readonly("defaultValue", &FormalArgumentSymbol::getDefaultValue);
 
-    py::class_<FieldSymbol, VariableSymbol>(m, "FieldSymbol")
+    py::classh<FieldSymbol, VariableSymbol>(m, "FieldSymbol")
         .def_readonly("bitOffset", &FieldSymbol::bitOffset)
         .def_readonly("fieldIndex", &FieldSymbol::fieldIndex)
         .def_readonly("randMode", &FieldSymbol::randMode);
 
-    py::class_<NetSymbol, ValueSymbol> netSymbol(m, "NetSymbol");
+    py::classh<NetSymbol, ValueSymbol> netSymbol(m, "NetSymbol");
     netSymbol.def_readonly("expansionHint", &NetSymbol::expansionHint)
         .def_readonly("isImplicit", &NetSymbol::isImplicit)
         .def_property_readonly("netType", [](const NetSymbol& self) { return &self.netType; })
@@ -275,32 +278,33 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("chargeStrength", &NetSymbol::getChargeStrength)
         .def_property_readonly("driveStrength", &NetSymbol::getDriveStrength);
 
-    py::enum_<NetSymbol::ExpansionHint>(netSymbol, "ExpansionHint")
+    py::native_enum<NetSymbol::ExpansionHint>(netSymbol, "ExpansionHint", "enum.Enum")
         .value("None_", NetSymbol::None)
         .value("Vectored", NetSymbol::Vectored)
         .value("Scalared", NetSymbol::Scalared)
-        .export_values();
+        .export_values()
+        .finalize();
 
-    py::class_<TempVarSymbol, VariableSymbol>(m, "TempVarSymbol");
-    py::class_<IteratorSymbol, TempVarSymbol>(m, "IteratorSymbol");
-    py::class_<PatternVarSymbol, TempVarSymbol>(m, "PatternVarSymbol");
-    py::class_<LocalAssertionVarSymbol, VariableSymbol>(m, "LocalAssertionVarSymbol");
+    py::classh<TempVarSymbol, VariableSymbol>(m, "TempVarSymbol");
+    py::classh<IteratorSymbol, TempVarSymbol>(m, "IteratorSymbol");
+    py::classh<PatternVarSymbol, TempVarSymbol>(m, "PatternVarSymbol");
+    py::classh<LocalAssertionVarSymbol, VariableSymbol>(m, "LocalAssertionVarSymbol");
 
-    py::class_<ClockingSkew>(m, "ClockingSkew")
+    py::classh<ClockingSkew>(m, "ClockingSkew")
         .def_readonly("edge", &ClockingSkew::edge)
         .def_readonly("delay", &ClockingSkew::delay)
         .def_property_readonly("hasValue", &ClockingSkew::hasValue);
 
-    py::class_<ClockVarSymbol, VariableSymbol>(m, "ClockVarSymbol")
+    py::classh<ClockVarSymbol, VariableSymbol>(m, "ClockVarSymbol")
         .def_readonly("direction", &ClockVarSymbol::direction)
         .def_readonly("inputSkew", &ClockVarSymbol::inputSkew)
         .def_readonly("outputSkew", &ClockVarSymbol::outputSkew);
 
-    py::class_<ClassPropertySymbol, VariableSymbol>(m, "ClassPropertySymbol")
+    py::classh<ClassPropertySymbol, VariableSymbol>(m, "ClassPropertySymbol")
         .def_readonly("visibility", &ClassPropertySymbol::visibility)
         .def_readonly("randMode", &ClassPropertySymbol::randMode);
 
-    py::enum_<MethodFlags>(m, "MethodFlags")
+    py::native_enum<MethodFlags>(m, "MethodFlags", "enum.Flag")
         .value("None_", MethodFlags::None)
         .value("Virtual", MethodFlags::Virtual)
         .value("Pure", MethodFlags::Pure)
@@ -317,9 +321,10 @@ void registerSymbols(py::module_& m) {
         .value("DefaultedSuperArg", MethodFlags::DefaultedSuperArg)
         .value("Initial", MethodFlags::Initial)
         .value("Extends", MethodFlags::Extends)
-        .value("Final", MethodFlags::Final);
+        .value("Final", MethodFlags::Final)
+        .finalize();
 
-    py::class_<SubroutineSymbol, Symbol, Scope>(m, "SubroutineSymbol")
+    py::classh<SubroutineSymbol, Symbol, Scope>(m, "SubroutineSymbol")
         .def_readonly("defaultLifetime", &SubroutineSymbol::defaultLifetime)
         .def_readonly("subroutineKind", &SubroutineSymbol::subroutineKind)
         .def_readonly("visibility", &SubroutineSymbol::visibility)
@@ -331,7 +336,7 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("prototype", &SubroutineSymbol::getPrototype)
         .def_property_readonly("isVirtual", &SubroutineSymbol::isVirtual);
 
-    py::class_<MethodPrototypeSymbol, Symbol, Scope> methodProto(m, "MethodPrototypeSymbol");
+    py::classh<MethodPrototypeSymbol, Symbol, Scope> methodProto(m, "MethodPrototypeSymbol");
     methodProto.def_readonly("subroutineKind", &MethodPrototypeSymbol::subroutineKind)
         .def_readonly("visibility", &MethodPrototypeSymbol::visibility)
         .def_readonly("flags", &MethodPrototypeSymbol::flags)
@@ -342,11 +347,11 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("isVirtual", &MethodPrototypeSymbol::isVirtual)
         .def_property_readonly("firstExternImpl", &MethodPrototypeSymbol::getFirstExternImpl);
 
-    py::class_<MethodPrototypeSymbol::ExternImpl>(methodProto, "ExternImpl")
+    py::classh<MethodPrototypeSymbol::ExternImpl>(methodProto, "ExternImpl")
         .def_readonly("impl", &MethodPrototypeSymbol::ExternImpl::impl)
         .def_property_readonly("nextImpl", &MethodPrototypeSymbol::ExternImpl::getNextImpl);
 
-    py::class_<PortSymbol, Symbol>(m, "PortSymbol")
+    py::classh<PortSymbol, Symbol>(m, "PortSymbol")
         .def_readonly("internalSymbol", &PortSymbol::internalSymbol)
         .def_readonly("externalLoc", &PortSymbol::externalLoc)
         .def_readonly("direction", &PortSymbol::direction)
@@ -357,14 +362,14 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("internalExpr", &PortSymbol::getInternalExpr)
         .def_property_readonly("isNetPort", &PortSymbol::isNetPort);
 
-    py::class_<MultiPortSymbol, Symbol>(m, "MultiPortSymbol")
+    py::classh<MultiPortSymbol, Symbol>(m, "MultiPortSymbol")
         .def_readonly("ports", &MultiPortSymbol::ports)
         .def_readonly("direction", &MultiPortSymbol::direction)
         .def_readonly("isNullPort", &MultiPortSymbol::isNullPort)
         .def_property_readonly("type", &MultiPortSymbol::getType)
         .def_property_readonly("initializer", &MultiPortSymbol::getInitializer);
 
-    py::class_<InterfacePortSymbol, Symbol>(m, "InterfacePortSymbol")
+    py::classh<InterfacePortSymbol, Symbol>(m, "InterfacePortSymbol")
         .def_readonly("interfaceDef", &InterfacePortSymbol::interfaceDef)
         .def_readonly("modport", &InterfacePortSymbol::modport)
         .def_readonly("isGeneric", &InterfacePortSymbol::isGeneric)
@@ -372,16 +377,16 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("connection", &InterfacePortSymbol::getConnection)
         .def_property_readonly("isInvalid", &InterfacePortSymbol::isInvalid);
 
-    py::class_<PortConnection>(m, "PortConnection")
+    py::classh<PortConnection>(m, "PortConnection")
         .def_property_readonly("ifaceConn", &PortConnection::getIfaceConn)
         .def_property_readonly("expression", &PortConnection::getExpression)
         .def_property_readonly("port", [](const PortConnection& self) { return &self.port; });
 
-    py::class_<InstanceSymbolBase, Symbol>(m, "InstanceSymbolBase")
+    py::classh<InstanceSymbolBase, Symbol>(m, "InstanceSymbolBase")
         .def_readonly("arrayPath", &InstanceSymbolBase::arrayPath)
         .def_property_readonly("arrayName", &InstanceSymbolBase::getArrayName);
 
-    py::class_<InstanceSymbol, InstanceSymbolBase>(m, "InstanceSymbol")
+    py::classh<InstanceSymbol, InstanceSymbolBase>(m, "InstanceSymbol")
         .def_property_readonly("definition", &InstanceSymbol::getDefinition)
         .def_property_readonly("isModule", &InstanceSymbol::isModule)
         .def_property_readonly("isInterface", &InstanceSymbol::isInterface)
@@ -401,7 +406,7 @@ void registerSymbols(py::module_& m) {
                                                            py::const_),
              byrefint, "port"_a);
 
-    py::class_<InstanceBodySymbol, Symbol, Scope>(m, "InstanceBodySymbol")
+    py::classh<InstanceBodySymbol, Symbol, Scope>(m, "InstanceBodySymbol")
         .def_readonly("parentInstance", &InstanceBodySymbol::parentInstance)
         .def_property_readonly("parameters", &InstanceBodySymbol::getParameters)
         .def_property_readonly("portList", &InstanceBodySymbol::getPortList)
@@ -409,19 +414,19 @@ void registerSymbols(py::module_& m) {
         .def("findPort", &InstanceBodySymbol::findPort, byrefint, "portName"_a)
         .def("hasSameType", &InstanceBodySymbol::hasSameType, "other"_a);
 
-    py::class_<InstanceArraySymbol, Symbol, Scope>(m, "InstanceArraySymbol")
+    py::classh<InstanceArraySymbol, Symbol, Scope>(m, "InstanceArraySymbol")
         .def_readonly("elements", &InstanceArraySymbol::elements)
         .def_readonly("range", &InstanceArraySymbol::range)
         .def_property_readonly("arrayName", &InstanceArraySymbol::getArrayName);
 
-    py::class_<UninstantiatedDefSymbol, Symbol>(m, "UninstantiatedDefSymbol")
+    py::classh<UninstantiatedDefSymbol, Symbol>(m, "UninstantiatedDefSymbol")
         .def_readonly("definitionName", &UninstantiatedDefSymbol::definitionName)
         .def_readonly("paramExpressions", &UninstantiatedDefSymbol::paramExpressions)
         .def_property_readonly("portConnections", &UninstantiatedDefSymbol::getPortConnections)
         .def_property_readonly("portNames", &UninstantiatedDefSymbol::getPortNames)
         .def_property_readonly("isChecker", &UninstantiatedDefSymbol::isChecker);
 
-    py::class_<PrimitiveInstanceSymbol, InstanceSymbolBase>(m, "PrimitiveInstanceSymbol")
+    py::classh<PrimitiveInstanceSymbol, InstanceSymbolBase>(m, "PrimitiveInstanceSymbol")
         .def_property_readonly("primitiveType",
                                [](const PrimitiveInstanceSymbol& self) {
                                    return &self.primitiveType;
@@ -430,12 +435,12 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("delay", &PrimitiveInstanceSymbol::getDelay)
         .def_property_readonly("driveStrength", &PrimitiveInstanceSymbol::getDriveStrength);
 
-    py::class_<CheckerInstanceSymbol, InstanceSymbolBase> checkerInst(m, "CheckerInstanceSymbol");
+    py::classh<CheckerInstanceSymbol, InstanceSymbolBase> checkerInst(m, "CheckerInstanceSymbol");
     checkerInst
         .def_property_readonly("body", [](const CheckerInstanceSymbol& self) { return &self.body; })
         .def_property_readonly("portConnections", &CheckerInstanceSymbol::getPortConnections);
 
-    py::class_<CheckerInstanceSymbol::Connection>(checkerInst, "Connection")
+    py::classh<CheckerInstanceSymbol::Connection>(checkerInst, "Connection")
         .def_property_readonly(
             "formal", [](const CheckerInstanceSymbol::Connection& self) { return &self.formal; })
         .def_property_readonly("outputInitialExpr",
@@ -443,169 +448,171 @@ void registerSymbols(py::module_& m) {
         .def_readonly("actual", &CheckerInstanceSymbol::Connection::actual)
         .def_readonly("attributes", &CheckerInstanceSymbol::Connection::attributes);
 
-    py::class_<CheckerInstanceBodySymbol, Symbol, Scope>(m, "CheckerInstanceBodySymbol")
+    py::classh<CheckerInstanceBodySymbol, Symbol, Scope>(m, "CheckerInstanceBodySymbol")
         .def_readonly("parentInstance", &CheckerInstanceBodySymbol::parentInstance)
         .def_property_readonly("checker",
                                [](const CheckerInstanceBodySymbol& self) { return &self.checker; });
 
-    py::class_<StatementBlockSymbol, Symbol, Scope>(m, "StatementBlockSymbol")
+    py::classh<StatementBlockSymbol, Symbol, Scope>(m, "StatementBlockSymbol")
         .def_readonly("blockKind", &StatementBlockSymbol::blockKind)
         .def_readonly("defaultLifetime", &StatementBlockSymbol::defaultLifetime);
 
-    py::class_<ProceduralBlockSymbol, Symbol>(m, "ProceduralBlockSymbol")
+    py::classh<ProceduralBlockSymbol, Symbol>(m, "ProceduralBlockSymbol")
         .def_readonly("procedureKind", &ProceduralBlockSymbol::procedureKind)
         .def_property_readonly("isSingleDriverBlock", &ProceduralBlockSymbol::isSingleDriverBlock)
         .def_property_readonly("body", &ProceduralBlockSymbol::getBody);
 
-    py::class_<GenerateBlockSymbol, Symbol, Scope>(m, "GenerateBlockSymbol")
+    py::classh<GenerateBlockSymbol, Symbol, Scope>(m, "GenerateBlockSymbol")
         .def_readonly("constructIndex", &GenerateBlockSymbol::constructIndex)
         .def_readonly("isUninstantiated", &GenerateBlockSymbol::isUninstantiated)
         .def_readonly("arrayIndex", &GenerateBlockSymbol::arrayIndex)
         .def_property_readonly("externalName", &GenerateBlockSymbol::getExternalName);
 
-    py::class_<GenerateBlockArraySymbol, Symbol, Scope>(m, "GenerateBlockArraySymbol")
+    py::classh<GenerateBlockArraySymbol, Symbol, Scope>(m, "GenerateBlockArraySymbol")
         .def_readonly("constructIndex", &GenerateBlockArraySymbol::constructIndex)
         .def_readonly("entries", &GenerateBlockArraySymbol::entries)
         .def_readonly("valid", &GenerateBlockArraySymbol::valid)
         .def_property_readonly("externalName", &GenerateBlockArraySymbol::getExternalName);
 
-    py::class_<EmptyMemberSymbol, Symbol>(m, "EmptyMemberSymbol");
-    py::class_<GenvarSymbol, Symbol>(m, "GenvarSymbol");
-    py::class_<SpecifyBlockSymbol, Symbol, Scope>(m, "SpecifyBlockSymbol");
-    py::class_<AnonymousProgramSymbol, Symbol, Scope>(m, "AnonymousProgramSymbol");
+    py::classh<EmptyMemberSymbol, Symbol>(m, "EmptyMemberSymbol");
+    py::classh<GenvarSymbol, Symbol>(m, "GenvarSymbol");
+    py::classh<SpecifyBlockSymbol, Symbol, Scope>(m, "SpecifyBlockSymbol");
+    py::classh<AnonymousProgramSymbol, Symbol, Scope>(m, "AnonymousProgramSymbol");
 
-    py::class_<NetAliasSymbol, Symbol>(m, "NetAliasSymbol")
+    py::classh<NetAliasSymbol, Symbol>(m, "NetAliasSymbol")
         .def_property_readonly("netReferences", &NetAliasSymbol::getNetReferences);
 
-    py::class_<TransparentMemberSymbol, Symbol>(m, "TransparentMemberSymbol")
+    py::classh<TransparentMemberSymbol, Symbol>(m, "TransparentMemberSymbol")
         .def_property_readonly("wrapped",
                                [](const TransparentMemberSymbol& self) { return &self.wrapped; });
 
-    py::class_<ExplicitImportSymbol, Symbol>(m, "ExplicitImportSymbol")
+    py::classh<ExplicitImportSymbol, Symbol>(m, "ExplicitImportSymbol")
         .def_readonly("packageName", &ExplicitImportSymbol::packageName)
         .def_readonly("importName", &ExplicitImportSymbol::importName)
         .def_readonly("isFromExport", &ExplicitImportSymbol::isFromExport)
         .def_property_readonly("package", &ExplicitImportSymbol::package)
         .def_property_readonly("importedSymbol", &ExplicitImportSymbol::importedSymbol);
 
-    py::class_<WildcardImportSymbol, Symbol>(m, "WildcardImportSymbol")
+    py::classh<WildcardImportSymbol, Symbol>(m, "WildcardImportSymbol")
         .def_readonly("packageName", &WildcardImportSymbol::packageName)
         .def_readonly("isFromExport", &WildcardImportSymbol::isFromExport)
         .def_property_readonly("package", &WildcardImportSymbol::getPackage);
 
-    py::class_<ModportPortSymbol, ValueSymbol>(m, "ModportPortSymbol")
+    py::classh<ModportPortSymbol, ValueSymbol>(m, "ModportPortSymbol")
         .def_readonly("direction", &ModportPortSymbol::direction)
         .def_readonly("internalSymbol", &ModportPortSymbol::internalSymbol)
         .def_readonly("explicitConnection", &ModportPortSymbol::explicitConnection);
 
-    py::class_<ModportClockingSymbol, Symbol>(m, "ModportClockingSymbol")
+    py::classh<ModportClockingSymbol, Symbol>(m, "ModportClockingSymbol")
         .def_readonly("target", &ModportClockingSymbol::target);
 
-    py::class_<ModportSymbol, Symbol, Scope>(m, "ModportSymbol")
+    py::classh<ModportSymbol, Symbol, Scope>(m, "ModportSymbol")
         .def_readonly("hasExports", &ModportSymbol::hasExports);
 
-    py::class_<ContinuousAssignSymbol, Symbol>(m, "ContinuousAssignSymbol")
+    py::classh<ContinuousAssignSymbol, Symbol>(m, "ContinuousAssignSymbol")
         .def_property_readonly("assignment", &ContinuousAssignSymbol::getAssignment)
         .def_property_readonly("delay", &ContinuousAssignSymbol::getDelay)
         .def_property_readonly("driveStrength", &ContinuousAssignSymbol::getDriveStrength);
 
-    py::class_<ElabSystemTaskSymbol, Symbol>(m, "ElabSystemTaskSymbol")
+    py::classh<ElabSystemTaskSymbol, Symbol>(m, "ElabSystemTaskSymbol")
         .def_readonly("taskKind", &ElabSystemTaskSymbol::taskKind)
         .def_property_readonly("message", &ElabSystemTaskSymbol::getMessage)
         .def_property_readonly("assertCondition", &ElabSystemTaskSymbol::getAssertCondition);
 
-    py::class_<PrimitivePortSymbol, ValueSymbol>(m, "PrimitivePortSymbol")
+    py::classh<PrimitivePortSymbol, ValueSymbol>(m, "PrimitivePortSymbol")
         .def_readonly("direction", &PrimitivePortSymbol::direction);
 
-    py::class_<PrimitiveSymbol, Symbol, Scope> primitiveSym(m, "PrimitiveSymbol");
+    py::classh<PrimitiveSymbol, Symbol, Scope> primitiveSym(m, "PrimitiveSymbol");
     primitiveSym.def_readonly("ports", &PrimitiveSymbol::ports)
         .def_readonly("initVal", &PrimitiveSymbol::initVal)
         .def_readonly("primitiveKind", &PrimitiveSymbol::primitiveKind)
         .def_readonly("isSequential", &PrimitiveSymbol::isSequential)
         .def_readonly("table", &PrimitiveSymbol::table);
 
-    py::enum_<PrimitiveSymbol::PrimitiveKind>(primitiveSym, "PrimitiveKind")
+    py::native_enum<PrimitiveSymbol::PrimitiveKind>(primitiveSym, "PrimitiveKind", "enum.Enum")
         .value("UserDefined", PrimitiveSymbol::PrimitiveKind::UserDefined)
         .value("Fixed", PrimitiveSymbol::PrimitiveKind::Fixed)
         .value("NInput", PrimitiveSymbol::PrimitiveKind::NInput)
         .value("NOutput", PrimitiveSymbol::PrimitiveKind::NOutput)
-        .export_values();
+        .export_values()
+        .finalize();
 
-    py::class_<PrimitiveSymbol::TableEntry>(primitiveSym, "TableEntry")
+    py::classh<PrimitiveSymbol::TableEntry>(primitiveSym, "TableEntry")
         .def_readonly("inputs", &PrimitiveSymbol::TableEntry::inputs)
         .def_readonly("state", &PrimitiveSymbol::TableEntry::state)
         .def_readonly("output", &PrimitiveSymbol::TableEntry::output);
 
-    py::class_<AssertionPortSymbol, Symbol>(m, "AssertionPortSymbol")
+    py::classh<AssertionPortSymbol, Symbol>(m, "AssertionPortSymbol")
         .def_readonly("direction", &AssertionPortSymbol::direction)
         .def_property_readonly("isLocalVar", &AssertionPortSymbol::isLocalVar)
         .def_property_readonly("type", [](const AssertionPortSymbol& self) {
             return &self.declaredType.getType();
         });
 
-    py::class_<SequenceSymbol, Symbol, Scope>(m, "SequenceSymbol")
+    py::classh<SequenceSymbol, Symbol, Scope>(m, "SequenceSymbol")
         .def_readonly("ports", &SequenceSymbol::ports);
 
-    py::class_<PropertySymbol, Symbol, Scope>(m, "PropertySymbol")
+    py::classh<PropertySymbol, Symbol, Scope>(m, "PropertySymbol")
         .def_readonly("ports", &PropertySymbol::ports);
 
-    py::class_<LetDeclSymbol, Symbol, Scope>(m, "LetDeclSymbol")
+    py::classh<LetDeclSymbol, Symbol, Scope>(m, "LetDeclSymbol")
         .def_readonly("ports", &LetDeclSymbol::ports);
 
-    py::class_<CheckerSymbol, Symbol, Scope>(m, "CheckerSymbol")
+    py::classh<CheckerSymbol, Symbol, Scope>(m, "CheckerSymbol")
         .def_readonly("ports", &CheckerSymbol::ports);
 
-    py::class_<ClockingBlockSymbol, Symbol, Scope>(m, "ClockingBlockSymbol")
+    py::classh<ClockingBlockSymbol, Symbol, Scope>(m, "ClockingBlockSymbol")
         .def_property_readonly("event", &ClockingBlockSymbol::getEvent)
         .def_property_readonly("defaultInputSkew", &ClockingBlockSymbol::getDefaultInputSkew)
         .def_property_readonly("defaultOutputSkew", &ClockingBlockSymbol::getDefaultOutputSkew);
 
-    py::class_<RandSeqProductionSymbol, Symbol, Scope> randSeq(m, "RandSeqProductionSymbol");
+    py::classh<RandSeqProductionSymbol, Symbol, Scope> randSeq(m, "RandSeqProductionSymbol");
     randSeq.def_readonly("arguments", &RandSeqProductionSymbol::arguments)
         .def_property_readonly("rules", &RandSeqProductionSymbol::getRules)
         .def_property_readonly("returnType", &RandSeqProductionSymbol::getReturnType);
 
-    py::enum_<RandSeqProductionSymbol::ProdKind>(randSeq, "ProdKind")
+    py::native_enum<RandSeqProductionSymbol::ProdKind>(randSeq, "ProdKind", "enum.Enum")
         .value("Item", RandSeqProductionSymbol::ProdKind::Item)
         .value("CodeBlock", RandSeqProductionSymbol::ProdKind::CodeBlock)
         .value("IfElse", RandSeqProductionSymbol::ProdKind::IfElse)
         .value("Repeat", RandSeqProductionSymbol::ProdKind::Repeat)
-        .value("Case", RandSeqProductionSymbol::ProdKind::Case);
+        .value("Case", RandSeqProductionSymbol::ProdKind::Case)
+        .finalize();
 
-    py::class_<RandSeqProductionSymbol::ProdBase>(randSeq, "ProdBase")
+    py::classh<RandSeqProductionSymbol::ProdBase>(randSeq, "ProdBase")
         .def_readonly("kind", &RandSeqProductionSymbol::ProdBase::kind);
 
-    py::class_<RandSeqProductionSymbol::ProdItem, RandSeqProductionSymbol::ProdBase>(randSeq,
+    py::classh<RandSeqProductionSymbol::ProdItem, RandSeqProductionSymbol::ProdBase>(randSeq,
                                                                                      "ProdItem")
         .def_readonly("target", &RandSeqProductionSymbol::ProdItem::target)
         .def_readonly("args", &RandSeqProductionSymbol::ProdItem::args);
 
-    py::class_<RandSeqProductionSymbol::CodeBlockProd, RandSeqProductionSymbol::ProdBase>(
+    py::classh<RandSeqProductionSymbol::CodeBlockProd, RandSeqProductionSymbol::ProdBase>(
         randSeq, "CodeBlockProd")
         .def_readonly("block", &RandSeqProductionSymbol::CodeBlockProd::block);
 
-    py::class_<RandSeqProductionSymbol::IfElseProd, RandSeqProductionSymbol::ProdBase>(randSeq,
+    py::classh<RandSeqProductionSymbol::IfElseProd, RandSeqProductionSymbol::ProdBase>(randSeq,
                                                                                        "IfElseProd")
         .def_readonly("expr", &RandSeqProductionSymbol::IfElseProd::expr)
         .def_readonly("ifItem", &RandSeqProductionSymbol::IfElseProd::ifItem)
         .def_readonly("elseItem", &RandSeqProductionSymbol::IfElseProd::elseItem);
 
-    py::class_<RandSeqProductionSymbol::RepeatProd, RandSeqProductionSymbol::ProdBase>(randSeq,
+    py::classh<RandSeqProductionSymbol::RepeatProd, RandSeqProductionSymbol::ProdBase>(randSeq,
                                                                                        "RepeatProd")
         .def_readonly("expr", &RandSeqProductionSymbol::RepeatProd::expr)
         .def_readonly("item", &RandSeqProductionSymbol::RepeatProd::item);
 
-    py::class_<RandSeqProductionSymbol::CaseItem>(randSeq, "CaseItem")
+    py::classh<RandSeqProductionSymbol::CaseItem>(randSeq, "CaseItem")
         .def_readonly("expressions", &RandSeqProductionSymbol::CaseItem::expressions)
         .def_readonly("item", &RandSeqProductionSymbol::CaseItem::item);
 
-    py::class_<RandSeqProductionSymbol::CaseProd, RandSeqProductionSymbol::ProdBase>(randSeq,
+    py::classh<RandSeqProductionSymbol::CaseProd, RandSeqProductionSymbol::ProdBase>(randSeq,
                                                                                      "CaseProd")
         .def_readonly("expr", &RandSeqProductionSymbol::CaseProd::expr)
         .def_readonly("items", &RandSeqProductionSymbol::CaseProd::items)
         .def_readonly("defaultItem", &RandSeqProductionSymbol::CaseProd::defaultItem);
 
-    py::class_<RandSeqProductionSymbol::Rule>(randSeq, "Rule")
+    py::classh<RandSeqProductionSymbol::Rule>(randSeq, "Rule")
         .def_readonly("ruleBlock", &RandSeqProductionSymbol::Rule::ruleBlock)
         .def_readonly("prods", &RandSeqProductionSymbol::Rule::prods)
         .def_readonly("weightExpr", &RandSeqProductionSymbol::Rule::weightExpr)
@@ -613,7 +620,7 @@ void registerSymbols(py::module_& m) {
         .def_readonly("codeBlock", &RandSeqProductionSymbol::Rule::codeBlock)
         .def_readonly("isRandJoin", &RandSeqProductionSymbol::Rule::isRandJoin);
 
-    py::class_<TimingPathSymbol, Symbol> timingPath(m, "TimingPathSymbol");
+    py::classh<TimingPathSymbol, Symbol> timingPath(m, "TimingPathSymbol");
     timingPath.def_readonly("connectionKind", &TimingPathSymbol::connectionKind)
         .def_readonly("polarity", &TimingPathSymbol::polarity)
         .def_readonly("edgePolarity", &TimingPathSymbol::edgePolarity)
@@ -625,38 +632,40 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("outputs", &TimingPathSymbol::getOutputs)
         .def_property_readonly("delays", &TimingPathSymbol::getDelays);
 
-    py::enum_<TimingPathSymbol::ConnectionKind>(timingPath, "ConnectionKind")
+    py::native_enum<TimingPathSymbol::ConnectionKind>(timingPath, "ConnectionKind", "enum.Enum")
         .value("Full", TimingPathSymbol::ConnectionKind::Full)
-        .value("Parallel", TimingPathSymbol::ConnectionKind::Parallel);
+        .value("Parallel", TimingPathSymbol::ConnectionKind::Parallel)
+        .finalize();
 
-    py::enum_<TimingPathSymbol::Polarity>(timingPath, "Polarity")
+    py::native_enum<TimingPathSymbol::Polarity>(timingPath, "Polarity", "enum.Enum")
         .value("Unknown", TimingPathSymbol::Polarity::Unknown)
         .value("Positive", TimingPathSymbol::Polarity::Positive)
-        .value("Negative", TimingPathSymbol::Polarity::Negative);
+        .value("Negative", TimingPathSymbol::Polarity::Negative)
+        .finalize();
 
-    py::class_<PulseStyleSymbol, Symbol>(m, "PulseStyleSymbol")
+    py::classh<PulseStyleSymbol, Symbol>(m, "PulseStyleSymbol")
         .def_readonly("pulseStyleKind", &PulseStyleSymbol::pulseStyleKind)
         .def_property_readonly("terminals", &PulseStyleSymbol::getTerminals);
 
-    py::class_<SystemTimingCheckSymbol, Symbol> timingCheck(m, "SystemTimingCheckSymbol");
+    py::classh<SystemTimingCheckSymbol, Symbol> timingCheck(m, "SystemTimingCheckSymbol");
     timingCheck.def_readonly("timingCheckKind", &SystemTimingCheckSymbol::timingCheckKind)
         .def_property_readonly("arguments", &SystemTimingCheckSymbol::getArguments);
 
-    py::class_<SystemTimingCheckSymbol::Arg>(timingCheck, "Arg")
+    py::classh<SystemTimingCheckSymbol::Arg>(timingCheck, "Arg")
         .def_readonly("expr", &SystemTimingCheckSymbol::Arg::expr)
         .def_readonly("condition", &SystemTimingCheckSymbol::Arg::condition)
         .def_readonly("edge", &SystemTimingCheckSymbol::Arg::edge)
         .def_readonly("edgeDescriptors", &SystemTimingCheckSymbol::Arg::edgeDescriptors);
 
-    py::class_<CoverageOptionSetter>(m, "CoverageOptionSetter")
+    py::classh<CoverageOptionSetter>(m, "CoverageOptionSetter")
         .def_property_readonly("isTypeOption", &CoverageOptionSetter::isTypeOption)
         .def_property_readonly("name", &CoverageOptionSetter::getName)
         .def_property_readonly("expression", &CoverageOptionSetter::getExpression);
 
-    py::class_<CovergroupBodySymbol, Symbol, Scope>(m, "CovergroupBodySymbol")
+    py::classh<CovergroupBodySymbol, Symbol, Scope>(m, "CovergroupBodySymbol")
         .def_readonly("options", &CovergroupBodySymbol::options);
 
-    py::class_<CoverageBinSymbol, Symbol> coverageBinSym(m, "CoverageBinSymbol");
+    py::classh<CoverageBinSymbol, Symbol> coverageBinSym(m, "CoverageBinSymbol");
     coverageBinSym.def_readonly("binsKind", &CoverageBinSymbol::binsKind)
         .def_readonly("isArray", &CoverageBinSymbol::isArray)
         .def_readonly("isWildcard", &CoverageBinSymbol::isWildcard)
@@ -669,38 +678,41 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("crossSelectExpr", &CoverageBinSymbol::getCrossSelectExpr)
         .def_property_readonly("values", &CoverageBinSymbol::getValues);
 
-    py::class_<CoverageBinSymbol::TransRangeList> transRangeList(coverageBinSym, "TransRangeList");
+    py::classh<CoverageBinSymbol::TransRangeList> transRangeList(coverageBinSym, "TransRangeList");
     transRangeList.def_readonly("items", &CoverageBinSymbol::TransRangeList::items)
         .def_readonly("repeatFrom", &CoverageBinSymbol::TransRangeList::repeatFrom)
         .def_readonly("repeatTo", &CoverageBinSymbol::TransRangeList::repeatTo)
         .def_readonly("repeatKind", &CoverageBinSymbol::TransRangeList::repeatKind);
 
-    py::enum_<CoverageBinSymbol::TransRangeList::RepeatKind>(transRangeList, "RepeatKind")
+    py::native_enum<CoverageBinSymbol::TransRangeList::RepeatKind>(transRangeList, "RepeatKind",
+                                                                   "enum.Enum")
         .value("None_", CoverageBinSymbol::TransRangeList::None)
         .value("Consecutive", CoverageBinSymbol::TransRangeList::Consecutive)
         .value("Nonconsecutive", CoverageBinSymbol::TransRangeList::Nonconsecutive)
         .value("GoTo", CoverageBinSymbol::TransRangeList::GoTo)
-        .export_values();
+        .export_values()
+        .finalize();
 
-    py::enum_<CoverageBinSymbol::BinKind>(coverageBinSym, "BinKind")
+    py::native_enum<CoverageBinSymbol::BinKind>(coverageBinSym, "BinKind", "enum.Enum")
         .value("Bins", CoverageBinSymbol::Bins)
         .value("IllegalBins", CoverageBinSymbol::IllegalBins)
         .value("IgnoreBins", CoverageBinSymbol::IgnoreBins)
-        .export_values();
+        .export_values()
+        .finalize();
 
-    py::class_<CoverpointSymbol, Symbol, Scope>(m, "CoverpointSymbol")
+    py::classh<CoverpointSymbol, Symbol, Scope>(m, "CoverpointSymbol")
         .def_readonly("options", &CoverpointSymbol::options)
         .def_property_readonly("type", &CoverpointSymbol::getType)
         .def_property_readonly("coverageExpr", &CoverpointSymbol::getCoverageExpr)
         .def_property_readonly("iffExpr", &CoverpointSymbol::getIffExpr);
 
-    py::class_<CoverCrossBodySymbol, Symbol, Scope>(m, "CoverCrossBodySymbol")
+    py::classh<CoverCrossBodySymbol, Symbol, Scope>(m, "CoverCrossBodySymbol")
         .def_readonly("crossQueueType", &CoverCrossBodySymbol::crossQueueType);
 
-    py::class_<CoverCrossSymbol, Symbol, Scope>(m, "CoverCrossSymbol")
+    py::classh<CoverCrossSymbol, Symbol, Scope>(m, "CoverCrossSymbol")
         .def_readonly("options", &CoverCrossSymbol::options)
         .def_readonly("targets", &CoverCrossSymbol::targets)
         .def_property_readonly("iffExpr", &CoverCrossSymbol::getIffExpr);
 
-    py::class_<ConfigBlockSymbol, Symbol, Scope>(m, "ConfigBlockSymbol");
+    py::classh<ConfigBlockSymbol, Symbol, Scope>(m, "ConfigBlockSymbol");
 }

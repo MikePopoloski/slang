@@ -87,7 +87,7 @@ void registerNumeric(py::module_& m) {
     m.def("literalBaseFromChar", &literalBaseFromChar, "base"_a, "result"_a);
     m.def("clog2", py::overload_cast<const SVInt&>(&clog2), "value"_a);
 
-    py::class_<logic_t>(m, "logic_t")
+    py::classh<logic_t>(m, "logic_t")
         .def(py::init<>())
         .def(py::init<uint8_t>(), "value"_a)
         .def_readwrite("value", &logic_t::value)
@@ -104,7 +104,7 @@ void registerNumeric(py::module_& m) {
         .def("__bool__", [](const logic_t& self) { return bool(self); })
         .def("__repr__", [](const logic_t& self) { return fmt::format("{}", self.toChar()); });
 
-    py::class_<SVInt>(m, "SVInt")
+    py::classh<SVInt>(m, "SVInt")
         .def(py::init<>())
         .def(py::init<logic_t>(), "bit"_a)
         .def(py::init<bitwidth_t, uint64_t, bool>(), "bits"_a, "value"_a, "isSigned"_a)
@@ -241,12 +241,13 @@ void registerNumeric(py::module_& m) {
 
     EXPOSE_ENUM(m, TimeUnit);
 
-    py::enum_<TimeScaleMagnitude>(m, "TimeScaleMagnitude")
+    py::native_enum<TimeScaleMagnitude>(m, "TimeScaleMagnitude", "enum.Enum")
         .value("One", TimeScaleMagnitude::One)
         .value("Ten", TimeScaleMagnitude::Ten)
-        .value("Hundred", TimeScaleMagnitude::Hundred);
+        .value("Hundred", TimeScaleMagnitude::Hundred)
+        .finalize();
 
-    py::class_<TimeScaleValue>(m, "TimeScaleValue")
+    py::classh<TimeScaleValue>(m, "TimeScaleValue")
         .def(py::init<>())
         .def(py::init<TimeUnit, TimeScaleMagnitude>(), "unit"_a, "magnitude"_a)
         .def_readwrite("unit", &TimeScaleValue::unit)
@@ -257,7 +258,7 @@ void registerNumeric(py::module_& m) {
         .def(py::self != py::self)
         .def("__repr__", [](const TimeScaleValue& self) { return self.toString(); });
 
-    py::class_<TimeScale>(m, "TimeScale")
+    py::classh<TimeScale>(m, "TimeScale")
         .def(py::init<>())
         .def(py::init<TimeScaleValue, TimeScaleValue>(), "base"_a, "precision"_a)
         .def_readwrite("base", &TimeScale::base)
@@ -268,15 +269,15 @@ void registerNumeric(py::module_& m) {
         .def(py::self != py::self)
         .def("__repr__", [](const TimeScale& self) { return self.toString(); });
 
-    py::class_<ConstantValue::NullPlaceholder>(m, "Null")
+    py::classh<ConstantValue::NullPlaceholder>(m, "Null")
         .def(py::init<>())
         .def("__repr__", [](const ConstantValue::NullPlaceholder&) { return "null"; });
 
-    py::class_<ConstantValue::UnboundedPlaceholder>(m, "Unbounded")
+    py::classh<ConstantValue::UnboundedPlaceholder>(m, "Unbounded")
         .def(py::init<>())
         .def("__repr__", [](const ConstantValue::UnboundedPlaceholder&) { return "$"; });
 
-    py::class_<ConstantValue>(m, "ConstantValue")
+    py::classh<ConstantValue>(m, "ConstantValue")
         .def(py::init<>())
         .def(py::init<const SVInt&>(), "integer"_a)
         .def(py::init<const std::string&>(), "str"_a)
@@ -341,7 +342,7 @@ void registerNumeric(py::module_& m) {
     py::implicitly_convertible<int, ConstantValue>();
     py::implicitly_convertible<double, ConstantValue>();
 
-    py::class_<ConstantRange>(m, "ConstantRange")
+    py::classh<ConstantRange>(m, "ConstantRange")
         .def(py::init<>())
         .def(py::init([](int left, int right) { return ConstantRange{left, right}; }), "left"_a,
              "right"_a)

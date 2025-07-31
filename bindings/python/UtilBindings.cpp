@@ -23,9 +23,9 @@
 namespace fs = std::filesystem;
 
 void registerUtil(py::module_& m) {
-    py::class_<BumpAllocator>(m, "BumpAllocator").def(py::init<>());
+    py::classh<BumpAllocator>(m, "BumpAllocator").def(py::init<>());
 
-    py::class_<Bag>(m, "Bag")
+    py::classh<Bag>(m, "Bag")
         .def(py::init<>())
         .def(py::init([](py::list list) {
                  Bag result;
@@ -54,7 +54,7 @@ void registerUtil(py::module_& m) {
         .def_property("compilationOptions", &Bag::get<CompilationOptions>,
                       py::overload_cast<const CompilationOptions&>(&Bag::set<CompilationOptions>));
 
-    py::class_<BufferID>(m, "BufferID")
+    py::classh<BufferID>(m, "BufferID")
         .def(py::init<>())
         .def_property_readonly("id", &BufferID::getId)
         .def_static("getPlaceholder", &BufferID::getPlaceholder)
@@ -71,7 +71,7 @@ void registerUtil(py::module_& m) {
         .def("__repr__",
              [](const BufferID& self) { return fmt::format("BufferID({})", self.getId()); });
 
-    py::class_<SourceLocation>(m, "SourceLocation")
+    py::classh<SourceLocation>(m, "SourceLocation")
         .def(py::init<>())
         .def(py::init<BufferID, size_t>(), "buffer"_a, "offset"_a)
         .def_property_readonly("buffer", &SourceLocation::buffer)
@@ -89,7 +89,7 @@ void registerUtil(py::module_& m) {
             return fmt::format("SourceLocation({}, {})", self.buffer().getId(), self.offset());
         });
 
-    py::class_<SourceRange>(m, "SourceRange")
+    py::classh<SourceRange>(m, "SourceRange")
         .def(py::init<>())
         .def(py::init<SourceLocation, SourceLocation>(), "startLoc"_a, "endLoc"_a)
         .def_property_readonly("start", &SourceRange::start)
@@ -97,18 +97,18 @@ void registerUtil(py::module_& m) {
         .def(py::self == py::self)
         .def(py::self != py::self);
 
-    py::class_<SourceLibrary>(m, "SourceLibrary")
+    py::classh<SourceLibrary>(m, "SourceLibrary")
         .def(py::init<>())
         .def_readonly("name", &SourceLibrary::name);
 
-    py::class_<SourceBuffer>(m, "SourceBuffer")
+    py::classh<SourceBuffer>(m, "SourceBuffer")
         .def(py::init<>())
         .def_readonly("id", &SourceBuffer::id)
         .def_readonly("library", &SourceBuffer::library, byrefint)
         .def_readonly("data", &SourceBuffer::data)
         .def("__bool__", &SourceBuffer::operator bool);
 
-    py::class_<SourceManager>(m, "SourceManager")
+    py::classh<SourceManager>(m, "SourceManager")
         .def(py::init<>())
         .def(
             "addSystemDirectories",
@@ -182,7 +182,7 @@ void registerUtil(py::module_& m) {
              "name"_a, "severity"_a)
         .def("getAllBuffers", &SourceManager::getAllBuffers);
 
-    py::class_<VersionInfo>(m, "VersionInfo")
+    py::classh<VersionInfo>(m, "VersionInfo")
         .def_static("getMajor", &VersionInfo::getMajor)
         .def_static("getMinor", &VersionInfo::getMinor)
         .def_static("getPatch", &VersionInfo::getPatch)
@@ -191,7 +191,7 @@ void registerUtil(py::module_& m) {
     EXPOSE_ENUM(m, DiagSubsystem);
     EXPOSE_ENUM(m, DiagnosticSeverity);
 
-    py::class_<DiagCode>(m, "DiagCode")
+    py::classh<DiagCode>(m, "DiagCode")
         .def(py::init<>())
         .def(py::init<DiagSubsystem, uint16_t>(), "subsystem"_a, "code"_a)
         .def("getCode", &DiagCode::getCode)
@@ -204,13 +204,13 @@ void registerUtil(py::module_& m) {
              [](const DiagCode& self) { return fmt::format("DiagCode({})", toString(self)); });
 
     struct Diags {};
-    py::class_<Diags> diagHolder(m, "Diags");
+    py::classh<Diags> diagHolder(m, "Diags");
     for (auto code : DiagCode::KnownCodes) {
         diagHolder.def_property_readonly_static(std::string(toString(code)).c_str(),
                                                 [code](py::object) { return code; });
     }
 
-    py::class_<Diagnostic>(m, "Diagnostic")
+    py::classh<Diagnostic>(m, "Diagnostic")
         .def(py::init<DiagCode, SourceLocation>(), "code"_a, "location"_a)
         .def_readonly("code", &Diagnostic::code)
         .def_readonly("location", &Diagnostic::location)
@@ -221,7 +221,7 @@ void registerUtil(py::module_& m) {
         .def(py::self == py::self)
         .def(py::self != py::self);
 
-    py::class_<Diagnostics>(m, "Diagnostics")
+    py::classh<Diagnostics>(m, "Diagnostics")
         .def(py::init<>())
         .def("add", py::overload_cast<DiagCode, SourceLocation>(&Diagnostics::add), byrefint,
              "code"_a, "location"_a)
@@ -245,14 +245,14 @@ void registerUtil(py::module_& m) {
             [](const Diagnostics& self) { return py::make_iterator(self.begin(), self.end()); },
             py::keep_alive<0, 1>());
 
-    py::class_<DiagGroup>(m, "DiagGroup")
+    py::classh<DiagGroup>(m, "DiagGroup")
         .def(py::init<const std::string&, const std::vector<DiagCode>&>(), "name"_a, "diags"_a)
         .def("getName", &DiagGroup::getName)
         .def("getDiags", &DiagGroup::getDiags)
         .def("__repr__",
              [](const DiagGroup& self) { return fmt::format("DiagGroup({})", self.getName()); });
 
-    py::class_<DiagnosticEngine>(m, "DiagnosticEngine")
+    py::classh<DiagnosticEngine>(m, "DiagnosticEngine")
         .def(py::init<const SourceManager&>(), py::keep_alive<1, 2>(), "sourceManager"_a)
         .def("addClient", &DiagnosticEngine::addClient, "client"_a)
         .def("clearClients", &DiagnosticEngine::clearClients)
@@ -285,7 +285,7 @@ void registerUtil(py::module_& m) {
              py::overload_cast<BufferID>(&DiagnosticEngine::setMappingsFromPragmas), "buffer"_a)
         .def_static("reportAll", &DiagnosticEngine::reportAll, "sourceManager"_a, "diag"_a);
 
-    py::class_<ReportedDiagnostic>(m, "ReportedDiagnostic")
+    py::classh<ReportedDiagnostic>(m, "ReportedDiagnostic")
         .def_property_readonly("originalDiagnostic",
                                [](const ReportedDiagnostic& self) {
                                    return self.originalDiagnostic;
@@ -297,13 +297,12 @@ void registerUtil(py::module_& m) {
         .def_readonly("severity", &ReportedDiagnostic::severity)
         .def_readonly("shouldShowIncludeStack", &ReportedDiagnostic::shouldShowIncludeStack);
 
-    py::class_<DiagnosticClient, std::shared_ptr<DiagnosticClient>>(m, "DiagnosticClient")
+    py::classh<DiagnosticClient>(m, "DiagnosticClient")
         .def("report", &DiagnosticClient::report, "diagnostic"_a)
         .def("setEngine", &DiagnosticClient::setEngine, "engine"_a)
         .def("showAbsPaths", &DiagnosticClient::showAbsPaths, "show"_a);
 
-    py::class_<TextDiagnosticClient, DiagnosticClient, std::shared_ptr<TextDiagnosticClient>>(
-        m, "TextDiagnosticClient")
+    py::classh<TextDiagnosticClient, DiagnosticClient>(m, "TextDiagnosticClient")
         .def(py::init<>())
         .def("showColors", &TextDiagnosticClient::showColors, "show"_a)
         .def("showColumn", &TextDiagnosticClient::showColumn, "show"_a)

@@ -12,14 +12,15 @@
 #include "slang/syntax/AllSyntax.h"
 
 void registerTypes(py::module_& m) {
-    py::enum_<IntegralFlags>(m, "IntegralFlags")
+    py::native_enum<IntegralFlags>(m, "IntegralFlags", "enum.Flag")
         .value("Unsigned", IntegralFlags::Unsigned)
         .value("TwoState", IntegralFlags::TwoState)
         .value("Signed", IntegralFlags::Signed)
         .value("FourState", IntegralFlags::FourState)
-        .value("Reg", IntegralFlags::Reg);
+        .value("Reg", IntegralFlags::Reg)
+        .finalize();
 
-    py::class_<Type, Symbol>(m, "Type")
+    py::classh<Type, Symbol>(m, "Type")
         .def_property_readonly("canonicalType", &Type::getCanonicalType)
         .def_property_readonly("bitWidth", &Type::getBitWidth)
         .def_property_readonly("bitstreamWidth", &Type::getBitstreamWidth)
@@ -92,7 +93,7 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("isValidForSequence", &Type::isValidForSequence)
         .def("__repr__", &Type::toString);
 
-    py::class_<NetType, Symbol> netType(m, "NetType");
+    py::classh<NetType, Symbol> netType(m, "NetType");
     netType.def_readonly("declaredType", &NetType::declaredType)
         .def_readonly("netKind", &NetType::netKind)
         .def_property_readonly("resolutionFunction", &NetType::getResolutionFunction)
@@ -101,7 +102,7 @@ void registerTypes(py::module_& m) {
         .def_static("getSimulatedNetType", &NetType::getSimulatedNetType, byrefint, "internal"_a,
                     "external"_a, "shouldWarn"_a);
 
-    py::enum_<NetType::NetKind>(netType, "NetKind")
+    py::native_enum<NetType::NetKind>(netType, "NetKind", "enum.Enum")
         .value("Unknown", NetType::Unknown)
         .value("Wire", NetType::Wire)
         .value("WAnd", NetType::WAnd)
@@ -117,9 +118,10 @@ void registerTypes(py::module_& m) {
         .value("UWire", NetType::UWire)
         .value("Interconnect", NetType::Interconnect)
         .value("UserDefined", NetType::UserDefined)
-        .export_values();
+        .export_values()
+        .finalize();
 
-    py::class_<TypePrintingOptions> typePrintingOptions(m, "TypePrintingOptions");
+    py::classh<TypePrintingOptions> typePrintingOptions(m, "TypePrintingOptions");
     typePrintingOptions.def_readwrite("addSingleQuotes", &TypePrintingOptions::addSingleQuotes)
         .def_readwrite("elideScopeNames", &TypePrintingOptions::elideScopeNames)
         .def_readwrite("printAKA", &TypePrintingOptions::printAKA)
@@ -128,19 +130,21 @@ void registerTypes(py::module_& m) {
         .def_readwrite("fullEnumType", &TypePrintingOptions::fullEnumType)
         .def_readwrite("skipTypeDefs", &TypePrintingOptions::skipTypeDefs);
 
-    py::enum_<TypePrintingOptions::AnonymousTypeStyle>(typePrintingOptions, "AnonymousTypeStyle")
+    py::native_enum<TypePrintingOptions::AnonymousTypeStyle>(typePrintingOptions,
+                                                             "AnonymousTypeStyle", "enum.Enum")
         .value("SystemName", TypePrintingOptions::SystemName)
         .value("FriendlyName", TypePrintingOptions::FriendlyName)
-        .export_values();
+        .export_values()
+        .finalize();
 
-    py::class_<TypePrinter>(m, "TypePrinter")
+    py::classh<TypePrinter>(m, "TypePrinter")
         .def(py::init<>())
         .def_readwrite("options", &TypePrinter::options)
         .def("append", &TypePrinter::append, "type"_a)
         .def("clear", &TypePrinter::clear)
         .def("toString", &TypePrinter::toString);
 
-    py::class_<DeclaredType>(m, "DeclaredType")
+    py::classh<DeclaredType>(m, "DeclaredType")
         .def_property_readonly("type", &DeclaredType::getType)
         .def_property_readonly("typeSyntax", &DeclaredType::getTypeSyntax)
         .def_property_readonly("initializer", &DeclaredType::getInitializer)
@@ -148,91 +152,94 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("initializerLocation", &DeclaredType::getInitializerLocation)
         .def_property_readonly("isEvaluating", &DeclaredType::isEvaluating);
 
-    py::class_<IntegralType, Type>(m, "IntegralType")
+    py::classh<IntegralType, Type>(m, "IntegralType")
         .def("getBitVectorRange", &IntegralType::getBitVectorRange)
         .def("isDeclaredReg", &IntegralType::isDeclaredReg);
 
-    py::class_<ScalarType, IntegralType> scalarType(m, "ScalarType");
+    py::classh<ScalarType, IntegralType> scalarType(m, "ScalarType");
     scalarType.def_readonly("scalarKind", &ScalarType::scalarKind);
 
-    py::enum_<ScalarType::Kind>(scalarType, "Kind")
+    py::native_enum<ScalarType::Kind>(scalarType, "Kind", "enum.Enum")
         .value("Bit", ScalarType::Bit)
         .value("Logic", ScalarType::Logic)
         .value("Reg", ScalarType::Reg)
-        .export_values();
+        .export_values()
+        .finalize();
 
-    py::class_<PredefinedIntegerType, IntegralType> pdit(m, "PredefinedIntegerType");
+    py::classh<PredefinedIntegerType, IntegralType> pdit(m, "PredefinedIntegerType");
     pdit.def_readonly("integerKind", &PredefinedIntegerType::integerKind);
 
-    py::enum_<PredefinedIntegerType::Kind>(pdit, "Kind")
+    py::native_enum<PredefinedIntegerType::Kind>(pdit, "Kind", "enum.Enum")
         .value("ShortInt", PredefinedIntegerType::ShortInt)
         .value("Int", PredefinedIntegerType::Int)
         .value("LongInt", PredefinedIntegerType::LongInt)
         .value("Byte", PredefinedIntegerType::Byte)
         .value("Integer", PredefinedIntegerType::Integer)
         .value("Time", PredefinedIntegerType::Time)
-        .export_values();
+        .export_values()
+        .finalize();
 
-    py::class_<FloatingType, Type> floating(m, "FloatingType");
+    py::classh<FloatingType, Type> floating(m, "FloatingType");
     floating.def_readonly("floatKind", &FloatingType::floatKind);
 
-    py::enum_<FloatingType::Kind>(floating, "Kind")
+    py::native_enum<FloatingType::Kind>(floating, "Kind", "enum.Enum")
         .value("Real", FloatingType::Real)
         .value("ShortReal", FloatingType::ShortReal)
         .value("RealTime", FloatingType::RealTime)
-        .export_values();
+        .export_values()
+        .finalize();
 
-    py::class_<EnumType, IntegralType, Scope>(m, "EnumType")
+    py::classh<EnumType, IntegralType, Scope>(m, "EnumType")
         .def_property_readonly("baseType", [](const EnumType& self) { return &self.baseType; })
         .def_readonly("systemId", &EnumType::systemId);
 
-    py::class_<PackedArrayType, IntegralType>(m, "PackedArrayType")
+    py::classh<PackedArrayType, IntegralType>(m, "PackedArrayType")
         .def_property_readonly("elementType",
                                [](const PackedArrayType& self) { return &self.elementType; })
         .def_readonly("range", &PackedArrayType::range);
 
-    py::class_<FixedSizeUnpackedArrayType, Type>(m, "FixedSizeUnpackedArrayType")
+    py::classh<FixedSizeUnpackedArrayType, Type>(m, "FixedSizeUnpackedArrayType")
         .def_property_readonly(
             "elementType", [](const FixedSizeUnpackedArrayType& self) { return &self.elementType; })
         .def_readonly("range", &FixedSizeUnpackedArrayType::range);
 
-    py::class_<DynamicArrayType, Type>(m, "DynamicArrayType")
+    py::classh<DynamicArrayType, Type>(m, "DynamicArrayType")
         .def_property_readonly("elementType",
                                [](const DynamicArrayType& self) { return &self.elementType; });
 
-    py::class_<DPIOpenArrayType, Type>(m, "DPIOpenArrayType")
+    py::classh<DPIOpenArrayType, Type>(m, "DPIOpenArrayType")
         .def_readonly("isPacked", &DPIOpenArrayType::isPacked)
         .def_property_readonly("elementType",
                                [](const DPIOpenArrayType& self) { return &self.elementType; });
 
-    py::class_<AssociativeArrayType, Type>(m, "AssociativeArrayType")
+    py::classh<AssociativeArrayType, Type>(m, "AssociativeArrayType")
         .def_property_readonly("elementType",
                                [](const AssociativeArrayType& self) { return &self.elementType; })
         .def_property_readonly("indexType",
                                [](const AssociativeArrayType& self) { return self.indexType; });
 
-    py::class_<QueueType, Type>(m, "QueueType")
+    py::classh<QueueType, Type>(m, "QueueType")
         .def_property_readonly("elementType",
                                [](const QueueType& self) { return &self.elementType; })
         .def_readonly("maxBound", &QueueType::maxBound);
 
-    py::class_<PackedStructType, IntegralType, Scope>(m, "PackedStructType")
+    py::classh<PackedStructType, IntegralType, Scope>(m, "PackedStructType")
         .def_readonly("systemId", &PackedStructType::systemId);
 
-    py::class_<UnpackedStructType, Type, Scope>(m, "UnpackedStructType")
+    py::classh<UnpackedStructType, Type, Scope>(m, "UnpackedStructType")
         .def_readonly("systemId", &UnpackedStructType::systemId);
 
-    py::class_<PackedUnionType, IntegralType, Scope>(m, "PackedUnionType")
+    py::classh<PackedUnionType, IntegralType, Scope>(m, "PackedUnionType")
         .def_readonly("systemId", &PackedUnionType::systemId)
         .def_readonly("isTagged", &PackedUnionType::isTagged)
         .def_readonly("isSoft", &PackedUnionType::isSoft)
         .def_readonly("tagBits", &PackedUnionType::tagBits);
 
-    py::class_<UnpackedUnionType, Type, Scope>(m, "UnpackedUnionType")
+    py::classh<UnpackedUnionType, Type, Scope>(m, "UnpackedUnionType")
         .def_readonly("systemId", &UnpackedUnionType::systemId)
         .def_readonly("isTagged", &UnpackedUnionType::isTagged);
 
-#define SIMPLE_TYPE(name) py::class_<name, Type>(m, #name)
+#define SIMPLE_TYPE(name) py::classh<name, Type>(m, #name)
     SIMPLE_TYPE(VoidType);
     SIMPLE_TYPE(NullType);
     SIMPLE_TYPE(CHandleType);
@@ -245,7 +252,7 @@ void registerTypes(py::module_& m) {
     SIMPLE_TYPE(PropertyType);
     SIMPLE_TYPE(ErrorType);
 
-    py::class_<VirtualInterfaceType, Type>(m, "VirtualInterfaceType")
+    py::classh<VirtualInterfaceType, Type>(m, "VirtualInterfaceType")
         .def_property_readonly("iface",
                                [](const VirtualInterfaceType& self) { return &self.iface; })
         .def_property_readonly("modport",
@@ -253,14 +260,14 @@ void registerTypes(py::module_& m) {
 
     EXPOSE_ENUM(m, ForwardTypeRestriction);
 
-    py::class_<ForwardingTypedefSymbol, Symbol>(m, "ForwardingTypedefSymbol")
+    py::classh<ForwardingTypedefSymbol, Symbol>(m, "ForwardingTypedefSymbol")
         .def_readonly("typeRestriction", &ForwardingTypedefSymbol::typeRestriction)
         .def_readonly("visibility", &ForwardingTypedefSymbol::visibility)
         .def_property_readonly("nextForwardDecl", [](const ForwardingTypedefSymbol& self) {
             return self.getNextForwardDecl();
         });
 
-    py::class_<TypeAliasType, Type>(m, "TypeAliasType")
+    py::classh<TypeAliasType, Type>(m, "TypeAliasType")
         .def_property_readonly("targetType",
                                [](const TypeAliasType& self) { return &self.targetType; })
         .def_readonly("visibility", &TypeAliasType::visibility)
@@ -268,7 +275,7 @@ void registerTypes(py::module_& m) {
             return self.getFirstForwardDecl();
         });
 
-    py::class_<ClassType, Type, Scope>(m, "ClassType")
+    py::classh<ClassType, Type, Scope>(m, "ClassType")
         .def_readonly("genericClass", &ClassType::genericClass)
         .def_readonly("isAbstract", &ClassType::isAbstract)
         .def_readonly("isInterface", &ClassType::isInterface)
@@ -279,7 +286,7 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("constructor", &ClassType::getConstructor)
         .def_property_readonly("firstForwardDecl", &ClassType::getFirstForwardDecl);
 
-    py::class_<GenericClassDefSymbol, Symbol>(m, "GenericClassDefSymbol")
+    py::classh<GenericClassDefSymbol, Symbol>(m, "GenericClassDefSymbol")
         .def_readonly("isInterface", &GenericClassDefSymbol::isInterface)
         .def_property_readonly("defaultSpecialization",
                                &GenericClassDefSymbol::getDefaultSpecialization)
@@ -289,7 +296,7 @@ void registerTypes(py::module_& m) {
                                &GenericClassDefSymbol::getDefaultSpecialization)
         .def_property_readonly("firstForwardDecl", &GenericClassDefSymbol::getFirstForwardDecl);
 
-    py::enum_<ConstraintBlockFlags>(m, "ConstraintBlockFlags")
+    py::native_enum<ConstraintBlockFlags>(m, "ConstraintBlockFlags", "enum.Flag")
         .value("None_", ConstraintBlockFlags::None)
         .value("Pure", ConstraintBlockFlags::Pure)
         .value("Static", ConstraintBlockFlags::Static)
@@ -297,14 +304,15 @@ void registerTypes(py::module_& m) {
         .value("ExplicitExtern", ConstraintBlockFlags::ExplicitExtern)
         .value("Initial", ConstraintBlockFlags::Initial)
         .value("Extends", ConstraintBlockFlags::Extends)
-        .value("Final", ConstraintBlockFlags::Final);
+        .value("Final", ConstraintBlockFlags::Final)
+        .finalize();
 
-    py::class_<ConstraintBlockSymbol, Symbol, Scope>(m, "ConstraintBlockSymbol")
+    py::classh<ConstraintBlockSymbol, Symbol, Scope>(m, "ConstraintBlockSymbol")
         .def_readonly("thisVar", &ConstraintBlockSymbol::thisVar)
         .def_readonly("flags", &ConstraintBlockSymbol::flags)
         .def_property_readonly("constraints", &ConstraintBlockSymbol::getConstraints);
 
-    py::class_<CovergroupType, Type, Scope>(m, "CovergroupType")
+    py::classh<CovergroupType, Type, Scope>(m, "CovergroupType")
         .def_property_readonly("arguments", &CovergroupType::getArguments)
         .def_property_readonly("body", [](const CovergroupType& self) { return &self.getBody(); })
         .def_property_readonly("baseGroup", &CovergroupType::getBaseGroup)
