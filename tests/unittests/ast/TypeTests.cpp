@@ -2383,3 +2383,18 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::RecursiveDefinition);
 }
+
+TEST_CASE("Multidimensional enum base type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum bit[1:0][2:0] { A } b;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidEnumBase);
+}
