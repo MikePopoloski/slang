@@ -10,6 +10,7 @@
 
 #include "slang/ast/Compilation.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
+#include "slang/driver/DepTracker.h"
 #include "slang/driver/SourceLoader.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
@@ -17,7 +18,6 @@
 #include "slang/util/LanguageVersion.h"
 #include "slang/util/OS.h"
 #include "slang/util/Util.h"
-
 namespace slang {
 
 class JsonDiagnosticClient;
@@ -338,9 +338,24 @@ public:
     /// Prints all macros from all loaded buffers to stdout.
     void reportMacros();
 
-    /// @brief Returns a list of all files that were loaded by the driver.
-    /// @param includesOnly If true, only include files that were loaded are returned.
-    std::vector<std::filesystem::path> getDepfiles(bool includesOnly = false) const;
+    /// @brief Returns the file paths that were loaded in the given syntax trees, excluding include
+    /// files.
+    std::vector<std::filesystem::path> getFilePaths(
+        std::vector<std::shared_ptr<syntax::SyntaxTree>> trees) const;
+
+    /// @brief Returns the file paths that were loaded via the command line.
+    std::vector<std::filesystem::path> getLoadedFilePaths() const;
+
+    /// @brief Returns the include files that were loaded in the given syntax trees.
+    std::vector<std::filesystem::path> getIncludePaths(
+        std::vector<std::shared_ptr<syntax::SyntaxTree>> trees) const;
+
+    /// @brief Returns the include files that were loaded in the given syntax trees.
+    std::vector<std::filesystem::path> getLoadedIncludePaths() const;
+
+    /// @brief Returns the set of dependencies referenced by the given syntax trees, along with
+    /// missing top modules and referenced modules.
+    DepTracker::DepResult getReferencedDeps() const;
 
     /// @brief Serializes the given list of files into a depfile format.
     /// @param files The list of files to serialize.

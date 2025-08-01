@@ -414,6 +414,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
                 }
 
                 if (buffer) {
+                    fileEntries.emplace_back(buffer);
                     auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
                                                        inheritedMacros);
                     tree->isLibraryUnit = true;
