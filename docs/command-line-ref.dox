@@ -283,6 +283,10 @@ When dumping AST to JSON, include source line and file information.
 When dumping AST to JSON, include expanded type information in the output instead of
 condensing all types into a human-friendly string.
 
+`--cst-json <file>`
+
+Dump the syntax trees in JSON format to the specified file, or '-' for stdout.
+
 @section compilation-limits Compilation
 
 `--top <name>`

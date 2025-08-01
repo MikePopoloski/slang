@@ -9,10 +9,12 @@
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
+#include "slang/syntax/CSTSerializer.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/syntax/SyntaxVisitor.h"
+#include "slang/text/Json.h"
 #include "slang/text/SourceManager.h"
 
 namespace fs = std::filesystem;
@@ -115,6 +117,7 @@ void registerSyntax(py::module_& m) {
     EXPOSE_ENUM(m, TokenKind);
     EXPOSE_ENUM(m, SyntaxKind);
     EXPOSE_ENUM(m, KnownSystemName);
+    EXPOSE_ENUM(m, CSTJsonMode);
 
     py::classh<Trivia>(m, "Trivia")
         .def(py::init<>())
@@ -278,7 +281,18 @@ void registerSyntax(py::module_& m) {
              [](const SyntaxNode& self) {
                  return fmt::format("SyntaxNode(SyntaxKind.{})", toString(self.kind));
              })
-        .def("__str__", &SyntaxNode::toString);
+        .def("__str__", &SyntaxNode::toString)
+        .def(
+            "to_json",
+            [](const SyntaxNode& self, CSTJsonMode mode = CSTJsonMode::Full) {
+                JsonWriter writer;
+                writer.setPrettyPrint(true);
+                CSTSerializer serializer(writer, mode);
+                serializer.serialize(self);
+                return std::string(writer.view());
+            },
+            py::arg("mode") = CSTJsonMode::Full,
+            "Convert this syntax node to JSON string with optional formatting mode");
 
     py::classh<IncludeMetadata>(m, "IncludeMetadata")
         .def(py::init<>())
@@ -358,7 +372,18 @@ void registerSyntax(py::module_& m) {
         .def_property_readonly("options", &SyntaxTree::options)
         .def_property_readonly("sourceLibrary", &SyntaxTree::getSourceLibrary)
         .def("getIncludeDirectives", &SyntaxTree::getIncludeDirectives)
-        .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref);
+        .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref)
+        .def(
+            "to_json",
+            [](const SyntaxTree& self, CSTJsonMode mode = CSTJsonMode::Full) {
+                JsonWriter writer;
+                writer.setPrettyPrint(true);
+                CSTSerializer serializer(writer, mode);
+                serializer.serialize(self);
+                return std::string(writer.view());
+            },
+            py::arg("mode") = CSTJsonMode::Full,
+            "Convert this syntax tree to JSON string with optional formatting mode");
 
     py::classh<LexerOptions>(m, "LexerOptions")
         .def(py::init<>())

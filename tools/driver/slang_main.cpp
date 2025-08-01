@@ -15,6 +15,7 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
+#include "slang/syntax/CSTSerializer.h"
 #include "slang/text/Json.h"
 #include "slang/util/TimeTrace.h"
 #include "slang/util/VersionInfo.h"
@@ -51,6 +52,28 @@ void printJson(Compilation& compilation, const std::string& fileName,
                 serializer.serialize(*sym);
         }
     }
+
+    writer.writeNewLine();
+    OS::writeFile(fileName, writer.view());
+}
+
+void printCSTJson(Driver& driver, const std::string& fileName,
+                  syntax::CSTJsonMode mode = syntax::CSTJsonMode::Full) {
+    JsonWriter writer;
+    writer.setPrettyPrint(true);
+
+    syntax::CSTSerializer converter(writer, mode);
+
+    writer.startObject();
+    writer.writeProperty("syntaxTrees");
+    writer.startArray();
+
+    for (auto& tree : driver.syntaxTrees) {
+        converter.serialize(*tree);
+    }
+
+    writer.endArray();
+    writer.endObject();
 
     writer.writeNewLine();
     OS::writeFile(fileName, writer.view());
@@ -101,6 +124,18 @@ int driverMain(int argc, TArgs argv) {
             "--ast-json", astJsonFile,
             "Dump the compiled AST in JSON format to the specified file, or '-' for stdout",
             "<file>", CommandLineFlags::FilePath);
+
+        std::optional<std::string> cstJsonFile;
+        driver.cmdLine.add(
+            "--cst-json", cstJsonFile,
+            "Dump the parsed syntax trees in JSON format to the specified file, or '-' for stdout",
+            "<file>", CommandLineFlags::FilePath);
+
+        std::optional<std::string> cstJsonMode;
+        driver.cmdLine.add("--cst-json-mode", cstJsonMode,
+                           "CST JSON output mode: 'full' (default), 'simple-trivia', 'no-trivia', "
+                           "or 'simple-tokens'",
+                           "<mode>");
 
         std::vector<std::string> astJsonScopes;
         driver.cmdLine.add("--ast-json-scope", astJsonScopes,
@@ -212,6 +247,36 @@ int driverMain(int argc, TArgs argv) {
             if (allDepfile) {
                 OS::writeFile(*allDepfile,
                               driver.serializeDepfiles(driver.getDepfiles(), depfileTarget));
+            }
+
+            if (cstJsonFile) {
+                TimeTraceScope timeScope("cstSerialization"sv, ""sv);
+                syntax::CSTJsonMode cstMode = syntax::CSTJsonMode::Full;
+
+                // Handle CST JSON mode
+                if (cstJsonMode) {
+                    if (*cstJsonMode == "full") {
+                        cstMode = syntax::CSTJsonMode::Full;
+                    }
+                    else if (*cstJsonMode == "simple-trivia") {
+                        cstMode = syntax::CSTJsonMode::SimpleTrivia;
+                    }
+                    else if (*cstJsonMode == "no-trivia") {
+                        cstMode = syntax::CSTJsonMode::NoTrivia;
+                    }
+                    else if (*cstJsonMode == "simple-tokens") {
+                        cstMode = syntax::CSTJsonMode::SimpleTokens;
+                    }
+                    else {
+                        std::cerr << "Error: Invalid value for --cst-json-mode: " << *cstJsonMode
+                                  << "\n";
+                        std::cerr
+                            << "Valid values are: full, simple-trivia, no-trivia, simple-tokens\n";
+                        return false;
+                    }
+                }
+
+                printCSTJson(driver, *cstJsonFile, cstMode);
             }
 
             if (onlyParse == true)

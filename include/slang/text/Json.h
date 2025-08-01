@@ -74,6 +74,12 @@ public:
     /// Writes an array or property boolean value ("true" or "false").
     void writeValue(bool value);
 
+    /// Writes an array or property null value.
+    void writeNull();
+
+    /// Writes an empty array as [] without indentation.
+    void writeEmptyArray();
+
     /// Writes a newline character into the buffer.
     void writeNewLine();
 
