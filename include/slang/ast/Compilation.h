@@ -119,9 +119,12 @@ enum class SLANG_EXPORT CompilationFlags {
     /// Disallow references to unknown instances by issuing a diagnostic. This is only
     /// relevant when using IgnoreUnknownModules, since otherwise there would already
     /// be errors issued for the unknown instances.
-    DisallowRefsToUnknownInstances = 1 << 12
+    DisallowRefsToUnknownInstances = 1 << 12,
+
+    /// Allow unnamed generate blocks (e.g. genblk) to be referenced
+    AllowUnnamedGenerate = 1 << 13
 };
-SLANG_BITMASK(CompilationFlags, DisallowRefsToUnknownInstances)
+SLANG_BITMASK(CompilationFlags, AllowUnnamedGenerate)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {

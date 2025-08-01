@@ -606,9 +606,9 @@ endmodule
     auto range = top.membersOfType<GenerateBlockSymbol>();
     auto it = range.begin();
     CHECK((it++)->getExternalName() == "genblk1");
-    it++;
+    CHECK((it++)->getExternalName() == "genblk1");
     CHECK((it++)->getExternalName() == "genblk02");
-    it++;
+    CHECK((it++)->getExternalName() == "genblk02");
     CHECK((it++)->getExternalName() == "genblk5");
 
     auto& g1 = top.find<GenerateBlockArraySymbol>("g1");
