@@ -16,7 +16,7 @@ module automatic m1 import p::*; #(int i = 1)
 endmodule
 
 module m2 #(parameter i = 1, localparam j = i)
-    (input int a[], (* bar = "asdf" *) output wire b = 1, ref c,
+    (input int a[], (* bar = "asdf" *) output logic b = 1, ref c,
      interface.mod d, .e());
 endmodule
 
