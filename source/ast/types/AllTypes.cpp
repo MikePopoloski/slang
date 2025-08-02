@@ -312,6 +312,21 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
                 SLANG_ASSERT(bitWidth);
             }
         }
+        else {
+            // There are many reasons that the base type could be an error, most of which
+            // will have already been diagnosed. We only need to check for the case where
+            // the base type is referring to this same enum definition via a forward decl,
+            // which is a circular reference.
+            if (base->kind == SymbolKind::TypeAlias && base->getSyntax() == syntax.parent) {
+                auto& diag = context.addDiag(diag::EnumCircularBaseType,
+                                             syntax.baseType->sourceRange());
+                diag << base->name;
+
+                auto& alias = base->as<TypeAliasType>();
+                if (auto fwd = alias.getFirstForwardDecl())
+                    diag.addNote(diag::NoteReferencedHere, fwd->location);
+            }
+        }
     }
 
     SVInt allOnes(bitWidth, 0, cb->isSigned());

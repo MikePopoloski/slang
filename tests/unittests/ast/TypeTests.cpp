@@ -2398,3 +2398,25 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InvalidEnumBase);
 }
+
+TEST_CASE("Enum can't be its own base type") {
+    auto tree = SyntaxTree::fromText(R"(
+module test;
+  typedef T;
+  typedef enum T {
+    A, B
+  } T;
+
+  initial begin
+    $display("FAILED");
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::EnumCircularBaseType);
+}
