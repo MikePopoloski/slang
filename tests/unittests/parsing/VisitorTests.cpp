@@ -781,7 +781,7 @@ TEST_CASE("Visit all file") {
     // printMissing("statement", ast::StatementKind_traits::values, symbols.stmtKinds);
 
     // Ideally this should visit all kinds (be zero)
-    CHECK(218 == syntax::SyntaxKind_traits::values.size() - syntaxKinds.size());
+    CHECK(219 == syntax::SyntaxKind_traits::values.size() - syntaxKinds.size());
 
     CHECK(42 == ast::SymbolKind_traits::values.size() - symKinds.size());
     CHECK(11 == ast::ExpressionKind_traits::values.size() - exprKinds.size());
