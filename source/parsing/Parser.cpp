@@ -1032,8 +1032,11 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
         else {
             while (true) {
                 decls.push_back(&parseTypeAssignment());
-                if (!peek(TokenKind::Comma) || peek(1).kind != TokenKind::Identifier ||
-                    (peek(2).kind != TokenKind::Equals && peek(2).kind != TokenKind::Comma)) {
+                if (!peek(TokenKind::Comma) || peek(1).kind != TokenKind::Identifier)
+                    break;
+
+                if (auto nk = peek(2).kind; nk != TokenKind::Comma && nk != TokenKind::Equals &&
+                                            nk != TokenKind::CloseParenthesis) {
                     break;
                 }
 
