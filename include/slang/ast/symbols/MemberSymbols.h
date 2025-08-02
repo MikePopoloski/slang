@@ -68,6 +68,9 @@ public:
     const PackageSymbol* package() const;
     const Symbol* importedSymbol() const;
 
+    void noteCorrespondingImport() const { correspondingImport = true; }
+    bool sawCorrespondingImport() const { return correspondingImport; }
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ExplicitImport; }
@@ -76,6 +79,7 @@ private:
     mutable const PackageSymbol* package_ = nullptr;
     mutable const Symbol* import = nullptr;
     mutable bool initialized = false;
+    mutable bool correspondingImport = false;
 };
 
 /// Represents a wildcard import declaration. This symbol is special in

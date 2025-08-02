@@ -178,6 +178,46 @@ const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
     return nullptr;
 }
 
+void PackageSymbol::checkExplicitExports() const {
+    // If we have an explicit export declaration, make sure that the
+    // referenced symbol is actually imported into the package.
+    auto& scopeNameMap = getNameMap();
+    auto wildcardData = getWildcardImportData();
+    for (auto& decl : exportDecls) {
+        if (decl->item.kind == TokenKind::Star)
+            continue;
+
+        auto lookupName = decl->item.valueText();
+        if (auto it = scopeNameMap.find(lookupName); it != scopeNameMap.end()) {
+            auto ei = it->second->as_if<ExplicitImportSymbol>();
+            if (ei && ei->isFromExport && !ei->sawCorrespondingImport() && ei->importedSymbol()) {
+                bool found = false;
+                if (wildcardData) {
+                    if (wildcardData->importedSymbols.contains(lookupName)) {
+                        // If the target symbol was already wildcard imported then we're done.
+                        found = true;
+                    }
+                    else {
+                        // There was no explicit import for this export, but if there is a viable
+                        // candidate for import then this export counts as a sufficient reference.
+                        for (auto import : wildcardData->wildcardImports) {
+                            auto package = import->getPackage();
+                            if (!package || package->name != decl->package.valueText())
+                                continue;
+
+                            found = package->findForImport(lookupName) != nullptr;
+                            break;
+                        }
+                    }
+                }
+
+                if (!found)
+                    addDiag(diag::PackageExportNotImported, decl->item.range()) << lookupName;
+            }
+        }
+    }
+}
+
 DefinitionSymbol::ParameterDecl::ParameterDecl(
     const Scope& scope, const ParameterDeclarationSyntax& syntax, const DeclaratorSyntax& decl,
     bool isLocal, bool isPort, std::span<const syntax::AttributeInstanceSyntax* const> attributes) :

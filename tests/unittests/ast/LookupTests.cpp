@@ -1699,6 +1699,7 @@ endpackage
 package p9;
     export foo::*;
     export p8::baz;
+    import p1::x;
     export p1::x;
     export p6::x;
     export p1::x;
@@ -1706,7 +1707,7 @@ endpackage
 
 package p10;
     import p1::*;
-    export p6::x;
+    export p1::x;
     int foo = x;
 endpackage
 
@@ -2257,4 +2258,31 @@ endmodule
     auto& arr2 = sym->as<InstanceArraySymbol>();
     CHECK(arr2.elements[0]->getHierarchicalPath() == "m.n1[2][4]");
     CHECK(arr2.elements[1]->getHierarchicalPath() == "m.n1[2][5]");
+}
+
+TEST_CASE("Package export without corresponding candidate for import") {
+    auto tree = SyntaxTree::fromText(R"(
+package P1;
+  integer x;
+  integer y;
+endpackage
+
+package P2;
+  import P1::x;
+  export P1::y; // Should fail, P1::y has not been imported.
+endpackage
+
+module test;
+  initial begin
+    $display("FAILED");
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::PackageExportNotImported);
 }

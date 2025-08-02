@@ -104,6 +104,12 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getPackage();
     }
 
+    void handle(const PackageSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+        symbol.checkExplicitExports();
+    }
+
     void handle(const InterfacePortSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

@@ -533,6 +533,7 @@ error OverridingInitial "'{}' is marked 'initial' but overrides a base class mem
 error OverridingFinal "'{}' overrides a base class member that is marked 'final'"
 error PackageImportSelf "package cannot import itself"
 error PackageExportSelf "package cannot export itself"
+error PackageExportNotImported "cannot export '{}' because it is not imported in this package"
 error UnknownCovergroupBase "'{}' is not a covergroup in '{}'"
 error RealCoverpointBins "coverpoints of real expressions must specify at least one explicit bin"
 error RealCoverpointDefaultArray "default bin for coverpoint of real expression cannot be an array"

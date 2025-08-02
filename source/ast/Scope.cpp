@@ -704,6 +704,16 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
     }
 
     if (existing->kind == SymbolKind::ExplicitImport && member.kind == SymbolKind::ExplicitImport) {
+        // If one of these is an import and the other is an export we should note
+        // that there was a corresponding import for the export so we don't error later.
+        auto& ei = existing->as<ExplicitImportSymbol>();
+        auto& mi = member.as<ExplicitImportSymbol>();
+        if (ei.isFromExport != mi.isFromExport) {
+            // It doesn't hurt anything to set it for both, even though only one is an export.
+            ei.noteCorrespondingImport();
+            mi.noteCorrespondingImport();
+        }
+
         if (!isElaborating) {
             // These can't be checked until we can resolve the imports and
             // see if they point to the same symbol.

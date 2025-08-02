@@ -61,6 +61,8 @@ public:
     /// exported from the package.
     const Symbol* findForImport(std::string_view name) const;
 
+    void checkExplicitExports() const;
+
     void serializeTo(ASTSerializer&) const {}
 
     static PackageSymbol& fromSyntax(const Scope& scope,
