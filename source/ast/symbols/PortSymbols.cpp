@@ -299,6 +299,11 @@ private:
             else {
                 port->setInitializerSyntax(*decl.initializer->expr,
                                            decl.initializer->equals.location());
+
+                if (port->direction != ArgumentDirection::In &&
+                    (port->direction != ArgumentDirection::Out || netType)) {
+                    scope.addDiag(diag::DisallowedPortDefault, decl.initializer->sourceRange());
+                }
             }
         }
 

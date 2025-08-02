@@ -1795,3 +1795,31 @@ endmodule
     auto marr1 = getConnStr("top.marr[1]");
     CHECK(marr1 == "{a[3][3:1], a[4]}");
 }
+
+TEST_CASE("inout ports cannot have defaults") {
+    auto tree = SyntaxTree::fromText(R"(
+module M (
+  inout [31:0] x, y = 1 // inout ports do not support default values
+);
+  initial begin
+    $display("FAILED");
+  end
+endmodule
+
+module test;
+  wire [31:0] x, y;
+
+  M i_m (
+    .x(x),
+    .y(y)
+  );
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DisallowedPortDefault);
+}
