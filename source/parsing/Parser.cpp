@@ -1049,6 +1049,11 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
     }
     else {
         auto& type = parseDataType(TypeOptions::AllowImplicit);
+        if (!keyword && type.kind == SyntaxKind::ImplicitType) {
+            auto& its = type.as<ImplicitTypeSyntax>();
+            if (its.signing || !its.dimensions.empty())
+                addDiag(diag::ImplicitParamTypeKeyword, type.sourceRange());
+        }
 
         // If the semi pointer is given, we should parse a simple list of decls.
         // Otherwise we're in a parameter port list and don't know if we'll encounter

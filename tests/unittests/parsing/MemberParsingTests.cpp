@@ -1577,3 +1577,32 @@ endmodule
 
     CHECK(!node1.isEquivalentTo(node2));
 }
+
+TEST_CASE("Parameters with implicit types must use keyword") {
+    auto& text = R"(
+module test1 #([7:0] A = 1);
+  initial begin
+    $display("FAILED");
+  end
+endmodule
+
+module test2 #(signed A = 1);
+  initial begin
+    $display("FAILED");
+  end
+endmodule
+
+module test3 #(parameter real A = 1.0, signed B = 2);
+  initial begin
+    $display("FAILED");
+  end
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::ImplicitParamTypeKeyword);
+    CHECK(diagnostics[1].code == diag::ImplicitParamTypeKeyword);
+    CHECK(diagnostics[2].code == diag::ImplicitParamTypeKeyword);
+}
