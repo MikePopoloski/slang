@@ -39,22 +39,14 @@ std::string squashBlankLines(const std::string& input) {
     std::string line;
     bool lastLineWasEmpty = false;
 
-    // Handle first line separately to avoid firstLine tracking
-    if (std::getline(stream, line)) {
-        lastLineWasEmpty = std::ranges::all_of(line, isWhitespace);
-        if (!lastLineWasEmpty) {
-            result.append(line);
-        }
-    }
-
     // Process remaining lines
     while (std::getline(stream, line)) {
         const bool isEmpty = std::ranges::all_of(line, isWhitespace);
 
         if (!isEmpty) {
             // Line has content, always include it with full indentation
-            result.push_back('\n');
             result.append(line);
+            result.push_back('\n');
             lastLineWasEmpty = false;
         }
         else if (!lastLineWasEmpty) {
@@ -62,11 +54,6 @@ std::string squashBlankLines(const std::string& input) {
             result.push_back('\n');
             lastLineWasEmpty = true;
         }
-    }
-
-    // Handle final newline if input had one
-    if (!input.empty() && isNewline(input.back())) {
-        result.push_back(input.back());
     }
 
     return result;
