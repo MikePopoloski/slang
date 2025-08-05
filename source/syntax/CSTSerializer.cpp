@@ -44,10 +44,12 @@ struct CSTJsonVisitor {
         writer.writeProperty("kind");
         writer.writeValue(toString(node.kind));
 
-        if constexpr (requires { handle(node); })
+        if constexpr (requires { handle(node); }) {
             handle(node);
-        else
+        }
+        else {
             static_assert(always_false<T>::value, "Unhandled syntax node type in CSTJsonVisitor");
+        }
 
         writer.endObject();
     }
