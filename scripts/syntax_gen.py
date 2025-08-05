@@ -58,9 +58,11 @@ def main():
         generatePyBindings(args.dir, alltypes)
     else:
         generateSyntaxClone(args.dir, alltypes, kindmap)
-        generateSyntax(args.dir, alltypes, kindmap)
+        # generateSyntax modifies alltypes
+        generateSyntax(args.dir, alltypes.copy(), kindmap)
         generateTokenKinds(inputdir, args.dir)
         generateSystemNames(inputdir, args.dir)
+        generateCSTJson(args.dir, alltypes)
 
 
 def loadalltypes(ourdir):
@@ -252,7 +254,6 @@ def createtype(name, tags, members, alltypes, kindmap):
 
 
 def generateSyntax(builddir, alltypes, kindmap):
-    # Make sure the output directory exists.
     headerdir = os.path.join(builddir, "slang", "syntax")
     try:
         os.makedirs(headerdir)
@@ -1253,6 +1254,69 @@ void registerSyntaxNodes{0}(py::module_& m) {{
             outf.write(";\n\n")
 
         outf.write("}\n")
+
+
+def generateCSTJson(builddir, alltypes):
+    cppf = open(os.path.join(builddir, "slang", "syntax", "CSTJsonVisitorGen.h"), "w")
+
+    # Generate handle() methods for all leaf syntax types
+    for typename, typeinfo in sorted(alltypes.items()):
+        if typename == "SyntaxNode":
+            continue
+
+        # Only generate for leaf types
+        if typeinfo.final == "":
+            continue
+
+        if not typeinfo.combinedMembers:
+            continue
+
+        cppf.write(
+            f"""
+    void handle(const {typename}& node) {{
+"""
+        )
+
+        # Generate code for each member (including inherited)
+        for member in typeinfo.combinedMembers:
+            memberType, memberName = member[0], member[1]
+
+            # Check if member is optional
+            isOptional = memberName in typeinfo.optionalMembers
+
+            if isOptional:
+                if memberType == "Token":
+                    raise ValueError(
+                        f"Token member '{memberName}' in type '{typename}' cannot be optional; there are no optional tokens."
+                    )
+                else:
+                    cppf.write(
+                        f'        writeOptionalNode("{memberName}", node.{memberName});\n'
+                    )
+            else:
+                if memberType == "Token":
+                    cppf.write(
+                        f'        writeToken("{memberName}", node.{memberName});\n'
+                    )
+                elif memberType.startswith("SeparatedSyntaxList<"):
+                    cppf.write(
+                        f'        writeSeparatedSyntaxList("{memberName}", node.{memberName});\n'
+                    )
+                elif memberType.startswith("SyntaxList<"):
+                    cppf.write(
+                        f'        writeSyntaxList("{memberName}", node.{memberName});\n'
+                    )
+                elif memberType == "TokenList":
+                    cppf.write(
+                        f'        writeTokenList("{memberName}", node.{memberName});\n'
+                    )
+                else:
+                    cppf.write(
+                        f'        writeNode("{memberName}", node.{memberName});\n'
+                    )
+
+        cppf.write("    }\n")
+        cppf.write("    \n")
 
 
 if __name__ == "__main__":

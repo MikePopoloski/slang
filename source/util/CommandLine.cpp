@@ -14,7 +14,6 @@
 #include "slang/text/CharInfo.h"
 #include "slang/util/OS.h"
 #include "slang/util/SmallVector.h"
-#include "slang/util/String.h"
 
 namespace fs = std::filesystem;
 
@@ -904,6 +903,18 @@ std::string CommandLine::addRenameCommand(std::string_view value) {
     value = value.substr(0, firstCommaIndex);
     cmdRename[std::string(value)] = slangName;
     return {};
+}
+
+std::string CommandLine::toKebabCase(std::string_view str) {
+    std::string result;
+    for (size_t i = 0; i < str.size(); ++i) {
+        char c = str[i];
+        if (i > 0 && std::isupper(c)) {
+            result += '-';
+        }
+        result += charToLower(c);
+    }
+    return result;
 }
 
 } // namespace slang
