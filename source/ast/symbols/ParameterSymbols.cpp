@@ -232,6 +232,7 @@ void TypeParameterSymbol::fromSyntax(const Scope& scope,
         auto param = comp.emplace<TypeParameterSymbol>(scope, name, loc, isLocal, isPort,
                                                        typeRestriction);
         param->setSyntax(*decl);
+        param->setTypeSyntax(*decl);
 
         if (!decl->assignment) {
             param->targetType.setType(comp.getErrorType());
