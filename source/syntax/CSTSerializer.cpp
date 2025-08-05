@@ -8,6 +8,7 @@
 #include "slang/syntax/CSTSerializer.h"
 
 #include <string_view>
+#include <type_traits>
 
 #include "slang/parsing/Token.h"
 #include "slang/syntax/AllSyntax.h"
@@ -40,26 +41,28 @@ struct CSTJsonVisitor {
 
     template<std::derived_from<SyntaxNode> T>
     void visit(const T& node) {
-        writer.startObject();
-        writer.writeProperty("kind");
-        writer.writeValue(toString(node.kind));
-
         if constexpr (requires { handle(node); }) {
+            writer.startObject();
+            writer.writeProperty("kind");
+            writer.writeValue(toString(node.kind));
+
             handle(node);
+
+            writer.endObject();
+        }
+        else if constexpr (std::is_same_v<T, SyntaxListBase>) {
+            // The child class's handlers should be called
+            SLANG_UNREACHABLE;
         }
         else {
             static_assert(always_false<T>::value, "Unhandled syntax node type in CSTJsonVisitor");
         }
-
-        writer.endObject();
     }
 
-    // The child class's handlers should be called
-    void handle(const SyntaxListBase&) { SLANG_UNREACHABLE; }
-
-    // These are never actually constructed; SyntaxKind::Unknown would be of another class in this
-    // visitor
-    void handle(const detail::InvalidSyntaxNode&) { SLANG_UNREACHABLE; }
+    void handle(const detail::InvalidSyntaxNode& node) {
+        writer.writeProperty("children");
+        writeChildren(node);
+    }
 
     void writeToken(std::string_view name, parsing::Token token) {
         if (token.valueText().empty()) {
@@ -106,6 +109,24 @@ struct CSTJsonVisitor {
         writer.endArray();
     }
 
+    void writeChildren(const SyntaxNode& node) {
+        writer.startArray();
+        // SeparatedSyntaxList stores elements and separators alternately
+        for (size_t i = 0; i < node.getChildCount(); i++) {
+            auto child = node.childNode(i);
+            if (child) {
+                child->visit(*this);
+            }
+            else {
+                auto token = node.childToken(i);
+                if (token) {
+                    writeTokenValue(token);
+                }
+            }
+        }
+        writer.endArray();
+    }
+
     template<typename T>
     void writeSeparatedSyntaxList(std::string_view name,
                                   const SeparatedSyntaxList<T>& separatedList) {
@@ -113,21 +134,7 @@ struct CSTJsonVisitor {
             return;
         }
         writer.writeProperty(name);
-        writer.startArray();
-        // SeparatedSyntaxList stores elements and separators alternately
-        for (size_t i = 0; i < separatedList.getChildCount(); i++) {
-            auto child = separatedList.childNode(i);
-            if (child) {
-                child->visit(*this);
-            }
-            else {
-                auto token = separatedList.childToken(i);
-                if (token) {
-                    writeTokenValue(token);
-                }
-            }
-        }
-        writer.endArray();
+        writeChildren(separatedList);
     }
 
     void writeTokenValue(parsing::Token token) {
