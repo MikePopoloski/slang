@@ -29,5 +29,5 @@ rewriter [options] <file-name>
 - `--exclude-skipped` - Exclude skipped (error) nodes in output
 
 ### Formatting Options
-- `--squash-blanklines` - Squash adjacent newlines into one, including lines that are all whitespace
+- `--squash-blanklines` - Squash adjacent blank lines into one
 - `--include-missing` - Include missing (auto-inserted) nodes in output
