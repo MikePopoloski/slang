@@ -2468,6 +2468,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
+    CHECK(compilation.getSourceManager()->getLineNumber(it->location) == 7);
     CHECK((it++)->code == diag::UnnamedGenerateReference);
     CHECK(it == diags.end());
 }
