@@ -250,10 +250,12 @@ public:
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as a string enum value.
-    /// The string will be matched against the available enum values using their toString()
-    /// representation. If the option is not provided on a command line, the value will remain
-    /// unset.
+    /// The string will be matched against the available enum values using the kebab case name
+    /// created from their toString() representation. If the option is not provided on a command
+    /// line, the value will remain unset.
     ///
+    /// @param T the type of the enum value
+    /// @param Traits a traits class, typically generated as T_traits by the SLANG_ENUM macro
     /// @param name a comma separated list of long form and short form names
     ///             (including the dashes) that are accepted for this option
     /// @param value a value that will be set if the option is provided
