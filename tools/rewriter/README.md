@@ -30,4 +30,5 @@ rewriter [options] <file-name>
 
 ### Formatting Options
 - `--squash-newlines` - Squash adjacent newlines into one
+- `--squash-blanklines` - Squash adjacent newlines into one, including lines that are all whitespace
 - `--include-missing` - Include missing (auto-inserted) nodes in output
