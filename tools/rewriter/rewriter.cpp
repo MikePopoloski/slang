@@ -30,33 +30,32 @@ using namespace slang::syntax;
 using namespace slang::parsing;
 
 // squash consecutive blank lines into single blank lines
-std::string squashBlankLines(const std::string& input) {
-    std::istringstream stream(input);
-
-    std::string result;
-    result.reserve(input.size());
-
+void squashBlankLines(std::string& text) {
+    std::istringstream stream(text);
     std::string line;
     bool lastLineWasEmpty = false;
+    size_t writePos = 0;
 
-    // Process remaining lines
+    // Process lines and write back in-place
     while (std::getline(stream, line)) {
         const bool isEmpty = std::ranges::all_of(line, isWhitespace);
 
         if (!isEmpty) {
             // Line has content, always include it with full indentation
-            result.append(line);
-            result.push_back('\n');
+            std::copy(line.begin(), line.end(),
+                      text.begin() + static_cast<std::ptrdiff_t>(writePos));
+            writePos += line.size();
+            text[writePos++] = '\n';
             lastLineWasEmpty = false;
         }
         else if (!lastLineWasEmpty) {
             // First empty line in a sequence, include it as a single empty line
-            result.push_back('\n');
+            text[writePos++] = '\n';
             lastLineWasEmpty = true;
         }
     }
 
-    return result;
+    text.resize(writePos);
 }
 
 int main(int argc, char** argv) {
@@ -166,7 +165,7 @@ int main(int argc, char** argv) {
 
         // Apply post-processing if requested
         if (squashNewlines == true) {
-            output = squashBlankLines(output);
+            squashBlankLines(output);
         }
 
         printf("%s", output.c_str());
