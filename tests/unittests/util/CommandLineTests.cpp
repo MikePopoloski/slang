@@ -6,30 +6,11 @@
 #include "slang/text/SourceManager.h"
 #include "slang/util/CommandLine.h"
 
-// Test enum for enum command line option testing
-enum class TestMode { Fast, Normal, Slow, VeryDetailedMode };
-static std::string_view toString(TestMode mode) {
-    switch (mode) {
-        case TestMode::Fast:
-            return "Fast";
-        case TestMode::Normal:
-            return "Normal";
-        case TestMode::Slow:
-            return "Slow";
-        case TestMode::VeryDetailedMode:
-            return "VeryDetailedMode";
-    }
-    return "";
-}
+// Test enum for enum command line option testing using SLANG_ENUM
+#define TM(x) x(Fast) x(Normal) x(Slow) x(VeryDetailedMode)
 
-class TestMode_traits {
-public:
-    static const std::array<TestMode, 4> values;
-};
-
-const std::array<TestMode, 4> TestMode_traits::values = {TestMode::Fast, TestMode::Normal,
-                                                         TestMode::Slow,
-                                                         TestMode::VeryDetailedMode};
+SLANG_ENUM(TestMode, TM)
+#undef TM
 
 TEST_CASE("Test CommandLine -- basic") {
     std::optional<bool> a, b, longFlag, longFlag2;
