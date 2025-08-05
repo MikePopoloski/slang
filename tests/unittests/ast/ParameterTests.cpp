@@ -133,6 +133,10 @@ endmodule
 
 TEST_CASE("Type parameters 2") {
     auto tree = SyntaxTree::fromText(R"(
+package p;
+parameter type x_t = logic[3:0];
+parameter type y_t = logic[3:0];
+endpackage
 module m #(parameter type foo_t, foo_t foo = 1) ();
     if (foo) begin
         parameter type asdf = shortint, basdf = logic;
@@ -154,6 +158,16 @@ endmodule
     CHECK(typeAlias.targetType.getTypeSyntax() == nullptr);
     CHECK(typeAlias.targetType.getInitializerSyntax() == nullptr);
     CHECK(typeAlias.getFirstForwardDecl() == nullptr);
+
+    sym = compilation.getRoot().lookupName("p::x_t");
+    REQUIRE(sym);
+    CHECK(sym->kind == SymbolKind::TypeAlias);
+    CHECK(sym->getSyntax());
+
+    sym = compilation.getRoot().lookupName("p::y_t");
+    REQUIRE(sym);
+    CHECK(sym->kind == SymbolKind::TypeAlias);
+    CHECK(sym->getSyntax());
 
     REQUIRE(typeAlias.getSyntax() != nullptr);
     CHECK(typeAlias.getSyntax()->kind == SyntaxKind::TypeAssignment);
