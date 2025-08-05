@@ -626,3 +626,19 @@ TEST_CASE("Test CommandLine -- enum options with short name") {
     CHECK(cmdLine.parse("prog --mode slow"));
     CHECK(mode == TestMode::Slow);
 }
+
+TEST_CASE("Test CommandLine -- enum options invalid value with valid prefix") {
+    // Test invalid value that has a valid prefix
+    {
+        std::optional<TestMode> mode;
+        CommandLine cmdLine;
+        cmdLine.addEnum<TestMode, TestMode_traits>("--mode", mode, "Test mode");
+
+        CHECK(!cmdLine.parse("prog --mode fast-invalid"));
+        auto errors = cmdLine.getErrors();
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0] ==
+              "prog: invalid value 'fast-invalid', valid options are: 'fast', 'normal', "
+              "'slow', 'very-detailed-mode'");
+    }
+}
