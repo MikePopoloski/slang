@@ -85,7 +85,8 @@ FlowAnalysisBase::WillExecute FlowAnalysisBase::tryGetLoopIterValues(
     return willExec;
 }
 
-bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
+bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt, const Statement* knownBranch,
+                                      bool isKnown) const {
     // This method determines whether a case statement's items fully cover
     // the input space, so that we know whether the default statement
     // (if there is one) is reachable or not.
@@ -112,9 +113,14 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
                 auto [it, inserted] = elems.emplace(std::move(cv), item);
                 if (!inserted) {
                     if (diagnostics) {
-                        auto& diag = diagnostics->add(rootSymbol, diag::CaseDup, item->sourceRange);
-                        diag << SemanticFacts::getCaseConditionStr(cond) << it->first;
-                        diag.addNote(diag::NotePreviousUsage, it->second->sourceRange);
+                        // Don't warn if there is a statically known branch and this duplicate
+                        // does not match the known branch's value.
+                        if (!isKnown || it->first == stmt.expr.eval(evalContext)) {
+                            auto& diag = diagnostics->add(rootSymbol, diag::CaseDup,
+                                                          item->sourceRange);
+                            diag << SemanticFacts::getCaseConditionStr(cond) << it->first;
+                            diag.addNote(diag::NotePreviousUsage, it->second->sourceRange);
+                        }
                     }
                 }
                 else if (it->first.isInteger()) {
@@ -163,6 +169,14 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
 
     // If diagnostics are enabled do various lint checks now.
     if (diagnostics) {
+        // If the case branch is statically known to not select anything we
+        // should warn about that.
+        if (isKnown && !knownBranch) {
+            auto& diag = diagnostics->add(rootSymbol, diag::CaseNone, stmt.expr.sourceRange);
+            diag << stmt.expr.eval(evalContext);
+            diag << SemanticFacts::getCaseConditionStr(cond);
+        }
+
         // Check for missing enum coverage.
         if (caseType.isEnum()) {
             SmallVector<std::string_view> missing;

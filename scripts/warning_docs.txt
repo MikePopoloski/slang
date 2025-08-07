@@ -548,6 +548,21 @@ module m;
 endmodule
 ```
 
+-Wcase-none
+A case statement is statically known to not select any branch, because none of the
+items match the known constant expression and there is no default label.
+```
+module m;
+    always_comb begin
+        case (1)
+            2: begin end
+            3: begin end
+            4: begin end
+        endcase
+    end
+endmodule
+```
+
 @category Constant Evaluation
 
 -Wreal-underflow

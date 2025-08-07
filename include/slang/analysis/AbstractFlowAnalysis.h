@@ -46,7 +46,8 @@ protected:
                                      SmallVector<ConstantValue>& values,
                                      SmallVector<ConstantValue*>& localPtrs);
 
-    bool isFullyCovered(const CaseStatement& stmt) const;
+    bool isFullyCovered(const CaseStatement& stmt, const Statement* knownBranch,
+                        bool isKnown) const;
 
     /// Tracking for how many steps we've taken while analyzing the body of a loop.
     uint32_t forLoopSteps = 0;
@@ -298,7 +299,6 @@ protected:
 
         // If the branch is known we can visit it explicitly,
         // otherwise we need to merge states for all case items.
-        // TODO: report warnings from the eval here?
         auto [knownBranch, isKnown] = stmt.getKnownBranch(evalContext);
 
         auto initialState = std::move(state);
@@ -319,7 +319,7 @@ protected:
 
         // Determine whether the case statement has full coverage of all possible
         // inputs, such that we're guaranteed to select one of the case items.
-        const bool covered = isFullyCovered(stmt);
+        const bool covered = isFullyCovered(stmt, knownBranch, isKnown);
 
         if (stmt.defaultCase) {
             // If the case input is fully covered by item expressions,

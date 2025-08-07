@@ -1188,6 +1188,7 @@ warning case-not-wildcard CaseNotWildcard "'case' statement item has unknown bit
 warning casez-with-x CaseZWithX "'casez' statement item has 'x' bits which don't work as wildcards; should this be a 'casex' statement?"
 warning case-too-complex CaseComplex "'{}' statement is too complex to analyze; assuming it does not have full coverage (increase --max-case-analysis-steps to try harder)"
 warning case-incomplete CaseIncomplete "'{}' statement does not handle all possible inputs (for example, {})"
+warning case-none CaseNone "'{}' does not match any item in '{}' statement and no default item is provided"
 warning port-coercion InputPortCoercion "input net port '{}' coerced to 'inout'"
 warning port-coercion OutputPortCoercion "output net port '{}' coerced to 'inout'"
 

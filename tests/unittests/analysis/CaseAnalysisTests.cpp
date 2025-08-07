@@ -607,3 +607,61 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CaseComplex);
 }
+
+TEST_CASE("Case DFA with all constants and no matching entries") {
+    auto& code = R"(
+module m;
+    always_comb begin
+        case (1)
+            2: begin end
+            3: begin end
+            4: begin end
+        endcase
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CaseNone);
+}
+
+TEST_CASE("Case DFA with all constants and duplicate non-matching entries") {
+    auto& code = R"(
+module A #(
+   int A = 1
+) (
+   input logic a,
+   input logic b,
+   output logic c
+);
+   always_comb begin
+       case (1'b1)
+          A > 0:  c = a & b;
+          A < 0:  c = a | b;
+          A == 0: c = a ^ b;
+       endcase
+   end
+
+   logic d;
+   always_comb begin
+       case (1'b1)
+          A > 0:  d = a & b;
+          1'b1:   d = a & b;
+          A < 0:  d = a | b;
+          A == 0: d = a ^ b;
+       endcase
+   end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CaseDup);
+}
