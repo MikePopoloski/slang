@@ -226,12 +226,13 @@ const CovergroupType& CovergroupType::fromSyntax(const Scope& scope,
 
     if (!syntax.extends) {
         if (syntax.portList) {
-            SmallVector<const FormalArgumentSymbol*> args;
+            SmallVector<FormalArgumentSymbol*> args;
             SubroutineSymbol::buildArguments(*result, scope, *syntax.portList,
                                              VariableLifetime::Automatic, args);
             result->arguments = args.copy(comp);
 
-            for (auto arg : result->arguments) {
+            for (auto arg : args) {
+                arg->flags |= VariableFlags::Const;
                 if (arg->direction == ArgumentDirection::Out ||
                     arg->direction == ArgumentDirection::InOut) {
                     scope.addDiag(diag::CovergroupOutArg, arg->location);
@@ -245,7 +246,7 @@ const CovergroupType& CovergroupType::fromSyntax(const Scope& scope,
         if (syntax.event && syntax.event->kind == SyntaxKind::WithFunctionSample) {
             auto& wfs = syntax.event->as<WithFunctionSampleSyntax>();
             if (wfs.portList) {
-                SmallVector<const FormalArgumentSymbol*> args;
+                SmallVector<FormalArgumentSymbol*> args;
                 SubroutineSymbol::buildArguments(*result, scope, *wfs.portList,
                                                  VariableLifetime::Automatic, args);
 
@@ -255,8 +256,7 @@ const CovergroupType& CovergroupType::fromSyntax(const Scope& scope,
                         scope.addDiag(diag::CovergroupOutArg, arg->location);
                     }
 
-                    const_cast<FormalArgumentSymbol*>(arg)->flags |=
-                        VariableFlags::CoverageSampleFormal;
+                    arg->flags |= VariableFlags::CoverageSampleFormal;
                     sample.copyArg(*arg);
                 }
             }

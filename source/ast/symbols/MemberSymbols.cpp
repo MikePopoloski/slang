@@ -1928,7 +1928,7 @@ RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(const Scope& scope,
         result->declaredReturnType.setType(comp.getVoidType());
 
     if (syntax.portList) {
-        SmallVector<const FormalArgumentSymbol*> args;
+        SmallVector<FormalArgumentSymbol*> args;
         SubroutineSymbol::buildArguments(*result, scope, *syntax.portList,
                                          VariableLifetime::Automatic, args);
         result->arguments = args.copy(comp);

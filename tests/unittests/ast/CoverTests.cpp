@@ -753,3 +753,46 @@ endgroup
     CHECK(diags[4].code == diag::RealCoverpointTransBins);
     CHECK(diags[5].code == diag::RealCoverpointImplicit);
 }
+
+TEST_CASE("Covergroup formals are const") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function foo(output int unsigned o);
+    endfunction
+
+    logic [31:0] a, b;
+    covergroup cg(ref int unsigned cg_lim);
+        coverpoint foo(cg_lim);
+        coverpoint b;
+
+        aXb : cross a, b
+        {
+            function CrossQueueType myFunc1(int unsigned f_lim);
+                cg_lim = 1;
+                for (int unsigned i = 0; i < f_lim; ++i)
+                    myFunc1.push_back('{i,i});
+            endfunction
+
+            bins one = myFunc1(cg_lim);
+            bins two = myFunc2(cg_lim);
+
+            function CrossQueueType myFunc2(logic [31:0] f_lim);
+                for (logic [31:0] i = 0; i < f_lim; ++i)
+                    myFunc2.push_back('{2*i,2*i});
+            endfunction
+        }
+    endgroup
+
+    int unsigned i;
+    cg cg_inst = new(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::AssignmentToConstVar);
+    CHECK(diags[1].code == diag::AssignmentToConstVar);
+}

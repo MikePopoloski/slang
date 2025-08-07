@@ -131,7 +131,7 @@ std::pair<SubroutineSymbol*, bool> SubroutineSymbol::fromSyntax(
     result->setSyntax(syntax);
     result->setAttributes(parent, syntax.attributes);
 
-    SmallVector<const FormalArgumentSymbol*> arguments;
+    SmallVector<FormalArgumentSymbol*> arguments;
     if (proto->portList)
         result->flags |= buildArguments(*result, parent, *proto->portList, *lifetime, arguments);
 
@@ -173,8 +173,9 @@ std::pair<SubroutineSymbol*, bool> SubroutineSymbol::fromSyntax(
                 portListError = true;
             }
 
+            // const_cast is ok because we immediately put the const back on down below.
             auto& arg = last->as<FormalArgumentSymbol>();
-            arguments.push_back(&arg);
+            arguments.push_back(const_cast<FormalArgumentSymbol*>(&arg));
 
             if (lifetime == VariableLifetime::Static && arg.direction == ArgumentDirection::Ref)
                 parent.addDiag(diag::RefArgAutomaticFunc, last->location);
@@ -295,7 +296,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     if (syntax.specString.valueText() == "DPI")
         parent.addDiag(diag::DPISpecDisallowed, syntax.specString.range());
 
-    SmallVector<const FormalArgumentSymbol*> arguments;
+    SmallVector<FormalArgumentSymbol*> arguments;
     if (proto.portList) {
         result->flags |= SubroutineSymbol::buildArguments(*result, parent, *proto.portList,
                                                           VariableLifetime::Automatic, arguments);
@@ -304,8 +305,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     // Check arguments for extra rules imposed by DPI imports.
     bool pureError = false;
     for (auto arg : arguments) {
-        const_cast<FormalArgumentSymbol*>(arg)->getDeclaredType()->addFlags(
-            DeclaredTypeFlags::DPIArg);
+        arg->getDeclaredType()->addFlags(DeclaredTypeFlags::DPIArg);
 
         if (arg->direction == ArgumentDirection::Ref)
             parent.addDiag(diag::DPIRefArg, arg->location);
@@ -630,10 +630,9 @@ struct LocalVarCheckVisitor {
     }
 };
 
-void SubroutineSymbol::inheritDefaultedArgList(
-    Scope& scope, const Scope& parentScope, const SyntaxNode& syntax,
-    SmallVectorBase<const FormalArgumentSymbol*>& arguments) {
-
+void SubroutineSymbol::inheritDefaultedArgList(Scope& scope, const Scope& parentScope,
+                                               const SyntaxNode& syntax,
+                                               SmallVectorBase<FormalArgumentSymbol*>& arguments) {
     auto& comp = scope.getCompilation();
     if (parentScope.asSymbol().kind == SymbolKind::ClassType) {
         auto& ct = parentScope.asSymbol().as<ClassType>();
@@ -671,7 +670,7 @@ void SubroutineSymbol::inheritDefaultedArgList(
 
 bitmask<MethodFlags> SubroutineSymbol::buildArguments(
     Scope& scope, const Scope& parentScope, const FunctionPortListSyntax& syntax,
-    VariableLifetime defaultLifetime, SmallVectorBase<const FormalArgumentSymbol*>& arguments) {
+    VariableLifetime defaultLifetime, SmallVectorBase<FormalArgumentSymbol*>& arguments) {
 
     auto& comp = scope.getCompilation();
     const DataTypeSyntax* lastType = nullptr;
@@ -973,7 +972,7 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
         }
     }
 
-    SmallVector<const FormalArgumentSymbol*> arguments;
+    SmallVector<FormalArgumentSymbol*> arguments;
     if (proto.portList) {
         result->flags |= SubroutineSymbol::buildArguments(*result, scope, *proto.portList,
                                                           VariableLifetime::Automatic, arguments);
@@ -1044,7 +1043,7 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
     else
         result.declaredReturnType.setType(comp.getVoidType());
 
-    SmallVector<const FormalArgumentSymbol*> arguments;
+    SmallVector<FormalArgumentSymbol*> arguments;
     if (proto.portList) {
         result.flags |= SubroutineSymbol::buildArguments(result, scope, *proto.portList,
                                                          VariableLifetime::Automatic, arguments);
@@ -1090,7 +1089,7 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::createExternIfaceMethod(const Scop
     else
         result->declaredReturnType.setType(comp.getVoidType());
 
-    SmallVector<const FormalArgumentSymbol*> arguments;
+    SmallVector<FormalArgumentSymbol*> arguments;
     if (proto.portList) {
         result->flags |= SubroutineSymbol::buildArguments(*result, scope, *proto.portList,
                                                           VariableLifetime::Automatic, arguments);

@@ -160,11 +160,12 @@ public:
 
     static void inheritDefaultedArgList(Scope& scope, const Scope& parentScope,
                                         const syntax::SyntaxNode& syntax,
-                                        SmallVectorBase<const FormalArgumentSymbol*>& arguments);
+                                        SmallVectorBase<FormalArgumentSymbol*>& arguments);
 
-    static bitmask<MethodFlags> buildArguments(
-        Scope& scope, const Scope& parentScope, const syntax::FunctionPortListSyntax& syntax,
-        VariableLifetime defaultLifetime, SmallVectorBase<const FormalArgumentSymbol*>& arguments);
+    static bitmask<MethodFlags> buildArguments(Scope& scope, const Scope& parentScope,
+                                               const syntax::FunctionPortListSyntax& syntax,
+                                               VariableLifetime defaultLifetime,
+                                               SmallVectorBase<FormalArgumentSymbol*>& arguments);
 
     static void checkVirtualMethodMatch(const Scope& scope, const SubroutineSymbol& parentMethod,
                                         const SubroutineSymbol& derivedMethod,
