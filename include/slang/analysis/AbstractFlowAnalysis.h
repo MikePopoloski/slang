@@ -411,7 +411,7 @@ protected:
 
         SmallVector<ConstantValue> iterValues;
         SmallVector<ConstantValue*> localPtrs;
-        const bool isOuterLoop = forLoopSteps == 0;
+        auto oldForLoopSteps = forLoopSteps;
         auto bodyWillExecute = WillExecute::Maybe;
         TState bodyState, exitState;
         if (stmt.stopExpr) {
@@ -464,8 +464,7 @@ protected:
                 evalContext.deleteLocal(var);
         }
 
-        if (isOuterLoop)
-            forLoopSteps = 0;
+        forLoopSteps = oldForLoopSteps;
 
         if (bodyWillExecute == WillExecute::Yes)
             (DERIVED).meetState(exitState, state);

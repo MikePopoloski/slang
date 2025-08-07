@@ -1108,3 +1108,63 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
+
+TEST_CASE("Multi assign loop analysis regress -- GH #1454") {
+    auto& code = R"(
+module top #(
+    parameter int unsigned P  = 4
+);
+    localparam C = 1;
+
+    typedef struct packed {
+        logic a;
+        logic b;
+    } type1;
+
+    type1 [P-1:0][C-1:0] t1;
+
+    typedef struct packed {
+        logic a;
+    } type2;
+
+    type2 [P-1:0][C-1:0] t2_a, t2_b;
+
+    always_comb begin
+        for (int unsigned p=0; p<P; p++) begin
+            for (int unsigned c=0; c<C; c++) begin
+                t1[p][c].a = '0;
+            end
+        end
+    end
+
+    always_comb begin
+        for (int unsigned p=0; p<P; p++) begin
+            for (int unsigned c=0; c<C; c++ ) begin
+                t1[p][c].b = '0;
+            end
+
+            for (int unsigned c=0; c<C; c++ ) begin
+                t2_a[p][c].a = 1'b0;
+            end
+
+            for (int unsigned c=0; c<C; c++) begin
+                if (~t2_b[p][c].a) begin
+                end
+            end
+
+            for (int unsigned c=0; c<C; c++) begin
+                for (int unsigned c=0; c<C; c++) begin
+                    t1[p][c].b = '1;
+                end
+            end
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
