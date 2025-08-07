@@ -35,6 +35,7 @@ FlowAnalysisBase::WillExecute FlowAnalysisBase::tryGetLoopIterValues(
 
     auto cleanupLocals = ScopeGuard([&] {
         values.clear();
+        localPtrs.clear();
         for (auto var : stmt.loopVars)
             evalContext.deleteLocal(var);
     });
