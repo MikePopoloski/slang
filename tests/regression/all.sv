@@ -4,7 +4,7 @@ timeprecision 1ps;
 (* foo = 1 *) package static p;
     timeunit 1ns;
     parameter int x = 1;
-    parameter type y = logic[x:0];
+    parameter type y_t = logic[x:0];
     program; endprogram
     export *::*;
 endpackage
@@ -15,7 +15,11 @@ module automatic m1 import p::*; #(int i = 1)
     output [1:0] b;
 endmodule
 
-module m2 #(parameter i = 1, localparam j = i)
+module m2 #(
+    parameter i = 1,
+    localparam j = i,
+    parameter type x_t = bit
+)
     (input int a[], (* bar = "asdf" *) output logic b = 1, ref c,
      interface.mod d, .e());
 endmodule
@@ -32,7 +36,13 @@ macromodule m3;
     wire b;
     logic c;
     I d(.a(), .b());
-    m2 m(, b, c, d, );
+
+    typedef p::y_t y_t;
+
+    m2 #(
+        .x_t(y_t)
+    ) m (, b, c, d, );
+
 
     $info("Hello %s", "world");
 

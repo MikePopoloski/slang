@@ -7,9 +7,11 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <functional>
 #include <vector>
 
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/util/FlatMap.h"
 #include "slang/util/TypeTraits.h"
@@ -37,8 +39,7 @@ public:
 
     /// The default handler invoked when no visit() method is overridden for a particular type.
     /// Will visit all child nodes by default.
-    template<typename T>
-    void visitDefault(const T& node) {
+    void visitDefault(const SyntaxNode& node) {
         for (uint32_t i = 0; i < node.getChildCount(); i++) {
             auto child = node.childNode(i);
             if (child)
@@ -80,6 +81,39 @@ auto makeSyntaxVisitor(Functions... funcs) {
         using Functions::operator()...;
     };
     return Result(std::move(funcs)...);
+}
+
+/// Simple visitors with kinds that are left to the user to evaluate.
+struct AllSyntaxVisitor {
+    AllSyntaxVisitor(std::function<void(const SyntaxNode&)> func) : handler(std::move(func)) {}
+
+    void visit(const SyntaxNode& node) {
+        handler(node);
+        for (uint32_t i = 0; i < node.getChildCount(); i++) {
+            auto child = node.childNode(i);
+            if (child)
+                visit(*child);
+        }
+    }
+
+private:
+    std::function<void(const SyntaxNode&)> handler;
+};
+
+/// @brief Creates a SyntaxVisitor with the provided handler function.
+///
+/// @param func The handler function to called during the preorder traversal of the syntax tree.
+///
+/// For example:
+/// @code
+/// auto visitor = makeSyntaxVisitor([&](const SyntaxNode& node) {
+///     std::cout << node.kind << std::endl;
+/// });
+/// visitor.visit(tree.root());
+/// @endcode
+///
+inline AllSyntaxVisitor makeAllSyntaxVisitor(std::function<void(const SyntaxNode&)> func) {
+    return AllSyntaxVisitor(std::move(func));
 }
 
 namespace detail {
