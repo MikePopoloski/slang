@@ -765,7 +765,7 @@ endclass
             {
               "name": "g2",
               "kind": "ClassProperty",
-              "type": "",
+              "type": "<unnamed covergroup>",
               "lifetime": "Automatic",
               "flags": "const",
               "visibility": "Public"

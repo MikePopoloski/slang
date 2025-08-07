@@ -364,7 +364,10 @@ void TypePrinter::visit(const ClassType& type, std::string_view) {
 }
 
 void TypePrinter::visit(const CovergroupType& type, std::string_view) {
-    buffer->append(type.name);
+    if (type.name.empty())
+        buffer->append("<unnamed covergroup>");
+    else
+        buffer->append(type.name);
 }
 
 void TypePrinter::visit(const VirtualInterfaceType& type, std::string_view) {
