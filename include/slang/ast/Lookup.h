@@ -177,9 +177,6 @@ struct SLANG_EXPORT LookupResult {
     /// traversing back down to the found symbol.
     uint32_t upwardCount = 0;
 
-    /// Lookup hit a disallowed, unnamed generate reference
-    const Symbol* unnamedGenerate = nullptr;
-
     /// Flags that specify additional information about the result of the lookup.
     bitmask<LookupResultFlags> flags;
 
@@ -333,9 +330,6 @@ public:
     /// local variable matching the given name. If one is found, populates @a result
     /// and returns true. Otherwise returns false.
     static bool findAssertionLocalVar(const ASTContext& context, const syntax::NameSyntax& name,
-                                      LookupResult& result);
-
-    static bool reportUnnamedGenerate(const Scope& scope, const syntax::NameSyntax& syntax,
                                       LookupResult& result);
 
 private:

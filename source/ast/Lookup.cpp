@@ -76,7 +76,6 @@ void LookupResult::clear() {
     selectors.clear();
     path.clear();
     diagnostics.clear();
-    // Intentionally not clearing unnamedGenerate
 }
 
 void LookupResult::reportDiags(const ASTContext& context) const {
@@ -265,11 +264,23 @@ bool badGenblkAccess(const Symbol* symbol, const Scope& scope, bitmask<LookupFla
     }
     if (disallowedGenerateAccess) {
         result.clear();
-        result.unnamedGenerate = symbol;
         return true;
     }
 
     return false;
+}
+
+bool badGenblkAccessReport(const Symbol* symbol, const Scope& scope, bitmask<LookupFlags> flags,
+                           LookupResult& result, std::span<const NamePlusLoc> nameParts,
+                           NameComponents name) {
+    bool bad = badGenblkAccess(symbol, scope, flags, result);
+    if (bad) {
+        SourceRange errorRange{name.range.start(), (nameParts.rend() - 1)->name.range.end()};
+        auto& diag = result.addDiag(scope, diag::UnnamedGenerateReference, errorRange);
+        diag.addNote(diag::NoteDeclarationHere, symbol->location);
+    }
+
+    return bad;
 }
 
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
@@ -299,7 +310,7 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
     for (auto it = nameParts.rbegin(); it != nameParts.rend(); it++) {
         if (!checkClassParams(name))
             return false;
-        if (badGenblkAccess(symbol, *context.scope, flags, result))
+        if (badGenblkAccessReport(symbol, *context.scope, flags, result, nameParts, name))
             return true;
 
         auto isValueLike = [&](const Symbol*& symbol) {
@@ -540,7 +551,7 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
 
     if (!checkClassParams(name))
         return false;
-    if (badGenblkAccess(symbol, *context.scope, flags, result))
+    if (badGenblkAccessReport(symbol, *context.scope, flags, result, nameParts, name))
         return true;
 
     if (result.flags.has(LookupResultFlags::IsHierarchical | LookupResultFlags::IfacePort) &&
@@ -2211,23 +2222,10 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
     // downward lookup (if any), so it's fine to just return it as is. If we never found any
     // symbol originally, issue an appropriate error for that.
     result = originalResult;
-    if (!reportUnnamedGenerate(*context.scope, syntax, result) && !result.found &&
-        !result.hasError()) {
+    if (!result.found && !result.hasError()) {
         reportUndeclared(scope, name, first.range,
                          flags | LookupFlags::NoUndeclaredErrorIfUninstantiated, true, result);
     }
-}
-
-bool Lookup::reportUnnamedGenerate(const Scope& scope, const syntax::NameSyntax& syntax,
-                                   LookupResult& result) {
-    if (!result.found && result.unnamedGenerate) {
-        auto& diag = result.addDiag(scope, diag::UnnamedGenerateReference, syntax.sourceRange());
-        diag << syntax.sourceRange();
-        diag << syntax.toString();
-        diag.addNote(diag::NoteDeclarationHere, result.unnamedGenerate->location);
-        return true;
-    }
-    return false;
 }
 
 void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, SourceRange range,

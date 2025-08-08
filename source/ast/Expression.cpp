@@ -1007,7 +1007,6 @@ Expression& Expression::bindName(Compilation& comp, const NameSyntax& syntax,
     // Normal name lookup and resolution.
     LookupResult result;
     Lookup::name(syntax, context, flags, result);
-    Lookup::reportUnnamedGenerate(*context.scope, syntax, result);
     result.reportDiags(context);
 
     if (result.systemSubroutine) {
