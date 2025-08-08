@@ -22,6 +22,7 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/GeneralDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
@@ -246,6 +247,42 @@ const Symbol* getContainingPackage(const Symbol& symbol) {
     }
 }
 
+bool badGenblkAccess(const Symbol* symbol, const Scope& scope, bitmask<LookupFlags> flags,
+                     LookupResult& result) {
+    if (flags.has(LookupFlags::AllowUnnamedGenerate) ||
+        scope.getCompilation().getOptions().flags.has(CompilationFlags::AllowUnnamedGenerate))
+        return false;
+
+    bool disallowedGenerateAccess = false;
+    if (auto block = symbol->as_if<GenerateBlockSymbol>()) {
+        if (block->isUnnamed)
+            disallowedGenerateAccess = true;
+    }
+    else if (auto array = symbol->as_if<GenerateBlockArraySymbol>()) {
+        if (array->isUnnamed)
+            disallowedGenerateAccess = true;
+    }
+    if (disallowedGenerateAccess) {
+        result.clear();
+        return true;
+    }
+
+    return false;
+}
+
+bool badGenblkAccessReport(const Symbol* symbol, const Scope& scope, bitmask<LookupFlags> flags,
+                           LookupResult& result, std::span<const NamePlusLoc> nameParts,
+                           NameComponents name) {
+    bool bad = badGenblkAccess(symbol, scope, flags, result);
+    if (bad) {
+        SourceRange errorRange{name.range.start(), (nameParts.rend() - 1)->name.range.end()};
+        auto& diag = result.addDiag(scope, diag::UnnamedGenerateReference, errorRange);
+        diag.addNote(diag::NoteDeclarationHere, symbol->location);
+    }
+
+    return bad;
+}
+
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
@@ -273,6 +310,8 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
     for (auto it = nameParts.rbegin(); it != nameParts.rend(); it++) {
         if (!checkClassParams(name))
             return false;
+        if (badGenblkAccessReport(symbol, *context.scope, flags, result, nameParts, name))
+            return true;
 
         auto isValueLike = [&](const Symbol*& symbol) {
             switch (symbol->kind) {
@@ -512,6 +551,8 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
 
     if (!checkClassParams(name))
         return false;
+    if (badGenblkAccessReport(symbol, *context.scope, flags, result, nameParts, name))
+        return true;
 
     if (result.flags.has(LookupResultFlags::IsHierarchical | LookupResultFlags::IfacePort) &&
         symbol) {
@@ -1731,8 +1772,10 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         // declared before use). Callables and block names can be referenced anywhere in the
         // scope, so the location doesn't matter for them.
         symbol = it->second;
-        bool locationGood = LookupLocation::before(*symbol) < location;
-        if (!locationGood) {
+
+        bool badGenblk = badGenblkAccess(symbol, scope, flags, result);
+        bool locationGood = LookupLocation::before(*symbol) < location && !badGenblk;
+        if (!locationGood && !badGenblk) {
             // A type alias can have forward definitions, so check those locations as well.
             // The forward decls form a linked list that are always ordered by location,
             // so we only need to check the first one.
