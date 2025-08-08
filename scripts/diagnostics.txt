@@ -990,7 +990,7 @@ error IllegalReferenceToProgramItem "cannot reference program item from outside 
 error HierarchicalFromPackage "cannot use hierarchical reference from within a package"
 error CompilationUnitFromPackage "cannot reference compilation unit item from within a package"
 error InvalidHierarchicalIfacePortConn "cannot connect interface port hierarchically through a generate block or instance array"
-error UnnamedGenerateReference "cannot reference unnamed generate blocks"
+error UnnamedGenerateReference "cannot reference unnamed generate block via external name '{}' (use --allow-genblk-reference to allow this)"
 warning unknown-sys-name UnknownSystemName "unknown system name '{}'"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 warning duplicate-definition DuplicateDefinition "duplicate definition of '{}'"

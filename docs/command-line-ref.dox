@@ -339,10 +339,6 @@ Disable the use of instance caching, which normally allows skipping duplicate in
 save time when elaborating. This shouldn't need to be turned off except to work around bugs in
 the caching implementation.
 
-`--allow-genblk-reference`
-
-Unnamed generate blocks are not allowed to be referenced, but this flag allows doing so.
-
 `--max-hierarchy-depth <depth>`
 
 Set the maximum depth of the design hierarchy. Used to detect infinite
@@ -535,6 +531,12 @@ module m(input a, output b);
     assign b = a;
 endmodule
 @endcode
+
+`--allow-genblk-reference`
+
+Unnamed generate blocks are not allowed to be referenced from within the language,
+but they do have externally visible names (following a 'genblk###' pattern). This flag
+allows hierarchical references to unnamed generate blocks via those external names.
 
 `--cmd-ignore <vendor_cmd>,<N>`
 

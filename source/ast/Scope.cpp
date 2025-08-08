@@ -998,7 +998,7 @@ void Scope::elaborate() const {
                 constructIndex++;
                 insertMembers(blocks, symbol);
                 for (auto block : blocks) {
-                    if (block->name.empty() && !block->isUninstantiated)
+                    if (block->isUnnamed && !block->isUninstantiated)
                         unnamedGenblks.push_back(block);
                 }
                 break;
@@ -1011,7 +1011,7 @@ void Scope::elaborate() const {
                 constructIndex++;
                 insertMembers(blocks, symbol);
                 for (auto block : blocks) {
-                    if (block->name.empty() && !block->isUninstantiated)
+                    if (block->isUnnamed && !block->isUninstantiated)
                         unnamedGenblks.push_back(block);
                 }
                 break;
@@ -1021,7 +1021,7 @@ void Scope::elaborate() const {
                     compilation, member.node.as<LoopGenerateSyntax>(), symbol->getIndex(), context,
                     constructIndex);
                 insertMember(array, symbol, true, true);
-                if (array->name.empty())
+                if (array->isUnnamed)
                     unnamedGenblks.push_back(array);
                 constructIndex++;
                 break;
@@ -1033,7 +1033,7 @@ void Scope::elaborate() const {
                                                               member.node.as<GenerateBlockSyntax>(),
                                                               constructIndex);
                 insertMember(block, symbol, true, true);
-                if (block->name.empty())
+                if (block->isUnnamed)
                     unnamedGenblks.push_back(block);
                 constructIndex++;
                 break;
@@ -1194,17 +1194,18 @@ void Scope::elaborate() const {
 
     for (auto symbol : unnamedGenblks) {
         auto updateName = [&](Symbol* symbol, const std::string& externalName) {
-            char* mem = (char*)getCompilation().allocate(externalName.size(), 1);
-            memcpy(mem, externalName.data(), externalName.size());
-            symbol->name = std::string_view(mem, externalName.size());
-            nameMap->emplace(symbol->name, symbol);
+            auto span = compilation.copyFrom(
+                std::span<const char>(externalName.data(), externalName.size()));
+            symbol->name = std::string_view(span.data(), span.size());
+
+            auto [it, inserted] = nameMap->emplace(symbol->name, symbol);
+            SLANG_ASSERT(inserted);
         };
-        if (auto block = symbol->as_if<GenerateBlockSymbol>()) {
+
+        if (auto block = symbol->as_if<GenerateBlockSymbol>())
             updateName(block, block->getExternalName());
-        }
-        else if (auto array = symbol->as_if<GenerateBlockArraySymbol>()) {
+        else if (auto array = symbol->as_if<GenerateBlockArraySymbol>())
             updateName(array, array->getExternalName());
-        }
     }
 
     // If there are nested definitions, go back through and find ones that

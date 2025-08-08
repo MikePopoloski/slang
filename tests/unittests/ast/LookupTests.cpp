@@ -624,7 +624,7 @@ TEST_CASE("Unnamed else generate lookup") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     if (0) begin
-        logic foo;
+        bit foo;
     end else begin
         logic bar;
     end
@@ -2466,7 +2466,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     auto it = diags.begin();
     CHECK(compilation.getSourceManager()->getLineNumber(it->location) == 7);
     CHECK((it++)->code == diag::UnnamedGenerateReference);

@@ -737,20 +737,21 @@ class C; endclass
         }
     }
 }
-TEST_CASE("SyntaxTree/Compilation Invariant Checking") {
 
-    // Validates that the parent pointers in the syntax tree are correct, and provides debug info if
-    // not
+TEST_CASE("SyntaxTree/Compilation Invariant Checking") {
+    // Validates that the parent pointers in the syntax tree are correct,
+    // and provides debug info if not.
     auto validateParents = [](const syntax::SyntaxTree& tree) {
         bool valid = true;
         tree.root().visit(AllSyntaxVisitor([&](const SyntaxNode& node) {
-            if (node.kind == SyntaxKind::SyntaxList || node.kind == SyntaxKind::SeparatedList) {
+            if (node.kind == SyntaxKind::SyntaxList || node.kind == SyntaxKind::SeparatedList)
                 return;
-            }
+
             for (size_t i = 0; i < node.getChildCount(); i++) {
                 auto child = node.childNode(i);
                 if (!child)
                     continue;
+
                 if (child->parent != &node) {
                     valid = false;
                     auto parentKind = toString(child->parent->kind);
@@ -777,13 +778,12 @@ TEST_CASE("SyntaxTree/Compilation Invariant Checking") {
     path /= "../../regression/all.sv";
     auto mTree = SyntaxTree::fromFile(path.string());
     REQUIRE(mTree);
-    auto tree = *mTree;
 
+    auto tree = *mTree;
     REQUIRE(validateParents(*tree));
 
     std::string originalSyntaxText = SyntaxPrinter::printFile(*tree);
 
-    // Compile
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     auto& _root = compilation.getRoot();

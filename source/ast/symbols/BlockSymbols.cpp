@@ -646,8 +646,10 @@ static std::string createGenBlkName(uint32_t constructIndex, const Scope& parent
     while (auto symbol = parent.find(current)) {
         // Sibling generate from if or case statement and not actually a name collision
         if (symbol->kind == SymbolKind::GenerateBlock &&
-            symbol->as<GenerateBlockSymbol>().isUnnamed)
+            symbol->as<GenerateBlockSymbol>().isUnnamed) {
             return current;
+        }
+
         base += '0';
         current = base + index;
     }

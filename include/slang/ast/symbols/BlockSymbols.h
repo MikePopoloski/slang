@@ -116,8 +116,8 @@ class SLANG_EXPORT GenerateBlockSymbol final : public Symbol, public Scope {
 public:
     uint32_t constructIndex = 0;
     bool isUninstantiated = false;
-    const SVInt* arrayIndex = nullptr;
     bool isUnnamed = false;
+    const SVInt* arrayIndex = nullptr;
 
     GenerateBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                         uint32_t constructIndex, bool isUninstantiated) :

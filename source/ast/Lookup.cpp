@@ -247,40 +247,20 @@ const Symbol* getContainingPackage(const Symbol& symbol) {
     }
 }
 
-bool badGenblkAccess(const Symbol* symbol, const Scope& scope, bitmask<LookupFlags> flags,
-                     LookupResult& result) {
-    if (flags.has(LookupFlags::AllowUnnamedGenerate) ||
-        scope.getCompilation().getOptions().flags.has(CompilationFlags::AllowUnnamedGenerate))
-        return false;
+bool isBadGenblkAccess(const Symbol& symbol, const Scope& scope, bitmask<LookupFlags> flags) {
+    auto check = [&](auto& block) {
+        return block.isUnnamed && !flags.has(LookupFlags::AllowUnnamedGenerate) &&
+               !scope.getCompilation().hasFlag(CompilationFlags::AllowUnnamedGenerate);
+    };
 
-    bool disallowedGenerateAccess = false;
-    if (auto block = symbol->as_if<GenerateBlockSymbol>()) {
-        if (block->isUnnamed)
-            disallowedGenerateAccess = true;
+    switch (symbol.kind) {
+        case SymbolKind::GenerateBlock:
+            return check(symbol.as<GenerateBlockSymbol>());
+        case SymbolKind::GenerateBlockArray:
+            return check(symbol.as<GenerateBlockArraySymbol>());
+        default:
+            return false;
     }
-    else if (auto array = symbol->as_if<GenerateBlockArraySymbol>()) {
-        if (array->isUnnamed)
-            disallowedGenerateAccess = true;
-    }
-    if (disallowedGenerateAccess) {
-        result.clear();
-        return true;
-    }
-
-    return false;
-}
-
-bool badGenblkAccessReport(const Symbol* symbol, const Scope& scope, bitmask<LookupFlags> flags,
-                           LookupResult& result, std::span<const NamePlusLoc> nameParts,
-                           NameComponents name) {
-    bool bad = badGenblkAccess(symbol, scope, flags, result);
-    if (bad) {
-        SourceRange errorRange{name.range.start(), (nameParts.rend() - 1)->name.range.end()};
-        auto& diag = result.addDiag(scope, diag::UnnamedGenerateReference, errorRange);
-        diag.addNote(diag::NoteDeclarationHere, symbol->location);
-    }
-
-    return bad;
 }
 
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
@@ -305,12 +285,23 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
         return true;
     };
 
+    auto checkGenblkAccess = [&] {
+        if (symbol && isBadGenblkAccess(*symbol, *context.scope, flags)) {
+            auto& diag = result.addDiag(*context.scope, diag::UnnamedGenerateReference, name.range);
+            diag << name.text;
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
+            return false;
+        }
+        return true;
+    };
+
     // Loop through each dotted name component and try to find it in the preceeding scope.
     bool isVirtualIface = false;
     for (auto it = nameParts.rbegin(); it != nameParts.rend(); it++) {
         if (!checkClassParams(name))
             return false;
-        if (badGenblkAccessReport(symbol, *context.scope, flags, result, nameParts, name))
+
+        if (!checkGenblkAccess())
             return true;
 
         auto isValueLike = [&](const Symbol*& symbol) {
@@ -551,7 +542,8 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
 
     if (!checkClassParams(name))
         return false;
-    if (badGenblkAccessReport(symbol, *context.scope, flags, result, nameParts, name))
+
+    if (!checkGenblkAccess())
         return true;
 
     if (result.flags.has(LookupResultFlags::IsHierarchical | LookupResultFlags::IfacePort) &&
@@ -1773,9 +1765,8 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         // scope, so the location doesn't matter for them.
         symbol = it->second;
 
-        bool badGenblk = badGenblkAccess(symbol, scope, flags, result);
-        bool locationGood = LookupLocation::before(*symbol) < location && !badGenblk;
-        if (!locationGood && !badGenblk) {
+        bool locationGood = LookupLocation::before(*symbol) < location;
+        if (!locationGood) {
             // A type alias can have forward definitions, so check those locations as well.
             // The forward decls form a linked list that are always ordered by location,
             // so we only need to check the first one.
@@ -1890,6 +1881,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                 }
             }
 
+            bool done = true;
             switch (symbol->kind) {
                 case SymbolKind::ExplicitImport:
                     result.found = symbol->as<ExplicitImportSymbol>().importedSymbol();
@@ -1907,6 +1899,17 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                 case SymbolKind::ModportClocking:
                     result.found = symbol->as<ModportClockingSymbol>().target;
                     break;
+                case SymbolKind::GenerateBlock:
+                case SymbolKind::GenerateBlockArray:
+                    if (isBadGenblkAccess(*symbol, scope, flags)) {
+                        // We can't actually access these blocks by name, so pretend
+                        // we didn't find them.
+                        done = false;
+                    }
+                    else {
+                        result.found = symbol;
+                    }
+                    break;
                 default:
                     result.found = symbol;
                     break;
@@ -1917,7 +1920,6 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
             // evaluated. This can only happen with a mutually recursive definition of something
             // like a parameter and a function, so detect and report the error here to avoid a
             // stack overflow.
-            bool done = true;
             if (result.found) {
                 auto declaredType = result.found->getDeclaredType();
                 if (declaredType && declaredType->isEvaluating()) {
