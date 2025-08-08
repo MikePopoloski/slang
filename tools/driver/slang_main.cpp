@@ -15,6 +15,7 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
+#include "slang/syntax/CSTSerializer.h"
 #include "slang/text/Json.h"
 #include "slang/util/TimeTrace.h"
 #include "slang/util/VersionInfo.h"
@@ -51,6 +52,28 @@ void printJson(Compilation& compilation, const std::string& fileName,
                 serializer.serialize(*sym);
         }
     }
+
+    writer.writeNewLine();
+    OS::writeFile(fileName, writer.view());
+}
+
+void printCSTJson(Driver& driver, const std::string& fileName,
+                  syntax::CSTJsonMode mode = syntax::CSTJsonMode::Full) {
+    JsonWriter writer;
+    writer.setPrettyPrint(true);
+
+    syntax::CSTSerializer converter(writer, mode);
+
+    writer.startObject();
+    writer.writeProperty("syntaxTrees");
+    writer.startArray();
+
+    for (auto& tree : driver.syntaxTrees) {
+        converter.serialize(*tree);
+    }
+
+    writer.endArray();
+    writer.endObject();
 
     writer.writeNewLine();
     OS::writeFile(fileName, writer.view());
@@ -101,6 +124,16 @@ int driverMain(int argc, TArgs argv) {
             "--ast-json", astJsonFile,
             "Dump the compiled AST in JSON format to the specified file, or '-' for stdout",
             "<file>", CommandLineFlags::FilePath);
+
+        std::optional<std::string> cstJsonFile;
+        driver.cmdLine.add(
+            "--cst-json", cstJsonFile,
+            "Dump the parsed syntax trees in JSON format to the specified file, or '-' for stdout",
+            "<file>", CommandLineFlags::FilePath);
+
+        std::optional<syntax::CSTJsonMode> cstJsonMode;
+        driver.cmdLine.addEnum<syntax::CSTJsonMode, syntax::CSTJsonMode_traits>(
+            "--cst-json-mode", cstJsonMode, "CST JSON output mode", "<mode>");
 
         std::vector<std::string> astJsonScopes;
         driver.cmdLine.add("--ast-json-scope", astJsonScopes,
@@ -214,6 +247,11 @@ int driverMain(int argc, TArgs argv) {
                               driver.serializeDepfiles(driver.getDepfiles(), depfileTarget));
             }
 
+            if (cstJsonFile) {
+                TimeTraceScope timeScope("cstSerialization"sv, ""sv);
+                printCSTJson(driver, *cstJsonFile, cstJsonMode.value_or(syntax::CSTJsonMode::Full));
+            }
+
             if (onlyParse == true)
                 return ok && driver.reportParseDiags();
 
@@ -232,7 +270,7 @@ int driverMain(int argc, TArgs argv) {
             ok &= driver.reportDiagnostics(quiet == true);
 
             if (astJsonFile) {
-                TimeTraceScope timeScope("serialization"sv, ""sv);
+                TimeTraceScope timeScope("astSerialization"sv, ""sv);
                 printJson(*compilation, *astJsonFile, astJsonScopes, includeSourceInfo == true,
                           serializeDetailedTypes == true);
             }

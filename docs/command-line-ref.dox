@@ -283,6 +283,25 @@ When dumping AST to JSON, include source line and file information.
 When dumping AST to JSON, include expanded type information in the output instead of
 condensing all types into a human-friendly string.
 
+`--cst-json <file>`
+
+Dump the concrete syntax trees (CST) in JSON format to the specified file, or '-' for stdout.
+The CST represents the parsed structure of the source code including all tokens, whitespace,
+and comments exactly as they appear in the source.
+
+`--cst-json-mode <mode>`
+
+Controls the level of detail included in the CST JSON output. The available modes in order of most to least detailed are:
+
+| Mode | Description |
+|------|-------------|
+| `full` | Full token objects with complete trivia information including whitespace, comments, and formatting details |
+| `simple-trivia` | Full token objects with trivia simplified to concatenated strings instead of detailed arrays and kinds |
+| `no-trivia` | Full token objects but with all trivia objects excluded from the output |
+| `simple-tokens` | Tokens represented as simple strings with no trivia or token kind information |
+
+The default mode is `full` if this option is not specified.
+
 @section compilation-limits Compilation
 
 `--top <name>`

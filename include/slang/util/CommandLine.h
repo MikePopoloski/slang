@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <cctype>
+#include <fmt/core.h>
 #include <functional>
 #include <map>
 #include <optional>
@@ -16,6 +18,7 @@
 
 #include "slang/util/Enum.h"
 #include "slang/util/SmallVector.h"
+#include "slang/util/String.h"
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -246,6 +249,24 @@ public:
     void add(std::string_view name, OptionCallback cb, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
+    /// Register an option with @a name that will be parsed as a string enum value.
+    /// The string will be matched against the available enum values using the kebab case name
+    /// created from their toString() representation. If the option is not provided on a command
+    /// line, the value will remain unset.
+    ///
+    /// @param T the type of the enum value
+    /// @param Traits a traits class, typically generated as T_traits by the SLANG_ENUM macro
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text. Valid options will be
+    /// appended to this documentation if given.
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
+    template<typename T, typename Traits>
+    void addEnum(std::string_view name, std::optional<T>& value, std::string_view desc,
+                 std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
+
     /// Set a variable that will receive any positional arguments provided
     /// on the command line. They will be returned as a list of strings.
     ///
@@ -400,7 +421,11 @@ private:
 
     void handleArg(std::string_view arg, Option*& expectingVal, std::string& expectingValName,
                    bool& hadUnknowns, ParseOptions options);
+
     void handlePlusArg(std::string_view arg, ParseOptions options, bool& hadUnknowns);
+
+    /// Converts CamelCase strings to kebab-case (e.g. "SimpleTrivia" -> "simple-trivia").
+    static std::string toKebabCase(std::string_view str);
 
     Option* findOption(std::string_view arg, std::string_view& value) const;
     Option* tryGroupOrPrefix(std::string_view& arg, std::string_view& value, ParseOptions options);
@@ -425,5 +450,55 @@ private:
     std::string programName;
     std::vector<std::string> errors;
 };
+
+// Impl must be in header because of the templates.
+template<typename T, typename Traits>
+void CommandLine::addEnum(std::string_view name, std::optional<T>& value, std::string_view desc,
+                          std::string_view valueName, bitmask<CommandLineFlags> flags) {
+    static_assert(Traits::values.size() > 0,
+                  "Traits::values must be defined with at least one value");
+
+    // Helper to build comma-separated list of valid options
+    auto buildValidOptionsList = []() -> std::string {
+        std::string validOptions;
+        bool first = true;
+        for (auto enumVal : Traits::values) {
+            if (!first)
+                validOptions += ", ";
+            validOptions += "'";
+            validOptions += CommandLine::toKebabCase(toString(enumVal));
+            validOptions += "'";
+            first = false;
+        }
+        return validOptions;
+    };
+
+    // Create a callback that parses the string and converts it to the enum value
+    auto parseValue = [&value, buildValidOptionsList](std::string_view str) -> std::string {
+        // Iterate through all possible enum values and find a match
+        for (auto enumVal : Traits::values) {
+            std::string kebabName = CommandLine::toKebabCase(toString(enumVal));
+            if (kebabName == str) {
+                value = enumVal;
+                return {};
+            }
+        }
+
+        return fmt::format("invalid value '{}', valid options are: {}", str,
+                           buildValidOptionsList());
+    };
+
+    // Build description with valid options listed
+    std::string validOptions = buildValidOptionsList();
+    std::string fullDesc = std::string(desc);
+    if (!validOptions.empty()) {
+        if (!fullDesc.empty()) {
+            fullDesc += ". ";
+        }
+        fullDesc += "Valid options: " + validOptions;
+    }
+
+    add(name, parseValue, fullDesc, valueName, flags);
+}
 
 } // namespace slang

@@ -6,6 +6,12 @@
 #include "slang/text/SourceManager.h"
 #include "slang/util/CommandLine.h"
 
+// Test enum for enum command line option testing using SLANG_ENUM
+#define TM(x) x(Fast) x(Normal) x(Slow) x(VeryDetailedMode)
+
+SLANG_ENUM(TestMode, TM)
+#undef TM
+
 TEST_CASE("Test CommandLine -- basic") {
     std::optional<bool> a, b, longFlag, longFlag2;
     std::optional<std::string> c;
@@ -531,4 +537,108 @@ TEST_CASE("Test CommandLine -- ignore and rename errors") {
     CHECK(cmdLine.addRenameCommand("--xxx").find("missing or extra comma") != std::string::npos);
     CHECK(cmdLine.addIgnoreCommand("--yyy,--bar,baz").find("missing or extra comma") !=
           std::string::npos);
+}
+
+TEST_CASE("Test CommandLine enum options basic") {
+    std::optional<TestMode> mode;
+
+    CommandLine cmdLine;
+    cmdLine.addEnum<TestMode, TestMode_traits>("--mode", mode, "Test mode selection");
+
+    CHECK(cmdLine.parse("prog --mode fast"));
+    CHECK(mode == TestMode::Fast);
+
+    // Test help text includes valid options
+    auto help = cmdLine.getHelpText("Test program");
+    CHECK(help.find("Valid options: 'fast', 'normal', 'slow', 'very-detailed-mode'") !=
+          std::string::npos);
+}
+
+TEST_CASE("Test CommandLine -- enum options all values") {
+    std::optional<TestMode> mode;
+
+    CommandLine cmdLine;
+    cmdLine.addEnum<TestMode, TestMode_traits>("--mode", mode, "Test mode");
+
+    // Test all valid kebab-case values
+    CHECK(cmdLine.parse("prog --mode fast"));
+    CHECK(mode == TestMode::Fast);
+
+    CHECK(cmdLine.parse("prog --mode normal"));
+    CHECK(mode == TestMode::Normal);
+
+    CHECK(cmdLine.parse("prog --mode slow"));
+    CHECK(mode == TestMode::Slow);
+
+    CHECK(cmdLine.parse("prog --mode very-detailed-mode"));
+    CHECK(mode == TestMode::VeryDetailedMode);
+}
+
+TEST_CASE("Test CommandLine -- enum options invalid value") {
+    std::optional<TestMode> mode;
+
+    CommandLine cmdLine;
+    cmdLine.addEnum<TestMode, TestMode_traits>("--mode", mode, "Test mode");
+
+    CHECK(!cmdLine.parse("prog --mode invalid"));
+
+    auto errors = cmdLine.getErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0] == "prog: invalid value 'invalid', valid options are: 'fast', 'normal', "
+                       "'slow', 'very-detailed-mode'");
+}
+
+TEST_CASE("Test CommandLine -- enum options case sensitive") {
+    std::optional<TestMode> mode;
+
+    CommandLine cmdLine;
+    cmdLine.addEnum<TestMode, TestMode_traits>("--mode", mode, "Test mode");
+
+    // CamelCase should not work
+    CHECK(!cmdLine.parse("prog --mode Fast"));
+
+    auto errors = cmdLine.getErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0] == "prog: invalid value 'Fast', valid options are: 'fast', 'normal', 'slow', "
+                       "'very-detailed-mode'");
+}
+
+TEST_CASE("Test CommandLine -- enum options default value") {
+    std::optional<TestMode> mode;
+
+    CommandLine cmdLine;
+    cmdLine.addEnum<TestMode, TestMode_traits>("--mode", mode, "Test mode");
+
+    // No mode specified, should remain unset
+    CHECK(cmdLine.parse("prog"));
+    CHECK(!mode.has_value());
+}
+
+TEST_CASE("Test CommandLine -- enum options with short name") {
+    std::optional<TestMode> mode;
+
+    CommandLine cmdLine;
+    cmdLine.addEnum<TestMode, TestMode_traits>("-m,--mode", mode, "Test mode");
+
+    CHECK(cmdLine.parse("prog -m fast"));
+    CHECK(mode == TestMode::Fast);
+
+    CHECK(cmdLine.parse("prog --mode slow"));
+    CHECK(mode == TestMode::Slow);
+}
+
+TEST_CASE("Test CommandLine -- enum options invalid value with valid prefix") {
+    // Test invalid value that has a valid prefix
+    {
+        std::optional<TestMode> mode;
+        CommandLine cmdLine;
+        cmdLine.addEnum<TestMode, TestMode_traits>("--mode", mode, "Test mode");
+
+        CHECK(!cmdLine.parse("prog --mode fast-invalid"));
+        auto errors = cmdLine.getErrors();
+        REQUIRE(errors.size() == 1);
+        CHECK(errors[0] ==
+              "prog: invalid value 'fast-invalid', valid options are: 'fast', 'normal', "
+              "'slow', 'very-detailed-mode'");
+    }
 }
