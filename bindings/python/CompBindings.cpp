@@ -196,7 +196,10 @@ void registerCompilation(py::module_& m) {
              "includeDirectives"_a, "obfuscateIds"_a, "useFixedObfuscationSeed"_a = false)
         .def("reportMacros", &Driver::reportMacros)
         .def("parseAllSources", &Driver::parseAllSources)
-        .def("getDepfiles", &Driver::getDepfiles, "includesOnly"_a = false)
+        .def("getLoadedIncludePaths", &Driver::getLoadedIncludePaths)
+        .def("getLoadedFilePaths", &Driver::getLoadedFilePaths)
+        .def("getIncludePaths", &Driver::getIncludePaths, "trees"_a)
+        .def("getFilePaths", &Driver::getFilePaths, "trees"_a)
         .def("serializeDepfiles", &Driver::serializeDepfiles, "files"_a,
              "depfileTarget"_a = std::optional<std::string>())
         .def("createOptionBag", &Driver::createOptionBag)

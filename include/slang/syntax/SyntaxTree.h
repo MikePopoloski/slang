@@ -9,10 +9,12 @@
 
 #include <expected.hpp>
 #include <memory>
+#include <vector>
 
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/parsing/ParserMetadata.h"
 #include "slang/parsing/Preprocessor.h"
+#include "slang/text/SourceLocation.h"
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
 
@@ -215,6 +217,9 @@ public:
     /// Gets the list of include directives that were encountered while parsing.
     IncludeList getIncludeDirectives() const { return includes; }
 
+    /// Gets the list of source buffer IDs that this syntax tree was created from.
+    std::span<const BufferID> getSourceBufferIds() const { return sourceBufferIds; }
+
     /// This is a shared default source manager for cases where the user doesn't
     /// care about managing the lifetime of loaded source. Note that all of
     /// the source loaded by this thing will live in memory for the lifetime of
@@ -225,7 +230,8 @@ private:
     SyntaxTree(SyntaxNode* root, const SourceLibrary* library, SourceManager& sourceManager,
                BumpAllocator&& alloc, Diagnostics&& diagnostics, parsing::ParserMetadata&& metadata,
                std::vector<const DefineDirectiveSyntax*>&& macros,
-               std::vector<parsing::IncludeMetadata>&& includes, Bag options);
+               std::vector<parsing::IncludeMetadata>&& includes,
+               std::vector<BufferID>&& sourceBufferIds, Bag options);
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager,
                                               std::span<const SourceBuffer> source,
@@ -241,6 +247,7 @@ private:
     std::unique_ptr<parsing::ParserMetadata> metadata;
     std::vector<const DefineDirectiveSyntax*> macros;
     std::vector<parsing::IncludeMetadata> includes;
+    std::vector<BufferID> sourceBufferIds;
 };
 
 } // namespace slang::syntax

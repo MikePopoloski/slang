@@ -7,7 +7,11 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/ParserMetadata.h"
 
+#include <functional>
+
+#include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxVisitor.h"
+#include "slang/util/FlatMap.h"
 
 namespace slang::parsing {
 
@@ -160,6 +164,68 @@ ParserMetadata ParserMetadata::fromSyntax(const SyntaxNode& root) {
     MetadataVisitor visitor;
     root.visit(visitor);
     return visitor.meta;
+}
+
+std::vector<std::string_view> ParserMetadata::getDeclaredSymbols() const {
+    std::vector<std::string_view> declared;
+    visitDeclaredSymbols([&](std::string_view name) { declared.push_back(name); });
+    return declared;
+}
+
+void ParserMetadata::visitDeclaredSymbols(const std::function<void(std::string_view)>& func) const {
+
+    for (auto& [n, _] : nodeMap) {
+        auto decl = &n->as<ModuleDeclarationSyntax>();
+        std::string_view name = decl->header->name.valueText();
+        if (!name.empty())
+            func(name);
+    }
+
+    for (auto classDecl : classDecls) {
+        std::string_view name = classDecl->name.valueText();
+        if (!name.empty())
+            func(name);
+    }
+}
+
+std::vector<std::string_view> ParserMetadata::getReferencedSymbols() const {
+    flat_hash_set<std::string_view> deps;
+    visitReferencedSymbols([&](std::string_view name) { deps.emplace(name); });
+    return std::vector<std::string_view>(deps.begin(), deps.end());
+}
+
+void ParserMetadata::visitReferencedSymbols(
+    const std::function<void(std::string_view)>& func) const {
+    // module insts
+    for (auto name : globalInstances) {
+        func(name);
+    }
+
+    // classes/packages
+    for (auto idName : classPackageNames) {
+        std::string_view name = idName->identifier.valueText();
+        if (!name.empty()) {
+            func(name);
+        }
+    }
+
+    // package imports
+    for (auto importDecl : packageImports) {
+        for (auto importItem : importDecl->items) {
+            std::string_view name = importItem->package.valueText();
+            if (!name.empty()) {
+                func(name);
+            }
+        }
+    }
+
+    // interface ports
+    for (auto intf : interfacePorts) {
+        std::string_view name = intf->nameOrKeyword.valueText();
+        if (!name.empty()) {
+            func(name);
+        }
+    }
 }
 
 } // namespace slang::parsing
