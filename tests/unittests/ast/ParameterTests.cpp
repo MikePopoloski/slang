@@ -112,7 +112,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::WarningTask);
 }
@@ -215,7 +215,7 @@ endmodule
 TEST_CASE("Type parameters -- bad replacement") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter type foo_t, foo_t foo = 1) ();
-    if (foo) begin
+    if (foo) begin : blk
         parameter type asdf = shortint, basdf = logic;
     end
 endmodule
@@ -255,7 +255,7 @@ endmodule
 TEST_CASE("Type parameters unset -- bad") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter type foo_t, foo_t foo = 1) ();
-    if (foo) begin
+    if (foo) begin : blk
         parameter type asdf = shortint, basdf = logic;
     end
 endmodule
@@ -971,7 +971,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::DefparamBadHierarchy);
 }
@@ -1172,7 +1172,7 @@ TEST_CASE("Param overrides within generates, arrays") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     parameter int foo = 0;
-    if (foo == 12) begin
+    if (foo == 12) begin : blk
         $info("Hello");
     end
 endmodule
@@ -1340,7 +1340,7 @@ endmodule
 
 module o;
     parameter int p = 1;
-    if (p == 2) begin
+    if (p == 2) begin : blk
         $info("Hello");
     end
 endmodule
@@ -1375,7 +1375,7 @@ module m;
 endmodule
 
 module n(I i);
-    if (i.j.p == 2) begin
+    if (i.j.p == 2) begin : blk
         $info("Hello");
     end
 endmodule

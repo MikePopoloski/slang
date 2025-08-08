@@ -1292,7 +1292,7 @@ module K;
 endmodule
 
 module L #(parameter int b);
-    if (b == 3) begin
+    if (b == 3) begin : blk
         $warning("b is 3");
     end
 endmodule

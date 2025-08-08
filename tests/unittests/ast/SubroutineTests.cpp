@@ -357,7 +357,7 @@ module m;
     endfunction
     function int f5; return asdf.v(); endfunction
 
-    if (t()) begin end
+    if (t()) begin : blk end
 endmodule
 )");
 

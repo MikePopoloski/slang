@@ -666,7 +666,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diagnostics = compilation.getAllDiagnostics();
+    auto diagnostics = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
 source:7:5: error: $error encountered
@@ -827,7 +827,7 @@ module test;
     global clocking gb @clk; endclocking
     global clocking gb2 @clk; endclocking
 
-    if (1) begin
+    if (1) begin : blk
         global clocking gb @clk; endclocking
     end
 endmodule

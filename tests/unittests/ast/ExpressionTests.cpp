@@ -3133,7 +3133,7 @@ endmodule : test
 
     // This used to print TEST PASSED for all three tests,
     // but now it prints what all other tools print.
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     std::string result = "\n" + report(diags);
     CHECK(result == R"x(
 source:6:7: note: $info encountered: TEST1 PASSED

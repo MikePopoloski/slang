@@ -331,7 +331,7 @@ module m1;
     end
 
     localparam int j = foo.i;
-    if (foo.i) begin
+    if (foo.i) begin : blk
         int j = asdf;
     end
 
@@ -400,7 +400,7 @@ TEST_CASE("Useful error when lookup before declared in parent scope") {
 module m1;
 
     int i;
-    if (1) begin
+    if (1) begin : blk
         always_comb i = foo;
         type_t something;
     end
@@ -1158,11 +1158,11 @@ module M;
     localparam int bar = foo1();
     localparam int baz = foo2();
 
-    if (bar == 10) begin
+    if (bar == 10) begin : blk1
         localparam int i = 99;
     end
 
-    if (baz == 10) begin
+    if (baz == 10) begin : blk2
         localparam int j = 99;
     end
 

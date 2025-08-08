@@ -1,18 +1,11 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 
-#include "Test.h"
+#include "AnalysisTests.h"
 
 #include "slang/analysis/AnalysisManager.h"
 
 using namespace slang::analysis;
-
-#define CHECK_DIAGS_EMPTY              \
-    do {                               \
-        if (!diags.empty()) {          \
-            FAIL_CHECK(report(diags)); \
-        }                              \
-    } while (0)
 
 Diagnostics analyze(const std::string& text, Compilation& compilation) {
     auto tree = SyntaxTree::fromText(text);
@@ -132,7 +125,7 @@ TEST_CASE("Unused nets and vars") {
     auto& text = R"(
 module m #(int foo)(input baz, output bar);
     int i;
-    if (foo > 1) assign i = 0;
+    if (foo > 1) begin : blk assign i = 0; end
 
     int x = 1;
     int z;
@@ -205,13 +198,13 @@ module m(output v);
     I i(clk);
 
     int x,z;
-    if (0) begin
+    if (0) begin : blk1
         assign x = 1;
         always_ff @(posedge clk) v <= x;
 
         assign z = 1;
     end
-    else begin
+    else begin : blk2
         assign z = 1;
     end
 
@@ -609,7 +602,7 @@ TEST_CASE("Unused genvars") {
 module m;
     genvar g;
     genvar h;
-    for (g = 0; g < 3; g++) begin end
+    for (g = 0; g < 3; g++) begin : blk end
 endmodule
 )";
 

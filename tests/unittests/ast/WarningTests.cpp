@@ -212,7 +212,7 @@ module m;
     // Not useless.
     localparam width = 32;
     logic [1:0][width-1:0] c;
-    for (genvar i = 0; i < 2; i++) begin
+    for (genvar i = 0; i < 2; i++) begin : blk
         always_comb c[i] = $bits(c[i])'(i);
     end
 endmodule
@@ -323,7 +323,7 @@ module m;
 
     localparam int unsigned NUM_PORTS = 3;
     genvar g;
-    for (g = 0; g < NUM_PORTS; g++) begin end
+    for (g = 0; g < NUM_PORTS; g++) begin : blk end
 endmodule
 
 class C;
@@ -346,7 +346,7 @@ module top;
     logic [7:0] b;
 
     // No warning for sign comparison of genvars.
-    for (genvar i = 0; i < 8; i++) begin
+    for (genvar i = 0; i < 8; i++) begin : blk
         always_comb a[i] = valid && i == b;
     end
 endmodule
@@ -604,4 +604,31 @@ endmodule
     CHECK(diags[0].code == diag::WidthExpand);
     CHECK(diags[1].code == diag::WidthExpand);
     CHECK(diags[2].code == diag::WidthExpand);
+}
+
+TEST_CASE("Unnamed generate warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module a;
+    parameter L = 0;
+    if (L) begin    // warning here
+    end else begin  // warning here
+    end
+endmodule
+
+module top;
+    for (genvar i = 0; i < 8; i++) begin   // warning here
+        a a_inst();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UnnamedGenerate);
+    CHECK(diags[1].code == diag::UnnamedGenerate);
+    CHECK(diags[2].code == diag::UnnamedGenerate);
 }

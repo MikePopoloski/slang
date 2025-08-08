@@ -301,7 +301,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     auto it = diags.begin();
     CHECK((it++)->code == diag::NotAValue);
     CHECK((it++)->code == diag::InvalidGenvarIterExpression);
@@ -348,7 +348,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     auto it = diags.begin();
     CHECK((it++)->code == diag::CaseGenerateEmpty);
     CHECK((it++)->code == diag::ConstEvalNonConstVariable);
@@ -453,7 +453,7 @@ module bar;
 endmodule
 
 module baz #(parameter int i)();
-    if (i == 1 || i == 3) begin
+    if (i == 1 || i == 3) begin : blk
         always asdf = 1;
     end
 endmodule
@@ -513,8 +513,8 @@ endmodule
 TEST_CASE("Generate loops -- too many iterations") {
     auto tree = SyntaxTree::fromText(R"(
 module bar;
-    for (genvar i = 0; i < 1024; i++) begin
-        for (genvar j = 0; j < 1024; j++) begin
+    for (genvar i = 0; i < 1024; i++) begin : blk1
+        for (genvar j = 0; j < 1024; j++) begin : blk2
         end
     end
 endmodule
@@ -625,7 +625,7 @@ endinterface
 module bar #(parameter int foo);
     localparam int bar = foo;
     int j = int'(bar[foo]);
-    if (j != 10) begin
+    if (j != 10) begin : blk
         int k = j[3.4];
     end
     int k = {};
@@ -734,7 +734,7 @@ primitive foo(output a, input b);
 endprimitive
 
 interface I;
-    if (1) begin
+    if (1) begin : blk
         m m1();
     end
     foo (a, b);
@@ -1035,7 +1035,7 @@ module m;
     defparam;
 
     module top;
-        if (1) begin
+        if (1) begin : blk
             top t1();
             top t2();
         end
@@ -1116,7 +1116,7 @@ program q;
 endprogram
 
 module m;
-    if (1) begin
+    if (1) begin : blk
         C c = new(3);
         int j = p::bar();
     end
@@ -1380,7 +1380,7 @@ module o;
 endmodule
 
 module p #(parameter bar);
-    if (bar == 1) begin
+    if (bar == 1) begin : blk
         bind top q q1();
     end
 
@@ -1394,7 +1394,7 @@ endmodule
 
 module r;
     parameter p = 0;
-    if (p == 1) begin
+    if (p == 1) begin : blk
         $info("World");
     end
 endmodule
@@ -1410,7 +1410,7 @@ module top;
 
     assign q1.w = 1;
 
-    if (1) begin
+    if (1) begin : blk
         r r1();
         defparam r1.p = 1;
     end
@@ -1752,7 +1752,7 @@ module m #(parameter P);
   module n;
     int i;
   endmodule
-  if (P == 2) begin
+  if (P == 2) begin : blk
   	bind n foo f();
   end
 endmodule
@@ -1781,7 +1781,7 @@ module m #(parameter P);
   module n;
     int i;
   endmodule
-  if (P == 2) begin
+  if (P == 2) begin : blk
     bind n foo f();
   end
   n n1();
@@ -1962,7 +1962,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
 }

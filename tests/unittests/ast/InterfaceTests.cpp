@@ -559,7 +559,7 @@ interface I #(parameter int q = 1);
 endinterface
 
 module m(I.m i);
-    if (i.q == 1) begin
+    if (i.q == 1) begin : blk
         int j = i.j;
     end
 endmodule
@@ -568,7 +568,7 @@ interface J #(parameter int r);
 endinterface
 
 module n(J j);
-    if (j.r == 1) begin
+    if (j.r == 1) begin : blk
         int j = asdf;
     end
 endmodule

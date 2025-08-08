@@ -1796,6 +1796,25 @@ module m #(parameter int i);
 endmodule
 ```
 
+-Wunnamed-generate
+A generate block has no user-provided name. This is perfectly valid in SystemVerilog
+but many coding standards dictate that generate blocks alwayscbe given a name so this
+warning can be used to enforce that.
+```
+module a;
+    parameter L = 0;
+    if (L) begin
+    end else begin
+    end
+endmodule
+
+module top;
+    for (genvar i = 0; i < 8; i++) begin
+        a a_inst();
+    end
+endmodule
+```
+
 -Wunknown-warning-option
 <ignored>
 

@@ -482,6 +482,12 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
     }
 
     auto [name, loc] = getGenerateBlockName(syntax);
+    if (name.empty()) {
+        auto range = syntax.kind == SyntaxKind::GenerateBlock
+                         ? syntax.as<GenerateBlockSyntax>().begin.range()
+                         : syntax.sourceRange();
+        context.addDiag(diag::UnnamedGenerate, range);
+    }
 
     auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc, constructIndex,
                                                           isUninstantiated);
@@ -699,6 +705,13 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     auto genvar = syntax.identifier;
     if (genvar.isMissing())
         return *result;
+
+    if (name.empty()) {
+        auto range = syntax.block->kind == SyntaxKind::GenerateBlock
+                         ? syntax.block->as<GenerateBlockSyntax>().begin.range()
+                         : syntax.keyword.range();
+        context.addDiag(diag::UnnamedGenerate, range);
+    }
 
     auto genvarSyntax = comp.emplace<IdentifierNameSyntax>(genvar);
 
