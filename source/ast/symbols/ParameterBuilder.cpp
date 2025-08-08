@@ -182,10 +182,8 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
             // a type parameter, so fix it up into a NamedTypeSyntax to get a type from it.
             tt.addFlags(DeclaredTypeFlags::TypeOverridden);
             if (NameSyntax::isKind(newInitializer->kind)) {
-                // const_cast is ugly but safe here, we're only going to refer to it
-                // by const reference everywhere down.
-                auto& nameSyntax = const_cast<NameSyntax&>(newInitializer->as<NameSyntax>());
-                auto namedType = comp.emplace<NamedTypeSyntax>(nameSyntax);
+                auto nameSyntax = deepClone(newInitializer->as<NameSyntax>(), comp);
+                auto namedType = comp.emplace<NamedTypeSyntax>(*nameSyntax);
 
                 tt.setTypeSyntax(*namedType);
             }

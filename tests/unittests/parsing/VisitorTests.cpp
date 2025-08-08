@@ -2,12 +2,16 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
+#include "catch2/catch_test_macros.hpp"
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/parsing/ParserMetadata.h"
+#include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxPrinter.h"
+#include "slang/syntax/SyntaxTree.h"
 #include "slang/syntax/SyntaxVisitor.h"
 
 class SemanticModel {
@@ -733,6 +737,64 @@ class C; endclass
         }
     }
 }
+TEST_CASE("SyntaxTree/Compilation Invariant Checking") {
+
+    // Validates that the parent pointers in the syntax tree are correct, and provides debug info if
+    // not
+    auto validateParents = [](const syntax::SyntaxTree& tree) {
+        bool valid = true;
+        tree.root().visit(AllSyntaxVisitor([&](const SyntaxNode& node) {
+            if (node.kind == SyntaxKind::SyntaxList || node.kind == SyntaxKind::SeparatedList) {
+                return;
+            }
+            for (size_t i = 0; i < node.getChildCount(); i++) {
+                auto child = node.childNode(i);
+                if (!child)
+                    continue;
+                if (child->parent != &node) {
+                    valid = false;
+                    auto parentKind = toString(child->parent->kind);
+                    auto childKind = toString(child->kind);
+                    auto expectedParent = toString(node.kind);
+                    INFO(fmt::format("Parent pointer mismatch with `{}`. {}.parent should be {}, "
+                                     "but is instead {}\n",
+                                     node.toString(), childKind, expectedParent,
+                                     !parentKind.empty() ? parentKind : "<garbage memory>"));
+
+                    if (!parentKind.empty()) {
+                        INFO(fmt::format("Check for `comp.emplace<{}Syntax>` calls, and deep "
+                                         "clone the syntax nodes used to create it.",
+                                         parentKind));
+                    }
+                }
+            }
+        }));
+
+        return valid;
+    };
+
+    fs::path path = findTestDir();
+    path /= "../../regression/all.sv";
+    auto mTree = SyntaxTree::fromFile(path.string());
+    REQUIRE(mTree);
+    auto tree = *mTree;
+
+    REQUIRE(validateParents(*tree));
+
+    std::string originalSyntaxText = SyntaxPrinter::printFile(*tree);
+
+    // Compile
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    auto& _root = compilation.getRoot();
+
+    // Check parent pointers after compilation
+    REQUIRE(validateParents(*tree));
+
+    // Check that the syntax text is the same after compilation
+    std::string syntaxTextAfterCompilation = SyntaxPrinter::printFile(*tree);
+    REQUIRE(originalSyntaxText == syntaxTextAfterCompilation);
+}
 
 TEST_CASE("Visit all file") {
     // Load a file containing all the SystemVerilog constructs and visit them
@@ -771,7 +833,7 @@ TEST_CASE("Visit all file") {
     auto printMissing = [](const std::string_view name, const auto& kinds, const auto& visited) {
         for (auto kind : kinds) {
             if (!visited.contains(kind)) {
-                fmt::print(stdout, "Did not visit {}: {}\n", name, toString(kind));
+                INFO(fmt::format("Did not visit {}: {}\n", name, toString(kind)));
             }
         }
     };
@@ -781,7 +843,7 @@ TEST_CASE("Visit all file") {
     // printMissing("statement", ast::StatementKind_traits::values, symbols.stmtKinds);
 
     // Ideally this should visit all kinds (be zero)
-    CHECK(219 == syntax::SyntaxKind_traits::values.size() - syntaxKinds.size());
+    CHECK(218 == syntax::SyntaxKind_traits::values.size() - syntaxKinds.size());
 
     CHECK(42 == ast::SymbolKind_traits::values.size() - symKinds.size());
     CHECK(11 == ast::ExpressionKind_traits::values.size() - exprKinds.size());
