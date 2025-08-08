@@ -83,7 +83,9 @@ auto makeSyntaxVisitor(Functions... funcs) {
     return Result(std::move(funcs)...);
 }
 
-/// Simple visitors with kinds that are left to the user to evaluate.
+/// @brief Simple visitors with kinds that are left to the user to evaluate.
+/// This is preferable over makeSyntaxVisitor([](auto, auto){...}), as the compile time cost is
+/// lower, and the compiler errors are better.
 struct AllSyntaxVisitor {
     AllSyntaxVisitor(std::function<void(const SyntaxNode&)> func) : handler(std::move(func)) {}
 
@@ -99,22 +101,6 @@ struct AllSyntaxVisitor {
 private:
     std::function<void(const SyntaxNode&)> handler;
 };
-
-/// @brief Creates a SyntaxVisitor with the provided handler function.
-///
-/// @param func The handler function to called during the preorder traversal of the syntax tree.
-///
-/// For example:
-/// @code
-/// auto visitor = makeSyntaxVisitor([&](const SyntaxNode& node) {
-///     std::cout << node.kind << std::endl;
-/// });
-/// visitor.visit(tree.root());
-/// @endcode
-///
-inline AllSyntaxVisitor makeAllSyntaxVisitor(std::function<void(const SyntaxNode&)> func) {
-    return AllSyntaxVisitor(std::move(func));
-}
 
 namespace detail {
 

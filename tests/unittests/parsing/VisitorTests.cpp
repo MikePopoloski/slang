@@ -4,6 +4,7 @@
 #include "Test.h"
 #include "catch2/catch_test_macros.hpp"
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/ast/ASTVisitor.h"
@@ -742,7 +743,7 @@ TEST_CASE("SyntaxTree/Compilation Invariant Checking") {
     // not
     auto validateParents = [](const syntax::SyntaxTree& tree) {
         bool valid = true;
-        tree.root().visit(makeAllSyntaxVisitor([&](const SyntaxNode& node) {
+        tree.root().visit(AllSyntaxVisitor([&](const SyntaxNode& node) {
             if (node.kind == SyntaxKind::SyntaxList || node.kind == SyntaxKind::SeparatedList) {
                 return;
             }
@@ -755,15 +756,15 @@ TEST_CASE("SyntaxTree/Compilation Invariant Checking") {
                     auto parentKind = toString(child->parent->kind);
                     auto childKind = toString(child->kind);
                     auto expectedParent = toString(node.kind);
-                    fmt::print("Parent pointer mismatch with `{}`. {}.parent should be {}, "
-                               "but is instead {}\n",
-                               node.toString(), childKind, expectedParent,
-                               !parentKind.empty() ? parentKind : "<garbage memory>");
+                    INFO(fmt::format("Parent pointer mismatch with `{}`. {}.parent should be {}, "
+                                     "but is instead {}\n",
+                                     node.toString(), childKind, expectedParent,
+                                     !parentKind.empty() ? parentKind : "<garbage memory>"));
 
                     if (!parentKind.empty()) {
-                        fmt::print("Check for `comp.emplace<{}Syntax>` calls, and deep "
-                                   "clone the syntax nodes used to create it.",
-                                   parentKind);
+                        INFO(fmt::format("Check for `comp.emplace<{}Syntax>` calls, and deep "
+                                         "clone the syntax nodes used to create it.",
+                                         parentKind));
                     }
                 }
             }
@@ -780,7 +781,6 @@ TEST_CASE("SyntaxTree/Compilation Invariant Checking") {
 
     REQUIRE(validateParents(*tree));
 
-    // Store the printed text
     std::string originalSyntaxText = SyntaxPrinter::printFile(*tree);
 
     // Compile
@@ -791,7 +791,7 @@ TEST_CASE("SyntaxTree/Compilation Invariant Checking") {
     // Check parent pointers after compilation
     REQUIRE(validateParents(*tree));
 
-    // Check the text as well
+    // Check that the syntax text is the same after compilation
     std::string syntaxTextAfterCompilation = SyntaxPrinter::printFile(*tree);
     REQUIRE(originalSyntaxText == syntaxTextAfterCompilation);
 }
@@ -833,7 +833,7 @@ TEST_CASE("Visit all file") {
     auto printMissing = [](const std::string_view name, const auto& kinds, const auto& visited) {
         for (auto kind : kinds) {
             if (!visited.contains(kind)) {
-                fmt::print(stdout, "Did not visit {}: {}\n", name, toString(kind));
+                INFO(fmt::format("Did not visit {}: {}\n", name, toString(kind)));
             }
         }
     };
