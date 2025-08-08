@@ -102,7 +102,7 @@ DepTracker::Deps DepTracker::getTreesFor(const std::vector<RC<SyntaxTree>>& tree
     }
 
     return {
-        std::move(result),
-        std::move(std::vector<std::string_view>(missing)),
+        result,
+        missing,
     };
 }

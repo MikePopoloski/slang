@@ -74,8 +74,7 @@ TEST_CASE("DepTracker topological sort ordering") {
     auto treeMid = SyntaxTree::fromText("module mid; leafA la(); leafB lb(); endmodule\n");
     auto treeTop = SyntaxTree::fromText("module top; mid m(); endmodule\n");
 
-    std::vector<std::shared_ptr<SyntaxTree>> trees = {treeLeafA, treeLeafB, treeMid, treeTop};
-    DepTracker tracker(trees);
+    DepTracker tracker({treeLeafA, treeLeafB, treeMid, treeTop});
 
     auto result = tracker.getTreesFor({"top"});
 
@@ -107,8 +106,7 @@ TEST_CASE("DepTracker circular dependency handling") {
     auto treeCycleA = SyntaxTree::fromText("module cycleA; cycleB cb(); endmodule\n");
     auto treeCycleB = SyntaxTree::fromText("module cycleB; cycleA ca(); endmodule\n");
 
-    std::vector<std::shared_ptr<SyntaxTree>> trees = {treeCycleA, treeCycleB};
-    DepTracker tracker(trees);
+    DepTracker tracker({treeCycleA, treeCycleB});
 
     auto result = tracker.getTreesFor({"cycleA"});
 
@@ -131,8 +129,7 @@ TEST_CASE("DepTracker partial dependency tree") {
     auto treeMid = SyntaxTree::fromText("module mid; leafA la(); leafB lb(); endmodule\n");
     auto treeTop = SyntaxTree::fromText("module top; mid m(); endmodule\n");
 
-    std::vector<std::shared_ptr<SyntaxTree>> trees = {treeLeafA, treeLeafB, treeMid, treeTop};
-    DepTracker tracker(trees);
+    DepTracker tracker({treeLeafA, treeLeafB, treeMid, treeTop});
 
     auto result = tracker.getTreesFor({"mid"});
 
