@@ -229,6 +229,9 @@ void Driver::addStandardArgs() {
                 "If this option is unset, colors will be enabled if a color-capable "
                 "terminal is detected.");
     cmdLine.add("--diag-column", options.diagColumn, "Show column numbers in diagnostic output");
+    cmdLine.addEnum<ColumnUnit, ColumnUnit_traits>("--diag-column-unit", options.diagColumnUnit,
+                                                   "Unit for column numbers in diagnostics",
+                                                   "<unit>");
     cmdLine.add("--diag-location", options.diagLocation,
                 "Show location information in diagnostic output");
     cmdLine.add("--diag-source", options.diagSourceLine,
@@ -587,12 +590,14 @@ bool Driver::processOptions() {
 
         jsonDiagClient = std::make_shared<JsonDiagnosticClient>(*jsonWriter);
         jsonDiagClient->showAbsPaths(options.diagAbsPaths.value_or(false));
+        jsonDiagClient->setColumnUnit(options.diagColumnUnit.value_or(ColumnUnit::Display));
         diagEngine.addClient(jsonDiagClient);
     }
 
     auto& tdc = *textDiagClient;
     tdc.showColors(showColors);
     tdc.showColumn(options.diagColumn.value_or(true));
+    tdc.setColumnUnit(options.diagColumnUnit.value_or(ColumnUnit::Display));
     tdc.showLocation(options.diagLocation.value_or(true));
     tdc.showSourceLine(options.diagSourceLine.value_or(true));
     tdc.showOptionName(options.diagOptionName.value_or(true));

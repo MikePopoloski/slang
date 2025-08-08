@@ -307,13 +307,22 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, std::span<const Source
     size_t col = 0;
     bool hasLocation = loc.buffer() != SourceLocation::NoLocation.buffer();
     if (hasLocation) {
+        // We always need the byte-based column for use in the source line stuff below.
         col = sourceManager->getColumnNumber(loc);
+
         if (includeLocation) {
             buffer->append(fg(filenameColor), getFileName(loc));
             buffer->append(":");
             buffer->format(fg(locationColor), "{}", sourceManager->getLineNumber(loc));
-            if (includeColumn)
-                buffer->format(fg(locationColor), ":{}", col);
+
+            if (includeColumn) {
+                // If the user wants "display" column numbers we will adjust that here.
+                size_t displayCol = col;
+                if (columnUnit == ColumnUnit::Display)
+                    displayCol = sourceManager->getDisplayColumnNumber(loc);
+
+                buffer->format(fg(locationColor), ":{}", displayCol);
+            }
             buffer->append(": ");
         }
 

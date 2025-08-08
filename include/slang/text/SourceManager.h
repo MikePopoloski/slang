@@ -80,6 +80,11 @@ public:
     /// @a location must be a file location.
     size_t getColumnNumber(SourceLocation location) const;
 
+    /// Gets the display column number for a given source location, accounting for
+    /// UTF-8 character widths and tab expansion.
+    /// @a location must be a file location.
+    size_t getDisplayColumnNumber(SourceLocation location) const;
+
     /// Gets a location that indicates from where the given buffer was included.
     /// @a location must be a file location.
     SourceLocation getIncludedFrom(BufferID buffer) const;

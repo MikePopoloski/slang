@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "slang/text/CharInfo.h"
 #include "slang/text/Glob.h"
 #include "slang/util/OS.h"
 #include "slang/util/SmallMap.h"
@@ -78,6 +79,58 @@ size_t SourceManager::getColumnNumber(SourceLocation location) const {
         lineStart--;
 
     return location.offset() - lineStart + 1;
+}
+
+size_t SourceManager::getDisplayColumnNumber(SourceLocation location) const {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    auto info = getFileInfo(location.buffer(), lock);
+    if (!info || !info->data)
+        return 0;
+
+    // walk backward to find start of line
+    auto fd = info->data;
+    const size_t targetOffset = location.offset();
+    size_t byteOffset = targetOffset;
+    SLANG_ASSERT(byteOffset < fd->mem.size());
+    while (byteOffset > 0 && fd->mem[byteOffset - 1] != '\n' && fd->mem[byteOffset - 1] != '\r')
+        byteOffset--;
+
+    // Calculate display column by walking forward from line start
+    size_t displayColumn = 0;
+    while (byteOffset < targetOffset) {
+        if (fd->mem[byteOffset] == '\t') {
+            // Expand tab to next 8-column boundary
+            displayColumn = (displayColumn / 8 + 1) * 8;
+            byteOffset++;
+        }
+        else {
+            // Try to decode UTF-8 character
+            const auto data = fd->mem.data() + byteOffset;
+            int error;
+            uint32_t codepoint;
+            int unused;
+
+            if (byteOffset + 4 <= fd->mem.size()) {
+                auto next = utf8Decode(data, &codepoint, &error, unused);
+                byteOffset += size_t(next - data);
+            }
+            else {
+                char buf[4] = {};
+                auto spaceLeft = fd->mem.size() - byteOffset;
+                memcpy(buf, data, spaceLeft);
+
+                auto next = utf8Decode(buf, &codepoint, &error, unused);
+                byteOffset += std::min(size_t(next - buf), spaceLeft);
+            }
+
+            if (!error && isPrintableUnicode(codepoint))
+                displayColumn += size_t(charWidthUnicode(codepoint));
+            else
+                displayColumn++;
+        }
+    }
+
+    return displayColumn + 1; // +1 for 1-based column numbering
 }
 
 std::string_view SourceManager::getFileName(SourceLocation location) const {

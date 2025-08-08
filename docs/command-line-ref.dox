@@ -573,6 +573,12 @@ if a color-capable terminal is detected.
 
 Show or hide column numbers in diagnostic output. The default is to show.
 
+`--diag-column-unit byte|display`
+
+Control how column numbers are calculated. If 'display' (the default), the display width of tabs and
+multi-byte UTF-8 characters will be counted. Otherwise, if 'byte' then the pure byte offset from the start
+of the line will be used.
+
 `--diag-location`
 
 Show or hide location information (file name, line and column numbers) in diagnostic output. The default is to show.

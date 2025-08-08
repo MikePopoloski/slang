@@ -54,6 +54,11 @@ std::string_view DiagnosticClient::getSourceLine(SourceLocation location, size_t
     return std::string_view(start, (size_t)(curr - start));
 }
 
+size_t DiagnosticClient::getColumnNumber(SourceLocation location) const {
+    return columnUnit == ColumnUnit::Display ? sourceManager->getDisplayColumnNumber(location)
+                                             : sourceManager->getColumnNumber(location);
+}
+
 std::string_view DiagnosticClient::getSeverityString(DiagnosticSeverity severity) {
     switch (severity) {
         case DiagnosticSeverity::Ignored:

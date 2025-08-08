@@ -31,8 +31,7 @@ void JsonDiagnosticClient::report(const ReportedDiagnostic& diag) {
         auto loc = diag.location;
         writer.writeProperty("location");
         writer.writeValue(fmt::format("{}:{}:{}", getFileName(loc),
-                                      sourceManager->getLineNumber(loc),
-                                      sourceManager->getColumnNumber(loc)));
+                                      sourceManager->getLineNumber(loc), getColumnNumber(loc)));
     }
 
     if (diag.shouldShowIncludeStack) {
@@ -75,7 +74,7 @@ void JsonDiagnosticClient::report(const ReportedDiagnostic& diag) {
                 writer.writeProperty("location");
                 writer.writeValue(fmt::format("{}:{}:{}", getFileName(loc),
                                               sourceManager->getLineNumber(loc),
-                                              sourceManager->getColumnNumber(loc)));
+                                              getColumnNumber(loc)));
             }
 
             writer.endObject();

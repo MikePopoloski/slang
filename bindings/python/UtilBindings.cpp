@@ -23,6 +23,8 @@
 namespace fs = std::filesystem;
 
 void registerUtil(py::module_& m) {
+    EXPOSE_ENUM(m, ColumnUnit);
+
     py::classh<BumpAllocator>(m, "BumpAllocator").def(py::init<>());
 
     py::classh<Bag>(m, "Bag")
@@ -131,6 +133,7 @@ void registerUtil(py::module_& m) {
         .def("getRawFileName", &SourceManager::getRawFileName, "buffer"_a)
         .def("getFullPath", &SourceManager::getFullPath, "buffer"_a)
         .def("getColumnNumber", &SourceManager::getColumnNumber, "location"_a)
+        .def("getDisplayColumnNumber", &SourceManager::getDisplayColumnNumber, "location"_a)
         .def("getIncludedFrom", &SourceManager::getIncludedFrom, "buffer"_a)
         .def("getMacroName", &SourceManager::getMacroName, "location"_a)
         .def("isFileLoc", &SourceManager::isFileLoc, "location"_a)
@@ -306,6 +309,7 @@ void registerUtil(py::module_& m) {
         .def(py::init<>())
         .def("showColors", &TextDiagnosticClient::showColors, "show"_a)
         .def("showColumn", &TextDiagnosticClient::showColumn, "show"_a)
+        .def("setColumnUnit", &TextDiagnosticClient::setColumnUnit, "unit"_a)
         .def("showLocation", &TextDiagnosticClient::showLocation, "show"_a)
         .def("showSourceLine", &TextDiagnosticClient::showSourceLine, "show"_a)
         .def("showOptionName", &TextDiagnosticClient::showOptionName, "show"_a)

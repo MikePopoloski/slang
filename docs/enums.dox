@@ -1295,3 +1295,14 @@
 @var slang::ast::UniquePriorityCheck::Priority
 @brief Priority check
 **/
+
+/** @enum slang::ColumnUnit
+@brief Represents the unit to use for column numbers in diagnostic output
+
+@var slang::ColumnUnit::Byte
+@brief Byte-based column accounting
+
+@var slang::ColumnUnit::Display
+@brief Column numbers that line up with what is displayed on a terminal (accounting for Unicode characters, tabs, etc)
+
+**/

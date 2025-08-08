@@ -9,6 +9,7 @@
 #pragma once
 
 #include "slang/ast/Compilation.h"
+#include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/driver/SourceLoader.h"
 #include "slang/text/SourceManager.h"
@@ -212,6 +213,9 @@ public:
 
         /// If true, include column numbers in printed diagnostics.
         std::optional<bool> diagColumn;
+
+        /// The unit to use for column numbers in diagnostic output.
+        std::optional<ColumnUnit> diagColumnUnit;
 
         /// If true, include location information in printed diagnostics.
         std::optional<bool> diagLocation;

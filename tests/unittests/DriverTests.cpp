@@ -76,6 +76,33 @@ TEST_CASE("Driver invalid diagHierarchy") {
     CHECK(stderrContains("invalid value for diag-hierarchy option"));
 }
 
+TEST_CASE("Driver valid column unit") {
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto filePath = findTestDir() + "test.sv";
+
+    const char* argv1[] = {"testfoo", "--diag-column-unit=byte", filePath.c_str()};
+    CHECK(driver.parseCommandLine(3, argv1));
+    CHECK(driver.processOptions());
+    CHECK(driver.options.diagColumnUnit == ColumnUnit::Byte);
+
+    const char* argv2[] = {"testfoo", "--diag-column-unit=display", filePath.c_str()};
+    CHECK(driver.parseCommandLine(3, argv2));
+    CHECK(driver.processOptions());
+    CHECK(driver.options.diagColumnUnit == ColumnUnit::Display);
+}
+
+TEST_CASE("Driver invalid column unit") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--diag-column-unit=invalid"};
+    CHECK(!driver.parseCommandLine(2, argv));
+}
+
 TEST_CASE("Driver invalid timescale") {
     auto guard = OS::captureOutput();
 

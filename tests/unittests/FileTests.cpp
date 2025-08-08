@@ -184,3 +184,43 @@ TEST_CASE("In-memory glob matching") {
     CHECK(svGlobMatches("../../foo/bar/baz.txt", "...bar/..."));
     CHECK(svGlobMatches("../../foo/bar/baz.txt", ".../bar/..."));
 }
+
+TEST_CASE("Display column with UTF-8") {
+    SourceManager manager;
+
+    // Test with UTF-8 characters: "H©llo" (© is 2 bytes, 1 column width)
+    std::string utf8Text = "H\xC2\xA9llo";
+    auto buffer = manager.assignText("test.sv", utf8Text);
+    REQUIRE(buffer);
+
+    // Test locations in the UTF-8 text
+    SourceLocation loc1(buffer.id, 0); // 'H' at byte 0
+    CHECK(manager.getDisplayColumnNumber(loc1) == 1);
+
+    SourceLocation loc2(buffer.id, 1); // '©' at byte 1 (starts 2-byte sequence)
+    CHECK(manager.getDisplayColumnNumber(loc2) == 2);
+
+    SourceLocation loc3(buffer.id, 3); // First 'l' at byte 3 (after 2-byte ©)
+    // Since © takes 2 bytes but 1 display column, this should be at display column 3, not 4
+    CHECK(manager.getDisplayColumnNumber(loc3) == 3);
+}
+
+TEST_CASE("Display column with tabs") {
+    SourceManager manager;
+
+    // Test with tab character: "a\tb"
+    std::string tabText = "a\tb";
+    auto buffer = manager.assignText("test.sv", tabText);
+    REQUIRE(buffer);
+
+    // Test specific locations
+    SourceLocation loc1(buffer.id, 0); // 'a' at byte 0
+    CHECK(manager.getDisplayColumnNumber(loc1) == 1);
+
+    SourceLocation loc2(buffer.id, 1); // '\t' at byte 1
+    CHECK(manager.getDisplayColumnNumber(loc2) == 2);
+
+    SourceLocation loc3(buffer.id, 2); // 'b' at byte 2 (after tab)
+    // Tab at position 2 expands to next 8-boundary, which is column 9
+    CHECK(manager.getDisplayColumnNumber(loc3) == 9);
+}

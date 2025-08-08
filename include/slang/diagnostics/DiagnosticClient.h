@@ -12,6 +12,10 @@
 
 namespace slang {
 
+#define COLUMN_UNIT(x) x(Byte) x(Display)
+SLANG_ENUM(ColumnUnit, COLUMN_UNIT)
+#undef COLUMN_UNIT
+
 /// A base class for diagnostic clients, which receive issued diagnostics
 /// and present them to the user in some form.
 class SLANG_EXPORT DiagnosticClient {
@@ -29,14 +33,19 @@ public:
     /// made absolute, or whether to use the relative path.
     void showAbsPaths(bool set) { absPaths = set; }
 
+    /// Sets the unit used for displaying column numbers.
+    void setColumnUnit(ColumnUnit unit) { columnUnit = unit; }
+
 protected:
     const DiagnosticEngine* engine = nullptr;
     const SourceManager* sourceManager = nullptr;
+    ColumnUnit columnUnit = ColumnUnit::Byte;
     bool absPaths = false;
 
     std::string getFileName(SourceLocation location) const;
     void getIncludeStack(BufferID buffer, SmallVectorBase<SourceLocation>& stack) const;
     std::string_view getSourceLine(SourceLocation location, size_t col) const;
+    size_t getColumnNumber(SourceLocation location) const;
     static std::string_view getSeverityString(DiagnosticSeverity severity);
 };
 
