@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+
 """
 Reconstructs source code from CST JSON output to verify token completeness.
 
@@ -33,7 +37,6 @@ def extract_tokens(node, tokens):
                     continue
                 extract_tokens(value, tokens)
     elif isinstance(node, list):
-        # Array of nodes
         for item in node:
             extract_tokens(item, tokens)
 
@@ -53,7 +56,7 @@ def reconstruct_source(json_file):
         # Direct CST node
         extract_tokens(data, tokens)
 
-    tokens.append("\n")  # Implicit newline
+    tokens.append("\n")
 
     # Join all tokens to reconstruct source
     reconstructed = "".join(tokens)

@@ -36,4 +36,5 @@ private:
     JsonWriter& writer;
     CSTJsonMode mode;
 };
+
 } // namespace slang::syntax

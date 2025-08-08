@@ -22,10 +22,12 @@
 
 using namespace slang;
 using namespace slang::ast;
+using namespace slang::syntax;
 using namespace slang::driver;
 
-void printJson(Compilation& compilation, const std::string& fileName,
-               const std::vector<std::string>& scopes, bool includeSourceInfo, bool detailedTypes) {
+void printASTJson(Compilation& compilation, const std::string& fileName,
+                  const std::vector<std::string>& scopes, bool includeSourceInfo,
+                  bool detailedTypes) {
     JsonWriter writer;
     writer.setPrettyPrint(true);
 
@@ -58,19 +60,18 @@ void printJson(Compilation& compilation, const std::string& fileName,
 }
 
 void printCSTJson(Driver& driver, const std::string& fileName,
-                  syntax::CSTJsonMode mode = syntax::CSTJsonMode::Full) {
+                  CSTJsonMode mode = CSTJsonMode::Full) {
     JsonWriter writer;
     writer.setPrettyPrint(true);
 
-    syntax::CSTSerializer converter(writer, mode);
+    CSTSerializer converter(writer, mode);
 
     writer.startObject();
     writer.writeProperty("syntaxTrees");
     writer.startArray();
 
-    for (auto& tree : driver.syntaxTrees) {
+    for (auto& tree : driver.syntaxTrees)
         converter.serialize(*tree);
-    }
 
     writer.endArray();
     writer.endObject();
@@ -131,9 +132,9 @@ int driverMain(int argc, TArgs argv) {
             "Dump the parsed syntax trees in JSON format to the specified file, or '-' for stdout",
             "<file>", CommandLineFlags::FilePath);
 
-        std::optional<syntax::CSTJsonMode> cstJsonMode;
-        driver.cmdLine.addEnum<syntax::CSTJsonMode, syntax::CSTJsonMode_traits>(
-            "--cst-json-mode", cstJsonMode, "CST JSON output mode", "<mode>");
+        std::optional<CSTJsonMode> cstJsonMode;
+        driver.cmdLine.addEnum<CSTJsonMode, CSTJsonMode_traits>("--cst-json-mode", cstJsonMode,
+                                                                "CST JSON output mode", "<mode>");
 
         std::vector<std::string> astJsonScopes;
         driver.cmdLine.add("--ast-json-scope", astJsonScopes,
@@ -249,7 +250,7 @@ int driverMain(int argc, TArgs argv) {
 
             if (cstJsonFile) {
                 TimeTraceScope timeScope("cstSerialization"sv, ""sv);
-                printCSTJson(driver, *cstJsonFile, cstJsonMode.value_or(syntax::CSTJsonMode::Full));
+                printCSTJson(driver, *cstJsonFile, cstJsonMode.value_or(CSTJsonMode::Full));
             }
 
             if (onlyParse == true)
@@ -271,8 +272,8 @@ int driverMain(int argc, TArgs argv) {
 
             if (astJsonFile) {
                 TimeTraceScope timeScope("astSerialization"sv, ""sv);
-                printJson(*compilation, *astJsonFile, astJsonScopes, includeSourceInfo == true,
-                          serializeDetailedTypes == true);
+                printASTJson(*compilation, *astJsonFile, astJsonScopes, includeSourceInfo == true,
+                             serializeDetailedTypes == true);
             }
             return ok;
         };

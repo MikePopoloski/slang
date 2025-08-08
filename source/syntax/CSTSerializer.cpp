@@ -24,8 +24,7 @@ CSTSerializer::CSTSerializer(JsonWriter& writer, CSTJsonMode mode) : writer(writ
 void CSTSerializer::serialize(const SyntaxTree& tree) {
     writer.startObject();
     writer.writeProperty("kind");
-    // Cast is needed because it will get converted to bool over string_view
-    writer.writeValue(std::string_view{"SyntaxTree"});
+    writer.writeValue("SyntaxTree"sv);
     writer.writeProperty("root");
     serialize(tree.root());
     writer.endObject();
@@ -33,6 +32,7 @@ void CSTSerializer::serialize(const SyntaxTree& tree) {
 
 template<typename T>
 struct always_false : std::false_type {};
+
 struct CSTJsonVisitor {
     JsonWriter& writer;
     CSTJsonMode mode;
@@ -65,9 +65,9 @@ struct CSTJsonVisitor {
     }
 
     void writeToken(std::string_view name, parsing::Token token) {
-        if (token.valueText().empty()) {
+        if (token.valueText().empty())
             return;
-        }
+
         writer.writeProperty(name);
         writeTokenValue(token);
     }
@@ -85,33 +85,30 @@ struct CSTJsonVisitor {
     }
 
     void writeTokenList(std::string_view name, const TokenList& tokenList) {
-        if (tokenList.empty()) {
+        if (tokenList.empty())
             return;
-        }
+
         writer.writeProperty(name);
         writer.startArray();
-        for (auto token : tokenList) {
+        for (auto token : tokenList)
             writeTokenValue(token);
-        }
         writer.endArray();
     }
 
     template<typename T>
     void writeSyntaxList(std::string_view name, const SyntaxList<T>& syntaxList) {
-        if (syntaxList.empty()) {
+        if (syntaxList.empty())
             return;
-        }
+
         writer.writeProperty(name);
         writer.startArray();
-        for (auto item : syntaxList) {
+        for (auto item : syntaxList)
             item->visit(*this);
-        }
         writer.endArray();
     }
 
     void writeChildren(const SyntaxNode& node) {
         writer.startArray();
-        // SeparatedSyntaxList stores elements and separators alternately
         for (size_t i = 0; i < node.getChildCount(); i++) {
             auto child = node.childNode(i);
             if (child) {
@@ -119,9 +116,8 @@ struct CSTJsonVisitor {
             }
             else {
                 auto token = node.childToken(i);
-                if (token) {
+                if (token)
                     writeTokenValue(token);
-                }
             }
         }
         writer.endArray();
@@ -130,9 +126,9 @@ struct CSTJsonVisitor {
     template<typename T>
     void writeSeparatedSyntaxList(std::string_view name,
                                   const SeparatedSyntaxList<T>& separatedList) {
-        if (separatedList.empty()) {
+        if (separatedList.empty())
             return;
-        }
+
         writer.writeProperty(name);
         writeChildren(separatedList);
     }
@@ -156,9 +152,9 @@ struct CSTJsonVisitor {
             if (mode == CSTJsonMode::SimpleTrivia) {
                 // Just write the concatenated trivia text
                 std::string triviaText;
-                for (auto trivia : token.trivia()) {
+                for (auto trivia : token.trivia())
                     triviaText += trivia.getRawText();
-                }
+
                 writer.writeValue(triviaText);
             }
             else {

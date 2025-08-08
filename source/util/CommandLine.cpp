@@ -909,9 +909,8 @@ std::string CommandLine::toKebabCase(std::string_view str) {
     std::string result;
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
-        if (i > 0 && std::isupper(c)) {
+        if (i > 0 && std::isupper(c))
             result += '-';
-        }
         result += charToLower(c);
     }
     return result;

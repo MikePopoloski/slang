@@ -77,6 +77,10 @@ public:
     /// Writes a newline character into the buffer.
     void writeNewLine();
 
+    // Don't let c-strings implicitly convert to bool, we want callers
+    // to pass a string_view instead.
+    void writeValue(const char*) = delete;
+
 private:
     void endValue();
     size_t findLastComma() const;
