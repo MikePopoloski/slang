@@ -11,6 +11,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
+#include "slang/driver/DepTracker.h"
 #include "slang/driver/SourceLoader.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
@@ -18,7 +19,6 @@
 #include "slang/util/LanguageVersion.h"
 #include "slang/util/OS.h"
 #include "slang/util/Util.h"
-
 namespace slang {
 
 class JsonDiagnosticClient;
@@ -342,15 +342,26 @@ public:
     /// Prints all macros from all loaded buffers to stdout.
     void reportMacros();
 
-    /// @brief Returns a list of all files that were loaded by the driver.
-    /// @param includesOnly If true, only include files that were loaded are returned.
-    std::vector<std::filesystem::path> getDepfiles(bool includesOnly = false) const;
+    /// @brief Returns the file paths that were loaded in the given syntax trees, excluding include
+    /// files.
+    std::vector<std::filesystem::path> getFilePaths(
+        std::vector<std::shared_ptr<syntax::SyntaxTree>> trees) const;
+
+    /// @brief Returns the file paths that were loaded via the command line.
+    std::vector<std::filesystem::path> getLoadedFilePaths() const;
+
+    /// @brief Returns the include files that were loaded in the given syntax trees.
+    std::vector<std::filesystem::path> getIncludePaths(
+        std::vector<std::shared_ptr<syntax::SyntaxTree>> trees) const;
+
+    /// @brief Returns the include files that were loaded in the given syntax trees.
+    std::vector<std::filesystem::path> getLoadedIncludePaths() const;
 
     /// @brief Serializes the given list of files into a depfile format.
     /// @param files The list of files to serialize.
     /// @param depfileTarget The target file to use; also implies that makefile format should be
-    /// used, with this string as the target. If not set, it will serialize in filelist format, with
-    /// one file per line.
+    /// used, with this string as the target. If not set, it will serialize in filelist format,
+    /// with one file per line.
     std::string serializeDepfiles(const std::vector<std::filesystem::path>& files,
                                   const std::optional<std::string>& depfileTarget);
 
@@ -397,14 +408,16 @@ public:
     /// @returns true if compilation succeeded and false if errors were encountered.
     [[nodiscard]] bool runFullCompilation(bool quiet = false);
 
+    void printError(const std::string& message);
+    void printWarning(const std::string& message);
+    void printNote(const std::string& message);
+
 private:
     bool parseUnitListing(std::string_view text);
     void addLibraryFiles(std::string_view pattern);
     void addParseOptions(Bag& bag) const;
     void addCompilationOptions(Bag& bag) const;
     bool reportLoadErrors();
-    void printError(const std::string& message);
-    void printWarning(const std::string& message);
 
     bool anyFailedLoads = false;
     flat_hash_set<std::filesystem::path> activeCommandFiles;

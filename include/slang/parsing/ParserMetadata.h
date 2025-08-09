@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <vector>
 
@@ -60,6 +61,20 @@ struct SLANG_EXPORT ParserMetadata {
 
     /// Constructs a new set of parser metadata by walking the provided syntax tree.
     static ParserMetadata fromSyntax(const syntax::SyntaxNode& root);
+
+    /// Returns a list symbols from visitDeclaredSymbols
+    std::vector<std::string_view> getDeclaredSymbols() const;
+
+    /// Visits top level symbols declared in this metadata, calling the provided function with the
+    /// name. This includes modules, classes, packages, and interfaces.
+    void visitDeclaredSymbols(const std::function<void(std::string_view)>& func) const;
+
+    /// Returns a list of all symbols from visitReferencedSymbols
+    std::vector<std::string_view> getReferencedSymbols() const;
+
+    /// Visits all top level symbols referenced/used by this metadata, calling the provided
+    /// function for each symbol name.
+    void visitReferencedSymbols(const std::function<void(std::string_view)>& func) const;
 };
 
 } // namespace slang::parsing
