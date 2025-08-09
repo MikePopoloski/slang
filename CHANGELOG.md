@@ -6,11 +6,33 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+* Explicit package export directives now correctly require a corresponding import (wildcard or explicit)
+* Non-variable and non-output ANSI port declarations are now correctly prevented from specifying an initializer expression
+* Parameter port declarations now correctly require an explicit keyword when an implicit type syntax with dimensions or signing keyword is used
+* Covergroup formal arguments are now correctly always considered `const`
+
 ### Notable Breaking Changes
+
 ### New Features
+* Added [-Wcase-none](https://sv-lang.com/warning-ref.html#case-none) which warns about constant case statements that don't match on any items
+* Added a `--cst-json` option to serialize the concrete syntax tree to JSON (thanks to @AndrewNolte)
+* Added `--allow-genblk-reference` as a compatibility option to allow referencing unnamed generate blocks via their external names (thanks to @toddstrader)
+* Added [-Wunnamed-generate](https://sv-lang.com/warning-ref.html#unnamed-generate) which warns for generate blocks that don't have a user-provided name
+* Added a `--diag-column-unit` option to control whether column numbers in diagnostics respect UTF-8 encoding and tab stop widths, which is now the new default. The old behavior can be selected with `--diag-column-unit=byte`.
+
 ### Improvements
+* -Wcase-dup no longer warns if the duplicate items are all constant case items that don't match a known constant case expression
+
 ### Fixes
+* Fixed enum base type check to properly error for multidimensional vector types
+* An appropriate error is now issued for enums that specify themselves as their own base type
+* Fixed a bug when parsing multiple comma separated type parameter declarations in a module port list
+* Fixed a bug in the accounting of how many nested `for` loop steps have been taken during dataflow analysis
+* Unnamed covergroup types now print with a placeholder name in diagnostics and AST dumping instead of just an empty string
+
 ### Tools & Bindings
+#### pyslang
+* Upgraded to pybind11 3.0, which brings improved performance, smart_holder and native_enum features
 
 
 ## [v9.0] - 2025-07-30
