@@ -14,6 +14,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_templated.hpp>
 #include <filesystem>
+#include <initializer_list>
 
 #include "slang/ast/Compilation.h"
 #include "slang/diagnostics/AllDiags.h"
@@ -56,7 +57,7 @@ using namespace slang::ast;
     } while (0)
 
 // These are warnings that are annoying to see in tests so we filter them out by default.
-static constexpr std::initializer_list DefaultIgnoreWarnings = {diag::UnnamedGenerate};
+static constexpr std::initializer_list<DiagCode> DefaultIgnoreWarnings = {diag::UnnamedGenerate};
 
 #define NO_COMPILATION_ERRORS                                                       \
     do {                                                                            \
