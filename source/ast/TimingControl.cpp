@@ -23,7 +23,8 @@ using namespace syntax;
 
 TimingControl& TimingControl::bind(const TimingControlSyntax& syntax, const ASTContext& context) {
     auto& comp = context.getCompilation();
-    if (context.flags.has(ASTFlags::Function | ASTFlags::Final) || context.inAlwaysCombLatch()) {
+    if ((context.flags.has(ASTFlags::Function | ASTFlags::Final) || context.inAlwaysCombLatch()) &&
+        !context.flags.has(ASTFlags::NonBlockingTimingControl)) {
         context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
         return badCtrl(comp, nullptr);
     }
