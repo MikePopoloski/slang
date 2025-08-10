@@ -243,6 +243,7 @@ Token Preprocessor::nextProcessed() {
         case TokenKind::MacroEscapedQuote:
         case TokenKind::MacroPaste:
         case TokenKind::LineContinuation:
+        case TokenKind::EmptyMacroArgument:
         case TokenKind::Unknown:
             return handleDirectives(token);
         case TokenKind::Directive:
@@ -280,6 +281,11 @@ Token Preprocessor::handleDirectives(Token token) {
                 addDiag(diag::MacroOpsOutsideDefinition, token.range());
                 break;
             }
+            case TokenKind::EmptyMacroArgument:
+                // This can happen when expanding a macro that has trailing synthetic comments
+                // that we need to preserve in the trivia.
+                trivia.append_range(token.trivia());
+                break;
             case TokenKind::Unknown: {
                 // This is an error in the lexer. See if we should issue any more
                 // specific diagnostics here (that were deferred until we know we're

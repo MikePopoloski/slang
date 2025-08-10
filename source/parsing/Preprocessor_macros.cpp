@@ -141,6 +141,13 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
     Token extraToAppend;
     bool anyNewMacros = false;
     bool didConcat = false;
+    bool syntheticIsLineComment = false;
+
+    auto finishSyntheticComment = [&] {
+        emptyArgTrivia.append_range(syntheticComment.trivia());
+        emptyArgTrivia.push_back(Lexer::commentify(alloc, sourceManager, commentBuffer));
+        syntheticComment = Token();
+    };
 
     for (size_t i = 0; i < tokens.size(); i++) {
         Token newToken;
@@ -217,7 +224,7 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                         }
                     }
                 }
-                else if (syntheticComment) {
+                else if (syntheticComment && !syntheticIsLineComment) {
                     // Check for a *``/ to end the synthetic comment. Otherwise ignore the paste,
                     // since this is just going to become a comment anyway.
                     if (commentBuffer.back().kind == TokenKind::Star &&
@@ -225,10 +232,7 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                         commentBuffer.push_back(tokens[i + 1]);
                         i++;
 
-                        emptyArgTrivia.append_range(syntheticComment.trivia());
-                        emptyArgTrivia.push_back(
-                            Lexer::commentify(alloc, sourceManager, commentBuffer));
-                        syntheticComment = Token();
+                        finishSyntheticComment();
                     }
                 }
                 else {
@@ -236,12 +240,16 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                     Token left = dest.back();
                     Token right = tokens[i + 1];
 
-                    // Other tools allow concatenating a '/' with a '*' to form a block comment.
+                    // Other tools allow concatenating a '/' with a '*' to form a block comment
+                    // (and similarly '/' with '/' for a line comment).
                     // This seems like utter nonsense but real world code depends on it so
                     // we have to support it as well.
-                    if (left.kind == TokenKind::Slash && right.kind == TokenKind::Star) {
+                    if (left.kind == TokenKind::Slash &&
+                        (right.kind == TokenKind::Star || right.kind == TokenKind::Slash)) {
+
                         commentBuffer.clear();
                         syntheticComment = left;
+                        syntheticIsLineComment = right.kind == TokenKind::Slash;
                         dest.pop_back();
                         ++i;
 
@@ -274,6 +282,10 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                         break;
                     }
                 }
+
+                // Check if we found the end of a synthetic line comment.
+                if (syntheticComment && syntheticIsLineComment && !token.isOnSameLine())
+                    finishSyntheticComment();
 
                 // Otherwise take the token as it is.
                 newToken = token;
@@ -347,8 +359,21 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
         stringifyBuffer.push_back(newToken);
     }
 
-    if (stringify)
+    if (stringify) {
         addDiag(diag::ExpectedMacroStringifyEnd, stringify.location());
+    }
+    else if (syntheticComment) {
+        if (syntheticIsLineComment) {
+            auto loc = syntheticComment.location();
+            finishSyntheticComment();
+
+            dest.push_back(
+                Token(alloc, TokenKind::EmptyMacroArgument, emptyArgTrivia.copy(alloc), ""sv, loc));
+        }
+        else {
+            addDiag(diag::ExpectedMacroCommentEnd, syntheticComment.location());
+        }
+    }
 
     return anyNewMacros;
 }

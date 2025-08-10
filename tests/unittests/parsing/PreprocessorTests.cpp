@@ -1740,6 +1740,65 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Macro concat into block comment -- missing terminator") {
+    auto& text = R"(
+`define FFSR(__q, __d, __reset_value, __clk, __reset_clk) \
+  `ifndef FOOBAR                                          \
+  /``* synopsys sync_set_reset `"__reset_clk`".           \
+    `endif                                                \
+  always_ff @(posedge (__clk)) begin                      \
+    __q <= (__reset_clk) ? (__reset_value) : (__d);       \
+  end
+
+module m;
+  logic q, d, clk, rst;
+  `FFSR(q, d, 0, clk, rst)
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == R"(
+module m;
+  logic q, d, clk, rst;
+
+
+endmodule
+)");
+
+    auto tree = SyntaxTree::fromText(text);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ExpectedMacroCommentEnd);
+    CHECK(diags[1].code == diag::MissingEndIfDirective);
+}
+
+TEST_CASE("Macro concat into line comment") {
+    auto& text = R"(
+`define M /``/metacomment \
+  /*foo*/ /``/ baz
+`M
+
+module m;
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == R"(
+//metacomment
+  /*foo*/ // baz
+module m;
+endmodule
+)");
+
+    auto tree = SyntaxTree::fromText(text);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Escaped macro with arguments") {
     auto& text = R"(
 `define \quote (x)  `"`\`"x`\`"`"

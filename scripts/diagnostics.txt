@@ -86,6 +86,7 @@ error MacroOpsOutsideDefinition "macro operators may only be used within a macro
 error ExpectedIncludeFileName "expected an include file name"
 error ExpectedTimeLiteral "expected time literal"
 error ExpectedMacroStringifyEnd "expected closing quote to end macro stringification"
+error ExpectedMacroCommentEnd "expected closing '*/' to end macro concatenated comment"
 error ExpectedPragmaName "expected pragma name"
 error ExpectedPragmaExpression "expected pragma expression"
 error DirectiveInsideDesignElement "directive is not allowed inside a design element"
