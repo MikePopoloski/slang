@@ -2019,3 +2019,17 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConcurrentAssertNotInProc);
 }
+
+TEST_CASE("Non-blocking intra-assignment delays are allowed in always_comb") {
+    auto tree = SyntaxTree::fromText(R"(
+module M;
+    logic a,b;
+    always_comb
+        a <= #1ns b;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
