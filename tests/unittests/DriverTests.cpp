@@ -3,6 +3,7 @@
 
 #include "Test.h"
 #include <fmt/core.h>
+#include <fstream>
 #include <regex>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -279,35 +280,13 @@ TEST_CASE("Driver includes depfile") {
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
     fs::current_path(findTestDir());
-    auto depfiles = driver.getDepfiles(true);
+    auto depfiles = driver.getLoadedIncludePaths();
     CHECK(depfiles == std::vector<fs::path>{
                           fs::current_path() / "file_defn.svh",
                       });
 
     CHECK(driver.serializeDepfiles(depfiles, {"target"}) == "target: file_defn.svh\n");
     CHECK(driver.serializeDepfiles(depfiles, std::nullopt) == "file_defn.svh\n");
-}
-
-TEST_CASE("Driver all depfile") {
-    Driver driver;
-    driver.addStandardArgs();
-
-    auto filePath = findTestDir() + "test.sv";
-    const char* argv[] = {"testfoo", filePath.c_str()};
-    CHECK(driver.parseCommandLine(2, argv));
-    CHECK(driver.processOptions());
-    CHECK(driver.parseAllSources());
-    fs::current_path(findTestDir());
-    auto files = driver.getDepfiles();
-    std::sort(files.begin(), files.end());
-    CHECK(files == std::vector<fs::path>{
-                       fs::current_path() / "file_defn.svh",
-                       fs::current_path() / "test.sv",
-                   });
-    CHECK(driver.serializeDepfiles(driver.getDepfiles(), {"target"}) ==
-          "target: file_defn.svh test.sv\n");
-    CHECK(driver.serializeDepfiles(driver.getDepfiles(), std::nullopt) ==
-          "file_defn.svh\ntest.sv\n");
 }
 
 TEST_CASE("Driver module depfile") {

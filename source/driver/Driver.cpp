@@ -22,6 +22,8 @@
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
+#include "slang/driver/DepTracker.h"
+#include "slang/driver/SourceLoader.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
@@ -760,11 +762,31 @@ void Driver::reportMacros() {
     }
 }
 
-std::vector<fs::path> Driver::getDepfiles(bool includesOnly) const {
-    flat_hash_set<fs::path> includeSet;
-    SLANG_ASSERT(!syntaxTrees.empty());
+std::vector<fs::path> Driver::getFilePaths(
+    std::vector<std::shared_ptr<syntax::SyntaxTree>> trees) const {
+    std::vector<fs::path> filePaths;
+    filePaths.reserve(trees.size());
+    for (auto& tree : trees) {
+        for (auto& bufferid : tree->getSourceBufferIds()) {
+            auto path = sourceManager.getFullPath(bufferid);
+            if (!path.empty())
+                filePaths.push_back(path);
+        }
+    }
+    return filePaths;
+}
 
-    for (auto& tree : syntaxTrees) {
+std::vector<fs::path> Driver::getLoadedFilePaths() const {
+    return sourceLoader.getFilePaths();
+}
+
+std::vector<fs::path> Driver::getIncludePaths(
+    std::vector<std::shared_ptr<syntax::SyntaxTree>> trees) const {
+    // Return the include paths that were added via the command line.
+    flat_hash_set<fs::path> includeSet;
+    SLANG_ASSERT(!trees.empty());
+
+    for (auto& tree : trees) {
         for (auto& inc : tree->getIncludeDirectives()) {
             if (inc.isSystem)
                 continue;
@@ -774,13 +796,11 @@ std::vector<fs::path> Driver::getDepfiles(bool includesOnly) const {
     }
 
     std::vector<fs::path> includePaths(includeSet.begin(), includeSet.end());
-    if (includesOnly)
-        return includePaths;
+    return includePaths;
+}
 
-    auto allPaths = sourceLoader.getFilePaths();
-    allPaths.reserve(allPaths.size() + includePaths.size());
-    allPaths.insert(allPaths.end(), includePaths.begin(), includePaths.end());
-    return allPaths;
+std::vector<fs::path> Driver::getLoadedIncludePaths() const {
+    return getIncludePaths(syntaxTrees);
 }
 
 std::string Driver::serializeDepfiles(const std::vector<fs::path>& files,
@@ -792,8 +812,6 @@ std::string Driver::serializeDepfiles(const std::vector<fs::path>& files,
         auto relPath = std::filesystem::relative(file, std::filesystem::current_path());
         paths.push_back(getU8Str(relPath));
     }
-
-    std::sort(paths.begin(), paths.end());
 
     FormatBuffer buffer;
     if (depfileTarget) {
@@ -1136,6 +1154,12 @@ void Driver::printError(const std::string& message) {
 
 void Driver::printWarning(const std::string& message) {
     OS::printE(fg(textDiagClient->warningColor), "warning: ");
+    OS::printE(message);
+    OS::printE("\n");
+}
+
+void Driver::printNote(const std::string& message) {
+    OS::printE(fg(textDiagClient->noteColor), "  note: ");
     OS::printE(message);
     OS::printE("\n");
 }

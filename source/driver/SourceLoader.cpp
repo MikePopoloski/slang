@@ -337,47 +337,16 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         flat_hash_set<std::string_view> knownNames;
         auto addKnownNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
             auto& meta = tree->getMetadata();
-            for (auto& [n, _] : meta.nodeMap) {
-                auto decl = &n->as<ModuleDeclarationSyntax>();
-                std::string_view name = decl->header->name.valueText();
-                if (!name.empty())
-                    knownNames.emplace(name);
-            }
-
-            for (auto classDecl : meta.classDecls) {
-                std::string_view name = classDecl->name.valueText();
-                if (!name.empty())
-                    knownNames.emplace(name);
-            }
+            meta.visitDeclaredSymbols([&](std::string_view name) { knownNames.emplace(name); });
         };
 
         auto findMissingNames = [&](const std::shared_ptr<SyntaxTree>& tree,
                                     flat_hash_set<std::string_view>& missing) {
             auto& meta = tree->getMetadata();
-            for (auto name : meta.globalInstances) {
+            meta.visitReferencedSymbols([&](std::string_view name) {
                 if (knownNames.find(name) == knownNames.end())
                     missing.emplace(name);
-            }
-
-            for (auto idName : meta.classPackageNames) {
-                std::string_view name = idName->identifier.valueText();
-                if (!name.empty() && knownNames.find(name) == knownNames.end())
-                    missing.emplace(name);
-            }
-
-            for (auto importDecl : meta.packageImports) {
-                for (auto importItem : importDecl->items) {
-                    std::string_view name = importItem->package.valueText();
-                    if (!name.empty() && knownNames.find(name) == knownNames.end())
-                        missing.emplace(name);
-                }
-            }
-
-            for (auto intf : meta.interfacePorts) {
-                std::string_view name = intf->nameOrKeyword.valueText();
-                if (knownNames.find(name) == knownNames.end())
-                    missing.emplace(name);
-            }
+            });
         };
 
         for (auto& tree : syntaxTrees)
@@ -414,6 +383,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
                 }
 
                 if (buffer) {
+                    // fileEntries.emplace_back(buffer);
                     auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
                                                        inheritedMacros);
                     tree->isLibraryUnit = true;
