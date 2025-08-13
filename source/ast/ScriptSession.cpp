@@ -35,7 +35,12 @@ ScriptSession::ScriptSession(Bag options) :
 }
 
 ConstantValue ScriptSession::eval(std::string_view text) {
-    syntaxTrees.emplace_back(SyntaxTree::fromText(text, options));
+    const auto& syntax = SyntaxTree::fromText(text, options);
+    for (auto& diag : syntax->diagnostics()) {
+        if (diag.isError())
+            return nullptr;
+    }
+    syntaxTrees.emplace_back(syntax);
 
     const auto& node = syntaxTrees.back()->root();
     switch (node.kind) {

@@ -2645,3 +2645,8 @@ endpackage)");
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Eval bad statement") {
+    ScriptSession session;
+    CHECK(!session.eval("fork=L:for"));
+}
