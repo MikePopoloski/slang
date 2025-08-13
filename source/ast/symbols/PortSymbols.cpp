@@ -1966,11 +1966,6 @@ void PortConnection::checkSimulatedNetTypes() const {
         auto& inNt = *in->netType;
         auto& exNt = *ex->netType;
 
-        if (&inNt == &exNt && inNt.netKind == NetType::NetKind::Interconnect) {
-            auto& diag = scope->addDiag(diag::SimulatedInterconnect, expr->sourceRange);
-            diag.addNote(diag::NoteDeclarationHere, port.location);
-        }
-
         if (!inNt.isBuiltIn() || !exNt.isBuiltIn()) {
             if (&inNt != &exNt) {
                 scope->addDiag(diag::UserDefPortMixedConcat, expr->sourceRange)
