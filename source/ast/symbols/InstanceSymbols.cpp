@@ -971,10 +971,13 @@ void InstanceSymbol::connectDefaultIfacePorts() const {
 }
 
 void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
-    if (canonicalBody)
+    if (canonicalBody &&
+        !serializer.getCompilation().hasFlag(CompilationFlags::DisableInstanceCaching)) {
         serializer.writeLink("body", *canonicalBody);
-    else
+    }
+    else {
         serializer.write("body", body);
+    }
 
     serializer.startArray("connections");
     for (auto conn : getPortConnections()) {
