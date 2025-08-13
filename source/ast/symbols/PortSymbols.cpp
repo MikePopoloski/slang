@@ -1916,8 +1916,13 @@ void PortConnection::checkSimulatedNetTypes() const {
     if (internal.size() == 1 && external.size() == 1) {
         auto& inNt = *internal[0].netType;
         auto& exNt = *external[0].netType;
-        if (&inNt == &exNt)
+        if (&inNt == &exNt) {
+            if (inNt.netKind == NetType::NetKind::Interconnect) {
+                auto& diag = scope->addDiag(diag::SimulatedInterconnect, expr->sourceRange);
+                diag.addNote(diag::NoteDeclarationHere, port.location);
+            }
             return;
+        }
 
         if (!inNt.isBuiltIn() || !exNt.isBuiltIn()) {
             // If both sides are user-defined nettypes they need to match.
@@ -1960,6 +1965,11 @@ void PortConnection::checkSimulatedNetTypes() const {
         bool shouldWarn;
         auto& inNt = *in->netType;
         auto& exNt = *ex->netType;
+
+        if (&inNt == &exNt && inNt.netKind == NetType::NetKind::Interconnect) {
+            auto& diag = scope->addDiag(diag::SimulatedInterconnect, expr->sourceRange);
+            diag.addNote(diag::NoteDeclarationHere, port.location);
+        }
 
         if (!inNt.isBuiltIn() || !exNt.isBuiltIn()) {
             if (&inNt != &exNt) {
