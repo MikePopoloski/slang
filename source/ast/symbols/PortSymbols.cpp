@@ -1478,7 +1478,6 @@ void PortSymbol::fromSyntax(
 
     switch (syntax.kind) {
         case SyntaxKind::AnsiPortList: {
-            SLANG_ASSERT(portDeclarations.empty());
             AnsiPortListBuilder builder{scope, implicitMembers};
             for (auto port : syntax.as<AnsiPortListSyntax>().ports) {
                 switch (port->kind) {
