@@ -225,10 +225,10 @@ public:
     const AssertionExpr& body;
 
     /// Arguments to the assertion item.
-    std::span<std::tuple<const Symbol*, ActualArg> const> arguments;
+    std::span<std::tuple<const AssertionPortSymbol*, ActualArg> const> arguments;
 
     /// Local variables materialized in the body of the assertion item.
-    std::span<const Symbol* const> localVars;
+    std::span<const ValueSymbol* const> localVars;
 
     /// True if this is a recursive property instantiation.
     bool isRecursiveProperty;

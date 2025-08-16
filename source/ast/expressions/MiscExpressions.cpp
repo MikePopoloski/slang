@@ -760,8 +760,8 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
                                               const ASTContext& context,
                                               SourceLocation outputLocalVarArgLoc,
                                               AssertionInstanceDetails& instance,
-                                              SmallVectorBase<const Symbol*>& localVars) {
-    auto createLocals = [&](auto& syntaxType) {
+                                              SmallVectorBase<const ValueSymbol*>& localVars) {
+    auto createLocals = [&](auto& syntaxType, std::span<const AssertionPortSymbol* const> ports) {
         auto& scope = symbol.as<Scope>();
         for (auto varSyntax : syntaxType.variables) {
             SmallVector<const LocalAssertionVarSymbol*> vars;
@@ -785,11 +785,20 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
                 }
             }
         }
+
+        // Local variable formal args act as if they were local variable declarations,
+        // rather than going through the usual argument substitution process.
+        for (auto formal : ports) {
+            if (formal->isLocalVar()) {
+                auto& var = LocalAssertionVarSymbol::fromPort(*context.scope, *formal);
+                instance.localVars.emplace(var.name, &var);
+            }
+        }
     };
 
     if (symbol.kind == SymbolKind::Sequence) {
         auto& sds = syntax.as<SequenceDeclarationSyntax>();
-        createLocals(sds);
+        createLocals(sds, symbol.as<SequenceSymbol>().ports);
 
         auto& result = AssertionExpr::bind(*sds.seqExpr, context);
         result.requireSequence(context);
@@ -806,7 +815,7 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
     }
     else {
         auto& pds = syntax.as<PropertyDeclarationSyntax>();
-        createLocals(pds);
+        createLocals(pds, symbol.as<PropertySymbol>().ports);
         return AssertionExpr::bind(*pds.propertySpec, context);
     }
 }
@@ -902,7 +911,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     bool bad = false;
     uint32_t orderedIndex = 0;
     SourceLocation outputLocalVarArgLoc;
-    SmallVector<std::tuple<const Symbol*, ActualArg>, 4> actualArgs;
+    SmallVector<std::tuple<const AssertionPortSymbol*, ActualArg>, 4> actualArgs;
 
     for (auto formal : formalPorts) {
         const ASTContext* argCtx = &context;
@@ -1033,7 +1042,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     auto bodySyntax = symbol.getSyntax();
     SLANG_ASSERT(bodySyntax);
 
-    SmallVector<const Symbol*> localVars;
+    SmallVector<const ValueSymbol*> localVars;
     auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc, instance,
                                    localVars);
 
@@ -1131,7 +1140,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     auto bodySyntax = symbol.getSyntax();
     SLANG_ASSERT(bodySyntax);
 
-    SmallVector<const Symbol*> localVars;
+    SmallVector<const ValueSymbol*> localVars;
     auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc, instance,
                                    localVars);
 

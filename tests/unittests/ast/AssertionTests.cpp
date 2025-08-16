@@ -2764,3 +2764,19 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::SequenceMatchedOutsideAssertion);
 }
+
+TEST_CASE("Assertion local var isn't rewritten") {
+    auto tree = SyntaxTree::fromText(R"(
+sequence s(local int a);
+    (1, a++) ##1 1;
+endsequence
+
+module m(input clk);
+    assert property (@(posedge clk) s(1));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

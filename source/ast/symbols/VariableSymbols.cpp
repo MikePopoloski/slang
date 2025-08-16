@@ -707,4 +707,14 @@ void LocalAssertionVarSymbol::fromSyntax(const Scope& scope,
     }
 }
 
+LocalAssertionVarSymbol& LocalAssertionVarSymbol::fromPort(const Scope& scope,
+                                                           const AssertionPortSymbol& port) {
+    auto& comp = scope.getCompilation();
+    auto var = comp.emplace<LocalAssertionVarSymbol>(port.name, port.location);
+    var->formalPort = &port;
+    var->getDeclaredType()->setLink(port.declaredType);
+    var->setParent(scope);
+    return *var;
+}
+
 } // namespace slang::ast
