@@ -11,13 +11,12 @@
 #include "slang/ast/HierarchicalReference.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssertionExpr.h"
-#include "slang/ast/symbols/ValueSymbol.h"
+#include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/syntax/SyntaxFwd.h"
 
 namespace slang::ast {
 
 class AssertionPortSymbol;
-class VariableSymbol;
 
 /// Common base class for both NamedValueExpression and HierarchicalValueExpression.
 class SLANG_EXPORT ValueExpressionBase : public Expression {
@@ -228,7 +227,7 @@ public:
     std::span<std::tuple<const AssertionPortSymbol*, ActualArg> const> arguments;
 
     /// Local variables materialized in the body of the assertion item.
-    std::span<const ValueSymbol* const> localVars;
+    std::span<const LocalAssertionVarSymbol* const> localVars;
 
     /// True if this is a recursive property instantiation.
     bool isRecursiveProperty;

@@ -2053,3 +2053,35 @@ endmodule : mod_sva_checks
     auto [diags, design] = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Sequences with uninitialized local variables") {
+    auto& text = R"(
+module m(input a, clk);
+
+  sequence s1(local input int i, local output int j);
+    i ##1 (1, j++) ##1 (j, j = 1) ##1 j;
+  endsequence
+
+  property p1;
+    int i;
+    int j = i;
+    int k;
+    (@ (posedge clk) (1, i = 1)) and i and s1(i, k) ##1 k;
+  endproperty
+
+  assert property (@(posedge clk) p1);
+
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::AssertionLocalUnassigned);
+    CHECK(diags[1].code == diag::AssertionLocalUnassigned);
+    CHECK(diags[2].code == diag::AssertionLocalUnassigned);
+    CHECK(diags[3].code == diag::AssertionLocalUnassigned);
+    CHECK(diags[4].code == diag::AssertionLocalUnassigned);
+}

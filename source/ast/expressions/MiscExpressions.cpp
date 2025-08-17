@@ -756,11 +756,11 @@ bool AssertionInstanceExpression::checkAssertionArg(const PropertyExprSyntax& pr
     return true;
 }
 
-static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const SyntaxNode& syntax,
-                                              const ASTContext& context,
-                                              SourceLocation outputLocalVarArgLoc,
-                                              AssertionInstanceDetails& instance,
-                                              SmallVectorBase<const ValueSymbol*>& localVars) {
+static const AssertionExpr& bindAssertionBody(
+    const Symbol& symbol, const SyntaxNode& syntax, const ASTContext& context,
+    SourceLocation outputLocalVarArgLoc, AssertionInstanceDetails& instance,
+    SmallVectorBase<const LocalAssertionVarSymbol*>& localVars) {
+
     auto createLocals = [&](auto& syntaxType, std::span<const AssertionPortSymbol* const> ports) {
         auto& scope = symbol.as<Scope>();
         for (auto varSyntax : syntaxType.variables) {
@@ -792,6 +792,7 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
             if (formal->isLocalVar()) {
                 auto& var = LocalAssertionVarSymbol::fromPort(*context.scope, *formal);
                 instance.localVars.emplace(var.name, &var);
+                localVars.push_back(&var);
             }
         }
     };
@@ -1042,7 +1043,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     auto bodySyntax = symbol.getSyntax();
     SLANG_ASSERT(bodySyntax);
 
-    SmallVector<const ValueSymbol*> localVars;
+    SmallVector<const LocalAssertionVarSymbol*> localVars;
     auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc, instance,
                                    localVars);
 
@@ -1140,7 +1141,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     auto bodySyntax = symbol.getSyntax();
     SLANG_ASSERT(bodySyntax);
 
-    SmallVector<const ValueSymbol*> localVars;
+    SmallVector<const LocalAssertionVarSymbol*> localVars;
     auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc, instance,
                                    localVars);
 
