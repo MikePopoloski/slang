@@ -188,6 +188,12 @@ int main(int argc, char** argv) {
     bool compilationOk;
     SLANG_TRY {
         compilationOk = driver.parseAllSources();
+        compilationOk &= driver.reportParseDiags();
+        if (!compilationOk) {
+            OS::printE("slang-tidy: errors found during compilation\n");
+            return 1;
+        }
+
         compilation = driver.createCompilation();
         driver.reportCompilation(*compilation, true);
         analysisManager = driver.runAnalysis(*compilation);

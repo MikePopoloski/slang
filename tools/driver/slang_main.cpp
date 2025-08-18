@@ -253,8 +253,9 @@ int driverMain(int argc, TArgs argv) {
                 printCSTJson(driver, *cstJsonFile, cstJsonMode.value_or(CSTJsonMode::Full));
             }
 
-            if (onlyParse == true)
-                return ok && driver.reportParseDiags();
+            auto parserHasErrors = driver.reportParseDiags();
+            if (onlyParse == true || !parserHasErrors)
+                return ok && parserHasErrors;
 
             std::unique_ptr<Compilation> compilation;
             {
