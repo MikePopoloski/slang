@@ -22,7 +22,7 @@ TEST_CASE("OnlyANSIPortDecl: Use of ANSI port declaration style") {
 module top(
     input logic a,
     inout logic b,
-    output logic c
+    output logic c,
 );
 
 endmodule

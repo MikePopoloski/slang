@@ -16,7 +16,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false, fa
     void handle(const PortSymbol& port) {
         NEEDS_SKIP_SYMBOL(port)
 
-        if (!port.isAnsiPort) {
+        if (!port.isAnsiPort && port.internalSymbol) {
             diags.add(diag::OnlyANSIPortDecl, port.location) << port.internalSymbol->name;
         }
     }
