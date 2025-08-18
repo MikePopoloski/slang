@@ -39,7 +39,8 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false, fa
             matched |= port.name.ends_with(suffix);
         }
         if (!matched) {
-            auto& diag = diags.add(diag::EnforcePortSuffix, port.location) << port.name;
+            std::string_view portName = !port.name.empty() ? port.name : "<unnamed>";
+            auto& diag = diags.add(diag::EnforcePortSuffix, port.location) << portName;
             if (suffixes->size() == 1) {
                 diag << fmt::format("\"{}\"", suffixes->front());
             }
