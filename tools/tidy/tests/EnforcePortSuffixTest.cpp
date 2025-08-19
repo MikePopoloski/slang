@@ -138,3 +138,14 @@ endmodule
 )");
     CHECK_FALSE(result);
 }
+
+TEST_CASE("EnforcePortSuffix: Implicit port name") {
+    auto result = runCheckTest("EnforcePortSuffix", R"(
+module top (
+  i[31:0]
+);
+    output var [31:0] i;
+endmodule
+)");
+    CHECK_FALSE(result);
+}
