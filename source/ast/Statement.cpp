@@ -511,7 +511,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                 forLoop.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
                 results.push_back(&StatementBlockSymbol::fromSyntax(scope, forLoop));
             }
-            else if (syntax.label) {
+            else if (syntax.label && !labelHandled) {
                 results.push_back(&StatementBlockSymbol::fromLabeledStmt(scope, syntax));
             }
             else {
