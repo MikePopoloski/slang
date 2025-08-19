@@ -68,11 +68,14 @@ private:
 /// Represents a time literal.
 class SLANG_EXPORT TimeLiteral final : public Expression {
 public:
-    TimeLiteral(const Type& type, double value, SourceRange sourceRange) :
-        Expression(ExpressionKind::TimeLiteral, type, sourceRange), value(value) {}
+    TimeLiteral(const Type& type, double value, TimeScale scale, SourceRange sourceRange) :
+        Expression(ExpressionKind::TimeLiteral, type, sourceRange), value(value), scale(scale) {}
 
     /// Gets the value of the literal.
     double getValue() const { return value; }
+
+    /// Gets the time scale in effect for the context of the expression.
+    TimeScale getScale() const { return scale; }
 
     ConstantValue evalImpl(EvalContext& context) const;
 
@@ -85,6 +88,7 @@ public:
 
 private:
     double value;
+    TimeScale scale;
 };
 
 /// Represents an unbased unsized integer literal, which fills all bits in an expression.

@@ -140,7 +140,7 @@ Expression& TimeLiteral::fromSyntax(const ASTContext& context,
     value = scale.apply(value, unit, /* roundToPrecision */ false);
 
     auto& comp = context.getCompilation();
-    return *comp.emplace<TimeLiteral>(comp.getType(SyntaxKind::RealTimeType), value,
+    return *comp.emplace<TimeLiteral>(comp.getType(SyntaxKind::RealTimeType), value, scale,
                                       syntax.sourceRange());
 }
 

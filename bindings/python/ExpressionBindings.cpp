@@ -126,7 +126,8 @@ void registerExpressions(py::module_& m) {
         .def_property_readonly("value", &RealLiteral::getValue);
 
     py::classh<TimeLiteral, Expression>(m, "TimeLiteral")
-        .def_property_readonly("value", &TimeLiteral::getValue);
+        .def_property_readonly("value", &TimeLiteral::getValue)
+        .def_property_readonly("scale", &TimeLiteral::getScale);
 
     py::classh<UnbasedUnsizedIntegerLiteral, Expression>(m, "UnbasedUnsizedIntegerLiteral")
         .def_property_readonly("literalValue", &UnbasedUnsizedIntegerLiteral::getLiteralValue)
