@@ -353,19 +353,14 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             conn->checkSimulatedNetTypes();
         }
 
-        // Detect infinite recursion, which happens if we see this exact
-        // instance body somewhere higher up in the stack.
-        if (!activeInstanceBodies.emplace(&symbol.body).second) {
-            symbol.getParentScope()->addDiag(diag::InfinitelyRecursiveHierarchy, symbol.location)
-                << symbol.name;
-            hierarchyProblem = true;
+        if (!visitInstances)
             return;
-        }
 
         // In order to avoid "effectively infinite" recursions, where parameter values
         // are changing but the numbers are so huge that we would run for almost forever,
         // check the depth and bail out after a certain configurable point.
         auto guard = ScopeGuard([this, &symbol] { activeInstanceBodies.erase(&symbol.body); });
+        activeInstanceBodies.emplace(&symbol.body);
         if (activeInstanceBodies.size() > compilation.getOptions().maxInstanceDepth) {
             auto& diag = symbol.getParentScope()->addDiag(diag::MaxInstanceDepthExceeded,
                                                           symbol.location);
@@ -378,8 +373,15 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // If we have already visited an identical instance body we don't have to do
         // it again, because all possible diagnostics have already been collected.
         // Otherwise descend into the body and visit everything.
-        if (visitInstances && !tryApplyFromCache(symbol))
+        if (!tryApplyFromCache(symbol)) {
             visit(symbol.body);
+        }
+        else if (activeInstanceBodies.contains(symbol.getCanonicalBody())) {
+            // Detect infinite recursion that we missed earlier because of caching.
+            symbol.getParentScope()->addDiag(diag::InfinitelyRecursiveHierarchy, symbol.location)
+                << symbol.name;
+            hierarchyProblem = true;
+        }
     }
 
     void handle(const SubroutineSymbol& symbol) {
