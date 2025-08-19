@@ -1475,11 +1475,18 @@ CompilationUnitSymbol& Compilation::createScriptScope() {
 void Compilation::elaborate() {
     SLANG_ASSERT(!isFrozen());
 
+    // Make sure our root is created. It's possible that this results in a fatal
+    // error if defparam resolution sees an infinitely recursive hierarchy,
+    // in which case we should get out early.
+    auto& rootSym = getRoot();
+    if (sawFatalError)
+        return;
+
     // Touch every symbol, scope, statement, and expression tree so that
     // we can be sure we have all the diagnostics.
     uint32_t errorLimit = options.errorLimit == 0 ? UINT32_MAX : options.errorLimit;
     DiagnosticVisitor elabVisitor(*this, numErrors, errorLimit);
-    getRoot().visit(elabVisitor);
+    rootSym.visit(elabVisitor);
 
     if (elabVisitor.finishedEarly()) {
         sawFatalError = true;
@@ -2413,6 +2420,7 @@ void Compilation::resolveDefParamsAndBinds() {
                                        visitor.hierarchyProblem->location);
             diag << visitor.hierarchyProblem->getDefinition().getKindString();
             diag << options.maxInstanceDepth;
+            sawFatalError = true;
             return true;
         }
         return false;

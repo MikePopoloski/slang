@@ -2153,3 +2153,22 @@ endpackage
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Infinite recursion regress -- GH #1476") {
+    auto tree = SyntaxTree::fromText(R"(
+module m();
+  m m1();
+endmodule
+
+module top();
+  m m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfinitelyRecursiveHierarchy);
+}
