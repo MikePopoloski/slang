@@ -900,7 +900,8 @@ void Scope::elaborate() const {
                                           nonAnsiPortDecls);
                     break;
                 case SyntaxKind::PortDeclaration:
-                    nonAnsiPortDecls.push_back({&node, symbol});
+                    if (hasNonAnsiPorts)
+                        nonAnsiPortDecls.push_back({&node, symbol});
                     break;
                 default:
                     break;
