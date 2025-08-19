@@ -2085,3 +2085,29 @@ endmodule
     CHECK(diags[3].code == diag::AssertionLocalUnassigned);
     CHECK(diags[4].code == diag::AssertionLocalUnassigned);
 }
+
+TEST_CASE("Sequences with uninitialized output locals") {
+    auto& text = R"(
+module m(input a, clk);
+
+  sequence s1(local output int i);
+    1;
+  endsequence
+
+  property p1;
+    int i;
+    @ (posedge clk) s1(i) ##1 i != 1;
+  endproperty
+
+  assert property (@(posedge clk) p1);
+
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssertionFormalUnassigned);
+}

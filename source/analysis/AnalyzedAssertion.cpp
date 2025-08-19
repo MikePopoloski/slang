@@ -203,12 +203,22 @@ struct AssertionVisitor {
             flags |= VF::InClockingBlock;
         }
 
+        // Inputs and inout local variable formal args should check that
+        // any local vars passed in are definitely assigned.
+        for (auto& [formal, actual] : expr.arguments) {
+            if (formal->isLocalVar() && formal->direction != ArgumentDirection::Out) {
+                if (auto init = std::get_if<const Expression*>(&actual))
+                    visitExpr(**init);
+            }
+        }
+
         expansionStack.push_back({expr, outerClock});
         hasInferredClockCall |= expansionStack.back().hasInferredClockArg;
 
         flat_hash_set<const Symbol*> savedVars = std::move(assignedVars);
         assignedVars.clear();
 
+        // Collect assigned local variables in the context of the instantiation.
         for (auto local : expr.localVars) {
             if (local->formalPort) {
                 // Inputs and inouts are always initialized by the caller,
@@ -224,8 +234,32 @@ struct AssertionVisitor {
 
         auto result = expr.body.visit(*this, flowClock, flags);
 
+        // Output and inout formal args must have been definitely assigned
+        // by the end of the called subsequence.
+        for (auto local : expr.localVars) {
+            if (local->formalPort) {
+                if (local->formalPort->direction != ArgumentDirection::In) {
+                    if (!assignedVars.contains(local)) {
+                        auto& diag = context.addDiag(parentSymbol, diag::AssertionFormalUnassigned,
+                                                     local->formalPort->location);
+                        diag << local->name;
+                    }
+                }
+            }
+        }
+
         assignedVars = std::move(savedVars);
         expansionStack.pop_back();
+
+        // Output local variable formal args are now definitely assigned.
+        for (auto& [formal, actual] : expr.arguments) {
+            if (formal->isLocalVar() && formal->direction == ArgumentDirection::Out) {
+                if (auto init = std::get_if<const Expression*>(&actual)) {
+                    if (auto sym = (*init)->getSymbolReference())
+                        assignedVars.emplace(sym);
+                }
+            }
+        }
 
         // Named sequences and properties instantiated from within a clocking block
         // must be singly clocked and share the same clock as the clocking block.
