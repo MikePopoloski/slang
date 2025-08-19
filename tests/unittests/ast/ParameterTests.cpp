@@ -1487,3 +1487,17 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Declared initializer eval regress -- GH #1472") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function automatic int f6;
+        int i6 = &f6();
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
