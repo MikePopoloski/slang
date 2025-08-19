@@ -53,6 +53,9 @@ class SLANG_EXPORT DiagnosticEngine {
 public:
     /// Constructs a new diagnostic engine, using the specified source manager
     /// for reporting source-based information from diagnostics.
+    ///
+    /// @note All diagnostics passed to this engine must use locations that
+    /// are managed by the given source manager.
     explicit DiagnosticEngine(const SourceManager& sourceManager);
     ~DiagnosticEngine();
 
