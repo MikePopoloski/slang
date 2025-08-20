@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
 
         // Get the ID and kind from the check code string
         auto hypenPos = infoCode->find('-');
-        if (hypenPos == std::string::npos) {
+        if (hypenPos == std::string::npos || (!infoCode->empty() && infoCode->at(0) == '-')) {
             OS::printE("Check code has not the correct format. Format should be ABCD-<id>\n");
             return 1;
         }
@@ -104,10 +104,17 @@ int main(int argc, char** argv) {
 
         // Parse the ID and kind
         auto kind = tidyKindFromStr(kindStr);
-        auto id = stoull(infoCode->substr(hypenPos + 1));
-
         if (!kind) {
             OS::printE(fmt::format("Check kind {} does not exist\n", kindStr));
+            return 1;
+        }
+
+        uint64_t id;
+        SLANG_TRY {
+            id = stoull(infoCode->substr(hypenPos + 1));
+        }
+        SLANG_CATCH(const std::exception& e) {
+            OS::printE("Check code has not the correct format. Format should be ABCD-<id>\n");
             return 1;
         }
 
