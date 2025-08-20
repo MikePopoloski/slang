@@ -3,4 +3,8 @@
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
   "testMate.cpp.test.workingDirectory": "${workspaceFolder}",
+  "files.associations": {
+    "*.py": "python",
+    "string": "cpp"
+  },
 }

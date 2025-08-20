@@ -30,7 +30,9 @@ add_library(
   src/synthesis/UnusedSensitiveSignal.cpp
   src/synthesis/UndrivenRange.cpp
   src/style/LoopsInGenerate.cpp
-  src/style/NoVerilogSyntax.cpp)
+  src/style/NoVerilogSyntax.cpp
+  src/style/ConstantFormatting.cpp
+  src/style/ConstantWidthCheck.cpp)
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include)
 target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang)
