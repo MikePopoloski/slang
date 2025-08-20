@@ -15,13 +15,9 @@ using namespace slang::syntax;
 namespace loops_in_generate {
 
 struct LoopVisitor : public SyntaxVisitor<LoopVisitor> {
-    void handle(const ForLoopStatementSyntax& syntax) { 
-        foundForLoops.push_back(&syntax); 
-    }
+    void handle(const ForLoopStatementSyntax& syntax) { foundForLoops.push_back(&syntax); }
 
-    void handle(const LoopGenerateSyntax& syntax) {
-        foundGenerateLoops.push_back(&syntax);
-    }
+    void handle(const LoopGenerateSyntax& syntax) { foundGenerateLoops.push_back(&syntax); }
 
 public:
     std::vector<const ForLoopStatementSyntax*> foundForLoops;
@@ -30,8 +26,7 @@ public:
 
 bool isInsideGenerate(const SyntaxNode* node) {
     while (node) {
-        if (node->kind == SyntaxKind::GenerateRegion || 
-            node->kind == SyntaxKind::GenerateBlock) {
+        if (node->kind == SyntaxKind::GenerateRegion || node->kind == SyntaxKind::GenerateBlock) {
             return true;
         }
         node = node->parent;
@@ -63,7 +58,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true, fal
         }
     }
 };
-}
+} // namespace loops_in_generate
 
 using namespace loops_in_generate;
 class LoopsInGenerate : public TidyCheck {
@@ -80,11 +75,14 @@ public:
 
     DiagCode diagCode() const override { return diag::LoopsInGenerate; }
     DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Error; }
-    std::string diagString() const override { return "loop statements must be inside generate blocks"; }
+    std::string diagString() const override {
+        return "loop statements must be inside generate blocks";
+    }
     std::string name() const override { return "LoopsInGenerate"; }
     std::string description() const override { return shortDescription(); }
     std::string shortDescription() const override {
-        return "Ensures that all loop statements are enclosed within generate and endgenerate blocks.";
+        return "Ensures that all loop statements are enclosed within generate and endgenerate "
+               "blocks.";
     }
 };
 
