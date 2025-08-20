@@ -33,4 +33,7 @@ inline constexpr DiagCode UnusedSensitiveSignal(DiagSubsystem::Tidy, 18);
 inline constexpr DiagCode EnforcePortPrefix(DiagSubsystem::Tidy, 19);
 inline constexpr DiagCode UndrivenRange(DiagSubsystem::Tidy, 20);
 
+// 18-341 Custom Rules
+inline constexpr DiagCode LoopsInGenerate(DiagSubsystem::Tidy, 21);
+
 } // namespace slang::diag
