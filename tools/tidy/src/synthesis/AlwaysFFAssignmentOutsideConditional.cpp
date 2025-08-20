@@ -104,7 +104,7 @@ public:
                "inside the conditional block";
     }
 
-    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Error; }
 
     std::string name() const override { return "AlwaysFFAssignmentOutsideConditional"; }
 

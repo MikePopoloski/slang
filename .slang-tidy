@@ -1,0 +1,4 @@
+Checks:
+ -style-enforce-port-suffix,
+ -synthesis-unused-sensitive-signal,
+ -style-no-legacy-generate

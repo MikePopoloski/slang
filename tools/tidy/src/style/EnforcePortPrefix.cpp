@@ -65,7 +65,7 @@ public:
     }
 
     DiagCode diagCode() const override { return diag::EnforcePortPrefix; }
-    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Error; }
     std::string diagString() const override {
         return "port '{}' is not correctly prefixed with prefix: {}";
     }

@@ -52,7 +52,7 @@ public:
     }
 
     DiagCode diagCode() const override { return diag::GenerateNamed; }
-    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Error; }
     std::string diagString() const override { return "definition of an unnamed generate block"; }
     std::string name() const override { return "GenerateNamed"; }
     std::string description() const override { return shortDescription(); }

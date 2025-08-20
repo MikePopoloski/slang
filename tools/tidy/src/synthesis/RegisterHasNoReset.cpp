@@ -142,7 +142,7 @@ public:
                "reset or set a value on reset";
     }
 
-    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Error; }
 
     std::string name() const override { return "RegisterHasNoReset"; }
 

@@ -57,7 +57,7 @@ public:
         return "port name not specified. Please use .port_name(net) syntax.";
     }
 
-    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Error; }
 
     std::string name() const override { return "NoImplicitPortNameInPortConnection"; }
 

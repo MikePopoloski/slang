@@ -60,7 +60,7 @@ public:
         return "use of '{}' in port connection list, consider using '{}({})' instead";
     }
 
-    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Error; }
 
     std::string name() const override { return "NoDotVarInPortConnection"; }
 

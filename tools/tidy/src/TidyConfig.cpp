@@ -39,6 +39,7 @@ TidyConfig::TidyConfig() {
 
     // 18-341 Custom Rules
     styleChecks.emplace("LoopsInGenerate", CheckOptions());
+    styleChecks.emplace("NoVerilogSyntax", CheckOptions());
 
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 

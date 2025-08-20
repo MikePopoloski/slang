@@ -46,7 +46,7 @@ public:
     }
 
     DiagCode diagCode() const override { return diag::AlwaysCombBlockNamed; }
-    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Error; }
     std::string diagString() const override { return "definition of an unnamed always_comb block"; }
     std::string name() const override { return "AlwaysCombBlockNamed"; }
     std::string description() const override { return shortDescription(); }

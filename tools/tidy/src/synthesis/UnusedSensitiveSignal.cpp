@@ -87,7 +87,7 @@ public:
                "or removing it from the sensitivity list";
     }
 
-    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Error; }
 
     std::string name() const override { return "UnusedSensitiveSignal"; }
 

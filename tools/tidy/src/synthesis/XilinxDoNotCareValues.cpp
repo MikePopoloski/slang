@@ -50,7 +50,7 @@ public:
         return "use of x'd? for do-not-care values is not recommended use x'b? instead";
     }
 
-    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Error; }
 
     std::string name() const override { return "XilinxDoNotCareValues"; }
 

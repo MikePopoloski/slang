@@ -46,7 +46,7 @@ public:
     }
 
     DiagCode diagCode() const override { return diag::AlwaysCombNonBlocking; }
-    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Error; }
     std::string diagString() const override {
         return "use of a non blocking assignment inside always_comb";
     }

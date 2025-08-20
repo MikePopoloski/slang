@@ -101,7 +101,7 @@ public:
 
     std::string diagString() const override { return "variable {} has undriven bits: {}"; }
 
-    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagDefaultSeverity() const override { return DiagnosticSeverity::Error; }
 
     std::string name() const override { return "UndrivenRange"; }
 

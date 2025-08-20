@@ -35,5 +35,6 @@ inline constexpr DiagCode UndrivenRange(DiagSubsystem::Tidy, 20);
 
 // 18-341 Custom Rules
 inline constexpr DiagCode LoopsInGenerate(DiagSubsystem::Tidy, 21);
+inline constexpr DiagCode NoVerilogSyntax(DiagSubsystem::Tidy, 22);
 
 } // namespace slang::diag
