@@ -42,6 +42,7 @@ TidyConfig::TidyConfig() {
     styleChecks.emplace("NoVerilogSyntax", CheckOptions());
     styleChecks.emplace("ConstantFormatting", CheckOptions());
     styleChecks.emplace("ConstantWidthCheck", CheckOptions());
+    styleChecks.emplace("LineFormatting", CheckOptions());
 
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
