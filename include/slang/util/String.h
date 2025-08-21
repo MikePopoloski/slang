@@ -39,7 +39,8 @@ std::optional<int32_t> strToInt(std::string_view str, size_t* pos = nullptr, int
 /// source string that was not part of the conversion.
 ///
 /// @return the converted value, or nullopt if conversion fails (invalid string, overflow, etc).
-std::optional<uint32_t> strToUInt(std::string_view str, size_t* pos = nullptr, int base = 10);
+SLANG_EXPORT std::optional<uint32_t> strToUInt(std::string_view str, size_t* pos = nullptr,
+                                               int base = 10);
 
 /// Parses the provided @a str into a floating point value.
 /// If @a pos is non-null, it will be set to point to the first character in the
