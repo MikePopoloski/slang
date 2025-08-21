@@ -95,25 +95,29 @@ int main(int argc, char** argv) {
         Registry::setSourceManager(&sm);
 
         // Get the ID and kind from the check code string
-        auto hypenPos = infoCode->find('-');
-        if (hypenPos == std::string::npos) {
+        auto hyphenPos = infoCode->find('-');
+        if (hyphenPos == std::string::npos || hyphenPos == 0) {
             OS::printE("Check code has not the correct format. Format should be ABCD-<id>\n");
             return 1;
         }
-        auto kindStr = infoCode->substr(0, hypenPos);
 
+        auto kindStr = infoCode->substr(0, hyphenPos);
         // Parse the ID and kind
         auto kind = tidyKindFromStr(kindStr);
-        auto id = stoull(infoCode->substr(hypenPos + 1));
-
         if (!kind) {
             OS::printE(fmt::format("Check kind {} does not exist\n", kindStr));
             return 1;
         }
 
+        auto id = strToUInt(infoCode->substr(hyphenPos + 1));
+        if (!id.has_value()) {
+            OS::printE("Check code has not the correct format. Format should be ABCD-<id>\n");
+            return 1;
+        }
+
         for (const auto& checkName : Registry::getRegisteredChecks()) {
             const auto check = Registry::create(checkName);
-            if (check->diagCode().getCode() == id && check->getKind() == kind) {
+            if (check->diagCode().getCode() == *id && check->getKind() == kind) {
                 OS::print(fmt::format(fmt::emphasis::bold, "[{}]\n", check->name()));
                 OS::print(fmt::format("{}", check->description()));
                 return 0;
