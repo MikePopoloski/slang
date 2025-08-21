@@ -636,6 +636,18 @@ public:
         }
     }
 
+#if defined(__has_feature)
+#    if __has_feature(memory_sanitizer)
+    // Elide msan check for SmallVector destructor.
+    //
+    // There is an issue with the destruction order: SmallVector frees the
+    // underlying storage (stackBase) and then cleanup accesses data in that
+    // region but MSAN has poisoned it already.
+
+    __attribute__((no_sanitize("memory"))) ~SmallVector() {}
+#    endif
+#endif
+
     /// Copy assignment from another vector.
     SmallVector& operator=(const Base& rhs) {
         Base::operator=(rhs);
