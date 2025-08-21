@@ -32,6 +32,22 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true, fal
                 return;
             }
             
+            if (isBitSelect(expr)) {
+                return;
+            }
+            
+            if (isRangeSelect(expr)) {
+                return;
+            }
+            
+            if (isArrayDimension(expr)) {
+                return;
+            }
+            
+            if (isGenerateLoopBound(expr)) {
+                return;
+            }
+            
             if (std::regex_match(text, std::regex("^[0-9]+$"))) {
                 if (text != "0" && text != "1") {
                     diags.add(diag::ConstantFormatting, location) 
@@ -91,6 +107,67 @@ private:
                 }
                 parent = parent->parent;
                 depth++;
+            }
+        }
+        return false;
+    }
+
+    bool isBitSelect(const IntegerLiteral& expr) {
+        if (auto syntax = expr.syntax) {
+            auto parent = syntax->parent;
+            // Check if we're inside an ElementSelect (array[index] or bus[bit])
+            while (parent && parent->kind != SyntaxKind::CompilationUnit) {
+                if (parent->kind == SyntaxKind::ElementSelectExpression ||
+                    parent->kind == SyntaxKind::IdentifierSelectName ||
+                    parent->kind == SyntaxKind::BitSelect) {
+                    return true;
+                }
+                parent = parent->parent;
+            }
+        }
+        return false;
+    }
+    
+    bool isRangeSelect(const IntegerLiteral& expr) {
+        if (auto syntax = expr.syntax) {
+            auto parent = syntax->parent;
+            // Check if we're inside a range select like [7:0] or [MSB:LSB]
+            while (parent && parent->kind != SyntaxKind::CompilationUnit) {
+                if (parent->kind == SyntaxKind::SimpleRangeSelect ||
+                    parent->kind == SyntaxKind::AscendingRangeSelect ||
+                    parent->kind == SyntaxKind::DescendingRangeSelect) {
+                    return true;
+                }
+                parent = parent->parent;
+            }
+        }
+        return false;
+    }
+    
+    bool isArrayDimension(const IntegerLiteral& expr) {
+        if (auto syntax = expr.syntax) {
+            auto parent = syntax->parent;
+            // Check if we're in array dimension declarations like logic [7:0] mem [0:255]
+            while (parent && parent->kind != SyntaxKind::CompilationUnit) {
+                if (parent->kind == SyntaxKind::VariableDimension) {
+                    return true;
+                }
+                parent = parent->parent;
+            }
+        }
+        return false;
+    }
+    
+    bool isGenerateLoopBound(const IntegerLiteral& expr) {
+        if (auto syntax = expr.syntax) {
+            auto parent = syntax->parent;
+            // Check if we're in a generate for loop bound
+            while (parent && parent->kind != SyntaxKind::CompilationUnit) {
+                if (parent->kind == SyntaxKind::ForLoopStatement ||
+                    parent->kind == SyntaxKind::LoopGenerate) {
+                    return true;
+                }
+                parent = parent->parent;
             }
         }
         return false;
