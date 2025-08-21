@@ -33,7 +33,8 @@ add_library(
   src/style/NoVerilogSyntax.cpp
   src/style/ConstantFormatting.cpp
   src/style/ConstantWidthCheck.cpp
-  src/style/LineFormatting.cpp)
+  src/style/LineFormatting.cpp
+  src/style/NoLogicInPortConnections.cpp)
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include)
 target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang)
