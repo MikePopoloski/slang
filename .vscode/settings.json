@@ -5,6 +5,8 @@
   "testMate.cpp.test.workingDirectory": "${workspaceFolder}",
   "files.associations": {
     "*.py": "python",
-    "string": "cpp"
+    "string": "cpp",
+    "__hash_table": "cpp",
+    "vector": "cpp"
   },
 }

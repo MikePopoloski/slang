@@ -19,6 +19,7 @@
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
+#include "slang/syntax/SyntaxTree.h"
 #include "slang/util/VersionInfo.h"
 
 /// Performs a search for the .slang-tidy file on the current directory. If the file is not found,
@@ -188,6 +189,15 @@ int main(int argc, char** argv) {
     bool compilationOk;
     SLANG_TRY {
         compilationOk = driver.parseAllSources();
+        
+        // For tidy, we want to force elaboration of all modules even in lint-only mode
+        // Override the isLibraryUnit flag for all syntax trees when lint-only is enabled
+        if (driver.options.lintMode()) {
+            for (auto& tree : driver.syntaxTrees) {
+                tree->isLibraryUnit = false;
+            }
+        }
+        
         compilation = driver.createCompilation();
         driver.reportCompilation(*compilation, true);
         analysisManager = driver.runAnalysis(*compilation);

@@ -1,4 +1,5 @@
 Checks:
  -style-enforce-port-suffix,
  -synthesis-unused-sensitive-signal,
- -style-no-legacy-generate
+ -style-no-legacy-generate,
+ -style-always-comb-block-named
