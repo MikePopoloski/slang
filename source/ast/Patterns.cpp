@@ -73,9 +73,6 @@ bool Pattern::createPatternVars(const ASTContext& context, const PatternSyntax& 
                                 const ExpressionSyntax& condSyntax,
                                 SmallVector<const PatternVarSymbol*>& results) {
     auto& expr = Expression::bind(condSyntax, context);
-    if (expr.bad())
-        return false;
-
     return createPatternVars(context, patternSyntax, *expr.type, results);
 }
 
