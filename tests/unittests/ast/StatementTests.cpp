@@ -2104,3 +2104,31 @@ endfunction
     // Just check that the build fails but doesn't crash.
     CHECK(!compilation.getAllDiagnostics().empty());
 }
+
+TEST_CASE("Tagged pattern eval regress -- GH #1482") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef union tagged {
+    struct {
+        bit [4:0] reg1, reg2, regd;
+    } Add;
+    union tagged {
+        bit [9:0] JmpU;
+        struct packed {
+            bit [0:1] cc;
+            bit [0:1] addr;
+        } JmpC;
+    } Jmp;
+    void Baz;
+} Instr;
+
+function automatic int f2;
+    parameter Instr e = tagged Jmp tagged JmpC '{2, 2'(137)};
+    int rf[3] = '{0, 0, 1};
+    return e matches (tagged Jmp (tagged JmpC '{cc:.c,addr:.a})) &&& rf[c] != 0 ? int'(c + a) : 1;
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

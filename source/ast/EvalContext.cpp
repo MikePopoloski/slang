@@ -30,7 +30,11 @@ void EvalContext::reset() {
 }
 
 ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue value) {
-    SLANG_ASSERT(!stack.empty());
+    if (stack.empty()) {
+        // This can happen outside of a function call due to things like pattern variables.
+        pushEmptyFrame();
+    }
+
     ConstantValue& result = stack.back().temporaries[symbol];
     if (!value) {
         result = symbol->getType().getDefaultValue();
