@@ -95,13 +95,13 @@ int main(int argc, char** argv) {
         Registry::setSourceManager(&sm);
 
         // Get the ID and kind from the check code string
-        auto hypenPos = infoCode->find('-');
-        if (hypenPos == std::string::npos || hypenPos == 0) {
+        auto hyphenPos = infoCode->find('-');
+        if (hyphenPos == std::string::npos || hyphenPos == 0) {
             OS::printE("Check code has not the correct format. Format should be ABCD-<id>\n");
             return 1;
         }
 
-        auto kindStr = infoCode->substr(0, hypenPos);
+        auto kindStr = infoCode->substr(0, hyphenPos);
         // Parse the ID and kind
         auto kind = tidyKindFromStr(kindStr);
         if (!kind) {
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        auto id = strToUInt(infoCode->substr(hypenPos + 1));
+        auto id = strToUInt(infoCode->substr(hyphenPos + 1));
         if (!id.has_value()) {
             OS::printE("Check code has not the correct format. Format should be ABCD-<id>\n");
             return 1;
