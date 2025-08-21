@@ -22,6 +22,7 @@
 #include "slang/ast/types/NetType.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -345,14 +346,31 @@ bool FormalArgumentSymbol::mergeVariable(const VariableSymbol& variable) {
     return true;
 }
 
-const Expression* FormalArgumentSymbol::getDefaultValue() const {
-    if (defaultVal || !defaultValSyntax)
-        return defaultVal;
+static const Expression* EvaluatingPlaceholder = reinterpret_cast<const Expression*>(UINTPTR_MAX);
 
+const Expression* FormalArgumentSymbol::getDefaultValue() const {
     auto scope = getParentScope();
     SLANG_ASSERT(scope);
 
+    if (defaultVal || !defaultValSyntax) {
+        // If the default value expression is the placeholder value it means
+        // we're recursively calling into ourselves and should report an error
+        // and break the chain.
+        if (defaultVal == EvaluatingPlaceholder) {
+            SLANG_ASSERT(defaultValSyntax);
+
+            if (!name.empty()) {
+                scope->addDiag(diag::RecursiveDefinition, location)
+                    << name << defaultValSyntax->sourceRange();
+            }
+            defaultVal = &InvalidExpression::Instance;
+        }
+
+        return defaultVal;
+    }
+
     ASTContext context(*scope, LookupLocation::after(*this));
+    defaultVal = EvaluatingPlaceholder;
     defaultVal = &Expression::bindArgument(getType(), direction, flags, *defaultValSyntax, context);
     return defaultVal;
 }
