@@ -298,6 +298,14 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
     if (!syntax)
         return;
 
+    auto createInvalid = [&] {
+        auto& comp = getCompilation();
+        auto& result = *comp.emplace<BlockStatement>(InvalidStatement::Instance, blockKind,
+                                                     SourceRange());
+        result.blockSymbol = this;
+        return comp.emplace<InvalidStatement>(&result);
+    };
+
     if (syntax->kind == SyntaxKind::RsRule) {
         // Create variables to hold results from all non-void productions
         // invoked by this rule.
@@ -314,7 +322,7 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
                                                  context, dims)) {
             // If building loop dims failed we don't want to later proceed with trying to
             // bind the statement again, so just set to invalid here.
-            stmt = &InvalidStatement::Instance;
+            stmt = createInvalid();
         }
 
         for (auto& dim : dims) {
@@ -330,7 +338,7 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
 
         SmallVector<const PatternVarSymbol*> vars;
         if (!Pattern::createPatternVars(context, *cond.matchesClause->pattern, *cond.expr, vars))
-            stmt = &InvalidStatement::Instance;
+            stmt = createInvalid();
 
         for (auto var : vars)
             insertCB(*var);
@@ -343,7 +351,7 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
         SmallVector<const PatternVarSymbol*> vars;
         if (!Pattern::createPatternVars(context, *syntax->as<PatternCaseItemSyntax>().pattern,
                                         *caseSyntax.expr, vars)) {
-            stmt = &InvalidStatement::Instance;
+            stmt = createInvalid();
         }
 
         for (auto var : vars)

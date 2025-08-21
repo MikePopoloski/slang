@@ -70,8 +70,12 @@ Statement& ConditionalStatement::fromSyntax(Compilation& comp,
             if (!currBlock) {
                 ifTrue = stmtCtx.tryGetBlock(context, *condSyntax);
                 SLANG_ASSERT(ifTrue);
-                if (ifTrue->bad())
-                    return badStmt(comp, nullptr);
+
+                if (ifTrue->bad()) {
+                    bad = true;
+                    ifTrue = ifTrue->as<InvalidStatement>().child;
+                    SLANG_ASSERT(ifTrue);
+                }
 
                 currBlock = ifTrue->as<BlockStatement>().blockSymbol;
                 SLANG_ASSERT(currBlock);
@@ -83,12 +87,16 @@ Statement& ConditionalStatement::fromSyntax(Compilation& comp,
             }
 
             // If the block was invalid (due to failing to bind pattern variables),
-            // just bail out early.
-            if (currBlock->isKnownBad())
-                return badStmt(comp, nullptr);
-
+            // don't pile on with more pattern related errors.
             trueContext = ASTContext(*currBlock, LookupLocation::max, trueContext.flags);
-            pattern = &Pattern::bind(trueContext, *condSyntax->matchesClause->pattern, *cond.type);
+            currBlock->members(); // Touch the block to ensure it's elaborated.
+            if (bad || currBlock->isKnownBad()) {
+                pattern = comp.emplace<InvalidPattern>(nullptr);
+            }
+            else {
+                pattern = &Pattern::bind(trueContext, *condSyntax->matchesClause->pattern,
+                                         *cond.type);
+            }
             bad |= pattern->bad();
 
             // We don't consider the condition to be const if there's a pattern.
