@@ -463,7 +463,10 @@ protected:
     // This way we don't need a virtual destructor, or vtable at all.
     SmallVectorBase() noexcept = default;
     explicit SmallVectorBase(size_type capacity) noexcept : cap(capacity) {}
-    ~SmallVectorBase() { cleanup(); }
+    ~SmallVectorBase() {
+        if (!isSmall())
+            ::operator delete(data_);
+    }
 
     SmallVectorBase& operator=(const SmallVectorBase& rhs);
     SmallVectorBase& operator=(SmallVectorBase&& rhs);
@@ -635,6 +638,8 @@ public:
             this->cap = std::exchange(other.cap, 0);
         }
     }
+
+    ~SmallVector() { std::ranges::destroy(*this); }
 
     /// Copy assignment from another vector.
     SmallVector& operator=(const Base& rhs) {
