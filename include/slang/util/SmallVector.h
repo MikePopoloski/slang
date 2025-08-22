@@ -463,7 +463,10 @@ protected:
     // This way we don't need a virtual destructor, or vtable at all.
     SmallVectorBase() noexcept = default;
     explicit SmallVectorBase(size_type capacity) noexcept : cap(capacity) {}
-    ~SmallVectorBase() { cleanup(); }
+    ~SmallVectorBase() {
+        if (!isSmall())
+            ::operator delete(data_);
+    }
 
     SmallVectorBase& operator=(const SmallVectorBase& rhs);
     SmallVectorBase& operator=(SmallVectorBase&& rhs);
@@ -636,17 +639,7 @@ public:
         }
     }
 
-#if defined(__has_feature)
-#    if __has_feature(memory_sanitizer)
-    // Elide msan check for SmallVector destructor.
-    //
-    // There is an issue with the destruction order: SmallVector frees the
-    // underlying storage (stackBase) and then cleanup accesses data in that
-    // region but MSAN has poisoned it already.
-
-    __attribute__((no_sanitize("memory"))) ~SmallVector() {}
-#    endif
-#endif
+    ~SmallVector() { std::ranges::destroy(*this); }
 
     /// Copy assignment from another vector.
     SmallVector& operator=(const Base& rhs) {
