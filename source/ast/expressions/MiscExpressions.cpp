@@ -15,6 +15,7 @@
 #include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
+#include "slang/ast/symbols/CheckerSymbols.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"

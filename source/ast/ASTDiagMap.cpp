@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/ASTDiagMap.h"
 
+#include "slang/ast/symbols/CheckerSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"

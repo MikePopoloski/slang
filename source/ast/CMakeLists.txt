@@ -31,6 +31,7 @@ target_sources(
           statements/MiscStatements.cpp
           symbols/AttributeSymbol.cpp
           symbols/BlockSymbols.cpp
+          symbols/CheckerSymbols.cpp
           symbols/ClassSymbols.cpp
           symbols/CompilationUnitSymbols.cpp
           symbols/CoverSymbols.cpp

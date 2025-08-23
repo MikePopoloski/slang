@@ -363,21 +363,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::LetDecl; }
 };
 
-/// Represents a checker declaration.
-class SLANG_EXPORT CheckerSymbol final : public Symbol, public Scope {
-public:
-    std::span<const AssertionPortSymbol* const> ports;
-
-    CheckerSymbol(Compilation& compilation, std::string_view name, SourceLocation loc);
-
-    static CheckerSymbol& fromSyntax(const Scope& scope,
-                                     const syntax::CheckerDeclarationSyntax& syntax);
-
-    void serializeTo(ASTSerializer&) const {}
-
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Checker; }
-};
-
 /// Represents a clocking block.
 class SLANG_EXPORT ClockingBlockSymbol final : public Symbol, public Scope {
 public:

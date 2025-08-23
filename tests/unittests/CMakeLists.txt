@@ -11,6 +11,7 @@ add_executable(
   analysis/MultiAssignTests.cpp
   analysis/UnusedTests.cpp
   ast/AssertionTests.cpp
+  ast/CheckerTests.cpp
   ast/ClassTests.cpp
   ast/ConfigTests.cpp
   ast/CoverTests.cpp
