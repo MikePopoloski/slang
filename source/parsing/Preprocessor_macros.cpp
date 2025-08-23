@@ -231,8 +231,7 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                         syntheticComment = Token();
                     }
                 }
-                else {
-                    // Dest cannot be empty here, though it's not easy to see why at first glance.
+                else if (!dest.empty()) {
                     Token left = dest.back();
                     Token right = tokens[i + 1];
 

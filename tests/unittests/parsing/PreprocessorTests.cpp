@@ -2741,3 +2741,24 @@ endmodule
     auto result = SyntaxPrinter::printFile(*tree);
     CHECK(result == text);
 }
+
+TEST_CASE("Invalid macro concatenation regress -- GH #1484") {
+    auto& text = R"(
+`define S0 ````n
+module m;
+    int i = `S0;
+endmodule
+)";
+
+    auto& expected = R"(
+module m;
+    int i = n;
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::IgnoredMacroPaste);
+}
