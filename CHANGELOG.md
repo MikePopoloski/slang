@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Non-variable and non-output ANSI port declarations are now correctly prevented from specifying an initializer expression
 * Parameter port declarations now correctly require an explicit keyword when an implicit type syntax with dimensions or signing keyword is used
 * Covergroup formal arguments are now correctly always considered `const`
+* Non-blocking assignments with intra-assignment delays are now correctly allowed in `always_comb` blocks
 
 ### Notable Breaking Changes
 
@@ -22,6 +23,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Improvements
 * -Wcase-dup no longer warns if the duplicate items are all constant case items that don't match a known constant case expression
+* Performing concatenation of two slashes in a macro expansion now expands to a line comment, matching the behavior of other tools
 
 ### Fixes
 * Fixed enum base type check to properly error for multidimensional vector types
@@ -29,10 +31,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a bug when parsing multiple comma separated type parameter declarations in a module port list
 * Fixed a bug in the accounting of how many nested `for` loop steps have been taken during dataflow analysis
 * Unnamed covergroup types now print with a placeholder name in diagnostics and AST dumping instead of just an empty string
+* Fixed AST serialization to respect the `--disable-instance-caching` flag
+* Fixed a bug where sequences and properties with local variable formal arguments would rewrite their formal args when expanding, potentially resulting in spurious errors
+* Fixed the check for infinite recursion in hierarchy instantiations to actually work
+* Fixed potentially infinite recursion when evaluating variable initializers in a recursive function
+* Fixed potentially infinite recursion with bad `for` loops with a preceeding statement label
+* Fixed various issues related to handling invalid patterns in conditional statements
+* Fixed a crash when evaluating top-level constant expression with pattern variables
+* We now properly report an error instead of crashing for subroutine formal arguments that call their parent function recursively from their default value expression
+* Fixed a crash in the preprocessor when there are ignored back-to-back macro concatenation tokens inside a macro expansion
 
 ### Tools & Bindings
 #### pyslang
 * Upgraded to pybind11 3.0, which brings improved performance, smart_holder and native_enum features
+
+#### slang-tidy
+* Fixed a crash in OnlyANSIPortDecls checker when ports don't connect to an internal symbol (thanks to @likeamahoney)
+* Fixed assertion in EnforcePortSuffix checker with ports that don't have a name (thanks to @likeamahoney)
+* Fixed a crash when an invalid value is provided for the `--code` flag (thanks to @likeamahoney)
 
 
 ## [v9.0] - 2025-07-30
