@@ -1526,18 +1526,33 @@ module top;
     interconnect b;
     q q1(.b);
 endmodule
+
+module netlist1;
+    interconnect iwire;
+    dut3 child1(iwire);
+    dut4 child2(iwire, iwire);
+endmodule
+
+module dut3(interconnect w);
+endmodule
+
+module dut4(interconnect wi, interconnect wii);
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::InterconnectInitializer);
     CHECK(diags[1].code == diag::InterconnectTypeSyntax);
     CHECK(diags[2].code == diag::InterconnectMultiPort);
     CHECK(diags[3].code == diag::InterconnectPortVar);
     CHECK(diags[4].code == diag::InterconnectReference);
+    CHECK(diags[5].code == diag::SimulatedInterconnect);
+    CHECK(diags[6].code == diag::SimulatedInterconnect);
+    CHECK(diags[7].code == diag::SimulatedInterconnect);
 }
 
 TEST_CASE("More interconnect ports") {
