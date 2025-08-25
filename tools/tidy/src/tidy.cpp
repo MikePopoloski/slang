@@ -187,6 +187,31 @@ int main(int argc, char** argv) {
     if (!driver.processOptions())
         return 1;
 
+    // Also add skipped files and paths to the diagnostic engine's ignore patterns
+    // so that warnings are suppressed for these locations
+    for (const auto& file : skippedFiles) {
+        // For skip-file, suppress warnings from the exact file
+        if (auto ec = driver.diagEngine.addIgnorePaths(file)) {
+            if (!superQuiet) {
+                OS::printE(fmt::format("Warning: Failed to add ignore path for '{}': {}\n", 
+                                      file, ec.message()));
+            }
+        }
+    }
+    
+    for (const auto& path : skippedPaths) {
+        // For skip-path, suppress warnings from files in the parent directory
+        auto parentDir = std::filesystem::path(path).parent_path().string();
+        if (!parentDir.empty()) {
+            if (auto ec = driver.diagEngine.addIgnorePaths(parentDir)) {
+                if (!superQuiet) {
+                    OS::printE(fmt::format("Warning: Failed to add ignore path for '{}': {}\n", 
+                                          parentDir, ec.message()));
+                }
+            }
+        }
+    }
+
     std::unique_ptr<ast::Compilation> compilation;
     std::unique_ptr<analysis::AnalysisManager> analysisManager;
     bool compilationOk;

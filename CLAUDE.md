@@ -6,11 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Build the project
-cmake -B build/macos-claude
-cmake --build build/macos-claude -j8
+cmake -B build/claude
+cmake --build build/claude -j8
+
+# Build with UHDM support (optional)
+cmake -B build/claude -DSLANG_INCLUDE_UHDM=ON
+cmake --build build/claude -j8
 
 # Run tests
-ctest --test-dir build/macos-claude --output-on-failure
+ctest --test-dir build/claude --output-on-failure
 
 # Python bindings build and test
 pip install . --no-build-isolation --config-settings build-dir=build/claude_python_build
@@ -21,7 +25,7 @@ pytest
 
 - **Unit Tests**: Uses Catch2 framework, located in `tests/unittests/`
 - **Regression Tests**: Custom SystemVerilog test files in `tests/regression/`
-- **Test Command**: `ctest --test-dir build/macos-claude --output-on-failure`
+- **Test Command**: `ctest --test-dir build/claude --output-on-failure`
 - **Python Tests**: `pytest` (for Python bindings)
 
 ## Architecture Overview
@@ -56,8 +60,8 @@ The slang library is organized into several key subsystems:
 
 ## Development Workflow
 
-1. Build: `cmake -B build/macos-claude && cmake --build build/macos-claude -j8`
-2. Test: `ctest --test-dir build/macos-claude --output-on-failure`
+1. Build: `cmake -B build/claude && cmake --build build/claude -j8`
+2. Test: `ctest --test-dir build/claude --output-on-failure`
 3. Format: Automatic via pre-commit hooks
 4. For Python changes: `pip install . --no-build-isolation --config-settings build-dir=build/claude_python_build && pytest`
 
@@ -68,3 +72,9 @@ This is a SystemVerilog compiler and language services library that provides:
 - High-performance compilation with excellent error messages
 - Python bindings for integration into other tools
 - Various command-line tools for SystemVerilog development
+
+## IMPORTANT
+
+- Always build and test your changes before deciding you're done. The build must succeed and the tests must pass.
+- Do not provide "mock" or "partial" or "interface-only" solutions -- all tasks must be commpleted fully and correctly.
+- If you're having trouble making forward progress, stop and ask for help rather than going in circles.
