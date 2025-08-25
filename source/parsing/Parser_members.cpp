@@ -96,7 +96,7 @@ MemberSyntax& Parser::parseModule(AttrList attributes, SyntaxKind parentKind,
     auto& result = factory.moduleDeclaration(declKind, attributes, header, members, endmodule,
                                              endName);
 
-    meta.nodeMap[&result] = node;
+    meta.nodeMeta.emplace_back(&result, node);
     return result;
 }
 
@@ -2733,7 +2733,7 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attri
             }
         }
         if (!found)
-            meta.globalInstances.emplace(name);
+            meta.addGlobalInstance(name);
     }
 
     Token semi;

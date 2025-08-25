@@ -70,7 +70,7 @@ public:
                 }
             }
             if (!found)
-                meta.globalInstances.emplace(name);
+                meta.addGlobalInstance(name);
         }
         visitDefault(syntax);
     }
@@ -93,7 +93,8 @@ public:
 
         // Needs to come after we visitDefault because visiting the first token
         // might update our preproc state.
-        meta.nodeMap[&syntax] = {defaultNetType, unconnectedDrive, cellDefine, timeScale};
+        meta.nodeMeta.emplace_back(&syntax, ParserMetadata::Node{defaultNetType, unconnectedDrive,
+                                                                 cellDefine, timeScale});
     }
 
     void visitToken(Token token) {
@@ -171,7 +172,7 @@ std::vector<std::string_view> ParserMetadata::getDeclaredSymbols() const {
 }
 
 void ParserMetadata::visitDeclaredSymbols(function_ref<void(std::string_view)> func) const {
-    for (auto& [n, _] : nodeMap) {
+    for (auto& [n, _] : nodeMeta) {
         auto decl = &n->as<ModuleDeclarationSyntax>();
         std::string_view name = decl->header->name.valueText();
         if (!name.empty())
@@ -186,9 +187,13 @@ void ParserMetadata::visitDeclaredSymbols(function_ref<void(std::string_view)> f
 }
 
 std::vector<std::string_view> ParserMetadata::getReferencedSymbols() const {
-    flat_hash_set<std::string_view> deps;
-    visitReferencedSymbols([&](std::string_view name) { deps.emplace(name); });
-    return std::vector<std::string_view>(deps.begin(), deps.end());
+    flat_hash_set<std::string_view> seenDeps;
+    std::vector<std::string_view> results;
+    visitReferencedSymbols([&](std::string_view name) {
+        if (seenDeps.insert(name).second)
+            results.push_back(name);
+    });
+    return results;
 }
 
 void ParserMetadata::visitReferencedSymbols(function_ref<void(std::string_view)> func) const {

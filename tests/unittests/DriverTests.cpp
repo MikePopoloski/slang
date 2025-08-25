@@ -931,7 +931,7 @@ TEST_CASE("Driver deplist partial dependency tree") {
     auto guard = OS::captureOutput();
     driver.optionallyWriteDepFiles();
 
-    CHECK(OS::capturedStdout == "leafB.sv\nleafA.sv\nmid.sv\n");
+    CHECK(OS::capturedStdout == "leafA.sv\nleafB.sv\nmid.sv\n");
     CHECK(OS::capturedStderr.empty());
 }
 
