@@ -22,7 +22,6 @@
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
-#include "slang/driver/DepTracker.h"
 #include "slang/driver/SourceLoader.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
@@ -361,6 +360,26 @@ void Driver::addStandardArgs() {
         "One or more command files containing additional program options. "
         "Paths in the file are considered relative to the file itself.",
         "<file-pattern>[,...]", CommandLineFlags::CommaList);
+
+    // Dependency files
+    cmdLine.add("--depfile-target", options.depfileTarget,
+                "Output depfile lists in makefile format, creating the file with "
+                "`<target>:` as the make target");
+    cmdLine.add("--Mall,--all-deps", options.allDepfile,
+                "Generate dependency file list of all files used during parsing", "<file>",
+                CommandLineFlags::FilePath);
+    cmdLine.add("--Minclude,--include-deps", options.includeDepfile,
+                "Generate dependency file list of just include files that were "
+                "used during parsing",
+                "<file>", CommandLineFlags::FilePath);
+    cmdLine.add("--Mmodule,--module-deps", options.moduleDepfile,
+                "Generate dependency file list of source files parsed, excluding include files",
+                "<file>", CommandLineFlags::FilePath);
+    cmdLine.add("--depfile-trim", options.depfileTrim,
+                "Trim unreferenced files before generating dependency lists "
+                "(also implies --depfile-sort)");
+    cmdLine.add("--depfile-sort", options.depfileSort,
+                "Topologically sort the emitted files in dependency lists");
 
     // Analysis modifiers
     auto addAnalysisFlag = [&](AnalysisFlags flag, std::string_view name, std::string_view desc) {
@@ -762,70 +781,181 @@ void Driver::reportMacros() {
     }
 }
 
-std::vector<fs::path> Driver::getFilePaths(
-    std::vector<std::shared_ptr<syntax::SyntaxTree>> trees) const {
-    std::vector<fs::path> filePaths;
-    filePaths.reserve(trees.size());
+static std::string getProximatePathStr(const fs::path& path) {
+    std::error_code ec;
+    auto file = fs::proximate(path, ec);
+    if (ec)
+        file = path;
+
+    return getU8Str(file);
+}
+
+static std::vector<const SyntaxTree*> getSortedDependencies(
+    Driver& driver, std::span<std::shared_ptr<SyntaxTree>> trees, bool trim) {
+
+    // Map all declared modules, classes, etc to their containing syntax trees.
+    flat_hash_map<std::string_view, const SyntaxTree*> nameToTree;
     for (auto& tree : trees) {
-        for (auto& bufferid : tree->getSourceBufferIds()) {
-            auto path = sourceManager.getFullPath(bufferid);
-            if (!path.empty())
-                filePaths.push_back(path);
-        }
+        for (auto name : tree->getMetadata().getDeclaredSymbols())
+            nameToTree.emplace(name, tree.get());
     }
-    return filePaths;
-}
 
-std::vector<fs::path> Driver::getLoadedFilePaths() const {
-    return sourceLoader.getFilePaths();
-}
+    struct Deps {
+        std::vector<const SyntaxTree*> childTrees;
+        std::vector<std::string_view> missingNames;
+    };
+    flat_hash_map<const SyntaxTree*, Deps> treeToDeps;
+    flat_hash_map<std::string_view, const SyntaxTree*> missingToTree;
 
-std::vector<fs::path> Driver::getIncludePaths(
-    std::vector<std::shared_ptr<syntax::SyntaxTree>> trees) const {
-    // Return the include paths that were added via the command line.
-    flat_hash_set<fs::path> includeSet;
-    SLANG_ASSERT(!trees.empty());
-
+    // For each syntax tree, build a list of child trees that depend on it
+    // based on references to modules, classes, etc.
     for (auto& tree : trees) {
-        for (auto& inc : tree->getIncludeDirectives()) {
-            if (inc.isSystem)
-                continue;
+        Deps deps;
+        flat_hash_set<const SyntaxTree*> seenTrees;
+        flat_hash_set<std::string_view> seenMissing;
 
-            includeSet.insert(sourceManager.getFullPath(inc.buffer.id));
+        for (auto ref : tree->getMetadata().getReferencedSymbols()) {
+            if (auto it = nameToTree.find(ref); it != nameToTree.end()) {
+                if (seenTrees.insert(it->second).second)
+                    deps.childTrees.push_back(it->second);
+            }
+            else if (seenMissing.insert(ref).second) {
+                deps.missingNames.push_back(ref);
+                missingToTree.emplace(ref, tree.get());
+            }
         }
+
+        treeToDeps.emplace(tree.get(), std::move(deps));
     }
 
-    std::vector<fs::path> includePaths(includeSet.begin(), includeSet.end());
-    return includePaths;
-}
+    // Topologically sort the trees based on their dependencies.
+    std::vector<const SyntaxTree*> results;
+    flat_hash_set<const SyntaxTree*> visited;
+    std::function<void(const SyntaxTree*)> dfsVisit = [&](const SyntaxTree* tree) {
+        if (!visited.insert(tree).second)
+            return;
 
-std::vector<fs::path> Driver::getLoadedIncludePaths() const {
-    return getIncludePaths(syntaxTrees);
-}
+        if (auto it = treeToDeps.find(tree); it != treeToDeps.end()) {
+            for (auto dep : it->second.childTrees)
+                dfsVisit(dep);
 
-std::string Driver::serializeDepfiles(const std::vector<fs::path>& files,
-                                      const std::optional<std::string>& depfileTarget) {
-    std::vector<std::string> paths;
-    paths.reserve(files.size());
+            for (auto name : it->second.missingNames) {
+                driver.printWarning(fmt::format("'{}' not found in any source file", name));
 
-    for (const auto& file : files) {
-        auto relPath = std::filesystem::relative(file, std::filesystem::current_path());
-        paths.push_back(getU8Str(relPath));
-    }
+                // Print one representative note for where this is referenced.
+                if (auto missingIt = missingToTree.find(name); missingIt != missingToTree.end()) {
+                    auto buffers = missingIt->second->getSourceBufferIds();
+                    if (!buffers.empty()) {
+                        driver.printNote(fmt::format(
+                            "referenced in file '{}'",
+                            getProximatePathStr(driver.sourceManager.getFullPath(buffers[0]))));
+                    }
+                }
+            }
+        }
 
-    FormatBuffer buffer;
-    if (depfileTarget) {
-        buffer.format("{}:", *depfileTarget);
-        for (const auto& file : paths)
-            buffer.format(" {}", file);
-        buffer.append("\n");
+        results.push_back(tree);
+    };
+
+    // If we are trimming, the initial set of trees to traverse is based on
+    // the user specified set of top modules. Otherwise, we use all trees.
+    if (trim) {
+        if (driver.options.topModules.empty()) {
+            driver.printWarning("using --depfile-trim with no top modules specified will always "
+                                "result in an empty dependency file");
+        }
+
+        for (auto& name : driver.options.topModules) {
+            if (auto it = nameToTree.find(name); it != nameToTree.end()) {
+                dfsVisit(it->second);
+            }
+            else {
+                driver.printWarning(
+                    fmt::format("top module '{}' not found in any source file", name));
+            }
+        }
     }
     else {
-        for (const auto& file : paths)
-            buffer.format("{}\n", file);
+        for (auto& tree : trees)
+            dfsVisit(tree.get());
     }
 
-    return buffer.str();
+    return results;
+}
+
+void Driver::optionallyWriteDepFiles() {
+    if (!options.includeDepfile && !options.moduleDepfile && !options.allDepfile)
+        return;
+
+    std::vector<const SyntaxTree*> depTrees;
+    if (options.depfileTrim == true || options.depfileSort == true) {
+        depTrees = getSortedDependencies(*this, syntaxTrees, options.depfileTrim == true);
+    }
+    else {
+        depTrees.reserve(syntaxTrees.size());
+        for (auto& tree : syntaxTrees)
+            depTrees.push_back(tree.get());
+    }
+
+    auto writeDepFile = [&](const std::vector<std::string>& paths, std::string_view fileName) {
+        FormatBuffer buffer;
+        if (options.depfileTarget)
+            buffer.format("{}: ", *options.depfileTarget);
+
+        for (auto& path : paths) {
+            buffer.append(path);
+
+            // If depfileTarget is provided the delimiter is a space, otherwise a newline.
+            if (options.depfileTarget)
+                buffer.append(" ");
+            else
+                buffer.append("\n");
+        }
+
+        if (options.depfileTarget) {
+            buffer.pop_back();
+            buffer.append("\n");
+        }
+
+        OS::writeFile(fileName, buffer.str());
+    };
+
+    std::vector<std::string> includePaths;
+    flat_hash_set<fs::path> seenPaths;
+    if (options.includeDepfile || options.allDepfile) {
+        for (auto& tree : depTrees) {
+            for (auto& inc : tree->getIncludeDirectives()) {
+                if (inc.isSystem)
+                    continue;
+
+                auto p = sourceManager.getFullPath(inc.buffer.id);
+                if (seenPaths.insert(p).second)
+                    includePaths.emplace_back(getProximatePathStr(p));
+            }
+        }
+
+        if (options.includeDepfile)
+            writeDepFile(includePaths, *options.includeDepfile);
+    }
+
+    std::vector<std::string> modulePaths;
+    if (options.moduleDepfile || options.allDepfile) {
+        for (auto& tree : depTrees) {
+            for (auto bufferId : tree->getSourceBufferIds()) {
+                auto path = sourceManager.getFullPath(bufferId);
+                if (!path.empty())
+                    modulePaths.emplace_back(getProximatePathStr(path));
+            }
+        }
+
+        if (options.moduleDepfile)
+            writeDepFile(modulePaths, *options.moduleDepfile);
+    }
+
+    if (options.allDepfile) {
+        includePaths.insert(includePaths.end(), modulePaths.begin(), modulePaths.end());
+        writeDepFile(includePaths, *options.allDepfile);
+    }
 }
 
 bool Driver::parseAllSources() {

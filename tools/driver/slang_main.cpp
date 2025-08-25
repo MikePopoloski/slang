@@ -5,7 +5,6 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include <fmt/color.h>
 #include <fstream>
 #include <iostream>
 
@@ -13,7 +12,6 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
-#include "slang/driver/DepTracker.h"
 #include "slang/driver/Driver.h"
 #include "slang/syntax/CSTSerializer.h"
 #include "slang/text/Json.h"
@@ -150,37 +148,6 @@ int driverMain(int argc, TArgs argv) {
         driver.cmdLine.add("--ast-json-detailed-types", serializeDetailedTypes,
                            "When dumping AST to JSON, expand out all type information");
 
-        std::optional<std::string> depfileTarget;
-        driver.cmdLine.add("--depfile-target", depfileTarget,
-                           "Output depfile lists in makefile format, creating the file with "
-                           "`<target>:` as the make target");
-
-        std::optional<std::string> allDepfile;
-        driver.cmdLine.add("--Mall,--all-deps", allDepfile,
-                           "Generate dependency file list of all files used during parsing",
-                           "<file>", CommandLineFlags::FilePath);
-
-        std::optional<std::string> includeDepfile;
-        driver.cmdLine.add(
-            "--Minclude,--include-deps", includeDepfile,
-            "Generate dependency file list of just include files that were used during parsing",
-            "<file>", CommandLineFlags::FilePath);
-
-        std::optional<std::string> moduleDepfile;
-        driver.cmdLine.add(
-            "--Mmodule,--module-deps", moduleDepfile,
-            "Generate dependency file list of source files parsed, excluding include files",
-            "<file>", CommandLineFlags::FilePath);
-
-        std::optional<bool> depfileTrim;
-        driver.cmdLine.add("--depfile-trim", depfileTrim,
-                           "Trim unreferenced files before generating dependency lists, and "
-                           "topologically sort the emitted files");
-
-        std::optional<bool> depfileSort;
-        driver.cmdLine.add("--depfile-sort", depfileSort,
-                           "Topologically sort the emitted files in the dependency lists");
-
         std::optional<std::string> timeTrace;
         driver.cmdLine.add("--time-trace", timeTrace,
                            "Do performance profiling of the slang compiler and output "
@@ -214,7 +181,9 @@ int driverMain(int argc, TArgs argv) {
             return 3;
         }
 
-        if ((onlyPreprocess || onlyMacros) && (includeDepfile || moduleDepfile || allDepfile)) {
+        if ((onlyPreprocess || onlyMacros) &&
+            (driver.options.includeDepfile || driver.options.moduleDepfile ||
+             driver.options.allDepfile)) {
             driver.printError(
                 "cannot use dependency file options with --preprocess or --macros-only");
             return 3;
@@ -240,58 +209,7 @@ int driverMain(int argc, TArgs argv) {
                 ok = driver.parseAllSources();
             }
 
-            std::optional<DepTracker::Deps> deps;
-
-            if (depfileTrim == true || depfileSort == true) {
-                DepTracker tracker(driver.syntaxTrees);
-
-                if (depfileTrim == true) {
-                    deps = tracker.getTreesFor(driver.options.topModules);
-
-                    // Error on missing tops, but continue
-                    for (auto& module : driver.options.topModules) {
-                        if (!tracker.moduleToTree.contains(module)) {
-                            driver.printError(fmt::format(
-                                "Top module '{}' not found in any source file ", module));
-                            ok = false;
-                        }
-                    }
-                }
-                else {
-                    deps = tracker.getTreesFor(driver.syntaxTrees);
-                }
-
-                // Warn about missing names
-                for (auto& missing : deps->missingNames) {
-                    driver.printWarning(
-                        fmt::format("Module '{}' not found in any source file", missing));
-
-                    for (auto& file : driver.getFilePaths(tracker.missingNames[missing])) {
-                        auto relPath = std::filesystem::relative(file,
-                                                                 std::filesystem::current_path());
-                        driver.printNote(fmt::format("referenced in file '{}'", getU8Str(relPath)));
-                    }
-                }
-            }
-
-            if (includeDepfile) {
-                auto paths = deps ? driver.getIncludePaths(deps->deps)
-                                  : driver.getLoadedIncludePaths();
-                OS::writeFile(*includeDepfile, driver.serializeDepfiles(paths, depfileTarget));
-            }
-            if (moduleDepfile) {
-                auto paths = deps ? driver.getFilePaths(deps->deps) : driver.getLoadedFilePaths();
-
-                OS::writeFile(*moduleDepfile, driver.serializeDepfiles(paths, depfileTarget));
-            }
-            if (allDepfile) {
-                auto paths = deps ? driver.getIncludePaths(deps->deps)
-                                  : driver.getLoadedIncludePaths();
-                auto modulePaths = driver.getFilePaths(deps ? deps->deps : driver.syntaxTrees);
-                paths.insert(paths.end(), modulePaths.begin(), modulePaths.end());
-
-                OS::writeFile(*allDepfile, driver.serializeDepfiles(paths, depfileTarget));
-            }
+            driver.optionallyWriteDepFiles();
 
             if (cstJsonFile) {
                 TimeTraceScope timeScope("cstSerialization"sv, ""sv);

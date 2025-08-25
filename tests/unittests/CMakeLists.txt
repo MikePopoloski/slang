@@ -42,7 +42,6 @@ add_executable(
   util/NumericTests.cpp
   util/SmallVectorTests.cpp
   util/UtilTests.cpp
-  DepTrackerTests.cpp
   DriverTests.cpp
   FileTests.cpp
   main.cpp

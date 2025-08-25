@@ -7,12 +7,12 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <functional>
 #include <optional>
 #include <vector>
 
 #include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxFwd.h"
+#include "slang/util/Function.h"
 #include "slang/util/Util.h"
 
 namespace slang::parsing {
@@ -62,19 +62,19 @@ struct SLANG_EXPORT ParserMetadata {
     /// Constructs a new set of parser metadata by walking the provided syntax tree.
     static ParserMetadata fromSyntax(const syntax::SyntaxNode& root);
 
-    /// Returns a list symbols from visitDeclaredSymbols
+    /// Returns a list of all symbols from @a visitDeclaredSymbols.
     std::vector<std::string_view> getDeclaredSymbols() const;
 
     /// Visits top level symbols declared in this metadata, calling the provided function with the
     /// name. This includes modules, classes, packages, and interfaces.
-    void visitDeclaredSymbols(const std::function<void(std::string_view)>& func) const;
+    void visitDeclaredSymbols(function_ref<void(std::string_view)> func) const;
 
-    /// Returns a list of all symbols from visitReferencedSymbols
+    /// Returns a list of all symbols from @a visitReferencedSymbols.
     std::vector<std::string_view> getReferencedSymbols() const;
 
     /// Visits all top level symbols referenced/used by this metadata, calling the provided
     /// function for each symbol name.
-    void visitReferencedSymbols(const std::function<void(std::string_view)>& func) const;
+    void visitReferencedSymbols(function_ref<void(std::string_view)> func) const;
 };
 
 } // namespace slang::parsing

@@ -11,7 +11,6 @@
 #include "slang/ast/Compilation.h"
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
-#include "slang/driver/DepTracker.h"
 #include "slang/driver/SourceLoader.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
@@ -19,6 +18,7 @@
 #include "slang/util/LanguageVersion.h"
 #include "slang/util/OS.h"
 #include "slang/util/Util.h"
+
 namespace slang {
 
 class JsonDiagnosticClient;
@@ -261,6 +261,28 @@ public:
         flat_hash_set<std::string> excludeExts;
 
         /// @}
+        /// @name Dependency files
+        /// @{
+
+        /// Optional target name to include when writing dependency files.
+        std::optional<std::string> depfileTarget;
+
+        /// If true, trim unreferenced files before generating dependency lists.
+        std::optional<bool> depfileTrim;
+
+        /// If true, topologically sort files before generating dependency lists.
+        std::optional<bool> depfileSort;
+
+        /// Output path for a dependency file containing all dependencies.
+        std::optional<std::string> allDepfile;
+
+        /// Output path for a dependency file containing include file dependencies.
+        std::optional<std::string> includeDepfile;
+
+        /// Output path for a dependency file containing module source file dependencies.
+        std::optional<std::string> moduleDepfile;
+
+        /// @}
         /// @name Analysis
         /// @{
 
@@ -342,28 +364,9 @@ public:
     /// Prints all macros from all loaded buffers to stdout.
     void reportMacros();
 
-    /// @brief Returns the file paths that were loaded in the given syntax trees, excluding include
-    /// files.
-    std::vector<std::filesystem::path> getFilePaths(
-        std::vector<std::shared_ptr<syntax::SyntaxTree>> trees) const;
-
-    /// @brief Returns the file paths that were loaded via the command line.
-    std::vector<std::filesystem::path> getLoadedFilePaths() const;
-
-    /// @brief Returns the include files that were loaded in the given syntax trees.
-    std::vector<std::filesystem::path> getIncludePaths(
-        std::vector<std::shared_ptr<syntax::SyntaxTree>> trees) const;
-
-    /// @brief Returns the include files that were loaded in the given syntax trees.
-    std::vector<std::filesystem::path> getLoadedIncludePaths() const;
-
-    /// @brief Serializes the given list of files into a depfile format.
-    /// @param files The list of files to serialize.
-    /// @param depfileTarget The target file to use; also implies that makefile format should be
-    /// used, with this string as the target. If not set, it will serialize in filelist format,
-    /// with one file per line.
-    std::string serializeDepfiles(const std::vector<std::filesystem::path>& files,
-                                  const std::optional<std::string>& depfileTarget);
+    /// Writes any dependency files that have been requested via command line options.
+    /// (if such options have not been specified this method does nothing).
+    void optionallyWriteDepFiles();
 
     /// @brief Parses all loaded buffers into syntax trees and appends the resulting trees
     /// to the @a syntaxTrees list.
@@ -408,8 +411,13 @@ public:
     /// @returns true if compilation succeeded and false if errors were encountered.
     [[nodiscard]] bool runFullCompilation(bool quiet = false);
 
+    /// Prints an error to stderr with appropriate terminal colors.
     void printError(const std::string& message);
+
+    /// Prints a warning to stderr with appropriate terminal colors.
     void printWarning(const std::string& message);
+
+    /// Prints a note to stderr with appropriate terminal colors.
     void printNote(const std::string& message);
 
 private:

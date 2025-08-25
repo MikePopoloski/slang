@@ -177,9 +177,8 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
 
     std::vector<BufferID> bufferIds;
     bufferIds.reserve(sources.size());
-    for (const auto& source : sources) {
+    for (const auto& source : sources)
         bufferIds.push_back(source.id);
-    }
 
     return std::shared_ptr<SyntaxTree>(
         new SyntaxTree(root, library, sourceManager, std::move(alloc), std::move(diagnostics),

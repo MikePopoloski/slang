@@ -117,11 +117,11 @@ expense of preventing various errors and warnings from being diagnosed. This opt
 should probably not be needed unless there are bugs in the analysis pass that need
 to be worked around.
 
-@section Depfiles
+@section depfiles Dependency Files
 
-These options output various depfiles as filelists in addition to other actions.
-The default format places a file on each line.
-The `--depfile-target` changes this to the makefile format that is emitted by C++ compilers.
+These options output various dependency files as filelists in addition to other actions.
+The default format places a file on each line. The `--depfile-target` option changes this
+to the Makefile format that is emitted by C++ compilers.
 
 `--Mall,--all-deps <file>`
 
@@ -137,7 +137,17 @@ Generate dependency file list of source files parsed, excluding include files.
 
 `--depfile-target <target>`
 
-Output depfile lists in makefile format, creating the file with `<target>:` as the make target.
+Output depfile lists in makefile format, creating the file with `<target>:` as the Make target.
+
+`--depfile-sort`
+
+Topologically sort the emitted files in dependency listings, based on references to classes,
+packages, and module and interface instantiations.
+
+`--depfile-trim`
+
+Trim unreferenced files before generating dependency lists, based on references to classes,
+packages, and module and interface instantiations. Also implies `--depfile-sort`.
 
 
 @section include-paths Include paths and macros
