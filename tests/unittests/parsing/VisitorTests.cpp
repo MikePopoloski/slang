@@ -727,9 +727,9 @@ class C; endclass
 )");
 
     auto& meta = tree->getMetadata();
-    CHECK(meta.nodeMap.size() == 3);
+    CHECK(meta.nodeMeta.size() == 3);
 
-    for (auto& [key, node] : meta.nodeMap) {
+    for (auto& [key, node] : meta.nodeMeta) {
         if (key->as<ModuleDeclarationSyntax>().header->name.valueText() == "FooBar") {
             CHECK(node.timeScale->base.unit == TimeUnit::Nanoseconds);
             CHECK(node.unconnectedDrive == TokenKind::Pull0Keyword);

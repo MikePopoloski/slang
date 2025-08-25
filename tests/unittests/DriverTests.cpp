@@ -3,6 +3,7 @@
 
 #include "Test.h"
 #include <fmt/core.h>
+#include <fstream>
 #include <regex>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -270,62 +271,72 @@ __slang__ 1
 }
 
 TEST_CASE("Driver includes depfile") {
-    Driver driver;
-    driver.addStandardArgs();
+    for (auto target : {"--depfile-target target"sv, ""sv}) {
+        auto guard = OS::captureOutput();
 
-    auto filePath = findTestDir() + "test.sv";
-    const char* argv[] = {"testfoo", filePath.c_str()};
-    CHECK(driver.parseCommandLine(2, argv));
-    CHECK(driver.processOptions());
-    CHECK(driver.parseAllSources());
-    fs::current_path(findTestDir());
-    auto depfiles = driver.getDepfiles(true);
-    CHECK(depfiles == std::vector<fs::path>{
-                          fs::current_path() / "file_defn.svh",
-                      });
+        Driver driver;
+        driver.addStandardArgs();
 
-    CHECK(driver.serializeDepfiles(depfiles, {"target"}) == "target: file_defn.svh\n");
-    CHECK(driver.serializeDepfiles(depfiles, std::nullopt) == "file_defn.svh\n");
-}
+        auto args = fmt::format("testfoo \"{0}test.sv\" {1} --Minclude -", findTestDir(), target);
+        CHECK(driver.parseCommandLine(args));
+        CHECK(driver.processOptions());
+        CHECK(driver.parseAllSources());
 
-TEST_CASE("Driver all depfile") {
-    Driver driver;
-    driver.addStandardArgs();
+        fs::current_path(findTestDir());
 
-    auto filePath = findTestDir() + "test.sv";
-    const char* argv[] = {"testfoo", filePath.c_str()};
-    CHECK(driver.parseCommandLine(2, argv));
-    CHECK(driver.processOptions());
-    CHECK(driver.parseAllSources());
-    fs::current_path(findTestDir());
-    auto files = driver.getDepfiles();
-    std::sort(files.begin(), files.end());
-    CHECK(files == std::vector<fs::path>{
-                       fs::current_path() / "file_defn.svh",
-                       fs::current_path() / "test.sv",
-                   });
-    CHECK(driver.serializeDepfiles(driver.getDepfiles(), {"target"}) ==
-          "target: file_defn.svh test.sv\n");
-    CHECK(driver.serializeDepfiles(driver.getDepfiles(), std::nullopt) ==
-          "file_defn.svh\ntest.sv\n");
+        driver.optionallyWriteDepFiles();
+
+        if (target.empty())
+            CHECK(stdoutContains("file_defn.svh\n"));
+        else
+            CHECK(stdoutContains(fmt::format("target: file_defn.svh\n")));
+    }
 }
 
 TEST_CASE("Driver module depfile") {
-    Driver driver;
-    driver.addStandardArgs();
+    for (auto target : {"--depfile-target target"sv, ""sv}) {
+        auto guard = OS::captureOutput();
 
-    auto filePath = findTestDir() + "test.sv";
-    const char* argv[] = {"testfoo", filePath.c_str()};
-    CHECK(driver.parseCommandLine(2, argv));
-    CHECK(driver.processOptions());
-    fs::current_path(findTestDir());
-    CHECK(driver.sourceLoader.getFilePaths() == std::vector<fs::path>{
-                                                    fs::current_path() / "test.sv",
-                                                });
-    CHECK(driver.serializeDepfiles(driver.sourceLoader.getFilePaths(), {"target"}) ==
-          "target: test.sv\n");
-    CHECK(driver.serializeDepfiles(driver.sourceLoader.getFilePaths(), std::nullopt) ==
-          "test.sv\n");
+        Driver driver;
+        driver.addStandardArgs();
+
+        auto args = fmt::format("testfoo \"{0}test.sv\" {1} --Mmodule -", findTestDir(), target);
+        CHECK(driver.parseCommandLine(args));
+        CHECK(driver.processOptions());
+        CHECK(driver.parseAllSources());
+
+        fs::current_path(findTestDir());
+
+        driver.optionallyWriteDepFiles();
+
+        if (target.empty())
+            CHECK(stdoutContains("test.sv\n"));
+        else
+            CHECK(stdoutContains(fmt::format("target: test.sv\n")));
+    }
+}
+
+TEST_CASE("Driver all depfile") {
+    for (auto target : {"--depfile-target target"sv, ""sv}) {
+        auto guard = OS::captureOutput();
+
+        Driver driver;
+        driver.addStandardArgs();
+
+        auto args = fmt::format("testfoo \"{0}test.sv\" {1} --Mall -", findTestDir(), target);
+        CHECK(driver.parseCommandLine(args));
+        CHECK(driver.processOptions());
+        CHECK(driver.parseAllSources());
+
+        fs::current_path(findTestDir());
+
+        driver.optionallyWriteDepFiles();
+
+        if (target.empty())
+            CHECK(stdoutContains("file_defn.svh\ntest.sv\n"));
+        else
+            CHECK(stdoutContains(fmt::format("target: file_defn.svh test.sv\n")));
+    }
 }
 
 TEST_CASE("Driver single-unit parsing") {
@@ -799,4 +810,164 @@ TEST_CASE("Driver JSON diag output") {
     "symbolPath": "\\$root "
   }
 )"));
+}
+
+TEST_CASE("Driver basic dependency pruning") {
+    // Test case 1: Request only moduleB as top module
+    // Should return moduleB, moduleA (dependency), but not moduleC or moduleD
+    Driver driver;
+    auto treeA = SyntaxTree::fromText("module moduleA; endmodule\n", driver.sourceManager,
+                                      "source"sv, "moduleA.sv"sv);
+    auto treeB = SyntaxTree::fromText("module moduleB; moduleA a1(); endmodule\n",
+                                      driver.sourceManager, "source"sv, "moduleB.sv"sv);
+    auto treeC = SyntaxTree::fromText("module moduleC; moduleB b1(); endmodule\n",
+                                      driver.sourceManager, "source"sv, "moduleC.sv"sv);
+    auto treeD = SyntaxTree::fromText("module moduleD; /* independent */ endmodule\n",
+                                      driver.sourceManager, "source"sv, "moduleD.sv"sv);
+
+    driver.options.allDepfile = "-";
+    driver.options.depfileTrim = true;
+    driver.syntaxTrees.push_back(treeA);
+    driver.syntaxTrees.push_back(treeB);
+    driver.syntaxTrees.push_back(treeC);
+    driver.syntaxTrees.push_back(treeD);
+
+    {
+        driver.options.topModules.push_back("moduleB");
+
+        auto guard = OS::captureOutput();
+        driver.optionallyWriteDepFiles();
+
+        CHECK(OS::capturedStdout == "moduleA.sv\nmoduleB.sv\n");
+        CHECK(OS::capturedStderr.empty());
+    }
+
+    // Test case 2: Request moduleC as top module
+    // Should return moduleC, moduleB, moduleA (all dependencies), but not moduleD
+    {
+        driver.options.topModules.clear();
+        driver.options.topModules.push_back("moduleC");
+
+        auto guard = OS::captureOutput();
+        driver.optionallyWriteDepFiles();
+
+        CHECK(OS::capturedStdout == "moduleA.sv\nmoduleB.sv\nmoduleC.sv\n");
+        CHECK(OS::capturedStderr.empty());
+    }
+
+    // Test case 3: just sorting, no trimming
+    {
+        driver.options.topModules.clear();
+        driver.options.depfileTrim = false;
+        driver.options.depfileSort = true;
+
+        auto guard = OS::captureOutput();
+        driver.optionallyWriteDepFiles();
+
+        CHECK(OS::capturedStdout == "moduleA.sv\nmoduleB.sv\nmoduleC.sv\nmoduleD.sv\n");
+        CHECK(OS::capturedStderr.empty());
+    }
+
+    // Test case 4: unknown top module
+    {
+        driver.options.topModules.clear();
+        driver.options.topModules.push_back("unknownModule");
+        driver.options.depfileTrim = true;
+
+        auto guard = OS::captureOutput();
+        driver.optionallyWriteDepFiles();
+
+        CHECK(OS::capturedStdout == "");
+        CHECK(OS::capturedStderr ==
+              "warning: top module 'unknownModule' not found in any source file\n");
+    }
+}
+
+TEST_CASE("Driver deplist circular dependency handling") {
+    // Test circular dependency detection and handling
+    // Create circular dependency: cycleA -> cycleB -> cycleA
+    Driver driver;
+    auto treeCycleA = SyntaxTree::fromText("module cycleA; cycleB cb(); endmodule\n",
+                                           driver.sourceManager, "source"sv, "cycleA.sv"sv);
+    auto treeCycleB = SyntaxTree::fromText("module cycleB; cycleA ca(); endmodule\n",
+                                           driver.sourceManager, "source"sv, "cycleB.sv"sv);
+
+    driver.options.allDepfile = "-";
+    driver.options.depfileTrim = true;
+    driver.syntaxTrees.push_back(treeCycleA);
+    driver.syntaxTrees.push_back(treeCycleB);
+
+    driver.options.topModules.push_back("cycleA");
+
+    auto guard = OS::captureOutput();
+    driver.optionallyWriteDepFiles();
+
+    CHECK(OS::capturedStdout == "cycleB.sv\ncycleA.sv\n");
+    CHECK(OS::capturedStderr.empty());
+}
+
+TEST_CASE("Driver deplist partial dependency tree") {
+    // Test requesting only mid-level module to verify partial tree extraction
+    // Create dependency hierarchy with extra unused module
+    Driver driver;
+    auto treeLeafA = SyntaxTree::fromText("module leafA; endmodule\n", driver.sourceManager,
+                                          "source"sv, "leafA.sv"sv);
+    auto treeLeafB = SyntaxTree::fromText("module leafB; endmodule\n", driver.sourceManager,
+                                          "source"sv, "leafB.sv"sv);
+    auto treeMid = SyntaxTree::fromText("module mid; leafA la(); leafB lb(); endmodule\n",
+                                        driver.sourceManager, "source"sv, "mid.sv"sv);
+    auto treeTop = SyntaxTree::fromText("module top; mid m(); endmodule\n", driver.sourceManager,
+                                        "source"sv, "top.sv"sv);
+
+    driver.options.allDepfile = "-";
+    driver.options.depfileTrim = true;
+    driver.syntaxTrees.push_back(treeLeafA);
+    driver.syntaxTrees.push_back(treeLeafB);
+    driver.syntaxTrees.push_back(treeMid);
+    driver.syntaxTrees.push_back(treeTop);
+
+    driver.options.topModules.push_back("mid");
+
+    auto guard = OS::captureOutput();
+    driver.optionallyWriteDepFiles();
+
+    CHECK(OS::capturedStdout == "leafA.sv\nleafB.sv\nmid.sv\n");
+    CHECK(OS::capturedStderr.empty());
+}
+
+TEST_CASE("Driver deplist missing dependencies") {
+    // Test handling of missing dependencies
+    // Create module that references non-existent module
+    Driver driver;
+    auto treeA = SyntaxTree::fromText("module moduleA; missingModule m(); endmodule\n",
+                                      driver.sourceManager, "source"sv, "moduleA.sv"sv);
+
+    driver.options.allDepfile = "-";
+    driver.options.depfileTrim = true;
+    driver.syntaxTrees.push_back(treeA);
+
+    driver.options.topModules.push_back("moduleA");
+
+    auto guard = OS::captureOutput();
+    driver.optionallyWriteDepFiles();
+
+    CHECK(OS::capturedStdout == "moduleA.sv\n");
+    CHECK(OS::capturedStderr == "warning: 'missingModule' not found in any source file\n  note: "
+                                "referenced in file 'moduleA.sv'\n");
+}
+
+TEST_CASE("Driver deplist missing top modules") {
+    Driver driver;
+    auto treeA = SyntaxTree::fromText("module moduleA; missingModule m(); endmodule\n",
+                                      driver.sourceManager, "source"sv, "moduleA.sv"sv);
+
+    driver.options.allDepfile = "-";
+    driver.options.depfileTrim = true;
+    driver.syntaxTrees.push_back(treeA);
+
+    auto guard = OS::captureOutput();
+    driver.optionallyWriteDepFiles();
+
+    CHECK(OS::capturedStdout == "");
+    CHECK(stderrContains("warning: using --depfile-trim with no top modules"));
 }

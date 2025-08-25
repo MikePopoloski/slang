@@ -5,7 +5,6 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include <fmt/color.h>
 #include <fstream>
 #include <iostream>
 
@@ -13,7 +12,6 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
-#include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
 #include "slang/syntax/CSTSerializer.h"
 #include "slang/text/Json.h"
@@ -150,28 +148,6 @@ int driverMain(int argc, TArgs argv) {
         driver.cmdLine.add("--ast-json-detailed-types", serializeDetailedTypes,
                            "When dumping AST to JSON, expand out all type information");
 
-        std::optional<std::string> depfileTarget;
-        driver.cmdLine.add("--depfile-target", depfileTarget,
-                           "Output depfile lists in makefile format, creating the file with "
-                           "`<target>:` as the make target");
-
-        std::optional<std::string> allDepfile;
-        driver.cmdLine.add("--Mall,--all-deps", allDepfile,
-                           "Generate dependency file list of all files used during parsing",
-                           "<file>", CommandLineFlags::FilePath);
-
-        std::optional<std::string> includeDepfile;
-        driver.cmdLine.add(
-            "--Minclude,--include-deps", includeDepfile,
-            "Generate dependency file list of just include files that were used during parsing",
-            "<file>", CommandLineFlags::FilePath);
-
-        std::optional<std::string> moduleDepfile;
-        driver.cmdLine.add(
-            "--Mmodule,--module-deps", moduleDepfile,
-            "Generate dependency file list of source files parsed, excluding include files",
-            "<file>", CommandLineFlags::FilePath);
-
         std::optional<std::string> timeTrace;
         driver.cmdLine.add("--time-trace", timeTrace,
                            "Do performance profiling of the slang compiler and output "
@@ -200,15 +176,16 @@ int driverMain(int argc, TArgs argv) {
         if (onlyParse.has_value() + onlyPreprocess.has_value() + onlyMacros.has_value() +
                 driver.options.lintMode() >
             1) {
-            OS::printE(fg(driver.textDiagClient->errorColor), "error: ");
-            OS::printE("can only specify one of --preprocess, --macros-only, "
-                       "--parse-only, --lint-only");
+            driver.printError("can only specify one of --preprocess, --macros-only, "
+                              "--parse-only, --lint-only");
             return 3;
         }
 
-        if ((onlyPreprocess || onlyMacros) && (includeDepfile || moduleDepfile || allDepfile)) {
-            OS::printE(fg(driver.textDiagClient->errorColor), "error: ");
-            OS::printE("cannot use dependency file options with --preprocess or --macros-only");
+        if ((onlyPreprocess || onlyMacros) &&
+            (driver.options.includeDepfile || driver.options.moduleDepfile ||
+             driver.options.allDepfile)) {
+            driver.printError(
+                "cannot use dependency file options with --preprocess or --macros-only");
             return 3;
         }
 
@@ -232,21 +209,7 @@ int driverMain(int argc, TArgs argv) {
                 ok = driver.parseAllSources();
             }
 
-            if (includeDepfile) {
-                OS::writeFile(*includeDepfile,
-                              driver.serializeDepfiles(driver.getDepfiles(true), depfileTarget));
-            }
-
-            if (moduleDepfile) {
-                OS::writeFile(*moduleDepfile,
-                              driver.serializeDepfiles(driver.sourceLoader.getFilePaths(),
-                                                       depfileTarget));
-            }
-
-            if (allDepfile) {
-                OS::writeFile(*allDepfile,
-                              driver.serializeDepfiles(driver.getDepfiles(), depfileTarget));
-            }
+            driver.optionallyWriteDepFiles();
 
             if (cstJsonFile) {
                 TimeTraceScope timeScope("cstSerialization"sv, ""sv);

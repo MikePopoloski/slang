@@ -7,7 +7,9 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/ParserMetadata.h"
 
+#include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxVisitor.h"
+#include "slang/util/FlatMap.h"
 
 namespace slang::parsing {
 
@@ -68,7 +70,7 @@ public:
                 }
             }
             if (!found)
-                meta.globalInstances.emplace(name);
+                meta.addGlobalInstance(name);
         }
         visitDefault(syntax);
     }
@@ -91,7 +93,8 @@ public:
 
         // Needs to come after we visitDefault because visiting the first token
         // might update our preproc state.
-        meta.nodeMap[&syntax] = {defaultNetType, unconnectedDrive, cellDefine, timeScale};
+        meta.nodeMeta.emplace_back(&syntax, ParserMetadata::Node{defaultNetType, unconnectedDrive,
+                                                                 cellDefine, timeScale});
     }
 
     void visitToken(Token token) {
@@ -160,6 +163,62 @@ ParserMetadata ParserMetadata::fromSyntax(const SyntaxNode& root) {
     MetadataVisitor visitor;
     root.visit(visitor);
     return visitor.meta;
+}
+
+std::vector<std::string_view> ParserMetadata::getDeclaredSymbols() const {
+    std::vector<std::string_view> declared;
+    visitDeclaredSymbols([&](std::string_view name) { declared.push_back(name); });
+    return declared;
+}
+
+void ParserMetadata::visitDeclaredSymbols(function_ref<void(std::string_view)> func) const {
+    for (auto& [n, _] : nodeMeta) {
+        auto decl = &n->as<ModuleDeclarationSyntax>();
+        std::string_view name = decl->header->name.valueText();
+        if (!name.empty())
+            func(name);
+    }
+
+    for (auto classDecl : classDecls) {
+        std::string_view name = classDecl->name.valueText();
+        if (!name.empty())
+            func(name);
+    }
+}
+
+std::vector<std::string_view> ParserMetadata::getReferencedSymbols() const {
+    flat_hash_set<std::string_view> seenDeps;
+    std::vector<std::string_view> results;
+    visitReferencedSymbols([&](std::string_view name) {
+        if (seenDeps.insert(name).second)
+            results.push_back(name);
+    });
+    return results;
+}
+
+void ParserMetadata::visitReferencedSymbols(function_ref<void(std::string_view)> func) const {
+    for (auto name : globalInstances)
+        func(name);
+
+    for (auto idName : classPackageNames) {
+        std::string_view name = idName->identifier.valueText();
+        if (!name.empty())
+            func(name);
+    }
+
+    for (auto importDecl : packageImports) {
+        for (auto importItem : importDecl->items) {
+            std::string_view name = importItem->package.valueText();
+            if (!name.empty())
+                func(name);
+        }
+    }
+
+    for (auto intf : interfacePorts) {
+        std::string_view name = intf->nameOrKeyword.valueText();
+        if (!name.empty())
+            func(name);
+    }
 }
 
 } // namespace slang::parsing

@@ -213,7 +213,7 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     root->addMember(*unit);
     compilationUnits.push_back(unit);
 
-    for (auto& [n, meta] : tree->getMetadata().nodeMap) {
+    for (auto& [n, meta] : tree->getMetadata().nodeMeta) {
         SyntaxMetadata result;
         result.tree = tree.get();
         result.defaultNetType = &getNetType(meta.defaultNetType);
