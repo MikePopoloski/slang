@@ -10,6 +10,7 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/ast/types/TypePrinter.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/CharInfo.h"
 #include "slang/text/FormatBuffer.h"
@@ -252,19 +253,40 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
     }
     else {
         if constexpr (std::is_base_of_v<Type, T>) {
+            auto printType = [&] {
+                TypePrinter printer;
+                printer.options.skipTypeDefs = true;
+                if (includeAddrs) {
+                    printer.options.typedefsAsLinks = true;
+                    printer.options.enumsAsLinks = true;
+                }
+
+                printer.append(elem);
+                return printer.toString();
+            };
+
             // If we're not including detailed type info, we can just write the type name,
             // unless this a type alias, class, or covergroup. Otherwise we will fall through
             // and serialize full detailed type info.
-            if (!detailedTypeInfo && (!inMembersArray || (!std::is_same_v<TypeAliasType, T> &&
-                                                          !std::is_same_v<ClassType, T> &&
-                                                          !std::is_same_v<CovergroupType, T>))) {
-                writer.writeValue(elem.toString());
+            if (!detailedTypeInfo &&
+                (!inMembersArray ||
+                 (!std::is_same_v<TypeAliasType, T> && !std::is_same_v<ClassType, T> &&
+                  !std::is_same_v<CovergroupType, T> && !std::is_same_v<EnumType, T>))) {
+                writer.writeValue(printType());
+                return;
+            }
+
+            // Even when printing detailed type info, if we're not in a members array prefer
+            // to print links to typedefs and enums to reduce verbosity of output.
+            if (!inMembersArray && includeAddrs &&
+                (std::is_same_v<TypeAliasType, T> || std::is_same_v<EnumType, T>)) {
+                writer.writeValue(printType());
                 return;
             }
 
             // Avoid infinite loops with recursive types.
             if (!visiting.insert(&elem).second) {
-                writer.writeValue(elem.toString());
+                writer.writeValue(printType());
                 return;
             }
         }
@@ -290,9 +312,20 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
                 return;
         }
 
-        // Ignore transparent members.
-        if (elem.kind == SymbolKind::TransparentMember)
+        if (elem.kind == SymbolKind::TransparentMember) {
+            // Ignore transparent members, except in one particular case. The first time
+            // we see a member of an enum type we should print it since all other references
+            // to the enum will print links instead.
+            if (auto ev = elem.template as<TransparentMemberSymbol>()
+                              .wrapped.template as_if<EnumValueSymbol>();
+                ev && includeAddrs && inMembersArray) {
+
+                auto& enumType = ev->getType();
+                if (printedEnums.insert(&enumType).second)
+                    serialize(enumType, /* inMembersArray */ true);
+            }
             return;
+        }
 
         writer.startObject();
         write("name", elem.name);

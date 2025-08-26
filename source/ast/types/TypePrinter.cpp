@@ -92,24 +92,29 @@ void TypePrinter::visit(const EnumType& type, std::string_view overrideName) {
             buffer->append(overrideName);
     }
     else {
-        buffer->append("enum");
-        if (options.fullEnumType) {
-            buffer->append(" ");
-            buffer->append(type.baseType.toString());
+        if (options.enumsAsLinks) {
+            buffer->format("{} ", uintptr_t(&type));
         }
-        buffer->append("{");
+        else {
+            buffer->append("enum");
+            if (options.fullEnumType) {
+                buffer->append(" ");
+                buffer->append(type.baseType.toString());
+            }
+            buffer->append("{");
 
-        bool first = true;
-        for (const auto& member : type.values()) {
-            if (!first)
-                buffer->append(",");
+            bool first = true;
+            for (const auto& member : type.values()) {
+                if (!first)
+                    buffer->append(",");
 
-            auto& value = member.getValue().integer();
-            buffer->format("{}={}", member.name,
-                           value.toString(LiteralBase::Decimal, /* includeBase */ true));
-            first = false;
+                auto& value = member.getValue().integer();
+                buffer->format("{}={}", member.name,
+                               value.toString(LiteralBase::Decimal, /* includeBase */ true));
+                first = false;
+            }
+            buffer->append("}");
         }
-        buffer->append("}");
 
         if (options.skipScopedTypeNames) {
             // Nothing to do here.
@@ -415,6 +420,8 @@ void TypePrinter::visit(const TypeAliasType& type, std::string_view overrideName
     }
 
     if (options.skipTypeDefs) {
+        if (options.typedefsAsLinks)
+            buffer->format("{} ", uintptr_t(&type));
         buffer->append(downstreamOverrideName);
     }
     else {

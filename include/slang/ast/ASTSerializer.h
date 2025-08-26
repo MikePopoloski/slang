@@ -189,6 +189,7 @@ private:
     bool detailedTypeInfo = false;
     bool tryConstantFold = true;
     flat_hash_set<const void*> visiting;
+    flat_hash_set<const void*> printedEnums;
 };
 
 } // namespace slang::ast

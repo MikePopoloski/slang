@@ -39,6 +39,12 @@ struct SLANG_EXPORT TypePrintingOptions {
     /// Include the enum's base type.
     bool fullEnumType = false;
 
+    /// Print typedefs as links instead of their expanded type details.
+    bool typedefsAsLinks = false;
+
+    /// Print enums as links instead of their expanded type details.
+    bool enumsAsLinks = false;
+
     /// Selects a style for anonymous types, either the system ID name
     /// or a more human-friendly name.
     enum AnonymousTypeStyle { SystemName, FriendlyName } anonymousTypeStyle = SystemName;
