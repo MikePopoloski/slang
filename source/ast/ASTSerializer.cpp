@@ -182,11 +182,19 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
                   std::is_base_of_v<AssertionExpr, T> || std::is_base_of_v<BinsSelectExpr, T> ||
                   std::is_base_of_v<Pattern, T>) {
         writer.startObject();
-        if (elem.syntax && includeSourceInfo) {
-            if (auto sm = compilation.getSourceManager()) {
-                auto sr = elem.syntax->sourceRange();
-                auto start = sm->getFullyExpandedLoc(sr.start());
-                auto end = sm->getFullyExpandedLoc(sr.end());
+        if (auto sm = compilation.getSourceManager(); sm && includeSourceInfo) {
+            SourceRange range;
+            if constexpr (requires { elem.sourceRange; }) {
+                range = elem.sourceRange;
+            }
+            else if (elem.syntax) {
+                range = elem.syntax->sourceRange();
+            }
+
+            if (range.start() && range.end() && range.start() != SourceLocation::NoLocation &&
+                range.end() != SourceLocation::NoLocation) {
+                auto start = sm->getFullyExpandedLoc(range.start());
+                auto end = sm->getFullyExpandedLoc(range.end());
                 write("source_file_start", sm->getFileName(start));
                 write("source_file_end", sm->getFileName(end));
                 write("source_line_start", sm->getLineNumber(start));
@@ -330,7 +338,7 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         writer.startObject();
         write("name", elem.name);
         write("kind", toString(elem.kind));
-        if (includeSourceInfo) {
+        if (includeSourceInfo && elem.location && elem.location != SourceLocation::NoLocation) {
             if (auto sm = compilation.getSourceManager()) {
                 write("source_file", sm->getFileName(elem.location));
                 write("source_line", sm->getLineNumber(elem.location));

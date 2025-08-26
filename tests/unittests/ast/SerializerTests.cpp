@@ -118,16 +118,10 @@ endmodule
 {
   "name": "$root",
   "kind": "Root",
-  "source_file": "",
-  "source_line": 0,
-  "source_column": 0,
   "members": [
     {
       "name": "",
-      "kind": "CompilationUnit",
-      "source_file": "",
-      "source_line": 0,
-      "source_column": 0
+      "kind": "CompilationUnit"
     },
     {
       "name": "test_enum",
@@ -199,8 +193,8 @@ endmodule
                     "source_file_end": "source",
                     "source_line_start": 11,
                     "source_line_end": 11,
-                    "source_column_start": 29,
-                    "source_column_end": 95,
+                    "source_column_start": 30,
+                    "source_column_end": 94,
                     "kind": "IntegerLiteral",
                     "type": "bit[199:0]",
                     "value": "200'h20f1c22386aad976de4999f1b69e783e821874fb88b47314c",
@@ -1088,16 +1082,10 @@ endmodule
 {
   "name": "$root",
   "kind": "Root",
-  "source_file": "",
-  "source_line": 0,
-  "source_column": 0,
   "members": [
     {
       "name": "",
       "kind": "CompilationUnit",
-      "source_file": "",
-      "source_line": 0,
-      "source_column": 0,
       "members": [
         {
           "name": "C",
@@ -1178,6 +1166,12 @@ endmodule
                 "source_column_end": 35,
                 "kind": "Return",
                 "expr": {
+                  "source_file_start": "source",
+                  "source_file_end": "source",
+                  "source_line_start": 12,
+                  "source_line_end": 12,
+                  "source_column_start": 16,
+                  "source_column_end": 34,
                   "kind": "Conversion",
                   "type": "logic",
                   "operand": {
@@ -1397,6 +1391,12 @@ endmodule
                       "type": "logic",
                       "subroutine": "should_print",
                       "thisClass": {
+                        "source_file_start": "source",
+                        "source_file_end": "source",
+                        "source_line_start": 22,
+                        "source_line_end": 22,
+                        "source_column_start": 9,
+                        "source_column_end": 9,
                         "kind": "NamedValue",
                         "type": "C",
                         "symbol": "c"
@@ -1447,12 +1447,24 @@ endmodule
                       "type": "void",
                       "subroutine": "print_msg",
                       "thisClass": {
+                        "source_file_start": "source",
+                        "source_file_end": "source",
+                        "source_line_start": 22,
+                        "source_line_end": 22,
+                        "source_column_start": 9,
+                        "source_column_end": 9,
                         "kind": "NamedValue",
                         "type": "C",
                         "symbol": "c"
                       },
                       "arguments": [
                         {
+                          "source_file_start": "source",
+                          "source_file_end": "source",
+                          "source_line_start": 22,
+                          "source_line_end": 22,
+                          "source_column_start": 9,
+                          "source_column_end": 9,
                           "kind": "Conversion",
                           "type": "string",
                           "operand": {
