@@ -464,11 +464,12 @@ rules about assigning to lvalues with loop indices used to select subsets of a v
 
 @section compat-option Compatibility
 
-`--compat vcs`
+`--compat vcs|all`
 
 Attempt to increase compatibility with the specified tool. Various options will
 be set and some warnings will be silenced to mimic the given tool as closely as possible.
-Currently only 'vcs' is supported as a value.
+Supported values are 'vcs' to match compatibility with Synopsys VCS, and 'all' to enable
+all possible compatibility options included with slang.
 
 `--allow-use-before-declare`
 

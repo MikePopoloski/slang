@@ -48,7 +48,7 @@ enum class AnalysisFlags;
 
 namespace slang::driver {
 
-#define COMPAT(x) x(Vcs)
+#define COMPAT(x) x(Vcs) x(All)
 SLANG_ENUM(CompatMode, COMPAT)
 #undef COMPAT
 

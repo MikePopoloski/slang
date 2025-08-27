@@ -935,3 +935,19 @@ TEST_CASE("Driver deplist missing top modules") {
     CHECK(OS::capturedStdout == "");
     CHECK(stderrContains("warning: using --depfile-trim with no top modules"));
 }
+
+TEST_CASE("Driver compat mode all") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo \"{0}test7.sv\" --compat=all", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stdoutContains("0 errors, 1 warning"));
+}

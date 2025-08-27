@@ -41,6 +41,34 @@ using namespace parsing;
 using namespace syntax;
 using namespace analysis;
 
+// clang-format off
+#define VCS_COMP_FLAGS \
+    CompilationFlags::AllowHierarchicalConst, \
+    CompilationFlags::RelaxEnumConversions, \
+    CompilationFlags::AllowUseBeforeDeclare, \
+    CompilationFlags::RelaxStringConversions, \
+    CompilationFlags::AllowRecursiveImplicitCall, \
+    CompilationFlags::AllowBareValParamAssignment, \
+    CompilationFlags::AllowSelfDeterminedStreamConcat, \
+    CompilationFlags::AllowMergingAnsiPorts
+
+static constexpr auto vcsCompFlags = {VCS_COMP_FLAGS};
+static constexpr auto allCompFlags = {
+    VCS_COMP_FLAGS,
+    CompilationFlags::AllowTopLevelIfacePorts,
+    CompilationFlags::AllowUnnamedGenerate
+};
+
+#define VCS_ANALYSIS_FLAGS \
+    AnalysisFlags::AllowMultiDrivenLocals
+
+static constexpr auto vcsAnalysisFlags = {VCS_ANALYSIS_FLAGS};
+static constexpr auto allAnalysisFlags = {
+    VCS_ANALYSIS_FLAGS,
+    AnalysisFlags::AllowDupInitialDrivers
+};
+// clang-format on
+
 Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
     textDiagClient = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(textDiagClient);
@@ -510,24 +538,25 @@ bool Driver::processOptions() {
         }
     }
 
-    if (options.compat == CompatMode::Vcs) {
-        auto vcsCompFlags = {CompilationFlags::AllowHierarchicalConst,
-                             CompilationFlags::AllowUseBeforeDeclare,
-                             CompilationFlags::RelaxEnumConversions,
-                             CompilationFlags::RelaxStringConversions,
-                             CompilationFlags::AllowRecursiveImplicitCall,
-                             CompilationFlags::AllowBareValParamAssignment,
-                             CompilationFlags::AllowSelfDeterminedStreamConcat,
-                             CompilationFlags::AllowMergingAnsiPorts};
+    if (options.compat.has_value()) {
+        std::initializer_list<CompilationFlags> compFlags;
+        std::initializer_list<AnalysisFlags> analysisFlags;
+        if (options.compat == CompatMode::Vcs) {
+            compFlags = vcsCompFlags;
+            analysisFlags = vcsAnalysisFlags;
+        }
+        else {
+            compFlags = allCompFlags;
+            analysisFlags = allAnalysisFlags;
+        }
 
-        for (auto flag : vcsCompFlags) {
+        for (auto flag : compFlags) {
             auto& option = options.compilationFlags.at(flag);
             if (!option.has_value())
                 option = true;
         }
 
-        auto vcsAnalysisFlags = {AnalysisFlags::AllowMultiDrivenLocals};
-        for (auto flag : vcsAnalysisFlags) {
+        for (auto flag : analysisFlags) {
             auto& option = options.analysisFlags.at(flag);
             if (!option.has_value())
                 option = true;
@@ -618,11 +647,13 @@ bool Driver::processOptions() {
     // suppressible warning that we promote to an error by default. This allows
     // the user to turn this back into a warning, or turn it off altogether.
 
-    diagEngine.setSeverity(diag::DuplicateDefinition, DiagnosticSeverity::Error);
-    diagEngine.setSeverity(diag::BadProceduralForce, DiagnosticSeverity::Error);
-    diagEngine.setSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
+    if (options.compat != CompatMode::All) {
+        diagEngine.setSeverity(diag::DuplicateDefinition, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::BadProceduralForce, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
+    }
 
-    if (options.compat == CompatMode::Vcs) {
+    if (options.compat == CompatMode::Vcs || options.compat == CompatMode::All) {
         diagEngine.setSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);
         diagEngine.setSeverity(diag::ImplicitConvert, DiagnosticSeverity::Ignored);
         diagEngine.setSeverity(diag::BadFinishNum, DiagnosticSeverity::Ignored);

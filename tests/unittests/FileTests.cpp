@@ -127,7 +127,7 @@ static void globAndCheck(const fs::path& basePath, std::string_view pattern, Glo
 TEST_CASE("File globbing") {
     auto testDir = findTestDir();
     globAndCheck(testDir, "*st?.sv", GlobMode::Files, GlobRank::WildcardName, {},
-                 {"test2.sv", "test3.sv", "test4.sv", "test5.sv", "test6.sv"});
+                 {"test2.sv", "test3.sv", "test4.sv", "test5.sv", "test6.sv", "test7.sv"});
     globAndCheck(testDir, "system", GlobMode::Files, GlobRank::ExactPath,
                  make_error_code(std::errc::is_a_directory), {});
     globAndCheck(testDir, "system/", GlobMode::Files, GlobRank::Directory, {},
