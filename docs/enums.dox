@@ -1306,3 +1306,17 @@
 @brief Column numbers that line up with what is displayed on a terminal (accounting for Unicode characters, tabs, etc)
 
 **/
+
+/** @enum slang::ast::MinTypMax
+@brief Specifies which set of min:typ:max expressions should be used during compilation.
+
+@var slang::ast::MinTypMax::Min
+@brief Use the "min" delay expressions.
+
+@var slang::ast::MinTypMax::Typ
+@brief Use the "typical" delay expressions.
+
+@var slang::ast::MinTypMax::Max
+@brief Use the "max" delay expressions.
+
+**/

@@ -16,7 +16,9 @@ namespace slang {
 
 class FormatBuffer;
 
-enum class ShowHierarchyPathOption { Auto, Always, Never };
+#define SHPO(x) x(Auto) x(Always) x(Never)
+SLANG_ENUM(ShowHierarchyPathOption, SHPO)
+#undef SHPO
 
 class SLANG_EXPORT TextDiagnosticClient : public DiagnosticClient {
 public:

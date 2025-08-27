@@ -160,10 +160,12 @@ void Driver::addStandardArgs() {
                 "Maximum number of UDP coverage notes that will be generated for a single "
                 "warning about missing edge transitions",
                 "<limit>");
-    cmdLine.add("--compat", options.compat,
-                "Attempt to increase compatibility with the specified tool", "vcs");
-    cmdLine.add("-T,--timing", options.minTypMax,
-                "Select which value to consider in min:typ:max expressions", "min|typ|max");
+    cmdLine.addEnum<CompatMode, CompatMode_traits>(
+        "--compat", options.compat, "Attempt to increase compatibility with the specified tool",
+        "<mode>");
+    cmdLine.addEnum<MinTypMax, MinTypMax_traits>(
+        "-T,--timing", options.minTypMax,
+        "Select which value to consider in min:typ:max expressions", "min|typ|max");
     cmdLine.add("--timescale", options.timeScale,
                 "Default time scale to use for design elements that don't specify one explicitly",
                 "<base>/<precision>");
@@ -244,8 +246,9 @@ void Driver::addStandardArgs() {
                 "Show macro expansion backtraces in diagnostic output");
     cmdLine.add("--diag-abs-paths", options.diagAbsPaths,
                 "Display absolute paths to files in diagnostic output");
-    cmdLine.add("--diag-hierarchy", options.diagHierarchy,
-                "Show hierarchy locations in diagnostic output", "always|never|auto");
+    cmdLine.addEnum<ShowHierarchyPathOption, ShowHierarchyPathOption_traits>(
+        "--diag-hierarchy", options.diagHierarchy, "Show hierarchy locations in diagnostic output",
+        "always|never|auto");
     cmdLine.add("--diag-json", options.diagJson,
                 "Dump all diagnostics in JSON format to the specified file, or '-' for stdout",
                 "<file>", CommandLineFlags::FilePath);
@@ -507,47 +510,28 @@ bool Driver::processOptions() {
         }
     }
 
-    if (options.compat.has_value()) {
-        if (options.compat == "vcs") {
-            auto vcsCompFlags = {CompilationFlags::AllowHierarchicalConst,
-                                 CompilationFlags::AllowUseBeforeDeclare,
-                                 CompilationFlags::RelaxEnumConversions,
-                                 CompilationFlags::RelaxStringConversions,
-                                 CompilationFlags::AllowRecursiveImplicitCall,
-                                 CompilationFlags::AllowBareValParamAssignment,
-                                 CompilationFlags::AllowSelfDeterminedStreamConcat,
-                                 CompilationFlags::AllowMergingAnsiPorts};
+    if (options.compat == CompatMode::Vcs) {
+        auto vcsCompFlags = {CompilationFlags::AllowHierarchicalConst,
+                             CompilationFlags::AllowUseBeforeDeclare,
+                             CompilationFlags::RelaxEnumConversions,
+                             CompilationFlags::RelaxStringConversions,
+                             CompilationFlags::AllowRecursiveImplicitCall,
+                             CompilationFlags::AllowBareValParamAssignment,
+                             CompilationFlags::AllowSelfDeterminedStreamConcat,
+                             CompilationFlags::AllowMergingAnsiPorts};
 
-            for (auto flag : vcsCompFlags) {
-                auto& option = options.compilationFlags.at(flag);
-                if (!option.has_value())
-                    option = true;
-            }
-
-            auto vcsAnalysisFlags = {AnalysisFlags::AllowMultiDrivenLocals};
-            for (auto flag : vcsAnalysisFlags) {
-                auto& option = options.analysisFlags.at(flag);
-                if (!option.has_value())
-                    option = true;
-            }
+        for (auto flag : vcsCompFlags) {
+            auto& option = options.compilationFlags.at(flag);
+            if (!option.has_value())
+                option = true;
         }
-        else {
-            printError(fmt::format("invalid value for compat option: '{}'", *options.compat));
-            return false;
+
+        auto vcsAnalysisFlags = {AnalysisFlags::AllowMultiDrivenLocals};
+        for (auto flag : vcsAnalysisFlags) {
+            auto& option = options.analysisFlags.at(flag);
+            if (!option.has_value())
+                option = true;
         }
-    }
-
-    if (options.minTypMax.has_value() && options.minTypMax != "min" && options.minTypMax != "typ" &&
-        options.minTypMax != "max") {
-        printError(fmt::format("invalid value for timing option: '{}'", *options.minTypMax));
-        return false;
-    }
-
-    if (options.diagHierarchy.has_value() && options.diagHierarchy != "always" &&
-        options.diagHierarchy != "never" && options.diagHierarchy != "auto") {
-        printError(
-            fmt::format("invalid value for diag-hierarchy option: '{}'", *options.diagHierarchy));
-        return false;
     }
 
     if (options.librariesInheritMacros == true && !options.singleUnit.value_or(false)) {
@@ -625,11 +609,7 @@ bool Driver::processOptions() {
     tdc.showIncludeStack(options.diagIncludeStack.value_or(true));
     tdc.showMacroExpansion(options.diagMacroExpansion.value_or(true));
     tdc.showAbsPaths(options.diagAbsPaths.value_or(false));
-
-    if (options.diagHierarchy == "always")
-        tdc.showHierarchyInstance(ShowHierarchyPathOption::Always);
-    else if (options.diagHierarchy == "never")
-        tdc.showHierarchyInstance(ShowHierarchyPathOption::Never);
+    tdc.showHierarchyInstance(options.diagHierarchy.value_or(ShowHierarchyPathOption::Auto));
 
     diagEngine.setErrorLimit((int)options.errorLimit.value_or(20));
 
@@ -642,7 +622,7 @@ bool Driver::processOptions() {
     diagEngine.setSeverity(diag::BadProceduralForce, DiagnosticSeverity::Error);
     diagEngine.setSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
 
-    if (options.compat == "vcs") {
+    if (options.compat == CompatMode::Vcs) {
         diagEngine.setSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);
         diagEngine.setSeverity(diag::ImplicitConvert, DiagnosticSeverity::Ignored);
         diagEngine.setSeverity(diag::BadFinishNum, DiagnosticSeverity::Ignored);
@@ -1048,6 +1028,8 @@ void Driver::addCompilationOptions(Bag& bag) const {
         coptions.maxUDPCoverageNotes = *options.maxUDPCoverageNotes;
     if (options.errorLimit.has_value())
         coptions.errorLimit = *options.errorLimit * 2;
+    if (options.minTypMax.has_value())
+        coptions.minTypMax = *options.minTypMax;
 
     for (auto& [flag, value] : options.compilationFlags) {
         if (value == true)
@@ -1060,15 +1042,6 @@ void Driver::addCompilationOptions(Bag& bag) const {
         coptions.paramOverrides.emplace_back(opt);
     for (auto& lib : options.libraryOrder)
         coptions.defaultLiblist.emplace_back(lib);
-
-    if (options.minTypMax.has_value()) {
-        if (options.minTypMax == "min")
-            coptions.minTypMax = MinTypMax::Min;
-        else if (options.minTypMax == "typ")
-            coptions.minTypMax = MinTypMax::Typ;
-        else if (options.minTypMax == "max")
-            coptions.minTypMax = MinTypMax::Max;
-    }
 
     if (options.timeScale.has_value())
         coptions.defaultTimeScale = TimeScale::fromString(*options.timeScale);

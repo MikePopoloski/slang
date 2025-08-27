@@ -41,42 +41,6 @@ TEST_CASE("Driver invalid command line arg") {
     CHECK(stderrContains("unknown command line arg"));
 }
 
-TEST_CASE("Driver invalid compat") {
-    auto guard = OS::captureOutput();
-
-    Driver driver;
-    driver.addStandardArgs();
-
-    const char* argv[] = {"testfoo", "--compat=baz"};
-    CHECK(driver.parseCommandLine(2, argv));
-    CHECK(!driver.processOptions());
-    CHECK(stderrContains("invalid value for compat option"));
-}
-
-TEST_CASE("Driver invalid timing") {
-    auto guard = OS::captureOutput();
-
-    Driver driver;
-    driver.addStandardArgs();
-
-    const char* argv[] = {"testfoo", "-TFoo"};
-    CHECK(driver.parseCommandLine(2, argv));
-    CHECK(!driver.processOptions());
-    CHECK(stderrContains("invalid value for timing option"));
-}
-
-TEST_CASE("Driver invalid diagHierarchy") {
-    auto guard = OS::captureOutput();
-
-    Driver driver;
-    driver.addStandardArgs();
-
-    const char* argv[] = {"testfoo", "--diag-hierarchy=foo"};
-    CHECK(driver.parseCommandLine(2, argv));
-    CHECK(!driver.processOptions());
-    CHECK(stderrContains("invalid value for diag-hierarchy option"));
-}
-
 TEST_CASE("Driver valid column unit") {
     Driver driver;
     driver.addStandardArgs();

@@ -24,6 +24,7 @@ namespace slang {
 class JsonDiagnosticClient;
 class JsonWriter;
 class TextDiagnosticClient;
+enum class ShowHierarchyPathOption;
 
 } // namespace slang
 
@@ -46,6 +47,10 @@ enum class AnalysisFlags;
 } // namespace slang::analysis
 
 namespace slang::driver {
+
+#define COMPAT(x) x(Vcs)
+SLANG_ENUM(CompatMode, COMPAT)
+#undef COMPAT
 
 /// @brief A top-level class that handles argument parsing, option preparation,
 /// and invoking various parts of the slang compilation process.
@@ -173,13 +178,11 @@ public:
         /// warning about missing edge transitions.
         std::optional<uint32_t> maxUDPCoverageNotes;
 
-        /// A string indicating a member of @a CompatMode to use for tailoring
-        /// other compilation options.
-        std::optional<std::string> compat;
+        /// Preset compatibility modes for setting other options in one easy step.
+        std::optional<CompatMode> compat;
 
-        /// A string indicating a member of @a MinTypMax to indicate which set
-        /// of (min:typ:max) expressions is valid for this compilation.
-        std::optional<std::string> minTypMax;
+        /// Indicates which set of (min:typ:max) expressions is valid for this compilation.
+        std::optional<ast::MinTypMax> minTypMax;
 
         /// A string that indicates the default time scale to use for
         /// any design elements that don't specify one explicitly.
@@ -235,9 +238,8 @@ public:
         /// If true, display absolute paths to files in printed diagnostics.
         std::optional<bool> diagAbsPaths;
 
-        /// One of the ShowHierarchyPathOption values that control whether to
-        /// include hierarchy paths in printed diagnostics.
-        std::optional<std::string> diagHierarchy;
+        /// Controls whether to include hierarchy paths in printed diagnostics.
+        std::optional<ShowHierarchyPathOption> diagHierarchy;
 
         /// If set, the path to a JSON file that will be written with diagnostic information.
         /// Can be '-' to indicate that the JSON should be written to stdout.

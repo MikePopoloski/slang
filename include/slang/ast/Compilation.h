@@ -54,18 +54,9 @@ enum class SymbolIndex : uint32_t;
 enum class SymbolKind : int;
 enum class UnconnectedDrive;
 
-/// Specifies which set of min:typ:max expressions should
-/// be used during compilation.
-enum class SLANG_EXPORT MinTypMax {
-    /// Use the "min" delay expressions.
-    Min,
-
-    /// Use the "typical" delay expressions.
-    Typ,
-
-    /// Use the "max" delay expressions.
-    Max
-};
+#define MTM(x) x(Min) x(Typ) x(Max)
+SLANG_ENUM(MinTypMax, MTM)
+#undef MTM
 
 /// Defines flags that control compilation behavior.
 enum class SLANG_EXPORT CompilationFlags {
