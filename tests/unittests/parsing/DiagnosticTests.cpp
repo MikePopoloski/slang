@@ -346,9 +346,41 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
+    DiagnosticEngine engine(SyntaxTree::getDefaultSourceManager());
 
     auto& diagnostics = compilation.getAllDiagnostics();
-    std::string result = "\n" + report(diagnostics);
+    auto client = std::make_shared<TextDiagnosticClient>();
+    engine.addClient(client);
+
+    for (auto& diag : diagnostics)
+        engine.issue(diag);
+
+    std::string result = "\n" + client->getString();
+    CHECK(result == R"(
+in file included from source:5:
+in file included from fake-include1.svh:2:
+fake-include2.svh:2:6: error: expected ';'
+i + 1 ()
+     ^
+)");
+
+    client->clear();
+    for (auto& diag : diagnostics)
+        engine.issue(diag);
+
+    result = "\n" + client->getString();
+    CHECK(result == R"(
+fake-include2.svh:2:6: error: expected ';'
+i + 1 ()
+     ^
+)");
+
+    client->clear();
+    engine.clearIncludeStack();
+    for (auto& diag : diagnostics)
+        engine.issue(diag);
+
+    result = "\n" + client->getString();
     CHECK(result == R"(
 in file included from source:5:
 in file included from fake-include1.svh:2:

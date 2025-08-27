@@ -659,4 +659,8 @@ std::optional<DiagnosticSeverity> DiagnosticEngine::findMappedSeverity(
     return (--byOffset)->severity;
 }
 
+void DiagnosticEngine::clearIncludeStack() {
+    reportedIncludeStack.clear();
+}
+
 } // namespace slang

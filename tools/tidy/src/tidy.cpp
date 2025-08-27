@@ -243,6 +243,7 @@ int main(int argc, char** argv) {
     auto& tdc = *driver.textDiagClient;
     for (const auto& checkName : Registry::getEnabledChecks()) {
         tdc.clear();
+        driver.diagEngine.clearIncludeStack();
 
         const auto check = Registry::create(checkName);
 

@@ -227,6 +227,10 @@ public:
     static std::string reportAll(const SourceManager& sourceManager,
                                  std::span<const Diagnostic> diags);
 
+    /// Clears the set of buffers for which include stacks have been reported.
+    /// This allows include stacks to be reported again for the same buffers.
+    void clearIncludeStack();
+
 private:
     // An entry added by `pragma diagnostic at the given source offset which
     // sets a diagnostic to the given severity.
