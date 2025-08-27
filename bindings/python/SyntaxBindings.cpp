@@ -373,6 +373,7 @@ void registerSyntax(py::module_& m) {
         .def_property_readonly("sourceLibrary", &SyntaxTree::getSourceLibrary)
         .def("getIncludeDirectives", &SyntaxTree::getIncludeDirectives)
         .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref)
+        .def("validate", &SyntaxTree::validate)
         .def(
             "to_json",
             [](const SyntaxTree& self, CSTJsonMode mode = CSTJsonMode::Full) {

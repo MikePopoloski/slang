@@ -228,6 +228,14 @@ public:
     /// Gets the list of source buffer IDs that this syntax tree was created from.
     std::span<const BufferID> getSourceBufferIds() const { return sourceBufferIds; }
 
+    /// Checks that the syntax tree is valid, in the sense that it round trips
+    /// through text and back again to an equivalent tree.
+    ///
+    /// The parser will always create a valid syntax tree. It's possible to
+    /// create an invalid syntax tree by manipulating the tree structure directly
+    /// or with the help of a SyntaxRewriter.
+    bool validate() const;
+
     /// This is a shared default source manager for cases where the user doesn't
     /// care about managing the lifetime of loaded source. Note that all of
     /// the source loaded by this thing will live in memory for the lifetime of

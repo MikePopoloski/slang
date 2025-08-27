@@ -31,6 +31,8 @@ def test_rewriter_handler_function_called_with_right_args():
     assert result is not None
     assert isinstance(result, pyslang.SyntaxTree)
 
+    assert result.validate()
+
     assert (
         handler_tracker["call_count"] > 0
     ), "Handler should have been called at least once"
@@ -61,6 +63,7 @@ def test_rewriter_with_no_changes():
     result = pyslang.rewrite(input_tree, lambda _node, _rewriter: None)
     assert result is not None
     assert result.root.isEquivalentTo(expected.root) is True
+    assert result.validate()
 
 
 def test_rewriter_remove():
@@ -114,9 +117,9 @@ def test_rewriter_remove():
     ), "Handler should not have been called yet"
 
     result = pyslang.rewrite(input_tree, remove_int_var)
-    print(result.root)
     assert check_func_called["called"] is True, "Handler should have been called"
     assert result is not None
+    assert result.validate()
     assert check_func_called["SyntaxList_count"] == 2
     assert check_func_called["SyntaxList_subnode_count"] == 10
     assert (
@@ -170,6 +173,7 @@ def test_rewriter_insert_after_with_new_declaration_outside():
 
     result = pyslang.rewrite(input_tree, insert_logic_var)
     assert result is not None
+    assert result.validate()
     assert check_func_called["called"] is True, "Handler should have been called"
     assert check_func_called["SyntaxList_count"] == 1
     assert (
@@ -232,6 +236,7 @@ def test_rewriter_insert_after_with_new_declaration_inside():
 
     result = pyslang.rewrite(input_tree, insert_logic_var)
     assert result is not None
+    assert result.validate()
     assert check_func_called["called"] is True, "Handler should have been called"
     assert check_func_called["SyntaxList_count"] == 1
     assert (
@@ -292,6 +297,7 @@ def test_rewriter_replace():
                         rewriter.replace(node, new_decl)
 
     result = pyslang.rewrite(input_tree, replace_int_var)
+    assert result.validate()
     assert check_func_called["called"] is True, "Handler should have been called"
     assert check_func_called["SyntaxList_count"] == 2
     assert check_func_called["SyntaxList_subnode_count"] == 10
@@ -388,6 +394,7 @@ def test_rewriter_nested():
 
     result = pyslang.rewrite(input_tree, modify_struct)
     assert result is not None
+    assert result.validate()
     assert check_func_called["called"] is True, "Handler should have been called"
     assert (
         check_func_called["remove_match_count"] == 1
@@ -441,6 +448,7 @@ def test_rewriter_skip():
     result = pyslang.rewrite(input_tree, skip_module_body)
     assert result is not None
     assert result.root.isEquivalentTo(expected.root) is True
+    assert result.validate()
 
 
 def test_rewriter_handler_errors_are_propagated():

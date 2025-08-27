@@ -10,6 +10,7 @@
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/ParserMetadata.h"
 #include "slang/parsing/Preprocessor.h"
+#include "slang/syntax/SyntaxPrinter.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/TimeTrace.h"
 
@@ -228,6 +229,33 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapBuffer(const SourceBuffer&
         new SyntaxTree(&root, nullptr, sourceManager, std::move(alloc), std::move(diagnostics),
                        parser.getMetadata(), preprocessor.getDefinedMacros(),
                        preprocessor.getIncludeDirectives(), std::move(bufferIds), options));
+}
+
+bool SyntaxTree::validate() const {
+    auto text = SyntaxPrinter(sourceManager())
+                    .setIncludeDirectives(true)
+                    .setExpandIncludes(true)
+                    .setExpandMacros(true)
+                    .print(*this)
+                    .str();
+
+    SourceManager tempManager;
+    auto buf = tempManager.assignText(text);
+
+    BumpAllocator tempAlloc;
+    Diagnostics tempDiags;
+    Preprocessor preprocessor(tempManager, tempAlloc, tempDiags, options_);
+    preprocessor.pushSource(buf);
+
+    Parser parser(preprocessor, options_);
+
+    SyntaxNode* newRoot;
+    if (rootNode->kind == SyntaxKind::CompilationUnit)
+        newRoot = &parser.parseCompilationUnit();
+    else
+        newRoot = &parser.parseGuess();
+
+    return newRoot->isEquivalentTo(*rootNode);
 }
 
 } // namespace slang::syntax

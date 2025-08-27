@@ -195,6 +195,7 @@ endmodule
 )");
 
     tree = TestRewriter(tree).transform(tree);
+    CHECK(tree->validate());
 
     CHECK(SyntaxPrinter::printFile(*tree) == R"(
 module M;
@@ -222,6 +223,7 @@ endmodule
 )");
 
     tree = TestRewriter(tree).transform(tree);
+    CHECK(tree->validate());
 
     CHECK(SyntaxPrinter::printFile(*tree) == R"(
 `define ENUM_MACRO(asdf) \
@@ -244,10 +246,14 @@ module m #(parameter P = 8)();
     reg tmp;
 endmodule
 )");
+
     struct RemoveWriter : public SyntaxRewriter<RemoveWriter> {
         void handle(const ParameterPortListSyntax& decl) { remove(decl); }
     };
+
     tree = RemoveWriter().transform(tree);
+    CHECK(tree->validate());
+
     CHECK(SyntaxPrinter::printFile(*tree) == R"(
 module m();
     reg tmp;
@@ -267,6 +273,7 @@ TEST_CASE("Remove node from comma-separated list") {
     function void foo3(int a, int b,, int c, int d, int e);
     endfunction
 )");
+
     struct RemoveWriter : public SyntaxRewriter<RemoveWriter> {
         void handle(const FunctionPortBaseSyntax& port) {
             std::string str = port.toString();
@@ -275,7 +282,10 @@ TEST_CASE("Remove node from comma-separated list") {
                 remove(port);
         }
     };
+
     tree = RemoveWriter().transform(tree);
+    CHECK(tree->validate());
+
     CHECK(SyntaxPrinter::printFile(*tree) == R"(
     // normal case
     function void foo1( int b, int d);
@@ -288,6 +298,7 @@ TEST_CASE("Remove node from comma-separated list") {
     endfunction
 )");
 }
+
 TEST_CASE("Advanced rewriting") {
     SECTION("Insert multiple newNodes surrounding oldNodes") {
         class MultipleRewriter : public RewriterBase<MultipleRewriter> {
@@ -342,6 +353,7 @@ endmodule
 )");
 
         tree = MultipleRewriter(tree).transform(tree);
+        CHECK(tree->validate());
 
         CHECK(SyntaxPrinter::printFile(*tree) == R"(
 module M;
@@ -356,6 +368,7 @@ module M;
 endmodule
 )");
     }
+
     SECTION("Combine insert and replace operation on oldNodes") {
         class InterleavedRewriter : public RewriterBase<InterleavedRewriter> {
         public:
@@ -406,6 +419,8 @@ endmodule
 )");
 
         tree = InterleavedRewriter(tree).transform(tree);
+        CHECK(tree->validate());
+
         CHECK(SyntaxPrinter::printFile(*tree) == R"(
 module M;
     localparam int test_t__count1 = 3;
@@ -417,6 +432,7 @@ module M;
 endmodule
 )");
     }
+
     SECTION("Combine insert and remove operation on oldNodes") {
         class InterleavedRewriter : public RewriterBase<InterleavedRewriter> {
         public:
@@ -465,6 +481,8 @@ endmodule
 )");
 
         tree = InterleavedRewriter(tree).transform(tree);
+        CHECK(tree->validate());
+
         CHECK(SyntaxPrinter::printFile(*tree) == R"(
 module M;
     localparam int test_t__count1 = 3;
@@ -488,6 +506,7 @@ endmodule
                 return SyntaxRewriter<FirstTypedefRemover>::transform(tree);
             }
         };
+
         auto tree = SyntaxTree::fromText(R"(
 module M;
     typedef enum int { FOO = 1 } test_t_1;
@@ -499,6 +518,7 @@ endmodule
         FirstTypedefRemover rewriter;
         tree = rewriter.transform(tree);
         tree = rewriter.transform(tree);
+        CHECK(tree->validate());
 
         CHECK(SyntaxPrinter::printFile(*tree) == R"(
 module M;
@@ -593,6 +613,8 @@ endmodule
         };
 
         auto newTree = CloneRewriter().transform(tree);
+        CHECK(tree->validate());
+
         CHECK(SyntaxPrinter::printFile(*newTree) == R"(
 module m;
     reg tmp3;
@@ -620,6 +642,8 @@ endmodule
         };
 
         tree = CloneRewriter().transform(tree);
+        CHECK(tree->validate());
+
         CHECK(SyntaxPrinter::printFile(*tree) == R"(
 module m;
     reg tmp;
@@ -646,6 +670,8 @@ endmodule
         };
         CloneRewriter visitor(tree);
         tree->root().visit(visitor);
+        CHECK(tree->validate());
+
         CHECK(SyntaxPrinter::printFile(*tree) == R"(module m; reg tmp; endmodule)");
     }
 }
@@ -696,6 +722,8 @@ class C; endclass
     };
 
     auto newTree = ModuleChanger().transform(tree);
+    CHECK(tree->validate());
+
     CHECK(SyntaxPrinter::printFile(*newTree) == R"(
 `default_nettype none
 `unconnected_drive pull0
