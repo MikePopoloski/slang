@@ -53,16 +53,6 @@ public:
     /// Indicates whether the DAG is exhaustive, meaning that all possible
     /// input values are covered by the case statement clauses.
     bool isExhaustive() const { return !counterexample.has_value(); }
-
-private:
-    void build(uint32_t level, std::span<const SVInt> clauses, uint32_t bitWidth, bool wildcardX,
-               uint32_t maxSteps, SVInt curPath, std::vector<ClauseIndex>&& activeIndices);
-
-    uint32_t steps = 0;
-
-    using MemoKey = std::pair<uint32_t, std::vector<ClauseIndex>>;
-    flat_hash_set<MemoKey> visitedKeys;
-    flat_hash_set<ClauseIndex> usedIndices;
 };
 
 } // namespace slang::analysis
