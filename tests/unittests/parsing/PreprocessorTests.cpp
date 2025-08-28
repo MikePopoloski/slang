@@ -2821,3 +2821,34 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::IgnoredMacroPaste);
 }
+
+TEST_CASE("Macro arg implicit concat after expansion") {
+    auto& text = R"(
+`define M1 t
+`define M2(ARG) foo`__LINE__ = 1; for`M1``ARG = 2;
+
+module m;
+    int foo9;
+    int fort4K;
+    initial begin
+        `M2(4K)
+    end
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == R"(
+module m;
+    int foo9;
+    int fort4K;
+    initial begin
+        foo9 = 1; fort4K = 2;
+    end
+endmodule
+)");
+
+    auto tree = SyntaxTree::fromText(text);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

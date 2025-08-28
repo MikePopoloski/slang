@@ -132,6 +132,22 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
     return {actualArgs, Trivia()};
 }
 
+static bool shouldImplicitConcat(Token left, Token right) {
+    auto check = [](TokenKind kind) {
+        switch (kind) {
+            case TokenKind::IntegerLiteral:
+            case TokenKind::RealLiteral:
+            case TokenKind::TimeLiteral:
+            case TokenKind::Identifier:
+            case TokenKind::SystemIdentifier:
+                return true;
+            default:
+                return LF::isKeyword(kind);
+        }
+    };
+    return check(left.kind) && check(right.kind);
+}
+
 bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<Token>& dest) {
     SmallVector<Trivia, 8> emptyArgTrivia;
     SmallVector<Token, 8> stringifyBuffer;
@@ -270,15 +286,24 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                 }
                 break;
             default: {
-                // If last iteration we did a token concatenation, check whether this token
-                // is right next to it (not leading trivia). If so, we should try to
-                // continue the concatenation process.
-                if (didConcat && token.trivia().empty() && emptyArgTrivia.empty()) {
-                    newToken = Lexer::concatenateTokens(alloc, sourceManager, dest.back(), token);
-                    if (newToken) {
-                        dest.pop_back();
-                        nextDidConcat = true;
-                        break;
+                if (token.trivia().empty() && emptyArgTrivia.empty() && !stringify &&
+                    !syntheticComment) {
+                    // If last iteration we did a token concatenation, check whether this
+                    // token is right next to it (not leading trivia). If so, we should try
+                    // to continue the concatenation process.
+                    //
+                    // Additionally, if we find two tokens back to back that should have
+                    // been lexed as a single identifier, we know that the second token
+                    // could only have come from expanding out a macro. Other tools implicitly
+                    // concatenate in this case, so we will do the same for compatibility.
+                    if (didConcat || (!dest.empty() && shouldImplicitConcat(dest.back(), token))) {
+                        newToken = Lexer::concatenateTokens(alloc, sourceManager, dest.back(),
+                                                            token);
+                        if (newToken) {
+                            dest.pop_back();
+                            nextDidConcat = true;
+                            break;
+                        }
                     }
                 }
 
