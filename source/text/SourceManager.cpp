@@ -437,7 +437,7 @@ SourceManager::BufferOrError SourceManager::readHeader(
 
     // search relative to the current file
     const fs::path* currFileDir = nullptr;
-    {
+    if (!disableLocalIncludes) {
         std::shared_lock<std::shared_mutex> lock(mutex);
         auto info = getFileInfo(includedFrom.buffer(), lock);
         if (info && info->data)

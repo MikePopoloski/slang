@@ -134,6 +134,10 @@ public:
         /// A set of options controlling translate-off comment directives.
         std::vector<std::string> translateOffOptions;
 
+        /// Disables "local" include path lookup, where include directives search
+        /// relative to the file containing the directive first.
+        std::optional<bool> disableLocalIncludes;
+
         /// @}
         /// @name Parsing
         /// @{

@@ -179,6 +179,7 @@ void registerUtil(py::module_& m) {
             "path"_a, "includedFrom"_a, "library"_a, "isSystemPath"_a)
         .def("isCached", &SourceManager::isCached, "path"_a)
         .def("setDisableProximatePaths", &SourceManager::setDisableProximatePaths, "set"_a)
+        .def("setDisableLocalIncludes", &SourceManager::setDisableLocalIncludes, "set"_a)
         .def("addLineDirective", &SourceManager::addLineDirective, "location"_a, "lineNum"_a,
              "name"_a, "level"_a)
         .def("addDiagnosticDirective", &SourceManager::addDiagnosticDirective, "location"_a,

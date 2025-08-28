@@ -103,6 +103,10 @@ void Driver::addStandardArgs() {
         "Additional system include search paths", "<dir-pattern>[,...]",
         CommandLineFlags::CommaList);
 
+    cmdLine.add("--disable-local-includes", options.disableLocalIncludes,
+                "Disables \"local\" include path lookup, where include directives search "
+                "relative to the file containing the directive first");
+
     // Preprocessor
     cmdLine.add("-D,--define-macro,+define", options.defines,
                 "Define <macro> to <value> (or 1 if <value> ommitted) in all source files",
@@ -608,6 +612,9 @@ bool Driver::processOptions() {
         if (anyBad)
             return false;
     }
+
+    if (options.disableLocalIncludes == true)
+        sourceManager.setDisableLocalIncludes(true);
 
     if (!reportLoadErrors())
         return false;

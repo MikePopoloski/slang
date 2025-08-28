@@ -951,3 +951,18 @@ TEST_CASE("Driver compat mode all") {
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stdoutContains("0 errors, 1 warning"));
 }
+
+TEST_CASE("Driver disable local includes") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo \"{0}test.sv\" --disable-local-includes", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stderrContains("file_defn.svh"));
+}

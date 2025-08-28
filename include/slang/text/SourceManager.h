@@ -186,6 +186,10 @@ public:
     /// disabled to always use the simple filename.
     void setDisableProximatePaths(bool set) { disableProximatePaths = set; }
 
+    /// Sets whether to disable "local" include path lookup, where include directives search
+    /// relative to the file containing the directive first.
+    void setDisableLocalIncludes(bool set) { disableLocalIncludes = set; }
+
     /// Adds a line directive at the given location.
     void addLineDirective(SourceLocation location, size_t lineNum, std::string_view name,
                           uint8_t level);
@@ -328,6 +332,7 @@ private:
 
     std::atomic<uint32_t> unnamedBufferCount = 0;
     bool disableProximatePaths = false;
+    bool disableLocalIncludes = false;
 
     template<IsLock TLock>
     FileInfo* getFileInfo(BufferID buffer, TLock& lock);

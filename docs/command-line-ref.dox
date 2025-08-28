@@ -117,39 +117,6 @@ expense of preventing various errors and warnings from being diagnosed. This opt
 should probably not be needed unless there are bugs in the analysis pass that need
 to be worked around.
 
-@section depfiles Dependency Files
-
-These options output various dependency files as filelists in addition to other actions.
-The default format places a file on each line. The `--depfile-target` option changes this
-to the Makefile format that is emitted by C++ compilers.
-
-`--Mall,--all-deps <file>`
-
-Generate dependency file list of all files used during parsing.
-
-`--Minclude,--include-deps <file>`
-
-Generate dependency file list of just include files that were used during parsing.
-
-`--Mmodule,--module-deps`
-
-Generate dependency file list of source files parsed, excluding include files.
-
-`--depfile-target <target>`
-
-Output depfile lists in makefile format, creating the file with `<target>:` as the Make target.
-
-`--depfile-sort`
-
-Topologically sort the emitted files in dependency listings, based on references to classes,
-packages, and module and interface instantiations.
-
-`--depfile-trim`
-
-Trim unreferenced files before generating dependency lists, based on references to classes,
-packages, and module and interface instantiations. Also implies `--depfile-sort`.
-
-
 @section include-paths Include paths and macros
 
 ```
@@ -180,6 +147,11 @@ slang -DFOO=2 -DBAR=asdf -D BAZ=3
 `-U,--undefine-macro <macro>`
 
 Undefine the given macro at the start of all source files.
+
+`--disable-local-includes`
+
+Disables "local" include path lookup, where include directives search relative to the file
+containing the directive first.
 
 @section clr-preprocessor Preprocessor
 
@@ -311,6 +283,38 @@ Controls the level of detail included in the CST JSON output. The available mode
 | `simple-tokens` | Tokens represented as simple strings with no trivia or token kind information |
 
 The default mode is `full` if this option is not specified.
+
+@section depfiles Dependency Files
+
+These options output various dependency files as filelists in addition to other actions.
+The default format places a file on each line. The `--depfile-target` option changes this
+to the Makefile format that is emitted by C++ compilers.
+
+`--Mall,--all-deps <file>`
+
+Generate dependency file list of all files used during parsing.
+
+`--Minclude,--include-deps <file>`
+
+Generate dependency file list of just include files that were used during parsing.
+
+`--Mmodule,--module-deps`
+
+Generate dependency file list of source files parsed, excluding include files.
+
+`--depfile-target <target>`
+
+Output depfile lists in makefile format, creating the file with `<target>:` as the Make target.
+
+`--depfile-sort`
+
+Topologically sort the emitted files in dependency listings, based on references to classes,
+packages, and module and interface instantiations.
+
+`--depfile-trim`
+
+Trim unreferenced files before generating dependency lists, based on references to classes,
+packages, and module and interface instantiations. Also implies `--depfile-sort`.
 
 @section compilation-limits Compilation
 
