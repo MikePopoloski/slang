@@ -179,6 +179,10 @@ public:
     /// Computes possible clock ticks (delay) length of sequence under assertion expression.
     std::optional<SequenceRange> computeSequenceLength() const;
 
+    /// Returns true if this expression can succeed vacuously, according to the
+    /// SystemVerilog LRM rules for vacuous evaluation attempts.
+    bool canSucceedVacuously() const;
+
     /// Returns true if this expression is known to be within a pair of parentheses,
     /// and otherwise false.
     bool isParenthesized() const;
@@ -266,6 +270,8 @@ public:
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
+    bool canSucceedVacuouslyImpl() const { return false; }
+
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Invalid; }
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -321,6 +327,7 @@ public:
     void requireSequence(const ASTContext& context, DiagCode code) const;
     NondegeneracyCheckResult checkNondegeneracyImpl() const;
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
+    bool canSucceedVacuouslyImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::SimpleSequenceExprSyntax& syntax,
                                      const ASTContext& context, bool allowDisable);
@@ -358,6 +365,7 @@ public:
 
     NondegeneracyCheckResult checkNondegeneracyImpl() const;
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
+    bool canSucceedVacuouslyImpl() const { return false; }
 
     static AssertionExpr& fromSyntax(const syntax::DelayedSequenceExprSyntax& syntax,
                                      const ASTContext& context);
@@ -393,6 +401,7 @@ public:
 
     NondegeneracyCheckResult checkNondegeneracyImpl() const;
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
+    bool canSucceedVacuouslyImpl() const { return false; }
 
     static AssertionExpr& fromSyntax(const syntax::ParenthesizedSequenceExprSyntax& syntax,
                                      const ASTContext& context);
@@ -429,6 +438,7 @@ public:
 
     NondegeneracyCheckResult checkNondegeneracyImpl() const { return {}; }
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
+    bool canSucceedVacuouslyImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::UnaryPropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -470,6 +480,7 @@ public:
 
     NondegeneracyCheckResult checkNondegeneracyImpl() const;
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
+    bool canSucceedVacuouslyImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::BinarySequenceExprSyntax& syntax,
                                      const ASTContext& context);
@@ -507,6 +518,8 @@ public:
         return seq.computeSequenceLength();
     }
 
+    bool canSucceedVacuouslyImpl() const { return false; }
+
     static AssertionExpr& fromSyntax(const syntax::FirstMatchSequenceExprSyntax& syntax,
                                      const ASTContext& context);
 
@@ -539,6 +552,8 @@ public:
     std::optional<SequenceRange> computeSequenceLengthImpl() const {
         return expr.computeSequenceLength();
     }
+
+    bool canSucceedVacuouslyImpl() const { return expr.canSucceedVacuously(); }
 
     static AssertionExpr& fromSyntax(const syntax::ClockingSequenceExprSyntax& syntax,
                                      const ASTContext& context);
@@ -577,6 +592,7 @@ public:
 
     NondegeneracyCheckResult checkNondegeneracyImpl() const { return {}; }
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
+    bool canSucceedVacuouslyImpl() const { return false; }
 
     static AssertionExpr& fromSyntax(const syntax::StrongWeakPropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -613,6 +629,7 @@ public:
 
     NondegeneracyCheckResult checkNondegeneracyImpl() const { return {}; }
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
+    bool canSucceedVacuouslyImpl() const { return true; }
 
     static AssertionExpr& fromSyntax(const syntax::AcceptOnPropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -647,6 +664,7 @@ public:
 
     NondegeneracyCheckResult checkNondegeneracyImpl() const { return {}; }
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
+    bool canSucceedVacuouslyImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::ConditionalPropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -692,6 +710,7 @@ public:
 
     NondegeneracyCheckResult checkNondegeneracyImpl() const { return {}; }
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
+    bool canSucceedVacuouslyImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::CasePropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -728,6 +747,7 @@ public:
 
     NondegeneracyCheckResult checkNondegeneracyImpl() const { return {}; }
     std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
+    bool canSucceedVacuouslyImpl() const { return expr.canSucceedVacuously(); }
 
     static AssertionExpr& fromSyntax(const syntax::DisableIffSyntax& syntax,
                                      const AssertionExpr& expr, const ASTContext& context);

@@ -73,7 +73,7 @@ module m;
     assert property (not a ##1 b);
     assert property (accept_on(b) sync_reject_on(c) sync_accept_on(d) reject_on(e) b ##1 c);
     assume property (if (b) a ##1 c else d ##1 e);
-    cover property (case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1 |-> b; endcase);
+    cover property (case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1 or b; endcase);
     restrict property (@(posedge b) ((b) and b) ##0 b);
 endmodule
 )");
@@ -1749,4 +1749,32 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Assertion vacuity checking") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    logic a, b;
+    cover property (a |-> b);
+    cover property (if (a) b);
+    cover property (if (a) b else b);
+    cover property (case (a) 0: b; 1: b; endcase);
+    cover property (case (a) 0: b; 1: b; default: b; endcase);
+    cover property (case (a) 0: b; 1: a |-> b; default: b; endcase);
+    cover property (not (a |=> b));
+    cover property (nexttime a);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::VacuousCover);
+    CHECK(diags[1].code == diag::VacuousCover);
+    CHECK(diags[2].code == diag::VacuousCover);
+    CHECK(diags[3].code == diag::VacuousCover);
+    CHECK(diags[4].code == diag::VacuousCover);
+    CHECK(diags[5].code == diag::VacuousCover);
 }

@@ -1025,6 +1025,15 @@ function int foo(input a);
 endfunction
 ```
 
+-Wvacuous-cover
+A property used in a `cover` statement allows vacuous success,
+which can cause confusing coverage results.
+```
+module m(input clk, a, b);
+    cover property (@(posedge clk) a |-> b);
+endmodule
+```
+
 @category Compatibility
 
 -Wdpi-spec

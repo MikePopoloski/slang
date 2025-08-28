@@ -884,6 +884,7 @@ warning pointless-void-cast PointlessVoidCast "cast to void for void-returning f
 warning unused-result UnusedResult "ignoring return value of '{}', cast to void to suppress"
 warning bad-procedural-force BadProceduralForce "lvalue of force/release must be a net, a variable, a constant select of a net, or a concatenation of these"
 warning multibit-edge MultiBitEdge "edge of expression of type {} will only trigger on changes to the first bit"
+warning vacuous-cover VacuousCover "cover property can succeed vacuously, which can cause confusing coverage results"
 note NoteWhileExpanding "while expanding {} '{}'"
 note NoteAlwaysFalse "expression is always false"
 

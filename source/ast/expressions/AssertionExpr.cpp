@@ -47,6 +47,13 @@ struct SequenceLengthVisitor {
     }
 };
 
+struct VacuityCheckVisitor {
+    template<typename T>
+    bool visit(const T& expr) {
+        return expr.canSucceedVacuouslyImpl();
+    }
+};
+
 } // namespace
 
 namespace slang::ast {
@@ -297,6 +304,11 @@ AssertionExpr::NondegeneracyCheckResult AssertionExpr::checkNondegeneracy() cons
 
 std::optional<SequenceRange> AssertionExpr::computeSequenceLength() const {
     SequenceLengthVisitor visitor;
+    return visit(visitor);
+}
+
+bool AssertionExpr::canSucceedVacuously() const {
+    VacuityCheckVisitor visitor;
     return visit(visitor);
 }
 
@@ -641,6 +653,17 @@ std::optional<SequenceRange> SimpleAssertionExpr::computeSequenceLengthImpl() co
         res = repetition->applyTo(res);
 
     return res;
+}
+
+bool SimpleAssertionExpr::canSucceedVacuouslyImpl() const {
+    if (expr.kind == ExpressionKind::AssertionInstance) {
+        auto& aie = expr.as<AssertionInstanceExpression>();
+        if (aie.type->isPropertyType())
+            return aie.body.canSucceedVacuously();
+    }
+
+    // Sequences are never vacuous.
+    return false;
 }
 
 void SimpleAssertionExpr::serializeTo(ASTSerializer& serializer) const {
@@ -1014,6 +1037,21 @@ AssertionExpr& UnaryAssertionExpr::fromSyntax(const UnarySelectPropertyExprSynta
     return *comp.emplace<UnaryAssertionExpr>(op, expr, range);
 }
 
+bool UnaryAssertionExpr::canSucceedVacuouslyImpl() const {
+    switch (op) {
+        case UnaryAssertionOperator::Not:
+            return expr.canSucceedVacuously();
+        case UnaryAssertionOperator::NextTime:
+        case UnaryAssertionOperator::SNextTime:
+        case UnaryAssertionOperator::Always:
+        case UnaryAssertionOperator::SAlways:
+        case UnaryAssertionOperator::Eventually:
+        case UnaryAssertionOperator::SEventually:
+            return true;
+    }
+    SLANG_UNREACHABLE;
+}
+
 void UnaryAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("op", toString(op));
     serializer.write("expr", expr);
@@ -1294,6 +1332,31 @@ std::optional<SequenceRange> BinaryAssertionExpr::computeSequenceLengthImpl() co
     }
 }
 
+bool BinaryAssertionExpr::canSucceedVacuouslyImpl() const {
+    switch (op) {
+        case BinaryAssertionOperator::Or:
+        case BinaryAssertionOperator::And:
+        case BinaryAssertionOperator::Iff:
+            return left.canSucceedVacuously() && right.canSucceedVacuously();
+        case BinaryAssertionOperator::Until:
+        case BinaryAssertionOperator::SUntil:
+        case BinaryAssertionOperator::UntilWith:
+        case BinaryAssertionOperator::SUntilWith:
+        case BinaryAssertionOperator::Implies:
+        case BinaryAssertionOperator::OverlappedImplication:
+        case BinaryAssertionOperator::NonOverlappedImplication:
+        case BinaryAssertionOperator::OverlappedFollowedBy:
+        case BinaryAssertionOperator::NonOverlappedFollowedBy:
+            return true;
+        case BinaryAssertionOperator::Intersect:
+        case BinaryAssertionOperator::Throughout:
+        case BinaryAssertionOperator::Within:
+            // These are sequence operations, always nonvacuous
+            return false;
+    }
+    SLANG_UNREACHABLE;
+}
+
 void BinaryAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("op", toString(op));
     serializer.write("left", left);
@@ -1468,6 +1531,15 @@ AssertionExpr& ConditionalAssertionExpr::fromSyntax(const ConditionalPropertyExp
     return *comp.emplace<ConditionalAssertionExpr>(cond, ifExpr, elseExpr);
 }
 
+bool ConditionalAssertionExpr::canSucceedVacuouslyImpl() const {
+    // If there is an else branch then we can be vacuous if either side
+    // can be vacuous. Otherwise we are always vacuous because the if
+    // condition may be false and no branch taken.
+    if (elseExpr)
+        return ifExpr.canSucceedVacuously() || elseExpr->canSucceedVacuously();
+    return true;
+}
+
 void ConditionalAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("condition", condition);
     serializer.write("if", ifExpr);
@@ -1506,6 +1578,20 @@ AssertionExpr& CaseAssertionExpr::fromSyntax(const CasePropertyExprSyntax& synta
     }
 
     return *comp.emplace<CaseAssertionExpr>(expr, items.copy(comp), defCase);
+}
+
+bool CaseAssertionExpr::canSucceedVacuouslyImpl() const {
+    // If there's no default then there's always the chance we're vacuous.
+    if (!defaultCase)
+        return true;
+
+    // Otherwise, we're vacuous if any branch can be vacuous.
+    for (auto& item : items) {
+        if (item.body->canSucceedVacuously())
+            return true;
+    }
+
+    return defaultCase->canSucceedVacuously();
 }
 
 void CaseAssertionExpr::serializeTo(ASTSerializer& serializer) const {

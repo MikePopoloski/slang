@@ -373,6 +373,9 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
     if (assertKind == AssertionKind::Expect && !context.requireTimingAllowed(result->sourceRange))
         return badStmt(compilation, result);
 
+    if (assertKind == AssertionKind::CoverProperty && prop.canSucceedVacuously())
+        ctx.addDiag(diag::VacuousCover, syntax.propertySpec->sourceRange());
+
     return *result;
 }
 
