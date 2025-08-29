@@ -8,22 +8,9 @@
 #include "slang/ast/expressions/MiscExpressions.h"
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
-#include "slang/ast/TimingControl.h"
-#include "slang/ast/expressions/AssertionExpr.h"
-#include "slang/ast/expressions/ConversionExpression.h"
-#include "slang/ast/expressions/OperatorExpressions.h"
-#include "slang/ast/symbols/BlockSymbols.h"
-#include "slang/ast/symbols/CheckerSymbols.h"
-#include "slang/ast/symbols/ClassSymbols.h"
-#include "slang/ast/symbols/InstanceSymbols.h"
-#include "slang/ast/symbols/MemberSymbols.h"
-#include "slang/ast/symbols/ParameterSymbols.h"
-#include "slang/ast/symbols/SubroutineSymbols.h"
-#include "slang/ast/symbols/VariableSymbols.h"
-#include "slang/ast/types/AllTypes.h"
-#include "slang/ast/types/NetType.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -1153,6 +1140,42 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     return *result;
 }
 
+struct CheckerArgVisitor : public ASTVisitor<CheckerArgVisitor, true, true> {
+    const ASTContext& context;
+    SourceRange argRange;
+
+    CheckerArgVisitor(const ASTContext& context, const AssertionPortSymbol& formal,
+                      const Expression& actual, SourceRange argRange) :
+        context(context), argRange(argRange) {
+
+        // Checker arguments that contain references to automatic variables or
+        // const cast expressions can only be used in assertion expressions.
+        if (context.flags.has(ASTFlags::AssertionExpr) ||
+            formal.getParentScope()->asSymbol().kind != SymbolKind::CheckerInstanceBody) {
+            return;
+        }
+
+        actual.visit(*this);
+    }
+
+    void handle(const NamedValueExpression& expr) {
+        if (auto var = expr.symbol.as_if<VariableSymbol>();
+            var && var->lifetime == VariableLifetime::Automatic) {
+            auto& diag = context.addDiag(diag::CheckerAutoVarRef, expr.sourceRange) << var->name;
+            diag.addNote(diag::NoteExpandedHere, argRange);
+        }
+        visitDefault(expr);
+    }
+
+    void handle(const ConversionExpression& expr) {
+        if (expr.isConstCast) {
+            auto& diag = context.addDiag(diag::CheckerConstCast, expr.sourceRange);
+            diag.addNote(diag::NoteExpandedHere, argRange);
+        }
+        visitDefault(expr);
+    }
+};
+
 Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRange range,
                                                   const ASTContext& instanceCtx) {
     Compilation& comp = instanceCtx.getCompilation();
@@ -1256,6 +1279,7 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
             // if possible and fall back to an assertion expression if not.
             if (regExpr) {
                 auto& result = selfDetermined(comp, *regExpr, argCtx, argCtx.flags);
+                CheckerArgVisitor(instanceCtx, formal, result, range);
                 result.sourceRange = range;
                 return result;
             }
@@ -1303,6 +1327,7 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
                 return badExpr(comp, nullptr);
 
             auto& expr = selfDetermined(comp, *regExpr, argCtx, argCtx.flags);
+            CheckerArgVisitor(instanceCtx, formal, expr, range);
             expr.sourceRange = range;
 
             if (!instanceCtx.flags.has(ASTFlags::LValue) && !expr.type->isMatching(type)) {

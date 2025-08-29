@@ -446,6 +446,7 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
     // and passes the type through unchanged.
     if (syntax.signing.kind == TokenKind::ConstKeyword) {
         result->type = operand.type;
+        result->isConstCast = true;
         return *result;
     }
 

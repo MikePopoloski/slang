@@ -1032,3 +1032,36 @@ checker(_e,[_e
     // Just check no crashes.
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Rules for checker args with automatic vars, const casts") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk);
+    checker c(a, b, e);
+        bit c;
+        always_comb c = a;
+
+        bit d;
+        assign d = b;
+
+        covergroup cg;
+            coverpoint e;
+        endgroup
+    endchecker
+
+    logic foo[4];
+    initial begin
+        automatic int bar;
+        c c1(foo[bar], 1 + const'(foo[0]), 1 + const'(foo[1]));
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::CheckerAutoVarRef);
+    CHECK(diags[1].code == diag::CheckerConstCast);
+    CHECK(diags[2].code == diag::CheckerConstCast);
+}

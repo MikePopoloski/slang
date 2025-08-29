@@ -15,7 +15,9 @@ namespace slang::ast {
 class SLANG_EXPORT ConversionExpression final : public Expression {
 public:
     /// The kind of conversion.
-    const ConversionKind conversionKind;
+    ConversionKind conversionKind;
+
+    bool isConstCast = false;
 
     ConversionExpression(const Type& type, ConversionKind conversionKind, Expression& operand,
                          SourceRange sourceRange) :

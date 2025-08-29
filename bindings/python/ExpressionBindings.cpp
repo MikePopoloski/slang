@@ -53,6 +53,7 @@ void registerExpressions(py::module_& m) {
 
     py::classh<ConversionExpression, Expression>(m, "ConversionExpression")
         .def_readonly("conversionKind", &ConversionExpression::conversionKind)
+        .def_readonly("isConstCast", &ConversionExpression::isConstCast)
         .def_property_readonly("isImplicit", &ConversionExpression::isImplicit)
         .def_property_readonly("operand", py::overload_cast<>(&ConversionExpression::operand));
 
