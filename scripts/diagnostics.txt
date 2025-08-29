@@ -686,6 +686,7 @@ error DynamicFromChecker "cannot refer to an element or member of a dynamic type
 error CheckerForkJoinRef "checkers cannot refer to members of fork-join blocks from their enclosing scopes"
 error CheckerAutoVarRef "cannot refer to automatic variable '{}' from procedural code in a checker"
 error CheckerConstCast "checker arguments containing a const cast can only be used in assertions within the checker body"
+error CheckerCovergroupProc "checker procedures cannot reference covergroups"
 error SpecparamInConstant "specparams cannot be used in general constant expressions"
 error TaskFromFunction "cannot invoke a task from within a function"
 error TaskFromFinal "cannot invoke a task from within a final block"

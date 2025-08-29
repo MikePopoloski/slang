@@ -1065,3 +1065,30 @@ endmodule
     CHECK(diags[1].code == diag::CheckerConstCast);
     CHECK(diags[2].code == diag::CheckerConstCast);
 }
+
+TEST_CASE("Covergroups in procedural block in checker") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk);
+    checker c;
+        covergroup cg;
+        endgroup
+
+        cg cg1 = new;
+        always_comb begin
+            cg1.sample();
+        end
+    endchecker
+
+    initial begin
+        c c1();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CheckerCovergroupProc);
+}

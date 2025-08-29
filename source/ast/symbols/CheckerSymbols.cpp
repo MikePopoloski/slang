@@ -652,6 +652,16 @@ public:
     void handle(const CallExpression& expr) {
         if (inAssignmentRhs && expr.hasOutputArgs())
             body.addDiag(diag::CheckerFuncArg, expr.sourceRange);
+
+        visitDefault(expr);
+    }
+
+    void handle(const NamedValueExpression& expr) {
+        if (currBlock && expr.symbol.getType().isCovergroup()) {
+            auto& diag = body.addDiag(diag::CheckerCovergroupProc, expr.sourceRange);
+            diag.addNote(diag::NoteDeclarationHere, expr.symbol.location);
+        }
+        visitDefault(expr);
     }
 
     void handle(const HierarchicalValueExpression& expr) {
