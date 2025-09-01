@@ -174,6 +174,7 @@ int main(int argc, char** argv) {
 
     // Print the configuration file for the currently enabled checks.
     if (dumpConfig) {
+        Registry::setConfig(tidyConfig);
         OS::print(TidyConfigPrinter::dumpConfig(tidyConfig).str());
         return 0;
     }
