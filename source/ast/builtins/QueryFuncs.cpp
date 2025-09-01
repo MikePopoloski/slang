@@ -358,8 +358,7 @@ protected:
 #define SUBROUTINE(className, base, ...)                                              \
     class className : public base {                                                   \
     public:                                                                           \
-        className() : base(__VA_ARGS__) {                                             \
-        }                                                                             \
+        className() : base(__VA_ARGS__) {}                                            \
         ConstantValue eval(EvalContext& context, const Args& args, SourceRange range, \
                            const CallExpression::SystemCallInfo&) const final;        \
     }
