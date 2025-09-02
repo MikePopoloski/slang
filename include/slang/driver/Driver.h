@@ -416,7 +416,7 @@ public:
 
     /// Processes and applies all configured options.
     /// @returns true on success and false if errors were encountered.
-    [[nodiscard]] bool processOptions();
+    [[nodiscard]] bool processOptions(bool checkFiles = true);
 
     /// Returns the analysis options constructed from flags.
     [[nodiscard]]
