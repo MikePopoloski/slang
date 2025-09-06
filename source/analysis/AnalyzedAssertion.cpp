@@ -389,12 +389,29 @@ struct AssertionVisitor {
             flags |= VF::InClockingBlock;
         }
 
-        // Inputs and inout local variable formal args should check that
-        // any local vars passed in are definitely assigned.
+        SmallMap<const Symbol*, const Expression*, 4> outputArgRefs;
         for (auto& [formal, actual] : expr.arguments) {
-            if (formal->isLocalVar() && formal->direction != ArgumentDirection::Out) {
-                if (auto init = std::get_if<const Expression*>(&actual))
-                    visitExpr(**init);
+            auto initExpr = std::get_if<const Expression*>(&actual);
+            if (initExpr && formal->isLocalVar()) {
+                // Inputs and inout local variable formal args should check that
+                // any local vars passed in are definitely assigned.
+                auto init = *initExpr;
+                if (formal->direction != ArgumentDirection::Out)
+                    visitExpr(*init);
+
+                // Outputs and inouts can't reference the same local.
+                if (formal->direction != ArgumentDirection::In) {
+                    if (auto sym = init->getSymbolReference()) {
+                        auto [it, inserted] = outputArgRefs.emplace(sym, init);
+                        if (!inserted) {
+                            auto& diag = context.addDiag(parentSymbol,
+                                                         diag::AssertionFormalMultiAssign,
+                                                         init->sourceRange);
+                            diag << sym->name;
+                            diag.addNote(diag::NotePreviousUsage, it->second->sourceRange);
+                        }
+                    }
+                }
             }
         }
 

@@ -2269,3 +2269,27 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AssertionLocalUnassigned);
 }
+
+TEST_CASE("Assertion local var formal arg multiple drivers") {
+    auto& text = R"(
+sequence s1(local output int x, y);
+    ##1 (1, x = 1, y = 2);
+endsequence
+
+sequence s2;
+    int foo;
+    s1(foo, foo);
+endsequence
+
+module m(input clk);
+    assert property (@(posedge clk) s2);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssertionFormalMultiAssign);
+}

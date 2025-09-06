@@ -457,8 +457,7 @@ const HierarchicalReference* DriverTracker::addDriver(
 
     const bool checkOverlap = (VariableSymbol::isKind(symbol.kind) &&
                                symbol.as<VariableSymbol>().lifetime == VariableLifetime::Static) ||
-                              isUWire || isSingleDriverUDNT ||
-                              symbol.kind == SymbolKind::LocalAssertionVar;
+                              isUWire || isSingleDriverUDNT;
 
     const bool allowDupInitialDrivers = context.manager->hasFlag(
         AnalysisFlags::AllowDupInitialDrivers);
@@ -487,8 +486,6 @@ const HierarchicalReference* DriverTracker::addDriver(
         //        always_comb / always_ff procedures.
         //          - If the allowDupInitialDrivers option is set, allow an initial
         //            block to overlap even if the other block is an always_comb/ff.
-        // - Assertion local variable formal arguments can't drive more than
-        //   one output to the same local variable.
         bool isProblem = false;
         auto curr = *it;
 
