@@ -312,9 +312,18 @@ struct AssertionVisitor {
             }
 
             if constexpr (HasVisitExprs<T, SeqExprVisitor>) {
+                // This works around an annoying MSVC bug where it warns even
+                // though the code is reachable.
+#ifdef _MSC_VER
+#    pragma warning(push)
+#    pragma warning(disable : 4702) // unreachable code
+#endif
                 if constexpr (std::is_base_of_v<Expression, T>) {
                     parentExpr = &expr;
                 }
+#ifdef _MSC_VER
+#    pragma warning(pop)
+#endif
 
                 expr.visitExprs(*this);
                 parentExpr = nullptr;
