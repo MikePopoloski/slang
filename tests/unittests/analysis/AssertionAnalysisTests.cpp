@@ -2293,3 +2293,42 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AssertionFormalMultiAssign);
 }
+
+TEST_CASE("Assertion local var rules when passing to triggered") {
+    auto& text = R"(
+module m(input clk);
+    sequence s1(a);
+        a;
+    endsequence
+
+    sequence s2;
+        int foo = 1;
+        s1(foo).triggered;
+    endsequence
+
+    sequence s3(a);
+        (1, a = 1);
+    endsequence
+
+    sequence s4;
+        int v1; !s3(v1).triggered ##1 (v1 == 1); // v1 unassigned
+    endsequence
+
+    sequence s5;
+        int v1; s3(v1).triggered ##1 (v1 == 1);
+    endsequence
+
+    assert property (@(posedge clk) s2);
+    assert property (@(posedge clk) s4);
+    assert property (@(posedge clk) s5);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::AssertionLocalUnassigned);
+    CHECK(diags[1].code == diag::AssertionLocalUnassigned);
+}

@@ -115,12 +115,8 @@ struct BlockedVarsVisitor {
             savedSampled = sampled;
         }
 
-        if (expr.expr.kind == ExpressionKind::AssertionInstance) {
+        if (expr.expr.kind == ExpressionKind::AssertionInstance)
             visit(expr.expr.as<AssertionInstanceExpression>());
-        }
-        else if (expr.expr.kind == ExpressionKind::Call) {
-            // TODO: triggered / matched calls
-        }
 
         if (isZeroRep(expr.repetition)) {
             blocked = std::move(savedBlocked);
@@ -292,6 +288,7 @@ struct AssertionVisitor {
         Clock outerClock;
         bitmask<VF> flags;
         Clock lastEndClock = nullptr;
+        const Expression* parentExpr = nullptr;
 
         SeqExprVisitor(AssertionVisitor& parent, Clock outerClock, bitmask<VF> flags) :
             parent(parent), outerClock(outerClock), flags(flags) {}
@@ -299,15 +296,29 @@ struct AssertionVisitor {
         template<typename T>
         void visit(const T& expr) {
             if constexpr (std::is_same_v<T, AssertionInstanceExpression>) {
-                auto result = parent.visit(expr, outerClock, flags);
+                bool isForSequenceMethod = false;
+                if (parentExpr && parentExpr->kind == ExpressionKind::Call) {
+                    auto ksn = parentExpr->as<CallExpression>().getKnownSystemName();
+                    isForSequenceMethod = ksn == KnownSystemName::Triggered ||
+                                          ksn == KnownSystemName::Matched;
+                }
+
+                auto result = parent.visit(expr, outerClock, flags, isForSequenceMethod);
                 if (!result.clocks.empty()) {
                     lastEndClock = result.endClock == nullptr ? result.clocks.back()
                                                               : result.endClock;
                 }
+                return;
             }
 
             if constexpr (HasVisitExprs<T, SeqExprVisitor>) {
+                if constexpr (std::is_base_of_v<Expression, T>) {
+                    parentExpr = &expr;
+                }
+
                 expr.visitExprs(*this);
+                parentExpr = nullptr;
+
                 if constexpr (std::is_same_v<T, CallExpression>) {
                     if (!parent.globalFutureSampledValueCall &&
                         SemanticFacts::isGlobalFutureSampledValueFunc(expr.getKnownSystemName())) {
@@ -371,8 +382,8 @@ struct AssertionVisitor {
         return {};
     }
 
-    VisitResult visit(const AssertionInstanceExpression& expr, Clock outerClock,
-                      bitmask<VF> flags) {
+    VisitResult visit(const AssertionInstanceExpression& expr, Clock outerClock, bitmask<VF> flags,
+                      bool isForSequenceMethod = false, bool isMaximalExpr = false) {
         if (expr.isRecursiveProperty)
             return {};
 
@@ -390,6 +401,8 @@ struct AssertionVisitor {
         }
 
         SmallMap<const Symbol*, const Expression*, 4> outputArgRefs;
+        SmallSet<const Symbol*, 4> sequenceMethodVars;
+
         for (auto& [formal, actual] : expr.arguments) {
             auto initExpr = std::get_if<const Expression*>(&actual);
             if (initExpr && formal->isLocalVar()) {
@@ -411,6 +424,15 @@ struct AssertionVisitor {
                             diag.addNote(diag::NotePreviousUsage, it->second->sourceRange);
                         }
                     }
+                }
+            }
+            else if (initExpr && isForSequenceMethod) {
+                // Local vars passed in to a sequence with 'triggered' applied are
+                // considered to be not assigned.
+                if (auto sym = (*initExpr)->getSymbolReference();
+                    sym && sym->kind == SymbolKind::LocalAssertionVar) {
+                    assignedVars.erase(sym);
+                    sequenceMethodVars.emplace(sym);
                 }
             }
         }
@@ -464,6 +486,13 @@ struct AssertionVisitor {
             }
         }
 
+        // If this is a sequence method and it's not a maximal expression
+        // then any local vars we passed in do not flow out.
+        if (isForSequenceMethod && !isMaximalExpr) {
+            for (auto local : sequenceMethodVars)
+                assignedVars.erase(local);
+        }
+
         // Named sequences and properties instantiated from within a clocking block
         // must be singly clocked and share the same clock as the clocking block.
         if (!bad && inClockingBlock && outerClock) {
@@ -509,8 +538,10 @@ struct AssertionVisitor {
             if (auto ksn = call.getKnownSystemName();
                 ksn == KnownSystemName::Triggered || ksn == KnownSystemName::Matched) {
                 auto args = call.arguments();
-                if (!args.empty() && args[0]->kind == ExpressionKind::AssertionInstance)
-                    result = visit(args[0]->as<AssertionInstanceExpression>(), outerClock, flags);
+                if (!args.empty() && args[0]->kind == ExpressionKind::AssertionInstance) {
+                    result = visit(args[0]->as<AssertionInstanceExpression>(), outerClock, flags,
+                                   /* isForSequenceMethod */ true, /* isMaximalExpr */ true);
+                }
             }
         }
 
