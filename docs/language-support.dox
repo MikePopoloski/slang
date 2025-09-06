@@ -3,12 +3,13 @@
 
 @tableofcontents
 
-This is an overview of which SystemVerilog features slang supports, and those which
-it yet does not. This is not a promise that features marked "supported" are bug-free,
-but should imply that any such bugs are as of yet unknown and should be reported if discovered.
+slang has complete support for the entirety of the IEEE 1800-2023 SystemVerilog language,
+up through compilation and elaboration. Any remaining known issues are tracked with
+the [lang-compliance](https://github.com/MikePopoloski/slang/issues?q=is%3Aissue%20state%3Aopen%20label%3Alang-compliance)
+label in the GitHub issue tracker.
 
-Features are expressed via references to chapters and sections within the
-IEEE 1800-2023 SystemVerilog Language Reference Manual (LRM).
+The tables below document when slang added full support for the indicated feature, broken down by
+chapters and sections from the SystemVerilog Language Reference Manual (LRM).
 
 @section elaboration Elaboration
 
@@ -247,7 +248,7 @@ IEEE 1800-2023 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 16.7 | Sequences | v0.8
 {{m-success}} 16.8 | Declaring sequences | v0.8
 {{m-success}} 16.9 | Sequence operations | v0.8
-{{m-warning}} 16.10 | Local variables | partial
+{{m-success}} 16.10 | Local variables | v10.0
 {{m-success}} 16.11 | Calling subroutines on match of sequence | v0.8
 {{m-success}} 16.12 | Declaring properties | v0.8
 {{m-success}} 16.12.22 | Nondegeneracy | v7.0
@@ -524,9 +525,5 @@ IEEE 1800-2023 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 35.7 | Exported functions | v0.6
 {{m-success}} 35.8 | Exported tasks | v0.6
 {{m-dim}}     35.9 | Disabling DPI tasks and functions | N/A
-
-@section simulation Simulation
-
-Simulation is not yet supported at all, but it will be at some point in the future.
 
 */
