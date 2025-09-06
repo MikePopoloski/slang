@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### New Features
 * Added [-Wcase-none](https://sv-lang.com/warning-ref.html#case-none) which warns about constant case statements that don't match on any items
 * Added [-Wunnamed-generate](https://sv-lang.com/warning-ref.html#unnamed-generate) which warns for generate blocks that don't have a user-provided name
-* Added [-Wvacuous-cover](https://sv-lang.com/warning-ref.html#vacuous-cover) which warns about cover statements for properties that allow vacuous success (which can result in misleading cover results) 
+* Added [-Wvacuous-cover](https://sv-lang.com/warning-ref.html#vacuous-cover) which warns about cover statements for properties that allow vacuous success (which can result in misleading cover results)
 * Added a `--cst-json` option to serialize the concrete syntax tree to JSON (thanks to @AndrewNolte)
 * Added `--allow-genblk-reference` as a compatibility option to allow referencing unnamed generate blocks via their external names (thanks to @toddstrader)
 * Added a `--diag-column-unit` option to control whether column numbers in diagnostics respect UTF-8 encoding and tab stop widths, which is now the new default. The old behavior can be selected with `--diag-column-unit=byte`.
