@@ -64,56 +64,96 @@ static bool isSameClock(const TimingControl& left, const TimingControl& right) {
     return le.expr.syntax->isEquivalentTo(*re.expr.syntax);
 }
 
+using LocalSet = flat_hash_set<const Symbol*>;
+
+static void computeFlowForBinaryOp(LocalSet& flow, const LocalSet& savedVars,
+                                   const BinaryAssertionExpr& expr);
+
+// Implements the sample(), block(), and flow() functions defined
+// in F.5.4 for purposes of finding local assertion variables that
+// are blocked from flowing out of a sequence.
 struct BlockedVarsVisitor {
-    flat_hash_set<const Symbol*> blocked;
-    flat_hash_set<const Symbol*> sampled;
+    LocalSet blocked;
+    LocalSet sampled;
+    LocalSet flow;
 
     void visit(const AssertionInstanceExpression& expr) {
         if (expr.isRecursiveProperty)
             return;
 
-        auto savedBlocked = std::move(blocked);
-        auto savedSampled = std::move(sampled);
-        blocked.clear();
-        sampled.clear();
+        // Collect assigned local variables in the context of the instantiation.
+        for (auto local : expr.localVars) {
+            if (local->getInitializer() ||
+                (local->formalPort && local->formalPort->direction != ArgumentDirection::Out)) {
+                // Inputs and inouts are always initialized by the caller,
+                // whereas outputs are never initialized.
+                flow.emplace(local);
+            }
+        }
 
         expr.body.visit(*this);
 
-        blocked = std::move(savedBlocked);
-        sampled = std::move(savedSampled);
+        for (auto local : expr.localVars)
+            flow.erase(local);
 
         // Output local variable formal args are now definitely assigned.
         for (auto& [formal, actual] : expr.arguments) {
             if (formal->isLocalVar() && formal->direction == ArgumentDirection::Out) {
                 if (auto init = std::get_if<const Expression*>(&actual)) {
                     if (auto sym = (*init)->getSymbolReference())
-                        sampled.emplace(sym);
+                        flow.emplace(sym);
                 }
             }
         }
     }
 
     void visit(const SimpleAssertionExpr& expr) {
-        // If this is a direct sequence instance then we can return its result directly.
-        if (expr.expr.kind == ExpressionKind::AssertionInstance)
-            return visit(expr.expr.as<AssertionInstanceExpression>());
+        LocalSet savedBlocked, savedSampled, savedFlow;
+        if (isZeroRep(expr.repetition)) {
+            savedBlocked = blocked;
+            savedFlow = flow;
+            savedSampled = sampled;
+        }
 
-        // TODO: triggered / matched calls
-        // TODO: zero repetition
+        if (expr.expr.kind == ExpressionKind::AssertionInstance) {
+            visit(expr.expr.as<AssertionInstanceExpression>());
+        }
+        else if (expr.expr.kind == ExpressionKind::Call) {
+            // TODO: triggered / matched calls
+        }
+
+        if (isZeroRep(expr.repetition)) {
+            blocked = std::move(savedBlocked);
+            flow = std::move(savedFlow);
+            sampled = std::move(savedSampled);
+        }
     }
 
     void visit(const SequenceConcatExpr& expr) {
         for (auto& elem : expr.elements) {
-            // TODO: the "block" of a concat should not include
-            // whatever flows out and is not blocked by later elems.
+            // The "block" of a concat should not include whatever flows out from later elems.
+            flow.clear();
             elem.sequence->visit(*this);
+            erase_if(blocked, [&](const Symbol* sym) { return flow.contains(sym); });
         }
     }
 
     void visit(const SequenceWithMatchExpr& expr) {
-        // TODO: zero repetition
+        LocalSet savedBlocked, savedSampled, savedFlow;
+        if (isZeroRep(expr.repetition)) {
+            savedBlocked = blocked;
+            savedFlow = flow;
+            savedSampled = sampled;
+        }
+
         expr.expr.visit(*this);
         handleMatchItems(expr.matchItems);
+
+        if (isZeroRep(expr.repetition)) {
+            blocked = std::move(savedBlocked);
+            flow = std::move(savedFlow);
+            sampled = std::move(savedSampled);
+        }
     }
 
     void visit(const FirstMatchAssertionExpr& expr) {
@@ -123,34 +163,40 @@ struct BlockedVarsVisitor {
 
     void visit(const ClockingAssertionExpr& expr) { expr.expr.visit(*this); }
 
-    void visit(const BinaryAssertionExpr& expr) {
+    void visit(const BinaryAssertionExpr& expr, bool isRoot = false) {
         switch (expr.op) {
             case BinaryAssertionOperator::Or:
-                // Simple union of both sides.
-                expr.left.visit(*this);
-                expr.right.visit(*this);
-                break;
             case BinaryAssertionOperator::Intersect:
             case BinaryAssertionOperator::Throughout:
             case BinaryAssertionOperator::Within:
             case BinaryAssertionOperator::And: {
                 // Union both sides, plus add in whatever has been
                 // "sampled" on both sides.
+                auto savedFlow = flow;
                 sampled.clear();
                 expr.left.visit(*this);
 
                 auto leftSampled = std::move(sampled);
                 sampled.clear();
+                std::swap(savedFlow, flow);
                 expr.right.visit(*this);
 
                 // The resulting sampled set should be the union of both sides.
                 auto rightSampled = sampled;
                 sampled.insert(leftSampled.begin(), leftSampled.end());
 
-                // The resulting blocked set should union the sampled intersection.
-                erase_if(leftSampled,
-                         [&](const Symbol* sym) { return !rightSampled.contains(sym); });
-                blocked.insert(leftSampled.begin(), leftSampled.end());
+                // To avoid infinite recursion when using a BlockedVarsVisitor to
+                // compute flow (which we won't use at the root anyway) skip over
+                // it here if isRoot is set.
+                if (!isRoot)
+                    computeFlowForBinaryOp(flow, savedFlow, expr);
+
+                if (expr.op != BinaryAssertionOperator::Or) {
+                    // The resulting blocked set should union the sampled intersection.
+                    erase_if(leftSampled,
+                             [&](const Symbol* sym) { return !rightSampled.contains(sym); });
+                    blocked.insert(leftSampled.begin(), leftSampled.end());
+                }
                 break;
             }
             default:
@@ -172,12 +218,37 @@ private:
         for (auto item : matchItems) {
             if (item->kind == ExpressionKind::Assignment) {
                 auto& assign = item->as<AssignmentExpression>();
-                if (auto sym = assign.left().getSymbolReference())
+                if (auto sym = assign.left().getSymbolReference()) {
                     sampled.emplace(sym);
+                    flow.emplace(sym);
+                }
             }
         }
     }
+
+    static bool isZeroRep(const std::optional<SequenceRepetition>& rep) {
+        return rep && rep->range.min == 0 && rep->range.max == 0;
+    }
 };
+
+static void computeFlowForBinaryOp(LocalSet& flow, const LocalSet& savedVars,
+                                   const BinaryAssertionExpr& expr) {
+    if (expr.op == BinaryAssertionOperator::Or) {
+        // Definitely assigned variables are the intersection of the two sides.
+        erase_if(flow, [&](const Symbol* sym) { return !savedVars.contains(sym); });
+    }
+    else {
+        // Definitely assigned variables are the union of the two sides,
+        // minus those that are "blocked" according to F.5.4.
+        flow.insert(savedVars.begin(), savedVars.end());
+
+        if (!flow.empty()) {
+            BlockedVarsVisitor blockedVisitor;
+            blockedVisitor.visit(expr, /* isRoot */ true);
+            erase_if(flow, [&](const Symbol* sym) { return blockedVisitor.blocked.contains(sym); });
+        }
+    }
+}
 
 enum class VisitFlags { None = 0, RequireSequence = 1, InClockingBlock = 2 };
 SLANG_BITMASK(VisitFlags, InClockingBlock)
@@ -279,7 +350,7 @@ struct AssertionVisitor {
     const Symbol& parentSymbol;
     SmallVector<ClockInference::ExpansionInstance> expansionStack;
     const CallExpression* globalFutureSampledValueCall = nullptr;
-    flat_hash_set<const Symbol*> assignedVars;
+    LocalSet assignedVars;
     bool hasInferredClockCall = false;
     bool hasMatchItems = false;
     bool bad = false;
@@ -330,9 +401,6 @@ struct AssertionVisitor {
         expansionStack.push_back({expr, outerClock});
         hasInferredClockCall |= expansionStack.back().hasInferredClockArg;
 
-        flat_hash_set<const Symbol*> savedVars = std::move(assignedVars);
-        assignedVars.clear();
-
         // Collect assigned local variables in the context of the instantiation.
         for (auto local : expr.localVars) {
             if (local->formalPort) {
@@ -363,8 +431,11 @@ struct AssertionVisitor {
             }
         }
 
-        assignedVars = std::move(savedVars);
         expansionStack.pop_back();
+
+        // Delete local vars that we created for the instance context.
+        for (auto local : expr.localVars)
+            assignedVars.erase(local);
 
         // Output local variable formal args are now definitely assigned.
         for (auto& [formal, actual] : expr.arguments) {
@@ -402,29 +473,44 @@ struct AssertionVisitor {
     }
 
     VisitResult visit(const SimpleAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
-        // If this is a direct sequence instance then we can return its result directly.
-        if (expr.expr.kind == ExpressionKind::AssertionInstance)
-            return visit(expr.expr.as<AssertionInstanceExpression>(), outerClock, flags);
+        LocalSet savedVars;
+        if (isZeroOrMoreRep(expr.repetition)) {
+            // Variable assignments don't flow out of this subexpression
+            // when its repetition has a zero bound.
+            savedVars = assignedVars;
+        }
 
-        // If this is a call to sequence method we don't require an outer clock,
-        // so check for that case explicitly.
-        if (expr.expr.kind == ExpressionKind::Call) {
+        std::optional<VisitResult> result;
+        if (expr.expr.kind == ExpressionKind::AssertionInstance) {
+            // If this is a direct sequence instance then we can return its result directly.
+            result = visit(expr.expr.as<AssertionInstanceExpression>(), outerClock, flags);
+        }
+        else if (expr.expr.kind == ExpressionKind::Call) {
+            // If this is a call to sequence method we don't require an outer clock,
+            // so check for that case explicitly.
             auto& call = expr.expr.as<CallExpression>();
             if (auto ksn = call.getKnownSystemName();
                 ksn == KnownSystemName::Triggered || ksn == KnownSystemName::Matched) {
                 auto args = call.arguments();
                 if (!args.empty() && args[0]->kind == ExpressionKind::AssertionInstance)
-                    return visit(args[0]->as<AssertionInstanceExpression>(), outerClock, flags);
+                    result = visit(args[0]->as<AssertionInstanceExpression>(), outerClock, flags);
             }
         }
 
-        // Visit the expression to find nested sequence instantiations due to
-        // calls to .triggered and .matched. We will still require an outer clock
-        // in the inheritedClock call below.
-        SeqExprVisitor exprVisitor(*this, outerClock, flags);
-        expr.expr.visit(exprVisitor);
+        if (!result) {
+            // Visit the expression to find nested sequence instantiations due to
+            // calls to .triggered and .matched. We will still require an outer clock
+            // in the inheritedClock call below.
+            SeqExprVisitor exprVisitor(*this, outerClock, flags);
+            expr.expr.visit(exprVisitor);
 
-        return inheritedClock(expr, outerClock, flags | VF::RequireSequence);
+            result = inheritedClock(expr, outerClock, flags | VF::RequireSequence);
+        }
+
+        if (isZeroOrMoreRep(expr.repetition))
+            assignedVars = std::move(savedVars);
+
+        return *result;
     }
 
     VisitResult visit(const SequenceConcatExpr& expr, Clock outerClock, bitmask<VF> flags) {
@@ -465,8 +551,19 @@ struct AssertionVisitor {
     }
 
     VisitResult visit(const SequenceWithMatchExpr& expr, Clock outerClock, bitmask<VF> flags) {
+        LocalSet savedVars;
+        if (isZeroOrMoreRep(expr.repetition)) {
+            // Variable assignments don't flow out of this subexpression
+            // when its repetition has a zero bound.
+            savedVars = assignedVars;
+        }
+
         auto result = expr.expr.visit(*this, outerClock, flags | VF::RequireSequence);
         handleMatchItems(expr.matchItems);
+
+        if (isZeroOrMoreRep(expr.repetition))
+            assignedVars = std::move(savedVars);
+
         return result;
     }
 
@@ -617,6 +714,10 @@ private:
         return flags.has(VF::RequireSequence) ? "sequence"sv : "property"sv;
     }
 
+    static bool isZeroOrMoreRep(const std::optional<SequenceRepetition>& rep) {
+        return rep && rep->range.min == 0;
+    }
+
     VisitResult inheritedClock(const AssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
         if (!outerClock) {
             if (!bad) {
@@ -715,24 +816,11 @@ private:
             badMulticlockedSeq(expr.left, expr.right, expr.opRange);
         }
 
-        if (expr.op == BinaryAssertionOperator::Or) {
-            // Definitely assigned variables are the intersection of the two sides.
-            erase_if(assignedVars, [&](const Symbol* sym) { return !savedVars.contains(sym); });
-        }
-        else {
-            // Definitely assigned variables are the union of the two sides,
-            // minus those that are "blocked" according to F.5.4.
-            assignedVars.insert(savedVars.begin(), savedVars.end());
-
-            BlockedVarsVisitor blockedVisitor;
-            expr.visit(blockedVisitor);
-            erase_if(assignedVars,
-                     [&](const Symbol* sym) { return blockedVisitor.blocked.contains(sym); });
-        }
+        computeFlowForBinaryOp(assignedVars, savedVars, expr);
     }
 
     VisitResult visitProperty(const AssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
-        flat_hash_set<const Symbol*> savedVars = assignedVars;
+        auto savedVars = assignedVars;
         auto result = expr.visit(*this, outerClock, flags);
 
         assignedVars = std::move(savedVars);

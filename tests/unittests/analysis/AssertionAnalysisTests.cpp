@@ -2167,3 +2167,105 @@ endmodule
     CHECK(diags[1].code == diag::AssertionLocalUnassigned);
     CHECK(diags[2].code == diag::AssertionLocalUnassigned);
 }
+
+TEST_CASE("Assertion variable flow through untyped arguments") {
+    auto& text = R"(
+module m(input a, b, c, d, int e, data, data1, data2, clk);
+    sequence s1(x, y);
+        (x, y = a) ##1 y == 0;
+    endsequence
+
+    sequence s2;
+        int x, y;
+        (1, x = a) ##1 s1(x, y) ##1 x == y;
+    endsequence
+
+    assert property (@(posedge clk) s2);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Assertion variable flow through repetition zero operators") {
+    auto& text = R"(
+module m(input a, b, c, d, int e, data, data1, data2, clk);
+    sequence s1;
+        int x;
+        (a, x = b)[*0] ##1 x == 0;
+    endsequence
+
+    sequence s2(y);
+        (1, y = 2);
+    endsequence
+
+    sequence s3;
+        int x;
+        s2(x)[*1:$] ##1 x == 0;
+    endsequence
+
+     sequence s4;
+        int x;
+        s2(x)[*0] ##1 x == 0;
+    endsequence
+
+    assert property (@(posedge clk) s1);
+    assert property (@(posedge clk) s3);
+    assert property (@(posedge clk) s4);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::AssertionLocalUnassigned);
+    CHECK(diags[1].code == diag::AssertionLocalUnassigned);
+}
+
+TEST_CASE("Assertion variable blocked flow corner cases") {
+    auto& text = R"(
+module m(input a, b, c, d, int e, data, data1, data2, logic clk);
+    sequence s1;
+        int x;
+        ((((a, x = 1) intersect (b, x = 1)) ##0 (b, x = 1)) intersect a) ##1 x == 1;
+    endsequence
+
+    sequence s2;
+        int x;
+        (((a, x = 1) intersect (b, x = 1) ##0 (b, x = 1)) intersect a) ##1 x == 1;
+    endsequence
+
+    sequence s3;
+        int x;
+        ((a, x = 1)[*0] intersect (a, x = 1)) ##1 x == 1;
+    endsequence
+
+    sequence s4(x);
+        (1, x = 1);
+    endsequence
+
+    sequence s5;
+        int x;
+        (s4(x)[*0] intersect (a, x = 1)) ##1 x == 1;
+    endsequence
+
+    assert property (@(posedge clk) s1);
+    assert property (@(posedge clk) s2);
+    assert property (@(posedge clk) s3);
+    assert property (@(posedge clk) s5);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssertionLocalUnassigned);
+}
