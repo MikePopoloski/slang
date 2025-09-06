@@ -6,24 +6,34 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+* Implemented all of the rules related to assertion local variable definite assignment flow. slang will now diagnose use of assertion locals before they have been assigned, according to the rules in the LRM.
 * Explicit package export directives now correctly require a corresponding import (wildcard or explicit)
 * Non-variable and non-output ANSI port declarations are now correctly prevented from specifying an initializer expression
 * Parameter port declarations now correctly require an explicit keyword when an implicit type syntax with dimensions or signing keyword is used
 * Covergroup formal arguments are now correctly always considered `const`
 * Non-blocking assignments with intra-assignment delays are now correctly allowed in `always_comb` blocks
+* Checker arguments that reference automatic variables or have const casts are now correctly disallowed from being used in procedural code
+* Checker procedures are now correctly disallowed from referencing covergroup types
 
 ### Notable Breaking Changes
+* AST serialization: typedefs and enum type references are now printed as links to the original definition instead of repeating the type for each usage
 
 ### New Features
 * Added [-Wcase-none](https://sv-lang.com/warning-ref.html#case-none) which warns about constant case statements that don't match on any items
+* Added [-Wunnamed-generate](https://sv-lang.com/warning-ref.html#unnamed-generate) which warns for generate blocks that don't have a user-provided name
+* Added [-Wvacuous-cover](https://sv-lang.com/warning-ref.html#vacuous-cover) which warns about cover statements for properties that allow vacuous success (which can result in misleading cover results) 
 * Added a `--cst-json` option to serialize the concrete syntax tree to JSON (thanks to @AndrewNolte)
 * Added `--allow-genblk-reference` as a compatibility option to allow referencing unnamed generate blocks via their external names (thanks to @toddstrader)
-* Added [-Wunnamed-generate](https://sv-lang.com/warning-ref.html#unnamed-generate) which warns for generate blocks that don't have a user-provided name
 * Added a `--diag-column-unit` option to control whether column numbers in diagnostics respect UTF-8 encoding and tab stop widths, which is now the new default. The old behavior can be selected with `--diag-column-unit=byte`.
+* Added a `--depfile-sort` option to sort dependencies written to depfiles in topological order according to their use in the design (thanks to @AndrewNolte)
+* Added a `--depfile-trim` option to remove dependencies from the written depfile that aren't actually used in the design (thanks to @AndrewNolte)
+* The `--compat` flag now accepts `all` to enable all compatibility flags at once, to maximize the chances that slang will accept your code that works with other tools but may not comply with the LRM
+* Added a `--disable-local-includes` flag to mimic the behavior of VCS where `` `include `` directives don't search relative to the including file
 
 ### Improvements
 * -Wcase-dup no longer warns if the duplicate items are all constant case items that don't match a known constant case expression
 * Performing concatenation of two slashes in a macro expansion now expands to a line comment, matching the behavior of other tools
+* The preprocessor will now implicitly concatenate tokens that result from back-to-back macro expansions even if there is no explicit macro concatenation operator used, to increase compatibility with other tools
 
 ### Fixes
 * Fixed enum base type check to properly error for multidimensional vector types
@@ -40,15 +50,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a crash when evaluating top-level constant expression with pattern variables
 * We now properly report an error instead of crashing for subroutine formal arguments that call their parent function recursively from their default value expression
 * Fixed a crash in the preprocessor when there are ignored back-to-back macro concatenation tokens inside a macro expansion
+* Fixed source ranges written by AST serialization for AST nodes that don't have syntax pointers
 
 ### Tools & Bindings
 #### pyslang
 * Upgraded to pybind11 3.0, which brings improved performance, smart_holder and native_enum features
 
 #### slang-tidy
+* The `--skip-file` and `--skip-path` slang-tidy options now also imply `--suppress-warnings` for those same paths
 * Fixed a crash in OnlyANSIPortDecls checker when ports don't connect to an internal symbol (thanks to @likeamahoney)
 * Fixed assertion in EnforcePortSuffix checker with ports that don't have a name (thanks to @likeamahoney)
 * Fixed a crash when an invalid value is provided for the `--code` flag (thanks to @likeamahoney)
+* Made the `--dump-config` option actually work correctly (thanks to @likeamahoney)
 
 
 ## [v9.0] - 2025-07-30
