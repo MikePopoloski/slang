@@ -64,6 +64,121 @@ static bool isSameClock(const TimingControl& left, const TimingControl& right) {
     return le.expr.syntax->isEquivalentTo(*re.expr.syntax);
 }
 
+struct BlockedVarsVisitor {
+    flat_hash_set<const Symbol*> blocked;
+    flat_hash_set<const Symbol*> sampled;
+
+    void visit(const AssertionInstanceExpression& expr) {
+        if (expr.isRecursiveProperty)
+            return;
+
+        auto savedBlocked = std::move(blocked);
+        auto savedSampled = std::move(sampled);
+        blocked.clear();
+        sampled.clear();
+
+        expr.body.visit(*this);
+
+        blocked = std::move(savedBlocked);
+        sampled = std::move(savedSampled);
+
+        // Output local variable formal args are now definitely assigned.
+        for (auto& [formal, actual] : expr.arguments) {
+            if (formal->isLocalVar() && formal->direction == ArgumentDirection::Out) {
+                if (auto init = std::get_if<const Expression*>(&actual)) {
+                    if (auto sym = (*init)->getSymbolReference())
+                        sampled.emplace(sym);
+                }
+            }
+        }
+    }
+
+    void visit(const SimpleAssertionExpr& expr) {
+        // If this is a direct sequence instance then we can return its result directly.
+        if (expr.expr.kind == ExpressionKind::AssertionInstance)
+            return visit(expr.expr.as<AssertionInstanceExpression>());
+
+        // TODO: triggered / matched calls
+        // TODO: zero repetition
+    }
+
+    void visit(const SequenceConcatExpr& expr) {
+        for (auto& elem : expr.elements) {
+            // TODO: the "block" of a concat should not include
+            // whatever flows out and is not blocked by later elems.
+            elem.sequence->visit(*this);
+        }
+    }
+
+    void visit(const SequenceWithMatchExpr& expr) {
+        // TODO: zero repetition
+        expr.expr.visit(*this);
+        handleMatchItems(expr.matchItems);
+    }
+
+    void visit(const FirstMatchAssertionExpr& expr) {
+        expr.seq.visit(*this);
+        handleMatchItems(expr.matchItems);
+    }
+
+    void visit(const ClockingAssertionExpr& expr) { expr.expr.visit(*this); }
+
+    void visit(const BinaryAssertionExpr& expr) {
+        switch (expr.op) {
+            case BinaryAssertionOperator::Or:
+                // Simple union of both sides.
+                expr.left.visit(*this);
+                expr.right.visit(*this);
+                break;
+            case BinaryAssertionOperator::Intersect:
+            case BinaryAssertionOperator::Throughout:
+            case BinaryAssertionOperator::Within:
+            case BinaryAssertionOperator::And: {
+                // Union both sides, plus add in whatever has been
+                // "sampled" on both sides.
+                sampled.clear();
+                expr.left.visit(*this);
+
+                auto leftSampled = std::move(sampled);
+                sampled.clear();
+                expr.right.visit(*this);
+
+                // The resulting sampled set should be the union of both sides.
+                auto rightSampled = sampled;
+                sampled.insert(leftSampled.begin(), leftSampled.end());
+
+                // The resulting blocked set should union the sampled intersection.
+                erase_if(leftSampled,
+                         [&](const Symbol* sym) { return !rightSampled.contains(sym); });
+                blocked.insert(leftSampled.begin(), leftSampled.end());
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    // These should never be called because this visitor is only used for sequences.
+    void visit(const InvalidAssertionExpr&) {}
+    void visit(const StrongWeakAssertionExpr&) {}
+    void visit(const UnaryAssertionExpr&) {}
+    void visit(const AbortAssertionExpr&) {}
+    void visit(const ConditionalAssertionExpr&) {}
+    void visit(const CaseAssertionExpr&) {}
+    void visit(const DisableIffAssertionExpr&) {}
+
+private:
+    void handleMatchItems(std::span<const Expression* const> matchItems) {
+        for (auto item : matchItems) {
+            if (item->kind == ExpressionKind::Assignment) {
+                auto& assign = item->as<AssignmentExpression>();
+                if (auto sym = assign.left().getSymbolReference())
+                    sampled.emplace(sym);
+            }
+        }
+    }
+};
+
 enum class VisitFlags { None = 0, RequireSequence = 1, InClockingBlock = 2 };
 SLANG_BITMASK(VisitFlags, InClockingBlock)
 
@@ -406,21 +521,12 @@ struct AssertionVisitor {
     }
 
     VisitResult visit(const BinaryAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
-        auto checkBadSeq = [&](const VisitResult& lresult, const VisitResult& rresult) {
-            if (lresult.isMulticlockedSeq || rresult.isMulticlockedSeq ||
-                (!lresult.clocks.empty() && !rresult.clocks.empty() &&
-                 !isSameClock(*lresult.clocks[0], *rresult.clocks[0]))) {
-                badMulticlockedSeq(expr.left, expr.right, expr.opRange);
-            }
-        };
-
         switch (expr.op) {
             case BinaryAssertionOperator::Intersect:
             case BinaryAssertionOperator::Throughout:
             case BinaryAssertionOperator::Within: {
-                auto lresult = expr.left.visit(*this, outerClock, flags | VF::RequireSequence);
-                auto rresult = expr.right.visit(*this, outerClock, flags | VF::RequireSequence);
-                checkBadSeq(lresult, rresult);
+                VisitResult lresult, rresult;
+                handleBinarySeqOp(expr, outerClock, flags, lresult, rresult);
                 return lresult;
             }
             case BinaryAssertionOperator::Until:
@@ -435,9 +541,7 @@ struct AssertionVisitor {
                 // Clocks come from both sides.
                 VisitResult lresult, rresult;
                 if (flags.has(VF::RequireSequence)) {
-                    lresult = expr.left.visit(*this, outerClock, flags);
-                    rresult = expr.right.visit(*this, outerClock, flags);
-                    checkBadSeq(lresult, rresult);
+                    handleBinarySeqOp(expr, outerClock, flags, lresult, rresult);
                 }
                 else {
                     lresult = visitProperty(expr.left, outerClock, flags);
@@ -594,6 +698,36 @@ private:
             else {
                 visitExpr(*expr);
             }
+        }
+    }
+
+    void handleBinarySeqOp(const BinaryAssertionExpr& expr, Clock outerClock, bitmask<VF> flags,
+                           VisitResult& lresult, VisitResult& rresult) {
+        auto savedVars = assignedVars;
+        lresult = expr.left.visit(*this, outerClock, flags | VF::RequireSequence);
+
+        std::swap(assignedVars, savedVars);
+        rresult = expr.right.visit(*this, outerClock, flags | VF::RequireSequence);
+
+        if (lresult.isMulticlockedSeq || rresult.isMulticlockedSeq ||
+            (!lresult.clocks.empty() && !rresult.clocks.empty() &&
+             !isSameClock(*lresult.clocks[0], *rresult.clocks[0]))) {
+            badMulticlockedSeq(expr.left, expr.right, expr.opRange);
+        }
+
+        if (expr.op == BinaryAssertionOperator::Or) {
+            // Definitely assigned variables are the intersection of the two sides.
+            erase_if(assignedVars, [&](const Symbol* sym) { return !savedVars.contains(sym); });
+        }
+        else {
+            // Definitely assigned variables are the union of the two sides,
+            // minus those that are "blocked" according to F.5.4.
+            assignedVars.insert(savedVars.begin(), savedVars.end());
+
+            BlockedVarsVisitor blockedVisitor;
+            expr.visit(blockedVisitor);
+            erase_if(assignedVars,
+                     [&](const Symbol* sym) { return blockedVisitor.blocked.contains(sym); });
         }
     }
 

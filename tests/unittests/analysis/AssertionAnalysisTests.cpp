@@ -2111,3 +2111,59 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AssertionFormalUnassigned);
 }
+
+TEST_CASE("Sequences local variable flow through operators") {
+    auto& text = R"(
+`define true 1'b1
+
+module m(input a, b, c, d, int e, data, data1, data2, clk);
+    sequence s4;
+        int x;
+        (a ##1 (b, x = data) ##1 c) or (d ##1 (e==x)); // illegal
+    endsequence
+
+    sequence s5;
+        int x,y;
+        ((a ##1 (b, x = data, y = data1) ##1 c)
+            or (d ##1 (`true, x = data) ##0 (e==x))) ##1 (y==data2);
+        // illegal because y is not in the intersection
+    endsequence
+
+    sequence s6;
+        int x,y;
+        ((a ##1 (b, x = data, y = data1) ##1 c)
+            or (d ##1 (`true, x = data) ##0 (e==x))) ##1 (x==data2);
+        // legal because x is in the intersection
+    endsequence
+
+    sequence s7;
+        int x,y;
+        ((a ##1 (b, x = data, y = data1) ##1 c)
+            and (d ##1 (`true, x = data) ##0 (e==x))) ##1 (x==data2);
+        // illegal because x is common to both threads
+    endsequence
+
+    sequence s8;
+        int x,y;
+        ((a ##1 (b, x = data, y = data1) ##1 c)
+            and (d ##1 (`true, x = data) ##0 (e==x))) ##1 (y==data2);
+        // legal because y is in the difference
+    endsequence
+
+    assert property (@(posedge clk) s4);
+    assert property (@(posedge clk) s5);
+    assert property (@(posedge clk) s6);
+    assert property (@(posedge clk) s7);
+    assert property (@(posedge clk) s8);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::AssertionLocalUnassigned);
+    CHECK(diags[1].code == diag::AssertionLocalUnassigned);
+    CHECK(diags[2].code == diag::AssertionLocalUnassigned);
+}
