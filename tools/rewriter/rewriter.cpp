@@ -9,6 +9,8 @@
 //------------------------------------------------------------------------------
 
 #include <cstdio>
+
+#include "slang/text/CharInfo.h"
 #if defined(_WIN32)
 #    include <fcntl.h>
 #    include <io.h>
@@ -16,6 +18,7 @@
 
 #include <fmt/format.h>
 #include <optional>
+#include <sstream>
 
 #include "slang/driver/Driver.h"
 #include "slang/syntax/SyntaxPrinter.h"
@@ -25,6 +28,36 @@
 using namespace slang;
 using namespace slang::syntax;
 using namespace slang::parsing;
+
+// squash consecutive blank lines into single blank lines
+std::string squashBlankLines(const std::string& input) {
+    std::istringstream stream(input);
+
+    std::string result;
+    result.reserve(input.size());
+
+    std::string line;
+    bool lastLineWasEmpty = false;
+
+    // Process remaining lines
+    while (std::getline(stream, line)) {
+        const bool isEmpty = std::ranges::all_of(line, isWhitespace);
+
+        if (!isEmpty) {
+            // Line has content, always include it with full indentation
+            result.append(line);
+            result.push_back('\n');
+            lastLineWasEmpty = false;
+        }
+        else if (!lastLineWasEmpty) {
+            // First empty line in a sequence, include it as a single empty line
+            result.push_back('\n');
+            lastLineWasEmpty = true;
+        }
+    }
+
+    return result;
+}
 
 int main(int argc, char** argv) {
     OS::setupConsole();
@@ -62,8 +95,8 @@ int main(int argc, char** argv) {
 
         // Trivia options
         driver.cmdLine.add("--exclude-comments", excludeComments, "Exclude comments in output");
-        driver.cmdLine.add("--squash-newlines", squashNewlines,
-                           "Squash adjacent newlines into one");
+        driver.cmdLine.add("--squash-blanklines", squashNewlines,
+                           "Squash adjacent blank lines into one");
 
         // Missing/skipped node options
         driver.cmdLine.add("--include-missing", includeMissing,
@@ -113,8 +146,6 @@ int main(int argc, char** argv) {
 
         if (excludeComments == true)
             printer.setIncludeComments(false);
-        if (squashNewlines == true)
-            printer.setSquashNewlines(true);
         if (excludeDirectives == true)
             printer.setIncludeDirectives(false);
 
@@ -128,7 +159,14 @@ int main(int argc, char** argv) {
         _setmode(_fileno(stdout), _O_BINARY);
 #endif
 
-        printf("%s", printer.print(*tree).str().c_str());
+        std::string output = printer.print(*tree).str();
+
+        // Apply post-processing if requested
+        if (squashNewlines == true) {
+            output = squashBlankLines(output);
+        }
+
+        printf("%s", output.c_str());
         return 0;
     }
     SLANG_CATCH(const std::exception& e) {
