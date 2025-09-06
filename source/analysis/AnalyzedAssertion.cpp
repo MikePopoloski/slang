@@ -17,6 +17,13 @@
 #include "slang/util/Enum.h"
 #include "slang/util/FlatMap.h"
 
+// This works around an annoying MSVC bug where it warns
+// in debug mode even though the code is reachable.
+#ifdef _MSC_VER
+#    pragma warning(push)
+#    pragma warning(disable : 4702) // unreachable code
+#endif
+
 namespace slang::analysis {
 
 using namespace ast;
@@ -312,18 +319,9 @@ struct AssertionVisitor {
             }
 
             if constexpr (HasVisitExprs<T, SeqExprVisitor>) {
-                // This works around an annoying MSVC bug where it warns even
-                // though the code is reachable.
-#ifdef _MSC_VER
-#    pragma warning(push)
-#    pragma warning(disable : 4702) // unreachable code
-#endif
                 if constexpr (std::is_base_of_v<Expression, T>) {
                     parentExpr = &expr;
                 }
-#ifdef _MSC_VER
-#    pragma warning(pop)
-#endif
 
                 expr.visitExprs(*this);
                 parentExpr = nullptr;
@@ -936,3 +934,7 @@ AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingContr
 }
 
 } // namespace slang::analysis
+
+#ifdef _MSC_VER
+#    pragma warning(pop)
+#endif
