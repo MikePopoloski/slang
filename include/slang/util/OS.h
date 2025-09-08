@@ -71,6 +71,8 @@ public:
     static inline std::string capturedStdout;
     static inline std::string capturedStderr;
 
+    static int getpid();
+
 private:
     OS() = default;
 

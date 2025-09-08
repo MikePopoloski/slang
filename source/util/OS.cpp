@@ -24,6 +24,8 @@
 #    include <Windows.h>
 #    include <fcntl.h>
 #    include <io.h>
+#    include <process.h>
+
 #else
 #    include <fcntl.h>
 #    include <sys/stat.h>
@@ -378,6 +380,17 @@ std::string OS::parseEnvVar(const char*& ptr, const char* end) {
         // This is not a possible variable name so just return what we have.
         return "$"s + c;
     }
+}
+
+int OS::getpid() {
+#if defined(_WIN32)
+    return ::_getpid();
+#elif defined(__wasi__)
+    // WASI doesn't have a concept of process IDs
+    return 1;
+#else
+    return ::getpid();
+#endif
 }
 
 } // namespace slang
