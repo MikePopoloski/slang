@@ -240,24 +240,25 @@ DriverList DriverTracker::getDrivers(const ValueSymbol& symbol) const {
     });
     return drivers;
 }
-    
-DriverList DriverTracker::getModportDrivers(const ast::ValueSymbol &symbol) const {
+
+DriverList DriverTracker::getModportDrivers(const ast::ValueSymbol& symbol) const {
     DriverList drivers;
-    modportPortDrivers.cvisit(&symbol, [&drivers](auto& item) { 
-        for (auto &[symbol, bounds] : item.second) {
-        drivers.emplace_back(symbol, bounds);
+    modportPortDrivers.cvisit(&symbol, [&drivers](auto& item) {
+        for (auto& [symbol, bounds] : item.second) {
+            drivers.emplace_back(symbol, bounds);
         }
-        });
+    });
     return drivers;
 }
 
-std::optional<DriverTracker::InstanceState> DriverTracker::getInstanceState(const InstanceBodySymbol &symbol) const {
-  if (!instanceMap.contains(&symbol)) {
-      return std::nullopt;
-      }
-  InstanceState state;
-  instanceMap.cvisit(&symbol, [&state](auto& item) { state = item.second; });
-  return state;
+std::optional<DriverTracker::InstanceState> DriverTracker::getInstanceState(
+    const InstanceBodySymbol& symbol) const {
+    if (!instanceMap.contains(&symbol)) {
+        return std::nullopt;
+    }
+    InstanceState state;
+    instanceMap.cvisit(&symbol, [&state](auto& item) { state = item.second; });
+    return state;
 }
 
 static std::string getLSPName(const ValueSymbol& symbol, const ValueDriver& driver) {

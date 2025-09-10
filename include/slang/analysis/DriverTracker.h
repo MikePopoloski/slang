@@ -33,7 +33,6 @@ class AnalyzedProcedure;
 /// A helper class that tracks drivers for all symbols in a thread-safe manner.
 class DriverTracker {
 public:
-    
     // State tracked per canonical instance.
     struct InstanceState {
         struct IfacePortDriver {
@@ -86,10 +85,10 @@ public:
     DriverList getDrivers(const ast::ValueSymbol& symbol) const;
 
     /// Return all of the tracked drivers for the given modport symbol.
-    DriverList getModportDrivers(const ast::ValueSymbol &symbol) const;
+    DriverList getModportDrivers(const ast::ValueSymbol& symbol) const;
 
     /// Return the state tracked per canonical instance.
-    std::optional<InstanceState> getInstanceState(const ast::InstanceBodySymbol &symbol) const;
+    std::optional<InstanceState> getInstanceState(const ast::InstanceBodySymbol& symbol) const;
 
 private:
     const ast::HierarchicalReference* addDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
