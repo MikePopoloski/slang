@@ -244,8 +244,8 @@ DriverList DriverTracker::getDrivers(const ValueSymbol& symbol) const {
 DriverList DriverTracker::getModportDrivers(const ast::ValueSymbol& symbol) const {
     DriverList drivers;
     modportPortDrivers.cvisit(&symbol, [&drivers](auto& item) {
-        for (auto& [symbol, bounds] : item.second) {
-            drivers.emplace_back(symbol, bounds);
+        for (auto& [driverSymbol, bounds] : item.second) {
+            drivers.emplace_back(driverSymbol, bounds);
         }
     });
     return drivers;
