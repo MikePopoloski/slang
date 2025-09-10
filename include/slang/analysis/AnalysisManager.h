@@ -144,7 +144,8 @@ public:
     DriverList getModportDrivers(const ast::ValueSymbol& symbol) const;
 
     /// Return the state tracked per canonical instance.
-    std::optional<DriverTracker::InstanceState> getInstanceState(const ast::InstanceBodySymbol& symbol) const;
+    std::optional<DriverTracker::InstanceState> getInstanceState(
+        const ast::InstanceBodySymbol& symbol) const;
 
     /// Collects and returns all issued analysis diagnostics.
     /// If @a sourceManager is provided it will be used to sort the diagnostics.
