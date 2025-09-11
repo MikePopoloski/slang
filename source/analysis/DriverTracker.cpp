@@ -131,7 +131,7 @@ void DriverTracker::noteNonCanonicalInstance(AnalysisContext& context, DriverAll
     auto canonical = instance.getCanonicalBody();
     SLANG_ASSERT(canonical);
 
-    std::vector<InstanceState::IfacePortDriver> ifacePortDrivers;
+    std::vector<InstanceDriverState::IfacePortDriver> ifacePortDrivers;
     auto updater = [&](auto& item) {
         auto& state = item.second;
         state.nonCanonicalInstances.push_back(&instance);
@@ -254,9 +254,9 @@ DriverList DriverTracker::getDrivers(const ValueSymbol& symbol) const {
     return drivers;
 }
 
-std::optional<InstanceState> DriverTracker::getInstanceState(
+std::optional<InstanceDriverState> DriverTracker::getInstanceState(
     const InstanceBodySymbol& symbol) const {
-    std::optional<InstanceState> state;
+    std::optional<InstanceDriverState> state;
     instanceMap.cvisit(&symbol, [&state](auto& item) { state = item.second; });
     return state;
 }
@@ -549,7 +549,7 @@ void DriverTracker::noteInterfacePortDriver(AnalysisContext& context, DriverAllo
     auto& symbol = scope->asSymbol();
     SLANG_ASSERT(symbol.kind == SymbolKind::InstanceBody);
 
-    InstanceState::IfacePortDriver ifacePortDriver{&ref, &driver};
+    InstanceDriverState::IfacePortDriver ifacePortDriver{&ref, &driver};
     std::vector<const ast::InstanceSymbol*> nonCanonicalInstances;
     auto updater = [&](auto& item) {
         auto& state = item.second;
@@ -689,7 +689,7 @@ static const Symbol* retargetIfacePort(const HierarchicalReference& ref,
 }
 
 void DriverTracker::applyInstanceSideEffect(AnalysisContext& context, DriverAlloc& driverAlloc,
-                                            const InstanceState::IfacePortDriver& ifacePortDriver,
+                                            const InstanceDriverState::IfacePortDriver& ifacePortDriver,
                                             const InstanceSymbol& instance) {
     auto& ref = *ifacePortDriver.ref;
     if (auto target = retargetIfacePort(ref, instance)) {

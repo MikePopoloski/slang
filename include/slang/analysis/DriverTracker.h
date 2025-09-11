@@ -31,7 +31,7 @@ class AnalysisContext;
 class AnalyzedProcedure;
 
 /// State tracked per canonical instance.
-struct SLANG_EXPORT InstanceState {
+struct SLANG_EXPORT InstanceDriverState {
     struct IfacePortDriver {
         not_null<const ast::HierarchicalReference*> ref;
         not_null<const ValueDriver*> driver;
@@ -85,7 +85,7 @@ public:
     DriverList getDrivers(const ast::ValueSymbol& symbol) const;
 
     /// Return the state tracked per canonical instance.
-    std::optional<InstanceState> getInstanceState(const ast::InstanceBodySymbol& symbol) const;
+    std::optional<InstanceDriverState> getInstanceState(const ast::InstanceBodySymbol& symbol) const;
 
 private:
     const ast::HierarchicalReference* addDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
@@ -95,7 +95,7 @@ private:
     void noteInterfacePortDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
                                  const ast::HierarchicalReference& ref, const ValueDriver& driver);
     void applyInstanceSideEffect(AnalysisContext& context, DriverAlloc& driverAlloc,
-                                 const InstanceState::IfacePortDriver& ifacePortDriver,
+                                 const InstanceDriverState::IfacePortDriver& ifacePortDriver,
                                  const ast::InstanceSymbol& instance);
     void propagateModportDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
                                 const ast::Expression& connectionExpr,
@@ -106,7 +106,7 @@ private:
                     const ast::Expression* initialLSP = nullptr);
 
     concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
-    concurrent_map<const ast::InstanceBodySymbol*, InstanceState> instanceMap;
+    concurrent_map<const ast::InstanceBodySymbol*, InstanceDriverState> instanceMap;
     concurrent_map<const ast::ValueSymbol*, DriverList> modportPortDrivers;
 };
 
