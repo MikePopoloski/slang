@@ -284,6 +284,11 @@ DriverList AnalysisManager::getDrivers(const ValueSymbol& symbol) const {
     return driverTracker.getDrivers(symbol);
 }
 
+std::optional<InstanceDriverState> AnalysisManager::getInstanceDriverState(
+    const ast::InstanceBodySymbol& symbol) const {
+    return driverTracker.getInstanceState(symbol);
+}
+
 Diagnostics AnalysisManager::getDiagnostics(const SourceManager* sourceManager) {
     wait();
 

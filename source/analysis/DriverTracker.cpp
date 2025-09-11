@@ -12,6 +12,7 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/LSPUtilities.h"
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 
 namespace slang::analysis {
@@ -130,7 +131,7 @@ void DriverTracker::noteNonCanonicalInstance(AnalysisContext& context, DriverAll
     auto canonical = instance.getCanonicalBody();
     SLANG_ASSERT(canonical);
 
-    std::vector<InstanceState::IfacePortDriver> ifacePortDrivers;
+    std::vector<InstanceDriverState::IfacePortDriver> ifacePortDrivers;
     auto updater = [&](auto& item) {
         auto& state = item.second;
         state.nonCanonicalInstances.push_back(&instance);
@@ -234,11 +235,30 @@ void DriverTracker::addDrivers(AnalysisContext& context, DriverAlloc& driverAllo
 
 DriverList DriverTracker::getDrivers(const ValueSymbol& symbol) const {
     DriverList drivers;
+
+    // If the symbol is a modport member, then return from the modport drivers.
+    if (symbol.kind == SymbolKind::ModportPort) {
+        modportPortDrivers.cvisit(&symbol, [&drivers](auto& item) {
+            for (auto& [driverSymbol, bounds] : item.second) {
+                drivers.emplace_back(driverSymbol, bounds);
+            }
+        });
+        return drivers;
+    }
+
+    // Otherwise lookup the generic drivers.
     symbolDrivers.cvisit(&symbol, [&drivers](auto& item) {
         for (auto it = item.second.begin(); it != item.second.end(); ++it)
             drivers.emplace_back(*it, it.bounds());
     });
     return drivers;
+}
+
+std::optional<InstanceDriverState> DriverTracker::getInstanceState(
+    const InstanceBodySymbol& symbol) const {
+    std::optional<InstanceDriverState> state;
+    instanceMap.cvisit(&symbol, [&state](auto& item) { state = item.second; });
+    return state;
 }
 
 static std::string getLSPName(const ValueSymbol& symbol, const ValueDriver& driver) {
@@ -529,7 +549,7 @@ void DriverTracker::noteInterfacePortDriver(AnalysisContext& context, DriverAllo
     auto& symbol = scope->asSymbol();
     SLANG_ASSERT(symbol.kind == SymbolKind::InstanceBody);
 
-    InstanceState::IfacePortDriver ifacePortDriver{&ref, &driver};
+    InstanceDriverState::IfacePortDriver ifacePortDriver{&ref, &driver};
     std::vector<const ast::InstanceSymbol*> nonCanonicalInstances;
     auto updater = [&](auto& item) {
         auto& state = item.second;
@@ -668,9 +688,9 @@ static const Symbol* retargetIfacePort(const HierarchicalReference& ref,
     return symbol;
 }
 
-void DriverTracker::applyInstanceSideEffect(AnalysisContext& context, DriverAlloc& driverAlloc,
-                                            const InstanceState::IfacePortDriver& ifacePortDriver,
-                                            const InstanceSymbol& instance) {
+void DriverTracker::applyInstanceSideEffect(
+    AnalysisContext& context, DriverAlloc& driverAlloc,
+    const InstanceDriverState::IfacePortDriver& ifacePortDriver, const InstanceSymbol& instance) {
     auto& ref = *ifacePortDriver.ref;
     if (auto target = retargetIfacePort(ref, instance)) {
         auto driver = context.alloc.emplace<ValueDriver>(*ifacePortDriver.driver);
