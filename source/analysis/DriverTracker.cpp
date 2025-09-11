@@ -237,7 +237,7 @@ DriverList DriverTracker::getDrivers(const ValueSymbol& symbol) const {
     DriverList drivers;
 
     // If the symbol is a modport member, then return from the modport drivers.
-    if (symbol.isKind(SymbolKind::Modport)) {
+    if (symbol.isKind(SymbolKind::ModportPort)) {
         modportPortDrivers.cvisit(&symbol, [&drivers](auto& item) {
             for (auto& [driverSymbol, bounds] : item.second) {
                 drivers.emplace_back(driverSymbol, bounds);
