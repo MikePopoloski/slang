@@ -283,14 +283,9 @@ void AnalysisManager::getTaskTimingControls(const CallExpression& expr,
 DriverList AnalysisManager::getDrivers(const ValueSymbol& symbol) const {
     return driverTracker.getDrivers(symbol);
 }
-
-DriverList AnalysisManager::getModportDrivers(const ast::ValueSymbol& symbol) const {
-    return driverTracker.getModportDrivers(symbol);
-}
-
-std::optional<DriverTracker::InstanceState> AnalysisManager::getInstanceState(
-    const ast::InstanceBodySymbol& symbol) const {
-    return driverTracker.getInstanceState(symbol);
+    
+std::optional<InstanceState> AnalysisManager::getInstanceState(const ast::InstanceBodySymbol& symbol) const {
+  return driverTracker.getInstanceState(symbol);
 }
 
 Diagnostics AnalysisManager::getDiagnostics(const SourceManager* sourceManager) {

@@ -29,24 +29,24 @@ namespace slang::analysis {
 
 class AnalysisContext;
 class AnalyzedProcedure;
+    
+/// State tracked per canonical instance.
+struct SLANG_EXPORT InstanceState {
+    struct IfacePortDriver {
+        not_null<const ast::HierarchicalReference*> ref;
+        not_null<const ValueDriver*> driver;
+    };
+
+    // Drivers that are applied through interface ports.
+    std::vector<IfacePortDriver> ifacePortDrivers;
+
+    // A list of instances that refer to the canonical one.
+    std::vector<const ast::InstanceSymbol*> nonCanonicalInstances;
+};
 
 /// A helper class that tracks drivers for all symbols in a thread-safe manner.
 class DriverTracker {
 public:
-    // State tracked per canonical instance.
-    struct InstanceState {
-        struct IfacePortDriver {
-            not_null<const ast::HierarchicalReference*> ref;
-            not_null<const ValueDriver*> driver;
-        };
-
-        // Drivers that are applied through interface ports.
-        std::vector<IfacePortDriver> ifacePortDrivers;
-
-        // A list of instances that refer to the canonical one.
-        std::vector<const ast::InstanceSymbol*> nonCanonicalInstances;
-    };
-
     using SymbolDriverMap = IntervalMap<uint64_t, const ValueDriver*, 5>;
     using DriverAlloc = SymbolDriverMap::allocator_type;
 
@@ -83,9 +83,6 @@ public:
 
     /// Returns all of the tracked drivers for the given symbol.
     DriverList getDrivers(const ast::ValueSymbol& symbol) const;
-
-    /// Return all of the tracked drivers for the given modport symbol.
-    DriverList getModportDrivers(const ast::ValueSymbol& symbol) const;
 
     /// Return the state tracked per canonical instance.
     std::optional<InstanceState> getInstanceState(const ast::InstanceBodySymbol& symbol) const;

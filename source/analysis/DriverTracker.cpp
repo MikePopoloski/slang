@@ -12,6 +12,7 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/LSPUtilities.h"
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 
 namespace slang::analysis {
@@ -234,6 +235,18 @@ void DriverTracker::addDrivers(AnalysisContext& context, DriverAlloc& driverAllo
 
 DriverList DriverTracker::getDrivers(const ValueSymbol& symbol) const {
     DriverList drivers;
+
+    // If the symbol is a modport member, then return from the modport drivers.
+    if (symbol.isKind(SymbolKind::Modport)) {
+      modportPortDrivers.cvisit(&symbol, [&drivers](auto& item) {
+          for (auto& [driverSymbol, bounds] : item.second) {
+              drivers.emplace_back(driverSymbol, bounds);
+          }
+      });
+      return drivers;
+    }
+
+    // Otherwise lookup the generic drivers.
     symbolDrivers.cvisit(&symbol, [&drivers](auto& item) {
         for (auto it = item.second.begin(); it != item.second.end(); ++it)
             drivers.emplace_back(*it, it.bounds());
@@ -241,22 +254,9 @@ DriverList DriverTracker::getDrivers(const ValueSymbol& symbol) const {
     return drivers;
 }
 
-DriverList DriverTracker::getModportDrivers(const ast::ValueSymbol& symbol) const {
-    DriverList drivers;
-    modportPortDrivers.cvisit(&symbol, [&drivers](auto& item) {
-        for (auto& [driverSymbol, bounds] : item.second) {
-            drivers.emplace_back(driverSymbol, bounds);
-        }
-    });
-    return drivers;
-}
-
-std::optional<DriverTracker::InstanceState> DriverTracker::getInstanceState(
+std::optional<InstanceState> DriverTracker::getInstanceState(
     const InstanceBodySymbol& symbol) const {
-    if (!instanceMap.contains(&symbol)) {
-        return std::nullopt;
-    }
-    InstanceState state;
+    std::optional<InstanceState> state;
     instanceMap.cvisit(&symbol, [&state](auto& item) { state = item.second; });
     return state;
 }
