@@ -688,9 +688,9 @@ static const Symbol* retargetIfacePort(const HierarchicalReference& ref,
     return symbol;
 }
 
-void DriverTracker::applyInstanceSideEffect(AnalysisContext& context, DriverAlloc& driverAlloc,
-                                            const InstanceDriverState::IfacePortDriver& ifacePortDriver,
-                                            const InstanceSymbol& instance) {
+void DriverTracker::applyInstanceSideEffect(
+    AnalysisContext& context, DriverAlloc& driverAlloc,
+    const InstanceDriverState::IfacePortDriver& ifacePortDriver, const InstanceSymbol& instance) {
     auto& ref = *ifacePortDriver.ref;
     if (auto target = retargetIfacePort(ref, instance)) {
         auto driver = context.alloc.emplace<ValueDriver>(*ifacePortDriver.driver);

@@ -141,7 +141,8 @@ public:
     DriverList getDrivers(const ast::ValueSymbol& symbol) const;
 
     /// Return the driver state tracked per canonical instance.
-    std::optional<InstanceDriverState> getInstanceDriverState(const ast::InstanceBodySymbol& symbol) const;
+    std::optional<InstanceDriverState> getInstanceDriverState(
+        const ast::InstanceBodySymbol& symbol) const;
 
     /// Collects and returns all issued analysis diagnostics.
     /// If @a sourceManager is provided it will be used to sort the diagnostics.

@@ -85,7 +85,8 @@ public:
     DriverList getDrivers(const ast::ValueSymbol& symbol) const;
 
     /// Return the state tracked per canonical instance.
-    std::optional<InstanceDriverState> getInstanceState(const ast::InstanceBodySymbol& symbol) const;
+    std::optional<InstanceDriverState> getInstanceState(
+        const ast::InstanceBodySymbol& symbol) const;
 
 private:
     const ast::HierarchicalReference* addDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
