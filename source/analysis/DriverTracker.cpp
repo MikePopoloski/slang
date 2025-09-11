@@ -238,12 +238,12 @@ DriverList DriverTracker::getDrivers(const ValueSymbol& symbol) const {
 
     // If the symbol is a modport member, then return from the modport drivers.
     if (symbol.isKind(SymbolKind::Modport)) {
-      modportPortDrivers.cvisit(&symbol, [&drivers](auto& item) {
-          for (auto& [driverSymbol, bounds] : item.second) {
-              drivers.emplace_back(driverSymbol, bounds);
-          }
-      });
-      return drivers;
+        modportPortDrivers.cvisit(&symbol, [&drivers](auto& item) {
+            for (auto& [driverSymbol, bounds] : item.second) {
+                drivers.emplace_back(driverSymbol, bounds);
+            }
+        });
+        return drivers;
     }
 
     // Otherwise lookup the generic drivers.

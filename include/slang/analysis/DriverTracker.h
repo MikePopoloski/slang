@@ -29,7 +29,7 @@ namespace slang::analysis {
 
 class AnalysisContext;
 class AnalyzedProcedure;
-    
+
 /// State tracked per canonical instance.
 struct SLANG_EXPORT InstanceState {
     struct IfacePortDriver {
