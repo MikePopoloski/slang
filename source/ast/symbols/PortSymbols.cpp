@@ -1253,28 +1253,6 @@ private:
     bool unnamedRefError = false;
 };
 
-struct PortBackrefVisitor {
-    const PortSymbol& port;
-
-    PortBackrefVisitor(const PortSymbol& port) : port(port) {}
-
-    template<typename T>
-    void visit(const T& expr) {
-        if constexpr (std::is_base_of_v<Expression, T>) {
-            switch (expr.kind) {
-                case ExpressionKind::NamedValue:
-                    expr.template as<NamedValueExpression>().symbol.addPortBackref(port);
-                    break;
-                default:
-                    if constexpr (HasVisitExprs<T, PortBackrefVisitor>) {
-                        expr.visitExprs(*this);
-                    }
-                    break;
-            }
-        }
-    }
-};
-
 } // end anonymous namespace
 
 PortSymbol::PortSymbol(std::string_view name, SourceLocation loc, bool isAnsiPort) :
@@ -1356,8 +1334,10 @@ const Type& PortSymbol::getType() const {
         if (!internalExpr->bad()) {
             Expression::checkConnectionDirection(*internalExpr, checkDir, context, location);
 
-            PortBackrefVisitor visitor(*this);
-            internalExpr->visit(visitor);
+            internalExpr->visitSymbolReferences([&](const Expression& expr, const Symbol&) {
+                if (expr.kind == ExpressionKind::NamedValue)
+                    expr.as<NamedValueExpression>().symbol.addPortBackref(*this);
+            });
         }
     }
 

@@ -439,31 +439,6 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
     return *assign;
 }
 
-struct ExpressionVarVisitor {
-    bool anyVars = false;
-
-    template<typename T>
-    void visit(const T& expr) {
-        if constexpr (std::is_base_of_v<Expression, T>) {
-            switch (expr.kind) {
-                case ExpressionKind::NamedValue:
-                case ExpressionKind::HierarchicalValue: {
-                    if (auto sym = expr.getSymbolReference()) {
-                        if (VariableSymbol::isKind(sym->kind))
-                            anyVars = true;
-                    }
-                    break;
-                }
-                default:
-                    if constexpr (HasVisitExprs<T, ExpressionVarVisitor>) {
-                        expr.visitExprs(*this);
-                    }
-                    break;
-            }
-        }
-    }
-};
-
 const TimingControl* ContinuousAssignSymbol::getDelay() const {
     if (delay)
         return *delay;
@@ -492,9 +467,14 @@ const TimingControl* ContinuousAssignSymbol::getDelay() const {
             auto& expr = getAssignment();
             if (expr.kind == ExpressionKind::Assignment) {
                 auto& left = expr.as<AssignmentExpression>().left();
-                ExpressionVarVisitor visitor;
-                left.visit(visitor);
-                if (visitor.anyVars)
+
+                bool anyVars = false;
+                left.visitSymbolReferences([&](const Expression&, const Symbol& sym) {
+                    if (VariableSymbol::isKind(sym.kind))
+                        anyVars = true;
+                });
+
+                if (anyVars)
                     context.addDiag(diag::Delay3OnVar, left.sourceRange);
             }
         }
