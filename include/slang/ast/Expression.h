@@ -10,6 +10,7 @@
 #include "slang/ast/ASTContext.h"
 #include "slang/ast/LValue.h"
 #include "slang/ast/SemanticFacts.h"
+#include "slang/util/Function.h"
 #include "slang/util/SmallMap.h"
 
 namespace slang::ast {
@@ -296,6 +297,9 @@ public:
     ///                    symbol reference or whether to consider only unpacked structs
     ///                    and arrays.
     const Symbol* getSymbolReference(bool allowPacked = true) const;
+
+    /// Visits all symbols referenced by this expression and all subexpressions.
+    void visitSymbolReferences(function_ref<void(const Expression&, const Symbol&)> callback) const;
 
     /// Returns true if any subexpression of this expression is a hierarchical reference.
     bool hasHierarchicalReference() const;

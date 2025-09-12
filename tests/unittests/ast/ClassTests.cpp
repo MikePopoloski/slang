@@ -3488,3 +3488,28 @@ endfunction
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Dist constraints on struct members count as rand") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    typedef struct {
+        logic a;
+        logic b;
+        logic c;
+    } s_t;
+
+    rand s_t s;
+
+    constraint c {
+        s.a dist {
+            0 :/ 90,
+            1 :/ 10
+        };
+    }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
