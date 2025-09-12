@@ -95,39 +95,6 @@ void ConstraintList::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-struct DistVarVisitor {
-    const ASTContext& context;
-    bool anyRandVars = false;
-
-    DistVarVisitor(const ASTContext& context) : context(context) {}
-
-    template<typename T>
-    void visit(const T& expr) {
-        if constexpr (std::is_base_of_v<Expression, T>) {
-            switch (expr.kind) {
-                case ExpressionKind::NamedValue:
-                case ExpressionKind::HierarchicalValue:
-                case ExpressionKind::MemberAccess:
-                case ExpressionKind::ElementSelect:
-                case ExpressionKind::RangeSelect: {
-                    if (auto sym = expr.getSymbolReference()) {
-                        RandMode mode = context.getRandMode(*sym);
-                        if (mode == RandMode::Rand)
-                            anyRandVars = true;
-                        else if (mode == RandMode::RandC)
-                            context.addDiag(diag::RandCInDist, expr.sourceRange);
-                    }
-                    break;
-                }
-                default:
-                    if constexpr (HasVisitExprs<T, DistVarVisitor>)
-                        expr.visitExprs(*this);
-                    break;
-            }
-        }
-    }
-};
-
 struct ConstraintExprVisitor {
     const ASTContext& context;
     bool failed = false;
@@ -250,10 +217,17 @@ struct ConstraintExprVisitor {
                     // Additional restrictions on dist expressions:
                     // - must contain at least one 'rand' var
                     // - cannot contain any 'randc' vars
-                    DistVarVisitor distVisitor(context);
+                    bool anyRandVars = false;
                     auto& left = expr.template as<DistExpression>().left();
-                    left.visit(distVisitor);
-                    if (!distVisitor.anyRandVars)
+                    left.visitSymbolReferences([&](const Expression& subExpr, const Symbol& sym) {
+                        RandMode mode = context.getRandMode(sym);
+                        if (mode == RandMode::Rand)
+                            anyRandVars = true;
+                        else if (mode == RandMode::RandC)
+                            context.addDiag(diag::RandCInDist, subExpr.sourceRange);
+                    });
+
+                    if (!anyRandVars)
                         context.addDiag(diag::RandNeededInDist, left.sourceRange);
                     return true;
                 }

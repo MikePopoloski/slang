@@ -121,6 +121,37 @@ struct Expression::HierarchicalVisitor {
     }
 };
 
+struct SymbolRefVisitor {
+    function_ref<void(const Expression&, const Symbol&)> callback;
+
+    SymbolRefVisitor(function_ref<void(const Expression&, const Symbol&)> callback) :
+        callback(callback) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            switch (expr.kind) {
+                case ExpressionKind::NamedValue:
+                case ExpressionKind::HierarchicalValue:
+                    callback(expr, expr.template as<ValueExpressionBase>().symbol);
+                    break;
+                case ExpressionKind::ArbitrarySymbol:
+                    callback(expr, *expr.template as<ArbitrarySymbolExpression>().symbol);
+                    break;
+                case ExpressionKind::MemberAccess:
+                    callback(expr, expr.template as<MemberAccessExpression>().member);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        if constexpr (HasVisitExprs<T, SymbolRefVisitor>) {
+            expr.visitExprs(*this);
+        }
+    }
+};
+
 // This visitor handles inserting implicit conversions into an expression
 // tree where necessary. SystemVerilog has an additional weird feature where
 // the type of one branch of an expression tree can bubble up and then propagate
@@ -599,6 +630,13 @@ const Symbol* Expression::getSymbolReference(bool allowPacked) const {
         default:
             return nullptr;
     }
+}
+
+void Expression::visitSymbolReferences(
+    function_ref<void(const Expression&, const Symbol&)> callback) const {
+
+    SymbolRefVisitor visitor(callback);
+    visit(visitor);
 }
 
 bool Expression::bad() const {
