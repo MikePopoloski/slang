@@ -271,7 +271,8 @@ private:
 
     bool checkType(const Expression& expr) {
         if (!expr.type->isValidForRand(RandMode::Rand,
-                                       context.getCompilation().languageVersion())) {
+                                       context.getCompilation().languageVersion()) &&
+            !expr.type->isUnbounded()) {
             context.addDiag(diag::InvalidConstraintExpr, expr.sourceRange) << *expr.type;
             return false;
         }
