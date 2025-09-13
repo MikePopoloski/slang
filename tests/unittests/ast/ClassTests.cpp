@@ -3513,3 +3513,23 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Dist ranges with $") {
+    auto tree = SyntaxTree::fromText(R"(
+class c;
+    rand logic [15:0] a;
+
+    constraint a_c {
+        a dist {
+            [1:9]    :/ 8,
+            [10:100] :/ 8,
+            [101:$]  :/ 1
+        };
+    }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
