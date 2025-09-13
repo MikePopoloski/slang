@@ -678,6 +678,7 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::SplitDistWeightOp, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::DPIPureTask, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::SpecifyPathConditionExpr, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::SolveBeforeDisallowed, DiagnosticSeverity::Error);
     }
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);

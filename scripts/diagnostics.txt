@@ -231,7 +231,6 @@ error Delay3NotAllowed "'{}' gates can have a maximum of two delay values"
 error Delay3UdpNotAllowed "instances of user-defined primitives can have a maximum of two delay values"
 error RandOnPackedMember "packed members cannot have random modifiers"
 error RandOnUnionMember "members of unions cannot have random modifiers"
-error SolveBeforeDisallowed "constraint ordering directive is not allowed within a nested constraint block"
 error InvalidPackageDecl "invalid package declaration"
 error InvalidRepeatRange "invalid repetition range"
 error InvalidPropertyIndex "only a single count of cycles is allowed for '{}' expression"
@@ -313,6 +312,7 @@ warning lifetime-prototype LifetimeForPrototype "lifetime specifier is not allow
 warning nonstandard-dist NonstandardDist "use of parentheses around 'dist' expression is non-standard"
 warning empty-body EmptyBody "{} has empty body (put the semicolon on a separate line to silence this warning)"
 warning split-distweight-op SplitDistWeightOp "split dist weight operator is not allowed; SystemVerilog requires that they be joined together"
+warning nested-solve-before SolveBeforeDisallowed "constraint ordering directive is not allowed within a nested constraint block"
 note NoteToMatchThis "to match this '{}'"
 note NoteLastBlockStarted "last complete block started here"
 note NoteLastBlockEnded "and ended here"
@@ -1223,7 +1223,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
                   split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
                   dup-config-rule unused-config-cell unused-config-instance specify-condition-expr
-                  seq-no-match case-too-complex }
+                  seq-no-match case-too-complex nested-solve-before }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

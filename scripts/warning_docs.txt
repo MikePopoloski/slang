@@ -1238,6 +1238,19 @@ localparam int i = 1;
 typedef enum { A[i:3] } e_t;
 ```
 
+-Wnested-solve-before
+A `solve before` constraint is nested inside another constraint. This is not allowed in
+SystemVerilog but can be downgraded to a warning for compatibility with other tools.
+```
+class A;
+    int arr[3];
+    rand int a, b;
+    constraint C {
+        foreach (arr[i]) solve a before b;
+    }
+endclass
+```
+
 @category Macros
 
 -Wignored-macro-paste
