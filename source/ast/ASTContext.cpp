@@ -101,18 +101,33 @@ void ASTContext::setAttributes(const Expression& expr,
                                    AttributeSymbol::fromSyntax(syntax, *scope, getLocation()));
 }
 
-Diagnostic& ASTContext::addDiag(DiagCode code, SourceLocation location) const {
-    auto& diag = scope->addDiag(code, location);
-    if (assertionInstance)
+template<typename TLoc>
+Diagnostic& ASTContext::addDiagImpl(DiagCode code, TLoc loc) const {
+    if (assertionInstance) {
+        // If we're in an assertion instance we need to walk up the
+        // instantiation chain to find the real scope, otherwise we
+        // might miss cases where we are in an uninstantiated scope.
+        auto curCtx = this;
+        while (curCtx->assertionInstance && curCtx->assertionInstance->prevContext &&
+               curCtx->assertionInstance->symbol &&
+               curCtx->assertionInstance->symbol->kind != SymbolKind::Checker) {
+            curCtx = curCtx->assertionInstance->prevContext;
+        }
+
+        auto& diag = curCtx->scope->addDiag(code, loc);
         addAssertionBacktrace(diag);
-    return diag;
+        return diag;
+    }
+
+    return scope->addDiag(code, loc);
+}
+
+Diagnostic& ASTContext::addDiag(DiagCode code, SourceLocation location) const {
+    return addDiagImpl(code, location);
 }
 
 Diagnostic& ASTContext::addDiag(DiagCode code, SourceRange sourceRange) const {
-    auto& diag = scope->addDiag(code, sourceRange);
-    if (assertionInstance)
-        addAssertionBacktrace(diag);
-    return diag;
+    return addDiagImpl(code, sourceRange);
 }
 
 bool ASTContext::requireIntegral(const Expression& expr) const {

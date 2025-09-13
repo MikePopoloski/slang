@@ -547,6 +547,9 @@ public:
 private:
     void evalRangeDimension(const syntax::SelectorSyntax& syntax, bool isPacked,
                             EvaluatedDimension& result) const;
+
+    template<typename TLoc>
+    Diagnostic& addDiagImpl(DiagCode code, TLoc location) const;
 };
 
 } // namespace slang::ast

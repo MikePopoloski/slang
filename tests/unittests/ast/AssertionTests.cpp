@@ -1757,3 +1757,31 @@ endmodule
     CHECK(diags[4].code == diag::VacuousCover);
     CHECK(diags[5].code == diag::VacuousCover);
 }
+
+TEST_CASE("Assertion instances in uninstantiated contexts -- GH #1512") {
+    auto tree = SyntaxTree::fromText(R"(
+module main
+  (
+   input wire clk,
+   input wire reset
+   );
+
+   wire a;
+
+   property delay (int CYCLES);
+      @(posedge clk) disable iff (reset) ($past(a, CYCLES));
+   endproperty
+
+   localparam int TICKS = 0;
+
+   if (TICKS < 0) begin: ticks_lt_zero
+      $warning("Property was given: %0d", -TICKS);
+      p: assume property (delay(-TICKS));
+   end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
