@@ -3533,3 +3533,22 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Inherited members incorrect used before decl error -- GH #1513") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    typedef enum {
+        X,
+        Y
+    } e_t;
+endclass
+
+class B extends A;
+    e_t e;
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
