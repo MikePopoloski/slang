@@ -37,10 +37,10 @@ struct SLANG_EXPORT InstanceDriverState {
         not_null<const ValueDriver*> driver;
     };
 
-    // Drivers that are applied through interface ports.
+    /// Drivers that are applied through interface ports.
     std::vector<IfacePortDriver> ifacePortDrivers;
 
-    // A list of instances that refer to the canonical one.
+    /// A list of instances that refer to the canonical one.
     std::vector<const ast::InstanceSymbol*> nonCanonicalInstances;
 };
 
