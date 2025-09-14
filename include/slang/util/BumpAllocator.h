@@ -79,6 +79,13 @@ public:
 #endif
     }
 
+    /// Unfreeze the allocator, allowing further allocations.
+    void unfreeze() {
+#if SLANG_ASSERT_ENABLED
+        frozen = false;
+#endif
+    }
+
     /// Returns true if the allocator is frozen, and false otherwise.
     bool isFrozen() const {
 #if SLANG_ASSERT_ENABLED

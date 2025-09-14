@@ -1167,6 +1167,8 @@ std::unique_ptr<AnalysisManager> Driver::runAnalysis(ast::Compilation& compilati
             diagEngine.issue(diag);
     }
 
+    compilation.unfreeze();
+
     return analysisManager;
 }
 
