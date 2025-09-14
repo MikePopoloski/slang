@@ -249,7 +249,7 @@ Token Lexer::lex(KeywordVersion keywordVersion) {
         sourceBuffer = sourceEnd - 1;
 
         triviaBuffer.push_back(Trivia(TriviaKind::DisabledText, lexeme()));
-        return Token(alloc, TokenKind::EndOfFile, triviaBuffer.copy(alloc), token.rawText(),
+        return Token(alloc, TokenKind::Unknown, triviaBuffer.copy(alloc), token.rawText(),
                      token.location());
     }
 
