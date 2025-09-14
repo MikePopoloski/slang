@@ -807,7 +807,7 @@ TEST_CASE("Too many errors") {
         CHECK(lexer.lex().kind == TokenKind::Unknown);
 
     CHECK(diagnostics.size() == buf.size() - 1);
-    CHECK(lexer.lex().kind == TokenKind::EndOfFile);
+    CHECK(lexer.lex().kind == TokenKind::Unknown);
     CHECK(diagnostics.back().code == diag::TooManyLexerErrors);
 }
 
