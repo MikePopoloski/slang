@@ -91,10 +91,16 @@ public:
         Token next = first;
         firstLocation = first.location();
 
+        // To restore previously matched number parsing status
+        // due to the fact that it may be rewrited due to recursion in `consume` and `peek` lexer
+        // methods.
+        bool validSaved;
         do {
             count++;
             int index = append(next, count == 1);
+            validSaved = valid;
             stream.consume();
+            valid = validSaved;
 
             if (index >= 0) {
                 // This handles a really obnoxious case: 'h 3e+2
@@ -114,7 +120,9 @@ public:
                     break;
             }
 
+            validSaved = valid;
             next = stream.peek();
+            valid = validSaved;
         } while (syntax::SyntaxFacts::isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
         return IntResult::vector(sizeToken, baseToken, finishValue(first, count == 1, isNegated));
