@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added [-Wcase-none](https://sv-lang.com/warning-ref.html#case-none) which warns about constant case statements that don't match on any items
 * Added [-Wunnamed-generate](https://sv-lang.com/warning-ref.html#unnamed-generate) which warns for generate blocks that don't have a user-provided name
 * Added [-Wvacuous-cover](https://sv-lang.com/warning-ref.html#vacuous-cover) which warns about cover statements for properties that allow vacuous success (which can result in misleading cover results)
+* Added [-Wnested-solve-before](https://sv-lang.com/warning-ref.html#nested-solve-before) which allows downgrading the error issued for nested `solve before` constraints, for compatibility with other tools (on by default for 'vcs' compat mode)
 * Added a `--cst-json` option to serialize the concrete syntax tree to JSON (thanks to @AndrewNolte)
 * Added `--allow-genblk-reference` as a compatibility option to allow referencing unnamed generate blocks via their external names (thanks to @toddstrader)
 * Added a `--diag-column-unit` option to control whether column numbers in diagnostics respect UTF-8 encoding and tab stop widths, which is now the new default. The old behavior can be selected with `--diag-column-unit=byte`.
@@ -51,6 +52,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * We now properly report an error instead of crashing for subroutine formal arguments that call their parent function recursively from their default value expression
 * Fixed a crash in the preprocessor when there are ignored back-to-back macro concatenation tokens inside a macro expansion
 * Fixed source ranges written by AST serialization for AST nodes that don't have syntax pointers
+* Fixed check for use of `rand` variables in dist constraints to work with struct member access
+* Fixed spurious error when using `$` in dist constraints
+* Fixed a bug that could cause diagnostics to be issued for assertions used within uninstantiated generate blocks
+* Fixed a bug that could cause "used before declared" errors to be issued for use of super class members in derived classes
+* Fixed lint-only mode to not run the analysis pass
+* Fixed a crash that could occur when the lexer gives up due to too many errors while parsing a pragma preprocessor directive
 
 ### Tools & Bindings
 #### pyslang
@@ -62,6 +69,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed assertion in EnforcePortSuffix checker with ports that don't have a name (thanks to @likeamahoney)
 * Fixed a crash when an invalid value is provided for the `--code` flag (thanks to @likeamahoney)
 * Made the `--dump-config` option actually work correctly (thanks to @likeamahoney)
+
+#### rewriter
+* Added a `--squash-blanklines` option to remove extra blank lines in the rewritten output (thanks to @AndrewNolte)
 
 
 ## [v9.0] - 2025-07-30
