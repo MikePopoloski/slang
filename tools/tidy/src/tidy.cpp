@@ -19,6 +19,7 @@
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
+#include "slang/util/String.h"
 #include "slang/util/VersionInfo.h"
 
 /// Performs a search for the .slang-tidy file on the current directory. If the file is not found,
