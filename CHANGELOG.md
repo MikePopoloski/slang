@@ -11,7 +11,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Non-variable and non-output ANSI port declarations are now correctly prevented from specifying an initializer expression
 * Parameter port declarations now correctly require an explicit keyword when an implicit type syntax with dimensions or signing keyword is used
 * Covergroup formal arguments are now correctly always considered `const`
-* Non-blocking assignments with intra-assignment delays are now correctly allowed in `always_comb` blocks
 * Checker arguments that reference automatic variables or have const casts are now correctly disallowed from being used in procedural code
 * Checker procedures are now correctly disallowed from referencing covergroup types
 
@@ -37,27 +36,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The preprocessor will now implicitly concatenate tokens that result from back-to-back macro expansions even if there is no explicit macro concatenation operator used, to increase compatibility with other tools
 
 ### Fixes
-* Fixed enum base type check to properly error for multidimensional vector types
-* An appropriate error is now issued for enums that specify themselves as their own base type
-* Fixed a bug when parsing multiple comma separated type parameter declarations in a module port list
-* Fixed a bug in the accounting of how many nested `for` loop steps have been taken during dataflow analysis
 * Unnamed covergroup types now print with a placeholder name in diagnostics and AST dumping instead of just an empty string
-* Fixed AST serialization to respect the `--disable-instance-caching` flag
 * Fixed a bug where sequences and properties with local variable formal arguments would rewrite their formal args when expanding, potentially resulting in spurious errors
-* Fixed the check for infinite recursion in hierarchy instantiations to actually work
-* Fixed potentially infinite recursion when evaluating variable initializers in a recursive function
-* Fixed potentially infinite recursion with bad `for` loops with a preceeding statement label
-* Fixed various issues related to handling invalid patterns in conditional statements
-* Fixed a crash when evaluating top-level constant expression with pattern variables
-* We now properly report an error instead of crashing for subroutine formal arguments that call their parent function recursively from their default value expression
-* Fixed a crash in the preprocessor when there are ignored back-to-back macro concatenation tokens inside a macro expansion
 * Fixed source ranges written by AST serialization for AST nodes that don't have syntax pointers
-* Fixed check for use of `rand` variables in dist constraints to work with struct member access
-* Fixed spurious error when using `$` in dist constraints
-* Fixed a bug that could cause diagnostics to be issued for assertions used within uninstantiated generate blocks
-* Fixed a bug that could cause "used before declared" errors to be issued for use of super class members in derived classes
 * Fixed lint-only mode to not run the analysis pass
-* Fixed a crash that could occur when the lexer gives up due to too many errors while parsing a pragma preprocessor directive
 
 ### Tools & Bindings
 #### pyslang
@@ -65,13 +47,38 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 #### slang-tidy
 * The `--skip-file` and `--skip-path` slang-tidy options now also imply `--suppress-warnings` for those same paths
+
+#### rewriter
+* Added a `--squash-blanklines` option to remove extra blank lines in the rewritten output (thanks to @AndrewNolte)
+
+
+## [v9.1] - 2025-09-21
+### Fixes
+* Non-blocking assignments with intra-assignment delays are now correctly allowed in `always_comb` blocks
+* Fixed enum base type check to properly error for multidimensional vector types
+* An appropriate error is now issued for enums that specify themselves as their own base type
+* Fixed a bug when parsing multiple comma separated type parameter declarations in a module port list
+* Fixed a bug in the accounting of how many nested `for` loop steps have been taken during dataflow analysis
+* Fixed AST serialization to respect the `--disable-instance-caching` flag
+* Fixed the check for infinite recursion in hierarchy instantiations to actually work
+* Fixed potentially infinite recursion when evaluating variable initializers in a recursive function
+* Fixed potentially infinite recursion with bad `for` loops with a preceeding statement label
+* Fixed various issues related to handling invalid patterns in conditional statements
+* Fixed a crash when evaluating top-level constant expression with pattern variables
+* We now properly report an error instead of crashing for subroutine formal arguments that call their parent function recursively from their default value expression
+* Fixed a crash in the preprocessor when there are ignored back-to-back macro concatenation tokens inside a macro expansion
+* Fixed check for use of `rand` variables in dist constraints to work with struct member access
+* Fixed spurious error when using `$` in dist constraints
+* Fixed a bug that could cause diagnostics to be issued for assertions used within uninstantiated generate blocks
+* Fixed a bug that could cause "used before declared" errors to be issued for use of super class members in derived classes
+* Fixed a crash that could occur when the lexer gives up due to too many errors while parsing a pragma preprocessor directive
+
+### Tools & Bindings
+#### slang-tidy
 * Fixed a crash in OnlyANSIPortDecls checker when ports don't connect to an internal symbol (thanks to @likeamahoney)
 * Fixed assertion in EnforcePortSuffix checker with ports that don't have a name (thanks to @likeamahoney)
 * Fixed a crash when an invalid value is provided for the `--code` flag (thanks to @likeamahoney)
 * Made the `--dump-config` option actually work correctly (thanks to @likeamahoney)
-
-#### rewriter
-* Added a `--squash-blanklines` option to remove extra blank lines in the rewritten output (thanks to @AndrewNolte)
 
 
 ## [v9.0] - 2025-07-30
