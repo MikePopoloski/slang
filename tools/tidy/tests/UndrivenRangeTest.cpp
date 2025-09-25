@@ -94,11 +94,13 @@ module offset_bus(input data_t i_input,
                   output data_t o_output);
   assign o_output = i_input;
 endmodule
-    )", {}, &output);
+    )",
+                               {}, &output);
     CHECK(result);
 }
 
-TEST_CASE("Undriven range: ensure variables with non-zero lower bounds report the correct undriven bits") {
+TEST_CASE("Undriven range: ensure variables with non-zero lower bounds report the correct undriven "
+          "bits") {
     std::string output;
     auto result = runCheckTest("UndrivenRange", R"(
 typedef logic [28:3] data_t;
@@ -106,7 +108,8 @@ module offset_bus(input data_t i_input,
                   output data_t o_output);
   assign o_output[28:4] = i_input;
 endmodule
-    )", {}, &output);
+    )",
+                               {}, &output);
     CHECK_FALSE(result);
     CHECK("\n" + output == R"(
 source:4:33: warning: [SYNTHESIS-20] variable o_output has undriven bits: 3
