@@ -120,12 +120,7 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("nextSibling", &Symbol::getNextSibling)
         .def_property_readonly("sourceLibrary", &Symbol::getSourceLibrary)
         .def_property_readonly("hierarchicalPath", &Symbol::getHierarchicalPath)
-        .def_property_readonly("lexicalPath",
-                               [](const Symbol& self) {
-                                   std::string str;
-                                   self.appendLexicalPath(str);
-                                   return str;
-                               })
+        .def_property_readonly("lexicalPath", &Symbol::getLexicalPath)
         .def("isDeclaredBefore",
              py::overload_cast<const Symbol&>(&Symbol::isDeclaredBefore, py::const_), "target"_a)
         .def("isDeclaredBefore",
