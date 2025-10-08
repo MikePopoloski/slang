@@ -100,6 +100,7 @@ void registerCompilation(py::module_& m) {
         .def("parseName", &Compilation::parseName, byrefint, "name"_a)
         .def("tryParseName", &Compilation::tryParseName, byrefint, "name"_a, "diags"_a)
         .def("createScriptScope", &Compilation::createScriptScope, byrefint)
+        .def("freeze", &Compilation::freeze)
         .def("getParseDiagnostics", &Compilation::getParseDiagnostics, byrefint)
         .def("getSemanticDiagnostics", &Compilation::getSemanticDiagnostics, byrefint)
         .def("getAllDiagnostics", &Compilation::getAllDiagnostics, byrefint)
