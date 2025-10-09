@@ -100,7 +100,6 @@ void registerCompilation(py::module_& m) {
         .def("parseName", &Compilation::parseName, byrefint, "name"_a)
         .def("tryParseName", &Compilation::tryParseName, byrefint, "name"_a, "diags"_a)
         .def("createScriptScope", &Compilation::createScriptScope, byrefint)
-        .def("freeze", &Compilation::freeze)
         .def("getParseDiagnostics", &Compilation::getParseDiagnostics, byrefint)
         .def("getSemanticDiagnostics", &Compilation::getSemanticDiagnostics, byrefint)
         .def("getAllDiagnostics", &Compilation::getAllDiagnostics, byrefint)
@@ -129,6 +128,7 @@ void registerCompilation(py::module_& m) {
         .def("getType", py::overload_cast<SyntaxKind>(&Compilation::getType, py::const_), byrefint,
              "kind"_a)
         .def("getNetType", &Compilation::getNetType, byrefint, "kind"_a)
+        .def("freeze", &Compilation::freeze)
         .def_property_readonly("defaultTimeScale", &Compilation::getDefaultTimeScale)
         .def_property_readonly("bitType", &Compilation::getBitType)
         .def_property_readonly("logicType", &Compilation::getLogicType)
