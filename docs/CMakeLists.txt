@@ -5,8 +5,8 @@
 
 FetchContent_Declare(
   mcss
-  URL https://github.com/MikePopoloski/m.css/releases/download/release-8/mcss.zip
-  URL_HASH MD5=39c52acc36aa3a604616f22dc2549ad8
+  URL https://github.com/MikePopoloski/m.css/releases/download/release-9/mcss.zip
+  URL_HASH MD5=8b8b25834d099a4e7d75733ae6060eeb
   SOURCE_DIR "${PROJECT_BINARY_DIR}/mcss"
   UPDATE_DISCONNECTED YES)
 FetchContent_MakeAvailable(mcss)
@@ -60,9 +60,11 @@ add_custom_command(
   OUTPUT ${DOXYGEN_INDEX_FILE}
   DEPENDS ${SLANG_PUBLIC_HEADERS} ${SLANG_DOX_FILES} ${DOXYGEN_EXAMPLE_DIR_LIST}
           ${CMAKE_CURRENT_BINARY_DIR}/warnings.dox
+          ${CMAKE_CURRENT_SOURCE_DIR}/index.html
   COMMAND "${CMAKE_COMMAND}" -E rm -rf ${CMAKE_CURRENT_BINARY_DIR}/html
           ${CMAKE_CURRENT_BINARY_DIR}/xml
-  COMMAND ${Python_EXECUTABLE} ${MCSS_DOXYGENPY_PATH} ${DOXYFILE_OUT}
+  COMMAND ${Python_EXECUTABLE} ${MCSS_DOXYGENPY_PATH} ${DOXYFILE_OUT} --mainpage
+          ${CMAKE_CURRENT_SOURCE_DIR}/index.html
   MAIN_DEPENDENCY ${DOXYFILE_OUT}
   ${DOXYFILE_IN}
   COMMENT "Generating docs"

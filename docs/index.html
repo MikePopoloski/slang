@@ -1,0 +1,84 @@
+<div>
+    <h1 style="margin-bottom: 0;">slang</h1>
+    <h3>SystemVerilog compilation, elaboration, analysis, tooling</h3>
+</div>
+
+<div class="m-container" style="margin-top:1rem;">
+    <div class="m-row">
+        <div class="m-col-t-6">
+            <aside class="m-block m-flat">
+                <h3 style="color: #a5c9ea">Complete Language Support</h3>
+                <p>slang has full support for parsing and elaborating all SystemVerilog language constructs,
+                    as specified in the 1800-2023 LRM.</p>
+                <p>See the <a href="language-support.html">language support page</a> for more details.</p>
+            </aside>
+        </div>
+        <div class="m-col-t-6">
+            <aside class="m-block m-flat">
+                <h3 style="color: #a5c9ea">Production Quality</h3>
+                <ul>
+                    <li>The fastest and most compliant SystemVerilog frontend (according to the open source
+                        <a href="https://chipsalliance.github.io/sv-tests-results/">chipsalliance test suite</a>)</li>
+                    <li>Comes with a wide array of <a href="command-line-ref.html#compat-option">compatibility options</a>,
+                        to support existing codebases built against other tools</li>
+                    <li>Designed to scale efficiently to large commercial-grade codebases</li>
+                    <li>Battle tested, fuzz tested, with high levels of <a href="https://codecov.io/gh/MikePopoloski/slang">unit test coverage</a></li>
+                </ul>
+            </aside>
+        </div>
+    </div>
+    <div class="m-row">
+        <div class="m-col-t-6">
+            <aside class="m-block m-flat">
+                <h3 style="color: #a5c9ea">Powerful Linting</h3>
+                <p>slang aims to provide high quality and comprehensible diagnostics, with a focus on
+                actionable suggestions and avoiding false positives.</p>
+                <p>slang comes with many <a href="warning-ref.html">built-in warnings</a>, and has many ways to
+                    <a href="command-line-ref.html#clr-warnings">configure</a> and
+                    <a href="user-manual.html#comment-directives">control</a> them</p>
+                <p>Custom rules can be written on top of slang; for example, see the <a href="tools.html#autotoc_md58">slang-tidy</a> tool.</p>
+            </aside>
+        </div>
+        <div class="m-col-t-6">
+            <aside class="m-block m-flat">
+                <h3 style="color: #a5c9ea">Designed as a Library</h3>
+                <p>slang is designed from the ground up to be used as a library, with a clean and well-documented
+                API for parsing, analyzing, and manipulating SystemVerilog code.</p>
+                <p>slang can be easily integrated into other tools, and comes with Python bindings
+                for easy scripting and prototyping.</p>
+                <p>See the <a href="api-reference.html">API documentation</a> for more details.</p>
+            </aside>
+        </div>
+    </div>
+    <div class="m-row">
+        <div class="m-col-t-6">
+            <aside class="m-block m-flat">
+                <h3 style="color: #a5c9ea">Use Cases</h3>
+                Some examples of things you can use slang for:
+                <ul>
+                    <li>Very fast syntax checking and linting tool</li>
+                    <li>Dumping the AST of your project to JSON</li>
+                    <li>Source code introspection via included Python bindings</li>
+                    <li>SystemVerilog code generation and refactoring</li>
+                    <li>As the engine for an editor language server</li>
+                    <li>As a fast and robust preprocessor that sits in front of downstream tools</li>
+                    <li>As a frontend for a synthesis or simulation tool, by including slang as a library</li>
+                </ul>
+            </aside>
+        </div>
+        <div class="m-col-t-6">
+            <aside class="m-block m-flat">
+                <h3 style="color: #a5c9ea">Notable Users</h3>
+                <ul>
+                    <li><a href="https://github.com/povik/yosys-slang">Yosys-slang</a> -- Synthesis tool</li>
+                    <li><a href="https://github.com/llvm/circt">CIRCT</a> -- Framework for EDA tools, with slang as the official Verilog frontend</li>
+                    <li><a href="https://github.com/jameshanlon/slang-netlist">slang-netlist</a> -- Netlist analysis tool</li>
+                    <li><a href="https://github.com/hudson-trading/slang-server">slang-server</a> -- Editor LSP</li>
+                    <li><a href="https://github.com/AsFigo/pyslint">pyslint</a> -- Linting framework</li>
+                    <li><a href="https://github.com/pieter3d/simview">simview</a> -- Design browser and waveform viewer</li>
+                    <li><a href="https://github.com/suzizecat/slang-lsp-tools">slang-lsp-tools</a> -- Editor LSP</li>
+                </ul>
+            </aside>
+        </div>
+    </div>
+</div>
