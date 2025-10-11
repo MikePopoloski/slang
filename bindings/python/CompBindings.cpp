@@ -128,6 +128,7 @@ void registerCompilation(py::module_& m) {
         .def("getType", py::overload_cast<SyntaxKind>(&Compilation::getType, py::const_), byrefint,
              "kind"_a)
         .def("getNetType", &Compilation::getNetType, byrefint, "kind"_a)
+        .def("freeze", &Compilation::freeze)
         .def_property_readonly("defaultTimeScale", &Compilation::getDefaultTimeScale)
         .def_property_readonly("bitType", &Compilation::getBitType)
         .def_property_readonly("logicType", &Compilation::getLogicType)
