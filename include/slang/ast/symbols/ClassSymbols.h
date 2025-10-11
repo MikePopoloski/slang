@@ -24,6 +24,7 @@ class Expression;
 class ForwardingTypedefSymbol;
 class GenericClassDefSymbol;
 
+/// Represents a class property declaration (i.e. a member variable).
 class SLANG_EXPORT ClassPropertySymbol final : public VariableSymbol {
 public:
     Visibility visibility;

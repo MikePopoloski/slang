@@ -15,6 +15,7 @@
 
 namespace slang::ast {
 
+/// Represents a statement block, either sequential or parallel.
 class SLANG_EXPORT StatementBlockSymbol final : public Symbol, public Scope {
 public:
     StatementBlockKind blockKind;
@@ -64,6 +65,7 @@ private:
     mutable const Statement* stmt = nullptr;
 };
 
+/// Represents a procedural block, such as an always block.
 class SLANG_EXPORT ProceduralBlockSymbol final : public Symbol {
 public:
     ProceduralBlockKind procedureKind;

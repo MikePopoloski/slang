@@ -173,6 +173,7 @@ private:
     mutable const InstanceBodySymbol* canonicalBody = nullptr;
 };
 
+/// The body of a module, interface, or program instance, which acts as the scope for its members.
 class SLANG_EXPORT InstanceBodySymbol final : public Symbol, public Scope {
 public:
     /// The parent instance for which this is the body.
@@ -231,6 +232,7 @@ private:
     std::span<const ParameterSymbolBase* const> parameters;
 };
 
+/// Represents an array of instances.
 class SLANG_EXPORT InstanceArraySymbol final : public Symbol, public Scope {
 public:
     std::span<const Symbol* const> elements;
@@ -320,6 +322,7 @@ private:
     mutable bool mustBeChecker = false;
 };
 
+/// Represents an instance of a built-in or user-defined primitive.
 class SLANG_EXPORT PrimitiveInstanceSymbol final : public InstanceSymbolBase {
 public:
     const PrimitiveSymbol& primitiveType;

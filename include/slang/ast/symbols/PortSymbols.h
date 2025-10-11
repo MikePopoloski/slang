@@ -167,6 +167,7 @@ private:
     mutable std::optional<std::span<const ConstantRange>> range;
 };
 
+/// Represents a connection to a port on an instance.
 class SLANG_EXPORT PortConnection {
 public:
     using IfaceConn = InterfacePortSymbol::IfaceConn;

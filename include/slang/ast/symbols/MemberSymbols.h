@@ -247,6 +247,7 @@ private:
     mutable bool resolved = false;
 };
 
+/// Represents a primitive port declaration.
 class SLANG_EXPORT PrimitivePortSymbol final : public ValueSymbol {
 public:
     PrimitivePortDirection direction;
@@ -259,6 +260,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PrimitivePort; }
 };
 
+/// Represents a user-defined primitive (UDP) declaration.
 class SLANG_EXPORT PrimitiveSymbol final : public Symbol, public Scope {
 public:
     struct TableEntry {
@@ -392,6 +394,7 @@ private:
     const syntax::ClockingSkewSyntax* outputSkewSyntax = nullptr;
 };
 
+/// Represents a randsequence production.
 class SLANG_EXPORT RandSeqProductionSymbol final : public Symbol, public Scope {
 public:
     enum class ProdKind { Item, CodeBlock, IfElse, Repeat, Case };
@@ -591,6 +594,7 @@ private:
     mutable std::optional<std::span<const Rule>> rules;
 };
 
+/// Represents an anonymous program.
 class SLANG_EXPORT AnonymousProgramSymbol final : public Symbol, public Scope {
 public:
     AnonymousProgramSymbol(Compilation& compilation, SourceLocation loc);
@@ -603,6 +607,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::AnonymousProgram; }
 };
 
+/// Represents a net alias declaration.
 class SLANG_EXPORT NetAliasSymbol final : public Symbol {
 public:
     explicit NetAliasSymbol(SourceLocation loc) : Symbol(SymbolKind::NetAlias, ""sv, loc) {}

@@ -19,6 +19,7 @@ namespace slang::ast {
 
 class FormalArgumentSymbol;
 
+/// Represents a setter for a coverage option.
 class SLANG_EXPORT CoverageOptionSetter {
 public:
     CoverageOptionSetter(const Scope& scope, const syntax::CoverageOptionSyntax& syntax);
@@ -112,6 +113,7 @@ private:
 
 class BinsSelectExpr;
 
+/// Represents a coverage bin declaration.
 class SLANG_EXPORT CoverageBinSymbol final : public Symbol {
 public:
     struct TransRangeList {
@@ -182,6 +184,7 @@ private:
     mutable bool isResolved = false;
 };
 
+/// Represents a coverpoint declaration.
 class SLANG_EXPORT CoverpointSymbol final : public Symbol, public Scope {
 public:
     DeclaredType declaredType;
@@ -240,6 +243,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CoverCrossBody; }
 };
 
+/// Represents a cover cross declaration.
 class SLANG_EXPORT CoverCrossSymbol final : public Symbol, public Scope {
 public:
     std::span<const CoverpointSymbol* const> targets;
@@ -287,6 +291,7 @@ SLANG_ENUM(BinsSelectExprKind, EXPR)
 #undef EXPR
 // clang-format on
 
+/// Base class for all coverage bin select expressions.
 class SLANG_EXPORT BinsSelectExpr {
 public:
     BinsSelectExprKind kind;
@@ -336,6 +341,7 @@ protected:
     static BinsSelectExpr& badExpr(Compilation& compilation, const BinsSelectExpr* expr);
 };
 
+/// Represents an invalid coverage bin select expression.
 class SLANG_EXPORT InvalidBinsSelectExpr final : public BinsSelectExpr {
 public:
     const BinsSelectExpr* child;
@@ -348,6 +354,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
+/// Represents a condition-based coverage bin select expression.
 class SLANG_EXPORT ConditionBinsSelectExpr final : public BinsSelectExpr {
 public:
     const Symbol& target;
@@ -370,6 +377,7 @@ public:
     }
 };
 
+/// Represents a unary coverage bin select expression.
 class SLANG_EXPORT UnaryBinsSelectExpr final : public BinsSelectExpr {
 public:
     const BinsSelectExpr& expr;
@@ -394,6 +402,7 @@ public:
     }
 };
 
+/// Represents a binary coverage bin select expression.
 class SLANG_EXPORT BinaryBinsSelectExpr final : public BinsSelectExpr {
 public:
     const BinsSelectExpr& left;
@@ -417,6 +426,7 @@ public:
     }
 };
 
+/// Represents a set expression coverage bin select expression.
 class SLANG_EXPORT SetExprBinsSelectExpr final : public BinsSelectExpr {
 public:
     const Expression& expr;
@@ -440,6 +450,7 @@ public:
     }
 };
 
+/// Represents a coverage bin select expression with a filter.
 class SLANG_EXPORT BinSelectWithFilterExpr final : public BinsSelectExpr {
 public:
     const BinsSelectExpr& expr;
@@ -467,6 +478,7 @@ public:
     }
 };
 
+/// Represents a cross-id coverage bin select expression.
 class SLANG_EXPORT CrossIdBinsSelectExpr final : public BinsSelectExpr {
 public:
     CrossIdBinsSelectExpr() : BinsSelectExpr(BinsSelectExprKind::CrossId) {}

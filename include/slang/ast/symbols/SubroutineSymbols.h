@@ -188,6 +188,7 @@ private:
     mutable bool isConstructing = false;
 };
 
+/// Represents a class method prototype.
 class SLANG_EXPORT MethodPrototypeSymbol final : public Symbol, public Scope {
 public:
     DeclaredType declaredReturnType;

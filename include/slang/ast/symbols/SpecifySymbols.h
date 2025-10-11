@@ -17,6 +17,7 @@ class Expression;
 class TimingPathSymbol;
 class ValueSymbol;
 
+/// Represents a specify block.
 class SLANG_EXPORT SpecifyBlockSymbol final : public Symbol, public Scope {
 public:
     enum class SpecifyTerminalDir { Input, Output, Both };
@@ -40,6 +41,7 @@ using TimingPathMap =
     flat_hash_map<const Symbol*,
                   flat_hash_map<const Symbol*, std::vector<const TimingPathSymbol*>>>;
 
+/// Represents a timing path declaration within a specify block.
 class SLANG_EXPORT TimingPathSymbol final : public Symbol {
 public:
     enum class ConnectionKind { Full, Parallel };
@@ -110,6 +112,7 @@ private:
     mutable std::span<const Expression* const> delays;
 };
 
+/// Represents a pulse style declaration.
 class SLANG_EXPORT PulseStyleSymbol final : public Symbol {
 public:
     PulseStyleKind pulseStyleKind;
@@ -160,6 +163,7 @@ SLANG_ENUM(SystemTimingCheckKind, STCK)
 
 struct SystemTimingCheckDef;
 
+/// Represents a system timing check declaration.
 class SLANG_EXPORT SystemTimingCheckSymbol final : public Symbol {
 public:
     using EdgeDescriptor = std::array<char, 2>;

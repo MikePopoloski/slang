@@ -30,6 +30,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Checker; }
 };
 
+/// Represents an instance of a checker.
 class SLANG_EXPORT CheckerInstanceSymbol final : public InstanceSymbolBase {
 public:
     const CheckerInstanceBodySymbol& body;
@@ -95,6 +96,7 @@ private:
     mutable bool connectionsResolved = false;
 };
 
+/// The body of a checker instance, which acts as the scope for its members.
 class SLANG_EXPORT CheckerInstanceBodySymbol final : public Symbol, public Scope {
 public:
     /// The parent instance for which this is the body.

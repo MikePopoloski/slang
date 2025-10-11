@@ -15,6 +15,7 @@ namespace slang::ast {
 
 class Compilation;
 
+/// A base class for parameter symbols, both type and value.
 class SLANG_EXPORT ParameterSymbolBase {
 public:
     const Symbol& symbol;
@@ -72,6 +73,7 @@ private:
     bool isFromGv = false;
 };
 
+/// Represents a type parameter.
 class SLANG_EXPORT TypeParameterSymbol final : public Symbol, public ParameterSymbolBase {
 public:
     DeclaredType targetType;
