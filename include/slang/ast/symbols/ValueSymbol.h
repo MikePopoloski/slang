@@ -69,6 +69,8 @@ public:
     void addPortBackref(const PortSymbol& port) const;
     const PortBackref* getFirstPortBackref() const { return firstPortBackref; }
 
+    bool isConnectedToRefPort() const;
+
 protected:
     ValueSymbol(SymbolKind kind, std::string_view name, SourceLocation location,
                 bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);

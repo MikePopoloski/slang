@@ -77,9 +77,9 @@ public:
     void noteNonCanonicalInstance(AnalysisContext& context, DriverAlloc& driverAlloc,
                                   const ast::InstanceSymbol& instance);
 
-    /// Propagates drivers to modport ports down to the targets of the
-    /// modport port connections.
-    void propagateModportDrivers(AnalysisContext& context, DriverAlloc& driverAlloc);
+    /// Propagates drivers of modport ports and ref ports down to the targets of their
+    /// actual port connections.
+    void propagateIndirectDrivers(AnalysisContext& context, DriverAlloc& driverAlloc);
 
     /// Returns all of the tracked drivers for the given symbol.
     DriverList getDrivers(const ast::ValueSymbol& symbol) const;
@@ -98,9 +98,9 @@ private:
     void applyInstanceSideEffect(AnalysisContext& context, DriverAlloc& driverAlloc,
                                  const InstanceDriverState::IfacePortDriver& ifacePortDriver,
                                  const ast::InstanceSymbol& instance);
-    void propagateModportDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
-                                const ast::Expression& connectionExpr,
-                                const ValueDriver& originalDriver);
+    void propagateIndirectDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
+                                 const ast::Expression& connectionExpr,
+                                 const ValueDriver& originalDriver);
     void addDrivers(AnalysisContext& context, DriverAlloc& driverAlloc, const ast::Expression& expr,
                     DriverKind driverKind, bitmask<DriverFlags> driverFlags,
                     const ast::Symbol& containingSymbol,
@@ -108,7 +108,7 @@ private:
 
     concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
     concurrent_map<const ast::InstanceBodySymbol*, InstanceDriverState> instanceMap;
-    concurrent_map<const ast::ValueSymbol*, DriverList> modportPortDrivers;
+    concurrent_map<const ast::ValueSymbol*, DriverList> indirectDrivers;
 };
 
 } // namespace slang::analysis

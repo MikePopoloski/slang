@@ -9,6 +9,7 @@
 
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Scope.h"
+#include "slang/ast/symbols/PortSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -46,6 +47,14 @@ void ValueSymbol::addPortBackref(const PortSymbol& port) const {
 
     auto& comp = scope->getCompilation();
     firstPortBackref = comp.emplace<PortBackref>(port, firstPortBackref);
+}
+
+bool ValueSymbol::isConnectedToRefPort() const {
+    for (auto ref = firstPortBackref; ref; ref = ref->getNextBackreference()) {
+        if (ref->port->direction == ArgumentDirection::Ref)
+            return true;
+    }
+    return false;
 }
 
 } // namespace slang::ast

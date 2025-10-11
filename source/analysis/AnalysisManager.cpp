@@ -96,9 +96,9 @@ AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
         result.topInstances.emplace_back(analyzeSymbol(*instance));
     wait();
 
-    // Finalize all drivers that are applied through modport ports.
+    // Finalize all drivers that are applied through indirect drivers.
     auto& state = getState();
-    driverTracker.propagateModportDrivers(state.context, state.driverAlloc);
+    driverTracker.propagateIndirectDrivers(state.context, state.driverAlloc);
 
     // Report on unused definitions.
     if (hasFlag(AnalysisFlags::CheckUnused)) {

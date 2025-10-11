@@ -55,8 +55,8 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
     else
         direction = port.as<MultiPortSymbol>().direction;
 
-    // Input ports are not drivers.
-    if (direction == ArgumentDirection::In)
+    // Input and ref ports are not drivers.
+    if (direction == ArgumentDirection::In || direction == ArgumentDirection::Ref)
         return;
 
     bitmask<DriverFlags> flags;
@@ -71,7 +71,7 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
 
 void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
                         const PortSymbol& symbol) {
-    // This method adds driver *from* the port to the *internal*
+    // This method adds a driver *from* the port to the *internal*
     // symbol (or expression) that it connects to.
     auto dir = symbol.direction;
     if (dir != ArgumentDirection::In && dir != ArgumentDirection::InOut)
@@ -145,25 +145,52 @@ void DriverTracker::noteNonCanonicalInstance(AnalysisContext& context, DriverAll
         applyInstanceSideEffect(context, driverAlloc, ifacePortDriver, instance);
 }
 
-void DriverTracker::propagateModportDrivers(AnalysisContext& context, DriverAlloc& driverAlloc) {
+void DriverTracker::propagateIndirectDrivers(AnalysisContext& context, DriverAlloc& driverAlloc) {
     while (true) {
-        concurrent_map<const ast::ValueSymbol*, DriverList> localCopy;
-        std::swap(modportPortDrivers, localCopy);
+        concurrent_map<const ValueSymbol*, DriverList> localCopy;
+        std::swap(indirectDrivers, localCopy);
         if (localCopy.empty())
             break;
 
         localCopy.cvisit_all([&](auto& item) {
-            if (auto expr = item.first->template as<ModportPortSymbol>().getConnectionExpr()) {
-                for (auto& [originalDriver, _] : item.second)
-                    propagateModportDriver(context, driverAlloc, *expr, *originalDriver);
+            const ValueSymbol& symbol = *item.first;
+            if (symbol.kind == SymbolKind::ModportPort) {
+                if (auto expr = symbol.as<ModportPortSymbol>().getConnectionExpr()) {
+                    for (auto& [originalDriver, _] : item.second)
+                        propagateIndirectDriver(context, driverAlloc, *expr, *originalDriver);
+                }
+            }
+            else {
+                // This is a ref port; we need to find all of its backreferences
+                // and apply the drivers to their connection expressions.
+                auto scope = symbol.getParentScope();
+                SLANG_ASSERT(scope);
+
+                auto inst = scope->asSymbol().as<InstanceBodySymbol>().parentInstance;
+                SLANG_ASSERT(inst);
+
+                for (auto ref = symbol.getFirstPortBackref(); ref;
+                     ref = ref->getNextBackreference()) {
+
+                    if (ref->port->direction != ArgumentDirection::Ref)
+                        continue;
+
+                    if (auto conn = inst->getPortConnection(*ref->port)) {
+                        if (auto expr = conn->getExpression()) {
+                            for (auto& [originalDriver, _] : item.second)
+                                propagateIndirectDriver(context, driverAlloc, *expr,
+                                                        *originalDriver);
+                        }
+                    }
+                }
             }
         });
     }
 }
 
-void DriverTracker::propagateModportDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
-                                           const Expression& connectionExpr,
-                                           const ValueDriver& originalDriver) {
+void DriverTracker::propagateIndirectDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
+                                            const Expression& connectionExpr,
+                                            const ValueDriver& originalDriver) {
     // TODO: this is clunky, but we need to be able to glue the outer select
     // expression to the inner connection expression. Probably the expression AST
     // should have a way to do this generically.
@@ -404,13 +431,13 @@ const HierarchicalReference* DriverTracker::addDriver(
             });
     }
 
-    // Keep track of modport ports separately so we can revisit them at the end of analysis.
-    if (symbol.kind == SymbolKind::ModportPort) {
+    // Keep track of "indirect" drivers separately so we can revisit them at the end of analysis.
+    if (symbol.kind == SymbolKind::ModportPort || symbol.isConnectedToRefPort()) {
         auto updater = [&](auto& item) { item.second.emplace_back(&driver, bounds); };
-        modportPortDrivers.try_emplace_and_visit(&symbol, updater, updater);
+        indirectDrivers.try_emplace_and_visit(&symbol, updater, updater);
 
-        // We don't do overlap detection for modport ports (the drivers apply to the underlying
-        // connection) but we will still track them for downstream users to query later.
+        // We don't do overlap detection for modport / ref ports (the drivers apply to the
+        // underlying connection) but we will still track them for downstream users to query later.
         driverMap.insert(bounds, &driver, driverAlloc);
 
         return result;
