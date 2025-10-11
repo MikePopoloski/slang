@@ -1187,10 +1187,22 @@ module top1;
     assign s = 1;
 endmodule
 
+module o(ref int s);
+    q q1(s);
+endmodule
+
+module p(ref int s);
+    o o1(s);
+endmodule
+
 module top2;
     int r;
-    n n1(r);
-    n n2(r);
+    p p1(r);
+    p p2(r);
+endmodule
+
+module q(ref int t);
+    assign t = 2;
 endmodule
 )";
 
@@ -1198,6 +1210,7 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::MultipleContAssigns);
+    CHECK(diags[1].code == diag::MultipleContAssigns);
 }
