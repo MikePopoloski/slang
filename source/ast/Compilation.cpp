@@ -1488,12 +1488,13 @@ void Compilation::elaborate() {
     DiagnosticVisitor elabVisitor(*this, numErrors, errorLimit);
     rootSym.visit(elabVisitor);
 
+    if (!elabVisitor.finishedEarly())
+        elabVisitor.finalize();
+
     if (elabVisitor.finishedEarly()) {
         sawFatalError = true;
         return;
     }
-
-    elabVisitor.finalize();
 
     // Note for the following checks here: anything that depends on a list
     // stored in the compilation object should think carefully about taking
