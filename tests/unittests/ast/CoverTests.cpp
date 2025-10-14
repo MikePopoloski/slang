@@ -429,34 +429,6 @@ endmodule
     CHECK(diags[3].code == diag::ExpectedFunctionPortList);
 }
 
-TEST_CASE("Covergroup expression errors") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    int asdf;
-    wire signed [31:0] w;
-    covergroup cg1 (int a, ref int r);
-        coverpoint a {
-            bins b = {r, asdf, w, foo()};
-        }
-    endgroup
-
-    function int foo;
-        return asdf;
-    endfunction
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::CoverageExprVar);
-    CHECK(diags[1].code == diag::CoverageExprVar);
-    CHECK(diags[2].code == diag::CoverageExprVar);
-    CHECK(diags[3].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
-}
-
 TEST_CASE("Cover cross bins") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -795,4 +767,35 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::AssignmentToConstVar);
     CHECK(diags[1].code == diag::AssignmentToConstVar);
+}
+
+TEST_CASE("Coverpoint non-constant bins expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    int unsigned NUM;
+
+    int unsigned id;
+
+    bit en;
+
+endclass
+
+class B;
+    A a;
+    event trig;
+
+    covergroup cg (string name) @trig;
+        label: coverpoint a.id {
+            bins b1 [] = {[0:a.NUM]};
+            bins b2 = {a.NUM+1} iff(a.en);
+            ignore_bins ig = {a.NUM+1} iff(!a.en);
+        }
+    endgroup
+
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

@@ -548,20 +548,6 @@ CoverageBinSymbol& CoverageBinSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-static const Expression& bindCovergroupExpr(const ExpressionSyntax& syntax,
-                                            const ASTContext& context,
-                                            const Type* lvalueType = nullptr,
-                                            bitmask<ASTFlags> extraFlags = {}) {
-    const Expression* expr;
-    if (lvalueType)
-        expr = &Expression::bindRValue(*lvalueType, syntax, {}, context, extraFlags);
-    else
-        expr = &Expression::bind(syntax, context, extraFlags);
-
-    context.eval(*expr, EvalFlags::CovergroupExpr);
-    return *expr;
-}
-
 static const Expression* bindIffExpr(const CoverageIffClauseSyntax* syntax,
                                      const ASTContext& context) {
     if (!syntax)
@@ -597,7 +583,7 @@ void CoverageBinSymbol::resolve() const {
     iffExpr = bindIffExpr(binsSyntax.iff, context);
 
     if (binsSyntax.size && binsSyntax.size->expr) {
-        numberOfBinsExpr = &bindCovergroupExpr(*binsSyntax.size->expr, context);
+        numberOfBinsExpr = &Expression::bind(*binsSyntax.size->expr, context);
         context.requireIntegral(*numberOfBinsExpr);
     }
 
@@ -614,7 +600,7 @@ void CoverageBinSymbol::resolve() const {
         ASTContext iterCtx = context;
         it->nextTemp = std::exchange(iterCtx.firstTempVar, it);
 
-        withExpr = &bindCovergroupExpr(*withSyntax.expr, iterCtx);
+        withExpr = &Expression::bind(*withSyntax.expr, iterCtx);
         iterCtx.requireBooleanConvertible(*withExpr);
 
         if (type.isFloating())
@@ -627,7 +613,7 @@ void CoverageBinSymbol::resolve() const {
             SmallVector<const Expression*> buffer;
             auto& rcbis = init->as<RangeCoverageBinInitializerSyntax>();
             for (auto elem : rcbis.ranges->valueRanges)
-                buffer.push_back(&bindCovergroupExpr(*elem, context, &type));
+                buffer.push_back(&Expression::bindRValue(type, *elem, {}, context));
             values = buffer.copy(comp);
 
             if (rcbis.withClause)
@@ -659,7 +645,7 @@ void CoverageBinSymbol::resolve() const {
             break;
         }
         case SyntaxKind::ExpressionCoverageBinInitializer:
-            setCoverageExpr = &bindCovergroupExpr(
+            setCoverageExpr = &Expression::bind(
                 *init->as<ExpressionCoverageBinInitializerSyntax>().expr, context);
 
             if (!setCoverageExpr->bad()) {
@@ -686,7 +672,7 @@ CoverageBinSymbol::TransRangeList::TransRangeList(const TransRangeSyntax& syntax
                                                   const ASTContext& context) {
     SmallVector<const Expression*> buffer;
     for (auto elem : syntax.items) {
-        auto& expr = bindCovergroupExpr(*elem, context, &type);
+        auto& expr = Expression::bindRValue(type, *elem, {}, context);
         buffer.push_back(&expr);
     }
 
@@ -709,7 +695,7 @@ CoverageBinSymbol::TransRangeList::TransRangeList(const TransRangeSyntax& syntax
         }
 
         auto bindCount = [&](const ExpressionSyntax& exprSyntax) {
-            auto& expr = bindCovergroupExpr(exprSyntax, context);
+            auto& expr = Expression::bind(exprSyntax, context);
             context.requireIntegral(expr);
             return &expr;
         };
@@ -1097,7 +1083,7 @@ BinsSelectExpr& ConditionBinsSelectExpr::fromSyntax(const BinsSelectConditionExp
 
         SmallVector<const Expression*> buffer;
         for (auto elem : syntax.intersects->ranges->valueRanges)
-            buffer.push_back(&bindCovergroupExpr(*elem, context, type));
+            buffer.push_back(&Expression::bindRValue(*type, *elem, {}, context));
         expr->intersects = buffer.copy(comp);
     }
 
@@ -1165,8 +1151,8 @@ BinsSelectExpr& SetExprBinsSelectExpr::fromSyntax(const SimpleBinsSelectExprSynt
     const Expression* matches = nullptr;
     if (syntax.matchesClause) {
         matches =
-            &bindCovergroupExpr(*syntax.matchesClause->pattern->as<ExpressionPatternSyntax>().expr,
-                                context, nullptr, ASTFlags::AllowUnboundedLiteral);
+            &Expression::bind(*syntax.matchesClause->pattern->as<ExpressionPatternSyntax>().expr,
+                              context, ASTFlags::AllowUnboundedLiteral);
         if (!matches->bad() && !matches->type->isUnbounded())
             context.requireIntegral(*matches);
     }
@@ -1198,14 +1184,14 @@ BinsSelectExpr& BinSelectWithFilterExpr::fromSyntax(const BinSelectWithFilterExp
         it->nextTemp = std::exchange(iterCtx.firstTempVar, it);
     }
 
-    auto& filter = bindCovergroupExpr(*syntax.filter, iterCtx);
+    auto& filter = Expression::bind(*syntax.filter, iterCtx);
     iterCtx.requireBooleanConvertible(filter);
 
     const Expression* matches = nullptr;
     if (syntax.matchesClause) {
         matches =
-            &bindCovergroupExpr(*syntax.matchesClause->pattern->as<ExpressionPatternSyntax>().expr,
-                                context, nullptr, ASTFlags::AllowUnboundedLiteral);
+            &Expression::bind(*syntax.matchesClause->pattern->as<ExpressionPatternSyntax>().expr,
+                              context, ASTFlags::AllowUnboundedLiteral);
         if (!matches->bad() && !matches->type->isUnbounded())
             context.requireIntegral(*matches);
     }

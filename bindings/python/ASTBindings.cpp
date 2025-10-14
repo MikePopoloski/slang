@@ -33,7 +33,6 @@ void registerAST(py::module_& m) {
         .value("IsScript", EvalFlags::IsScript)
         .value("CacheResults", EvalFlags::CacheResults)
         .value("SpecparamsAllowed", EvalFlags::SpecparamsAllowed)
-        .value("CovergroupExpr", EvalFlags::CovergroupExpr)
         .value("AllowUnboundedPlaceholder", EvalFlags::AllowUnboundedPlaceholder)
         .finalize();
 

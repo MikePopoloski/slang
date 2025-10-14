@@ -719,7 +719,6 @@ error TaggedUnionTarget "tagged union expression can only be used in an assignme
 error TaggedUnionMissingInit "missing initializer expression for non-void tagged union member '{}'"
 error CoverOptionImmutable "the '{}' option cannot be modified outside of the covergroup definition"
 error ValueRangeUnbounded "value range cannot be unbounded on both sides"
-error CoverageExprVar "coverage expressions can only reference constants and non-ref formal arguments"
 error CoverageSampleFormal "sample formal argument '{}' can only be referenced in a coverpoint, cross, or conditional guard expression"
 error InvalidBinsTarget "binsof target '{}' is not a coverpoint or coverpoint bin"
 error InvalidBinsMatches "'matches' expression is invalid here"
