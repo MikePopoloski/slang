@@ -15,7 +15,7 @@ add_test(NAME regression_all_file
 add_test(
   NAME regression_cst_json_roundtrip
   COMMAND
-    ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/reconstruct_from_json.py
+    ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/reconstruct_from_json.py
     ${CMAKE_CURRENT_BINARY_DIR}/all_cst.json --compare
     ${CMAKE_CURRENT_LIST_DIR}/all.sv)
 
