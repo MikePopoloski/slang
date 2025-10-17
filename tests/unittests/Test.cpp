@@ -11,14 +11,12 @@
 #include "slang/parsing/Preprocessor.h"
 #include "slang/text/SourceManager.h"
 
-static std::string findTestDirInternal() {
-    auto path = fs::current_path();
-    while (!fs::exists(path / "tests")) {
-        path = path.parent_path();
-        SLANG_ASSERT(!path.empty());
-    }
+#ifndef TEST_DATA_DIR
+#    error "TEST_DATA_DIR is not defined. Please configure with CMake."
+#endif
 
-    return (path / "tests/unittests/data/").string();
+static std::string findTestDirInternal() {
+    return TEST_DATA_DIR;
 }
 
 std::string findTestDir() {

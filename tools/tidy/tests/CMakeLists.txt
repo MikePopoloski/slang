@@ -35,6 +35,9 @@ target_link_libraries(tidy_unittests PRIVATE Catch2::Catch2 slang_tidy_obj_lib)
 target_compile_definitions(tidy_unittests PRIVATE UNITTESTS)
 target_include_directories(tidy_unittests PRIVATE ../../../tests/unittests)
 
+target_compile_definitions(tidy_unittests
+                           PRIVATE "TEST_DATA_DIR=\"${TEST_DATA_DEST}/\"")
+
 add_test(NAME tidy_unittests COMMAND tidy_unittests)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
