@@ -20,6 +20,7 @@ public:
     JsonDiagnosticClient(JsonWriter& writer) : writer(writer) {}
 
     void report(const ReportedDiagnostic& diagnostic) override;
+    void reportMessage(DiagnosticSeverity severity, const std::string& message) override;
 
 private:
     JsonWriter& writer;

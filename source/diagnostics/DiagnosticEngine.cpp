@@ -663,4 +663,9 @@ void DiagnosticEngine::clearIncludeStack() {
     reportedIncludeStack.clear();
 }
 
+void DiagnosticEngine::issueMessage(DiagnosticSeverity severity, const std::string& message) {
+    for (auto& client : clients)
+        client->reportMessage(severity, message);
+}
+
 } // namespace slang

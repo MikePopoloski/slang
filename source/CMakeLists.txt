@@ -78,6 +78,7 @@ add_library(
   diagnostics/Diagnostics.cpp
   diagnostics/JsonDiagnosticClient.cpp
   diagnostics/TextDiagnosticClient.cpp
+  driver/BaseDriver.cpp
   driver/Driver.cpp
   driver/SourceLoader.cpp
   numeric/ConstantValue.cpp

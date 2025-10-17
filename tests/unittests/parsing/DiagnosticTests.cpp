@@ -419,6 +419,8 @@ TEST_CASE("DiagnosticEngine stuff") {
             lastMessage = diag.formattedMessage;
             lastSeverity = diag.severity;
         }
+
+        void reportMessage(DiagnosticSeverity, const std::string&) override {}
     };
 
     DiagnosticEngine engine(getSourceManager());
