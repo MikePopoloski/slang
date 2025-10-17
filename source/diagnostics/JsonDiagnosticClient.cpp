@@ -84,4 +84,13 @@ void JsonDiagnosticClient::report(const ReportedDiagnostic& diag) {
     writer.endObject();
 }
 
+void JsonDiagnosticClient::reportMessage(DiagnosticSeverity severity, const std::string& message) {
+    writer.startObject();
+    writer.writeProperty("severity");
+    writer.writeValue(getSeverityString(severity));
+    writer.writeProperty("message");
+    writer.writeValue(message);
+    writer.endObject();
+}
+
 } // namespace slang

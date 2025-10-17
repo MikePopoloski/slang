@@ -182,8 +182,8 @@ int driverMain(int argc, TArgs argv) {
         }
 
         if ((onlyPreprocess || onlyMacros) &&
-            (driver.options.includeDepfile || driver.options.moduleDepfile ||
-             driver.options.allDepfile)) {
+            (driver.depFileOptions.includeDepfile || driver.depFileOptions.moduleDepfile ||
+             driver.depFileOptions.allDepfile)) {
             driver.printError(
                 "cannot use dependency file options with --preprocess or --macros-only");
             return 3;

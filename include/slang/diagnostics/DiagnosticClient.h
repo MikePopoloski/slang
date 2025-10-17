@@ -25,6 +25,9 @@ public:
     /// Called when a diagnostic is issued by the engine.
     virtual void report(const ReportedDiagnostic& diagnostic) = 0;
 
+    /// Called to report a simple message with a given severity.
+    virtual void reportMessage(DiagnosticSeverity severity, const std::string& message) = 0;
+
     /// Sets the engine that this client is associated with.
     /// This is called by the engine when the client is added to it.
     void setEngine(const DiagnosticEngine& engine);

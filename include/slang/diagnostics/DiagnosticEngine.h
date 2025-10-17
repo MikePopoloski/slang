@@ -69,6 +69,9 @@ public:
     /// be filtered or remapped based on current settings.
     void issue(const Diagnostic& diagnostic);
 
+    /// Reports a simple message with the given severity to all registered clients.
+    void issueMessage(DiagnosticSeverity severity, const std::string& message);
+
     /// Gets the source manager associated with the engine.
     const SourceManager& getSourceManager() const { return sourceManager; }
 
