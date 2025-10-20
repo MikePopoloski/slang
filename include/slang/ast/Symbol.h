@@ -177,7 +177,7 @@ public:
     /// Gets the symbol's hierarchical path by walking up to the root node and appending
     /// each parent's name to the provided buffer.
     void appendHierarchicalPath(std::string& buffer) const;
-    
+
     /// Gets the symbol's lexical path by walking up to the compilation unit and appending
     /// each parent's name to the provided buffer.
     std::string getLexicalPath() const;
