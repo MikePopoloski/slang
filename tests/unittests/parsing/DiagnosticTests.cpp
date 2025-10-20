@@ -106,7 +106,7 @@ endmodule
     CHECK(result == R"(
 source:7:23: error: no member named 'bar' in '<unnamed unpacked struct>'
     int i = `BAR(asdf.bar);
-                 ~~~~~^~~
+                 ~~~~ ^~~
 )");
 }
 
@@ -135,7 +135,7 @@ source:3:19: note: expanded from macro 'BAR'
                   ^~~~~~~~~~
 source:2:24: note: expanded from macro 'FOO'
 `define FOO(blah) blah.bar
-                  ~~~~~^~~
+                  ~~~~ ^~~
 )");
 }
 

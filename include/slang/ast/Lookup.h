@@ -180,6 +180,9 @@ struct SLANG_EXPORT LookupResult {
     /// Flags that specify additional information about the result of the lookup.
     bitmask<LookupResultFlags> flags;
 
+    /// The portion of the name lookup syntax that resulted in this symbol being found.
+    SourceRange nameRange;
+
     /// A structure that represents a selection of a single member from the resulting
     /// symbol found during a lookup operation.
     struct MemberSelector {

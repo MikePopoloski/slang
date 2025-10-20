@@ -373,7 +373,7 @@ protected:
                                 const ASTContext& context);
 
     static Expression& bindLookupResult(
-        Compilation& compilation, LookupResult& result, SourceRange sourceRange,
+        Compilation& compilation, LookupResult& result,
         const syntax::InvocationExpressionSyntax* invocation,
         const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
         const ASTContext& context);

@@ -67,7 +67,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_link_options(unittests PUBLIC "-Wno-stringop-overflow")
 endif()
 
-# Copy the data directory for running tests from the build folder# and build the
+# Copy the data directory for running tests from the build folder and build the
 # tests with a reference to that folder.
 
 set(TEST_DATA_DEST "${CMAKE_CURRENT_BINARY_DIR}/data")

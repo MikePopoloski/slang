@@ -73,6 +73,7 @@ void LookupResult::clear() {
     systemSubroutine = nullptr;
     upwardCount = 0;
     flags = LookupResultFlags::None;
+    nameRange = {};
     selectors.clear();
     path.clear();
     diagnostics.clear();
@@ -263,6 +264,19 @@ bool isBadGenblkAccess(const Symbol& symbol, const Scope& scope, bitmask<LookupF
     }
 }
 
+void applySelectors(const NameComponents& name, const ASTContext& context, LookupResult& result) {
+    if (!name.selectors.empty()) {
+        // If this is a scope, the selectors should be an index into it.
+        if (result.found && result.found->isScope() && !result.found->isType()) {
+            result.found = Lookup::selectChild(*result.found, name.selectors, context, result);
+        }
+        else {
+            result.selectors.append_range(name.selectors);
+            result.nameRange = {result.nameRange.start(), name.range.end()};
+        }
+    }
+}
+
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
@@ -335,6 +349,7 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
 
         // If we found a value, the remaining dots are member access expressions.
         if (isValueLike(symbol)) {
+            result.nameRange = {result.nameRange.start(), name.range.end()};
             result.selectors.append_range(name.selectors);
 
             for (; it != nameParts.rend(); it++) {
@@ -566,15 +581,7 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
     }
 
     result.found = symbol;
-
-    if (!name.selectors.empty()) {
-        // If this is a scope, the selectors should be an index into it.
-        if (result.found && result.found->isScope() && !result.found->isType())
-            result.found = Lookup::selectChild(*result.found, name.selectors, context, result);
-        else
-            result.selectors.append_range(name.selectors);
-    }
-
+    applySelectors(name, context, result);
     return true;
 }
 
@@ -586,6 +593,7 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
     // Upward lookups can match either a scope name, or a module definition name (on any of the
     // instances). Imports are not considered.
     const Symbol* firstMatch = nullptr;
+    const auto savedRange = result.nameRange;
     auto tryMatch = [&](const Symbol& symbol) {
         // Keep track of the first match we find; if it turns out we can't
         // resolve all of the name parts we'll move on and try elsewhere,
@@ -596,6 +604,7 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
 
         result.clear();
         result.found = &symbol;
+        result.nameRange = savedRange;
         return lookupDownward(nameParts, name, context, flags, result);
     };
 
@@ -643,6 +652,7 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
     } while (scope);
 
     result.clear();
+    result.nameRange = savedRange;
     if (firstMatch) {
         // If we did find a match at some point, repeat that
         // lookup to provide a real error message.
@@ -892,25 +902,22 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
     return lookupDownward(nameParts, name, context, flags, result);
 }
 
-void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupResult& result,
-                  bool unwrapGenericClasses = true) {
+void unwrapResult(const Scope& scope, LookupResult& result, bool unwrapGenericClasses = true) {
     if (!result.found)
         return;
 
     if (result.flags.has(LookupResultFlags::IsHierarchical)) {
         auto declaredType = result.found->getDeclaredType();
         if (declaredType && declaredType->isEvaluating()) {
-            if (range) {
-                auto& diag = result.addDiag(scope, diag::RecursiveDefinition, *range);
-                diag << result.found->name;
-                diag.addNote(diag::NoteDeclarationHere, result.found->location);
-            }
+            auto& diag = result.addDiag(scope, diag::RecursiveDefinition, result.nameRange);
+            diag << result.found->name;
+            diag.addNote(diag::NoteDeclarationHere, result.found->location);
             result.found = nullptr;
             return;
         }
     }
 
-    checkVisibility(*result.found, scope, range, result);
+    checkVisibility(*result.found, scope, result.nameRange, result);
 
     // Unwrap type parameters into their target type alias.
     if (result.found->kind == SymbolKind::TypeParameter) {
@@ -930,14 +937,11 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
         result.found = genericClass.getDefaultSpecialization(scope);
 
         if (!result.found) {
-            if (range)
-                result.addDiag(scope, diag::NoDefaultSpecialization, *range) << genericClass.name;
+            result.addDiag(scope, diag::NoDefaultSpecialization, result.nameRange)
+                << genericClass.name;
             return;
         }
     }
-
-    if (!range)
-        return;
 
     if (result.flags.has(LookupResultFlags::WasImported)) {
         // If the symbol was imported from a package, check if it is actually
@@ -951,7 +955,8 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
 
             if (parentSym.kind == SymbolKind::AnonymousProgram) {
                 if (!isInProgram(scope.asSymbol())) {
-                    auto& diag = result.addDiag(scope, diag::IllegalReferenceToProgramItem, *range);
+                    auto& diag = result.addDiag(scope, diag::IllegalReferenceToProgramItem,
+                                                result.nameRange);
                     diag.addNote(diag::NoteDeclarationHere, result.found->location);
                 }
                 break;
@@ -965,13 +970,13 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
         // unless the target symbol is also within the same package.
         auto pkg = getContainingPackage(scope.asSymbol());
         if (pkg && getContainingPackage(*result.found) != pkg)
-            result.addDiag(scope, diag::HierarchicalFromPackage, *range);
+            result.addDiag(scope, diag::HierarchicalFromPackage, result.nameRange);
     }
     else if (auto parent = result.found->getParentScope();
              parent && parent->asSymbol().kind == SymbolKind::CompilationUnit) {
         // Compilation unit items are not allowed to be referenced from a package.
         if (getContainingPackage(scope.asSymbol())) {
-            auto& diag = result.addDiag(scope, diag::CompilationUnitFromPackage, *range);
+            auto& diag = result.addDiag(scope, diag::CompilationUnitFromPackage, result.nameRange);
             diag.addNote(diag::NoteDeclarationHere, result.found->location);
         }
     }
@@ -1072,6 +1077,8 @@ bool withinCovergroup(const Symbol& symbol, const Scope& initialScope) {
 void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<LookupFlags> flags,
                   LookupResult& result) {
     auto& scope = *context.scope;
+    result.nameRange = syntax.sourceRange();
+
     NameComponents name;
     switch (syntax.kind) {
         case SyntaxKind::IdentifierName:
@@ -1082,12 +1089,12 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
         case SyntaxKind::ScopedName:
             // Handle qualified names separately.
             qualified(syntax.as<ScopedNameSyntax>(), context, flags, result);
-            unwrapResult(scope, syntax.sourceRange(), result);
+            unwrapResult(scope, result);
             if (flags.has(LookupFlags::NoSelectors))
                 result.errorIfSelectors(context);
             return;
         case SyntaxKind::ThisHandle:
-            result.found = findThisHandle(scope, flags, syntax.sourceRange(), result);
+            result.found = findThisHandle(scope, flags, result.nameRange, result);
             return;
         case SyntaxKind::SystemName: {
             // If this is a system name, look up directly in the compilation.
@@ -1130,7 +1137,7 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             result.found = scope.getCompilationUnit();
             return;
         case SyntaxKind::ConstructorName:
-            result.addDiag(scope, diag::UnexpectedNameToken, syntax.sourceRange())
+            result.addDiag(scope, diag::UnexpectedNameToken, result.nameRange)
                 << syntax.getFirstToken().valueText();
             result.found = nullptr;
             return;
@@ -1182,19 +1189,10 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
         }
     }
 
-    unwrapResult(scope, syntax.sourceRange(), result);
-
-    if (!name.selectors.empty()) {
-        // If this is a scope, the selectors should be an index into it.
-        if (result.found && result.found->isScope() && !result.found->isType()) {
-            result.found = selectChild(*result.found, name.selectors, context, result);
-        }
-        else {
-            result.selectors.append_range(name.selectors);
-            if (flags.has(LookupFlags::NoSelectors))
-                result.errorIfSelectors(context);
-        }
-    }
+    unwrapResult(scope, result);
+    applySelectors(name, context, result);
+    if (flags.has(LookupFlags::NoSelectors))
+        result.errorIfSelectors(context);
 }
 
 const Symbol* Lookup::unqualified(const Scope& scope, std::string_view name,
@@ -1203,11 +1201,12 @@ const Symbol* Lookup::unqualified(const Scope& scope, std::string_view name,
         return nullptr;
 
     LookupResult result;
+    result.nameRange = SourceRange::NoLocation;
     unqualifiedImpl(scope, name, LookupLocation::max, std::nullopt, flags, {}, result, scope,
                     nullptr);
 
     SLANG_ASSERT(result.selectors.empty());
-    unwrapResult(scope, std::nullopt, result, /* unwrapGenericClasses */ false);
+    unwrapResult(scope, result, /* unwrapGenericClasses */ false);
 
     return result.found;
 }
@@ -1219,10 +1218,11 @@ const Symbol* Lookup::unqualifiedAt(const Scope& scope, std::string_view name,
         return nullptr;
 
     LookupResult result;
+    result.nameRange = sourceRange;
     unqualifiedImpl(scope, name, location, sourceRange, flags, {}, result, scope, nullptr);
 
     SLANG_ASSERT(result.selectors.empty());
-    unwrapResult(scope, sourceRange, result, /* unwrapGenericClasses */ false);
+    unwrapResult(scope, result, /* unwrapGenericClasses */ false);
 
     if (!result.found && !result.hasError())
         reportUndeclared(scope, name, sourceRange, flags, false, result);
@@ -1616,6 +1616,7 @@ bool Lookup::findTempVar(const Scope& scope, const TempVarSymbol& symbol, const 
         return false;
 
     ASTContext context(scope, LookupLocation::max);
+    result.nameRange = syntax.sourceRange();
     return lookupDownward(nameParts, name, context, LookupFlags::None, result);
 }
 
@@ -1642,6 +1643,8 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
     };
 
     NameComponents name = *first;
+    result.nameRange = syntax.sourceRange();
+
     switch (first->kind) {
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:
@@ -1703,7 +1706,7 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
             return false;
     }
 
-    unwrapResult(*context.scope, syntax.sourceRange(), result);
+    unwrapResult(*context.scope, result);
     return true;
 }
 
@@ -1741,6 +1744,7 @@ bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& 
         return false;
 
     result.found = it->second;
+    result.nameRange = syntax.sourceRange();
     return lookupDownward(nameParts, name, context, LookupFlags::None, result);
 }
 
@@ -1933,7 +1937,9 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                         // our own symbol when we otherwise shouldn't.
                         // Work around this by just pretending we didn't find anything.
                         done = false;
+                        auto savedRange = result.nameRange;
                         result.clear();
+                        result.nameRange = savedRange;
                     }
                 }
             }

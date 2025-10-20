@@ -1102,7 +1102,7 @@ endmodule
     CHECK(result == R"(
 source:64:33: error: reference to 'gen3' by hierarchical name is not allowed in a constant expression
     localparam int blah2 = int'(m_inst.gen3.a[0]);
-                                ^~~~~~~~~~~~~~~~
+                                ^~~~~~~~~~~
 source:66:14: error: multiple imports found for identifier 'foo'
     wire a = foo.bar;           // import collision
              ^~~
@@ -1144,7 +1144,7 @@ source:75:21: error: use of undeclared identifier 'bar'
                     ^~~
 source:77:19: error: no member named 'bar' in 'type_t'
     wire l = gen3.bar;          // doesn't find top.gen3.bar because of local variable
-             ~~~~~^~~
+             ~~~~ ^~~
 source:79:20: error: hierarchical scope 'array1' is not indexable
     wire n = array1[0].foo;     // no upward because indexing fails
                    ^~~

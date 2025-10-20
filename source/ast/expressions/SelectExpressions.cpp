@@ -965,7 +965,7 @@ Expression& MemberAccessExpression::fromSelector(
             return *result;
         }
 
-        auto& diag = context.addDiag(diag::UnknownMember, selector.nameRange.start());
+        auto& diag = context.addDiag(diag::UnknownMember, selector.nameRange);
         diag << expr.sourceRange;
         diag << selector.name;
         diag << *expr.type;
