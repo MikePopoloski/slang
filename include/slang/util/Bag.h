@@ -27,7 +27,9 @@ public:
     Bag() = default;
 
     template<typename... T>
-    Bag(T&&... items) {
+    Bag(T&&... items)
+        requires((!std::is_same_v<std::decay_t<T>, Bag> && ...))
+    {
         (set(std::forward<decltype(items)>(items)), ...);
     }
 
