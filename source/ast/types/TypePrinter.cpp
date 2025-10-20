@@ -16,9 +16,8 @@ static std::string getLexicalPath(const Scope* scope) {
     if (!scope || scope->asSymbol().kind == SymbolKind::CompilationUnit)
         return "";
 
-    std::string str;
     auto& sym = scope->asSymbol();
-    sym.appendLexicalPath(str);
+    std::string str = sym.getLexicalPath();
 
     if (sym.kind == SymbolKind::Package || sym.kind == SymbolKind::ClassType ||
         sym.kind == SymbolKind::CovergroupType) {

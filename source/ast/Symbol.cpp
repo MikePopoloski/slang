@@ -232,8 +232,10 @@ static void getLexicalPathImpl(const Symbol& symbol, std::string& buffer) {
         buffer.append(symbol.name);
 }
 
-void Symbol::appendLexicalPath(std::string& buffer) const {
+std::string Symbol::getLexicalPath() const {
+    std::string buffer;
     getLexicalPathImpl(*this, buffer);
+    return buffer;
 }
 
 std::optional<bool> Symbol::isDeclaredBefore(const Symbol& target) const {

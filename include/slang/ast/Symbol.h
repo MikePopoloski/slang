@@ -180,7 +180,7 @@ public:
 
     /// Gets the symbol's lexical path by walking up to the compilation unit and appending
     /// each parent's name to the provided buffer.
-    void appendLexicalPath(std::string& buffer) const;
+    std::string getLexicalPath() const;
 
     /// Determines whether this symbol is considered to be declared before the
     /// given symbol, in the same compilation unit. If it is, this method returns true.
