@@ -251,6 +251,33 @@ endmodule
     CHECK(diags[2].code == diag::DuplicateImport);
 }
 
+TEST_CASE("Package lookup with path") {
+    auto tree = SyntaxTree::fromText(R"(
+package pkg;
+    parameter int x = 42;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    const CompilationUnitSymbol* unit = compilation.getRoot().compilationUnits[0];
+
+    LookupResult result;
+    ASTContext context(*unit, LookupLocation::max);
+    Lookup::name(compilation.parseName("pkg::x"), context, LookupFlags::None, result);
+
+    REQUIRE(result.found);
+    CHECK(result.found->kind == SymbolKind::Parameter);
+    CHECK(result.found->as<ParameterSymbol>().getValue().integer() == 42);
+
+    // Verify that the package is in the result.path
+    REQUIRE(result.path.size() == 1);
+    CHECK(result.path[0].symbol->name == "pkg");
+    CHECK(result.path[0].symbol->kind == SymbolKind::Package);
+}
+
 TEST_CASE("Package references 2") {
     auto tree = SyntaxTree::fromText(R"(
 package p;

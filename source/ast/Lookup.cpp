@@ -763,6 +763,7 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
             }
             return false;
         }
+        result.path.emplace_back(*symbol);
     }
 
     auto validateSymbol = [&] {
