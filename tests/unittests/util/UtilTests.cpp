@@ -6,6 +6,7 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <sstream>
 
+#include "slang/util/Bag.h"
 #include "slang/util/Random.h"
 #include "slang/util/TimeTrace.h"
 
@@ -35,6 +36,32 @@ TEST_CASE("TypeName test") {
 TEST_CASE("createRandomGenerator construction") {
     // Basic construction test, not much else we can do with it.
     auto rng = createRandomGenerator<std::mt19937>();
+}
+
+TEST_CASE("Bag constructor doesn't accept Bag") {
+    // The variadic constructor has a requires clause that prevents passing a Bag
+    // as an argument. Without this constraint, Bag(bag) would call set(Bag&&),
+    // storing the entire Bag as an element inside itself. That would call another bag copy, which
+    // would recurse infinitely and overflow the stack.
+
+    slang::Bag bag1;
+    bag1.set(42);
+    bag1.set(std::string("hello"));
+
+    // This should not compile (prevented by requires clause):
+    // slang::Bag bag2(bag1);
+
+    // Verify that the normal constructor and copy work as expected
+    slang::Bag bag2(42, std::string("world"));
+    CHECK(bag2.get<int>() != nullptr);
+    CHECK(*bag2.get<int>() == 42);
+    CHECK(bag2.get<std::string>() != nullptr);
+    CHECK(*bag2.get<std::string>() == "world");
+
+    // Copy constructor instead of bag of bag of bag of ...
+    slang::Bag bag3 = bag2;
+    CHECK(bag3.get<int>() != nullptr);
+    CHECK(*bag3.get<int>() == 42);
 }
 
 #if defined(SLANG_USE_THREADS)
