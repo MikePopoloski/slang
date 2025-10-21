@@ -413,7 +413,7 @@ bool Token::isOnSameLine() const {
                 break;
         }
     }
-    return true;
+    return kind != TokenKind::EndOfFile;
 }
 
 Token Token::withTrivia(BumpAllocator& alloc, std::span<Trivia const> trivia) const {

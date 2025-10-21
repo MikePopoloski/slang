@@ -2852,3 +2852,21 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Pragma number parsing regression 1") {
+    auto& text = R"(
+`pragma D's 11111111111111111110's 1.`pragma I's
+)";
+
+    // Just checking no crash.
+    preprocess(text);
+}
+
+TEST_CASE("Pragma number parsing regression 2") {
+    auto& text = R"(
+`pragma D .`p
+)";
+
+    // Just checking no crash.
+    preprocess(text);
+}

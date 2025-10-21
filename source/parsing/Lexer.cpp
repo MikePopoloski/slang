@@ -289,6 +289,11 @@ bool Lexer::isNextTokenOnSameLine() {
             case '\r':
             case '\n':
                 return false;
+            case '`':
+                // Only macro usages are considered to be on the same line; directives are not.
+                mark();
+                advance();
+                return lexDirective().directiveKind() == SyntaxKind::MacroUsage;
             default:
                 return true;
         }
