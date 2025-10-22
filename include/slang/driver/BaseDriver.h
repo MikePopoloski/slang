@@ -1,7 +1,6 @@
 //------------------------------------------------------------------------------
-//! @file Driver.h
-//! @brief Top-level handler for processing arguments and
-//! constructing a compilation for a CLI tool.
+//! @file BaseDriver.h
+//! @brief Base driver class for argument parsing and compilation.
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -52,25 +51,13 @@ namespace slang::driver {
 SLANG_ENUM(CompatMode, COMPAT)
 #undef COMPAT
 
-/// @brief A top-level class that handles argument parsing, option preparation,
+/// @brief Base driver class that handles argument parsing, option preparation,
 /// and invoking various parts of the slang compilation process.
 ///
 /// This is exposed as a convenience wrapper around the various components
 /// that could otherwise be used on their own.
 ///
-/// A typical compilation flow using the driver looks as follows:
-///
-/// @code{.cpp}
-/// Driver driver;
-/// driver.addStandardArgs();
-/// if (!driver.parseCommandLine(someStr)) { ...error }
-/// if (!driver.processOptions()) { ...error }
-/// if (!driver.parseAllSources()) { ...error }
-/// if (!driver.runFullCompilation()) { ...error }
-/// else { ...success }
-/// @endcode
-///
-class SLANG_EXPORT Driver {
+class SLANG_EXPORT BaseDriver {
 private:
     // This exists to ensure we get a Compilation object created prior to anything else,
     // such as the DiagnosticEngine, which wants a Compilation to register callbacks
@@ -87,12 +74,6 @@ public:
 
     /// The diagnostics engine that will be used to report diagnostics.
     DiagnosticEngine diagEngine;
-
-    /// The text diagnostics client that will be used to render diagnostics.
-    std::shared_ptr<TextDiagnosticClient> textDiagClient;
-
-    /// The (optional) JSON diagnostics client that will be used to render diagnostics.
-    std::shared_ptr<JsonDiagnosticClient> jsonDiagClient;
 
     /// The object that handles loading and parsing source files.
     SourceLoader sourceLoader;
@@ -214,41 +195,6 @@ public:
         /// @}
         /// @name Diagnostics control
         /// @{
-
-        /// If true, print diagnostics with color.
-        std::optional<bool> colorDiags;
-
-        /// If true, include column numbers in printed diagnostics.
-        std::optional<bool> diagColumn;
-
-        /// The unit to use for column numbers in diagnostic output.
-        std::optional<ColumnUnit> diagColumnUnit;
-
-        /// If true, include location information in printed diagnostics.
-        std::optional<bool> diagLocation;
-
-        /// If true, include source line context in printed diagnostics.
-        std::optional<bool> diagSourceLine;
-
-        /// If true, include warning option names in printed diagnostics.
-        std::optional<bool> diagOptionName;
-
-        /// If true, include file include stacks in printed diagnostics.
-        std::optional<bool> diagIncludeStack;
-
-        /// If true, include macro expansion information in printed diagnostics.
-        std::optional<bool> diagMacroExpansion;
-
-        /// If true, display absolute paths to files in printed diagnostics.
-        std::optional<bool> diagAbsPaths;
-
-        /// Controls whether to include hierarchy paths in printed diagnostics.
-        std::optional<ShowHierarchyPathOption> diagHierarchy;
-
-        /// If set, the path to a JSON file that will be written with diagnostic information.
-        /// Can be '-' to indicate that the JSON should be written to stdout.
-        std::optional<std::string> diagJson;
-
         /// The maximum number of errors to print before giving up.
         std::optional<uint32_t> errorLimit;
 
@@ -265,28 +211,6 @@ public:
 
         /// A set of extensions that will be used to exclude files.
         flat_hash_set<std::string> excludeExts;
-
-        /// @}
-        /// @name Dependency files
-        /// @{
-
-        /// Optional target name to include when writing dependency files.
-        std::optional<std::string> depfileTarget;
-
-        /// If true, trim unreferenced files before generating dependency lists.
-        std::optional<bool> depfileTrim;
-
-        /// If true, topologically sort files before generating dependency lists.
-        std::optional<bool> depfileSort;
-
-        /// Output path for a dependency file containing all dependencies.
-        std::optional<std::string> allDepfile;
-
-        /// Output path for a dependency file containing include file dependencies.
-        std::optional<std::string> includeDepfile;
-
-        /// Output path for a dependency file containing module source file dependencies.
-        std::optional<std::string> moduleDepfile;
 
         /// @}
         /// @name Analysis
@@ -307,9 +231,9 @@ public:
         bool lintMode() const;
     } options;
 
-    /// Constructs a new instance of the @a Driver class.
-    Driver();
-    ~Driver();
+    /// Constructs a new instance of the @a BaseDriver class.
+    BaseDriver(const std::shared_ptr<DiagnosticClient>& client);
+    ~BaseDriver();
 
     /// @brief Adds standard command line arguments to the @a cmdLine object.
     ///
@@ -367,12 +291,10 @@ public:
     [[nodiscard]] bool runPreprocessor(bool includeComments, bool includeDirectives,
                                        bool obfuscateIds, bool useFixedObfuscationSeed = false);
 
-    /// Prints all macros from all loaded buffers to stdout.
-    void reportMacros();
+    static std::string getProximatePathStr(const std::filesystem::path& path);
 
-    /// Writes any dependency files that have been requested via command line options.
-    /// (if such options have not been specified this method does nothing).
-    void optionallyWriteDepFiles();
+    static std::vector<const syntax::SyntaxTree*> getSortedDependencies(
+        BaseDriver& driver, std::span<std::shared_ptr<syntax::SyntaxTree>> trees, bool trim);
 
     /// @brief Parses all loaded buffers into syntax trees and appends the resulting trees
     /// to the @a syntaxTrees list.
@@ -389,33 +311,10 @@ public:
     /// Creates a compilation object from all of the current loaded state of the driver.
     [[nodiscard]] std::unique_ptr<ast::Compilation> createCompilation();
 
-    /// Reports all parsing diagnostics found in all of the @a syntaxTrees
-    /// @returns true on success and false if errors were encountered.
-    [[nodiscard]] bool reportParseDiags();
-
-    /// @brief Reports the result of compilation.
-    ///
-    /// If @a quiet is set to true, non-essential output will be suppressed.
-    void reportCompilation(ast::Compilation& compilation, bool quiet);
-
     /// @brief Runs analysis on a compilation and reports the results.
     ///
     /// @note The compilation will be frozen after this call.
     std::unique_ptr<analysis::AnalysisManager> runAnalysis(ast::Compilation& compilation);
-
-    /// @brief Reports all diagnostics to output.
-    ///
-    /// If @a quiet is set to true, non-essential output will be suppressed.
-    /// @returns true if compilation succeeded and false if errors were encountered.
-    [[nodiscard]] bool reportDiagnostics(bool quiet);
-
-    /// @brief Runs a full compilation pass and reports the results.
-    ///
-    /// This is a helper method that calls @a createCompilation, @a reportCompilation,
-    /// @a runAnalysis, and @a reportDiagnostics in sequence.
-    ///
-    /// @returns true if compilation succeeded and false if errors were encountered.
-    [[nodiscard]] bool runFullCompilation(bool quiet = false);
 
     /// Prints an error to stderr with appropriate terminal colors.
     void printError(const std::string& message);
@@ -426,18 +325,38 @@ public:
     /// Prints a note to stderr with appropriate terminal colors.
     void printNote(const std::string& message);
 
+protected:
+    void addParseOptions(Bag& bag) const;
+    void addCompilationOptions(Bag& bag) const;
+
 private:
     bool parseUnitListing(std::string_view text);
     void addLibraryFiles(std::string_view pattern);
-    void addParseOptions(Bag& bag) const;
-    void addCompilationOptions(Bag& bag) const;
     bool reportLoadErrors();
 
     bool anyFailedLoads = false;
     flat_hash_set<std::filesystem::path> activeCommandFiles;
     std::vector<std::tuple<std::string_view, std::string_view, std::string_view>>
         translateOffFormats;
-    std::unique_ptr<JsonWriter> jsonWriter;
+};
+
+template<typename ClientT>
+    requires std::derived_from<ClientT, DiagnosticClient>
+class ClientOwner {
+protected:
+    std::shared_ptr<ClientT> diagClient;
+
+public:
+    ClientOwner() : diagClient(std::make_shared<ClientT>()) {}
+};
+
+/// Use this for proper initialization order if you're extending base driver.
+// otherwise use BaseDriver directly.
+template<typename ClientT>
+    requires std::derived_from<ClientT, DiagnosticClient>
+class SLANG_EXPORT ClientOwningDriver : public ClientOwner<ClientT>, public BaseDriver {
+public:
+    ClientOwningDriver() : BaseDriver(this->diagClient) {}
 };
 
 } // namespace slang::driver

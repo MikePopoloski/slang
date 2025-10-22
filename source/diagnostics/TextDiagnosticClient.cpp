@@ -12,6 +12,7 @@
 #include "slang/text/CharInfo.h"
 #include "slang/text/FormatBuffer.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/OS.h"
 
 namespace slang {
 
@@ -358,6 +359,35 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, std::span<const Source
     }
 
     buffer->append("\n"sv);
+}
+
+void TextDiagnosticClient::reportMessage(DiagnosticSeverity severity, const std::string& message) {
+    fmt::terminal_color color;
+    std::string_view prefix;
+
+    switch (severity) {
+        case DiagnosticSeverity::Error:
+        case DiagnosticSeverity::Fatal:
+            color = errorColor;
+            prefix = "error: ";
+            break;
+        case DiagnosticSeverity::Warning:
+            color = warningColor;
+            prefix = "warning: ";
+            break;
+        case DiagnosticSeverity::Note:
+            color = noteColor;
+            prefix = "  note: ";
+            break;
+        default:
+            OS::printE(message);
+            OS::printE("\n");
+            return;
+    }
+
+    OS::printE(fg(color), prefix);
+    OS::printE(message);
+    OS::printE("\n");
 }
 
 } // namespace slang

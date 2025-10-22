@@ -84,4 +84,9 @@ void JsonDiagnosticClient::report(const ReportedDiagnostic& diag) {
     writer.endObject();
 }
 
+void JsonDiagnosticClient::reportMessage(DiagnosticSeverity, const std::string&) {
+    // No op to match previous behavior. Changes are needed in driver and slang main to actually
+    // report these, since normally slang will error out earlier before the json is printed
+}
+
 } // namespace slang

@@ -45,6 +45,7 @@ public:
     fmt::terminal_color getSeverityColor(DiagnosticSeverity severity) const;
 
     void report(const ReportedDiagnostic& diagnostic) override;
+    void reportMessage(DiagnosticSeverity severity, const std::string& message) override;
 
     void clear();
     std::string getString() const;

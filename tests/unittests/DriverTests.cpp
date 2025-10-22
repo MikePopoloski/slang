@@ -50,12 +50,12 @@ TEST_CASE("Driver valid column unit") {
     const char* argv1[] = {"testfoo", "--diag-column-unit=byte", filePath.c_str()};
     CHECK(driver.parseCommandLine(3, argv1));
     CHECK(driver.processOptions());
-    CHECK(driver.options.diagColumnUnit == ColumnUnit::Byte);
+    CHECK(driver.diagFormatOptions.diagColumnUnit == ColumnUnit::Byte);
 
     const char* argv2[] = {"testfoo", "--diag-column-unit=display", filePath.c_str()};
     CHECK(driver.parseCommandLine(3, argv2));
     CHECK(driver.processOptions());
-    CHECK(driver.options.diagColumnUnit == ColumnUnit::Display);
+    CHECK(driver.diagFormatOptions.diagColumnUnit == ColumnUnit::Display);
 }
 
 TEST_CASE("Driver invalid column unit") {
@@ -789,8 +789,8 @@ TEST_CASE("Driver basic dependency pruning") {
     auto treeD = SyntaxTree::fromText("module moduleD; /* independent */ endmodule\n",
                                       driver.sourceManager, "source"sv, "moduleD.sv"sv);
 
-    driver.options.allDepfile = "-";
-    driver.options.depfileTrim = true;
+    driver.depFileOptions.allDepfile = "-";
+    driver.depFileOptions.depfileTrim = true;
     driver.syntaxTrees.push_back(treeA);
     driver.syntaxTrees.push_back(treeB);
     driver.syntaxTrees.push_back(treeC);
@@ -822,8 +822,8 @@ TEST_CASE("Driver basic dependency pruning") {
     // Test case 3: just sorting, no trimming
     {
         driver.options.topModules.clear();
-        driver.options.depfileTrim = false;
-        driver.options.depfileSort = true;
+        driver.depFileOptions.depfileTrim = false;
+        driver.depFileOptions.depfileSort = true;
 
         auto guard = OS::captureOutput();
         driver.optionallyWriteDepFiles();
@@ -836,7 +836,7 @@ TEST_CASE("Driver basic dependency pruning") {
     {
         driver.options.topModules.clear();
         driver.options.topModules.push_back("unknownModule");
-        driver.options.depfileTrim = true;
+        driver.depFileOptions.depfileTrim = true;
 
         auto guard = OS::captureOutput();
         driver.optionallyWriteDepFiles();
@@ -856,8 +856,8 @@ TEST_CASE("Driver deplist circular dependency handling") {
     auto treeCycleB = SyntaxTree::fromText("module cycleB; cycleA ca(); endmodule\n",
                                            driver.sourceManager, "source"sv, "cycleB.sv"sv);
 
-    driver.options.allDepfile = "-";
-    driver.options.depfileTrim = true;
+    driver.depFileOptions.allDepfile = "-";
+    driver.depFileOptions.depfileTrim = true;
     driver.syntaxTrees.push_back(treeCycleA);
     driver.syntaxTrees.push_back(treeCycleB);
 
@@ -883,8 +883,8 @@ TEST_CASE("Driver deplist partial dependency tree") {
     auto treeTop = SyntaxTree::fromText("module top; mid m(); endmodule\n", driver.sourceManager,
                                         "source"sv, "top.sv"sv);
 
-    driver.options.allDepfile = "-";
-    driver.options.depfileTrim = true;
+    driver.depFileOptions.allDepfile = "-";
+    driver.depFileOptions.depfileTrim = true;
     driver.syntaxTrees.push_back(treeLeafA);
     driver.syntaxTrees.push_back(treeLeafB);
     driver.syntaxTrees.push_back(treeMid);
@@ -906,8 +906,8 @@ TEST_CASE("Driver deplist missing dependencies") {
     auto treeA = SyntaxTree::fromText("module moduleA; missingModule m(); endmodule\n",
                                       driver.sourceManager, "source"sv, "moduleA.sv"sv);
 
-    driver.options.allDepfile = "-";
-    driver.options.depfileTrim = true;
+    driver.depFileOptions.allDepfile = "-";
+    driver.depFileOptions.depfileTrim = true;
     driver.syntaxTrees.push_back(treeA);
 
     driver.options.topModules.push_back("moduleA");
@@ -925,8 +925,8 @@ TEST_CASE("Driver deplist missing top modules") {
     auto treeA = SyntaxTree::fromText("module moduleA; missingModule m(); endmodule\n",
                                       driver.sourceManager, "source"sv, "moduleA.sv"sv);
 
-    driver.options.allDepfile = "-";
-    driver.options.depfileTrim = true;
+    driver.depFileOptions.allDepfile = "-";
+    driver.depFileOptions.depfileTrim = true;
     driver.syntaxTrees.push_back(treeA);
 
     auto guard = OS::captureOutput();
