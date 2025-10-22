@@ -837,7 +837,7 @@ bool InstanceCacheKey::operator==(const InstanceCacheKey& other) const {
         else {
             auto& lt = lp->symbol.as<TypeParameterSymbol>().targetType.getType();
             auto& rt = rp->symbol.as<TypeParameterSymbol>().targetType.getType();
-            if (!lt.isMatching(rt))
+            if (!lt.isMatching(rt) && !lt.isIdenticalStructUnion(rt))
                 return false;
         }
     }

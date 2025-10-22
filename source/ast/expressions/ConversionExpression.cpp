@@ -43,38 +43,6 @@ bool isSameEnum(const Expression& expr, const Type& enumType) {
     return expr.type->isMatching(enumType);
 }
 
-// This checks whether the two types are essentially the same struct or union type,
-// which is true if they have the same number of fields with the same names and the
-// same field types.
-bool isSameStructUnion(const Type& left, const Type& right) {
-    const Type& lt = left.getCanonicalType();
-    const Type& rt = right.getCanonicalType();
-    if (lt.kind != rt.kind)
-        return false;
-
-    if (lt.kind != SymbolKind::PackedStructType && lt.kind != SymbolKind::PackedUnionType)
-        return false;
-
-    auto lr = lt.as<Scope>().membersOfType<FieldSymbol>();
-    auto rr = rt.as<Scope>().membersOfType<FieldSymbol>();
-
-    auto lit = lr.begin();
-    auto rit = rr.begin();
-    while (lit != lr.end()) {
-        if (rit == rr.end() || lit->name != rit->name)
-            return false;
-
-        auto& lft = lit->getType();
-        auto& rft = rit->getType();
-        if (!lft.isMatching(rft) && !isSameStructUnion(lft, rft))
-            return false;
-
-        ++lit;
-        ++rit;
-    }
-    return rit == rr.end();
-}
-
 bool isUnionMemberType(const Type& left, const Type& right) {
     const Type& lt = left.getCanonicalType();
     const Type& rt = right.getCanonicalType();
@@ -673,7 +641,7 @@ void ConversionExpression::checkImplicitConversions(
     if (lt.isIntegral() && rt.isIntegral()) {
         // Warn for conversions between different enums/structs/unions.
         if (isStructUnionEnum(lt) && isStructUnionEnum(rt) && !lt.isMatching(rt)) {
-            if (!isSameStructUnion(lt, rt) && !isUnionMemberType(lt, rt))
+            if (!lt.isIdenticalStructUnion(rt) && !isUnionMemberType(lt, rt))
                 addDiag(diag::ImplicitConvert) << sourceType << targetType;
             return;
         }

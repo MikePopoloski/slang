@@ -269,6 +269,11 @@ public:
     /// extends the given interface class type. Otherwise, returns false.
     bool implements(const Type& ifaceClass) const;
 
+    /// Determines whether the given type is a struct or union type that is
+    /// identical to this one, meaning they have the same fields with the
+    /// same names and types in the same order.
+    bool isIdenticalStructUnion(const Type& rhs) const;
+
     /// Gets a combination of flags for integral types; for non-integral types,
     /// this returns all zeros.
     bitmask<IntegralFlags> getIntegralFlags() const;

@@ -710,6 +710,54 @@ bool Type::implements(const Type& ifaceClass) const {
     return false;
 }
 
+bool Type::isIdenticalStructUnion(const Type& rhs) const {
+    const Type& lt = getCanonicalType();
+    const Type& rt = rhs.getCanonicalType();
+    if (lt.kind != rt.kind)
+        return false;
+
+    if (!lt.isStruct() && !lt.isUnion())
+        return false;
+
+    auto lr = lt.as<Scope>().membersOfType<FieldSymbol>();
+    auto rr = rt.as<Scope>().membersOfType<FieldSymbol>();
+
+    auto lit = lr.begin();
+    auto rit = rr.begin();
+    while (lit != lr.end()) {
+        if (rit == rr.end() || lit->name != rit->name || lit->randMode != rit->randMode ||
+            lit->flags != rit->flags) {
+            return false;
+        }
+
+        auto& lft = lit->getType();
+        auto& rft = rit->getType();
+        if (!lft.isMatching(rft) && !lft.isIdenticalStructUnion(rft))
+            return false;
+
+        ++lit;
+        ++rit;
+    }
+
+    if (rit != rr.end())
+        return false;
+
+    if (lt.kind == SymbolKind::UnpackedUnionType) {
+        auto& lu = lt.as<UnpackedUnionType>();
+        auto& ru = rt.as<UnpackedUnionType>();
+        if (lu.isTagged != ru.isTagged)
+            return false;
+    }
+    else if (lt.kind == SymbolKind::PackedUnionType) {
+        auto& lu = lt.as<PackedUnionType>();
+        auto& ru = rt.as<PackedUnionType>();
+        if (lu.isTagged != ru.isTagged || lu.isSoft != ru.isSoft)
+            return false;
+    }
+
+    return true;
+}
+
 bitmask<IntegralFlags> Type::getIntegralFlags() const {
     bitmask<IntegralFlags> flags;
     if (!isIntegral())
@@ -946,21 +994,15 @@ std::string Type::toString() const {
 size_t Type::hash() const {
     size_t h = size_t(kind);
     auto& ct = getCanonicalType();
-    if (ct.isScalar()) {
-        auto sk = ct.as<ScalarType>().scalarKind;
-        if (sk == ScalarType::Reg)
-            sk = ScalarType::Logic;
-        hash_combine(h, sk);
+    if (ct.isIntegral()) {
+        auto& it = ct.as<IntegralType>();
+        hash_combine(h, it.isSigned, it.isFourState, it.bitWidth);
     }
     else if (ct.isFloating()) {
         auto fk = ct.as<FloatingType>().floatKind;
         if (fk == FloatingType::RealTime)
             fk = FloatingType::Real;
         hash_combine(h, fk);
-    }
-    else if (ct.isIntegral()) {
-        auto& it = ct.as<IntegralType>();
-        hash_combine(h, it.isSigned, it.isFourState, it.bitWidth);
     }
     else if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType) {
         auto& uat = ct.as<FixedSizeUnpackedArrayType>();
@@ -988,6 +1030,22 @@ size_t Type::hash() const {
         auto& vi = ct.as<VirtualInterfaceType>();
         hash_combine(h, &vi.iface);
         hash_combine(h, vi.modport);
+    }
+    else if (ct.kind == SymbolKind::UnpackedStructType) {
+        for (auto field : ct.as<UnpackedStructType>().fields) {
+            hash_combine(h, field->name);
+            hash_combine(h, field->fieldIndex);
+            hash_combine(h, field->getType().hash());
+        }
+    }
+    else if (ct.kind == SymbolKind::UnpackedUnionType) {
+        auto& uu = ct.as<UnpackedUnionType>();
+        hash_combine(h, uu.isTagged);
+        for (auto field : uu.fields) {
+            hash_combine(h, field->name);
+            hash_combine(h, field->fieldIndex);
+            hash_combine(h, field->getType().hash());
+        }
     }
     else {
         h = (size_t)slang::hash<const Type*>()(&ct);
