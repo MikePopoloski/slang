@@ -38,6 +38,7 @@ add_executable(
   parsing/RewriterExpandTests.cpp
   parsing/VisitorTests.cpp
   parsing/StatementParsingTests.cpp
+  parsing/SyntaxPrinterTests.cpp
   util/CommandLineTests.cpp
   util/IntervalMapTests.cpp
   util/NumericTests.cpp

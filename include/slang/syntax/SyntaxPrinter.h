@@ -43,6 +43,23 @@ public:
     /// @return a reference to this object, to allow chaining additional method calls.
     SyntaxPrinter& print(const SyntaxNode& node);
 
+    /// Print the leading comments and trivia for the provided @a node.
+    /// This will attempt to grab the leading trivia that is intended to provide info for this
+    /// syntax node. This includes doc comments, but also other typical annotation styles. See
+    /// SyntaxPrinterTests.cpp for more detail.
+    /// @return a reference to this object, to allow chaining additional method calls.
+    SyntaxPrinter& printLeadingComments(const SyntaxNode& node);
+
+    /// Print the provided @a node to the internal buffer, with the leading comments and trivia on
+    /// the primary node. See @a printLeadingComments for detail on what is considered a leading
+    /// comment.
+    /// @return a reference to this object, to allow chaining additional method calls.
+    SyntaxPrinter& printWithLeadingComments(const SyntaxNode& node);
+
+    /// Print the provided @a node to the internal buffer, excluding any leading trivia.
+    /// @return a reference to this object, to allow chaining additional method calls.
+    SyntaxPrinter& printExcludingLeadingComments(const SyntaxNode& node);
+
     /// Print the provided @a tree to the internal buffer.
     /// @return a reference to this object, to allow chaining additional method calls.
     SyntaxPrinter& print(const SyntaxTree& tree);
