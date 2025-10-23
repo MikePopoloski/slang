@@ -146,6 +146,36 @@ public:
     /// Gets the number of (direct) children underneath this node in the tree.
     size_t getChildCount() const; // Note: implemented in AllSyntax.cpp
 
+    /// An iterator that walks through all tokens in a syntax node in order.
+    class SLANG_EXPORT token_iterator : public iterator_facade<token_iterator> {
+    public:
+        token_iterator() : node(nullptr), childIndex(0), currentToken() {}
+
+        parsing::Token dereference() const { return currentToken; }
+
+        void increment();
+
+        bool equals(const token_iterator& other) const;
+
+    private:
+        friend class SyntaxNode;
+
+        explicit token_iterator(const SyntaxNode* node);
+
+        void findNextToken();
+
+        const SyntaxNode* node;
+        size_t childIndex;
+        parsing::Token currentToken;
+        SmallVector<std::pair<const SyntaxNode*, size_t>, 4> stack;
+    };
+
+    /// Gets an iterator to the first token in this subtree.
+    token_iterator tokens_begin() const { return token_iterator(this); }
+
+    /// Gets an iterator representing the end of tokens in this subtree.
+    token_iterator tokens_end() const { return token_iterator(); }
+
     /// Returns true if this syntax node is "equivalent" to the other provided
     /// syntax node. Equivalence here is determined by the entire subtrees having
     /// the same kinds of syntax nodes in the same order and all leaf tokens

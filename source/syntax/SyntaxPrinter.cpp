@@ -8,10 +8,12 @@
 #include "slang/syntax/SyntaxPrinter.h"
 
 #include "slang/parsing/ParserMetadata.h"
+#include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/Util.h"
 
 namespace slang::syntax {
 
@@ -115,6 +117,82 @@ SyntaxPrinter& SyntaxPrinter::print(const SyntaxNode& node) {
         else if (auto token = node.childToken(i); token)
             print(token);
     }
+    return *this;
+}
+
+SyntaxPrinter& SyntaxPrinter::printLeadingComments(const SyntaxNode& node) {
+    auto triviaSpan = node.getFirstToken().trivia();
+    using Iterator = std::span<const Trivia>::iterator;
+    std::optional<Iterator> lastComment;
+    std::optional<Iterator> leadingCommentStart;
+
+    // Walk backwards through trivia until
+    // - block comment
+    // - double new line after seeing a comment
+    // This misses leading trivia at first line, although that's typically for license/file
+    auto findDocBoundary = [&]() {
+        bool lastIsNewline = false;
+        for (auto it = triviaSpan.rbegin(); it != triviaSpan.rend(); it++) {
+            const auto& trivia = *it;
+            switch (trivia.kind) {
+                case TriviaKind::EndOfLine:
+                    if (lastIsNewline && lastComment) {
+                        // found a double newline after a comment, stop here
+                        return;
+                    }
+                    leadingCommentStart = lastComment;
+                    lastIsNewline = true;
+                    break;
+                case TriviaKind::BlockComment:
+                    // the first block comment is the start
+                    leadingCommentStart = it.base() - 1;
+                    return;
+                case TriviaKind::LineComment:
+                    lastComment = it.base() - 1;
+                    [[fallthrough]];
+                default:
+                    lastIsNewline = false;
+            }
+        }
+    };
+    findDocBoundary();
+
+    if (leadingCommentStart) {
+        for (auto it = *leadingCommentStart; it != triviaSpan.end(); it++) {
+            print(*it);
+        }
+    }
+
+    return *this;
+}
+
+SyntaxPrinter& SyntaxPrinter::printExcludingLeadingComments(const SyntaxNode& node) {
+    if (!includeTrivia) {
+        print(node);
+        return *this;
+    }
+
+    auto it = node.tokens_begin();
+    auto end = node.tokens_end();
+
+    if (it == end)
+        return *this;
+
+    // Print first token without leading trivia
+    includeTrivia = false;
+    print(*it);
+    includeTrivia = true;
+
+    for (++it; it != end; ++it) {
+        print(*it);
+    }
+
+    return *this;
+}
+
+SyntaxPrinter& SyntaxPrinter::printWithLeadingComments(const SyntaxNode& node) {
+    printLeadingComments(node);
+    printExcludingLeadingComments(node);
     return *this;
 }
 

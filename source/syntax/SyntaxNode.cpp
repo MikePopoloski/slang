@@ -148,6 +148,63 @@ TokenOrSyntax SyntaxNode::getChild(size_t index) {
     return visit(visitor, index);
 }
 
+SyntaxNode::token_iterator::token_iterator(const SyntaxNode* node) :
+    node(node), childIndex(0), currentToken() {
+    if (node)
+        findNextToken();
+}
+
+void SyntaxNode::token_iterator::increment() {
+    if (!node)
+        return;
+
+    // Move to the next child in the current node
+    childIndex++;
+    findNextToken();
+}
+
+bool SyntaxNode::token_iterator::equals(const token_iterator& other) const {
+    // begin iterator will have node set, end will have nullptr node
+    return node == other.node && childIndex == other.childIndex;
+}
+
+void SyntaxNode::token_iterator::findNextToken() {
+    while (true) {
+        // If we're out of children in the current node, pop from the stack
+        if (childIndex >= node->getChildCount()) {
+            if (stack.empty()) {
+                // We're done iterating
+                node = nullptr;
+                childIndex = 0;
+                return;
+            }
+
+            // Pop the last saved state
+            auto [parentNode, parentIndex] = stack.back();
+            stack.pop_back();
+            node = parentNode;
+            childIndex = parentIndex + 1;
+            continue;
+        }
+
+        auto token = node->childToken(childIndex);
+        if (token) {
+            currentToken = token;
+            return;
+        }
+
+        auto childNode = node->childNode(childIndex);
+        if (childNode) {
+            stack.push_back({node, childIndex});
+            node = childNode;
+            childIndex = 0;
+        }
+        else {
+            childIndex++;
+        }
+    }
+}
+
 const SyntaxNode* SyntaxNode::childNode(size_t index) const {
     auto child = getChild(index);
     if (child.isToken())
