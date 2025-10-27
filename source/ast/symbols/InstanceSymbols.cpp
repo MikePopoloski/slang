@@ -138,16 +138,21 @@ private:
         // make up an empty array so that we don't get further errors when
         // things try to reference this symbol.
         auto dim = context.evalDimension(dimSyntax, /* requireRange */ true, /* isPacked */ false);
-        if (!dim.isRange())
-            return &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(),
-                                                     nameToken.location());
+        if (!dim.isRange()) {
+            auto result = &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(),
+                                                            nameToken.location());
+            result->setSyntax(syntax);
+            return result;
+        }
 
         ConstantRange range = dim.range;
         if (range.width() > comp.getOptions().maxInstanceArray) {
             auto& diag = context.addDiag(diag::MaxInstanceArrayExceeded, dimSyntax.sourceRange());
             diag << definition->getKindString() << comp.getOptions().maxInstanceArray;
-            return &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(),
-                                                     nameToken.location());
+            auto result = &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(),
+                                                            nameToken.location());
+            result->setSyntax(syntax);
+            return result;
         }
 
         SmallVector<const Symbol*> elements;
@@ -1478,14 +1483,21 @@ Symbol* recursePrimArray(Compilation& comp, const PrimitiveSymbol& primitive,
     // make up an empty array so that we don't get further errors when
     // things try to reference this symbol.
     auto dim = context.evalDimension(dimSyntax, /* requireRange */ true, /* isPacked */ false);
-    if (!dim.isRange())
-        return &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(), nameToken.location());
+    if (!dim.isRange()) {
+        auto result = &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(),
+                                                        nameToken.location());
+        result->setSyntax(instance);
+        return result;
+    }
 
     ConstantRange range = dim.range;
     if (range.width() > comp.getOptions().maxInstanceArray) {
         auto& diag = context.addDiag(diag::MaxInstanceArrayExceeded, dimSyntax.sourceRange());
         diag << "primitive"sv << comp.getOptions().maxInstanceArray;
-        return &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(), nameToken.location());
+        auto result = &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(),
+                                                        nameToken.location());
+        result->setSyntax(instance);
+        return result;
     }
 
     SmallVector<const Symbol*> elements;
@@ -1502,6 +1514,7 @@ Symbol* recursePrimArray(Compilation& comp, const PrimitiveSymbol& primitive,
     auto result = comp.emplace<InstanceArraySymbol>(comp, nameToken.valueText(),
                                                     nameToken.location(), elements.copy(comp),
                                                     range);
+    result->setSyntax(instance);
     for (auto element : elements)
         result->addMember(*element);
 
