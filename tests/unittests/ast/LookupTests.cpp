@@ -17,6 +17,7 @@
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/text/SourceManager.h"
 
 TEST_CASE("Explicit import lookup") {
     auto tree = SyntaxTree::fromText(R"(
@@ -497,6 +498,36 @@ endmodule
     CHECK(block.find<ParameterSymbol>("last").getValue().integer() == 7);
     CHECK(block.find<ParameterSymbol>("count1").getValue().integer() == 3);
     CHECK(block.find<ParameterSymbol>("count2").getValue().integer() == 3);
+}
+
+TEST_CASE("Enum value lookup with different source manager") {
+
+    SourceManager sm;
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+    typedef enum { FOO = 2, BAR = 6, BAZ = 7 } e;
+
+endmodule
+)",
+                                     sm);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& block = compilation.getRoot().topInstances[0]->body;
+
+    // Causes `Assertion 'buffer.getId() < bufferEntries.size()' failed`
+    auto value = block.lookupName("FOO");
+    REQUIRE(value);
+    CHECK(value->kind == SymbolKind::EnumValue);
+
+    // Also causes `Assertion 'buffer.getId() < bufferEntries.size()' failed`
+    LookupResult result;
+    ASTContext context(block, LookupLocation::max);
+    Lookup::name(compilation.parseName("FOO"), context, LookupFlags::None, result);
+    REQUIRE(result.found);
+    CHECK(result.found->kind == SymbolKind::EnumValue);
 }
 
 TEST_CASE("Instance array indexing") {
