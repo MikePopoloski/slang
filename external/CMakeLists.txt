@@ -243,6 +243,7 @@ if(SLANG_INCLUDE_INSTALL)
       COMPONENT slang_Development)
     install(
       FILES ${PROJECT_SOURCE_DIR}/external/boost_unordered.hpp
+            ${PROJECT_SOURCE_DIR}/external/boost_concurrent.hpp
       DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
       COMPONENT slang_Development)
   endif()
