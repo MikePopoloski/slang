@@ -759,7 +759,8 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
     switch (intrinsic) {
         case MacroIntrinsic::File: {
             std::string_view macroName = "__FILE__";
-            SourceLocation macroLoc = sourceManager.createExpansionLoc(loc, expansion.getRange(), macroName);
+            SourceLocation macroLoc = sourceManager.createExpansionLoc(loc, expansion.getRange(),
+                                                                       macroName);
 
             std::string_view fileName = sourceManager.getFileName(loc);
             text.push_back('"');
@@ -773,7 +774,8 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
         }
         case MacroIntrinsic::Line: {
             std::string_view macroName = "__LINE__";
-            SourceLocation macroLoc = sourceManager.createExpansionLoc(loc, expansion.getRange(), macroName);
+            SourceLocation macroLoc = sourceManager.createExpansionLoc(loc, expansion.getRange(),
+                                                                       macroName);
 
             size_t lineNum = sourceManager.getLineNumber(loc);
             uintToStr(text, static_cast<uint64_t>(lineNum));
