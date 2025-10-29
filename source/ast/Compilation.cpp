@@ -21,7 +21,6 @@
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/CharInfo.h"
-#include "slang/text/SourceManager.h"
 #include "slang/util/TimeTrace.h"
 
 using namespace slang::parsing;
@@ -1447,17 +1446,16 @@ const NameSyntax& Compilation::parseName(std::string_view name) {
     auto& result = tryParseName(name, localDiags);
 
     if (!localDiags.empty()) {
-        SourceManager& sourceMan = SyntaxTree::getDefaultSourceManager();
-        localDiags.sort(sourceMan);
-        SLANG_THROW(std::runtime_error(DiagnosticEngine::reportAll(sourceMan, localDiags)));
+        localDiags.sort(*sourceManager);
+        SLANG_THROW(std::runtime_error(DiagnosticEngine::reportAll(*sourceManager, localDiags)));
     }
 
     return result;
 }
 
 const NameSyntax& Compilation::tryParseName(std::string_view name, Diagnostics& localDiags) {
-    SourceManager& sourceMan = SyntaxTree::getDefaultSourceManager();
-    Preprocessor preprocessor(sourceMan, *this, localDiags);
+    SLANG_ASSERT(sourceManager);
+    Preprocessor preprocessor(*sourceManager, *this, localDiags);
     preprocessor.pushSource(name);
 
     Parser parser(preprocessor);
