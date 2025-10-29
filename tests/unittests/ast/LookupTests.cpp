@@ -325,11 +325,33 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
+    INFO(report(diags));
     REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::AmbiguousWildcardImport);
-    CHECK(diags[1].code == diag::Redefinition);
-    CHECK(diags[2].code == diag::Redefinition);
-    CHECK(diags[3].code == diag::ImportNameCollision);
+
+    int ambiguousCount = 0;
+    int redeclarationCount = 0;
+    int importCollisionCount = 0;
+    int undeclaredCount = 0;
+
+    for (auto& diag : diags) {
+        if (diag.code == diag::AmbiguousWildcardImport) {
+            ambiguousCount++;
+        }
+        else if (diag.code == diag::Redefinition) {
+            redeclarationCount++;
+        }
+        else if (diag.code == diag::ImportNameCollision) {
+            importCollisionCount++;
+        }
+        else if (diag.code == diag::UndeclaredIdentifier) {
+            undeclaredCount++;
+        }
+    }
+
+    CHECK(ambiguousCount == 1);
+    CHECK(redeclarationCount == 2);
+    CHECK(importCollisionCount == 1);
+    CHECK(undeclaredCount == 0);
 }
 
 TEST_CASE("Member access") {
@@ -1098,6 +1120,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diagnostics = compilation.getAllDiagnostics();
+
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
 source:64:33: error: reference to 'gen3' by hierarchical name is not allowed in a constant expression

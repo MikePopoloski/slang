@@ -5,9 +5,12 @@
 #include <fmt/core.h>
 #include <fstream>
 #include <regex>
+#include <iostream>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/ast/types/AllTypes.h"
 #include "slang/driver/Driver.h"
 
 using namespace slang::driver;
@@ -568,6 +571,142 @@ TEST_CASE("Driver suppress macro warnings by path") {
     CHECK(driver.runFullCompilation());
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stdoutContains("0 errors, 0 warnings"));
+}
+
+TEST_CASE("Driver allows diamond wildcard import") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format(
+        "testfoo \"{0}collision/consts_pkg.sv\" \"{0}collision/a_pkg.sv\" "
+        "\"{0}collision/b_pkg.sv\" \"{0}collision/consumer_pkg.sv\"",
+        testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto compilation = driver.createCompilation();
+    auto consumerPkg = compilation->getPackage("consumer_pkg");
+    REQUIRE(consumerPkg);
+
+    INFO(report(compilation->getAllDiagnostics()));
+
+    auto& addrAlias = consumerPkg->lookupName<TypeAliasType>("addr_t");
+    auto& addrType = addrAlias.targetType.getType();
+    REQUIRE(addrType.isIntegral());
+
+    auto addrWidth = addrType.getBitWidth();
+
+    auto aPkg = compilation->getPackage("a_pkg");
+    REQUIRE(aPkg);
+    auto& aWidthParam = aPkg->lookupName<ParameterSymbol>("WIDTH");
+    auto aWidthValue = aWidthParam.getValue().integer().as<uint32_t>();
+
+    auto bPkg = compilation->getPackage("b_pkg");
+    REQUIRE(bPkg);
+    auto& bWidthParam = bPkg->lookupName<ParameterSymbol>("WIDTH");
+    auto bWidthValue = bWidthParam.getValue().integer().as<uint32_t>();
+
+    auto constsPkg = compilation->getPackage("consts_pkg");
+    REQUIRE(constsPkg);
+    auto& baseWidthParam = constsPkg->lookupName<ParameterSymbol>("WIDTH");
+    auto baseWidthValue = baseWidthParam.getValue().integer().as<uint32_t>();
+
+    CHECK(aWidthValue == baseWidthValue);
+    CHECK(bWidthValue == baseWidthValue);
+    CHECK(addrWidth == baseWidthValue);
+
+    compilation.reset();
+
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stdoutContains("0 errors, 0 warnings"));
+}
+
+TEST_CASE("Driver diamond explicit import re-export") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format(
+        "testfoo \"{0}collision/consts_pkg.sv\" \"{0}collision/explicit_forward_pkg.sv\" "
+        "\"{0}collision/explicit_import_pkg.sv\" \"{0}collision/consumer_pkg_explicit.sv\"",
+        testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto success = driver.runFullCompilation();
+    INFO("stderr:\n" << OS::capturedStderr);
+    CHECK(success);
+    CHECK(stdoutContains("Build succeeded"));
+}
+
+TEST_CASE("Driver diamond multi-hop forward") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format(
+        "testfoo \"{0}collision/consts_pkg.sv\" \"{0}collision/multihop_mid_pkg.sv\" "
+        "\"{0}collision/multihop_outer_pkg.sv\" \"{0}collision/consumer_pkg_multihop.sv\"",
+        testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto success = driver.runFullCompilation();
+    INFO("stderr:\n" << OS::capturedStderr);
+    CHECK(success);
+    CHECK(stdoutContains("Build succeeded"));
+}
+
+TEST_CASE("Driver diamond typedef re-export") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format(
+        "testfoo \"{0}collision/type_base_pkg.sv\" \"{0}collision/type_forward_a_pkg.sv\" "
+        "\"{0}collision/type_forward_b_pkg.sv\" \"{0}collision/consumer_pkg_types.sv\"",
+        testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto success = driver.runFullCompilation();
+    INFO("stderr:\n" << OS::capturedStderr);
+    CHECK(success);
+    CHECK(stdoutContains("Build succeeded"));
+}
+
+TEST_CASE("Driver reports mixed wildcard import collision") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format(
+        "testfoo \"{0}collision/consts_pkg.sv\" \"{0}collision/a_pkg.sv\" "
+        "\"{0}collision/b_pkg.sv\" \"{0}collision/consumer_pkg_mixed.sv\"",
+        testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stderrContains("multiple imports found for identifier 'DEPTH'"));
+    CHECK_FALSE(stderrContains("multiple imports found for identifier 'WIDTH'"));
+    CHECK(stdoutContains("Build failed"));
 }
 
 static bool contains(std::string_view str, std::string_view value) {

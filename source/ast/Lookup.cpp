@@ -10,6 +10,8 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
+#include "slang/ast/expressions/ConversionExpression.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -29,6 +31,7 @@
 #include "slang/parsing/LexerFacts.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/Hash.h"
 #include "slang/util/String.h"
 
 namespace slang::ast {
@@ -38,6 +41,62 @@ using namespace syntax;
 
 const LookupLocation LookupLocation::max{nullptr, UINT_MAX};
 const LookupLocation LookupLocation::min{nullptr, 0};
+
+namespace {
+
+const Symbol* canonicalImportTargetImpl(const Symbol& symbol,
+                                        flat_hash_set<const Symbol*>& visited) {
+    if (!visited.emplace(&symbol).second)
+        return &symbol;
+
+    switch (symbol.kind) {
+        case SymbolKind::ExplicitImport:
+            if (auto target = symbol.as<ExplicitImportSymbol>().importedSymbol())
+                return canonicalImportTargetImpl(*target, visited);
+            return &symbol;
+        case SymbolKind::TransparentMember:
+            return canonicalImportTargetImpl(symbol.as<TransparentMemberSymbol>().wrapped, visited);
+        case SymbolKind::TypeAlias: {
+            auto& alias = symbol.as<TypeAliasType>();
+            const Type& target = alias.targetType.getType();
+            if (target.kind == SymbolKind::TypeAlias)
+                return canonicalImportTargetImpl(target.as<TypeAliasType>(), visited);
+            return &symbol;
+        }
+        case SymbolKind::ForwardingTypedef:
+            return &symbol;
+        default:
+            break;
+    }
+
+    if (symbol.isValue()) {
+        const auto& value = symbol.as<ValueSymbol>();
+        auto declaredType = value.getDeclaredType();
+        if (declaredType) {
+            const Expression* init = declaredType->getInitializer();
+            if (init) {
+                const Expression* expr = init;
+                while (expr->kind == ExpressionKind::Conversion)
+                    expr = &expr->as<ConversionExpression>().operand();
+
+                if (auto named = expr->as_if<NamedValueExpression>())
+                    return canonicalImportTargetImpl(named->symbol, visited);
+
+                if (auto hier = expr->as_if<HierarchicalValueExpression>())
+                    return canonicalImportTargetImpl(hier->symbol, visited);
+            }
+        }
+    }
+
+    return &symbol;
+}
+
+const Symbol* canonicalImportTarget(const Symbol& symbol) {
+    flat_hash_set<const Symbol*> visited;
+    return canonicalImportTargetImpl(symbol, visited);
+}
+
+} // namespace
 
 LookupLocation LookupLocation::before(const Symbol& symbol) {
     return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex());
@@ -1993,37 +2052,94 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
             }
 
             if (!imports.empty()) {
+                const Import* selectedImport = nullptr;
+                const Symbol* canonicalSymbol = nullptr;
+                SmallVector<const Symbol*, 4> canonicalTargets;
+                canonicalTargets.reserve(imports.size());
+                for (auto& pair : imports)
+                    canonicalTargets.push_back(canonicalImportTarget(*pair.imported));
+
                 if (imports.size() > 1) {
-                    if (sourceRange) {
-                        auto& diag = result.addDiag(scope, diag::AmbiguousWildcardImport,
-                                                    *sourceRange);
+                    canonicalSymbol = canonicalTargets[0];
+                    bool allSame = canonicalSymbol != nullptr;
+
+                    for (size_t i = 1; i < imports.size(); i++) {
+                        if (canonicalTargets[i] != canonicalSymbol) {
+                            allSame = false;
+                            break;
+                        }
+                    }
+
+                    if (!allSame) {
+                        auto& diag = [&]() -> Diagnostic& {
+                            if (sourceRange && sourceRange->start()) {
+                                return result.addDiag(scope, diag::AmbiguousWildcardImport,
+                                                      *sourceRange);
+                            }
+
+                            if (result.nameRange.start()) {
+                                return result.addDiag(scope, diag::AmbiguousWildcardImport,
+                                                      result.nameRange);
+                            }
+
+                            if (originalSyntax) {
+                                return result.addDiag(scope, diag::AmbiguousWildcardImport,
+                                                      originalSyntax->sourceRange());
+                            }
+
+                            return result.addDiag(scope, diag::AmbiguousWildcardImport,
+                                                  SourceLocation::NoLocation);
+                        }();
+
                         diag << name;
-                        for (const auto& pair : imports) {
+
+                        flat_hash_set<const Symbol*> noted;
+                        for (size_t i = 0; i < imports.size(); i++) {
+                            const auto& pair = imports[i];
+                            const Symbol* target =
+                                canonicalTargets[i] ? canonicalTargets[i] : pair.imported;
+                            if (!noted.emplace(target).second)
+                                continue;
+
                             diag.addNote(diag::NoteImportedFrom, pair.import->location);
                             diag.addNote(diag::NoteDeclarationHere, pair.imported->location);
                         }
+
+                        result.flags |= LookupResultFlags::SuppressUndeclared;
+                        return;
                     }
-                    return;
+
+                    for (ptrdiff_t i = ptrdiff_t(imports.size()) - 1; i >= 0; i--) {
+                        if (canonicalTargets[size_t(i)] == canonicalSymbol) {
+                            selectedImport = &imports[size_t(i)];
+                            break;
+                        }
+                    }
                 }
+
+                if (!selectedImport)
+                    selectedImport = &imports[0];
+
+                const Symbol* finalSymbol =
+                    canonicalSymbol ? canonicalSymbol : selectedImport->imported;
 
                 if (symbol && sourceRange) {
                     // The existing symbol might be an import for the thing we just imported
                     // via wildcard, which is fine so don't error for that case.
                     if (symbol->kind != SymbolKind::ExplicitImport ||
-                        symbol->as<ExplicitImportSymbol>().importedSymbol() !=
-                            imports[0].imported) {
+                        symbol->as<ExplicitImportSymbol>().importedSymbol() != finalSymbol) {
 
                         auto& diag = result.addDiag(scope, diag::ImportNameCollision, *sourceRange);
                         diag << name;
                         diag.addNote(diag::NoteDeclarationHere, symbol->location);
-                        diag.addNote(diag::NoteImportedFrom, imports[0].import->location);
-                        diag.addNote(diag::NoteDeclarationHere, imports[0].imported->location);
+                        diag.addNote(diag::NoteImportedFrom, selectedImport->import->location);
+                        diag.addNote(diag::NoteDeclarationHere, finalSymbol->location);
                     }
                 }
 
                 result.flags |= LookupResultFlags::WasImported;
-                result.found = imports[0].imported;
-                scope.getCompilation().noteReference(*imports[0].import);
+                result.found = finalSymbol;
+                scope.getCompilation().noteReference(*selectedImport->import);
 
                 wildcardImportData->importedSymbols.try_emplace(result.found->name, result.found);
                 return;
