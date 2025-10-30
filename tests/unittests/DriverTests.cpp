@@ -468,10 +468,10 @@ TEST_CASE("Driver macro include actual resumes multiple times") {
     Driver driver;
     driver.addStandardArgs();
 
-    auto args =
-        fmt::format("testfoo -I \"{0}import_include_error\" \"{0}import_include_error/top_dual.sv\" "
-                    "\"{0}import_include_error/dual_compute_unit.sv\"",
-                    findTestDir());
+    auto args = fmt::format(
+        "testfoo -I \"{0}import_include_error\" \"{0}import_include_error/top_dual.sv\" "
+        "\"{0}import_include_error/dual_compute_unit.sv\"",
+        findTestDir());
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
@@ -486,10 +486,10 @@ TEST_CASE("Driver nested macro include recursion parses successfully") {
     Driver driver;
     driver.addStandardArgs();
 
-    auto args =
-        fmt::format("testfoo -I \"{0}import_include_error\" \"{0}import_include_error/top_nested.sv\" "
-                    "\"{0}import_include_error/dual_compute_unit.sv\"",
-                    findTestDir());
+    auto args = fmt::format(
+        "testfoo -I \"{0}import_include_error\" \"{0}import_include_error/top_nested.sv\" "
+        "\"{0}import_include_error/dual_compute_unit.sv\"",
+        findTestDir());
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());

@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
+#include <cctype>
+#include <ranges>
 
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/text/SourceManager.h"
-#include <cctype>
-#include <ranges>
 
 void trimTrailingWhitespace(std::string& str) {
     size_t off = 0;
