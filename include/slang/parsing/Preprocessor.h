@@ -410,9 +410,18 @@ private:
     // map from macro name to macro definition
     flat_hash_map<std::string_view, MacroDef> macros;
 
+    struct MacroBufferFrame {
+        SmallVector<Token> tokens;
+        uint32_t index = 0;
+    };
+
+    void suspendCurrentMacroBuffer();
+    bool resumePendingMacroBuffer();
+
     // list of expanded macro tokens to drain before continuing with active lexer
     SmallVector<Token> expandedTokens;
     Token* currentMacroToken = nullptr;
+    SmallVector<MacroBufferFrame, 4> pendingMacroFrames;
 
     // the latest token pulled from a lexer
     Token currentToken;

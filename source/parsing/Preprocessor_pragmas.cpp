@@ -367,17 +367,38 @@ void Preprocessor::skipMacroTokensBeforeProtectRegion(Token directive,
     // protect directive, so we don't expect there to be macro tokens still pending.
     // If there are, issue an error and skip them.
     SLANG_ASSERT(!currentToken);
-    if (currentMacroToken) {
-        addDiag(diag::MacroTokensAfterPragmaProtect, currentMacroToken->range())
+    auto reportRange = [&]() -> std::optional<SourceRange> {
+        if (currentMacroToken)
+            return currentMacroToken->range();
+        if (!pendingMacroFrames.empty()) {
+            const auto& frame = pendingMacroFrames.back();
+            if (frame.index < frame.tokens.size())
+                return frame.tokens[frame.index].range();
+        }
+        return std::nullopt;
+    };
+
+    if (auto range = reportRange()) {
+        addDiag(diag::MacroTokensAfterPragmaProtect, *range)
             .addNote(diag::NoteDirectiveHere, directive.range());
 
-        do {
-            skippedTokens.push_back(*currentMacroToken);
-            currentMacroToken++;
-        } while (currentMacroToken != expandedTokens.end());
+        if (currentMacroToken) {
+            do {
+                skippedTokens.push_back(*currentMacroToken);
+                currentMacroToken++;
+            } while (currentMacroToken != expandedTokens.end());
 
-        currentMacroToken = nullptr;
-        expandedTokens.clear();
+            currentMacroToken = nullptr;
+            expandedTokens.clear();
+        }
+
+        while (!pendingMacroFrames.empty()) {
+            auto frame = std::move(pendingMacroFrames.back());
+            pendingMacroFrames.pop_back();
+
+            for (size_t i = frame.index; i < frame.tokens.size(); i++)
+                skippedTokens.push_back(frame.tokens[i]);
+        }
     }
 }
 

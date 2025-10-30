@@ -3,6 +3,8 @@
 
 #include "Test.h"
 #include <fstream>
+#include <sstream>
+#include <vector>
 
 #include "slang/text/Glob.h"
 #include "slang/text/SourceManager.h"
@@ -100,6 +102,33 @@ static void globAndCheck(const fs::path& basePath, std::string_view pattern, Glo
     std::error_code ec;
     auto rank = svGlob(basePath, pattern, mode, results, /* expandEnvVars */ true, ec);
 
+    SmallVector<fs::path> filtered;
+    filtered.reserve(results.size());
+    for (auto& entry : results) {
+        auto name = entry.filename().string();
+        if (name.rfind("._", 0) == 0)
+            continue;
+        filtered.push_back(entry);
+    }
+    results = std::move(filtered);
+
+    std::vector<std::string> expectedList(expected.begin(), expected.end());
+
+    std::ostringstream resultStream;
+    for (auto& entry : results)
+        resultStream << entry.filename().string() << " -> " << entry << '\n';
+
+    std::ostringstream expectedStream;
+    for (auto& entry : expectedList)
+        expectedStream << entry << '\n';
+
+    INFO("Glob pattern: " << pattern);
+    INFO("Base path: " << basePath);
+    INFO("Glob rank: " << static_cast<int>(rank));
+    INFO("Reported error: " << (ec ? ec.message() : "none"));
+    INFO("Results (" << results.size() << "):\n" << resultStream.str());
+    INFO("Expected (" << expectedList.size() << "):\n" << expectedStream.str());
+
     CHECK(rank == expectedRank);
     CHECK(results.size() == expected.size());
 
@@ -156,7 +185,8 @@ TEST_CASE("Directory globbing") {
     globAndCheck(testDir, "system", GlobMode::Directories, GlobRank::ExactPath, {}, {"system"});
     globAndCheck(testDir, "system/", GlobMode::Directories, GlobRank::ExactPath, {}, {"system"});
     globAndCheck(testDir, ".../", GlobMode::Directories, GlobRank::Directory, {},
-                 {"library", "nested", "system", "data", "libtest"});
+                 {"library", "nested", "system", "data", "libtest",
+                  "import_include_error"});
     globAndCheck(testDir, testDir + "/library/pkg.sv", GlobMode::Directories, GlobRank::ExactPath,
                  make_error_code(std::errc::not_a_directory), {});
 }

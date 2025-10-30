@@ -7,6 +7,8 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/text/SourceManager.h"
+#include <cctype>
+#include <ranges>
 
 void trimTrailingWhitespace(std::string& str) {
     size_t off = 0;
@@ -94,6 +96,35 @@ TEST_CASE("Double include, with pragma once") {
     result.erase(std::remove(result.begin(), result.end(), '\r'), result.end());
 
     CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Preprocessor include resumes macro buffers") {
+    auto& text = R"(
+`define MAKE(idx) \
+  dual_compute_unit #(`include "import_include_error/dual_param_width.sv" \
+                      `include "import_include_error/dual_param_enable.sv" \
+                      .INDEX(idx)) \
+  u``idx();
+
+module wrapper;
+  localparam int WIDTH  = 4;
+  localparam bit ENABLE = 1;
+  `MAKE(5)
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    result.erase(std::remove(result.begin(), result.end(), '\r'), result.end());
+
+    std::string collapsed = result;
+    collapsed.erase(std::remove_if(collapsed.begin(), collapsed.end(),
+                                   [](unsigned char c) { return std::isspace(c); }),
+                    collapsed.end());
+
+    CHECK(collapsed ==
+          "modulewrapper;localparamintWIDTH=4;localparambitENABLE=1;dual_compute_unit#("
+          ".WIDTH(WIDTH),.ENABLE(ENABLE),.INDEX(5))u5();endmodule");
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
@@ -2105,6 +2136,24 @@ TEST_CASE("Pragma protect with multiline macro expansion") {
     CHECK(diagnostics[0].code == diag::MacroTokensAfterPragmaProtect);
     CHECK(diagnostics[1].code == diag::RawProtectEOF);
     CHECK(diagnostics[2].code == diag::ProtectedEnvelope);
+}
+
+TEST_CASE("Pragma protect reports suspended macro tokens from include") {
+    auto& text = R"(
+`define WRAP() `include "import_include_error/protect_include.sv" \
+    123
+
+module top;
+  `WRAP()
+endmodule
+)";
+
+    preprocess(text);
+
+    REQUIRE(!diagnostics.empty());
+    CHECK(std::ranges::any_of(diagnostics, [](const Diagnostic& diag) {
+        return diag.code == diag::MacroTokensAfterPragmaProtect;
+    }));
 }
 
 TEST_CASE("Pragma protect raw encoding block") {

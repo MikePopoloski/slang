@@ -443,6 +443,61 @@ TEST_CASE("Driver failed compilation") {
     CHECK(stdoutContains("1 error, 1 warning"));
 }
 
+TEST_CASE("Driver macro include emitted from macro actuals parses successfully") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args =
+        fmt::format("testfoo -I \"{0}import_include_error\" \"{0}import_include_error/top.sv\" "
+                    "\"{0}import_include_error/compute_unit.sv\"",
+                    findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.reportParseDiags());
+    CHECK(driver.runFullCompilation());
+    CHECK(!stderrContains("expected expression"));
+    CHECK(!stderrContains("shared_assign.sv"));
+}
+
+TEST_CASE("Driver macro include actual resumes multiple times") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args =
+        fmt::format("testfoo -I \"{0}import_include_error\" \"{0}import_include_error/top_dual.sv\" "
+                    "\"{0}import_include_error/dual_compute_unit.sv\"",
+                    findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.reportParseDiags());
+    CHECK(driver.runFullCompilation());
+    CHECK(!stderrContains("expected expression"));
+}
+
+TEST_CASE("Driver nested macro include recursion parses successfully") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args =
+        fmt::format("testfoo -I \"{0}import_include_error\" \"{0}import_include_error/top_nested.sv\" "
+                    "\"{0}import_include_error/dual_compute_unit.sv\"",
+                    findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    INFO(OS::capturedStderr);
+    CHECK(driver.reportParseDiags());
+    CHECK(driver.runFullCompilation());
+}
+
 TEST_CASE("Driver command files") {
     auto guard = OS::captureOutput();
 
