@@ -2898,15 +2898,15 @@ endmodule
         if (token.kind == TokenKind::StringLiteral) {
             std::string_view val = token.valueText();
             if (val == "test.sv") {
-                CHECK(sm.isMacroLoc(loc));                  // token from macro expansion
-                CHECK(sm.getFileName(loc) == "test.sv");    // the source file name is correct
+                CHECK(sm.isMacroLoc(loc));               // token from macro expansion
+                CHECK(sm.getFileName(loc) == "test.sv"); // the source file name is correct
                 sawFile = true;
             }
         }
         else if (token.kind == TokenKind::IntegerLiteral) {
             std::string_view val = token.valueText();
             if (val == "3") {
-                CHECK(sm.isMacroLoc(loc));                  
+                CHECK(sm.isMacroLoc(loc));
                 CHECK(sm.getFileName(loc) == "test.sv");
                 sawLine = true;
             }
