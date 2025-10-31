@@ -70,8 +70,8 @@ void SvUnion::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlias
     // Note: This constructor will be generated only if the other constructor is not already
     // from a sc_bv
     if (!noSystemC && unionSize <= 64) {
-        hppFile.addWithIndent(
-            fmt::format("{}(const sc_dt::sc_bv<{}>& __data) {{\n", unionName, type.getBitstreamWidth()));
+        hppFile.addWithIndent(fmt::format("{}(const sc_dt::sc_bv<{}>& __data) {{\n", unionName,
+                                          type.getBitstreamWidth()));
 
         hppFile.increaseIndent();
 

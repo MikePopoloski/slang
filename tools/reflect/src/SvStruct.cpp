@@ -59,8 +59,10 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
     //** GENERATE START AND WIDTH OF EACH SIGNAL **//
     size_t startBit = 0;
     for (const auto& [name, type] : members) {
-        hppFile.addWithIndent(fmt::format("static constexpr std::size_t {}_s = {};\n", name, startBit));
-        hppFile.addWithIndent(fmt::format("static constexpr std::size_t {}_w = {};\n", name, type.size));
+        hppFile.addWithIndent(
+            fmt::format("static constexpr std::size_t {}_s = {};\n", name, startBit));
+        hppFile.addWithIndent(
+            fmt::format("static constexpr std::size_t {}_w = {};\n", name, type.size));
         startBit += type.size;
     }
     hppFile.addWithIndent(fmt::format("static constexpr std::size_t _size = {};\n", structSize));
@@ -120,8 +122,8 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
     // Note: This constructor will be generated only if the other constructor is not already from a
     // sc_bv
     if (!noSystemC && structSize <= 64) {
-        hppFile.addWithIndent(
-            fmt::format("{}(const sc_dt::sc_bv<{}>& __data) {{\n", structName, type.getBitstreamWidth()));
+        hppFile.addWithIndent(fmt::format("{}(const sc_dt::sc_bv<{}>& __data) {{\n", structName,
+                                          type.getBitstreamWidth()));
 
         hppFile.increaseIndent();
 
