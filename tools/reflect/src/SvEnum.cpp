@@ -8,13 +8,13 @@
 void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) const {
     auto underlyingType = [&] {
         if (type.getBitstreamWidth() <= 8)
-            return "uint8_t"sv;
+            return "std::uint8_t"sv;
         if (type.getBitstreamWidth() <= 16)
-            return "uint16_t"sv;
+            return "std::uint16_t"sv;
         if (type.getBitstreamWidth() <= 32)
-            return "uint32_t"sv;
+            return "std::uint32_t"sv;
         if (type.getBitstreamWidth() <= 64)
-            return "uint64_t"sv;
+            return "std::uint64_t"sv;
         SLANG_THROW(
             std::runtime_error("Enum with $bits size bigger than 64 bits are not supported"));
     };
@@ -47,7 +47,7 @@ void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) c
 
     //** SIZE **/
     hppFile.addWithIndent(
-        fmt::format("static constexpr size_t _size = {};\n\n", type.getBitstreamWidth()));
+        fmt::format("static constexpr std::size_t _size = {};\n\n", type.getBitstreamWidth()));
 
     //** LOCAL **//
     hppFile.addWithIndent("Type type;\n");
@@ -93,9 +93,9 @@ void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) c
     hppFile.addWithIndent("}\n\n");
 
     //** OVERLOAD UINT64_T OPERATOR **//
-    hppFile.addWithIndent(fmt::format("operator uint64_t() const {{\n"));
+    hppFile.addWithIndent(fmt::format("operator std::uint64_t() const {{\n"));
     hppFile.increaseIndent();
-    hppFile.addWithIndent(fmt::format("return static_cast<uint64_t>(type);\n", type.name));
+    hppFile.addWithIndent(fmt::format("return static_cast<std::uint64_t>(type);\n", type.name));
     hppFile.decreaseIndent();
     hppFile.addWithIndent("}\n\n");
 

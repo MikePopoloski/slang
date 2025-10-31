@@ -49,9 +49,9 @@ std::string toString(const Type& cppType) {
     // clang-format off
     switch (cppType) {
         case BOOL: return "bool";
-        case U32: return "uint32_t";
-        case U64: return "uint64_t";
-        case SC_BV: return "sc_bv<{}>";
+        case U32: return "std::uint32_t";
+        case U64: return "std::uint64_t";
+        case SC_BV: return "sc_dt::sc_bv<{}>";
         case STRUCT: return "{}";
         case ENUM: return "{}";
         case UNION: return "{}";

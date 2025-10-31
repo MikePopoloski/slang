@@ -59,11 +59,11 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
     //** GENERATE START AND WIDTH OF EACH SIGNAL **//
     size_t startBit = 0;
     for (const auto& [name, type] : members) {
-        hppFile.addWithIndent(fmt::format("static constexpr size_t {}_s = {};\n", name, startBit));
-        hppFile.addWithIndent(fmt::format("static constexpr size_t {}_w = {};\n", name, type.size));
+        hppFile.addWithIndent(fmt::format("static constexpr std::size_t {}_s = {};\n", name, startBit));
+        hppFile.addWithIndent(fmt::format("static constexpr std::size_t {}_w = {};\n", name, type.size));
         startBit += type.size;
     }
-    hppFile.addWithIndent(fmt::format("static constexpr size_t _size = {};\n", structSize));
+    hppFile.addWithIndent(fmt::format("static constexpr std::size_t _size = {};\n", structSize));
     hppFile.add("\n");
 
     //** GENERATE DEFAULT CONSTRUCTOR **//
@@ -121,7 +121,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
     // sc_bv
     if (!noSystemC && structSize <= 64) {
         hppFile.addWithIndent(
-            fmt::format("{}(const sc_bv<{}>& __data) {{\n", structName, type.getBitstreamWidth()));
+            fmt::format("{}(const sc_dt::sc_bv<{}>& __data) {{\n", structName, type.getBitstreamWidth()));
 
         hppFile.increaseIndent();
 
@@ -159,7 +159,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
             else {
                 hppFile.addWithIndent(fmt::format("ret.range({0}_s + {0}_w - 1, {0}_s) = ", name));
                 if (type.isStructEnumOrUnion() && type.size > 64)
-                    hppFile.add(fmt::format("sc_bv<{}>({});\n", type.size, name));
+                    hppFile.add(fmt::format("sc_dt::sc_bv<{}>({});\n", type.size, name));
                 else
                     hppFile.add(fmt::format("{};\n", name));
             }
@@ -183,7 +183,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
     if (!noSystemC && cppType != CppType::SC_BV) {
         hppFile.addWithIndent(fmt::format("operator sc_bv<{}>() const {{\n", structSize));
         hppFile.increaseIndent();
-        hppFile.addWithIndent(fmt::format("auto ret = sc_bv<{}>();\n", structSize));
+        hppFile.addWithIndent(fmt::format("auto ret = sc_dt::sc_bv<{}>();\n", structSize));
         for (const auto& [name, type] : members) {
             if (type.cppType == CppType::BOOL) {
                 hppFile.addWithIndent(fmt::format("ret.set_bit({0}_s, {0});\n", name));
@@ -191,7 +191,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
             else {
                 hppFile.addWithIndent(fmt::format("ret.range({0}_s + {0}_w - 1, {0}_s) = ", name));
                 if (type.isStructEnumOrUnion() && type.size > 64)
-                    hppFile.add(fmt::format("sc_bv<{}>({});\n", type.size, name));
+                    hppFile.add(fmt::format("sc_dt::sc_bv<{}>({});\n", type.size, name));
                 else
                     hppFile.add(fmt::format("{};\n", name));
             }
