@@ -21,7 +21,7 @@ void SvUnion::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlias
 
     const size_t unionSize = type.getBitstreamWidth();
     const auto cppType = CppType::fromSize(unionSize);
-    hppFile.addWithIndent(fmt::format("static constexpr size_t _size = {};\n\n", unionSize));
+    hppFile.addWithIndent(fmt::format("static constexpr std::size_t _size = {};\n\n", unionSize));
 
     if (cppType == CppType::SC_BV && noSystemC) {
         slang::OS::printE(fmt::format("Headers for the union {} can not be generated without "
@@ -70,8 +70,8 @@ void SvUnion::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlias
     // Note: This constructor will be generated only if the other constructor is not already
     // from a sc_bv
     if (!noSystemC && unionSize <= 64) {
-        hppFile.addWithIndent(
-            fmt::format("{}(const sc_bv<{}>& __data) {{\n", unionName, type.getBitstreamWidth()));
+        hppFile.addWithIndent(fmt::format("{}(const sc_dt::sc_bv<{}>& __data) {{\n", unionName,
+                                          type.getBitstreamWidth()));
 
         hppFile.increaseIndent();
 
@@ -87,7 +87,7 @@ void SvUnion::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlias
     if (cppType == CppType::SC_BV) {
         hppFile.addWithIndent(fmt::format("operator {}() const {{\n", cppTypeStr));
         hppFile.increaseIndent();
-        hppFile.addWithIndent(fmt::format("return sc_bv<{}>(union_data);\n", unionSize));
+        hppFile.addWithIndent(fmt::format("return sc_dt::sc_bv<{}>(union_data);\n", unionSize));
     }
     else {
         hppFile.addWithIndent(fmt::format("operator {}() const {{\n", cppTypeStr));
