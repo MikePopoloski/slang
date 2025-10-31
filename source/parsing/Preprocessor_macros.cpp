@@ -758,23 +758,31 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
     SmallVector<char> text;
     switch (intrinsic) {
         case MacroIntrinsic::File: {
+            std::string_view macroName = "__FILE__";
+            SourceLocation macroLoc = sourceManager.createExpansionLoc(loc, expansion.getRange(),
+                                                                       macroName);
+
             std::string_view fileName = sourceManager.getFileName(loc);
             text.push_back('"');
             text.append_range(fileName);
             text.push_back('"');
 
             std::string_view rawText = toStringView(text.copy(alloc));
-            Token token(alloc, TokenKind::StringLiteral, {}, rawText, loc, fileName);
-            expansion.append(token, loc);
+            Token token(alloc, TokenKind::StringLiteral, {}, rawText, macroLoc, fileName);
+            expansion.append(token, macroLoc, loc, expansion.getRange());
             break;
         }
         case MacroIntrinsic::Line: {
+            std::string_view macroName = "__LINE__";
+            SourceLocation macroLoc = sourceManager.createExpansionLoc(loc, expansion.getRange(),
+                                                                       macroName);
+
             size_t lineNum = sourceManager.getLineNumber(loc);
             uintToStr(text, static_cast<uint64_t>(lineNum));
 
             std::string_view rawText = toStringView(text.copy(alloc));
-            Token token(alloc, TokenKind::IntegerLiteral, {}, rawText, loc, lineNum);
-            expansion.append(token, loc);
+            Token token(alloc, TokenKind::IntegerLiteral, {}, rawText, macroLoc, lineNum);
+            expansion.append(token, macroLoc, loc, expansion.getRange());
             break;
         }
         case MacroIntrinsic::None:

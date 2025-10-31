@@ -2870,3 +2870,50 @@ TEST_CASE("Pragma number parsing regression 2") {
     // Just checking no crash.
     preprocess(text);
 }
+
+TEST_CASE("Intrinsic macro tokens are marked as macro locations") {
+    diagnostics.clear();
+
+    std::string_view text = R"(
+module directives();
+    initial $display("At %s @ %d\n", `__FILE__, `__LINE__);
+endmodule
+)";
+
+    auto& sm = getSourceManager();
+    Preprocessor preprocessor(sm, alloc, diagnostics);
+    preprocessor.pushSource(text, "test.sv");
+
+    bool sawFile = false;
+    bool sawLine = false;
+
+    while (true) {
+        Token token = preprocessor.next();
+        if (token.kind == TokenKind::EndOfFile)
+            break;
+
+        SourceLocation loc = token.location();
+
+        // Check that the expanded tokens __FILE__ and __LINE__ are marked as macro locations
+        if (token.kind == TokenKind::StringLiteral) {
+            std::string_view val = token.valueText();
+            if (val == "test.sv") {
+                CHECK(sm.isMacroLoc(loc));               // token from macro expansion
+                CHECK(sm.getFileName(loc) == "test.sv"); // the source file name is correct
+                sawFile = true;
+            }
+        }
+        else if (token.kind == TokenKind::IntegerLiteral) {
+            std::string_view val = token.valueText();
+            if (val == "3") {
+                CHECK(sm.isMacroLoc(loc));
+                CHECK(sm.getFileName(loc) == "test.sv");
+                sawLine = true;
+            }
+        }
+    }
+
+    CHECK(sawFile);
+    CHECK(sawLine);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
