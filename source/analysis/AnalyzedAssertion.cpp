@@ -67,8 +67,7 @@ static bool isSameClock(const TimingControl& left, const TimingControl& right) {
     if (!le.expr.syntax || !re.expr.syntax)
         return false;
 
-    // TODO: this should check the AST expression and not the syntax
-    return le.expr.syntax->isEquivalentTo(*re.expr.syntax);
+    return le.expr.isEquivalentTo(re.expr);
 }
 
 using LocalSet = flat_hash_set<const Symbol*>;

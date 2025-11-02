@@ -1602,6 +1602,35 @@ endmodule // mm_09
     CHECK(diags[1].code == diag::AssertionNoClock);
 }
 
+TEST_CASE("Clock resolution tests 16") {
+    auto& text = R"(
+module m;
+    sequence s (clk1, clk2);
+        @clk1 1 and @clk2 1;
+    endsequence
+
+    wire clk;
+    checker c(ck = $inferred_clock);
+        assert property (s(posedge clk, ck));
+    endchecker
+
+    if (1) begin
+        wire clk;
+        always @(posedge clk) begin
+            c c1();
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidMulticlockedSeqOp);
+}
+
 TEST_CASE("Inferred clock resolution") {
     auto& text = R"(
 module m(input clk1, clk2, clk3, a);
