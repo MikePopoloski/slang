@@ -234,6 +234,16 @@ private:
     }
 };
 
+struct Expression::EquivalentToVisitor {
+    template<typename T>
+    bool visit(const T& lhs, const Expression& rhs) {
+        if (lhs.kind != rhs.kind || !lhs.type->isMatching(*rhs.type))
+            return false;
+
+        return lhs.isEquivalentImpl(rhs.as<T>());
+    }
+};
+
 const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance);
 
 const Expression& Expression::bind(const ExpressionSyntax& syntax, const ASTContext& context,
@@ -577,6 +587,11 @@ bool Expression::requireLValue(const ASTContext& context, SourceLocation locatio
     auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
     diag << sourceRange;
     return false;
+}
+
+bool Expression::isEquivalentTo(const Expression& other) const {
+    EquivalentToVisitor visitor;
+    return visit(visitor, other);
 }
 
 std::optional<bitwidth_t> Expression::getEffectiveWidth() const {

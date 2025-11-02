@@ -41,6 +41,7 @@ public:
                        ConversionKind conversionKind);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
+    bool isEquivalentImpl(const UnaryExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -98,6 +99,7 @@ public:
                        ConversionKind conversionKind);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
+    bool isEquivalentImpl(const BinaryExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -164,6 +166,7 @@ public:
                        ConversionKind conversionKind);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
+    bool isEquivalentImpl(const ConditionalExpression& rhs) const;
 
     /// If the condition for this expression is a known constant value,
     /// this method returns the side of the expression that will be selected
@@ -212,6 +215,7 @@ public:
     std::span<const Expression* const> rangeList() const { return rangeList_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const InsideExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -248,6 +252,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const ConcatenationExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -289,6 +294,7 @@ public:
     Expression& concat() { return *concat_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const ReplicationExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -323,6 +329,11 @@ public:
         /// If there is a @a withExpr and it has a constant value, this is
         /// the width of the selection.
         std::optional<bitwidth_t> constantWithWidth;
+
+        bool isEquivalentTo(const StreamExpression& rhs) const {
+            return operand->isEquivalentTo(*rhs.operand) && bool(withExpr) == bool(rhs.withExpr) &&
+                   (!withExpr || withExpr->isEquivalentTo(*rhs.withExpr));
+        }
     };
 
     StreamingConcatenationExpression(const Type& type, uint64_t sliceSize, uint64_t bitstreamWidth,
@@ -346,6 +357,7 @@ public:
     std::span<const StreamExpression> streams() const { return streams_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const StreamingConcatenationExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -402,6 +414,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange,
                        ConversionKind conversionKind);
+    bool isEquivalentImpl(const ValueRangeExpression& rhs) const;
 
     ConstantValue checkInside(EvalContext& context, const ConstantValue& val) const;
 

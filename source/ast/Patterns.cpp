@@ -31,6 +31,16 @@ struct EvalVisitor {
     }
 };
 
+struct EquivalentToVisitor {
+    template<typename T>
+    bool visit(const T& lhs, const Pattern& rhs) {
+        if (lhs.kind != rhs.kind)
+            return false;
+
+        return lhs.isEquivalentImpl(rhs.as<T>());
+    }
+};
+
 } // namespace
 
 namespace slang::ast {
@@ -150,6 +160,11 @@ ConstantValue Pattern::eval(EvalContext& context, const ConstantValue& value,
     return visit(visitor, context, value, conditionKind);
 }
 
+bool Pattern::isEquivalentTo(const Pattern& other) const {
+    EquivalentToVisitor visitor;
+    return visit(visitor, other);
+}
+
 Pattern& Pattern::badPattern(Compilation& comp, const Pattern* child) {
     return *comp.emplace<InvalidPattern>(child);
 }
@@ -212,6 +227,10 @@ ConstantValue ConstantPattern::evalImpl(EvalContext&, const ConstantValue& value
     return SVInt(1, result ? 1 : 0, false);
 }
 
+bool ConstantPattern::isEquivalentImpl(const ConstantPattern& rhs) const {
+    return expr.isEquivalentTo(rhs.expr);
+}
+
 void ConstantPattern::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
 }
@@ -247,6 +266,10 @@ ConstantValue VariablePattern::evalImpl(EvalContext& context, const ConstantValu
 
     // Always succeeds.
     return SVInt(1, 1, false);
+}
+
+bool VariablePattern::isEquivalentImpl(const VariablePattern& rhs) const {
+    return variable.getType().isMatching(rhs.variable.getType());
 }
 
 void VariablePattern::serializeTo(ASTSerializer& serializer) const {
@@ -320,6 +343,11 @@ ConstantValue TaggedPattern::evalImpl(EvalContext& context, const ConstantValue&
 
     // If no nested pattern we just succeed.
     return SVInt(1, 1, false);
+}
+
+bool TaggedPattern::isEquivalentImpl(const TaggedPattern& rhs) const {
+    return &member == &rhs.member && bool(valuePattern) == bool(rhs.valuePattern) &&
+           (!valuePattern || valuePattern->isEquivalentTo(*rhs.valuePattern));
 }
 
 void TaggedPattern::serializeTo(ASTSerializer& serializer) const {
@@ -465,6 +493,14 @@ ConstantValue StructurePattern::evalImpl(EvalContext& context, const ConstantVal
     }
 
     return SVInt(1, 1, false);
+}
+
+bool StructurePattern::isEquivalentImpl(const StructurePattern& rhs) const {
+    return std::ranges::equal(patterns, rhs.patterns,
+                              [](const FieldPattern& a, const FieldPattern& b) {
+                                  return a.field == b.field &&
+                                         a.pattern->isEquivalentTo(*b.pattern);
+                              });
 }
 
 void StructurePattern::serializeTo(ASTSerializer& serializer) const {

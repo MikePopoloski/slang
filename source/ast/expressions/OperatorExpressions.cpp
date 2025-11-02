@@ -378,6 +378,10 @@ Expression::EffectiveSign UnaryExpression::getEffectiveSignImpl(bool isForConver
     }
 }
 
+bool UnaryExpression::isEquivalentImpl(const UnaryExpression& rhs) const {
+    return op == rhs.op && operand().isEquivalentTo(rhs.operand());
+}
+
 ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
     // Handle operations that require an lvalue up front.
     if (OpInfo::isLValue(op)) {
@@ -1232,6 +1236,10 @@ Expression::EffectiveSign BinaryExpression::getEffectiveSignImpl(bool isForConve
     SLANG_UNREACHABLE;
 }
 
+bool BinaryExpression::isEquivalentImpl(const BinaryExpression& rhs) const {
+    return op == rhs.op && left().isEquivalentTo(rhs.left()) && right().isEquivalentTo(rhs.right());
+}
+
 ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
     if (left().kind == ExpressionKind::TypeReference &&
         right().kind == ExpressionKind::TypeReference) {
@@ -1517,6 +1525,16 @@ Expression::EffectiveSign ConditionalExpression::getEffectiveSignImpl(bool isFor
                        right().getEffectiveSign(isForConversion));
 }
 
+bool ConditionalExpression::isEquivalentImpl(const ConditionalExpression& rhs) const {
+    return left().isEquivalentTo(rhs.left()) && right().isEquivalentTo(rhs.right()) &&
+           std::ranges::equal(conditions, rhs.conditions,
+                              [](const Condition& a, const Condition& b) {
+                                  return a.expr->isEquivalentTo(*b.expr) &&
+                                         bool(a.pattern) == bool(b.pattern) &&
+                                         (!a.pattern || a.pattern->isEquivalentTo(*b.pattern));
+                              });
+}
+
 ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
     ConstantValue cp;
     for (auto& cond : conditions) {
@@ -1697,6 +1715,14 @@ ConstantValue InsideExpression::evalImpl(EvalContext& context) const {
     }
 
     return SVInt(anyUnknown ? logic_t::x : logic_t(0));
+}
+
+bool InsideExpression::isEquivalentImpl(const InsideExpression& rhs) const {
+    return left().isEquivalentTo(rhs.left()) &&
+           std::ranges::equal(rangeList(), rhs.rangeList(),
+                              [](const Expression* a, const Expression* b) {
+                                  return a->isEquivalentTo(*b);
+                              });
 }
 
 void InsideExpression::serializeTo(ASTSerializer& serializer) const {
@@ -2015,6 +2041,13 @@ LValue ConcatenationExpression::evalLValueImpl(EvalContext& context) const {
     return LValue(std::move(lvals), LValue::Concat::Packed);
 }
 
+bool ConcatenationExpression::isEquivalentImpl(const ConcatenationExpression& rhs) const {
+    return std::ranges::equal(operands(), rhs.operands(),
+                              [](const Expression* a, const Expression* b) {
+                                  return a->isEquivalentTo(*b);
+                              });
+}
+
 void ConcatenationExpression::serializeTo(ASTSerializer& serializer) const {
     if (!operands().empty()) {
         serializer.startArray("operands");
@@ -2126,6 +2159,10 @@ ConstantValue ReplicationExpression::evalImpl(EvalContext& context) const {
     }
 
     return v.integer().replicate(c.integer());
+}
+
+bool ReplicationExpression::isEquivalentImpl(const ReplicationExpression& rhs) const {
+    return count().isEquivalentTo(rhs.count()) && concat().isEquivalentTo(rhs.concat());
 }
 
 void ReplicationExpression::serializeTo(ASTSerializer& serializer) const {
@@ -2321,6 +2358,15 @@ ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) c
     return values;
 }
 
+bool StreamingConcatenationExpression::isEquivalentImpl(
+    const StreamingConcatenationExpression& rhs) const {
+    return sliceSize == rhs.sliceSize &&
+           std::ranges::equal(streams(), rhs.streams(),
+                              [](const StreamExpression& a, const StreamExpression& b) {
+                                  return a.isEquivalentTo(b);
+                              });
+}
+
 void StreamingConcatenationExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("sliceSize", sliceSize);
     if (!streams().empty()) {
@@ -2429,6 +2475,11 @@ bool ValueRangeExpression::propagateType(const ASTContext& context, const Type& 
 ConstantValue ValueRangeExpression::evalImpl(EvalContext&) const {
     // Should never enter this expecting a real result.
     return nullptr;
+}
+
+bool ValueRangeExpression::isEquivalentImpl(const ValueRangeExpression& rhs) const {
+    return rangeKind == rhs.rangeKind && left().isEquivalentTo(rhs.left()) &&
+           right().isEquivalentTo(rhs.right());
 }
 
 ConstantValue ValueRangeExpression::checkInside(EvalContext& context,

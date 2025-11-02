@@ -48,6 +48,9 @@ public:
     /// Returns true if the pattern had an error and is therefore invalid.
     bool bad() const { return kind == PatternKind::Invalid; }
 
+    /// Returns true if this pattern is structurally equivalent to the other one.
+    bool isEquivalentTo(const Pattern& other) const;
+
     static bool createPatternVars(const ASTContext& context,
                                   const syntax::PatternSyntax& patternSyntax,
                                   const syntax::ExpressionSyntax& condSyntax,
@@ -135,6 +138,7 @@ public:
 
     static bool isKind(PatternKind kind) { return kind == PatternKind::Invalid; }
 
+    bool isEquivalentImpl(const InvalidPattern&) const { return true; }
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>
@@ -155,6 +159,7 @@ public:
 
     static bool isKind(PatternKind kind) { return kind == PatternKind::Wildcard; }
 
+    bool isEquivalentImpl(const WildcardPattern&) const { return true; }
     void serializeTo(ASTSerializer&) const {}
 
     template<typename TVisitor>
@@ -178,6 +183,7 @@ public:
 
     static bool isKind(PatternKind kind) { return kind == PatternKind::Constant; }
 
+    bool isEquivalentImpl(const ConstantPattern& rhs) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>
@@ -203,6 +209,7 @@ public:
 
     static bool isKind(PatternKind kind) { return kind == PatternKind::Variable; }
 
+    bool isEquivalentImpl(const VariablePattern& rhs) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>
@@ -232,6 +239,7 @@ public:
 
     static bool isKind(PatternKind kind) { return kind == PatternKind::Tagged; }
 
+    bool isEquivalentImpl(const TaggedPattern& rhs) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>
@@ -270,6 +278,7 @@ public:
 
     static bool isKind(PatternKind kind) { return kind == PatternKind::Structure; }
 
+    bool isEquivalentImpl(const StructurePattern& rhs) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>

@@ -486,6 +486,12 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
     return rvalue;
 }
 
+bool AssignmentExpression::isEquivalentImpl(const AssignmentExpression& rhs) const {
+    return op == rhs.op && nonBlocking == rhs.nonBlocking && left().isEquivalentTo(rhs.left()) &&
+           right().isEquivalentTo(rhs.right()) && bool(timingControl) == bool(rhs.timingControl) &&
+           (!timingControl || timingControl->isEquivalentTo(*rhs.timingControl));
+}
+
 void AssignmentExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("left", left());
     serializer.write("right", right());
@@ -558,6 +564,11 @@ ConstantValue NewArrayExpression::evalImpl(EvalContext& context) const {
         result[index] = def;
 
     return result;
+}
+
+bool NewArrayExpression::isEquivalentImpl(const NewArrayExpression& rhs) const {
+    return sizeExpr().isEquivalentTo(rhs.sizeExpr()) && bool(initExpr()) == bool(rhs.initExpr()) &&
+           (!initExpr() || initExpr()->isEquivalentTo(*rhs.initExpr()));
 }
 
 void NewArrayExpression::serializeTo(ASTSerializer& serializer) const {
@@ -693,6 +704,12 @@ ConstantValue NewClassExpression::evalImpl(EvalContext& context) const {
     return nullptr;
 }
 
+bool NewClassExpression::isEquivalentImpl(const NewClassExpression& rhs) const {
+    return bool(constructorCall()) == bool(rhs.constructorCall()) &&
+           (!constructorCall() || constructorCall()->isEquivalentTo(*rhs.constructorCall())) &&
+           isSuperClass == rhs.isSuperClass;
+}
+
 void NewClassExpression::serializeTo(ASTSerializer& serializer) const {
     if (constructorCall())
         serializer.write("constructorCall", *constructorCall());
@@ -719,6 +736,13 @@ Expression& NewCovergroupExpression::fromSyntax(Compilation& compilation,
 ConstantValue NewCovergroupExpression::evalImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalCovergroupType, sourceRange);
     return nullptr;
+}
+
+bool NewCovergroupExpression::isEquivalentImpl(const NewCovergroupExpression& rhs) const {
+    return std::ranges::equal(arguments, rhs.arguments,
+                              [](const Expression* a, const Expression* b) {
+                                  return a->isEquivalentTo(*b);
+                              });
 }
 
 void NewCovergroupExpression::serializeTo(ASTSerializer& serializer) const {
@@ -936,6 +960,14 @@ ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) co
 
         return values;
     }
+}
+
+bool AssignmentPatternExpressionBase::isEquivalentImpl(
+    const AssignmentPatternExpressionBase& rhs) const {
+    return std::ranges::equal(elements(), rhs.elements(),
+                              [](const Expression* a, const Expression* b) {
+                                  return a->isEquivalentTo(*b);
+                              });
 }
 
 void AssignmentPatternExpressionBase::serializeTo(ASTSerializer& serializer) const {

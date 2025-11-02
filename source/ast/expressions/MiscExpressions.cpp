@@ -411,6 +411,10 @@ LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
     return LValue(*cv);
 }
 
+bool NamedValueExpression::isEquivalentImpl(const NamedValueExpression& rhs) const {
+    return &symbol == &rhs.symbol;
+}
+
 bool NamedValueExpression::checkConstant(EvalContext& context) const {
     if (context.flags.has(EvalFlags::IsScript))
         return true;
@@ -509,6 +513,12 @@ ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const 
     }
 }
 
+bool HierarchicalValueExpression::isEquivalentImpl(const HierarchicalValueExpression& rhs) const {
+    // We say two hierarchical value expressions are equivalent if they refer to the same symbol,
+    // even if their hierarchical paths differ.
+    return &symbol == &rhs.symbol;
+}
+
 Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                            const ASTContext& context) {
     const Type& type = compilation.getType(syntax, context);
@@ -565,9 +575,12 @@ Expression& ArbitrarySymbolExpression::fromSyntax(Compilation& comp, const NameS
                                                     &hierRef, syntax.sourceRange());
 }
 
+bool ArbitrarySymbolExpression::isEquivalentImpl(const ArbitrarySymbolExpression& rhs) const {
+    return symbol == rhs.symbol;
+}
+
 void ArbitrarySymbolExpression::serializeTo(ASTSerializer& serializer) const {
-    if (symbol)
-        serializer.writeLink("symbol", *symbol);
+    serializer.writeLink("symbol", *symbol);
 }
 
 ConstantValue LValueReferenceExpression::evalImpl(EvalContext& context) const {
@@ -595,6 +608,10 @@ Expression& ClockingEventExpression::fromSyntax(const ClockingPropertyExprSyntax
         context.addDiag(diag::UnexpectedClockingExpr, syntax.expr->sourceRange());
 
     return *comp.emplace<ClockingEventExpression>(comp.getVoidType(), timing, syntax.sourceRange());
+}
+
+bool ClockingEventExpression::isEquivalentImpl(const ClockingEventExpression& rhs) const {
+    return timingControl.isEquivalentTo(rhs.timingControl);
 }
 
 void ClockingEventExpression::serializeTo(ASTSerializer& serializer) const {
@@ -1322,6 +1339,22 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
     }
 }
 
+bool AssertionInstanceExpression::isEquivalentImpl(const AssertionInstanceExpression& rhs) const {
+    return &symbol == &rhs.symbol && isRecursiveProperty == rhs.isRecursiveProperty &&
+           std::ranges::equal(arguments, rhs.arguments, [](auto& a, auto& b) {
+               return std::visit(
+                   [](auto&& la, auto&& ra) {
+                       if constexpr (std::is_same_v<decltype(la), decltype(ra)>) {
+                           return la->isEquivalentTo(*ra);
+                       }
+                       else {
+                           return false;
+                       }
+                   },
+                   std::get<1>(a), std::get<1>(b));
+           });
+}
+
 void AssertionInstanceExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("symbol", symbol);
     serializer.write("body", body);
@@ -1398,6 +1431,10 @@ Expression::EffectiveSign MinTypMaxExpression::getEffectiveSignImpl(bool isForCo
     return selected().getEffectiveSign(isForConversion);
 }
 
+bool MinTypMaxExpression::isEquivalentImpl(const MinTypMaxExpression& rhs) const {
+    return selected().isEquivalentTo(rhs.selected());
+}
+
 void MinTypMaxExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("selected", selected());
 }
@@ -1422,6 +1459,10 @@ Expression& CopyClassExpression::fromSyntax(Compilation& compilation,
 ConstantValue CopyClassExpression::evalImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalClassType, sourceRange);
     return nullptr;
+}
+
+bool CopyClassExpression::isEquivalentImpl(const CopyClassExpression& rhs) const {
+    return sourceExpr().isEquivalentTo(rhs.sourceExpr());
 }
 
 void CopyClassExpression::serializeTo(ASTSerializer& serializer) const {
@@ -1505,6 +1546,14 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
         return badExpr(comp, result);
 
     return *result;
+}
+
+bool DistExpression::isEquivalentImpl(const DistExpression& rhs) const {
+    return left().isEquivalentTo(rhs.left()) &&
+           std::ranges::equal(items_, rhs.items_,
+                              [](auto& a, auto& b) { return a.isEquivalentTo(b); }) &&
+           bool(defaultWeight_) == bool(rhs.defaultWeight_) &&
+           (!defaultWeight_ || defaultWeight_->isEquivalentTo(*rhs.defaultWeight_));
 }
 
 void DistExpression::serializeTo(ASTSerializer& serializer) const {
@@ -1609,6 +1658,11 @@ ConstantValue TaggedUnionExpression::evalImpl(EvalContext& context) const {
 
         return result;
     }
+}
+
+bool TaggedUnionExpression::isEquivalentImpl(const TaggedUnionExpression& rhs) const {
+    return &member == &rhs.member && bool(valueExpr) == bool(rhs.valueExpr) &&
+           (!valueExpr || valueExpr->isEquivalentTo(*rhs.valueExpr));
 }
 
 void TaggedUnionExpression::serializeTo(ASTSerializer& serializer) const {

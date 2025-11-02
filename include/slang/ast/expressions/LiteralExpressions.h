@@ -28,6 +28,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
+    bool isEquivalentImpl(const IntegerLiteral& rhs) const;
 
     void serializeTo(ASTSerializer&) const;
 
@@ -53,6 +54,7 @@ public:
     double getValue() const { return value; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const RealLiteral& rhs) const;
 
     void serializeTo(ASTSerializer&) const;
 
@@ -78,6 +80,7 @@ public:
     TimeScale getScale() const { return scale; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const TimeLiteral& rhs) const;
 
     void serializeTo(ASTSerializer&) const;
 
@@ -108,6 +111,7 @@ public:
                        ConversionKind conversionKind);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
+    bool isEquivalentImpl(const UnbasedUnsizedIntegerLiteral& rhs) const;
 
     void serializeTo(ASTSerializer&) const;
 
@@ -129,6 +133,7 @@ public:
         Expression(ExpressionKind::NullLiteral, type, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const NullLiteral&) const { return true; }
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -145,6 +150,7 @@ public:
         Expression(ExpressionKind::UnboundedLiteral, type, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const UnboundedLiteral&) const { return true; }
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -170,6 +176,7 @@ public:
     const ConstantValue& getIntValue() const;
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const StringLiteral& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

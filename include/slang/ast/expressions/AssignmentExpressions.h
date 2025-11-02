@@ -59,6 +59,7 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const AssignmentExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -102,6 +103,7 @@ public:
     const Expression* initExpr() const { return initializer_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const NewArrayExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -138,6 +140,7 @@ public:
     const Expression* constructorCall() const { return constructorCall_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const NewClassExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -172,6 +175,7 @@ public:
         Expression(ExpressionKind::NewCovergroup, type, sourceRange), arguments(arguments) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const NewCovergroupExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -195,6 +199,7 @@ public:
     std::span<const Expression* const> elements() const { return elements_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const AssignmentPatternExpressionBase& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

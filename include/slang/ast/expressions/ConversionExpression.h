@@ -36,6 +36,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
+    bool isEquivalentImpl(const ConversionExpression& rhs) const;
 
     ConstantValue applyTo(EvalContext& context, ConstantValue&& value) const;
 

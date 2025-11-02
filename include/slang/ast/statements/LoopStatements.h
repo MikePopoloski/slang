@@ -169,6 +169,10 @@ public:
         /// The loop variable for this dimension, or nullptr if
         /// the dimension is being skipped.
         const IteratorSymbol* loopVar = nullptr;
+
+        bool isEquivalentTo(const LoopDim& rhs) const {
+            return range == rhs.range && loopVar == rhs.loopVar;
+        }
     };
 
     /// An expression indicating the array to iterate.

@@ -209,6 +209,7 @@ void registerAST(py::module_& m) {
         .def_readonly("sourceRange", &Pattern::sourceRange)
         .def_property_readonly("bad", &Pattern::bad)
         .def("eval", &Pattern::eval, "context"_a, "value"_a, "conditionKind"_a)
+        .def("isEquivalentTo", &Pattern::isEquivalentTo, "other"_a)
         .def("__repr__", [](const Pattern& self) {
             return fmt::format("Pattern(PatternKind.{})", toString(self.kind));
         });
@@ -239,6 +240,7 @@ void registerAST(py::module_& m) {
         .def_readonly("syntax", &TimingControl::syntax)
         .def_readonly("sourceRange", &TimingControl::sourceRange)
         .def_property_readonly("bad", &TimingControl::bad)
+        .def("isEquivalentTo", &TimingControl::isEquivalentTo, "other"_a)
         .def("visit", &pyASTVisit<TimingControl>, "f"_a, PyASTVisitor::doc)
         .def("__repr__", [](const TimingControl& self) {
             return fmt::format("TimingControl(TimingControlKind.{})", toString(self.kind));
@@ -283,6 +285,7 @@ void registerAST(py::module_& m) {
         .def_readonly("kind", &Constraint::kind)
         .def_readonly("syntax", &Constraint::syntax)
         .def_property_readonly("bad", &Constraint::bad)
+        .def("isEquivalentTo", &Constraint::isEquivalentTo, "other"_a)
         .def("__repr__", [](const Constraint& self) {
             return fmt::format("Constraint(ConstraintKind.{})", toString(self.kind));
         });
@@ -330,6 +333,7 @@ void registerAST(py::module_& m) {
         .def_readonly("kind", &AssertionExpr::kind)
         .def_readonly("syntax", &AssertionExpr::syntax)
         .def_property_readonly("bad", &AssertionExpr::bad)
+        .def("isEquivalentTo", &AssertionExpr::isEquivalentTo, "other"_a)
         .def("__repr__", [](const AssertionExpr& self) {
             return fmt::format("AssertionExpr(AssertionExprKind.{})", toString(self.kind));
         });

@@ -385,6 +385,10 @@ bool ElementSelectExpression::requireLValueImpl(const ASTContext& context, Sourc
     return requireLValueHelper(*this, context, location, flags);
 }
 
+bool ElementSelectExpression::isEquivalentImpl(const ElementSelectExpression& rhs) const {
+    return value().isEquivalentTo(rhs.value()) && selector().isEquivalentTo(rhs.selector());
+}
+
 void ElementSelectExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", value());
     serializer.write("selector", selector());
@@ -810,6 +814,11 @@ std::optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& conte
 bool RangeSelectExpression::requireLValueImpl(const ASTContext& context, SourceLocation location,
                                               bitmask<AssignFlags> flags) const {
     return requireLValueHelper(*this, context, location, flags);
+}
+
+bool RangeSelectExpression::isEquivalentImpl(const RangeSelectExpression& rhs) const {
+    return value().isEquivalentTo(rhs.value()) && getSelectionKind() == rhs.getSelectionKind() &&
+           left().isEquivalentTo(rhs.left()) && right().isEquivalentTo(rhs.right());
 }
 
 void RangeSelectExpression::serializeTo(ASTSerializer& serializer) const {
@@ -1339,6 +1348,10 @@ bool MemberAccessExpression::requireLValueImpl(const ASTContext& context, Source
     }
 
     return value().requireLValue(context, location, flags);
+}
+
+bool MemberAccessExpression::isEquivalentImpl(const MemberAccessExpression& rhs) const {
+    return value().isEquivalentTo(rhs.value()) && &member == &rhs.member;
 }
 
 void MemberAccessExpression::serializeTo(ASTSerializer& serializer) const {

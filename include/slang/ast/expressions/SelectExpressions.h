@@ -36,6 +36,7 @@ public:
     LValue evalLValueImpl(EvalContext& context) const;
     bool requireLValueImpl(const ASTContext& context, SourceLocation location,
                            bitmask<AssignFlags> flags) const;
+    bool isEquivalentImpl(const ElementSelectExpression& rhs) const;
 
     std::optional<ConstantRange> evalIndex(EvalContext& context, const ConstantValue& val,
                                            ConstantValue& associativeIndex, bool& softFail) const;
@@ -94,6 +95,7 @@ public:
     LValue evalLValueImpl(EvalContext& context) const;
     bool requireLValueImpl(const ASTContext& context, SourceLocation location,
                            bitmask<AssignFlags> flags) const;
+    bool isEquivalentImpl(const RangeSelectExpression& rhs) const;
 
     std::optional<ConstantRange> evalRange(EvalContext& context, const ConstantValue& val,
                                            bool enforceBounds) const;
@@ -145,6 +147,7 @@ public:
     LValue evalLValueImpl(EvalContext& context) const;
     bool requireLValueImpl(const ASTContext& context, SourceLocation location,
                            bitmask<AssignFlags> flags) const;
+    bool isEquivalentImpl(const MemberAccessExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

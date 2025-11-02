@@ -91,6 +91,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
+    bool isEquivalentImpl(const CallExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

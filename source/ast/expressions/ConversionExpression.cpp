@@ -751,6 +751,11 @@ Expression::EffectiveSign ConversionExpression::getEffectiveSignImpl(bool isForC
     return type->isSigned() ? EffectiveSign::Signed : EffectiveSign::Unsigned;
 }
 
+bool ConversionExpression::isEquivalentImpl(const ConversionExpression& rhs) const {
+    return conversionKind == rhs.conversionKind && isConstCast == rhs.isConstCast &&
+           operand().isEquivalentTo(rhs.operand());
+}
+
 void ConversionExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("operand", operand());
 }

@@ -741,6 +741,53 @@ Expression::EffectiveSign CallExpression::getEffectiveSignImpl(bool) const {
     return type->isSigned() ? EffectiveSign::Signed : EffectiveSign::Unsigned;
 }
 
+bool CallExpression::isEquivalentImpl(const CallExpression& rhs) const {
+    if (subroutine.index() != rhs.subroutine.index())
+        return false;
+
+    if (subroutine.index() == 1) {
+        // We deliberately allow scopes to differ here; the only way this
+        // is observable is for display calls that use %m formatting.
+        auto& lci = std::get<1>(subroutine);
+        auto& rci = std::get<1>(rhs.subroutine);
+        if (lci.subroutine != rci.subroutine)
+            return false;
+
+        if (lci.extraInfo.index() != rci.extraInfo.index())
+            return false;
+
+        if (lci.extraInfo.index() == 1) {
+            auto& lii = std::get<1>(lci.extraInfo);
+            auto& rii = std::get<1>(rci.extraInfo);
+            if (lii.iterVar != rii.iterVar || bool(lii.iterExpr) != bool(rii.iterExpr) ||
+                (lii.iterExpr && !lii.iterExpr->isEquivalentTo(*rii.iterExpr))) {
+                return false;
+            }
+        }
+        else if (lci.extraInfo.index() == 2) {
+            auto& lrc = std::get<2>(lci.extraInfo);
+            auto& rrc = std::get<2>(rci.extraInfo);
+            if (bool(lrc.inlineConstraints) != bool(rrc.inlineConstraints) ||
+                (lrc.inlineConstraints &&
+                 !lrc.inlineConstraints->isEquivalentTo(*rrc.inlineConstraints)) ||
+                !std::ranges::equal(lrc.constraintRestrictions, rrc.constraintRestrictions)) {
+                return false;
+            }
+        }
+    }
+    else {
+        if (std::get<0>(subroutine) != std::get<0>(rhs.subroutine))
+            return false;
+    }
+
+    return bool(thisClass_) == bool(rhs.thisClass_) &&
+           (!thisClass_ || thisClass_->isEquivalentTo(*rhs.thisClass_)) &&
+           std::ranges::equal(arguments(), rhs.arguments(),
+                              [](const Expression* a, const Expression* b) {
+                                  return a->isEquivalentTo(*b);
+                              });
+}
+
 bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
                                    SourceRange range) {
     if (context.flags.has(EvalFlags::IsScript))

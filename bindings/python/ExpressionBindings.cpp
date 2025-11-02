@@ -35,6 +35,7 @@ void registerExpressions(py::module_& m) {
              "type"_a)
         .def("getSymbolReference", &Expression::getSymbolReference, byrefint,
              "allowPacked"_a = true)
+        .def("isEquivalentTo", &Expression::isEquivalentTo, "other"_a)
         .def("visit", &pyASTVisit<Expression>, "f"_a, PyASTVisitor::doc)
         .def("__repr__", [](const Expression& self) {
             return fmt::format("Expression(ExpressionKind.{})", toString(self.kind));

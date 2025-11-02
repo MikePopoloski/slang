@@ -58,6 +58,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const NamedValueExpression& rhs) const;
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
 
@@ -75,6 +76,7 @@ public:
                                 const HierarchicalReference& ref, SourceRange sourceRange);
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const HierarchicalValueExpression& rhs) const;
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::HierarchicalValue; }
 };
@@ -90,6 +92,7 @@ public:
         Expression(ExpressionKind::DataType, type, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool isEquivalentImpl(const DataTypeExpression&) const { return true; }
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -114,6 +117,7 @@ public:
         targetType(targetType) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool isEquivalentImpl(const TypeReferenceExpression&) const { return true; }
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -138,6 +142,7 @@ public:
                               const HierarchicalReference* hierRef, SourceRange sourceRange);
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool isEquivalentImpl(const ArbitrarySymbolExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -160,6 +165,7 @@ public:
         Expression(ExpressionKind::LValueReference, type, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const LValueReferenceExpression&) const { return true; }
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -176,6 +182,7 @@ public:
         Expression(ExpressionKind::EmptyArgument, type, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool isEquivalentImpl(const EmptyArgumentExpression&) const { return true; }
 
     void serializeTo(ASTSerializer&) const {}
 
@@ -197,6 +204,7 @@ public:
     }
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool isEquivalentImpl(const ClockingEventExpression& rhs) const;
 
     static Expression& fromSyntax(const syntax::ClockingPropertyExprSyntax& syntax,
                                   const ASTContext& context);
@@ -238,6 +246,7 @@ public:
         body(body), isRecursiveProperty(isRecursiveProperty) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool isEquivalentImpl(const AssertionInstanceExpression& rhs) const;
 
     static Expression& fromLookup(const Symbol& symbol,
                                   const syntax::InvocationExpressionSyntax* syntax,
@@ -306,6 +315,7 @@ public:
                        ConversionKind conversionKind);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
+    bool isEquivalentImpl(const MinTypMaxExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -339,6 +349,7 @@ public:
     const Expression& sourceExpr() const { return sourceExpr_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const CopyClassExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -371,6 +382,11 @@ public:
 
         /// The weight expression.
         const Expression* expr;
+
+        bool isEquivalentTo(const DistWeight& rhs) const {
+            return kind == rhs.kind && bool(expr) == bool(rhs.expr) &&
+                   (!expr || expr->isEquivalentTo(*rhs.expr));
+        }
     };
 
     /// A single distribution item.
@@ -380,6 +396,12 @@ public:
 
         /// The weight to apply to the expression.
         std::optional<DistWeight> weight;
+
+        bool isEquivalentTo(const DistItem& rhs) const {
+            return value.isEquivalentTo(rhs.value) &&
+                   weight.has_value() == rhs.weight.has_value() &&
+                   (!weight.has_value() || weight->isEquivalentTo(*rhs.weight));
+        }
     };
 
     DistExpression(const Type& type, const Expression& left, std::span<DistItem> items,
@@ -399,6 +421,7 @@ public:
     }
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool isEquivalentImpl(const DistExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -442,6 +465,7 @@ public:
         valueExpr(valueExpr) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool isEquivalentImpl(const TaggedUnionExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

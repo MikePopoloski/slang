@@ -268,6 +268,9 @@ public:
     /// of the given type.
     bool isImplicitlyAssignableTo(Compilation& compilation, const Type& type) const;
 
+    /// Returns true if this expression is structurally equivalent to the other expression.
+    bool isEquivalentTo(const Expression& other) const;
+
     /// Traverses the expression tree and computes what its width would be (in bits)
     /// if the types of all known constants were declared with only the bits necessary to
     /// represent them. If any encountered expressions have errors, returns nullopt.
@@ -426,6 +429,7 @@ private:
     struct EffectiveSignVisitor;
     struct HierarchicalVisitor;
     struct PropagationVisitor;
+    struct EquivalentToVisitor;
 
     mutable const ConstantValue* constant = nullptr;
 };
@@ -443,6 +447,7 @@ public:
         Expression(ExpressionKind::Invalid, type, SourceRange()), child(child) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool isEquivalentImpl(const InvalidExpression&) const { return true; }
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Invalid; }

@@ -51,6 +51,9 @@ public:
     /// Indicates whether the timing control is invalid.
     bool bad() const { return kind == TimingControlKind::Invalid; }
 
+    /// Returns true if this timing control is structurally equivalent to the other one.
+    bool isEquivalentTo(const TimingControl& other) const;
+
     /// Binds a timing control from the given syntax node.
     static TimingControl& bind(const syntax::TimingControlSyntax& syntax,
                                const ASTContext& context);
@@ -123,6 +126,7 @@ public:
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Invalid; }
 
+    bool isEquivalentImpl(const InvalidTimingControl&) const { return true; }
     void serializeTo(ASTSerializer& serializer) const;
 };
 
@@ -144,6 +148,7 @@ public:
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Delay; }
 
+    bool isEquivalentImpl(const DelayControl& rhs) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>
@@ -178,6 +183,7 @@ public:
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Delay3; }
 
+    bool isEquivalentImpl(const Delay3Control& rhs) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>
@@ -225,6 +231,7 @@ public:
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::SignalEvent; }
 
+    bool isEquivalentImpl(const SignalEventControl& rhs) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>
@@ -254,6 +261,7 @@ public:
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::EventList; }
 
+    bool isEquivalentImpl(const EventListControl& rhs) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>
@@ -275,6 +283,7 @@ public:
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::ImplicitEvent; }
 
+    bool isEquivalentImpl(const ImplicitEventControl&) const { return true; }
     void serializeTo(ASTSerializer&) const {}
 };
 
@@ -297,6 +306,7 @@ public:
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::RepeatedEvent; }
 
+    bool isEquivalentImpl(const RepeatedEventControl& rhs) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>
@@ -314,6 +324,7 @@ public:
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::OneStepDelay; }
 
+    bool isEquivalentImpl(const OneStepDelayControl&) const { return true; }
     void serializeTo(ASTSerializer&) const {}
 };
 
@@ -331,6 +342,7 @@ public:
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::CycleDelay; }
 
+    bool isEquivalentImpl(const CycleDelayControl& rhs) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     template<typename TVisitor>
@@ -362,6 +374,7 @@ public:
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::BlockEventList; }
 
+    bool isEquivalentImpl(const BlockEventListControl& rhs) const;
     void serializeTo(ASTSerializer& serializer) const;
 };
 
