@@ -13,6 +13,7 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/text/FormatBuffer.h"
+#include "slang/util/ScopeGuard.h"
 
 namespace slang::ast {
 
@@ -107,25 +108,40 @@ struct LSPVisitor {
 };
 
 /// A collection of utility methods for working with LSP expressions.
+///
+/// An LSP expression is the longest static prefix of an expression that can be
+/// used to identify a particular driver of a variable. For example, in the
+/// expression `a.b[3].c.d[2:0]`, if all of the selects are constant, then the entire
+/// expression is the LSP. If instead we had `a.b[i].c.d[2:0]`, then the LSP would be
+/// `a.b[i]`.
 class SLANG_EXPORT LSPUtilities {
 public:
+    /// Converts an LSP expression to a human-friendly string representation.
     static void stringifyLSP(const Expression& expr, EvalContext& evalContext,
                              FormatBuffer& buffer);
 
     /// Computes bounds for a driver given its longest static prefix expression.
-    static std::optional<DriverBitRange> getBounds(const Expression& prefixExpression,
-                                                   EvalContext& evalContext, const Type& rootType);
+    ///
+    /// @note It is assumed that @a lsp is a valid LSP expression. An exception
+    ///       is thrown if that is not the case.
+    static std::optional<DriverBitRange> getBounds(const Expression& lsp, EvalContext& evalContext,
+                                                   const Type& rootType);
 
     /// Visits the longest static prefix expressions for all of the operands
     /// in the given expression using the provided callback function.
     template<typename TCallback>
     static void visitLSPs(const Expression& expr, EvalContext& evalContext, TCallback&& func,
-                          const Expression* initialLSP = nullptr) {
+                          bool isLValue = true) {
         LSPHelper<TCallback> lspHelper(evalContext, std::forward<TCallback>(func));
-        lspHelper.visitor.currentLSP = initialLSP;
+        lspHelper.isLValue = isLValue;
         expr.visit(lspHelper);
     }
 
+    /// Visits the components of the provided LSP expression, starting from the outer
+    /// expressions and invoking the callback for each sub-expression in the path.
+    ///
+    /// @note It is assumed that @a longestStaticPrefix is a valid LSP expression.
+    ///       An exception is thrown if that is not the case.
     template<typename TCallback>
     static void visitComponents(const Expression& longestStaticPrefix, bool includeRoot,
                                 TCallback&& callback) {
@@ -169,8 +185,23 @@ public:
         } while (expr);
     }
 
+    using LSPCallback = function_ref<void(const ValueSymbol&, const Expression&, bool)>;
+
+    /// Visits the longest static prefix expressions for all of the operands
+    /// in the given expression using the provided callback function.
+    ///
+    /// Unlike @a visitLSPs, this method will expand indirect references such as
+    /// modport port connections and ref port connections.
+    static void expandIndirectLSPs(BumpAllocator& alloc, const Expression& expr,
+                                   EvalContext& evalContext, LSPCallback callback,
+                                   bool isLValue = true);
+
 private:
     LSPUtilities() = delete;
+
+    static void expandIndirectLSP(BumpAllocator& alloc, EvalContext& evalContext,
+                                  LSPCallback callback, const ValueSymbol& symbol,
+                                  const Expression& lsp, bool isLValue);
 
     template<typename F>
     struct LSPHelper {

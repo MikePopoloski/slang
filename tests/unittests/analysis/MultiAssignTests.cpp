@@ -1214,3 +1214,46 @@ endmodule
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);
 }
+
+TEST_CASE("Multi assign through ref ports 2") {
+    auto& code = R"(
+// module r({a, b});
+//     ref logic a;
+//     output logic b;
+
+//     assign a = 1;
+// endmodule
+
+module v(ref .a(foo.b));
+    struct { logic a; logic b; } foo;
+    assign foo.b = 1;
+endmodule
+
+module w(ref .a(foo[0][1]));
+    logic [1:0] foo[2][3];
+    assign foo[0][1][0] = 1;
+endmodule
+
+module top;
+    // logic [1:0] q;
+    // r r1(q);
+    // assign q[1] = 1;
+
+    logic s [1:0][3:1];
+    v v1(s[1][1]);
+    assign s[1][1] = 1;
+
+    logic [1:0] t [1:0][3:1];
+    w w1(t[1][1]);
+    assign t[1][1][0] = 1;
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+    CHECK(diags[1].code == diag::MultipleContAssigns);
+}

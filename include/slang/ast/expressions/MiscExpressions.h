@@ -56,6 +56,8 @@ public:
     NamedValueExpression(const ValueSymbol& symbol, SourceRange sourceRange) :
         ValueExpressionBase(ExpressionKind::NamedValue, symbol, sourceRange) {}
 
+    explicit NamedValueExpression(const NamedValueExpression& other);
+
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
     bool isEquivalentImpl(const NamedValueExpression& rhs) const;
@@ -74,6 +76,8 @@ public:
 
     HierarchicalValueExpression(const Scope& scope, const ValueSymbol& symbol,
                                 const HierarchicalReference& ref, SourceRange sourceRange);
+
+    explicit HierarchicalValueExpression(const HierarchicalValueExpression& other);
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool isEquivalentImpl(const HierarchicalValueExpression& rhs) const;

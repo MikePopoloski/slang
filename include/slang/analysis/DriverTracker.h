@@ -109,13 +109,14 @@ private:
     void applyInstanceSideEffect(AnalysisContext& context, DriverAlloc& driverAlloc,
                                  const HierPortDriver& hierPortDriver,
                                  const ast::InstanceSymbol& instance);
-    void propagateIndirectDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
-                                 const ast::Expression& connectionExpr,
-                                 const ValueDriver& originalDriver);
     void addDrivers(AnalysisContext& context, DriverAlloc& driverAlloc, const ast::Expression& expr,
                     DriverKind driverKind, bitmask<DriverFlags> driverFlags,
-                    const ast::Symbol& containingSymbol,
-                    const ast::Expression* initialLSP = nullptr);
+                    const ast::Symbol& containingSymbol);
+
+    void addFromLSP(AnalysisContext& context, DriverAlloc& driverAlloc, DriverKind driverKind,
+                    bitmask<DriverFlags> driverFlags, const ast::Symbol& containingSymbol,
+                    const ast::ValueSymbol& symbol, const ast::Expression& lsp, bool isLValue,
+                    ast::EvalContext& evalCtx, SmallVector<HierPortDriver>& hierPortDrivers);
 
     concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
     concurrent_map<const ast::InstanceBodySymbol*, InstanceDriverState> instanceMap;

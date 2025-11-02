@@ -7,8 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/LSPUtilities.h"
 
-#include "slang/ast/expressions/ConversionExpression.h"
-#include "slang/ast/expressions/OperatorExpressions.h"
+#include "slang/ast/ASTVisitor.h"
 
 namespace slang::ast {
 
@@ -111,6 +110,167 @@ std::optional<DriverBitRange> LSPUtilities::getBounds(const Expression& prefixEx
     }
 
     return result;
+}
+
+static Expression* translateSelector(BumpAllocator& alloc, Expression& value,
+                                     const Expression& sourceSelector) {
+    // TODO: need to translate selector indices because types may be only
+    // equivalent and not matching.
+    switch (sourceSelector.kind) {
+        case ExpressionKind::ElementSelect: {
+            auto& es = sourceSelector.as<ElementSelectExpression>();
+            return alloc.emplace<ElementSelectExpression>(*es.type, value, es.selector(),
+                                                          es.sourceRange);
+        }
+        case ExpressionKind::RangeSelect: {
+            auto& rs = sourceSelector.as<RangeSelectExpression>();
+            return alloc.emplace<RangeSelectExpression>(rs.getSelectionKind(), *rs.type, value,
+                                                        rs.left(), rs.right(), rs.sourceRange);
+        }
+        case ExpressionKind::MemberAccess: {
+            auto& ma = sourceSelector.as<MemberAccessExpression>();
+            return alloc.emplace<MemberAccessExpression>(*ma.type, value, ma.member,
+                                                         ma.sourceRange);
+        }
+        default:
+            SLANG_UNREACHABLE;
+    }
+}
+
+static bool expandRefPortConn(BumpAllocator& alloc, EvalContext& evalContext, const Expression& lsp,
+                              bool isLValue, const Expression& externalConn,
+                              const Expression* internalConn, LSPUtilities::LSPCallback callback) {
+    if (externalConn.bad() || (internalConn && internalConn->bad()))
+        return true;
+
+    SmallVector<const Expression*> lspPath;
+    LSPUtilities::visitComponents(lsp, /* includeRoot */ false,
+                                  [&](const Expression& expr) { lspPath.push_back(&expr); });
+
+    size_t elemsToRemove = 0;
+    if (internalConn) {
+        SmallVector<const Expression*> internalPath;
+        LSPUtilities::visitComponents(*internalConn, /* includeRoot */ false,
+                                      [&](const Expression& expr) {
+                                          internalPath.push_back(&expr);
+                                      });
+
+        // Remove the common prefix from the lsp path -- the remainder is the portion
+        // of the expression that applies on top of the external connection. Note that
+        // the paths are in reverse order so we need to walk backwards.
+        while (elemsToRemove < internalPath.size() && elemsToRemove < lspPath.size()) {
+            auto l = internalPath[internalPath.size() - 1 - elemsToRemove];
+            auto r = lspPath[lspPath.size() - 1 - elemsToRemove];
+            if (!l->isEquivalentTo(*r)) {
+                // This port is not applicable because the internal connection
+                // doesn't match the lsp and so assignments don't affect it.
+                return false;
+            }
+            elemsToRemove++;
+        }
+    }
+
+    if (elemsToRemove == lspPath.size()) {
+        // The entire lsp is covered by the internal connection, so the external
+        // connection is the relevant expression.
+        LSPUtilities::visitLSPs(externalConn, evalContext, callback, isLValue);
+    }
+    else {
+        // The external connection is only partially covered by the LSP. We need to
+        // glue the uncovered portion of the LSP onto the external connection.
+        // The const_cast here is okay because we never mutate anything during analysis.
+        auto newExpr = const_cast<Expression*>(&externalConn);
+        for (size_t i = elemsToRemove; i < lspPath.size(); i++) {
+            auto elem = lspPath[lspPath.size() - 1 - i];
+            newExpr = translateSelector(alloc, *newExpr, *elem);
+        }
+        LSPUtilities::visitLSPs(*newExpr, evalContext, callback, isLValue);
+    }
+    return true;
+}
+
+static void expandModportConn(BumpAllocator& alloc, EvalContext& evalContext, const Expression& lsp,
+                              bool isLValue, const Expression& internalConn,
+                              LSPUtilities::LSPCallback callback) {
+    // We need to glue the uncovered portion of the LSP onto the external connection.
+    // The const_cast here is okay because we never mutate anything during analysis.
+    const Expression* expandedLSP = &internalConn;
+    switch (lsp.kind) {
+        case ExpressionKind::ElementSelect: {
+            auto& es = lsp.as<ElementSelectExpression>();
+            expandedLSP = alloc.emplace<ElementSelectExpression>(
+                *es.type, const_cast<Expression&>(internalConn), es.selector(), es.sourceRange);
+            break;
+        }
+        case ExpressionKind::RangeSelect: {
+            auto& rs = lsp.as<RangeSelectExpression>();
+            expandedLSP = alloc.emplace<RangeSelectExpression>(
+                rs.getSelectionKind(), *rs.type, const_cast<Expression&>(internalConn), rs.left(),
+                rs.right(), rs.sourceRange);
+            break;
+        }
+        case ExpressionKind::MemberAccess: {
+            auto& ma = lsp.as<MemberAccessExpression>();
+            expandedLSP = alloc.emplace<MemberAccessExpression>(
+                *ma.type, const_cast<Expression&>(internalConn), ma.member, ma.sourceRange);
+            break;
+        }
+        default:
+            break;
+    }
+
+    LSPUtilities::visitLSPs(*expandedLSP, evalContext, callback, isLValue);
+}
+
+void LSPUtilities::expandIndirectLSPs(BumpAllocator& alloc, const Expression& expr,
+                                      EvalContext& evalContext, LSPCallback callback,
+                                      bool isLValue) {
+    visitLSPs(
+        expr, evalContext,
+        [&](const ValueSymbol& symbol, const Expression& lsp, bool isLValue) {
+            expandIndirectLSP(alloc, evalContext, callback, symbol, lsp, isLValue);
+        },
+        isLValue);
+}
+
+void LSPUtilities::expandIndirectLSP(BumpAllocator& alloc, EvalContext& evalContext,
+                                     LSPCallback callback, const ValueSymbol& symbol,
+                                     const Expression& lsp, bool isLValue) {
+    if (symbol.kind == SymbolKind::ModportPort) {
+        if (auto expr = symbol.as<ModportPortSymbol>().getConnectionExpr())
+            expandModportConn(alloc, evalContext, lsp, isLValue, *expr, callback);
+        return;
+    }
+
+    // If this symbol is connected to a ref port we need to chop off
+    // the common part of the connection expression and glue the remainder
+    // onto the target of the connection.
+    bool anyRefPorts = false;
+    for (auto backref = symbol.getFirstPortBackref(); backref;
+         backref = backref->getNextBackreference()) {
+        // TODO: multiports
+        auto& port = *backref->port;
+        if (port.direction == ArgumentDirection::Ref) {
+            auto scope = symbol.getParentScope();
+            SLANG_ASSERT(scope);
+
+            auto inst = scope->asSymbol().as<InstanceBodySymbol>().parentInstance;
+            SLANG_ASSERT(inst);
+
+            if (auto conn = inst->getPortConnection(port)) {
+                if (auto expr = conn->getExpression()) {
+                    anyRefPorts |= expandRefPortConn(alloc, evalContext, lsp, isLValue, *expr,
+                                                     port.getInternalExpr(), callback);
+                }
+            }
+        }
+    }
+
+    if (!anyRefPorts) {
+        // No ref ports or modports involved, so just invoke the callback directly.
+        // TODO:
+        // callback(symbol, lsp, isLValue);
+    }
 }
 
 } // namespace slang::ast
