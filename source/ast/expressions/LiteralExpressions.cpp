@@ -10,6 +10,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/ast/TypeProvider.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
@@ -73,12 +74,13 @@ Expression& IntegerLiteral::fromSyntax(Compilation& compilation,
                                                 syntax.sourceRange());
 }
 
-Expression& IntegerLiteral::fromConstant(Compilation& compilation, const SVInt& value) {
+Expression& IntegerLiteral::fromConstant(const TypeProvider& typeProvider, const SVInt& value) {
     SVInt val = value.resize(32);
     val.setSigned(true);
 
-    return *compilation.emplace<IntegerLiteral>(compilation, compilation.getIntType(),
-                                                std::move(val), true, SourceRange::NoLocation);
+    auto& alloc = typeProvider.alloc;
+    return *alloc.emplace<IntegerLiteral>(alloc, typeProvider.getIntType(), std::move(val), true,
+                                          SourceRange::NoLocation);
 }
 
 ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {

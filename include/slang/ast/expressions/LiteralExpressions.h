@@ -12,6 +12,8 @@
 
 namespace slang::ast {
 
+class TypeProvider;
+
 /// Represents an integer literal.
 class SLANG_EXPORT IntegerLiteral final : public Expression {
 public:
@@ -36,7 +38,7 @@ public:
                                   const syntax::LiteralExpressionSyntax& syntax);
     static Expression& fromSyntax(Compilation& compilation,
                                   const syntax::IntegerVectorExpressionSyntax& syntax);
-    static Expression& fromConstant(Compilation& compilation, const SVInt& value);
+    static Expression& fromConstant(const TypeProvider& typeProvider, const SVInt& value);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::IntegerLiteral; }
 

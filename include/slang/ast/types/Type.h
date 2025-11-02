@@ -15,6 +15,7 @@
 namespace slang::ast {
 
 class Compilation;
+class TypeProvider;
 struct LookupResult;
 enum class RandMode;
 
@@ -326,12 +327,12 @@ public:
     /// If this is an integral type, returns the same type converted
     /// to a signed integral type (properly descending through sub arrays).
     /// Otherwise returns `*this`.
-    const Type& makeSigned(Compilation& compilation) const;
+    const Type& makeSigned(const TypeProvider& typeProvider) const;
 
     /// If this is an integral type, returns the same type converted
     /// to an unsigned integral type (properly descending through sub arrays).
     /// Otherwise returns `*this`.
-    const Type& makeUnsigned(Compilation& compilation) const;
+    const Type& makeUnsigned(const TypeProvider& typeProvider) const;
 
     /// @returns a human-friendly string representation of the type.
     std::string toString() const;

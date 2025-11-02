@@ -12,6 +12,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/TimingControl.h"
+#include "slang/ast/TypeProvider.h"
 #include "slang/ast/expressions/CallExpression.h"
 #include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/MiscExpressions.h"
@@ -34,34 +35,32 @@ namespace slang::ast {
 using namespace parsing;
 using namespace syntax;
 
-// Helper method used by tryConnectPortArray to build a tree of selects of the sliced result.
-// `flatRange` is the bit range of the final flattened result. We map down to that flattened
-// result by walking the expression tree and selecting the appropriate elements.
-static Expression* buildPackedSelectTree(Compilation& comp, Expression* expr,
-                                         ConstantRange flatRange, const ASTContext& context) {
+Expression& Expression::buildPackedSelectTree(const TypeProvider& typeProvider, Expression& expr,
+                                              ConstantRange flatRange, const ASTContext& context) {
     SLANG_ASSERT(flatRange.isLittleEndian());
 
     // If the range covers the entire type, just return the expression itself
-    auto& type = *expr->type;
+    auto& type = *expr.type;
     if (flatRange.width() >= type.getBitWidth())
         return expr;
 
-    auto createConcat = [&](SmallVector<Expression*>& parts) -> Expression* {
+    auto& alloc = typeProvider.alloc;
+    auto createConcat = [&](SmallVector<Expression*>& parts) -> Expression& {
         SLANG_ASSERT(!parts.empty());
 
         if (parts.size() == 1)
-            return parts.front();
+            return *parts.front();
 
-        auto& resultType = comp.getType(flatRange.width(), type.getIntegralFlags());
-        return comp.emplace<ConcatenationExpression>(resultType, parts.copy(comp),
-                                                     expr->sourceRange);
+        auto& resultType = typeProvider.getType(flatRange.width(), type.getIntegralFlags());
+        return *alloc.emplace<ConcatenationExpression>(resultType, parts.copy(alloc),
+                                                       expr.sourceRange);
     };
 
-    if (expr->kind == ExpressionKind::Concatenation) {
+    if (expr.kind == ExpressionKind::Concatenation) {
         // Handle concat: flatten bit ranges over its operands
         int32_t msb = int32_t(type.getBitWidth()) - 1;
         SmallVector<Expression*> parts;
-        for (auto op : expr->as<ConcatenationExpression>().operands()) {
+        for (auto op : expr.as<ConcatenationExpression>().operands()) {
             const int32_t opWidth = int32_t(op->type->getBitWidth());
             const int32_t opMsb = msb;
             const int32_t opLsb = msb - opWidth + 1;
@@ -73,7 +72,8 @@ static Expression* buildPackedSelectTree(Compilation& comp, Expression* expr,
                 // Map to local indices within op
                 const int32_t localMsb = overlapMsb - opLsb;
                 const int32_t localLsb = overlapLsb - opLsb;
-                parts.push_back(buildPackedSelectTree(comp, op, {localMsb, localLsb}, context));
+                parts.push_back(
+                    &buildPackedSelectTree(typeProvider, *op, {localMsb, localLsb}, context));
             }
 
             msb -= opWidth;
@@ -98,8 +98,9 @@ static Expression* buildPackedSelectTree(Compilation& comp, Expression* expr,
 
         if (leftElem == rightElem) {
             // Range is fully within a single element.
-            expr = &ElementSelectExpression::fromConstant(comp, *expr, getIndex(leftElem), context);
-            return buildPackedSelectTree(comp, expr, {localMsb, localLsb}, context);
+            auto& sel = ElementSelectExpression::fromConstant(typeProvider, expr,
+                                                              getIndex(leftElem), context);
+            return buildPackedSelectTree(typeProvider, sel, {localMsb, localLsb}, context);
         }
 
         // Otherwise we have a range of elements. If the range is partial on either end
@@ -109,9 +110,9 @@ static Expression* buildPackedSelectTree(Compilation& comp, Expression* expr,
         auto midRight = rightElem;
         if (localMsb < elemWidth - 1) {
             midLeft--;
-            auto leftExpr = &ElementSelectExpression::fromConstant(comp, *expr, getIndex(leftElem),
-                                                                   context);
-            parts.push_back(buildPackedSelectTree(comp, leftExpr, {localMsb, 0}, context));
+            auto& leftExpr = ElementSelectExpression::fromConstant(typeProvider, expr,
+                                                                   getIndex(leftElem), context);
+            parts.push_back(&buildPackedSelectTree(typeProvider, leftExpr, {localMsb, 0}, context));
         }
 
         // Middle full elements (if any): select entire elements
@@ -119,20 +120,20 @@ static Expression* buildPackedSelectTree(Compilation& comp, Expression* expr,
             midRight++;
 
         if (midLeft == midRight) {
-            parts.push_back(
-                &ElementSelectExpression::fromConstant(comp, *expr, getIndex(midLeft), context));
+            parts.push_back(&ElementSelectExpression::fromConstant(typeProvider, expr,
+                                                                   getIndex(midLeft), context));
         }
         else if (midLeft > midRight) {
             parts.push_back(&RangeSelectExpression::fromConstant(
-                comp, *expr, {getIndex(midLeft), getIndex(midRight)}, context));
+                typeProvider, expr, {getIndex(midLeft), getIndex(midRight)}, context));
         }
 
         // Right partial element (LSB side)
         if (localLsb) {
-            auto rightExpr = &ElementSelectExpression::fromConstant(comp, *expr,
+            auto& rightExpr = ElementSelectExpression::fromConstant(typeProvider, expr,
                                                                     getIndex(rightElem), context);
-            parts.push_back(buildPackedSelectTree(comp, rightExpr,
-                                                  {elemWidth - 1, elemWidth - localLsb}, context));
+            parts.push_back(&buildPackedSelectTree(typeProvider, rightExpr,
+                                                   {elemWidth - 1, elemWidth - localLsb}, context));
         }
 
         return createConcat(parts);
@@ -140,8 +141,8 @@ static Expression* buildPackedSelectTree(Compilation& comp, Expression* expr,
 
     // Not a packed array, so selection is simple bit vectors.
     if (flatRange.left == flatRange.right)
-        return &ElementSelectExpression::fromConstant(comp, *expr, flatRange.left, context);
-    return &RangeSelectExpression::fromConstant(comp, *expr, flatRange, context);
+        return ElementSelectExpression::fromConstant(typeProvider, expr, flatRange.left, context);
+    return RangeSelectExpression::fromConstant(typeProvider, expr, flatRange, context);
 }
 
 Expression* Expression::tryConnectPortArray(const ASTContext& context, const Type& portType,
@@ -221,7 +222,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
         // all of the instance dims and whatever is left should match
         // the actual port type to connect.
         if (!unpackedDims.empty()) {
-            auto& unpackedType = FixedSizeUnpackedArrayType::fromDims(*context.scope, *ct,
+            auto& unpackedType = FixedSizeUnpackedArrayType::fromDims(comp, context, *ct,
                                                                       unpackedDims,
                                                                       expr.sourceRange);
             if (!portType.isEquivalent(unpackedType)) {
@@ -285,7 +286,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
     int32_t width = int32_t(portWidth);
     offset *= width;
     ConstantRange range{offset + width - 1, offset};
-    return buildPackedSelectTree(comp, result, range, context);
+    return &buildPackedSelectTree(comp, *result, range, context);
 }
 
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,

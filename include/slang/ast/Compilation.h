@@ -812,22 +812,18 @@ private:
     TypedBumpAllocator<PointerMap> pointerMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
 
-    // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
-    // reg. Two of the entries are not valid and will be nullptr (!fourstate & reg).
-    Type* scalarTypeTable[8]{nullptr};
-
     // Instances of all the built-in types.
-    Type* bitType;
-    Type* logicType;
-    Type* intType;
-    Type* byteType;
-    Type* integerType;
-    Type* realType;
-    Type* shortRealType;
-    Type* stringType;
-    Type* voidType;
-    Type* errorType;
-    NetType* wireNetType;
+    const Type* bitType;
+    const Type* logicType;
+    const Type* intType;
+    const Type* byteType;
+    const Type* integerType;
+    const Type* realType;
+    const Type* shortRealType;
+    const Type* stringType;
+    const Type* voidType;
+    const Type* errorType;
+    const NetType* wireNetType;
 
     // A map of syntax nodes that have been referenced in the AST.
     // The value indicates whether the node has been used as an lvalue vs non-lvalue,

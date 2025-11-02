@@ -41,7 +41,7 @@ Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
     defaultLibPtr(defaultLib) {
 
     // Construct all built-in types.
-    auto& bi = slang::ast::builtins::Builtins::Instance;
+    auto& bi = builtins::Builtins::Instance;
     bitType = &bi.bitType;
     logicType = &bi.logicType;
     intType = &bi.intType;
@@ -51,12 +51,9 @@ Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
     shortRealType = &bi.shortRealType;
     stringType = &bi.stringType;
     voidType = &bi.voidType;
-    errorType = &bi.errorType;
+    errorType = &ErrorType::Instance;
 
     auto regType = &bi.regType;
-    auto signedBitType = &bi.signedBitType;
-    auto signedLogicType = &bi.signedLogicType;
-    auto signedRegType = &bi.signedRegType;
     auto shortIntType = &bi.shortIntType;
     auto longIntType = &bi.longIntType;
     auto timeType = &bi.timeType;
@@ -120,17 +117,6 @@ Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
     wireNetType = knownNetTypes[TokenKind::WireKeyword].get();
 
 #undef MAKE_NETTYPE
-
-    // Scalar types are indexed by bit flags.
-    auto registerScalar = [this](auto type) {
-        scalarTypeTable[type->getIntegralFlags().bits() & 0x7] = type;
-    };
-    registerScalar(bitType);
-    registerScalar(logicType);
-    registerScalar(regType);
-    registerScalar(signedBitType);
-    registerScalar(signedLogicType);
-    registerScalar(signedRegType);
 
     root = std::make_unique<RootSymbol>(*this);
 
@@ -1763,7 +1749,7 @@ const Type& Compilation::getType(bitwidth_t width, bitmask<IntegralFlags> flags)
 }
 
 const Type& Compilation::getScalarType(bitmask<IntegralFlags> flags) const {
-    Type* ptr = scalarTypeTable[flags.bits() & 0x7];
+    auto ptr = builtins::Builtins::Instance.scalarTypeTable[flags.bits() & 0x7];
     SLANG_ASSERT(ptr);
     return *ptr;
 }

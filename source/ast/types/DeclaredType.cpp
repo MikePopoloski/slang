@@ -11,6 +11,7 @@
 #include "slang/ast/Expression.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
+#include "slang/ast/TypeProvider.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
@@ -348,14 +349,15 @@ void DeclaredType::mergePortTypes(
 
         bool shouldBeSigned = implicit.signing.kind == TokenKind::SignedKeyword;
         if (shouldBeSigned && !sourceType->isSigned()) {
-            sourceType = &sourceType->makeSigned(context.getCompilation());
+            auto& comp = context.getCompilation();
+            sourceType = &sourceType->makeSigned(comp);
             if (!sourceType->isSigned()) {
                 warnSignedness();
             }
             else {
                 // Put the unpacked dimensions back on the type now that it
                 // has been made signed.
-                destType = &FixedSizeUnpackedArrayType::fromDims(*context.scope, *sourceType,
+                destType = &FixedSizeUnpackedArrayType::fromDims(comp, context, *sourceType,
                                                                  destDims, SourceRange::NoLocation);
             }
         }

@@ -78,8 +78,6 @@ void registerTypes(py::module_& m) {
         .def("implements", &Type::implements, "rhs"_a)
         .def("isValidForRand", &Type::isValidForRand, "mode"_a, "languageVersion"_a)
         .def("coerceValue", &Type::coerceValue, "value"_a)
-        .def("makeSigned", &Type::makeSigned, "compilation"_a)
-        .def("makeUnsigned", &Type::makeUnsigned, "compilation"_a)
         .def_static("getCommonBase", &Type::getCommonBase, byrefint, "left"_a, "right"_a)
         .def_property_readonly("integralFlags", &Type::getIntegralFlags)
         .def_property_readonly("defaultValue", &Type::getDefaultValue)

@@ -980,7 +980,7 @@ public:
         switch (arrayType.kind) {
             case SymbolKind::FixedSizeUnpackedArrayType: {
                 auto& fsuat = arrayType.as<FixedSizeUnpackedArrayType>();
-                return FixedSizeUnpackedArrayType::fromDim(*context.scope, elemType, fsuat.range,
+                return FixedSizeUnpackedArrayType::fromDim(comp, context, elemType, fsuat.range,
                                                            iterExpr->sourceRange);
             }
             case SymbolKind::DynamicArrayType:

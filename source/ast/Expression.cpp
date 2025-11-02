@@ -1472,7 +1472,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
                                                           /* isRealIface */ true,
                                                           sourceRange.start());
     if (!dims.empty())
-        type = &FixedSizeUnpackedArrayType::fromDims(*context.scope, *type, dims, sourceRange);
+        type = &FixedSizeUnpackedArrayType::fromDims(comp, context, *type, dims, sourceRange);
 
     // Don't return a modport as the symbol target, it's expected that it
     // will be pulled from the virtual interface type instead.
@@ -1540,8 +1540,8 @@ Expression& Expression::selfDetermined(Compilation& compilation, const Expressio
     return *expr;
 }
 
-Expression& Expression::badExpr(Compilation& compilation, const Expression* expr) {
-    return *compilation.emplace<InvalidExpression>(expr, compilation.getErrorType());
+Expression& Expression::badExpr(BumpAllocator& alloc, const Expression* expr) {
+    return *alloc.emplace<InvalidExpression>(expr, ErrorType::Instance);
 }
 
 Expression::EffectiveSign Expression::conjunction(EffectiveSign left, EffectiveSign right) {

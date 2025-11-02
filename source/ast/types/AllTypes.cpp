@@ -107,7 +107,7 @@ const Type& createPackedDims(const ASTContext& context, const Type* type,
     for (size_t i = 0; i < count; i++) {
         auto& dimSyntax = *dimensions[count - i - 1];
         auto dim = context.evalPackedDimension(dimSyntax);
-        type = &PackedArrayType::fromSyntax(*context.scope, *type, dim, dimSyntax);
+        type = &PackedArrayType::fromSyntax(context, *type, dim, dimSyntax);
     }
 
     return *type;
@@ -193,7 +193,7 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
     size_t count = dims.size();
     for (size_t i = 0; i < count; i++) {
         auto& pair = dims[count - i - 1];
-        result = &PackedArrayType::fromSyntax(*context.scope, *result, pair.first, *pair.second);
+        result = &PackedArrayType::fromSyntax(context, *result, pair.first, *pair.second);
     }
 
     return *result;
@@ -648,25 +648,25 @@ PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range,
     elementType(elementType), range(range) {
 }
 
-const Type& PackedArrayType::fromSyntax(const Scope& scope, const Type& elementType,
+const Type& PackedArrayType::fromSyntax(const ASTContext& context, const Type& elementType,
                                         const EvaluatedDimension& dimension,
                                         const SyntaxNode& syntax) {
-    auto& comp = scope.getCompilation();
+    auto& comp = context.getCompilation();
     if (elementType.isError())
         return elementType;
 
     if (!elementType.isIntegral()) {
         if (elementType.getCanonicalType().kind == SymbolKind::DPIOpenArrayType)
-            scope.addDiag(diag::MultiplePackedOpenArrays, syntax.sourceRange());
+            context.addDiag(diag::MultiplePackedOpenArrays, syntax.sourceRange());
         else
-            scope.addDiag(diag::PackedArrayNotIntegral, syntax.sourceRange()) << elementType;
+            context.addDiag(diag::PackedArrayNotIntegral, syntax.sourceRange()) << elementType;
         return comp.getErrorType();
     }
 
     if (!dimension.isRange()) {
         if (dimension.kind == DimensionKind::DPIOpenArray) {
             if (elementType.isPackedArray()) {
-                scope.addDiag(diag::MultiplePackedOpenArrays, syntax.sourceRange());
+                context.addDiag(diag::MultiplePackedOpenArrays, syntax.sourceRange());
                 return comp.getErrorType();
             }
 
@@ -677,24 +677,24 @@ const Type& PackedArrayType::fromSyntax(const Scope& scope, const Type& elementT
         return comp.getErrorType();
     }
 
-    return fromDim(scope, elementType, dimension.range, syntax);
+    return fromDim(comp, context, elementType, dimension.range, syntax);
 }
 
-const Type& PackedArrayType::fromDim(const Scope& scope, const Type& elementType, ConstantRange dim,
+const Type& PackedArrayType::fromDim(BumpAllocator& alloc, const ASTContext& context,
+                                     const Type& elementType, ConstantRange dim,
                                      DeferredSourceRange sourceRange) {
     if (elementType.isError())
         return elementType;
 
-    auto& comp = scope.getCompilation();
     auto width = checkedMulU32(elementType.getBitWidth(), dim.width());
     if (!width || width > (uint32_t)SVInt::MAX_BITS) {
         uint64_t fullWidth = uint64_t(elementType.getBitWidth()) * dim.width();
-        scope.addDiag(diag::PackedTypeTooLarge, sourceRange.get())
+        context.addDiag(diag::PackedTypeTooLarge, sourceRange.get())
             << fullWidth << (uint32_t)SVInt::MAX_BITS;
-        return comp.getErrorType();
+        return ErrorType::Instance;
     }
 
-    auto result = comp.emplace<PackedArrayType>(elementType, dim, bitwidth_t(*width));
+    auto result = alloc.emplace<PackedArrayType>(elementType, dim, bitwidth_t(*width));
     if (auto syntax = sourceRange.syntax())
         result->setSyntax(*syntax);
 
@@ -713,35 +713,35 @@ FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType, 
     range(range), selectableWidth(selectableWidth), bitstreamWidth(bitstreamWidth) {
 }
 
-const Type& FixedSizeUnpackedArrayType::fromDims(const Scope& scope, const Type& elementType,
+const Type& FixedSizeUnpackedArrayType::fromDims(BumpAllocator& alloc, const ASTContext& context,
+                                                 const Type& elementType,
                                                  std::span<const ConstantRange> dimensions,
                                                  DeferredSourceRange sourceRange) {
     const Type* result = &elementType;
     size_t count = dimensions.size();
     for (size_t i = 0; i < count; i++)
-        result = &fromDim(scope, *result, dimensions[count - i - 1], sourceRange);
+        result = &fromDim(alloc, context, *result, dimensions[count - i - 1], sourceRange);
 
     return *result;
 }
 
-const Type& FixedSizeUnpackedArrayType::fromDim(const Scope& scope, const Type& elementType,
-                                                ConstantRange dim,
+const Type& FixedSizeUnpackedArrayType::fromDim(BumpAllocator& alloc, const ASTContext& context,
+                                                const Type& elementType, ConstantRange dim,
                                                 DeferredSourceRange sourceRange) {
     if (elementType.isError())
         return elementType;
 
-    auto& comp = scope.getCompilation();
     auto selectableWidth = checkedMulU64(elementType.getSelectableWidth(), dim.width());
     auto bitstreamWidth = checkedMulU64(elementType.getBitstreamWidth(), dim.width());
 
     if (!selectableWidth || selectableWidth > MaxBitWidth || !bitstreamWidth ||
         bitstreamWidth > MaxBitWidth) {
-        scope.addDiag(diag::ObjectTooLarge, sourceRange.get());
-        return comp.getErrorType();
+        context.addDiag(diag::ObjectTooLarge, sourceRange.get());
+        return ErrorType::Instance;
     }
 
-    auto result = comp.emplace<FixedSizeUnpackedArrayType>(elementType, dim, *selectableWidth,
-                                                           *bitstreamWidth);
+    auto result = alloc.emplace<FixedSizeUnpackedArrayType>(elementType, dim, *selectableWidth,
+                                                            *bitstreamWidth);
     if (auto syntax = sourceRange.syntax())
         result->setSyntax(*syntax);
 

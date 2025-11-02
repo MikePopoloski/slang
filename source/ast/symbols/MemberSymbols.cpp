@@ -2095,6 +2095,8 @@ void RandSeqProductionSymbol::createRuleVariables(const RsRuleSyntax& syntax, co
     }
 
     auto& comp = scope.getCompilation();
+    ASTContext context(scope, LookupLocation::max);
+
     for (auto [symbol, count] : prodMap) {
         auto var = comp.emplace<VariableSymbol>(symbol->name, syntax.getFirstToken().location(),
                                                 VariableLifetime::Automatic);
@@ -2105,8 +2107,8 @@ void RandSeqProductionSymbol::createRuleVariables(const RsRuleSyntax& syntax, co
         }
         else {
             ConstantRange range{1, int32_t(count)};
-            var->setType(
-                FixedSizeUnpackedArrayType::fromDim(scope, symbol->getReturnType(), range, syntax));
+            var->setType(FixedSizeUnpackedArrayType::fromDim(comp, context, symbol->getReturnType(),
+                                                             range, syntax));
         }
 
         results.push_back(var);

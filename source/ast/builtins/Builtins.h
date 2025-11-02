@@ -45,7 +45,10 @@ public:
     UntypedType untypedType;
     SequenceType sequenceType;
     PropertyType propertyType;
-    ErrorType errorType;
+
+    // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
+    // reg. Two of the entries are not valid and will be nullptr (!fourstate & reg).
+    Type* scalarTypeTable[8]{nullptr};
 
     std::vector<std::shared_ptr<SystemSubroutine>> systemSubroutines;
     flat_hash_map<std::string_view, std::shared_ptr<SystemSubroutine>> subroutineNameMap;
@@ -55,6 +58,17 @@ public:
     static Builtins Instance;
 
     Builtins() {
+        // Scalar types are indexed by bit flags.
+        auto registerScalar = [this](auto& type) {
+            scalarTypeTable[type.getIntegralFlags().bits() & 0x7] = &type;
+        };
+        registerScalar(bitType);
+        registerScalar(logicType);
+        registerScalar(regType);
+        registerScalar(signedBitType);
+        registerScalar(signedLogicType);
+        registerScalar(signedRegType);
+
         systemSubroutines.resize(parsing::KnownSystemName_traits::values.size());
 
         registerArrayMethods();

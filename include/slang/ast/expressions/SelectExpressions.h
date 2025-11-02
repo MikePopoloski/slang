@@ -12,6 +12,8 @@
 
 namespace slang::ast {
 
+class TypeProvider;
+
 /// Represents a single element selection expression.
 class SLANG_EXPORT ElementSelectExpression final : public Expression {
 public:
@@ -47,8 +49,8 @@ public:
                                   const syntax::ExpressionSyntax& syntax, SourceRange fullRange,
                                   const ASTContext& context);
 
-    static Expression& fromConstant(Compilation& compilation, Expression& value, int32_t index,
-                                    const ASTContext& context);
+    static Expression& fromConstant(const TypeProvider& typeProvider, Expression& value,
+                                    int32_t index, const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ElementSelect; }
 
@@ -106,7 +108,7 @@ public:
                                   const syntax::RangeSelectSyntax& syntax, SourceRange fullRange,
                                   const ASTContext& context);
 
-    static Expression& fromConstant(Compilation& compilation, Expression& value,
+    static Expression& fromConstant(const TypeProvider& typeProvider, Expression& value,
                                     ConstantRange range, const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RangeSelect; }

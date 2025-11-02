@@ -8,6 +8,7 @@
 #include "slang/ast/symbols/SymbolBuilders.h"
 
 #include "slang/ast/Compilation.h"
+#include "slang/ast/TypeProvider.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"

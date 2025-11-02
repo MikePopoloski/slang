@@ -170,11 +170,12 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static const Type& fromSyntax(const Scope& scope, const Type& elementType,
+    static const Type& fromSyntax(const ASTContext& context, const Type& elementType,
                                   const EvaluatedDimension& dimension,
                                   const syntax::SyntaxNode& syntax);
 
-    static const Type& fromDim(const Scope& scope, const Type& elementType, ConstantRange dim,
+    static const Type& fromDim(BumpAllocator& alloc, const ASTContext& context,
+                               const Type& elementType, ConstantRange dim,
                                syntax::DeferredSourceRange sourceRange);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedArrayType; }
@@ -201,11 +202,12 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static const Type& fromDims(const Scope& scope, const Type& elementType,
-                                std::span<const ConstantRange> dimensions,
+    static const Type& fromDims(BumpAllocator& alloc, const ASTContext& context,
+                                const Type& elementType, std::span<const ConstantRange> dimensions,
                                 syntax::DeferredSourceRange sourceRange);
 
-    static const Type& fromDim(const Scope& scope, const Type& elementType, ConstantRange dim,
+    static const Type& fromDim(BumpAllocator& alloc, const ASTContext& context,
+                               const Type& elementType, ConstantRange dim,
                                syntax::DeferredSourceRange sourceRange);
 
     ConstantValue getDefaultValueImpl() const;

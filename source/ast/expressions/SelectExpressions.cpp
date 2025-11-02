@@ -10,6 +10,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/ast/TypeProvider.h"
 #include "slang/ast/expressions/CallExpression.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
@@ -28,19 +29,20 @@ namespace slang::ast {
 
 using namespace syntax;
 
-static const Type& getIndexedType(Compilation& compilation, const ASTContext& context,
+template<typename TTypeProvider>
+static const Type& getIndexedType(TTypeProvider& typeProvider, const ASTContext& context,
                                   const Type& valueType, SourceRange exprRange,
                                   SourceRange valueRange, bool isRangeSelect) {
     const Type& ct = valueType.getCanonicalType();
     if (ct.isArray()) {
         auto& elemType = *ct.getArrayElementType();
         if (valueType.kind == SymbolKind::PackedArrayType && valueType.isSigned())
-            return elemType.makeUnsigned(compilation);
+            return elemType.makeUnsigned(typeProvider);
 
         return elemType;
     }
     else if (ct.kind == SymbolKind::StringType && !isRangeSelect) {
-        return compilation.getByteType();
+        return typeProvider.getByteType();
     }
     else if (!ct.isIntegral()) {
         if (!ct.isError()) {
@@ -49,18 +51,18 @@ static const Type& getIndexedType(Compilation& compilation, const ASTContext& co
             diag << valueRange;
             diag << valueType;
         }
-        return compilation.getErrorType();
+        return typeProvider.getErrorType();
     }
     else if (ct.isScalar()) {
         auto& diag = context.addDiag(diag::CannotIndexScalar, exprRange);
         diag << valueRange;
-        return compilation.getErrorType();
+        return typeProvider.getErrorType();
     }
     else if (ct.isFourState()) {
-        return compilation.getLogicType();
+        return typeProvider.getLogicType();
     }
     else {
-        return compilation.getBitType();
+        return typeProvider.getBitType();
     }
 }
 
@@ -189,18 +191,18 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     return *result;
 }
 
-Expression& ElementSelectExpression::fromConstant(Compilation& compilation, Expression& value,
-                                                  int32_t index, const ASTContext& context) {
-    Expression* indexExpr = &IntegerLiteral::fromConstant(compilation, index);
-    selfDetermined(context, indexExpr);
+Expression& ElementSelectExpression::fromConstant(const TypeProvider& typeProvider,
+                                                  Expression& value, int32_t index,
+                                                  const ASTContext& context) {
+    auto& indexExpr = IntegerLiteral::fromConstant(typeProvider, index);
+    auto& resultType = getIndexedType(typeProvider, context, *value.type, indexExpr.sourceRange,
+                                      value.sourceRange, false);
 
-    const Type& resultType = getIndexedType(compilation, context, *value.type,
-                                            indexExpr->sourceRange, value.sourceRange, false);
-
-    auto result = compilation.emplace<ElementSelectExpression>(resultType, value, *indexExpr,
-                                                               value.sourceRange);
-    if (value.bad() || indexExpr->bad() || result->bad())
-        return badExpr(compilation, result);
+    auto& alloc = typeProvider.alloc;
+    auto result = alloc.emplace<ElementSelectExpression>(resultType, value, indexExpr,
+                                                         value.sourceRange);
+    if (value.bad() || indexExpr.bad() || result->bad())
+        return badExpr(alloc, result);
 
     return *result;
 }
@@ -403,7 +405,7 @@ static bool checkRangeOverflow(ConstantRange range, TContext& context, SourceRan
     return false;
 }
 
-Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
+Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& value,
                                               const RangeSelectSyntax& syntax,
                                               SourceRange fullRange, const ASTContext& context) {
     // Left and right are either the extents of a part-select, in which case they must
@@ -426,7 +428,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
 
     if (!value.bad() && value.type->isAssociativeArray()) {
         context.addDiag(diag::RangeSelectAssociative, fullRange);
-        return badExpr(compilation, nullptr);
+        return badExpr(comp, nullptr);
     }
 
     // Selection expressions don't need to be const if we're selecting from a queue.
@@ -443,36 +445,35 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     auto& left = bind(*syntax.left, selectorCtx, extraFlags);
     auto& right = bind(*syntax.right, selectorCtx, extraFlags);
 
-    auto result = compilation.emplace<RangeSelectExpression>(selectionKind,
-                                                             compilation.getErrorType(), value,
-                                                             left, right, fullRange);
+    auto result = comp.emplace<RangeSelectExpression>(selectionKind, comp.getErrorType(), value,
+                                                      left, right, fullRange);
 
     if (value.bad() || left.bad() || right.bad())
-        return badExpr(compilation, result);
+        return badExpr(comp, result);
 
     if (!left.type->isUnbounded() && !context.requireIntegral(left))
-        return badExpr(compilation, result);
+        return badExpr(comp, result);
 
     if (!right.type->isUnbounded() && !context.requireIntegral(right))
-        return badExpr(compilation, result);
+        return badExpr(comp, result);
 
     const Type& valueType = *value.type;
-    const Type& elementType = getIndexedType(compilation, context, valueType, syntax.sourceRange(),
+    const Type& elementType = getIndexedType(comp, context, valueType, syntax.sourceRange(),
                                              value.sourceRange, true);
     if (elementType.isError())
-        return badExpr(compilation, result);
+        return badExpr(comp, result);
 
     // Selects of vectored nets are disallowed.
     checkForVectoredSelect(value, fullRange, context);
 
     if (!valueType.hasFixedRange() && context.flags.has(ASTFlags::NonProcedural)) {
         context.addDiag(diag::DynamicNotProcedural, fullRange);
-        return badExpr(compilation, result);
+        return badExpr(comp, result);
     }
 
     // If this is selecting from a queue, the result is always a queue.
     if (isQueue) {
-        result->type = compilation.emplace<QueueType>(elementType, 0u);
+        result->type = comp.emplace<QueueType>(elementType, 0u);
         return *result;
     }
 
@@ -482,14 +483,14 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     if (context.flags.has(ASTFlags::StreamingWithRange)) {
         if (context.inUnevaluatedBranch() || !context.tryEval(right) ||
             (selectionKind == RangeSelectionKind::Simple && !context.tryEval(left))) {
-            result->type = compilation.emplace<QueueType>(elementType, 0u);
+            result->type = comp.emplace<QueueType>(elementType, 0u);
             return *result;
         }
     }
 
     std::optional<int32_t> rv = context.evalInteger(right);
     if (!rv)
-        return badExpr(compilation, result);
+        return badExpr(comp, result);
 
     // If the array type has a fixed range, validate that the range we're selecting is allowed.
     SourceRange errorRange{left.sourceRange.start(), right.sourceRange.end()};
@@ -511,17 +512,17 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         if (selectionKind == RangeSelectionKind::Simple) {
             std::optional<int32_t> lv = context.evalInteger(left);
             if (!lv)
-                return badExpr(compilation, result);
+                return badExpr(comp, result);
 
             selectionRange = {*lv, *rv};
             if (checkRangeOverflow(selectionRange, context, errorRange))
-                return badExpr(compilation, result);
+                return badExpr(comp, result);
 
             if (selectionRange.isLittleEndian() != valueRange.isLittleEndian() &&
                 selectionRange.width() > 1) {
                 auto& diag = context.addDiag(diag::SelectEndianMismatch, errorRange);
                 diag << valueType;
-                return badExpr(compilation, result);
+                return badExpr(comp, result);
             }
 
             if (!context.inUnevaluatedBranch())
@@ -529,7 +530,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         }
         else {
             if (!context.requireGtZero(rv, right.sourceRange))
-                return badExpr(compilation, result);
+                return badExpr(comp, result);
 
             // If the lhs is a known constant, we can check that now too.
             ConstantValue leftVal;
@@ -539,7 +540,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                     auto& diag = context.addDiag(diag::IndexValueInvalid, left.sourceRange);
                     diag << leftVal;
                     diag << valueType;
-                    return badExpr(compilation, result);
+                    return badExpr(comp, result);
                 }
 
                 auto range =
@@ -547,7 +548,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                                                    selectionKind == RangeSelectionKind::IndexedUp);
                 if (!range) {
                     context.addDiag(diag::RangeWidthOverflow, errorRange);
-                    return badExpr(compilation, result);
+                    return badExpr(comp, result);
                 }
 
                 selectionRange = *range;
@@ -562,7 +563,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                                                                 RangeSelectionKind::IndexedUp);
                 if (!range) {
                     context.addDiag(diag::RangeWidthOverflow, errorRange);
-                    return badExpr(compilation, result);
+                    return badExpr(comp, result);
                 }
 
                 selectionRange = *range;
@@ -578,11 +579,11 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         // At this point, all expressions are good, ranges have been validated and
         // we know the final width of the selection, so pick the result type and we're done.
         if (valueType.isUnpackedArray()) {
-            result->type = &FixedSizeUnpackedArrayType::fromDim(*context.scope, elementType,
+            result->type = &FixedSizeUnpackedArrayType::fromDim(comp, context, elementType,
                                                                 selectionRange, errorRange);
         }
         else {
-            result->type = &PackedArrayType::fromDim(*context.scope, elementType, selectionRange,
+            result->type = &PackedArrayType::fromDim(comp, context, elementType, selectionRange,
                                                      errorRange);
         }
     }
@@ -594,62 +595,60 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         if (selectionKind == RangeSelectionKind::Simple) {
             std::optional<int32_t> lv = context.evalInteger(left);
             if (!lv)
-                return badExpr(compilation, result);
+                return badExpr(comp, result);
 
             selectionRange = {*lv, *rv};
             if (selectionRange.isLittleEndian() && selectionRange.width() > 1) {
                 auto& diag = context.addDiag(diag::SelectEndianDynamic, errorRange);
                 diag << selectionRange.left << selectionRange.right;
                 diag << valueType;
-                return badExpr(compilation, result);
+                return badExpr(comp, result);
             }
         }
         else {
             if (!context.requireGtZero(rv, right.sourceRange))
-                return badExpr(compilation, result);
+                return badExpr(comp, result);
 
             selectionRange.left = 0;
             selectionRange.right = *rv - 1;
         }
 
-        result->type = &FixedSizeUnpackedArrayType::fromDim(*context.scope, elementType,
+        result->type = &FixedSizeUnpackedArrayType::fromDim(comp, context, elementType,
                                                             selectionRange, errorRange);
     }
 
     return *result;
 }
 
-Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expression& value,
+Expression& RangeSelectExpression::fromConstant(const TypeProvider& typeProvider, Expression& value,
                                                 ConstantRange range, const ASTContext& context) {
-    Expression* left = &IntegerLiteral::fromConstant(compilation, range.left);
-    selfDetermined(context, left);
+    auto& left = IntegerLiteral::fromConstant(typeProvider, range.left);
+    auto& right = IntegerLiteral::fromConstant(typeProvider, range.right);
 
-    Expression* right = &IntegerLiteral::fromConstant(compilation, range.right);
-    selfDetermined(context, right);
-
-    auto result = compilation.emplace<RangeSelectExpression>(RangeSelectionKind::Simple,
-                                                             compilation.getErrorType(), value,
-                                                             *left, *right, value.sourceRange);
-    if (value.bad() || left->bad() || right->bad())
-        return badExpr(compilation, result);
+    auto& alloc = typeProvider.alloc;
+    auto result = alloc.emplace<RangeSelectExpression>(RangeSelectionKind::Simple,
+                                                       typeProvider.getErrorType(), value, left,
+                                                       right, value.sourceRange);
+    if (value.bad() || left.bad() || right.bad())
+        return badExpr(alloc, result);
 
     const Type& valueType = *value.type;
-    const Type& elementType = getIndexedType(compilation, context, valueType, value.sourceRange,
+    const Type& elementType = getIndexedType(typeProvider, context, valueType, value.sourceRange,
                                              value.sourceRange, true);
 
     if (elementType.isError())
-        return badExpr(compilation, result);
+        return badExpr(alloc, result);
 
     // This method is only called on expressions with a fixed range type.
     SLANG_ASSERT(range.isLittleEndian() == valueType.getFixedRange().isLittleEndian());
     SLANG_ASSERT(valueType.hasFixedRange());
 
     if (valueType.isUnpackedArray()) {
-        result->type = &FixedSizeUnpackedArrayType::fromDim(*context.scope, elementType, range,
+        result->type = &FixedSizeUnpackedArrayType::fromDim(alloc, context, elementType, range,
                                                             result->sourceRange);
     }
     else {
-        result->type = &PackedArrayType::fromDim(*context.scope, elementType, range,
+        result->type = &PackedArrayType::fromDim(alloc, context, elementType, range,
                                                  result->sourceRange);
     }
 

@@ -19,6 +19,7 @@ class ASTSerializer;
 class EvalContext;
 class InstanceSymbolBase;
 class Type;
+class TypeProvider;
 class ValueSymbol;
 enum class VariableFlags : uint16_t;
 
@@ -229,6 +230,13 @@ public:
                                          Expression& expr, SourceRange assignmentRange,
                                          Expression** lhsExpr = nullptr);
 
+    /// Builds a tree of select expressions to map down to the target flattened bit range.
+    ///
+    /// @note The expression must be of integral type and the flatRange must be in
+    ///       canonical (little-endian) format.
+    static Expression& buildPackedSelectTree(const TypeProvider& typeProvider, Expression& expr,
+                                             ConstantRange flatRange, const ASTContext& context);
+
     /// Indicates whether the expression is invalid.
     bool bad() const;
 
@@ -395,7 +403,7 @@ protected:
     static Expression* tryConnectPortArray(const ASTContext& context, const Type& type,
                                            Expression& expr, const InstanceSymbolBase& instance);
 
-    static Expression& badExpr(Compilation& compilation, const Expression* expr);
+    static Expression& badExpr(BumpAllocator& alloc, const Expression* expr);
 
     // Perform type propagation and constant folding of a context-determined subexpression.
     static void contextDetermined(const ASTContext& context, Expression*& expr,
