@@ -1217,12 +1217,11 @@ endmodule
 
 TEST_CASE("Multi assign through ref ports 2") {
     auto& code = R"(
-// module r({a, b});
-//     ref logic a;
-//     output logic b;
-
-//     assign a = 1;
-// endmodule
+module r({a, b});
+    ref logic a;
+    output logic b;
+    assign a = 1;
+endmodule
 
 module v(ref .a(foo.b));
     struct { logic a; logic b; } foo;
@@ -1232,12 +1231,26 @@ endmodule
 module w(ref .a(foo[0][1]));
     logic [1:0] foo[2][3];
     assign foo[0][1][0] = 1;
+    assign foo[0][1][1] = 1;
+
+    assign foo[1][0] = 1;
+    assign foo[1][0][1] = 1;
+endmodule
+
+module x(ref .a(foo), .b(foo));
+    logic foo;
+    assign foo = 1;
+endmodule
+
+module y(ref .a(foo[0]));
+    logic [5:3] foo[2];
+    assign foo[0][5] = 1;
 endmodule
 
 module top;
-    // logic [1:0] q;
-    // r r1(q);
-    // assign q[1] = 1;
+    logic [1:0] q;
+    r r1(q);
+    assign q[1] = 1;
 
     logic s [1:0][3:1];
     v v1(s[1][1]);
@@ -1246,6 +1259,14 @@ module top;
     logic [1:0] t [1:0][3:1];
     w w1(t[1][1]);
     assign t[1][1][0] = 1;
+
+    logic u, v;
+    x x1(u, v);
+    assign {u, v} = 1;
+
+    logic [2:4] z;
+    y y1(z);
+    assign z[2:3] = 1;
 endmodule
 )";
 
@@ -1253,7 +1274,52 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);
+    CHECK(diags[2].code == diag::MultipleContAssigns);
+    CHECK(diags[3].code == diag::MultipleContAssigns);
+    CHECK(diags[4].code == diag::MultipleContAssigns);
+    CHECK(diags[5].code == diag::MultipleContAssigns);
+}
+
+TEST_CASE("Multi assign through ref ports 3") {
+    auto& code = R"(
+module y(ref .a(foo));
+    logic [5:3] foo;
+    assign foo[3] = 1;
+endmodule
+
+module b(ref logic[7:0] a [2:6]);
+    assign a[3][5:4] = 1;
+endmodule
+
+typedef struct { logic a[2:8]; } bar_t;
+module c(ref bar_t a);
+    assign a.a[4:5] = '{1, 0};
+endmodule
+
+module top;
+    logic [2:4] z;
+    y y1(z);
+    assign z[4] = 1;
+
+    struct packed { logic a; logic b; } [1:4] a [5:1];
+    b b1(a);
+    assign a[4][2].b = 1;
+
+    bar_t d;
+    c c1(d);
+    assign d.a[4:5] = '{0, 1};
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+    CHECK(diags[1].code == diag::MultipleContAssigns);
+    CHECK(diags[2].code == diag::MultipleContAssigns);
 }

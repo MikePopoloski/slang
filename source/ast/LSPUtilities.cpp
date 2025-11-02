@@ -8,6 +8,8 @@
 #include "slang/ast/LSPUtilities.h"
 
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/EvalContext.h"
+#include "slang/ast/TypeProvider.h"
 
 namespace slang::ast {
 
@@ -62,17 +64,13 @@ void LSPUtilities::stringifyLSP(const Expression& expr, EvalContext& evalContext
     }
 }
 
-std::optional<DriverBitRange> LSPUtilities::getBounds(const Expression& prefixExpression,
-                                                      EvalContext& evalContext,
-                                                      const Type& rootType) {
+static std::optional<DriverBitRange> computeBounds(SmallVector<const Expression*>& path,
+                                                   size_t skip, EvalContext& evalContext,
+                                                   const Type& rootType) {
     auto type = &rootType.getCanonicalType();
     DriverBitRange result{0, type->getSelectableWidth() - 1};
 
-    SmallVector<const Expression*> path;
-    visitComponents(prefixExpression, /* includeRoot */ false,
-                    [&](const Expression& expr) { path.push_back(&expr); });
-
-    for (size_t i = path.size(); i > 0; i--) {
+    for (size_t i = path.size() - skip; i > 0; i--) {
         uint64_t start, width;
         auto& elem = *path[i - 1];
         if (elem.kind == ExpressionKind::MemberAccess) {
@@ -112,29 +110,14 @@ std::optional<DriverBitRange> LSPUtilities::getBounds(const Expression& prefixEx
     return result;
 }
 
-static Expression* translateSelector(BumpAllocator& alloc, Expression& value,
-                                     const Expression& sourceSelector) {
-    // TODO: need to translate selector indices because types may be only
-    // equivalent and not matching.
-    switch (sourceSelector.kind) {
-        case ExpressionKind::ElementSelect: {
-            auto& es = sourceSelector.as<ElementSelectExpression>();
-            return alloc.emplace<ElementSelectExpression>(*es.type, value, es.selector(),
-                                                          es.sourceRange);
-        }
-        case ExpressionKind::RangeSelect: {
-            auto& rs = sourceSelector.as<RangeSelectExpression>();
-            return alloc.emplace<RangeSelectExpression>(rs.getSelectionKind(), *rs.type, value,
-                                                        rs.left(), rs.right(), rs.sourceRange);
-        }
-        case ExpressionKind::MemberAccess: {
-            auto& ma = sourceSelector.as<MemberAccessExpression>();
-            return alloc.emplace<MemberAccessExpression>(*ma.type, value, ma.member,
-                                                         ma.sourceRange);
-        }
-        default:
-            SLANG_UNREACHABLE;
-    }
+std::optional<DriverBitRange> LSPUtilities::getBounds(const Expression& prefixExpression,
+                                                      EvalContext& evalContext,
+                                                      const Type& rootType) {
+    SmallVector<const Expression*> path;
+    visitComponents(prefixExpression, /* includeRoot */ false,
+                    [&](const Expression& expr) { path.push_back(&expr); });
+
+    return computeBounds(path, 0, evalContext, rootType);
 }
 
 static bool expandRefPortConn(BumpAllocator& alloc, EvalContext& evalContext, const Expression& lsp,
@@ -180,10 +163,61 @@ static bool expandRefPortConn(BumpAllocator& alloc, EvalContext& evalContext, co
         // glue the uncovered portion of the LSP onto the external connection.
         // The const_cast here is okay because we never mutate anything during analysis.
         auto newExpr = const_cast<Expression*>(&externalConn);
-        for (size_t i = elemsToRemove; i < lspPath.size(); i++) {
-            auto elem = lspPath[lspPath.size() - 1 - i];
-            newExpr = translateSelector(alloc, *newExpr, *elem);
+
+        // First, replicate all of the selects for unpacked types. The only way that
+        // types can mismatch here is for fixed size arrays, which can have differing
+        // ranges, so translate those along the way.
+        for (; elemsToRemove < lspPath.size(); elemsToRemove++) {
+            auto& ct = newExpr->type->getCanonicalType();
+            if (ct.isIntegral())
+                break;
+
+            auto elem = lspPath[lspPath.size() - 1 - elemsToRemove];
+            if (elem->kind == ExpressionKind::MemberAccess) {
+                auto& ma = elem->as<MemberAccessExpression>();
+                newExpr = alloc.emplace<MemberAccessExpression>(*ma.type, *newExpr, ma.member,
+                                                                ma.sourceRange);
+                continue;
+            }
+
+            auto targetDim = ct.getFixedRange();
+            auto translateIndex = [&](int32_t index) {
+                if (targetDim.isLittleEndian())
+                    return targetDim.upper() - index;
+                else
+                    return targetDim.lower() + index;
+            };
+
+            auto selection = elem->evalSelector(evalContext, /* enforceBounds */ true);
+            SLANG_ASSERT(selection);
+
+            selection->left = translateIndex(selection->left);
+            selection->right = translateIndex(selection->right);
+
+            if (elem->kind == ExpressionKind::ElementSelect) {
+                newExpr = &ElementSelectExpression::fromConstant(alloc, *newExpr,
+                                                                 selection->lower(),
+                                                                 evalContext.astCtx);
+            }
+            else {
+                newExpr = &RangeSelectExpression::fromConstant(alloc, *newExpr, *selection,
+                                                               evalContext.astCtx);
+            }
         }
+
+        // For remaining integral path components, compute the bounds and then
+        // recreate a corresponding select tree that achieves those same bounds.
+        if (elemsToRemove < lspPath.size()) {
+            auto bounds = computeBounds(lspPath, elemsToRemove, evalContext, *newExpr->type);
+            SLANG_ASSERT(bounds);
+
+            // Note that this can't overflow here because it's a packed type
+            // so the total width is bounded.
+            ConstantRange range{int32_t(bounds->second), int32_t(bounds->first)};
+            newExpr = &Expression::buildPackedSelectTree(alloc, *newExpr, range,
+                                                         evalContext.astCtx);
+        }
+
         LSPUtilities::visitLSPs(*newExpr, evalContext, callback, isLValue);
     }
     return true;
@@ -268,8 +302,7 @@ void LSPUtilities::expandIndirectLSP(BumpAllocator& alloc, EvalContext& evalCont
 
     if (!anyRefPorts) {
         // No ref ports or modports involved, so just invoke the callback directly.
-        // TODO:
-        // callback(symbol, lsp, isLValue);
+        callback(symbol, lsp, isLValue);
     }
 }
 

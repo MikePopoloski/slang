@@ -144,6 +144,16 @@ void DriverTracker::propagateIndirectDrivers(AnalysisContext& context, DriverAll
                 LSPUtilities::expandIndirectLSPs(
                     context.alloc, *originalDriver->prefixExpression, evalCtx,
                     [&](const ValueSymbol& symbol, const Expression& lsp, bool isLValue) {
+                        // If the LSP maps to the same symbol as the original driver,
+                        // skip it to avoid infinite recursion. This can happen only if
+                        // this is a ref port and `expandIndirectLSPs` determined that
+                        // the driver doesn't actually apply to the port due to a
+                        // non-overlapping internal connection expression.
+                        if (&symbol == item.first) {
+                            SLANG_ASSERT(symbol.isConnectedToRefPort());
+                            return;
+                        }
+
                         addFromLSP(context, driverAlloc, originalDriver->kind,
                                    originalDriver->flags, *originalDriver->containingSymbol, symbol,
                                    lsp, isLValue, evalCtx, hierPortDrivers);
@@ -367,20 +377,28 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
     }
 
     // Keep track of "indirect" drivers separately so we can revisit them at the end of analysis.
-    if (symbol.kind == SymbolKind::ModportPort || symbol.isConnectedToRefPort()) {
-        auto updater = [&](auto& item) { item.second.emplace_back(&driver, bounds); };
-        indirectDrivers.try_emplace_and_visit(&symbol, updater, updater);
+    auto indirectUpdater = [&](auto& item) { item.second.emplace_back(&driver, bounds); };
+    if (symbol.kind == SymbolKind::ModportPort) {
+        indirectDrivers.try_emplace_and_visit(&symbol, indirectUpdater, indirectUpdater);
 
-        if (symbol.kind != SymbolKind::ModportPort && !driver.isFromSideEffect) {
+        // We don't do overlap detection for modports but we will still track them for downstream
+        // users to query later.
+        driverMap.insert(bounds, &driver, driverAlloc);
+        return;
+    }
+
+    if (symbol.isConnectedToRefPort()) {
+        indirectDrivers.try_emplace_and_visit(&symbol, indirectUpdater, indirectUpdater);
+
+        if (!driver.isFromSideEffect) {
             // Ref port drivers are side effects that need to be applied to
             // non-canonical instances.
             hierPortDrivers.push_back({&driver, &symbol, nullptr});
         }
 
-        // We don't do overlap detection for modport / ref ports (the drivers apply to the
-        // underlying connection) but we will still track them for downstream users to query later.
-        driverMap.insert(bounds, &driver, driverAlloc);
-        return;
+        // For ref ports we will continue on and do normal overlap checking,
+        // since the ref port might not actually apply if it has an internal
+        // connection expression that points somewhere else.
     }
 
     if (driverMap.empty()) {

@@ -192,6 +192,9 @@ public:
     ///
     /// Unlike @a visitLSPs, this method will expand indirect references such as
     /// modport port connections and ref port connections.
+    ///
+    /// @param alloc The allocator to use for any AST nodes that need to be created
+    ///              to represent expanded selections.
     static void expandIndirectLSPs(BumpAllocator& alloc, const Expression& expr,
                                    EvalContext& evalContext, LSPCallback callback,
                                    bool isLValue = true);
