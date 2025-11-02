@@ -63,8 +63,6 @@ public:
         Expression(ExpressionKind::Call, returnType, sourceRange), subroutine(subroutine),
         thisClass_(thisClass), arguments_(arguments), lookupLocation(lookupLocation) {}
 
-    explicit CallExpression(const CallExpression& other);
-
     /// If this call is for a class method, returns the expression representing the
     /// class handle on which the method is being invoked. Otherwise returns nullptr.
     const Expression* thisClass() const { return thisClass_; }
