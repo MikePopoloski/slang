@@ -2096,8 +2096,8 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                         flat_hash_set<const Symbol*> noted;
                         for (size_t i = 0; i < imports.size(); i++) {
                             const auto& pair = imports[i];
-                            const Symbol* target =
-                                canonicalTargets[i] ? canonicalTargets[i] : pair.imported;
+                            const Symbol* target = canonicalTargets[i] ? canonicalTargets[i]
+                                                                       : pair.imported;
                             if (!noted.emplace(target).second)
                                 continue;
 
@@ -2120,8 +2120,8 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                 if (!selectedImport)
                     selectedImport = &imports[0];
 
-                const Symbol* finalSymbol =
-                    canonicalSymbol ? canonicalSymbol : selectedImport->imported;
+                const Symbol* finalSymbol = canonicalSymbol ? canonicalSymbol
+                                                            : selectedImport->imported;
 
                 if (symbol && sourceRange) {
                     // The existing symbol might be an import for the thing we just imported

@@ -4,8 +4,8 @@
 #include "Test.h"
 #include <fmt/core.h>
 #include <fstream>
-#include <regex>
 #include <iostream>
+#include <regex>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -580,10 +580,9 @@ TEST_CASE("Driver allows diamond wildcard import") {
     driver.addStandardArgs();
 
     auto testDir = findTestDir();
-    auto args = fmt::format(
-        "testfoo \"{0}collision/consts_pkg.sv\" \"{0}collision/a_pkg.sv\" "
-        "\"{0}collision/b_pkg.sv\" \"{0}collision/consumer_pkg.sv\"",
-        testDir);
+    auto args = fmt::format("testfoo \"{0}collision/consts_pkg.sv\" \"{0}collision/a_pkg.sv\" "
+                            "\"{0}collision/b_pkg.sv\" \"{0}collision/consumer_pkg.sv\"",
+                            testDir);
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
@@ -696,10 +695,9 @@ TEST_CASE("Driver reports mixed wildcard import collision") {
     driver.addStandardArgs();
 
     auto testDir = findTestDir();
-    auto args = fmt::format(
-        "testfoo \"{0}collision/consts_pkg.sv\" \"{0}collision/a_pkg.sv\" "
-        "\"{0}collision/b_pkg.sv\" \"{0}collision/consumer_pkg_mixed.sv\"",
-        testDir);
+    auto args = fmt::format("testfoo \"{0}collision/consts_pkg.sv\" \"{0}collision/a_pkg.sv\" "
+                            "\"{0}collision/b_pkg.sv\" \"{0}collision/consumer_pkg_mixed.sv\"",
+                            testDir);
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
