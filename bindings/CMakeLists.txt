@@ -65,3 +65,14 @@ install(
   TARGETS pyslang
   COMPONENT pylib
   DESTINATION .)
+
+# Install py.typed marker file for PEP 561 compliance
+install(
+  FILES ${CMAKE_CURRENT_SOURCE_DIR}/../pyslang/pyslang/py.typed
+  COMPONENT pylib
+  DESTINATION .)
+
+# Generate Python stubs as a post-install step
+install(
+  SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/generate_stubs.cmake
+  COMPONENT pylib)
