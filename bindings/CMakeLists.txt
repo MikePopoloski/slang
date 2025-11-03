@@ -73,6 +73,4 @@ install(
   DESTINATION .)
 
 # Generate Python stubs as a post-install step
-install(
-  SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/generate_stubs.cmake
-  COMPONENT pylib)
+install(SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/generate_stubs.cmake COMPONENT pylib)
