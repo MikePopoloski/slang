@@ -10,7 +10,6 @@
 #include <deque>
 #include <filesystem>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <span>
 #include <vector>
@@ -19,6 +18,7 @@
 #include "slang/text/Glob.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/FlatMap.h"
+#include "slang/util/Function.h"
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -151,6 +151,16 @@ public:
     /// Gets a pointer to the source library with the given name, or adds it if
     /// it does not exist. Returns nullptr if @a name is empty.
     SourceLibrary* getOrAddLibrary(std::string_view name);
+
+    /// Find a source buffer by searching through libraries added via -y
+    SourceBuffer findBuffer(std::string_view name) const;
+
+    /// Load trees using a custom buffer finder function
+    /// Result is stored in the same syntaxTree list
+    static void loadTrees(
+        SyntaxTreeList& syntaxTrees, function_ref<SourceBuffer(std::string_view)> findBufferFunc,
+        SourceManager& sourceManager, const Bag& optionBag,
+        std::span<const syntax::DefineDirectiveSyntax* const> inheritedMacros = {});
 
 private:
     // One entry per unit of files + options to compile them.
