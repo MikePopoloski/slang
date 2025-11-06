@@ -7,6 +7,8 @@
 An implicit conversion in an expression expands a type. This may be harmless,
 but the warning provides a mechanism for discovering unintended conversions.
 An explicit cast can be used to silence the warning.
+Note that this warning is not issued for constant expressions;
+see -Wconstant-conversion instead.
 ```
 logic [1:0] a;
 int b = a;
@@ -15,6 +17,8 @@ int b = a;
 -Wwidth-trunc
 An implicit conversion in an expression truncates a type. This conversion
 potentially loses data. An explicit cast can be used to silence the warning.
+Note that this warning is not issued for constant expressions;
+see -Wconstant-conversion instead.
 ```
 int a;
 logic [1:0] b = a;
@@ -68,6 +72,8 @@ endmodule
 -Wsign-conversion
 An implicit conversion changes the signedness of an integer type
 (from signed to unsigned or vice versa).
+Note that this warning is not issued for constant expressions;
+see -Wconstant-conversion instead.
 ```
 module m;
     logic signed [31:0] a;
@@ -100,6 +106,8 @@ endmodule
 
 -Wfloat-int-conv
 A floating point value (real or shortreal) is implicitly converted to an integer.
+Note that this warning is not issued for constant expressions;
+see -Wconstant-conversion instead.
 ```
 function automatic f(real r);
     int i = r;
@@ -108,6 +116,8 @@ endfunction
 
 -Wint-float-conv
 A integer value is implicitly converted to a floating point type (real or shortreal).
+Note that this warning is not issued for constant expressions;
+see -Wconstant-conversion instead.
 ```
 function automatic f(int i);
     real r = i;
@@ -116,6 +126,8 @@ endfunction
 
 -Wfloat-widen
 A floating point value is implicitly converted to a wider floating point type.
+Note that this warning is not issued for constant expressions;
+see -Wconstant-conversion instead.
 ```
 function automatic f(shortreal s);
     real r = s;
@@ -124,6 +136,8 @@ endfunction
 
 -Wfloat-narrow
 A floating point value is implicitly converted to a narrower floating point type.
+Note that this warning is not issued for constant expressions;
+see -Wconstant-conversion instead.
 ```
 function automatic f(real r);
     shortreal s = r;
