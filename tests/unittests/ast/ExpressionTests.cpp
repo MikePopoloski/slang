@@ -782,7 +782,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter({diag::PackedArrayConv});
     REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::IndexOOB);
     CHECK(diags[1].code == diag::IndexOOB);

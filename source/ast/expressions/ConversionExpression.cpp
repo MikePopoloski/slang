@@ -624,13 +624,13 @@ void ConversionExpression::checkImplicitConversions(
     };
 
     // Don't warn about conversions in compound assignment operators.
+    auto& unwrapped = op.unwrapImplicitConversions();
     auto isCompoundAssign = [&] {
-        auto& expr = op.unwrapImplicitConversions();
-        if (expr.kind == ExpressionKind::LValueReference)
+        if (unwrapped.kind == ExpressionKind::LValueReference)
             return true;
 
-        return expr.kind == ExpressionKind::BinaryOp &&
-               expr.as<BinaryExpression>().left().unwrapImplicitConversions().kind ==
+        return unwrapped.kind == ExpressionKind::BinaryOp &&
+               unwrapped.as<BinaryExpression>().left().unwrapImplicitConversions().kind ==
                    ExpressionKind::LValueReference;
     };
     if (isCompoundAssign())
@@ -648,7 +648,7 @@ void ConversionExpression::checkImplicitConversions(
 
         // Warn for conversions between packed arrays of differing
         // dimension counts or sizes.
-        if (isMultiDimArray(lt) && isMultiDimArray(rt) && !hasSameDims(lt, rt)) {
+        if ((isMultiDimArray(lt) || isMultiDimArray(rt)) && !hasSameDims(lt, rt)) {
             // Avoid warning for assignments or comparisons with 0 or '0, '1.
             auto isZeroOrUnsized = [](const Expression& e) {
                 auto expr = &e.unwrapImplicitConversions();
@@ -662,9 +662,23 @@ void ConversionExpression::checkImplicitConversions(
                         bool(expr->as<IntegerLiteral>().getValue() == 0));
             };
 
-            if (!isZeroOrUnsized(op) &&
+            auto isAppropriateConcat = [&]() {
+                if (unwrapped.kind == ExpressionKind::Concatenation && isMultiDimArray(lt) &&
+                    lt.getBitWidth() == rt.getBitWidth()) {
+                    auto& elemType = *lt.getArrayElementType();
+                    for (auto subExpr : unwrapped.as<ConcatenationExpression>().operands()) {
+                        if (!hasSameDims(elemType, *subExpr->type))
+                            return false;
+                    }
+                    return true;
+                }
+                return false;
+            };
+
+            if (!isZeroOrUnsized(unwrapped) &&
                 (!parentIsComparison() ||
-                 !isZeroOrUnsized(parentExpr->as<BinaryExpression>().right()))) {
+                 !isZeroOrUnsized(parentExpr->as<BinaryExpression>().right())) &&
+                !isAppropriateConcat()) {
                 addDiag(diag::PackedArrayConv) << sourceType << targetType;
             }
         }
