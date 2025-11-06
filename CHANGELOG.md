@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Covergroup formal arguments are now correctly always considered `const`
 * Checker arguments that reference automatic variables or have const casts are now correctly disallowed from being used in procedural code
 * Checker procedures are now correctly disallowed from referencing covergroup types
+* Removed the restriction that covergroup expressions must be constant expressions -- the implementation was buggy, other tools don't implement it, and the details in the LRM are not well defined
 
 ### Notable Breaking Changes
 * AST serialization: typedefs and enum type references are now printed as links to the original definition instead of repeating the type for each usage
@@ -34,12 +35,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * -Wcase-dup no longer warns if the duplicate items are all constant case items that don't match a known constant case expression
 * Performing concatenation of two slashes in a macro expansion now expands to a line comment, matching the behavior of other tools
 * The preprocessor will now implicitly concatenate tokens that result from back-to-back macro expansions even if there is no explicit macro concatenation operator used, to increase compatibility with other tools
+* Instances that have type parameters set to identical but not technically "matching" struct types are now eligible for instance caching, which can speed up elaboration of certain designs
 
 ### Fixes
 * Unnamed covergroup types now print with a placeholder name in diagnostics and AST dumping instead of just an empty string
 * Fixed a bug where sequences and properties with local variable formal arguments would rewrite their formal args when expanding, potentially resulting in spurious errors
 * Fixed source ranges written by AST serialization for AST nodes that don't have syntax pointers
 * Fixed lint-only mode to not run the analysis pass
+* Fixed a crash in analysis that could occur after exiting elaboration early due to hitting the configured error limit
+* Fixed the source ranges of chained select expression AST nodes
+* Fixed a preprocessor crash when encountering certain specially crafted malformed pragma directives
+* Fixed expansion of `__FILE__` and `__LINE__` macros to use proper source locations (thanks to @g4rry1)
 
 ### Tools & Bindings
 #### pyslang
@@ -47,6 +53,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 #### slang-tidy
 * The `--skip-file` and `--skip-path` slang-tidy options now also imply `--suppress-warnings` for those same paths
+* Fixed the undriven range checker to handle variables with non-zero lower bounds in their range (thanks to @jameshanlon)
 
 #### rewriter
 * Added a `--squash-blanklines` option to remove extra blank lines in the rewritten output (thanks to @AndrewNolte)
