@@ -194,7 +194,14 @@ protected:
     }
 
     /// Replace the given @a oldNode with @a newNode in the rewritten tree.
-    void replace(const SyntaxNode& oldNode, SyntaxNode& newNode) {
+    void replace(const SyntaxNode& oldNode, SyntaxNode& newNode, bool preserveTrivia = false) {
+        if (preserveTrivia) {
+            if (auto oldTok = oldNode.getFirstToken()) {
+                if (auto newTok = newNode.getFirstTokenPtr())
+                    *newTok = newTok->withTrivia(alloc, oldTok.trivia());
+            }
+        }
+
         if (auto [_, ok] = commits.removeOrReplace.emplace(
                 &oldNode, detail::ReplaceChange{&oldNode, &newNode});
             !ok) {
