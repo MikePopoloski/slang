@@ -23,7 +23,7 @@ endclass
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -47,7 +47,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
@@ -87,7 +87,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MixedVarAssigns);
@@ -119,7 +119,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }
@@ -150,7 +150,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager(options);
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -170,7 +170,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -198,7 +198,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -224,7 +224,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -259,7 +259,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -277,7 +277,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -316,7 +316,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);
@@ -363,7 +363,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);
@@ -392,7 +392,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -423,7 +423,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
@@ -466,7 +466,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }
@@ -491,7 +491,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager(options);
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -516,7 +516,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
 
     std::string result = "\n" + report(diags);
     CHECK(result == R"(
@@ -560,7 +560,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -617,7 +617,7 @@ TEST_CASE("Unrollable for loop drivers") {
     Compilation compilation;
     AnalysisManager analysisManager(options);
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
@@ -645,7 +645,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager(options);
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }
@@ -674,7 +674,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }
@@ -702,7 +702,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
@@ -727,7 +727,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
@@ -748,7 +748,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
@@ -788,7 +788,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
@@ -810,7 +810,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::NTResolveArgModify);
 }
@@ -838,7 +838,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::InputPortAssign);
     CHECK(diags[1].code == diag::InputPortAssign);
@@ -864,7 +864,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::OutputPortCoercion);
     CHECK(diags[1].code == diag::InputPortCoercion);
@@ -884,7 +884,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ClockVarTargetAssign);
 }
@@ -926,7 +926,7 @@ endmodule
     compilation.freeze();
 
     analysisManager.analyze(compilation);
-    auto diags = analysisManager.getDiagnostics(compilation.getSourceManager());
+    auto diags = analysisManager.getDiagnostics();
 
     CHECK_DIAGS_EMPTY;
 }
@@ -957,7 +957,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
@@ -990,7 +990,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }
@@ -1011,7 +1011,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::MixedVarAssigns);
     CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
@@ -1072,7 +1072,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
@@ -1104,7 +1104,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
@@ -1165,7 +1165,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -1209,7 +1209,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);
@@ -1273,7 +1273,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);
@@ -1317,7 +1317,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);

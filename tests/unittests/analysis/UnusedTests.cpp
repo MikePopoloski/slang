@@ -20,7 +20,7 @@ Diagnostics analyze(const std::string& text, Compilation& compilation) {
     AnalysisManager analysisManager(options);
     analysisManager.analyze(compilation);
 
-    diags.append_range(analysisManager.getDiagnostics(compilation.getSourceManager()));
+    diags.append_range(analysisManager.getDiagnostics());
     return diags;
 }
 

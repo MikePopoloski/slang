@@ -42,7 +42,7 @@ struct AnalysisScopeVisitor {
         if (symbol.body.flags.has(InstanceFlags::Uninstantiated))
             return;
 
-        result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
+        manager.analyzeSymbolAsync(symbol);
         visitExprs(symbol);
 
         for (auto conn : symbol.getPortConnections())
@@ -54,7 +54,7 @@ struct AnalysisScopeVisitor {
         if (symbol.body.flags.has(InstanceFlags::Uninstantiated) || symbol.body.isProcedural)
             return;
 
-        result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
+        manager.analyzeSymbolAsync(symbol);
         visitExprs(symbol);
 
         for (auto& conn : symbol.getPortConnections()) {
@@ -107,6 +107,8 @@ struct AnalysisScopeVisitor {
     void visit(const T& symbol) {
         result.procedures.emplace_back(context, symbol, parentProcedure);
         manager.driverTracker.add(state.context, state.driverAlloc, result.procedures.back());
+        for (auto& listener : manager.procListeners)
+            listener(result.procedures.back());
     }
 
     void visit(const SubroutineSymbol& symbol) {
@@ -130,12 +132,10 @@ struct AnalysisScopeVisitor {
             sub->visit(*this);
     }
 
-    void visit(const ClassType& symbol) {
-        result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
-    }
+    void visit(const ClassType& symbol) { manager.analyzeSymbolAsync(symbol); }
 
     void visit(const CovergroupType& symbol) {
-        result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
+        manager.analyzeSymbolAsync(symbol);
         visitExprs(symbol);
     }
 

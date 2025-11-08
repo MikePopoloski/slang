@@ -31,10 +31,6 @@ static const Scope& getAsScope(const Symbol& symbol) {
     }
 }
 
-const AnalyzedScope* PendingAnalysis::tryGet() const {
-    return analysisManager->getAnalyzedScope(getAsScope(*symbol));
-}
-
 Diagnostic& AnalysisContext::addDiag(const Symbol& symbol, DiagCode code, SourceLocation location) {
     return diagnostics.add(symbol, code, location);
 }
@@ -59,41 +55,27 @@ AnalysisManager::AnalysisManager(AnalysisOptions options) :
 #endif
 }
 
-AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
+void AnalysisManager::analyze(const Compilation& compilation) {
     if (!compilation.isElaborated())
         SLANG_THROW(std::runtime_error("Compilation must be elaborated before analysis"));
 
     SLANG_ASSERT(compilation.isFrozen());
     if (compilation.hasFatalErrors())
-        return {};
+        return;
+
+    if (sourceManager && sourceManager != compilation.getSourceManager()) {
+        SLANG_THROW(
+            std::runtime_error("AnalysisManager cannot be reused with different source managers"));
+    }
+    sourceManager = compilation.getSourceManager();
 
     // Analyze all compilation units first.
     auto& root = compilation.getRootNoFinalize();
     for (auto unit : root.compilationUnits)
         analyzeScopeAsync(*unit);
-    wait();
-
-    // Go back through and collect all of the units that were analyzed.
-    AnalyzedDesign result(compilation);
-    for (auto unit : root.compilationUnits) {
-        auto scope = getAnalyzedScope(*unit);
-        SLANG_ASSERT(scope);
-        result.compilationUnits.push_back(scope);
-    }
-
-    // Collect all packages into our result object.
-    for (auto package : compilation.getPackages()) {
-        // Skip the built-in "std" package.
-        if (package->name == "std")
-            continue;
-
-        auto scope = getAnalyzedScope(*package);
-        SLANG_ASSERT(scope);
-        result.packages.push_back(scope);
-    }
 
     for (auto instance : root.topInstances)
-        result.topInstances.emplace_back(analyzeSymbol(*instance));
+        analyzeSymbolAsync(*instance);
     wait();
 
     // Finalize all drivers that are applied through indirect drivers.
@@ -109,8 +91,6 @@ AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
             }
         }
     }
-
-    return result;
 }
 
 const AnalyzedScope& AnalysisManager::analyzeScopeBlocking(
@@ -158,6 +138,9 @@ const AnalyzedProcedure* AnalysisManager::addAnalyzedSubroutine(
 
         auto& state = getState();
         driverTracker.add(state.context, state.driverAlloc, *result);
+
+        for (auto& listener : procListeners)
+            listener(*result);
     }
 
     return result;
@@ -289,7 +272,7 @@ std::optional<InstanceDriverState> AnalysisManager::getInstanceDriverState(
     return driverTracker.getInstanceState(symbol);
 }
 
-Diagnostics AnalysisManager::getDiagnostics(const SourceManager* sourceManager) {
+Diagnostics AnalysisManager::getDiagnostics() {
     wait();
 
     ASTDiagMap diagMap;
@@ -303,7 +286,7 @@ Diagnostics AnalysisManager::getDiagnostics(const SourceManager* sourceManager) 
     return diagMap.coalesce(sourceManager);
 }
 
-PendingAnalysis AnalysisManager::analyzeSymbol(const Symbol& symbol) {
+void AnalysisManager::analyzeSymbolAsync(const Symbol& symbol) {
     analyzeScopeAsync(getAsScope(symbol));
 
     // If this is an instance with a canonical body, record that
@@ -315,8 +298,6 @@ PendingAnalysis AnalysisManager::analyzeSymbol(const Symbol& symbol) {
             driverTracker.noteNonCanonicalInstance(state.context, state.driverAlloc, inst);
         }
     }
-
-    return PendingAnalysis(*this, symbol);
 }
 
 void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
@@ -328,6 +309,8 @@ void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
             SLANG_TRY {
                 auto& result = analyzeScopeBlocking(scope);
                 analyzedScopes.visit(&scope, [&result](auto& item) { item.second = &result; });
+                for (auto& listener : scopeListeners)
+                    listener(result);
             }
             SLANG_CATCH(...) {
                 std::unique_lock<std::mutex> lock(mutex);

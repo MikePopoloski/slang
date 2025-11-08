@@ -152,7 +152,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::InferredLatch);
     CHECK(diags[1].code == diag::InferredLatch);
@@ -182,7 +182,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     std::string result = "\n" + report(diags);
     CHECK(result == R"(
 source:8:13: warning: latch inferred for 's.a' because it is not assigned on all control paths [-Winferred-latch]
@@ -219,7 +219,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -267,7 +267,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InferredLatch);
 }
@@ -306,7 +306,7 @@ endfunction
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::MissingReturn);
     CHECK(diags[1].code == diag::IncompleteReturn);
@@ -332,7 +332,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InferredLatch);
 }
@@ -352,7 +352,7 @@ endfunction
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -382,7 +382,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -413,7 +413,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -538,7 +538,7 @@ endmodule // test
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 13);
     CHECK(diags[0].code == diag::InferredComb);
     CHECK(diags[1].code == diag::InferredComb);
@@ -570,8 +570,8 @@ endfunction
     compilation.getAllDiagnostics();
     compilation.freeze();
 
-    auto design = analysisManager.analyze(compilation);
-    auto diags = analysisManager.getDiagnostics(compilation.getSourceManager());
+    analysisManager.analyze(compilation);
+    auto diags = analysisManager.getDiagnostics();
     CHECK_DIAGS_EMPTY;
 }
 
@@ -628,7 +628,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::AlwaysWithoutTimingControl);
     CHECK(diags[1].code == diag::AlwaysWithoutTimingControl);
@@ -648,7 +648,7 @@ endmodule
         Compilation compilation;
         AnalysisManager analysisManager;
 
-        auto [diags, design] = analyze(code, compilation, analysisManager);
+        auto diags = analyze(code, compilation, analysisManager);
         CHECK_DIAGS_EMPTY;
     }
 
@@ -664,7 +664,7 @@ endmodule
         Compilation compilation;
         AnalysisManager analysisManager;
 
-        auto [diags, design] = analyze(code, compilation, analysisManager);
+        auto diags = analyze(code, compilation, analysisManager);
         REQUIRE(diags.size() == 1);
         CHECK(diags[0].code == diag::AlwaysWithoutTimingControl);
     }

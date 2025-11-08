@@ -1163,7 +1163,7 @@ std::unique_ptr<AnalysisManager> Driver::runAnalysis(ast::Compilation& compilati
     if (!options.lintMode()) {
         analysisManager->analyze(compilation);
 
-        for (auto& diag : analysisManager->getDiagnostics(compilation.getSourceManager()))
+        for (auto& diag : analysisManager->getDiagnostics())
             diagEngine.issue(diag);
     }
 
