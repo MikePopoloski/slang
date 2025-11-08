@@ -43,9 +43,7 @@ struct NonProceduralExprVisitor {
                 context.manager->noteDrivers(drivers);
         }
         else if constexpr (std::is_same_v<T, AssertionInstanceExpression>) {
-            // We might want to find a place to store these analyzed assertions created in
-            // non-procedural contexts, but for now it's enough to make sure they're valid.
-            AnalyzedAssertion(context, getDefaultClocking(), nullptr, containingSymbol, expr);
+            context.manager->analyzeAssertion(getDefaultClocking(), containingSymbol, expr);
         }
 
         if constexpr (HasVisitExprs<T, NonProceduralExprVisitor>) {

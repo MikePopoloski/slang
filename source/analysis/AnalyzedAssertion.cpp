@@ -887,49 +887,40 @@ private:
     }
 };
 
-AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingControl* contextualClock,
-                                     const AnalyzedProcedure& procedure, const Statement& stmt,
-                                     const Symbol* checkerInstance) {
-    if (checkerInstance) {
-        auto& inst = checkerInstance->as<CheckerInstanceSymbol>();
-        checkerScope = &context.manager->analyzeScopeBlocking(inst.body, &procedure);
+AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const AnalyzedProcedure& procedure,
+                                     const ConcurrentAssertionStatement& stmt) {
+    AssertionVisitor visitor(context, &procedure, *procedure.analyzedSymbol);
 
-        NonProceduralExprVisitor visitor(context, inst);
-        inst.visitExprs(visitor);
+    auto& propSpec = stmt.propertySpec;
+    auto result = propSpec.visit(visitor, procedure.getInferredClock(), VisitFlags::None);
 
-        for (auto& conn : inst.getPortConnections()) {
-            if (conn.formal.kind == SymbolKind::FormalArgument && conn.actual.index() == 0)
-                context.manager->noteDriver(*std::get<0>(conn.actual), inst);
-        }
-    }
-    else {
-        AssertionVisitor visitor(context, &procedure, *procedure.analyzedSymbol);
-
-        auto& propSpec = stmt.as<ConcurrentAssertionStatement>().propertySpec;
-        auto result = propSpec.visit(visitor, contextualClock, VisitFlags::None);
-
-        if (!visitor.bad && result.clocks.size() > 1) {
-            // There must be a unique semantic leading clock.
-            auto firstClock = result.clocks[0];
-            for (size_t i = 1; i < result.clocks.size(); i++) {
-                if (!isSameClock(*firstClock, *result.clocks[i])) {
-                    SLANG_ASSERT(propSpec.syntax);
-                    auto& diag = context.addDiag(*procedure.analyzedSymbol, diag::NoUniqueClock,
-                                                 propSpec.syntax->sourceRange());
-                    diag.addNote(diag::NoteClockHere, firstClock->sourceRange);
-                    diag.addNote(diag::NoteClockHere, result.clocks[i]->sourceRange);
-                    break;
-                }
+    if (!visitor.bad && result.clocks.size() > 1) {
+        // There must be a unique semantic leading clock.
+        auto firstClock = result.clocks[0];
+        for (size_t i = 1; i < result.clocks.size(); i++) {
+            if (!isSameClock(*firstClock, *result.clocks[i])) {
+                SLANG_ASSERT(propSpec.syntax);
+                auto& diag = context.addDiag(*procedure.analyzedSymbol, diag::NoUniqueClock,
+                                             propSpec.syntax->sourceRange());
+                diag.addNote(diag::NoteClockHere, firstClock->sourceRange);
+                diag.addNote(diag::NoteClockHere, result.clocks[i]->sourceRange);
+                break;
             }
         }
     }
 }
 
+AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const AnalyzedProcedure& procedure,
+                                     const AssertionInstanceExpression& expr) {
+    AssertionVisitor visitor(context, &procedure, *procedure.analyzedSymbol);
+    visitor.visit(expr, procedure.getInferredClock(), VisitFlags::None);
+}
+
 AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingControl* contextualClock,
-                                     const AnalyzedProcedure* procedure,
-                                     const ast::Symbol& parentSymbol, const Expression& expr) {
-    AssertionVisitor visitor(context, procedure, parentSymbol);
-    visitor.visit(expr.as<AssertionInstanceExpression>(), contextualClock, VisitFlags::None);
+                                     const Symbol& parentSymbol,
+                                     const AssertionInstanceExpression& expr) {
+    AssertionVisitor visitor(context, nullptr, parentSymbol);
+    visitor.visit(expr, contextualClock, VisitFlags::None);
 }
 
 } // namespace slang::analysis

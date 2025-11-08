@@ -15,6 +15,7 @@
 #include <optional>
 
 #include "slang/analysis/AnalysisOptions.h"
+#include "slang/analysis/AnalyzedAssertion.h"
 #include "slang/analysis/AnalyzedProcedure.h"
 #include "slang/analysis/DriverTracker.h"
 #include "slang/diagnostics/Diagnostics.h"
@@ -24,6 +25,7 @@
 
 namespace slang::ast {
 
+class CheckerInstanceSymbol;
 class Compilation;
 class Scope;
 class SubroutineSymbol;
@@ -118,13 +120,6 @@ public:
     /// Collects and returns all issued analysis diagnostics.
     Diagnostics getDiagnostics();
 
-    /// Analyzes the given scope, in blocking fashion.
-    ///
-    /// @note The result is not stored in the manager and so
-    /// won't be visible via calls to @a getAnalyzedScope.
-    const AnalyzedScope& analyzeScopeBlocking(const ast::Scope& scope,
-                                              const AnalyzedProcedure* parentProcedure = nullptr);
-
     /// Returns the results of a previous analysis of a scope, if available.
     const AnalyzedScope* getAnalyzedScope(const ast::Scope& scope) const;
 
@@ -135,6 +130,26 @@ public:
     /// Adds a new analyzed subroutine to the manager's cache for later lookup.
     const AnalyzedProcedure* addAnalyzedSubroutine(const ast::SubroutineSymbol& symbol,
                                                    std::unique_ptr<AnalyzedProcedure> procedure);
+
+    /// Returns all analyzed assertions for the given symbol.
+    std::span<const AnalyzedAssertion> getAnalyzedAssertions(const ast::Symbol& symbol) const;
+
+    /// Analyzes the given assertion statement.
+    void analyzeAssertion(const AnalyzedProcedure& procedure,
+                          const ast::ConcurrentAssertionStatement& stmt);
+
+    /// Analyzes the given assertion instance expression.
+    void analyzeAssertion(const AnalyzedProcedure& procedure,
+                          const ast::AssertionInstanceExpression& expr);
+
+    /// Analyzes the given assertion instance expression in a non-procedural context.
+    void analyzeAssertion(const ast::TimingControl* contextualClock,
+                          const ast::Symbol& parentSymbol,
+                          const ast::AssertionInstanceExpression& expr);
+
+    /// Analyzes the given checker instance.
+    void analyzeCheckerInstance(const ast::CheckerInstanceSymbol& symbol,
+                                const AnalyzedProcedure& parentProcedure);
 
     /// Notes that the given expression is a driver and should be added to the driver tracker.
     void noteDriver(const ast::Expression& expr, const ast::Symbol& containingSymbol);
@@ -164,6 +179,8 @@ private:
         WorkerState(AnalysisManager& manager) : context(manager), driverAlloc(context.alloc) {}
     };
 
+    const AnalyzedScope& analyzeScopeBlocking(const ast::Scope& scope,
+                                              const AnalyzedProcedure* parentProcedure = nullptr);
     void analyzeSymbolAsync(const ast::Symbol& symbol);
     void analyzeScopeAsync(const ast::Scope& scope);
     void wait();
@@ -175,6 +192,7 @@ private:
     concurrent_map<const ast::Scope*, std::optional<const AnalyzedScope*>> analyzedScopes;
     concurrent_map<const ast::SubroutineSymbol*, std::unique_ptr<AnalyzedProcedure>>
         analyzedSubroutines;
+    concurrent_map<const ast::Symbol*, std::vector<AnalyzedAssertion>> analyzedAssertions;
 
     DriverTracker driverTracker;
 

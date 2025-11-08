@@ -59,6 +59,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
     timingControls.insert(timingControls.end(), dfaTimedStatements.begin(),
                           dfaTimedStatements.end());
 
+    auto& manager = *context.manager;
     if (parentProcedure || !dfa.getAssertions().empty() || hasSampledValueCalls) {
         // All flavors of always and initial blocks can infer a clock.
         if (analyzedSymbol.kind == SymbolKind::ProceduralBlock &&
@@ -79,22 +80,20 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         if (inferredClock && inferredClock->bad())
             return;
 
-        auto dfaAssertions = dfa.getAssertions();
-        assertions.reserve(dfaAssertions.size());
-        for (auto& var : dfaAssertions) {
+        for (auto& var : dfa.getAssertions()) {
             if (auto stmtPtr = std::get_if<const Statement*>(&var)) {
                 auto& stmt = **stmtPtr;
                 if (stmt.kind == StatementKind::ProceduralChecker) {
                     for (auto inst : stmt.as<ProceduralCheckerStatement>().instances)
-                        assertions.emplace_back(context, inferredClock, *this, stmt, inst);
+                        manager.analyzeCheckerInstance(inst->as<CheckerInstanceSymbol>(), *this);
                 }
                 else {
-                    assertions.emplace_back(context, inferredClock, *this, stmt, nullptr);
+                    manager.analyzeAssertion(*this, stmt.as<ConcurrentAssertionStatement>());
                 }
             }
             else {
                 auto& expr = *std::get<const Expression*>(var);
-                assertions.emplace_back(context, inferredClock, this, analyzedSymbol, expr);
+                manager.analyzeAssertion(*this, expr.as<AssertionInstanceExpression>());
             }
         }
 
@@ -137,7 +136,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
                 SmallSet<const SubroutineSymbol*, 2> taskVisited;
                 std::vector<const ast::Statement*> taskTimingControls;
                 for (auto call : dfaCalls) {
-                    context.manager->getTaskTimingControls(*call, taskVisited, taskTimingControls);
+                    manager.getTaskTimingControls(*call, taskVisited, taskTimingControls);
                     if (!taskTimingControls.empty()) {
                         hasTimingInSubroutines = true;
                         break;
@@ -201,7 +200,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
     if (analyzedSymbol.kind != SymbolKind::Subroutine) {
         SmallSet<const SubroutineSymbol*, 2> visited;
         for (auto call : dfaCalls)
-            context.manager->getFunctionDrivers(*call, analyzedSymbol, visited, drivers);
+            manager.getFunctionDrivers(*call, analyzedSymbol, visited, drivers);
     }
 }
 

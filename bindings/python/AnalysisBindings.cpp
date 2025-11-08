@@ -62,13 +62,15 @@ void registerAnalysis(py::module_& m) {
         .def("getDiagnostics", &AnalysisManager::getDiagnostics)
         .def("getAnalyzedScope", &AnalysisManager::getAnalyzedScope, "scope"_a, byrefint)
         .def("getAnalyzedSubroutine", &AnalysisManager::getAnalyzedSubroutine, "symbol"_a, byrefint)
+        .def("getAnalyzedAssertions", &AnalysisManager::getAnalyzedAssertions, "symbol"_a, byrefint)
         .def_property_readonly("options", &AnalysisManager::getOptions);
 
     py::classh<AnalyzedProcedure>(m, "AnalyzedProcedure")
         .def_readonly("analyzedSymbol", &AnalyzedProcedure::analyzedSymbol)
         .def_readonly("parentProcedure", &AnalyzedProcedure::parentProcedure)
         .def_property_readonly("inferredClock", &AnalyzedProcedure::getInferredClock)
-        .def_property_readonly("assertions", &AnalyzedProcedure::getAssertions)
         .def_property_readonly("drivers", &AnalyzedProcedure::getDrivers)
         .def_property_readonly("callExpressions", &AnalyzedProcedure::getCallExpressions);
+
+    py::classh<AnalyzedAssertion>(m, "AnalyzedAssertion");
 }

@@ -93,19 +93,6 @@ void AnalysisManager::analyze(const Compilation& compilation) {
     }
 }
 
-const AnalyzedScope& AnalysisManager::analyzeScopeBlocking(
-    const Scope& scope, const AnalyzedProcedure* parentProcedure) {
-
-    auto& state = getState();
-    auto& result = *state.scopeAlloc.emplace(scope);
-
-    AnalysisScopeVisitor visitor(state, result, parentProcedure);
-    for (auto& member : scope.members())
-        member.visit(visitor);
-
-    return result;
-}
-
 const AnalyzedScope* AnalysisManager::getAnalyzedScope(const Scope& scope) const {
     const AnalyzedScope* result = nullptr;
     analyzedScopes.cvisit(&scope, [&result](auto& item) {
@@ -144,6 +131,54 @@ const AnalyzedProcedure* AnalysisManager::addAnalyzedSubroutine(
     }
 
     return result;
+}
+
+std::span<const AnalyzedAssertion> AnalysisManager::getAnalyzedAssertions(
+    const ast::Symbol& symbol) const {
+
+    std::span<const AnalyzedAssertion> result;
+    analyzedAssertions.cvisit(&symbol, [&result](auto& item) { result = item.second; });
+    return result;
+}
+
+void AnalysisManager::analyzeAssertion(const AnalyzedProcedure& procedure,
+                                       const ConcurrentAssertionStatement& stmt) {
+    AnalyzedAssertion assertion(getState().context, procedure, stmt);
+
+    auto updater = [&](auto& item) { item.second.emplace_back(std::move(assertion)); };
+    analyzedAssertions.try_emplace_and_visit(procedure.analyzedSymbol, updater, updater);
+}
+
+void AnalysisManager::analyzeAssertion(const AnalyzedProcedure& procedure,
+                                       const AssertionInstanceExpression& expr) {
+    AnalyzedAssertion assertion(getState().context, procedure, expr);
+
+    auto updater = [&](auto& item) { item.second.emplace_back(std::move(assertion)); };
+    analyzedAssertions.try_emplace_and_visit(procedure.analyzedSymbol, updater, updater);
+}
+
+void AnalysisManager::analyzeAssertion(const TimingControl* contextualClock,
+                                       const Symbol& parentSymbol,
+                                       const AssertionInstanceExpression& expr) {
+    AnalyzedAssertion assertion(getState().context, contextualClock, parentSymbol, expr);
+
+    auto updater = [&](auto& item) { item.second.emplace_back(std::move(assertion)); };
+    analyzedAssertions.try_emplace_and_visit(&parentSymbol, updater, updater);
+}
+
+void AnalysisManager::analyzeCheckerInstance(const CheckerInstanceSymbol& inst,
+                                             const AnalyzedProcedure& parentProcedure) {
+    analyzeScopeBlocking(inst.body, &parentProcedure);
+
+    auto& state = getState();
+
+    NonProceduralExprVisitor visitor(state.context, inst);
+    inst.visitExprs(visitor);
+
+    for (auto& conn : inst.getPortConnections()) {
+        if (conn.formal.kind == SymbolKind::FormalArgument && conn.actual.index() == 0)
+            noteDriver(*std::get<0>(conn.actual), inst);
+    }
 }
 
 void AnalysisManager::noteDriver(const Expression& expr, const Symbol& containingSymbol) {
@@ -284,6 +319,19 @@ Diagnostics AnalysisManager::getDiagnostics() {
     }
 
     return diagMap.coalesce(sourceManager);
+}
+
+const AnalyzedScope& AnalysisManager::analyzeScopeBlocking(
+    const Scope& scope, const AnalyzedProcedure* parentProcedure) {
+
+    auto& state = getState();
+    auto& result = *state.scopeAlloc.emplace(scope);
+
+    AnalysisScopeVisitor visitor(state, result, parentProcedure);
+    for (auto& member : scope.members())
+        member.visit(visitor);
+
+    return result;
 }
 
 void AnalysisManager::analyzeSymbolAsync(const Symbol& symbol) {

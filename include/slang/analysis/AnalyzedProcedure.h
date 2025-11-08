@@ -17,6 +17,7 @@
 namespace slang::ast {
 
 class CallExpression;
+class Statement;
 class SubroutineSymbol;
 class Symbol;
 class TimingControl;
@@ -50,11 +51,6 @@ public:
     /// at least one concurrent assertion.
     const ast::TimingControl* getInferredClock() const { return inferredClock; }
 
-    /// Gets the list of analyzed assertions in the procedure.
-    ///
-    /// @note These include procedural checkers contained within the procedure.
-    std::span<const AnalyzedAssertion> getAssertions() const { return assertions; }
-
     /// Gets all of the drivers in the procedure.
     std::span<const SymbolDriverListPair> getDrivers() const { return drivers; }
 
@@ -69,7 +65,6 @@ public:
 private:
     const ast::TimingControl* inferredClock = nullptr;
     std::vector<SymbolDriverListPair> drivers;
-    std::vector<AnalyzedAssertion> assertions;
     std::vector<const ast::CallExpression*> callExpressions;
     std::vector<const ast::Statement*> timingControls;
 };
