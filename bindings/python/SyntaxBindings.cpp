@@ -74,8 +74,8 @@ public:
     // --- Expose protected base methods via public wrappers ---
     void py_remove(const SyntaxNode& node) { this->remove(node); }
 
-    void py_replace(const SyntaxNode& oldNode, SyntaxNode& newNode) {
-        this->replace(oldNode, cloneNode(newNode));
+    void py_replace(const SyntaxNode& oldNode, SyntaxNode& newNode, bool preserveTrivia = false) {
+        this->replace(oldNode, cloneNode(newNode), preserveTrivia);
     }
 
     void py_insertBefore(const SyntaxNode& node, SyntaxNode& newNode) {
@@ -429,7 +429,8 @@ void registerSyntax(py::module_& m) {
 
     py::classh<PySyntaxRewriter>(m, "SyntaxRewriter")
         .def("remove", &PySyntaxRewriter::py_remove)
-        .def("replace", &PySyntaxRewriter::py_replace)
+        .def("replace", &PySyntaxRewriter::py_replace, "oldNode"_a, "newNode"_a,
+             "preserveTrivia"_a = false)
         .def("insert_before", &PySyntaxRewriter::py_insertBefore)
         .def("insert_after", &PySyntaxRewriter::py_insertAfter)
         .def("insert_at_front", &PySyntaxRewriter::py_insertAtFront, py::arg("list"),

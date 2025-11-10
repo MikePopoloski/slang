@@ -266,6 +266,12 @@ bool DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
     return true;
 }
 
+const DiagnosticEngine::FormatterMap& DiagnosticEngine::getFormatters() const {
+    if (formatters.empty())
+        formatters = defaultFormatters;
+    return formatters;
+}
+
 std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {
     // If we have no arguments, the format string is the entire message.
     if (diag.args.empty())
@@ -284,13 +290,9 @@ std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {
         // Unwrap the argument type (stored as a variant).
         std::visit(
             [&](auto&& t) {
-                // If the argument is a pointer, the fmtlib API needs it unwrapped into a reference.
                 using T = std::decay_t<decltype(t)>;
                 if constexpr (std::is_same_v<Diagnostic::CustomArgType, T>) {
-                    if (auto it = formatters.find(t.first); it != formatters.end())
-                        args.push_back(it->second->format(t.second));
-                    else
-                        SLANG_THROW(std::runtime_error("No diagnostic formatter for type"));
+                    args.push_back(formatArg(t));
                 }
                 else if constexpr (std::is_same_v<ConstantValue, T>) {
                     if (t.isReal())
@@ -308,6 +310,36 @@ std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {
     }
 
     return fmt::vformat(getMessage(diag.code), args);
+}
+
+std::string DiagnosticEngine::formatArg(const Diagnostic::CustomArgType& arg) const {
+    getFormatters();
+    if (auto it = formatters.find(arg.first); it != formatters.end())
+        return it->second->format(arg.second);
+
+    SLANG_THROW(std::runtime_error("No diagnostic formatter for type"));
+}
+
+std::string DiagnosticEngine::formatArg(const Diagnostic::Arg& arg) const {
+    return std::visit(
+        [&](auto&& t) {
+            using T = std::decay_t<decltype(t)>;
+            if constexpr (std::is_same_v<Diagnostic::CustomArgType, T>) {
+                return formatArg(t);
+            }
+            else if constexpr (std::is_same_v<ConstantValue, T>) {
+                if (t.isReal())
+                    return fmt::to_string(double(t.real()));
+                else if (t.isShortReal())
+                    return fmt::to_string(float(t.shortReal()));
+                else
+                    return t.toString();
+            }
+            else {
+                return fmt::to_string(t);
+            }
+        },
+        arg);
 }
 
 // Walks up a chain of macro argument expansions and collects their buffer IDs.

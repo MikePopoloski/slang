@@ -766,6 +766,49 @@ class C; endclass
     }
 }
 
+TEST_CASE("Syntax rewriter -- replace preserves trivia") {
+    auto tree = SyntaxTree::fromText(R"(
+module test(
+    input wire clock,
+    input wire reset,
+    output reg [3:0] o_signal
+);
+wire t;
+`ifndef SYNTHESIS
+initial begin
+    $display("hello");
+end
+`endif
+assign t = o_signal[1];
+
+endmodule
+)");
+
+    struct Rewriter : public SyntaxRewriter<Rewriter> {
+        void handle(const ContinuousAssignSyntax& syntax) {
+            replace(syntax, parse("assign t = 2;"), /* preserveTrivia */ true);
+        }
+    };
+
+    auto result = SyntaxPrinter::printFile(*Rewriter().transform(tree));
+    CHECK(result == R"(
+module test(
+    input wire clock,
+    input wire reset,
+    output reg [3:0] o_signal
+);
+wire t;
+`ifndef SYNTHESIS
+initial begin
+    $display("hello");
+end
+`endif
+assign t = 2;
+
+endmodule
+)");
+}
+
 TEST_CASE("SyntaxTree/Compilation Invariant Checking") {
     // Validates that the parent pointers in the syntax tree are correct,
     // and provides debug info if not.

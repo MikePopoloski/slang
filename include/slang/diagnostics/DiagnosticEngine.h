@@ -173,6 +173,11 @@ public:
         defaultFormatters[SLANG_TYPEOF(ForType)] = std::move(formatter);
     }
 
+    using FormatterMap = flat_hash_map<SLANG_TYPEINDEX, std::shared_ptr<DiagArgFormatter>>;
+
+    /// Gets the custom argument formatters registered with this diagnostic engine.
+    const FormatterMap& getFormatters() const;
+
     using SymbolPathCB = std::function<std::string(const ast::Symbol&)>;
 
     /// Sets a callback that will be used to get a symbol path for a given symbol.
@@ -194,6 +199,14 @@ public:
     /// Formats the given diagnostic using its arguments and the currently mapped
     /// message for its diagnostic code.
     std::string formatMessage(const Diagnostic& diag) const;
+
+    /// Formats a single diagnostic argument to a string.
+    /// @note Throws an exception if no formatter is found for the argument type.
+    std::string formatArg(const Diagnostic::CustomArgType& arg) const;
+
+    /// Formats a single diagnostic argument to a string.
+    /// @note Throws an exception if no formatter is found for the argument type.
+    std::string formatArg(const Diagnostic::Arg& arg) const;
 
     /// Sets diagnostic options from the given option strings, typically from a list of -W
     /// arguments passed to a command line invocation. Any errors encountered while parsing
@@ -296,7 +309,6 @@ private:
 
     // A map from type_index to a formatter for that type. Used to register custom
     // formatters for subsystem-specific types.
-    using FormatterMap = flat_hash_map<SLANG_TYPEINDEX, std::shared_ptr<DiagArgFormatter>>;
     mutable FormatterMap formatters;
 
     // A set of default formatters that will be assigned to each new DiagnosticEngine instance
