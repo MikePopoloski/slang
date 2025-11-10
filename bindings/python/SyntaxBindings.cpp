@@ -391,6 +391,14 @@ void registerSyntax(py::module_& m) {
         .def_readwrite("maxErrors", &LexerOptions::maxErrors)
         .def_readwrite("languageVersion", &LexerOptions::languageVersion);
 
+    py::classh<Lexer>(m, "Lexer")
+        .def(py::init<SourceBuffer, BumpAllocator&, Diagnostics&, SourceManager&, LexerOptions>(),
+             py::keep_alive<1, 3>(), py::keep_alive<1, 4>(), py::keep_alive<1, 5>(), "buffer"_a,
+             "alloc"_a, "diagnostics"_a, "sourceManager"_a, "options"_a = LexerOptions())
+        .def("lex", py::overload_cast<>(&Lexer::lex))
+        .def("isNextTokenOnSameLine", &Lexer::isNextTokenOnSameLine)
+        .def("getLibrary", &Lexer::getLibrary);
+
     py::classh<PreprocessorOptions>(m, "PreprocessorOptions")
         .def(py::init<>())
         .def_readwrite("maxIncludeDepth", &PreprocessorOptions::maxIncludeDepth)
