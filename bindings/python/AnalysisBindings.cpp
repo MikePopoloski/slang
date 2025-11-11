@@ -57,6 +57,10 @@ void registerAnalysis(py::module_& m) {
              py::overload_cast<std::function<void(const AnalyzedScope&)>>(
                  &AnalysisManager::addListener),
              "listener"_a)
+        .def("addAssertionListener",
+             py::overload_cast<std::function<void(const AnalyzedAssertion&)>>(
+                 &AnalysisManager::addListener),
+             "listener"_a)
         .def("analyze", &AnalysisManager::analyze, "compilation"_a)
         .def("getDrivers", &AnalysisManager::getDrivers, "symbol"_a, byrefint)
         .def("getDiagnostics", &AnalysisManager::getDiagnostics)
@@ -72,5 +76,11 @@ void registerAnalysis(py::module_& m) {
         .def_property_readonly("drivers", &AnalyzedProcedure::getDrivers)
         .def_property_readonly("callExpressions", &AnalyzedProcedure::getCallExpressions);
 
-    py::classh<AnalyzedAssertion>(m, "AnalyzedAssertion");
+    py::classh<AnalyzedAssertion>(m, "AnalyzedAssertion")
+        .def_readonly("containingSymbol", &AnalyzedAssertion::containingSymbol)
+        .def_readonly("procedure", &AnalyzedAssertion::procedure)
+        .def_readonly("astNode", &AnalyzedAssertion::astNode)
+        .def_property_readonly("semanticLeadingClock", &AnalyzedAssertion::getSemanticLeadingClock)
+        .def_property_readonly("root", &AnalyzedAssertion::getRoot)
+        .def("getClock", &AnalyzedAssertion::getClock, "expr"_a, byrefint);
 }

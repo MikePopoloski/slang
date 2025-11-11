@@ -8,19 +8,23 @@ static void ltrim(std::string& s) {
             std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !std::isspace(ch); }));
 }
 
+static std::string clkStr(const TimingControl* clock) {
+    if (!clock)
+        return "";
+
+    REQUIRE(clock->syntax);
+    auto result = clock->syntax->toString();
+    ltrim(result);
+    return result;
+}
+
 static std::string testInferredClock(const char* text) {
     Compilation compilation;
     AnalysisManager analysisManager;
 
     std::string clockResult;
-    analysisManager.addListener([&](const AnalyzedProcedure& proc) {
-        auto inferredClock = proc.getInferredClock();
-        if (inferredClock) {
-            REQUIRE(inferredClock->syntax);
-            clockResult = inferredClock->syntax->toString();
-            ltrim(clockResult);
-        }
-    });
+    analysisManager.addListener(
+        [&](const AnalyzedProcedure& proc) { clockResult = clkStr(proc.getInferredClock()); });
 
     auto fullText = fmt::format(R"(
 module m(input clk_default);
@@ -2357,4 +2361,52 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::AssertionLocalUnassigned);
     CHECK(diags[1].code == diag::AssertionLocalUnassigned);
+}
+
+TEST_CASE("Assertion analysis visitation") {
+    auto& text = R"(
+module m;
+    logic clk1, clk2;
+    logic x, y;
+
+    sequence seq1;
+        @(posedge clk1) y ##1 @(posedge clk1) x;
+    endsequence
+
+    sequence seq2;
+        @(posedge clk2) x ##0 @(posedge clk2) y;
+    endsequence
+
+    property prop1;
+        @(posedge clk1) disable iff(!$rose(clk1, @(posedge clk1))) seq1 |-> seq2;
+    endproperty
+
+    property prop2;
+        @(posedge clk2) disable iff(!$rose(clk2, @(posedge clk2))) seq2 |-> seq1;
+    endproperty
+
+    assert property (prop1);
+    assert property (prop2);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    analysisManager.addListener([](const AnalyzedAssertion& assertion) {
+        auto slc = clkStr(assertion.getSemanticLeadingClock());
+        auto& root = assertion.getRoot();
+        auto& inst = root.as<SimpleAssertionExpr>().expr.as<AssertionInstanceExpression>();
+        if (inst.symbol.name == "prop1") {
+            CHECK(slc == "@(posedge clk1)");
+            CHECK(clkStr(assertion.getClock(inst.body)) == "@(posedge clk1)");
+        }
+        else {
+            CHECK(slc == "@(posedge clk2)");
+            CHECK(clkStr(assertion.getClock(inst.body)) == "@(posedge clk2)");
+        }
+    });
+
+    auto diags = analyze(text, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
 }

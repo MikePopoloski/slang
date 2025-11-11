@@ -104,6 +104,13 @@ public:
         scopeListeners.push_back(std::move(listener));
     }
 
+    /// Adds a listener that will be invoked when an assertion is analyzed.
+    ///
+    /// @note The listener may be invoked on multiple threads simultaneously.
+    void addListener(std::function<void(const AnalyzedAssertion&)> listener) {
+        assertListeners.push_back(std::move(listener));
+    }
+
     /// Analyzes the given compilation and returns a representation of the design.
     ///
     /// @note The provided compilation must be finalized and frozen
@@ -132,7 +139,7 @@ public:
                                                    std::unique_ptr<AnalyzedProcedure> procedure);
 
     /// Returns all analyzed assertions for the given symbol.
-    std::span<const AnalyzedAssertion> getAnalyzedAssertions(const ast::Symbol& symbol) const;
+    std::vector<const AnalyzedAssertion*> getAnalyzedAssertions(const ast::Symbol& symbol) const;
 
     /// Analyzes the given assertion statement.
     void analyzeAssertion(const AnalyzedProcedure& procedure,
@@ -183,6 +190,7 @@ private:
                                               const AnalyzedProcedure* parentProcedure = nullptr);
     void analyzeSymbolAsync(const ast::Symbol& symbol);
     void analyzeScopeAsync(const ast::Scope& scope);
+    void handleAssertion(std::unique_ptr<AnalyzedAssertion>&& assertion);
     void wait();
     WorkerState& getState();
 
@@ -192,12 +200,14 @@ private:
     concurrent_map<const ast::Scope*, std::optional<const AnalyzedScope*>> analyzedScopes;
     concurrent_map<const ast::SubroutineSymbol*, std::unique_ptr<AnalyzedProcedure>>
         analyzedSubroutines;
-    concurrent_map<const ast::Symbol*, std::vector<AnalyzedAssertion>> analyzedAssertions;
+    concurrent_map<const ast::Symbol*, std::vector<std::unique_ptr<AnalyzedAssertion>>>
+        analyzedAssertions;
 
     DriverTracker driverTracker;
 
     std::vector<std::function<void(const AnalyzedProcedure&)>> procListeners;
     std::vector<std::function<void(const AnalyzedScope&)>> scopeListeners;
+    std::vector<std::function<void(const AnalyzedAssertion&)>> assertListeners;
 
     const SourceManager* sourceManager = nullptr;
 

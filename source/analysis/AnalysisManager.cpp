@@ -133,37 +133,32 @@ const AnalyzedProcedure* AnalysisManager::addAnalyzedSubroutine(
     return result;
 }
 
-std::span<const AnalyzedAssertion> AnalysisManager::getAnalyzedAssertions(
-    const ast::Symbol& symbol) const {
+std::vector<const AnalyzedAssertion*> AnalysisManager::getAnalyzedAssertions(
+    const Symbol& symbol) const {
 
-    std::span<const AnalyzedAssertion> result;
-    analyzedAssertions.cvisit(&symbol, [&result](auto& item) { result = item.second; });
-    return result;
+    std::vector<const AnalyzedAssertion*> results;
+    analyzedAssertions.cvisit(&symbol, [&results](auto& item) {
+        for (auto& elem : item.second)
+            results.push_back(elem.get());
+    });
+    return results;
 }
 
 void AnalysisManager::analyzeAssertion(const AnalyzedProcedure& procedure,
                                        const ConcurrentAssertionStatement& stmt) {
-    AnalyzedAssertion assertion(getState().context, procedure, stmt);
-
-    auto updater = [&](auto& item) { item.second.emplace_back(std::move(assertion)); };
-    analyzedAssertions.try_emplace_and_visit(procedure.analyzedSymbol, updater, updater);
+    handleAssertion(std::make_unique<AnalyzedAssertion>(getState().context, procedure, stmt));
 }
 
 void AnalysisManager::analyzeAssertion(const AnalyzedProcedure& procedure,
                                        const AssertionInstanceExpression& expr) {
-    AnalyzedAssertion assertion(getState().context, procedure, expr);
-
-    auto updater = [&](auto& item) { item.second.emplace_back(std::move(assertion)); };
-    analyzedAssertions.try_emplace_and_visit(procedure.analyzedSymbol, updater, updater);
+    handleAssertion(std::make_unique<AnalyzedAssertion>(getState().context, procedure, expr));
 }
 
 void AnalysisManager::analyzeAssertion(const TimingControl* contextualClock,
                                        const Symbol& parentSymbol,
                                        const AssertionInstanceExpression& expr) {
-    AnalyzedAssertion assertion(getState().context, contextualClock, parentSymbol, expr);
-
-    auto updater = [&](auto& item) { item.second.emplace_back(std::move(assertion)); };
-    analyzedAssertions.try_emplace_and_visit(&parentSymbol, updater, updater);
+    handleAssertion(std::make_unique<AnalyzedAssertion>(getState().context, contextualClock,
+                                                        parentSymbol, expr));
 }
 
 void AnalysisManager::analyzeCheckerInstance(const CheckerInstanceSymbol& inst,
@@ -264,7 +259,7 @@ void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbo
 
 void AnalysisManager::getTaskTimingControls(const CallExpression& expr,
                                             SmallSet<const SubroutineSymbol*, 2>& visited,
-                                            std::vector<const ast::Statement*>& controls) {
+                                            std::vector<const Statement*>& controls) {
     if (expr.getSubroutineKind() != SubroutineKind::Task || expr.isSystemCall()) {
         return;
     }
@@ -303,7 +298,7 @@ DriverList AnalysisManager::getDrivers(const ValueSymbol& symbol) const {
 }
 
 std::optional<InstanceDriverState> AnalysisManager::getInstanceDriverState(
-    const ast::InstanceBodySymbol& symbol) const {
+    const InstanceBodySymbol& symbol) const {
     return driverTracker.getInstanceState(symbol);
 }
 
@@ -369,6 +364,16 @@ void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
         auto& result = analyzeScopeBlocking(scope);
         analyzedScopes.visit(&scope, [&result](auto& item) { item.second = &result; });
 #endif
+    }
+}
+
+void AnalysisManager::handleAssertion(std::unique_ptr<AnalyzedAssertion>&& assertion) {
+    if (!assertion->bad) {
+        for (auto& listener : assertListeners)
+            listener(*assertion);
+
+        auto updater = [&](auto& item) { item.second.emplace_back(std::move(assertion)); };
+        analyzedAssertions.try_emplace_and_visit(assertion->containingSymbol, updater, updater);
     }
 }
 

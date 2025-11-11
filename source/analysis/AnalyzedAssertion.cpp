@@ -28,48 +28,6 @@ namespace slang::analysis {
 
 using namespace ast;
 
-static bool isSameClock(const TimingControl& left, const TimingControl& right) {
-    if ((left.kind != TimingControlKind::SignalEvent &&
-         left.kind != TimingControlKind::EventList) ||
-        (right.kind != TimingControlKind::SignalEvent &&
-         right.kind != TimingControlKind::EventList)) {
-        // Ignore anything invalid here, we only want to compare valid clocks.
-        return true;
-    }
-
-    if (left.kind != right.kind)
-        return false;
-
-    if (left.kind == TimingControlKind::EventList) {
-        auto& le = left.as<EventListControl>();
-        auto& re = right.as<EventListControl>();
-        if (le.events.size() != re.events.size())
-            return false;
-
-        for (size_t i = 0; i < le.events.size(); i++) {
-            if (!isSameClock(*le.events[i], *re.events[i]))
-                return false;
-        }
-        return true;
-    }
-
-    auto& le = left.as<SignalEventControl>();
-    auto& re = right.as<SignalEventControl>();
-    if (le.edge != re.edge || bool(le.iffCondition) != bool(re.iffCondition))
-        return false;
-
-    if (le.iffCondition) {
-        if (!le.iffCondition->syntax || !re.iffCondition->syntax)
-            return false;
-        return le.iffCondition->syntax->isEquivalentTo(*re.iffCondition->syntax);
-    }
-
-    if (!le.expr.syntax || !re.expr.syntax)
-        return false;
-
-    return le.expr.isEquivalentTo(re.expr);
-}
-
 using LocalSet = flat_hash_set<const Symbol*>;
 
 static void computeFlowForBinaryOp(LocalSet& flow, const LocalSet& savedVars,
@@ -282,9 +240,17 @@ struct AssertionVisitor {
 
         static VisitResult unionWith(const VisitResult& left, const VisitResult& right) {
             VisitResult result;
-            result.clocks.reserve(left.clocks.size() + right.clocks.size());
             result.clocks.append_range(left.clocks);
-            result.clocks.append_range(right.clocks);
+
+            // Unfortunately n^2 but can't hash these given the structural equality checks.
+            // In practice this will almost always just have one entry.
+            for (auto rclk : right.clocks) {
+                if (std::ranges::none_of(left.clocks,
+                                         [&](auto l) { return l->isEquivalentTo(*rclk); })) {
+                    result.clocks.emplace_back(rclk);
+                }
+            }
+
             return result;
         }
     };
@@ -335,11 +301,9 @@ struct AssertionVisitor {
                     if (lastEndClock && outerClock) {
                         // The end clock of a sequence used with .triggered or .matched
                         // must match the outer clock.
-                        if (!isSameClock(*outerClock, *lastEndClock)) {
-                            parent.bad = true;
-                            auto& diag = parent.context.addDiag(parent.parentSymbol,
-                                                                diag::SeqMethodEndClock,
-                                                                expr.sourceRange);
+                        if (!outerClock->isEquivalentTo(*lastEndClock)) {
+                            parent.parent.bad = true;
+                            auto& diag = parent.addDiag(diag::SeqMethodEndClock, expr.sourceRange);
                             diag << expr.getSubroutineName();
                             diag.addNote(diag::NoteClockHere, outerClock->sourceRange);
                             diag.addNote(diag::NoteClockHere, lastEndClock->sourceRange);
@@ -353,9 +317,7 @@ struct AssertionVisitor {
         void visit(const NamedValueExpression& expr) {
             if (expr.symbol.kind == SymbolKind::LocalAssertionVar) {
                 if (!parent.assignedVars.contains(&expr.symbol)) {
-                    auto& diag = parent.context.addDiag(parent.parentSymbol,
-                                                        diag::AssertionLocalUnassigned,
-                                                        expr.sourceRange);
+                    auto& diag = parent.addDiag(diag::AssertionLocalUnassigned, expr.sourceRange);
                     diag << expr.symbol.name;
                 }
             }
@@ -363,28 +325,25 @@ struct AssertionVisitor {
     };
 
     AnalysisContext& context;
-    const AnalyzedProcedure* procedure;
-    const Symbol& parentSymbol;
+    AnalyzedAssertion& parent;
     SmallVector<ClockInference::ExpansionInstance> expansionStack;
     const CallExpression* globalFutureSampledValueCall = nullptr;
     LocalSet assignedVars;
     bool hasInferredClockCall = false;
     bool hasMatchItems = false;
-    bool bad = false;
 
-    AssertionVisitor(AnalysisContext& context, const AnalyzedProcedure* procedure,
-                     const Symbol& parentSymbol) :
-        context(context), procedure(procedure), parentSymbol(parentSymbol) {
+    AssertionVisitor(AnalysisContext& context, AnalyzedAssertion& parent) :
+        context(context), parent(parent) {
 
         // If we're in a checker with an inferred clock arg, we will just assume
         // that we might have an inferred clock call somewhere.
-        auto scope = parentSymbol.getParentScope();
+        auto scope = parent.containingSymbol->getParentScope();
         if (scope && scope->asSymbol().kind == SymbolKind::CheckerInstanceBody)
             hasInferredClockCall = true;
     }
 
     VisitResult visit(const InvalidAssertionExpr&, Clock, bitmask<VF>) {
-        bad = true;
+        parent.bad = true;
         return {};
     }
 
@@ -423,9 +382,8 @@ struct AssertionVisitor {
                     if (auto sym = init->getSymbolReference()) {
                         auto [it, inserted] = outputArgRefs.emplace(sym, init);
                         if (!inserted) {
-                            auto& diag = context.addDiag(parentSymbol,
-                                                         diag::AssertionFormalMultiAssign,
-                                                         init->sourceRange);
+                            auto& diag = addDiag(diag::AssertionFormalMultiAssign,
+                                                 init->sourceRange);
                             diag << sym->name;
                             diag.addNote(diag::NotePreviousUsage, it->second->sourceRange);
                         }
@@ -468,8 +426,8 @@ struct AssertionVisitor {
             if (local->formalPort) {
                 if (local->formalPort->direction != ArgumentDirection::In) {
                     if (!assignedVars.contains(local)) {
-                        auto& diag = context.addDiag(parentSymbol, diag::AssertionFormalUnassigned,
-                                                     local->formalPort->location);
+                        auto& diag = addDiag(diag::AssertionFormalUnassigned,
+                                             local->formalPort->location);
                         diag << local->name;
                     }
                 }
@@ -501,19 +459,17 @@ struct AssertionVisitor {
 
         // Named sequences and properties instantiated from within a clocking block
         // must be singly clocked and share the same clock as the clocking block.
-        if (!bad && inClockingBlock && outerClock) {
+        if (!parent.bad && inClockingBlock && outerClock) {
             if (result.isMulticlockedSeq || result.clocks.size() != 1 ||
-                !isSameClock(*outerClock, *result.clocks[0])) {
+                !outerClock->isEquivalentTo(*result.clocks[0])) {
 
-                bad = true;
+                parent.bad = true;
                 if (result.isMulticlockedSeq || result.clocks.size() != 1) {
-                    context.addDiag(parentSymbol, diag::MulticlockedInClockingBlock,
-                                    expr.sourceRange)
+                    addDiag(diag::MulticlockedInClockingBlock, expr.sourceRange)
                         << expr.symbol.name;
                 }
                 else {
-                    auto& diag = context.addDiag(parentSymbol, diag::DifferentClockInClockingBlock,
-                                                 expr.sourceRange);
+                    auto& diag = addDiag(diag::DifferentClockInClockingBlock, expr.sourceRange);
                     diag << expr.symbol.name;
                     diag.addNote(diag::NoteClockHere, outerClock->sourceRange);
                     diag.addNote(diag::NoteClockHere, result.clocks[0]->sourceRange);
@@ -581,7 +537,8 @@ struct AssertionVisitor {
                 if (!firstClock) {
                     firstClock = result.clocks[0];
                 }
-                else if (result.isMulticlockedSeq || !isSameClock(*firstClock, *result.clocks[0])) {
+                else if (result.isMulticlockedSeq ||
+                         !firstClock->isEquivalentTo(*result.clocks[0])) {
                     // When concatenating differently clocked sequences, the maximal single-clocked
                     // subsequences must not admit an empty match.
                     if (!lastWasMulticlocked)
@@ -601,6 +558,7 @@ struct AssertionVisitor {
         if (!firstClock)
             return {};
 
+        registerClock(expr, firstClock);
         return {firstClock, isMulticlockedSeq, endClock};
     }
 
@@ -618,17 +576,21 @@ struct AssertionVisitor {
         if (isZeroOrMoreRep(expr.repetition))
             assignedVars = std::move(savedVars);
 
+        registerClock(expr, result);
         return result;
     }
 
     VisitResult visit(const FirstMatchAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
         auto result = expr.seq.visit(*this, outerClock, flags | VF::RequireSequence);
         handleMatchItems(expr.matchItems);
+        registerClock(expr, result);
         return result;
     }
 
     VisitResult visit(const StrongWeakAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
-        return expr.expr.visit(*this, outerClock, flags | VF::RequireSequence);
+        auto result = expr.expr.visit(*this, outerClock, flags | VF::RequireSequence);
+        registerClock(expr, result);
+        return result;
     }
 
     VisitResult visit(const ClockingAssertionExpr& expr, Clock, bitmask<VF> flags) {
@@ -637,11 +599,11 @@ struct AssertionVisitor {
         // clocking expressions we find.
         auto clocking = &expr.clocking;
         if (hasInferredClockCall) {
-            auto result = ClockInference::expand(context, parentSymbol, *clocking, expansionStack,
-                                                 procedure);
+            auto result = ClockInference::expand(context, *parent.containingSymbol, *clocking,
+                                                 expansionStack, parent.procedure);
             clocking = result.clock;
             if (result.diag) {
-                bad = true;
+                parent.bad = true;
                 addExpansionNotes(*result.diag);
             }
         }
@@ -650,24 +612,32 @@ struct AssertionVisitor {
             // Our current clock doesn't flow into the event expression,
             // so check it separately for explicit clocking of sequence instances
             // and calls to sampled value functions.
-            NonProceduralExprVisitor visitor(context, parentSymbol);
+            NonProceduralExprVisitor visitor(context, *parent.containingSymbol);
             clocking->visit(visitor);
         }
 
-        return expr.expr.visit(*this, clocking, flags);
+        auto result = expr.expr.visit(*this, clocking, flags);
+        registerClock(expr, result);
+        return result;
     }
 
     VisitResult visit(const UnaryAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
         auto result = visitProperty(expr.expr, outerClock, flags);
-        if (expr.op == UnaryAssertionOperator::Not)
+        if (expr.op == UnaryAssertionOperator::Not) {
+            registerClock(expr, result);
             return result;
+        }
+
         return inheritedClock(expr, outerClock, flags);
     }
 
     VisitResult visit(const AbortAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
         auto result = visitProperty(expr.expr, outerClock, flags);
-        if (!expr.isSync)
+        if (!expr.isSync) {
+            registerClock(expr, result);
             return result;
+        }
+
         return inheritedClock(expr, outerClock, flags);
     }
 
@@ -693,19 +663,23 @@ struct AssertionVisitor {
                 VisitResult lresult, rresult;
                 if (flags.has(VF::RequireSequence)) {
                     handleBinarySeqOp(expr, outerClock, flags, lresult, rresult);
+                    return lresult;
                 }
-                else {
-                    lresult = visitProperty(expr.left, outerClock, flags);
-                    rresult = visitProperty(expr.right, outerClock, flags);
-                }
-                return VisitResult::unionWith(lresult, rresult);
+
+                lresult = visitProperty(expr.left, outerClock, flags);
+                rresult = visitProperty(expr.right, outerClock, flags);
+                auto result = VisitResult::unionWith(lresult, rresult);
+                registerClock(expr, result);
+                return result;
             }
             case BinaryAssertionOperator::Iff:
             case BinaryAssertionOperator::Implies: {
                 // Clocks come from both sides.
                 auto lresult = visitProperty(expr.left, outerClock, flags);
                 auto rresult = visitProperty(expr.right, outerClock, flags);
-                return VisitResult::unionWith(lresult, rresult);
+                auto result = VisitResult::unionWith(lresult, rresult);
+                registerClock(expr, result);
+                return result;
             }
             case BinaryAssertionOperator::OverlappedImplication:
             case BinaryAssertionOperator::NonOverlappedImplication:
@@ -716,6 +690,7 @@ struct AssertionVisitor {
                 // use visitProperty here.
                 auto lresult = expr.left.visit(*this, outerClock, flags | VF::RequireSequence);
                 expr.right.visit(*this, outerClock, flags);
+                registerClock(expr, lresult);
                 return lresult;
             }
         }
@@ -746,19 +721,21 @@ struct AssertionVisitor {
         // Our current clock doesn't flow into the disable iff condition,
         // so check it separately for explicit clocking of sequence instances
         // and calls to sampled value functions.
-        NonProceduralExprVisitor visitor(context, parentSymbol, /*isDisableCondition =*/true);
+        NonProceduralExprVisitor visitor(context, *parent.containingSymbol,
+                                         /* isDisableCondition */ true);
         expr.condition.visit(visitor);
         visitExpr(expr.condition);
 
-        return expr.expr.visit(*this, outerClock, flags);
+        auto result = expr.expr.visit(*this, outerClock, flags);
+        registerClock(expr, result);
+        return result;
     }
 
     void checkGFSVC() {
-        if (!bad && globalFutureSampledValueCall && hasMatchItems) {
-            bad = true;
+        if (!parent.bad && globalFutureSampledValueCall && hasMatchItems) {
+            parent.bad = true;
 
-            auto& diag = context.addDiag(parentSymbol, diag::GFSVMatchItems,
-                                         globalFutureSampledValueCall->sourceRange);
+            auto& diag = addDiag(diag::GFSVMatchItems, globalFutureSampledValueCall->sourceRange);
             diag << globalFutureSampledValueCall->getSubroutineName();
         }
     }
@@ -772,10 +749,22 @@ private:
         return rep && rep->range.min == 0;
     }
 
+    void registerClock(const AssertionExpr& expr, Clock clock) {
+        if (clock != parent.firstClock || !parent.firstClock) {
+            parent.clocksForExpr.emplace(&expr, clock);
+            if (!parent.firstClock)
+                parent.firstClock = clock;
+        }
+    }
+
+    void registerClock(const AssertionExpr& expr, const VisitResult& result) {
+        registerClock(expr, result.clocks.size() == 1 ? result.clocks[0] : nullptr);
+    }
+
     VisitResult inheritedClock(const AssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
         if (!outerClock) {
-            if (!bad) {
-                bad = true;
+            if (!parent.bad) {
+                parent.bad = true;
 
                 SourceRange range;
                 SLANG_ASSERT(expr.syntax);
@@ -784,7 +773,7 @@ private:
                 else
                     range = expr.syntax->sourceRange();
 
-                auto& diag = context.addDiag(parentSymbol, diag::AssertionNoClock, range);
+                auto& diag = addDiag(diag::AssertionNoClock, range);
                 diag << exprKindStr(flags);
 
                 if (!expansionStack.empty()) {
@@ -795,13 +784,14 @@ private:
             }
             return {};
         }
+        registerClock(expr, outerClock);
         return {outerClock, false, nullptr};
     }
 
     void badMulticlockedSeq(const AssertionExpr& left, const AssertionExpr& right,
                             SourceRange opRange) {
-        if (!bad) {
-            bad = true;
+        if (!parent.bad) {
+            parent.bad = true;
 
             SLANG_ASSERT(left.syntax);
             SLANG_ASSERT(right.syntax);
@@ -811,19 +801,18 @@ private:
             if (!range.start())
                 range = leftRange;
 
-            auto& diag = context.addDiag(parentSymbol, diag::InvalidMulticlockedSeqOp, range);
+            auto& diag = addDiag(diag::InvalidMulticlockedSeqOp, range);
             diag << leftRange << right.syntax->sourceRange();
             addExpansionNotes(diag);
         }
     }
 
     void requireOnlyNonEmptyMatch(const AssertionExpr& expr) {
-        if (!bad && expr.checkNondegeneracy().status.has(NondegeneracyStatus::AdmitsEmpty)) {
-            bad = true;
+        if (!parent.bad && expr.checkNondegeneracy().status.has(NondegeneracyStatus::AdmitsEmpty)) {
+            parent.bad = true;
 
             SLANG_ASSERT(expr.syntax);
-            context.addDiag(parentSymbol, diag::MulticlockedSeqEmptyMatch,
-                            expr.syntax->sourceRange());
+            addDiag(diag::MulticlockedSeqEmptyMatch, expr.syntax->sourceRange());
         }
     }
 
@@ -866,9 +855,12 @@ private:
 
         if (lresult.isMulticlockedSeq || rresult.isMulticlockedSeq ||
             (!lresult.clocks.empty() && !rresult.clocks.empty() &&
-             !isSameClock(*lresult.clocks[0], *rresult.clocks[0]))) {
+             !lresult.clocks[0]->isEquivalentTo(*rresult.clocks[0]))) {
             badMulticlockedSeq(expr.left, expr.right, expr.opRange);
         }
+
+        // Clocks are required to be the same (checked above) so pick one to register here.
+        registerClock(expr, lresult);
 
         computeFlowForBinaryOp(assignedVars, savedVars, expr);
     }
@@ -885,24 +877,36 @@ private:
         SeqExprVisitor exprVisitor(*this, nullptr, VisitFlags::None);
         expr.visit(exprVisitor);
     }
+
+    Diagnostic& addDiag(DiagCode code, SourceLocation loc) const {
+        return context.addDiag(*parent.containingSymbol, code, loc);
+    }
+
+    Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const {
+        return context.addDiag(*parent.containingSymbol, code, sourceRange);
+    }
 };
 
 AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const AnalyzedProcedure& procedure,
-                                     const ConcurrentAssertionStatement& stmt) {
-    AssertionVisitor visitor(context, &procedure, *procedure.analyzedSymbol);
+                                     const ConcurrentAssertionStatement& stmt) :
+    containingSymbol(procedure.analyzedSymbol), procedure(&procedure), astNode(&stmt) {
+
+    AssertionVisitor visitor(context, *this);
 
     auto& propSpec = stmt.propertySpec;
     auto result = propSpec.visit(visitor, procedure.getInferredClock(), VisitFlags::None);
 
-    if (!visitor.bad && result.clocks.size() > 1) {
+    if (!bad && result.clocks.size() > 1) {
         // There must be a unique semantic leading clock.
-        auto firstClock = result.clocks[0];
+        auto first = result.clocks[0];
         for (size_t i = 1; i < result.clocks.size(); i++) {
-            if (!isSameClock(*firstClock, *result.clocks[i])) {
+            if (!first->isEquivalentTo(*result.clocks[i])) {
+                bad = true;
+
                 SLANG_ASSERT(propSpec.syntax);
                 auto& diag = context.addDiag(*procedure.analyzedSymbol, diag::NoUniqueClock,
                                              propSpec.syntax->sourceRange());
-                diag.addNote(diag::NoteClockHere, firstClock->sourceRange);
+                diag.addNote(diag::NoteClockHere, first->sourceRange);
                 diag.addNote(diag::NoteClockHere, result.clocks[i]->sourceRange);
                 break;
             }
@@ -911,16 +915,37 @@ AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const AnalyzedPro
 }
 
 AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const AnalyzedProcedure& procedure,
-                                     const AssertionInstanceExpression& expr) {
-    AssertionVisitor visitor(context, &procedure, *procedure.analyzedSymbol);
+                                     const AssertionInstanceExpression& expr) :
+    containingSymbol(procedure.analyzedSymbol), procedure(&procedure), astNode(&expr) {
+
+    AssertionVisitor visitor(context, *this);
     visitor.visit(expr, procedure.getInferredClock(), VisitFlags::None);
 }
 
 AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingControl* contextualClock,
                                      const Symbol& parentSymbol,
-                                     const AssertionInstanceExpression& expr) {
-    AssertionVisitor visitor(context, nullptr, parentSymbol);
+                                     const AssertionInstanceExpression& expr) :
+    containingSymbol(&parentSymbol), astNode(&expr) {
+
+    AssertionVisitor visitor(context, *this);
     visitor.visit(expr, contextualClock, VisitFlags::None);
+}
+
+const AssertionExpr& AnalyzedAssertion::getRoot() const {
+    if (astNode.index() == 0)
+        return std::get<0>(astNode)->propertySpec;
+    else
+        return std::get<1>(astNode)->body;
+}
+
+const TimingControl* AnalyzedAssertion::getSemanticLeadingClock() const {
+    return getClock(getRoot());
+}
+
+const TimingControl* AnalyzedAssertion::getClock(const AssertionExpr& expr) const {
+    if (auto it = clocksForExpr.find(&expr); it != clocksForExpr.end())
+        return it->second;
+    return firstClock;
 }
 
 } // namespace slang::analysis
