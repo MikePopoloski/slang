@@ -397,7 +397,7 @@ void registerSyntax(py::module_& m) {
              "alloc"_a, "diagnostics"_a, "sourceManager"_a, "options"_a = LexerOptions())
         .def("lex", py::overload_cast<>(&Lexer::lex))
         .def("isNextTokenOnSameLine", &Lexer::isNextTokenOnSameLine)
-        .def("getLibrary", &Lexer::getLibrary);
+        .def_property_readonly("library", &Lexer::getLibrary);
 
     py::classh<PreprocessorOptions>(m, "PreprocessorOptions")
         .def(py::init<>())
