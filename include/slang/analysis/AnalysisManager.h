@@ -115,6 +115,18 @@ public:
         assertListeners.push_back(std::move(listener));
     }
 
+    using CustomDFAProvider = std::function<AnalyzedProcedure(AnalysisContext&, const ast::Symbol&,
+                                                              const AnalyzedProcedure*)>;
+
+    /// Sets a callback that will be invoked whenever a procedure needs to be analyzed.
+    ///
+    /// The callback should perform whatever custom data flow analysis is desired and
+    /// then return a properly constructed AnalyzedProcedure object.
+    void setCustomDFAProvider(CustomDFAProvider provider) {
+        SLANG_ASSERT(!customDFAProvider);
+        customDFAProvider = provider;
+    }
+
     /// Analyzes the given compilation and returns a representation of the design.
     ///
     /// @note The provided compilation must be finalized and frozen
@@ -214,6 +226,7 @@ private:
 
     DriverTracker driverTracker;
 
+    CustomDFAProvider customDFAProvider;
     std::vector<std::function<void(const AnalyzedProcedure&)>> procListeners;
     std::vector<std::function<void(const AnalyzedScope&)>> scopeListeners;
     std::vector<std::function<void(const AnalyzedAssertion&)>> assertListeners;

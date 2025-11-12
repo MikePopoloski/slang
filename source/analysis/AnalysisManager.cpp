@@ -338,6 +338,9 @@ void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
 
 AnalyzedProcedure AnalysisManager::analyzeProcedure(AnalysisContext& context, const Symbol& symbol,
                                                     const AnalyzedProcedure* parentProcedure) {
+    if (customDFAProvider)
+        return customDFAProvider(context, symbol, parentProcedure);
+
     DefaultDFA dfa(context, symbol, true);
     dfa.run();
 

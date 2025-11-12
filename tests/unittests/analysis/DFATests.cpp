@@ -3,6 +3,8 @@
 
 #include "AnalysisTests.h"
 
+#include "slang/analysis/DataFlowAnalysis.h"
+
 class TestAnalysis : public AbstractFlowAnalysis<TestAnalysis, int> {
 public:
     TestAnalysis(const Symbol& symbol) : AbstractFlowAnalysis(symbol, {}) {}
@@ -668,4 +670,51 @@ endmodule
         REQUIRE(diags.size() == 1);
         CHECK(diags[0].code == diag::AlwaysWithoutTimingControl);
     }
+}
+
+struct CustomState : public DataFlowState {};
+
+class CustomDFA : public DataFlowAnalysis<CustomDFA, CustomState> {
+public:
+    std::string& callName;
+
+    CustomDFA(AnalysisContext& context, const Symbol& symbol, std::string& callName) :
+        DataFlowAnalysis(context, symbol, false), callName(callName) {}
+
+    void handle(const CallExpression& call) {
+        DataFlowAnalysis::handle(call);
+        callName = std::string(call.getSubroutineName());
+    }
+};
+
+TEST_CASE("Custom DFA API test") {
+    auto& code = R"(
+function void foo;
+endfunction
+
+module m;
+    always_comb foo();
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    std::string callName;
+
+    analysisManager.setCustomDFAProvider([&](AnalysisContext& context, const Symbol& symbol,
+                                             const AnalyzedProcedure* parentProcedure) {
+        CustomDFA dfa(context, symbol, callName);
+        dfa.run();
+
+        if (dfa.bad)
+            return AnalyzedProcedure(symbol, parentProcedure);
+        else
+            return AnalyzedProcedure(context, symbol, parentProcedure, dfa);
+    });
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+
+    CHECK(callName == "foo");
 }
