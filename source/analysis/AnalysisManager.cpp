@@ -145,20 +145,11 @@ void AnalysisManager::analyzeCheckerInstance(const CheckerInstanceSymbol& inst,
     analyzeScopeBlocking(inst.body, &parentProcedure);
     analyzeNonProceduralExprs(inst);
 
+    auto& state = getState();
     for (auto& conn : inst.getPortConnections()) {
         if (conn.formal.kind == SymbolKind::FormalArgument && conn.actual.index() == 0)
-            noteDriver(*std::get<0>(conn.actual), inst);
+            driverTracker.add(state.context, state.driverAlloc, *std::get<0>(conn.actual), inst);
     }
-}
-
-void AnalysisManager::noteDriver(const Expression& expr, const Symbol& containingSymbol) {
-    auto& state = getState();
-    driverTracker.add(state.context, state.driverAlloc, expr, containingSymbol);
-}
-
-void AnalysisManager::noteDrivers(std::span<const SymbolDriverListPair> drivers) {
-    auto& state = getState();
-    driverTracker.add(state.context, state.driverAlloc, drivers);
 }
 
 void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbol& containingSymbol,
@@ -425,19 +416,18 @@ const TimingControl* AnalysisManager::NonProceduralExprVisitor::getDefaultClocki
 }
 
 void AnalysisManager::NonProceduralExprVisitor::visitCall(const CallExpression& expr) {
+    auto& state = manager.getState();
     if (ClockInference::isSampledValueFuncCall(expr)) {
         // If we don't have a default clocking active in this scope then
         // we should check the call to be sure it has an explicit clock provided.
-        if (getDefaultClocking() == nullptr) {
-            ClockInference::checkSampledValueFuncs(manager.getState().context, containingSymbol,
-                                                   expr);
-        }
+        if (getDefaultClocking() == nullptr)
+            ClockInference::checkSampledValueFuncs(state.context, containingSymbol, expr);
     }
 
     std::vector<SymbolDriverListPair> drivers;
     manager.getFunctionDrivers(expr, containingSymbol, visitedSubroutines, drivers);
     if (!drivers.empty())
-        manager.noteDrivers(drivers);
+        manager.driverTracker.add(state.context, state.driverAlloc, drivers);
 }
 
 } // namespace slang::analysis

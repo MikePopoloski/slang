@@ -141,39 +141,6 @@ public:
     /// Returns all analyzed assertions for the given symbol.
     std::vector<const AnalyzedAssertion*> getAnalyzedAssertions(const ast::Symbol& symbol) const;
 
-    /// Analyzes the given assertion statement.
-    void analyzeAssertion(const AnalyzedProcedure& procedure,
-                          const ast::ConcurrentAssertionStatement& stmt);
-
-    /// Analyzes the given assertion instance expression.
-    void analyzeAssertion(const AnalyzedProcedure& procedure,
-                          const ast::AssertionInstanceExpression& expr);
-
-    /// Analyzes the given assertion instance expression in a non-procedural context.
-    void analyzeAssertion(const ast::TimingControl* contextualClock,
-                          const ast::Symbol& parentSymbol,
-                          const ast::AssertionInstanceExpression& expr);
-
-    /// Analyzes the given checker instance.
-    void analyzeCheckerInstance(const ast::CheckerInstanceSymbol& symbol,
-                                const AnalyzedProcedure& parentProcedure);
-
-    /// Notes that the given expression is a driver and should be added to the driver tracker.
-    void noteDriver(const ast::Expression& expr, const ast::Symbol& containingSymbol);
-
-    /// Notes the existence of the given symbol value drivers.
-    void noteDrivers(std::span<const SymbolDriverListPair> drivers);
-
-    /// Helper method to get the indirect drivers from a call to a function.
-    void getFunctionDrivers(const ast::CallExpression& expr, const ast::Symbol& containingSymbol,
-                            SmallSet<const ast::SubroutineSymbol*, 2>& visited,
-                            std::vector<SymbolDriverListPair>& drivers);
-
-    /// Helper method to get all timing controls from a call to a task.
-    void getTaskTimingControls(const ast::CallExpression& expr,
-                               SmallSet<const ast::SubroutineSymbol*, 2>& visited,
-                               std::vector<const ast::Statement*>& controls);
-
     /// Analyzes the non-procedural expressions in the given symbol.
     template<std::derived_from<ast::Symbol> TSymbol>
     void analyzeNonProceduralExprs(const TSymbol& symbol) {
@@ -183,14 +150,17 @@ public:
         }
     }
 
+    /// Analyzes the non-procedural expressions in the given timing control.
     void analyzeNonProceduralExprs(const ast::TimingControl& timing,
                                    const ast::Symbol& containingSymbol);
 
+    /// Analyzes the given non-procedural expression.
     void analyzeNonProceduralExprs(const ast::Expression& expr, const ast::Symbol& containingSymbol,
                                    bool isDisableCondition = false);
 
 private:
     friend struct AnalysisScopeVisitor;
+    friend class AnalyzedProcedure;
 
     // Per-thread state.
     struct WorkerState {
@@ -205,12 +175,29 @@ private:
                                               const AnalyzedProcedure* parentProcedure = nullptr);
     void analyzeSymbolAsync(const ast::Symbol& symbol);
     void analyzeScopeAsync(const ast::Scope& scope);
+    void analyzeAssertion(const AnalyzedProcedure& procedure,
+                          const ast::ConcurrentAssertionStatement& stmt);
+    void analyzeAssertion(const AnalyzedProcedure& procedure,
+                          const ast::AssertionInstanceExpression& expr);
+    void analyzeAssertion(const ast::TimingControl* contextualClock,
+                          const ast::Symbol& parentSymbol,
+                          const ast::AssertionInstanceExpression& expr);
+    void analyzeCheckerInstance(const ast::CheckerInstanceSymbol& symbol,
+                                const AnalyzedProcedure& parentProcedure);
 
     AnalyzedProcedure analyzeProcedure(AnalysisContext& context, const ast::Symbol& symbol,
                                        const AnalyzedProcedure* parentProcedure = nullptr);
     const AnalyzedProcedure& analyzeSubroutine(AnalysisContext& context,
                                                const ast::SubroutineSymbol& symbol,
                                                const AnalyzedProcedure* parentProcedure = nullptr);
+
+    void getFunctionDrivers(const ast::CallExpression& expr, const ast::Symbol& containingSymbol,
+                            SmallSet<const ast::SubroutineSymbol*, 2>& visited,
+                            std::vector<SymbolDriverListPair>& drivers);
+
+    void getTaskTimingControls(const ast::CallExpression& expr,
+                               SmallSet<const ast::SubroutineSymbol*, 2>& visited,
+                               std::vector<const ast::Statement*>& controls);
 
     void handleAssertion(std::unique_ptr<AnalyzedAssertion>&& assertion);
     void wait();
