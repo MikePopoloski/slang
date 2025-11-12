@@ -38,6 +38,9 @@ namespace slang::analysis {
 class AnalysisManager;
 class DFAResults;
 
+template<typename T, typename TVisitor>
+concept HasVisitExprs = requires(const T& t, TVisitor&& visitor) { t.visitExprs(visitor); };
+
 /// Represents an analyzed AST scope.
 class SLANG_EXPORT AnalyzedScope {
 public:
@@ -171,6 +174,21 @@ public:
                                SmallSet<const ast::SubroutineSymbol*, 2>& visited,
                                std::vector<const ast::Statement*>& controls);
 
+    /// Analyzes the non-procedural expressions in the given symbol.
+    template<std::derived_from<ast::Symbol> TSymbol>
+    void analyzeNonProceduralExprs(const TSymbol& symbol) {
+        if constexpr (HasVisitExprs<TSymbol, NonProceduralExprVisitor>) {
+            NonProceduralExprVisitor visitor(*this, symbol);
+            symbol.visitExprs(visitor);
+        }
+    }
+
+    void analyzeNonProceduralExprs(const ast::TimingControl& timing,
+                                   const ast::Symbol& containingSymbol);
+
+    void analyzeNonProceduralExprs(const ast::Expression& expr, const ast::Symbol& containingSymbol,
+                                   bool isDisableCondition = false);
+
 private:
     friend struct AnalysisScopeVisitor;
 
@@ -222,6 +240,36 @@ private:
     std::mutex mutex;
     std::exception_ptr pendingException;
 #endif
+
+    struct NonProceduralExprVisitor {
+        NonProceduralExprVisitor(AnalysisManager& manager, const ast::Symbol& containingSymbol,
+                                 bool isDisableCondition = false) :
+            manager(manager), containingSymbol(containingSymbol),
+            isDisableCondition(isDisableCondition) {}
+
+        template<typename T>
+        void visit(const T& expr) {
+            if constexpr (std::is_same_v<T, ast::CallExpression>) {
+                visitCall(expr);
+            }
+            else if constexpr (std::is_same_v<T, ast::AssertionInstanceExpression>) {
+                manager.analyzeAssertion(getDefaultClocking(), containingSymbol, expr);
+            }
+
+            if constexpr (HasVisitExprs<T, NonProceduralExprVisitor>) {
+                expr.visitExprs(*this);
+            }
+        }
+
+    private:
+        AnalysisManager& manager;
+        const ast::Symbol& containingSymbol;
+        SmallSet<const ast::SubroutineSymbol*, 2> visitedSubroutines;
+        bool isDisableCondition;
+
+        const ast::TimingControl* getDefaultClocking() const;
+        void visitCall(const ast::CallExpression& expr);
+    };
 };
 
 } // namespace slang::analysis

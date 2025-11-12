@@ -7,8 +7,6 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/AnalyzedAssertion.h"
 
-#include "NonProceduralExprVisitor.h"
-
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/ClockInference.h"
 #include "slang/ast/ASTVisitor.h"
@@ -612,8 +610,7 @@ struct AssertionVisitor {
             // Our current clock doesn't flow into the event expression,
             // so check it separately for explicit clocking of sequence instances
             // and calls to sampled value functions.
-            NonProceduralExprVisitor visitor(context, *parent.containingSymbol);
-            clocking->visit(visitor);
+            context.manager->analyzeNonProceduralExprs(*clocking, *parent.containingSymbol);
         }
 
         auto result = expr.expr.visit(*this, clocking, flags);
@@ -721,9 +718,8 @@ struct AssertionVisitor {
         // Our current clock doesn't flow into the disable iff condition,
         // so check it separately for explicit clocking of sequence instances
         // and calls to sampled value functions.
-        NonProceduralExprVisitor visitor(context, *parent.containingSymbol,
-                                         /* isDisableCondition */ true);
-        expr.condition.visit(visitor);
+        context.manager->analyzeNonProceduralExprs(expr.condition, *parent.containingSymbol,
+                                                   /* isDisableCondition */ true);
         visitExpr(expr.condition);
 
         auto result = expr.expr.visit(*this, outerClock, flags);

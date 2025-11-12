@@ -9,6 +9,7 @@
 
 #include "AnalysisScopeVisitor.h"
 
+#include "slang/analysis/ClockInference.h"
 #include "slang/analysis/DataFlowAnalysis.h"
 #include "slang/ast/ASTDiagMap.h"
 #include "slang/ast/Compilation.h"
@@ -142,11 +143,7 @@ void AnalysisManager::analyzeAssertion(const TimingControl* contextualClock,
 void AnalysisManager::analyzeCheckerInstance(const CheckerInstanceSymbol& inst,
                                              const AnalyzedProcedure& parentProcedure) {
     analyzeScopeBlocking(inst.body, &parentProcedure);
-
-    auto& state = getState();
-
-    NonProceduralExprVisitor visitor(state.context, inst);
-    inst.visitExprs(visitor);
+    analyzeNonProceduralExprs(inst);
 
     for (auto& conn : inst.getPortConnections()) {
         if (conn.formal.kind == SymbolKind::FormalArgument && conn.actual.index() == 0)
@@ -259,6 +256,19 @@ void AnalysisManager::getTaskTimingControls(const CallExpression& expr,
     // from those calls as well.
     for (auto call : analysis.getCallExpressions())
         getTaskTimingControls(*call, visited, controls);
+}
+
+void AnalysisManager::analyzeNonProceduralExprs(const TimingControl& timing,
+                                                const Symbol& containingSymbol) {
+    NonProceduralExprVisitor visitor(*this, containingSymbol);
+    timing.visit(visitor);
+}
+
+void AnalysisManager::analyzeNonProceduralExprs(const Expression& expr,
+                                                const Symbol& containingSymbol,
+                                                bool isDisableCondition) {
+    NonProceduralExprVisitor visitor(*this, containingSymbol, isDisableCondition);
+    expr.visit(visitor);
 }
 
 DriverList AnalysisManager::getDrivers(const ValueSymbol& symbol) const {
@@ -399,6 +409,35 @@ void AnalysisManager::wait() {
     if (pendingException)
         std::rethrow_exception(pendingException);
 #endif
+}
+
+const TimingControl* AnalysisManager::NonProceduralExprVisitor::getDefaultClocking() const {
+    if (isDisableCondition)
+        return nullptr;
+
+    auto scope = containingSymbol.getParentScope();
+    SLANG_ASSERT(scope);
+
+    if (auto defClk = scope->getCompilation().getDefaultClocking(*scope))
+        return &defClk->as<ClockingBlockSymbol>().getEvent();
+
+    return nullptr;
+}
+
+void AnalysisManager::NonProceduralExprVisitor::visitCall(const CallExpression& expr) {
+    if (ClockInference::isSampledValueFuncCall(expr)) {
+        // If we don't have a default clocking active in this scope then
+        // we should check the call to be sure it has an explicit clock provided.
+        if (getDefaultClocking() == nullptr) {
+            ClockInference::checkSampledValueFuncs(manager.getState().context, containingSymbol,
+                                                   expr);
+        }
+    }
+
+    std::vector<SymbolDriverListPair> drivers;
+    manager.getFunctionDrivers(expr, containingSymbol, visitedSubroutines, drivers);
+    if (!drivers.empty())
+        manager.noteDrivers(drivers);
 }
 
 } // namespace slang::analysis

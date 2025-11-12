@@ -7,18 +7,20 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/DFAResults.h"
 
-#include "NonProceduralExprVisitor.h"
-
+#include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/ClockInference.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/LSPUtilities.h"
 
 namespace slang::analysis {
+
+using namespace ast;
 
 DFAResults::DFAResults(AnalysisContext& context, const SmallVectorBase<SymbolBitMap>& stateRef) :
     bitMapAllocator(context.alloc), lspMapAllocator(context.alloc), stateRef(&stateRef) {
 }
 
-bool DFAResults::isReferenced(ast::EvalContext& evalContext, const ValueSymbol& symbol,
+bool DFAResults::isReferenced(EvalContext& evalContext, const ValueSymbol& symbol,
                               const Expression& lsp) const {
     auto bounds = LSPUtilities::getBounds(lsp, evalContext, symbol.getType());
     if (!bounds)

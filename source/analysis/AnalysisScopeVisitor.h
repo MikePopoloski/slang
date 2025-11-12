@@ -7,8 +7,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "NonProceduralExprVisitor.h"
-
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/diagnostics/AnalysisDiags.h"
@@ -321,10 +319,7 @@ private:
 
     template<typename T>
     void visitExprs(const T& symbol) {
-        if constexpr (HasVisitExprs<T, NonProceduralExprVisitor>) {
-            NonProceduralExprVisitor visitor(context, symbol);
-            symbol.visitExprs(visitor);
-        }
+        manager.analyzeNonProceduralExprs(symbol);
     }
 
     void checkValueUnused(const ValueSymbol& symbol, DiagCode unusedCode,

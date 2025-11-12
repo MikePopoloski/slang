@@ -269,8 +269,7 @@ private:
 
         // The timing expressions don't contribute to data flow but we still
         // want to analyze them for various correctness checks.
-        NonProceduralExprVisitor visitor(context, this->rootSymbol);
-        timing.visit(visitor);
+        context.manager->analyzeNonProceduralExprs(timing, this->rootSymbol);
     }
 
     [[nodiscard]] auto saveLValueFlag() {
