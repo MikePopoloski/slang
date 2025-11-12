@@ -9,7 +9,7 @@
 
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/ClockInference.h"
-#include "slang/analysis/DataFlowAnalysis.h"
+#include "slang/analysis/DFAResults.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/LSPUtilities.h"
@@ -26,7 +26,7 @@ AnalyzedProcedure::AnalyzedProcedure(const Symbol& analyzedSymbol,
 
 AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& analyzedSymbol,
                                      const AnalyzedProcedure* parentProcedure,
-                                     const DataFlowAnalysis& dfa) :
+                                     const DFAResults& dfa) :
     analyzedSymbol(&analyzedSymbol), parentProcedure(parentProcedure) {
 
     auto dfaCalls = dfa.getCallExpressions();

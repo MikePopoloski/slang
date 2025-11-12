@@ -1,11 +1,11 @@
 //------------------------------------------------------------------------------
-// DataFlowAnalysis.cpp
-// Data flow analysis pass
+// DFAResults.cpp
+// Results of running data flow analysis
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/analysis/DataFlowAnalysis.h"
+#include "slang/analysis/DFAResults.h"
 
 #include "NonProceduralExprVisitor.h"
 
@@ -14,13 +14,12 @@
 
 namespace slang::analysis {
 
-DataFlowAnalysis::DataFlowAnalysis(AnalysisContext& context,
-                                   const SmallVectorBase<SymbolBitMap>& stateRef) :
+DFAResults::DFAResults(AnalysisContext& context, const SmallVectorBase<SymbolBitMap>& stateRef) :
     bitMapAllocator(context.alloc), lspMapAllocator(context.alloc), stateRef(&stateRef) {
 }
 
-bool DataFlowAnalysis::isReferenced(ast::EvalContext& evalContext, const ValueSymbol& symbol,
-                                    const Expression& lsp) const {
+bool DFAResults::isReferenced(ast::EvalContext& evalContext, const ValueSymbol& symbol,
+                              const Expression& lsp) const {
     auto bounds = LSPUtilities::getBounds(lsp, evalContext, symbol.getType());
     if (!bounds)
         return isReferenced(symbol);
@@ -42,7 +41,7 @@ bool DataFlowAnalysis::isReferenced(ast::EvalContext& evalContext, const ValueSy
     return false;
 }
 
-bool DataFlowAnalysis::isDefinitelyAssigned(const ValueSymbol& symbol) const {
+bool DFAResults::isDefinitelyAssigned(const ValueSymbol& symbol) const {
     auto it = symbolToSlot.find(&symbol);
     if (it == symbolToSlot.end())
         return false;
@@ -51,7 +50,7 @@ bool DataFlowAnalysis::isDefinitelyAssigned(const ValueSymbol& symbol) const {
     return it->second < assigned.size() && !assigned[it->second].empty();
 }
 
-void DataFlowAnalysis::visitPartiallyAssigned(bool skipAutomatic, AssignedSymbolCB cb) const {
+void DFAResults::visitPartiallyAssigned(bool skipAutomatic, AssignedSymbolCB cb) const {
     auto& currState = *stateRef;
     for (size_t index = 0; index < lvalues.size(); index++) {
         auto& symbolState = lvalues[index];
@@ -90,7 +89,7 @@ void DataFlowAnalysis::visitPartiallyAssigned(bool skipAutomatic, AssignedSymbol
     }
 }
 
-void DataFlowAnalysis::visitDefinitelyAssigned(bool skipAutomatic, AssignedSymbolCB cb) const {
+void DFAResults::visitDefinitelyAssigned(bool skipAutomatic, AssignedSymbolCB cb) const {
     auto& currState = *stateRef;
     for (size_t index = 0; index < currState.size(); index++) {
         auto& symbolState = lvalues[index];
@@ -123,10 +122,9 @@ void DataFlowAnalysis::visitDefinitelyAssigned(bool skipAutomatic, AssignedSymbo
     }
 }
 
-const TimingControl* DataFlowAnalysis::inferClock(AnalysisContext& context,
-                                                  const Symbol& rootSymbol,
-                                                  EvalContext& evalContext,
-                                                  const AnalyzedProcedure* parentProcedure) const {
+const TimingControl* DFAResults::inferClock(AnalysisContext& context, const Symbol& rootSymbol,
+                                            EvalContext& evalContext,
+                                            const AnalyzedProcedure* parentProcedure) const {
     // 16.14.6: There must be no blocking timing controls and exactly one event control.
     const TimingControl* eventControl = nullptr;
     for (auto stmt : getTimedStatements()) {

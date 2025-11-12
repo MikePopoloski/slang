@@ -36,7 +36,7 @@ class Symbol;
 namespace slang::analysis {
 
 class AnalysisManager;
-class DataFlowAnalysis;
+class DFAResults;
 
 /// Represents an analyzed AST scope.
 class SLANG_EXPORT AnalyzedScope {

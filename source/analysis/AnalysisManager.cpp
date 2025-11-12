@@ -9,7 +9,7 @@
 
 #include "AnalysisScopeVisitor.h"
 
-#include "slang/analysis/DFAImpl.h"
+#include "slang/analysis/DataFlowAnalysis.h"
 #include "slang/ast/ASTDiagMap.h"
 #include "slang/ast/Compilation.h"
 
