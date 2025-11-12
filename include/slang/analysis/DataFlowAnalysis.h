@@ -20,8 +20,7 @@ namespace slang::analysis {
 /// Augments the AbstractFlowAnalysis class with logic for tracking assigned
 /// states of symbols within the procedure.
 template<typename TDerived, typename TState>
-class SLANG_EXPORT DataFlowAnalysis : public AbstractFlowAnalysis<TDerived, TState>,
-                                      public DFAResults {
+class DataFlowAnalysis : public AbstractFlowAnalysis<TDerived, TState>, public DFAResults {
 public:
     using AFABase = AbstractFlowAnalysis<TDerived, TState>;
 
