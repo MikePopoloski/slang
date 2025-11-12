@@ -10,19 +10,18 @@
 #include "NonProceduralExprVisitor.h"
 
 #include "slang/analysis/ClockInference.h"
+#include "slang/ast/LSPUtilities.h"
 
 namespace slang::analysis {
 
-DataFlowAnalysis::DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol,
-                                   bool reportDiags) :
-    AbstractFlowAnalysis(symbol, context.manager->getOptions(),
-                         reportDiags ? &context.diagnostics : nullptr),
-    context(context), bitMapAllocator(context.alloc), lspMapAllocator(context.alloc),
-    lspVisitor(*this) {
+DataFlowAnalysis::DataFlowAnalysis(AnalysisContext& context,
+                                   const SmallVectorBase<SymbolBitMap>& stateRef) :
+    bitMapAllocator(context.alloc), lspMapAllocator(context.alloc), stateRef(&stateRef) {
 }
 
-bool DataFlowAnalysis::isReferenced(const ValueSymbol& symbol, const Expression& lsp) const {
-    auto bounds = LSPUtilities::getBounds(lsp, getEvalContext(), symbol.getType());
+bool DataFlowAnalysis::isReferenced(ast::EvalContext& evalContext, const ValueSymbol& symbol,
+                                    const Expression& lsp) const {
+    auto bounds = LSPUtilities::getBounds(lsp, evalContext, symbol.getType());
     if (!bounds)
         return isReferenced(symbol);
 
@@ -48,230 +47,86 @@ bool DataFlowAnalysis::isDefinitelyAssigned(const ValueSymbol& symbol) const {
     if (it == symbolToSlot.end())
         return false;
 
-    auto& assigned = getState().assigned;
+    auto& assigned = *stateRef;
     return it->second < assigned.size() && !assigned[it->second].empty();
 }
 
-void DataFlowAnalysis::noteReference(const ValueSymbol& symbol, const Expression& lsp) {
-    // This feels icky but we don't count a symbol as being referenced in the procedure
-    // if it's only used inside an unreachable flow path. The alternative would just
-    // frustrate users, but the reason it's icky is because whether a path is reachable
-    // is based on whatever level of heuristics we're willing to implement rather than
-    // some well defined set of rules in the LRM.
-    auto& currState = getState();
-    if (!currState.reachable)
-        return;
+void DataFlowAnalysis::visitPartiallyAssigned(bool skipAutomatic, AssignedSymbolCB cb) const {
+    auto& currState = *stateRef;
+    for (size_t index = 0; index < lvalues.size(); index++) {
+        auto& symbolState = lvalues[index];
+        auto& symbol = *symbolState.symbol;
 
-    auto bounds = LSPUtilities::getBounds(lsp, getEvalContext(), symbol.getType());
-    if (!bounds) {
-        // This probably cannot be hit given that we early out elsewhere for
-        // invalid expressions.
-        return;
-    }
-
-    if (isLValue) {
-        auto [it, inserted] = symbolToSlot.try_emplace(&symbol, (uint32_t)lvalues.size());
-        if (inserted) {
-            lvalues.emplace_back(symbol);
-            SLANG_ASSERT(lvalues.size() == symbolToSlot.size());
+        if (skipAutomatic && VariableSymbol::isKind(symbol.kind) &&
+            symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+            continue;
         }
 
-        auto index = it->second;
-        if (index >= currState.assigned.size())
-            currState.assigned.resize(index + 1);
+        auto& left = symbolState.assigned;
+        SLANG_ASSERT(!left.empty());
 
-        currState.assigned[index].unionWith(*bounds, {}, bitMapAllocator);
-
-        auto& lspMap = lvalues[index].assigned;
-        for (auto lspIt = lspMap.find(*bounds); lspIt != lspMap.end();) {
-            // If we find an existing entry that completely contains
-            // the new bounds we can just keep that one and ignore the
-            // new one. Otherwise we will insert a new entry.
-            auto itBounds = lspIt.bounds();
-            if (itBounds.first <= bounds->first && itBounds.second >= bounds->second)
-                return;
-
-            // If the new bounds completely contain the existing entry, we can remove it.
-            if (bounds->first < itBounds.first && bounds->second > itBounds.second) {
-                lspMap.erase(lspIt, lspMapAllocator);
-                lspIt = lspMap.find(*bounds);
-            }
-            else {
-                ++lspIt;
-            }
+        // Each interval in the left map is a range that needs to be fully covered
+        // by our final state, otherwise that interval is not fully assigned.
+        if (currState.size() <= index) {
+            for (auto it = left.begin(); it != left.end(); ++it)
+                cb(symbol, **it);
+            continue;
         }
-        lspMap.insert(*bounds, &lsp, lspMapAllocator);
-    }
-    else {
-        rvalues[&symbol].unionWith(*bounds, {}, bitMapAllocator);
+
+        auto& right = currState[index];
+        for (auto lit = left.begin(); lit != left.end(); ++lit) {
+            auto lbounds = lit.bounds();
+            if (auto rit = right.find(lbounds); rit != right.end()) {
+                // If this right hand side interval doesn't completely cover
+                // the left hand side one then we don't need to look further.
+                // The rhs intervals are unioned so there otherwise must be a
+                // gap and so the lhs interval is not fully assigned.
+                auto rbounds = rit.bounds();
+                if (rbounds.first <= lbounds.first && rbounds.second >= lbounds.second)
+                    continue;
+            }
+            cb(symbol, **lit);
+        }
     }
 }
 
-void DataFlowAnalysis::handle(const AssignmentExpression& expr) {
-    // Note that this method mirrors the logic in the base class
-    // handler but we need to track the LValue status of the lhs.
-    if (!prohibitLValue) {
-        SLANG_ASSERT(!isLValue);
-        isLValue = true;
-        visit(expr.left());
-        isLValue = false;
-    }
-    else {
-        visit(expr.left());
-    }
+void DataFlowAnalysis::visitDefinitelyAssigned(bool skipAutomatic, AssignedSymbolCB cb) const {
+    auto& currState = *stateRef;
+    for (size_t index = 0; index < currState.size(); index++) {
+        auto& symbolState = lvalues[index];
+        auto& symbol = *symbolState.symbol;
 
-    if (!expr.isLValueArg())
-        visit(expr.right());
+        if (skipAutomatic && VariableSymbol::isKind(symbol.kind) &&
+            symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+            continue;
+        }
 
-    if (expr.timingControl)
-        handleTiming(*expr.timingControl);
-}
-
-void DataFlowAnalysis::handle(const CallExpression& expr) {
-    expr.visitExprsNoArgs(*this);
-
-    if (auto sysCall = std::get_if<CallExpression::SystemCallInfo>(&expr.subroutine)) {
-        auto& sub = *sysCall->subroutine;
-
-        size_t argIndex = 0;
-        for (auto arg : expr.arguments()) {
-            if (!sub.isArgUnevaluated(argIndex)) {
-                if (sub.isArgByRef(argIndex)) {
-                    isLValue = true;
-                    visit(*arg);
-                    isLValue = false;
+        auto& imap = currState[index];
+        for (auto it = imap.begin(); it != imap.end(); ++it) {
+            // We know this range is definitely assigned. In order to provide an
+            // example expression for the LSP we need to look up a range that
+            // overlaps from the procedure-wide tracking map.
+            std::optional<std::pair<uint64_t, uint64_t>> prevBounds;
+            for (auto lspIt = symbolState.assigned.find(it.bounds());
+                 lspIt != symbolState.assigned.end(); ++lspIt) {
+                // Skip over ranges that partially overlap previously visited ranges,
+                // as it's not clear that there's additional value in reporting them.
+                auto curBounds = lspIt.bounds();
+                if (!prevBounds || prevBounds->first > curBounds.second ||
+                    prevBounds->second < curBounds.first) {
+                    cb(symbol, **lspIt);
                 }
-                else {
-                    visit(*arg);
-                }
-            }
-            argIndex++;
-        }
 
-        if (sub.neverReturns)
-            setUnreachable();
-    }
-    else {
-        auto subroutine = std::get<const SubroutineSymbol*>(expr.subroutine);
-        auto formals = subroutine->getArguments();
-        auto args = expr.arguments();
-        SLANG_ASSERT(formals.size() == args.size());
-
-        for (size_t i = 0; i < formals.size(); i++) {
-            // Non-const ref args are special because they don't have an assignment
-            // expression generated for them but still act as output drivers.
-            auto& formal = *formals[i];
-            if (formal.direction == ArgumentDirection::Ref &&
-                !formal.flags.has(VariableFlags::Const)) {
-                isLValue = true;
-                visit(*args[i]);
-                isLValue = false;
-            }
-            else {
-                visit(*args[i]);
+                prevBounds = curBounds;
             }
         }
     }
-
-    callExpressions.push_back(&expr);
 }
 
-void DataFlowAnalysis::handle(const ExpressionStatement& stmt) {
-    visitStmt(stmt);
-
-    if (stmt.expr.kind == ExpressionKind::Assignment) {
-        auto& assignment = stmt.expr.as<AssignmentExpression>();
-        if (assignment.timingControl) {
-            bad |= assignment.timingControl->bad();
-            timedStatements.push_back(&stmt);
-        }
-    }
-}
-
-void DataFlowAnalysis::handle(const ConcurrentAssertionStatement& stmt) {
-    concurrentAssertions.push_back(&stmt);
-    visitStmt(stmt);
-}
-
-void DataFlowAnalysis::handle(const ProceduralCheckerStatement& stmt) {
-    concurrentAssertions.push_back(&stmt);
-    visitStmt(stmt);
-}
-
-void DataFlowAnalysis::handle(const AssertionInstanceExpression& expr) {
-    concurrentAssertions.push_back(&expr);
-    visitExpr(expr);
-}
-
-void DataFlowAnalysis::handle(const EventTriggerStatement& stmt) {
-    if (stmt.timing)
-        handleTiming(*stmt.timing);
-    visitStmt(stmt);
-}
-
-void DataFlowAnalysis::handleTiming(const TimingControl& timing) {
-    if (timing.bad()) {
-        bad = true;
-        return;
-    }
-
-    // The timing expressions don't contribute to data flow but we still
-    // want to analyze them for various correctness checks.
-    NonProceduralExprVisitor visitor(context, rootSymbol);
-    timing.visit(visitor);
-}
-
-void DataFlowAnalysis::joinState(DataFlowState& result, const DataFlowState& other) {
-    if (result.reachable == other.reachable) {
-        if (result.assigned.size() > other.assigned.size())
-            result.assigned.resize(other.assigned.size());
-
-        for (size_t i = 0; i < result.assigned.size(); i++) {
-            result.assigned[i] = result.assigned[i].intersection(other.assigned[i],
-                                                                 bitMapAllocator);
-        }
-    }
-    else if (!result.reachable) {
-        result = copyState(other);
-    }
-}
-
-void DataFlowAnalysis::meetState(DataFlowState& result, const DataFlowState& other) {
-    if (!other.reachable) {
-        result.reachable = false;
-        return;
-    }
-
-    // Union the assigned state across each variable.
-    if (result.assigned.size() < other.assigned.size())
-        result.assigned.resize(other.assigned.size());
-
-    for (size_t i = 0; i < other.assigned.size(); i++) {
-        for (auto it = other.assigned[i].begin(); it != other.assigned[i].end(); ++it)
-            result.assigned[i].unionWith(it.bounds(), *it, bitMapAllocator);
-    }
-}
-
-DataFlowState DataFlowAnalysis::copyState(const DataFlowState& source) {
-    DataFlowState result;
-    result.reachable = source.reachable;
-    result.assigned.reserve(source.assigned.size());
-    for (size_t i = 0; i < source.assigned.size(); i++)
-        result.assigned.emplace_back(source.assigned[i].clone(bitMapAllocator));
-    return result;
-}
-
-DataFlowState DataFlowAnalysis::unreachableState() const {
-    DataFlowState result;
-    result.reachable = false;
-    return result;
-}
-
-DataFlowState DataFlowAnalysis::topState() const {
-    return {};
-}
-
-const TimingControl* DataFlowAnalysis::inferClock(const AnalyzedProcedure* parentProcedure) const {
+const TimingControl* DataFlowAnalysis::inferClock(AnalysisContext& context,
+                                                  const Symbol& rootSymbol,
+                                                  EvalContext& evalContext,
+                                                  const AnalyzedProcedure* parentProcedure) const {
     // 16.14.6: There must be no blocking timing controls and exactly one event control.
     const TimingControl* eventControl = nullptr;
     for (auto stmt : getTimedStatements()) {
@@ -329,9 +184,9 @@ const TimingControl* DataFlowAnalysis::inferClock(const AnalyzedProcedure* paren
             // This is a valid clock if every term in the expression is
             // unused elsewhere in the procedure.
             bool referenced = false;
-            LSPUtilities::visitLSPs(timing.expr, getEvalContext(),
+            LSPUtilities::visitLSPs(timing.expr, evalContext,
                                     [&](const ValueSymbol& symbol, const Expression& lsp, bool) {
-                                        if (isReferenced(symbol, lsp))
+                                        if (isReferenced(evalContext, symbol, lsp))
                                             referenced = true;
                                     });
             if (!referenced) {

@@ -36,6 +36,7 @@ class Symbol;
 namespace slang::analysis {
 
 class AnalysisManager;
+class DataFlowAnalysis;
 
 /// Represents an analyzed AST scope.
 class SLANG_EXPORT AnalyzedScope {
@@ -134,10 +135,6 @@ public:
     /// Otherwise returns nullptr.
     const AnalyzedProcedure* getAnalyzedSubroutine(const ast::SubroutineSymbol& symbol) const;
 
-    /// Adds a new analyzed subroutine to the manager's cache for later lookup.
-    const AnalyzedProcedure* addAnalyzedSubroutine(const ast::SubroutineSymbol& symbol,
-                                                   std::unique_ptr<AnalyzedProcedure> procedure);
-
     /// Returns all analyzed assertions for the given symbol.
     std::vector<const AnalyzedAssertion*> getAnalyzedAssertions(const ast::Symbol& symbol) const;
 
@@ -190,6 +187,13 @@ private:
                                               const AnalyzedProcedure* parentProcedure = nullptr);
     void analyzeSymbolAsync(const ast::Symbol& symbol);
     void analyzeScopeAsync(const ast::Scope& scope);
+
+    AnalyzedProcedure analyzeProcedure(AnalysisContext& context, const ast::Symbol& symbol,
+                                       const AnalyzedProcedure* parentProcedure = nullptr);
+    const AnalyzedProcedure& analyzeSubroutine(AnalysisContext& context,
+                                               const ast::SubroutineSymbol& symbol,
+                                               const AnalyzedProcedure* parentProcedure = nullptr);
+
     void handleAssertion(std::unique_ptr<AnalyzedAssertion>&& assertion);
     void wait();
     WorkerState& getState();

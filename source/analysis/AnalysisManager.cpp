@@ -9,6 +9,7 @@
 
 #include "AnalysisScopeVisitor.h"
 
+#include "slang/analysis/DFAImpl.h"
 #include "slang/ast/ASTDiagMap.h"
 #include "slang/ast/Compilation.h"
 
@@ -110,29 +111,6 @@ const AnalyzedProcedure* AnalysisManager::getAnalyzedSubroutine(
     return result;
 }
 
-const AnalyzedProcedure* AnalysisManager::addAnalyzedSubroutine(
-    const SubroutineSymbol& symbol, std::unique_ptr<AnalyzedProcedure> procedure) {
-
-    const AnalyzedProcedure* result = nullptr;
-    auto updater = [&result](auto& item) { result = item.second.get(); };
-
-    if (analyzedSubroutines.try_emplace_and_cvisit(&symbol, std::move(procedure), updater,
-                                                   updater)) {
-        // If we successfully inserted a new procedure, we need to
-        // add it to the driver tracker. If not, someone else already
-        // did it for us.
-        SLANG_ASSERT(result);
-
-        auto& state = getState();
-        driverTracker.add(state.context, state.driverAlloc, *result);
-
-        for (auto& listener : procListeners)
-            listener(*result);
-    }
-
-    return result;
-}
-
 std::vector<const AnalyzedAssertion*> AnalysisManager::getAnalyzedAssertions(
     const Symbol& symbol) const {
 
@@ -217,15 +195,11 @@ void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbo
 
     // Get analysis for the function.
     auto& context = getState().context;
-    auto analysis = getAnalyzedSubroutine(subroutine);
-    if (!analysis) {
-        auto proc = std::make_unique<AnalyzedProcedure>(context, subroutine);
-        analysis = addAnalyzedSubroutine(subroutine, std::move(proc));
-    }
+    auto& analysis = analyzeSubroutine(context, subroutine);
 
     // For each driver in the function, create a new driver that points to the
     // original driver but has the current procedure as the containing symbol.
-    auto funcDrivers = analysis->getDrivers();
+    auto funcDrivers = analysis.getDrivers();
     drivers.reserve(drivers.size() + funcDrivers.size());
 
     for (auto& [valueSym, driverList] : funcDrivers) {
@@ -253,7 +227,7 @@ void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbo
 
     // If this function has any calls, we need to recursively add drivers
     // from those calls as well.
-    for (auto call : analysis->getCallExpressions())
+    for (auto call : analysis.getCallExpressions())
         getFunctionDrivers(*call, containingSymbol, visited, drivers);
 }
 
@@ -276,20 +250,14 @@ void AnalysisManager::getTaskTimingControls(const CallExpression& expr,
     if (!visited.insert(&subroutine).second)
         return;
 
-    // Get analysis for the task.
-    auto analysis = getAnalyzedSubroutine(subroutine);
-    if (!analysis) {
-        auto proc = std::make_unique<AnalyzedProcedure>(getState().context, subroutine);
-        analysis = addAnalyzedSubroutine(subroutine, std::move(proc));
-    }
-
     // Add timing controls from the task to our list.
-    auto taskTimingControls = analysis->getTimingControls();
+    auto& analysis = analyzeSubroutine(getState().context, subroutine);
+    auto taskTimingControls = analysis.getTimingControls();
     controls.insert(controls.end(), taskTimingControls.begin(), taskTimingControls.end());
 
     // If this task has any calls, we need to recursively add timing controls
     // from those calls as well.
-    for (auto call : analysis->getCallExpressions())
+    for (auto call : analysis.getCallExpressions())
         getTaskTimingControls(*call, visited, controls);
 }
 
@@ -365,6 +333,46 @@ void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
         analyzedScopes.visit(&scope, [&result](auto& item) { item.second = &result; });
 #endif
     }
+}
+
+AnalyzedProcedure AnalysisManager::analyzeProcedure(AnalysisContext& context, const Symbol& symbol,
+                                                    const AnalyzedProcedure* parentProcedure) {
+    DefaultDFA dfa(context, symbol, true);
+    dfa.run();
+
+    if (dfa.bad)
+        return AnalyzedProcedure(symbol, parentProcedure);
+    else
+        return AnalyzedProcedure(context, symbol, parentProcedure, dfa);
+}
+
+const AnalyzedProcedure& AnalysisManager::analyzeSubroutine(
+    AnalysisContext& context, const SubroutineSymbol& symbol,
+    const AnalyzedProcedure* parentProcedure) {
+
+    if (auto result = getAnalyzedSubroutine(symbol))
+        return *result;
+
+    auto proc = std::make_unique<AnalyzedProcedure>(
+        analyzeProcedure(context, symbol, parentProcedure));
+
+    const AnalyzedProcedure* result = nullptr;
+    auto updater = [&result](auto& item) { result = item.second.get(); };
+
+    if (analyzedSubroutines.try_emplace_and_cvisit(&symbol, std::move(proc), updater, updater)) {
+        // If we successfully inserted a new procedure, we need to
+        // add it to the driver tracker. If not, someone else already
+        // did it for us.
+        SLANG_ASSERT(result);
+
+        auto& state = getState();
+        driverTracker.add(state.context, state.driverAlloc, *result);
+
+        for (auto& listener : procListeners)
+            listener(*result);
+    }
+
+    return *result;
 }
 
 void AnalysisManager::handleAssertion(std::unique_ptr<AnalyzedAssertion>&& assertion) {

@@ -7,42 +7,27 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/AnalyzedProcedure.h"
 
+#include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/ClockInference.h"
 #include "slang/analysis/DataFlowAnalysis.h"
+#include "slang/ast/ASTVisitor.h"
+#include "slang/ast/EvalContext.h"
+#include "slang/ast/LSPUtilities.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 
 namespace slang::analysis {
 
 using namespace ast;
 
-AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& analyzedSymbol,
+AnalyzedProcedure::AnalyzedProcedure(const Symbol& analyzedSymbol,
                                      const AnalyzedProcedure* parentProcedure) :
     analyzedSymbol(&analyzedSymbol), parentProcedure(parentProcedure) {
+}
 
-    DriverKind driverKind = DriverKind::Procedural;
-    DataFlowAnalysis dfa(context, analyzedSymbol, true);
-    switch (analyzedSymbol.kind) {
-        case SymbolKind::ProceduralBlock:
-            dfa.run(analyzedSymbol.as<ProceduralBlockSymbol>().getBody());
-            break;
-        case SymbolKind::Subroutine:
-            dfa.run(analyzedSymbol.as<SubroutineSymbol>().getBody());
-            break;
-        case SymbolKind::ContinuousAssign: {
-            auto& assign = analyzedSymbol.as<ContinuousAssignSymbol>();
-            if (auto delay = assign.getDelay())
-                dfa.handleTiming(*delay);
-
-            dfa.run(assign.getAssignment());
-            driverKind = DriverKind::Continuous;
-            break;
-        }
-        default:
-            SLANG_UNREACHABLE;
-    }
-
-    if (dfa.bad)
-        return;
+AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& analyzedSymbol,
+                                     const AnalyzedProcedure* parentProcedure,
+                                     const DataFlowAnalysis& dfa) :
+    analyzedSymbol(&analyzedSymbol), parentProcedure(parentProcedure) {
 
     auto dfaCalls = dfa.getCallExpressions();
     callExpressions.reserve(dfaCalls.size());
@@ -59,13 +44,15 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
     timingControls.insert(timingControls.end(), dfaTimedStatements.begin(),
                           dfaTimedStatements.end());
 
+    EvalContext evalContext(analyzedSymbol);
+
     auto& manager = *context.manager;
     if (parentProcedure || !dfa.getAssertions().empty() || hasSampledValueCalls) {
         // All flavors of always and initial blocks can infer a clock.
         if (analyzedSymbol.kind == SymbolKind::ProceduralBlock &&
             analyzedSymbol.as<ProceduralBlockSymbol>().procedureKind !=
                 ProceduralBlockKind::Final) {
-            inferredClock = dfa.inferClock(parentProcedure);
+            inferredClock = dfa.inferClock(context, analyzedSymbol, evalContext, parentProcedure);
         }
 
         // If no procedural inferred clock, check the scope for a default clocking block.
@@ -114,7 +101,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             dfa.visitPartiallyAssigned(/* skipAutomatic */ true, [&](const Symbol&,
                                                                      const Expression& expr) {
                 FormatBuffer buffer;
-                LSPUtilities::stringifyLSP(expr, dfa.getEvalContext(), buffer);
+                LSPUtilities::stringifyLSP(expr, evalContext, buffer);
 
                 context.addDiag(procedure, diag::InferredLatch, expr.sourceRange) << buffer.str();
             });
@@ -123,7 +110,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             dfa.visitDefinitelyAssigned(/* skipAutomatic */ true, [&](const Symbol&,
                                                                       const Expression& expr) {
                 FormatBuffer buffer;
-                LSPUtilities::stringifyLSP(expr, dfa.getEvalContext(), buffer);
+                LSPUtilities::stringifyLSP(expr, evalContext, buffer);
 
                 context.addDiag(procedure, diag::InferredComb, expr.sourceRange) << buffer.str();
             });
@@ -154,14 +141,14 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         // Diagnose missing return statements and/or incomplete
         // assignments to the return value var.
         auto& subroutine = analyzedSymbol.as<SubroutineSymbol>();
-        if (dfa.isReachable() && subroutine.subroutineKind == SubroutineKind::Function &&
+        if (dfa.endIsReachable && subroutine.subroutineKind == SubroutineKind::Function &&
             !subroutine.getReturnType().isVoid() && !subroutine.name.empty() &&
             subroutine.returnValVar) {
 
             // Control falls off the end of a non-void function but that is
             // fine if the return value var is definitely assigned here.
             if (!dfa.isDefinitelyAssigned(*subroutine.returnValVar)) {
-                if (dfa.hasReturnStatements() || dfa.isReferenced(*subroutine.returnValVar)) {
+                if (dfa.hasReturnStatements || dfa.isReferenced(*subroutine.returnValVar)) {
                     context.addDiag(subroutine, diag::IncompleteReturn, subroutine.location)
                         << subroutine.name;
                 }
@@ -172,6 +159,10 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             }
         }
     }
+
+    DriverKind driverKind = DriverKind::Procedural;
+    if (analyzedSymbol.kind == SymbolKind::ContinuousAssign)
+        driverKind = DriverKind::Continuous;
 
     // Build a list of drivers for all lvalues.
     auto lvalues = dfa.getLValues();

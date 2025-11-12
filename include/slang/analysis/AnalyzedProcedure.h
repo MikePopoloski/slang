@@ -27,6 +27,7 @@ class TimingControl;
 namespace slang::analysis {
 
 class AnalysisContext;
+class DataFlowAnalysis;
 
 /// Represents an analyzed procedure.
 ///
@@ -42,8 +43,11 @@ public:
     const AnalyzedProcedure* parentProcedure;
 
     /// Constructs a new AnalyzedProcedure object.
+    AnalyzedProcedure(const ast::Symbol& symbol, const AnalyzedProcedure* parentProcedure);
+
+    /// Constructs a new AnalyzedProcedure object.
     AnalyzedProcedure(AnalysisContext& context, const ast::Symbol& symbol,
-                      const AnalyzedProcedure* parentProcedure = nullptr);
+                      const AnalyzedProcedure* parentProcedure, const DataFlowAnalysis& analysis);
 
     /// Returns the inferred clocking block for the procedure, if available.
     ///
