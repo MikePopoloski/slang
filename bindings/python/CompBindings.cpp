@@ -170,6 +170,7 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("ignoreDuplicates", &CommandLine::ParseOptions::ignoreDuplicates);
 
     py::native_enum<LanguageVersion>(m, "LanguageVersion", "enum.Enum")
+        .value("v1364_2005", LanguageVersion::v1364_2005)
         .value("v1800_2017", LanguageVersion::v1800_2017)
         .value("v1800_2023", LanguageVersion::v1800_2023)
         .value("Default", LanguageVersion::Default)

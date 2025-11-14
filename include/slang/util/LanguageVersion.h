@@ -11,11 +11,13 @@
 
 namespace slang {
 
-/// Specifies SystemVerilog language versions.
-enum class LanguageVersion { v1800_2017, v1800_2023, Default = v1800_2017 };
+/// Specifies Verilog/SystemVerilog language versions.
+enum class LanguageVersion { v1364_2005, v1800_2017, v1800_2023, Default = v1800_2017 };
 
 inline std::string_view toString(LanguageVersion lv) {
     switch (lv) {
+        case LanguageVersion::v1364_2005:
+            return "1364-2005";
         case LanguageVersion::v1800_2017:
             return "1800-2017";
         case LanguageVersion::v1800_2023:
