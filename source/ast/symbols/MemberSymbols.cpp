@@ -170,22 +170,28 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
     auto name = syntax.name;
     auto result = comp.emplace<ModportPortSymbol>(name.valueText(), name.location(), direction);
     result->setSyntax(syntax);
-    result->internalSymbol = Lookup::unqualifiedAt(*context.scope, name.valueText(),
-                                                   context.getLocation(), name.range(),
-                                                   LookupFlags::NoParentScope);
 
-    if (result->internalSymbol) {
-        if (result->internalSymbol->kind == SymbolKind::Subroutine) {
+    auto symbol = Lookup::unqualifiedAt(*context.scope, name.valueText(), context.getLocation(),
+                                        name.range());
+
+    if (symbol) {
+        if (symbol->getParentScope() != context.scope) {
+            auto& diag = context.addDiag(diag::ModportMemberParent, name.range());
+            diag << name.valueText();
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
+        }
+        else if (symbol->kind == SymbolKind::Subroutine) {
             auto& diag = context.addDiag(diag::ExpectedImportExport, name.range());
             diag << name.valueText();
-            diag.addNote(diag::NoteDeclarationHere, result->internalSymbol->location);
-            result->internalSymbol = nullptr;
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
         }
-        else if (!SemanticFacts::isAllowedInModport(result->internalSymbol->kind)) {
+        else if (!SemanticFacts::isAllowedInModport(symbol->kind)) {
             auto& diag = context.addDiag(diag::NotAllowedInModport, name.range());
             diag << name.valueText();
-            diag.addNote(diag::NoteDeclarationHere, result->internalSymbol->location);
-            result->internalSymbol = nullptr;
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
+        }
+        else {
+            result->internalSymbol = symbol;
         }
     }
 
@@ -194,7 +200,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
         return *result;
     }
 
-    auto sourceType = result->internalSymbol->getDeclaredType();
+    auto sourceType = symbol->getDeclaredType();
     SLANG_ASSERT(sourceType);
     result->getDeclaredType()->setLink(*sourceType);
 
@@ -211,9 +217,9 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
     auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, nullptr,
                                                  {loc, loc + result->name.length()});
 
-    Expression::checkConnectionDirection(expr, direction, checkCtx, loc);
+    if (Expression::checkConnectionDirection(expr, direction, checkCtx, loc))
+        result->connExpr = &expr;
 
-    result->connExpr = &expr;
     return *result;
 }
 
@@ -241,14 +247,30 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext
     auto& expr = Expression::bind(*syntax.expr, context, extraFlags);
     result->explicitConnection = &expr;
     result->connExpr = &expr;
-    if (expr.bad()) {
+    result->setType(*expr.type);
+
+    if (expr.bad() ||
+        !Expression::checkConnectionDirection(expr, direction, context, result->location)) {
         result->setType(comp.getErrorType());
         return *result;
     }
 
-    result->setType(*expr.type);
+    expr.visitSymbolReferences([&](const Expression& refExpr, const Symbol& symbol) {
+        // "Hierarchical" is ok if it's actually via an interface / modport port
+        // on the parent interface itself.
+        if (auto hierVal = refExpr.as_if<HierarchicalValueExpression>()) {
+            auto& ref = hierVal->ref;
+            if (ref.isViaIfacePort() && ref.path[0].symbol->getParentScope() == context.scope)
+                return;
+        }
 
-    Expression::checkConnectionDirection(expr, direction, context, result->location);
+        if (symbol.getParentScope() != context.scope) {
+            auto& diag = context.addDiag(diag::ModportMemberParent, refExpr.sourceRange);
+            diag << symbol.name;
+            diag.addNote(diag::NoteDeclarationHere, symbol.location);
+            result->setType(comp.getErrorType());
+        }
+    });
 
     return *result;
 }
@@ -272,14 +294,23 @@ ModportClockingSymbol& ModportClockingSymbol::fromSyntax(const ASTContext& conte
     auto result = comp.emplace<ModportClockingSymbol>(name.valueText(), name.location());
     result->setSyntax(syntax);
 
-    result->target = Lookup::unqualifiedAt(*context.scope, name.valueText(), context.getLocation(),
-                                           name.range(), LookupFlags::NoParentScope);
+    auto symbol = Lookup::unqualifiedAt(*context.scope, name.valueText(), context.getLocation(),
+                                        name.range());
 
-    if (result->target && result->target->kind != SymbolKind::ClockingBlock) {
-        auto& diag = context.addDiag(diag::NotAClockingBlock, name.range());
-        diag << name.valueText();
-        diag.addNote(diag::NoteDeclarationHere, result->target->location);
-        result->target = nullptr;
+    if (symbol) {
+        if (symbol->getParentScope() != context.scope) {
+            auto& diag = context.addDiag(diag::ModportMemberParent, name.range());
+            diag << name.valueText();
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
+        }
+        else if (symbol->kind != SymbolKind::ClockingBlock) {
+            auto& diag = context.addDiag(diag::NotAClockingBlock, name.range());
+            diag << name.valueText();
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
+        }
+        else {
+            result->target = symbol;
+        }
     }
 
     return *result;
