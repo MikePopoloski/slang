@@ -30,7 +30,6 @@ void registerSymbols(py::module_& m) {
         .value("NoUndeclaredError", LookupFlags::NoUndeclaredError)
         .value("NoUndeclaredErrorIfUninstantiated", LookupFlags::NoUndeclaredErrorIfUninstantiated)
         .value("AllowIncompleteForwardTypedefs", LookupFlags::AllowIncompleteForwardTypedefs)
-        .value("NoParentScope", LookupFlags::NoParentScope)
         .value("NoSelectors", LookupFlags::NoSelectors)
         .value("AllowRoot", LookupFlags::AllowRoot)
         .value("AllowUnit", LookupFlags::AllowUnit)

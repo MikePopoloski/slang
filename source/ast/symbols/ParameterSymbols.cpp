@@ -600,8 +600,7 @@ const Symbol* SpecparamSymbol::resolvePathTerminal(std::string_view terminalName
 
     SourceRange sourceRange{loc, loc + terminalName.length()};
     auto symbol = Lookup::unqualifiedAt(*parentParent, terminalName,
-                                        LookupLocation::after(parent.asSymbol()), sourceRange,
-                                        LookupFlags::NoParentScope);
+                                        LookupLocation::after(parent.asSymbol()), sourceRange);
     if (!symbol)
         return nullptr;
 
