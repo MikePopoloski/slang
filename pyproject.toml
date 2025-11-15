@@ -32,7 +32,7 @@ Changelog = "https://github.com/MikePopoloski/slang/blob/master/CHANGELOG.md"
 test = ["pytest"]
 
 [build-system]
-requires = ["pybind11 == 3.*", "scikit-build-core"]
+requires = ["pybind11 == 3.*", "scikit-build-core", "pybind11-stubgen"]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
@@ -40,6 +40,8 @@ cmake.source-dir = "."
 install.components = ["pylib"]
 sdist.exclude = [".github", "./build", "./install", "./tests", "./tools"]
 wheel.packages = ["pyslang/pyslang"]
+wheel.install-dir = "pyslang"
+wheel.license-files = ["LICENSE"]
 
 [tool.scikit-build.cmake.define]
 SLANG_INCLUDE_TESTS = "OFF"
