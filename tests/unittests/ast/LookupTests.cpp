@@ -2549,3 +2549,21 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Class scope lookup in package regress") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    class C #(parameter int i = 1);
+        typedef int T;
+    endclass
+endpackage
+
+module m;
+    p::C c;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
