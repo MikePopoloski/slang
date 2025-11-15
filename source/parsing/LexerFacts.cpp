@@ -665,6 +665,8 @@ SyntaxKind LexerFacts::getDirectiveKind(std::string_view directive, bool enableL
 
 KeywordVersion LexerFacts::getDefaultKeywordVersion(LanguageVersion languageVersion) {
     switch (languageVersion) {
+        case LanguageVersion::v1364_2005:
+            return KeywordVersion::v1364_2005;
         case LanguageVersion::v1800_2017:
             return KeywordVersion::v1800_2017;
         case LanguageVersion::v1800_2023:
