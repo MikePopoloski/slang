@@ -1224,15 +1224,18 @@ static std::span<const Expression* const> createUninstantiatedParams(
 
     SmallVector<const Expression*> params;
     if (syntax.parameters) {
+        auto& comp = context.getCompilation();
         for (auto expr : syntax.parameters->parameters) {
             // Empty expressions are just ignored here.
-            if (expr->kind == SyntaxKind::OrderedParamAssignment) {
-                params.push_back(
-                    &Expression::bind(*expr->as<OrderedParamAssignmentSyntax>().expr, context));
-            }
-            else if (expr->kind == SyntaxKind::NamedParamAssignment) {
-                if (auto ex = expr->as<NamedParamAssignmentSyntax>().expr)
-                    params.push_back(&Expression::bind(*ex, context, ASTFlags::AllowDataType));
+            const ExpressionSyntax* connSyntax = nullptr;
+            if (expr->kind == SyntaxKind::OrderedParamAssignment)
+                connSyntax = expr->as<OrderedParamAssignmentSyntax>().expr;
+            else if (expr->kind == SyntaxKind::NamedParamAssignment)
+                connSyntax = expr->as<NamedParamAssignmentSyntax>().expr;
+
+            if (connSyntax) {
+                params.push_back(&Expression::bindRValue(comp.getErrorType(), *connSyntax, {},
+                                                         context, ASTFlags::AllowDataType));
             }
         }
     }

@@ -2207,3 +2207,28 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InfinitelyRecursiveHierarchy);
 }
+
+TEST_CASE("Uinstantiated module assignment pattern param regress -- GH #1572") {
+    auto tree = SyntaxTree::fromText(R"(
+module uninst;
+    submod #(
+        .PARAM2 ('{default: 0})
+    ) i_submod ();
+endmodule
+
+module submod #(
+    parameter int PARAM2[1:0] = '{default: 0}
+    );
+endmodule
+
+module empty;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("empty");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
