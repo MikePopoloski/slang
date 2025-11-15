@@ -2058,6 +2058,41 @@ endmodule
     CHECK(diags[1].code == diag::HierarchicalRefUnknownModule);
 }
 
+TEST_CASE("Disallow hier-ref to uninstantiated defs spurious error regress -- GH #1571") {
+    auto tree = SyntaxTree::fromText(R"(
+interface bus(input clk);
+	logic a, b;
+	modport primary(input a, output b, input clk);
+	modport secondary(input b, output a, input clk);
+endinterface
+
+module submod(bus.primary intf);
+	assign intf.b = !intf.a;
+endmodule
+
+module top(input logic w1, output logic w2,
+		   input logic clk);
+	bus intf(clk);
+	assign intf.a = w1;
+	assign w2 = intf.b;
+	submod sm(intf);
+endmodule
+
+module top2();
+endmodule
+
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::IgnoreUnknownModules;
+    options.flags |= CompilationFlags::DisallowRefsToUnknownInstances;
+    options.topModules.emplace("top2");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Package ordering dependency 1 -- GH #1424") {
     auto tree = SyntaxTree::fromText(R"(
 package A_pkg;

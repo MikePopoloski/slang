@@ -410,8 +410,9 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
             // If we found an uninstantiated def, exit silently. An appropriate error was
             // already issued, so no need to pile on.
             if (symbol->kind == SymbolKind::UninstantiatedDef &&
-                !context.getCompilation().hasFlag(
-                    CompilationFlags::DisallowRefsToUnknownInstances)) {
+                (!context.getCompilation().hasFlag(
+                     CompilationFlags::DisallowRefsToUnknownInstances) ||
+                 context.scope->isUninstantiated())) {
                 return false;
             }
 
