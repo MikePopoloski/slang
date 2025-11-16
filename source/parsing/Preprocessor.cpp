@@ -108,6 +108,43 @@ void Preprocessor::popSource() {
     lexerStack.pop_back();
 }
 
+void Preprocessor::suspendCurrentMacroBuffer() {
+    if (!currentMacroToken)
+        return;
+
+    SLANG_ASSERT(!expandedTokens.empty());
+    SLANG_ASSERT(currentMacroToken >= expandedTokens.begin() &&
+                 currentMacroToken <= expandedTokens.end());
+
+    uint32_t index = uint32_t(currentMacroToken - expandedTokens.begin());
+    auto& frame = pendingMacroFrames.emplace_back();
+    frame.tokens = std::move(expandedTokens);
+    frame.index = index;
+
+    currentMacroToken = nullptr;
+    expandedTokens.clear();
+}
+
+bool Preprocessor::resumePendingMacroBuffer() {
+    if (currentMacroToken)
+        return true;
+
+    while (!pendingMacroFrames.empty()) {
+        auto frame = std::move(pendingMacroFrames.back());
+        pendingMacroFrames.pop_back();
+
+        if (frame.index < frame.tokens.size()) {
+            expandedTokens = std::move(frame.tokens);
+            currentMacroToken = expandedTokens.begin() + frame.index;
+            return true;
+        }
+    }
+
+    expandedTokens.clear();
+    currentMacroToken = nullptr;
+    return false;
+}
+
 void Preprocessor::predefine(const std::string& definition, std::string_view name) {
     Preprocessor pp(*this);
     pp.pushSource("`define " + definition + "\n", name);
@@ -445,6 +482,8 @@ Token Preprocessor::nextRaw() {
     // don't return EndOfFile tokens for included files, fall
     // through to loop to merge trivia
     popSource();
+    if (resumePendingMacroBuffer())
+        return nextRaw();
     if (lexerStack.empty()) {
         checkBranchStack();
         return token;
@@ -470,6 +509,8 @@ Token Preprocessor::nextRaw() {
             break;
 
         popSource();
+        if (resumePendingMacroBuffer())
+            return nextRaw();
         if (lexerStack.empty()) {
             checkBranchStack();
             break;
@@ -564,6 +605,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         }
         else if (includeOnceHeaders.find(buffer->data.data()) == includeOnceHeaders.end()) {
             includeDepth++;
+            suspendCurrentMacroBuffer();
             pushSource(*buffer);
 
             includeDirectives.push_back(IncludeMetadata{
