@@ -1323,3 +1323,46 @@ endmodule
     CHECK(diags[1].code == diag::MultipleContAssigns);
     CHECK(diags[2].code == diag::MultipleContAssigns);
 }
+
+TEST_CASE("Multi assign complicated modport expressions") {
+    auto& code = R"(
+class C;
+    int i;
+endclass
+
+interface I;
+    logic [1:0] b, d;
+    logic [2:3] c, e;
+    C g;
+
+    typedef struct { logic [1:0] q; logic [1:0] r; } S;
+
+    modport m(output .a({b, c}), .d(S'{d, e}), .f(g), ref .h(g));
+endinterface
+
+module n(I.m im);
+    C c = new;
+    assign im.a[2] = 1;
+    assign im.d.r[0] = 1;
+    always_comb im.f = c;
+    always_comb im.h = c;
+endmodule
+
+module top;
+    I i();
+    n n1(i);
+
+    assign i.b[0] = 1;
+    assign i.d = 1;
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+    CHECK(diags[1].code == diag::MultipleContAssigns);
+    CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
+}
