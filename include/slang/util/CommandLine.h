@@ -16,10 +16,14 @@
 #include <variant>
 #include <vector>
 
+#include "slang/parsing/LexerFacts.h"
 #include "slang/util/Enum.h"
+#include "slang/util/LanguageVersion.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/String.h"
 #include "slang/util/Util.h"
+
+namespace fs = std::filesystem;
 
 namespace slang {
 
@@ -306,6 +310,18 @@ public:
     ///              the new name it should have.
     /// @returns a string containing an error message if the @a value is malformed.
     std::string addRenameCommand(std::string_view value);
+
+    /// Parses keyword to file patterns command line map.
+    ///
+    /// @param value a string containing a single column-separated
+    ///              "keyword_version:file_pattern,[...]" pair, where the "keyword_version"
+    ///              can pass only such types of values:
+    ///              "1364-1995, 1364-2001-noconfig, 1364-2001, 1364-2005, 1800-2005,
+    ///              1800-2009, 1800-2012, 1800-2017, 1800-2023". After which starts
+    ///              the comma-separated list of file patterns.
+    /// @returns a string containing an error message if the @a value is malformed.
+    std::map<std::string, std::pair<parsing::KeywordVersion, std::optional<SmallVector<fs::path>>>>
+    parseMapKeywordVersion(std::string_view value, std::string& error);
 
     /// Parse the provided command line (C-style).
     /// @return true on success, false if an errors occurs.
