@@ -23,6 +23,7 @@
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/SourceLoader.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
@@ -128,6 +129,20 @@ void Driver::addStandardArgs() {
                 "end word, each separated by commas. For example, "
                 "'pragma,translate_off,translate_on'",
                 "<common>,<start>,<end>");
+    cmdLine.add(
+        "--map-keyword-version",
+        [this](std::string_view value) {
+            std::string err = "";
+            auto res = cmdLine.parseMapKeywordVersion(value, err);
+            if (err.empty())
+                sourceLoader.addKeywordMapping(res);
+            return err;
+        },
+        "Forces slang to interpret files which satisfy the passed patterns with specified "
+        "keywords version."
+        "For example '--map-keyword-version=1364-2005:*.v,*.vh'"
+        "or '--map-keyword-version=1364-2005:/path/to/verilog.v'"
+        "<keyword-version>:<file-pattern>[,...]");
 
     // Legacy vendor commands support
     cmdLine.add(
@@ -1020,6 +1035,7 @@ void Driver::addParseOptions(Bag& bag) const {
         ppoptions.maxIncludeDepth = *options.maxIncludeDepth;
     for (const auto& d : options.ignoreDirectives)
         ppoptions.ignoreDirectives.emplace(d);
+    ppoptions.keywordMapping = sourceLoader.getKeywordMapping();
 
     LexerOptions loptions;
     loptions.languageVersion = languageVersion;

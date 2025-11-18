@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "slang/parsing/LexerFacts.h"
 #include "slang/util/Enum.h"
 #include "slang/util/FlatMap.h"
 #include "slang/util/Util.h"
@@ -211,6 +212,8 @@ struct SLANG_EXPORT SourceBuffer {
 
     /// The ID assigned to the buffer.
     BufferID id;
+
+    std::optional<parsing::KeywordVersion> forcedKeywordVersion = std::nullopt;
 
     explicit operator bool() const { return id.valid(); }
 };
