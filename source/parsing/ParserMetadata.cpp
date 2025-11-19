@@ -70,7 +70,7 @@ public:
                 }
             }
             if (!found)
-                meta.addGlobalInstance(name);
+                meta.globalInstances.push_back(&syntax);
         }
         visitDefault(syntax);
     }
@@ -198,12 +198,20 @@ std::vector<std::string_view> ParserMetadata::getReferencedSymbols() const {
 
 void ParserMetadata::visitReferencedSymbols(function_ref<void(std::string_view)> func) const {
     for (auto name : globalInstances)
-        func(name);
+        func(name->type.valueText());
 
     for (auto idName : classPackageNames) {
         std::string_view name = idName->identifier.valueText();
         if (!name.empty())
             func(name);
+    }
+
+    for (auto classDecl : classDecls) {
+        if (classDecl->extendsClause) {
+            auto name = classDecl->extendsClause->getFirstToken().valueText();
+            if (!name.empty())
+                func(name);
+        }
     }
 
     for (auto importDecl : packageImports) {

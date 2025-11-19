@@ -221,8 +221,8 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         syntaxMetadata[n] = result;
     }
 
-    for (auto& name : tree->getMetadata().globalInstances)
-        globalInstantiations.emplace(name);
+    for (auto& inst : tree->getMetadata().globalInstances)
+        globalInstantiations.emplace(inst->type.valueText());
 
     if (node.kind == SyntaxKind::CompilationUnit) {
         for (auto member : node.as<CompilationUnitSyntax>().members)
