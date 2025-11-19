@@ -665,7 +665,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::Redefinition);
+    CHECK(diags[0].code == diag::DuplicateDefinition);
     CHECK(diags[1].code == diag::ConstEvalSubroutineNotConstant);
 }
 
