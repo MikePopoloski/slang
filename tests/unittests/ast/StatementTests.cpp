@@ -679,6 +679,35 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Intra-assignment timing control with assignment pattern") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct packed {
+        logic one;
+        logic two;
+        logic three;
+        logic four;
+    } protocol_t;
+
+    parameter TP = 1;
+    logic clk_i;
+    logic reset_ni;
+    protocol_t proto_i, proto_o;
+
+    always_ff @(posedge clk_i or negedge reset_ni) begin
+        if (!reset_ni)
+            proto_o <= #TP '{ default: '0, one: 1'b1 };
+        else
+            proto_o <= #TP proto_i;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Intra-assignment timing control errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

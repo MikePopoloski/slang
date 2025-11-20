@@ -288,10 +288,13 @@ ExpressionSyntax& Parser::parsePrimaryExpression(bitmask<ExpressionOptions> opti
                 kind != TokenKind::UnitSystemName) {
 
                 auto& type = parseDataType();
-                if (peek(TokenKind::ApostropheOpenBrace))
+                if (!options.has(ExpressionOptions::DisallowPatterns) &&
+                    peek(TokenKind::ApostropheOpenBrace)) {
                     return parseAssignmentPatternExpression(&type);
-                else
+                }
+                else {
                     return type;
+                }
             }
             else {
                 bitmask<NameOptions> nameOptions = NameOptions::ExpectingExpression;
@@ -300,8 +303,10 @@ ExpressionSyntax& Parser::parsePrimaryExpression(bitmask<ExpressionOptions> opti
 
                 // parseName() will insert a missing identifier token for the error case
                 auto& name = parseName(nameOptions);
-                if (peek(TokenKind::ApostropheOpenBrace))
+                if (!options.has(ExpressionOptions::DisallowPatterns) &&
+                    peek(TokenKind::ApostropheOpenBrace)) {
                     return parseAssignmentPatternExpression(&factory.namedType(name));
+                }
                 else {
                     // otherwise just a name expression
                     return name;
@@ -1196,7 +1201,8 @@ TimingControlSyntax* Parser::parseTimingControl(bool inAssertion) {
             if (peek(TokenKind::OneStep))
                 return &factory.oneStepDelay(hash, consume());
 
-            auto& delay = parsePrimaryExpression(ExpressionOptions::DisallowVectors);
+            auto& delay = parsePrimaryExpression(ExpressionOptions::DisallowVectors |
+                                                 ExpressionOptions::DisallowPatterns);
             if (!isValidDelayExpr(delay.kind))
                 addDiag(diag::InvalidDelayValue, delay.sourceRange());
 
@@ -1204,7 +1210,7 @@ TimingControlSyntax* Parser::parseTimingControl(bool inAssertion) {
         }
         case TokenKind::DoubleHash: {
             auto hash = consume();
-            auto& delay = parsePrimaryExpression(ExpressionOptions::None);
+            auto& delay = parsePrimaryExpression(ExpressionOptions::DisallowPatterns);
             if (!isValidCycleDelay(delay.kind))
                 addDiag(diag::InvalidDelayValue, delay.sourceRange());
 
