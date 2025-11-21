@@ -908,18 +908,18 @@ std::string CommandLine::addRenameCommand(std::string_view value) {
 
 std::map<std::string, std::pair<parsing::KeywordVersion, std::optional<SmallVector<fs::path>>>>
 CommandLine::parseMapKeywordVersion(std::string_view value, std::string& error) {
-    const size_t firstColonIndex = value.find_first_of(':');
-    const size_t lastColonIndex = value.find_last_of(':');
+    const size_t firstPlusIndex = value.find_first_of('+');
+    const size_t lastPlusIndex = value.find_last_of('+');
     std::map<std::string, std::pair<parsing::KeywordVersion, std::optional<SmallVector<fs::path>>>>
         keywordMapping;
 
-    if (firstColonIndex == std::string_view::npos || firstColonIndex != lastColonIndex) {
-        error = fmt::format("missing or extra colon in argument '{}'", value);
+    if (firstPlusIndex == std::string_view::npos || firstPlusIndex != lastPlusIndex) {
+        error = fmt::format("missing or extra '+' in argument '{}'", value);
         return {};
     }
 
-    const std::string_view fileNamePatterns = value.substr(firstColonIndex + 1);
-    auto keywordVersionStr = value.substr(0, firstColonIndex);
+    const std::string_view fileNamePatterns = value.substr(firstPlusIndex + 1);
+    auto keywordVersionStr = value.substr(0, firstPlusIndex);
     auto keywordVersion = parsing::LexerFacts::getKeywordVersion(keywordVersionStr);
     if (!keywordVersion.has_value()) {
         error = fmt::format("failed to set keyword version in argument '{}'; only such types of "

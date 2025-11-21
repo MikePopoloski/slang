@@ -86,11 +86,11 @@ Note that multithreading *parsing* cannot be supported when running
 with `--single-unit`, though other parts of the compilation process
 may still take advantage of threading where possible.
 
-`--map-keyword-version <keyword-version>:<file-pattern>[,...]`
+`--map-keyword-version <keyword-version>+<file-pattern>[,...]`
 
 Forces slang to interpret files which satisfy the passed patterns with specified
-keywords version. For example '--map-keyword-version=1364-2005:*.v,*.vh'
-or '--map-keyword-version=1364-2005:/path/to/verilog.v'.
+keywords version. For example '--map-keyword-version=1364-2005+*.v,*.vh'
+or '--map-keyword-version=1364-2005+/path/to/verilog.v'.
 
 Available keywords is:
 '1364-1995, 1364-2001-noconfig, 1364-2001, 1364-2005, 1800-2005,'
