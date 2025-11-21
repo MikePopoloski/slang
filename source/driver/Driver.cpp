@@ -139,10 +139,13 @@ void Driver::addStandardArgs() {
             return err;
         },
         "Forces slang to interpret files which satisfy the passed patterns with specified "
-        "keywords version."
-        "For example '--map-keyword-version=1364-2005:*.v,*.vh'"
-        "or '--map-keyword-version=1364-2005:/path/to/verilog.v'"
-        "<keyword-version>:<file-pattern>[,...]");
+        "keywords version. "
+        "For example '--map-keyword-version=1364-2005:*.v,*.vh' "
+        "or '--map-keyword-version=1364-2005:/path/to/verilog.v' "
+        "<keyword-version>:<file-pattern>[,...]. "
+        "Available keywords is: "
+        "1364-1995, 1364-2001-noconfig, 1364-2001, 1364-2005, 1800-2005, "
+        "1800-2009, 1800-2012, 1800-2017, 1800-2023.");
 
     // Legacy vendor commands support
     cmdLine.add(
