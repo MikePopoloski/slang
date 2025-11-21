@@ -2956,7 +2956,9 @@ TEST_CASE("Map keyword version option positive") {
     Driver driver;
     driver.addStandardArgs();
 
-    auto args = fmt::format("testfoo --map-keyword-version \"1364-2005:{0}*.v\" \"{0}systemverilog.sv\"", findTestDir());
+    auto args =
+        fmt::format("testfoo --map-keyword-version \"1364-2005:{0}*.v\" \"{0}systemverilog.sv\"",
+                    findTestDir());
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
