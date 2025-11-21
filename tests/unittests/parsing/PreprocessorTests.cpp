@@ -2957,7 +2957,7 @@ TEST_CASE("Map keyword version option positive") {
     driver.addStandardArgs();
 
     auto args =
-        fmt::format("testfoo --map-keyword-version \"1364-2005:{0}*.v\" \"{0}systemverilog.sv\"",
+        fmt::format("testfoo --map-keyword-version \"1364-2005+{0}*.v\" \"{0}systemverilog.sv\"",
                     findTestDir());
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
@@ -2973,8 +2973,8 @@ TEST_CASE("Map keyword version option negative") {
     driver.addStandardArgs();
 
     auto args = fmt::format(
-        "testfoo --map-keyword-version \"1364-2005:{0}*.v\" --map-keyword-version "
-        "\"1364-2005:{0}systemverilog.sv,{0}another_systemverilog.sv\" \"{0}systemverilog.sv\"",
+        "testfoo --map-keyword-version \"1364-2005+{0}*.v\" --map-keyword-version "
+        "\"1364-2005+{0}systemverilog.sv,{0}another_systemverilog.sv\" \"{0}systemverilog.sv\"",
         findTestDir());
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
@@ -2983,4 +2983,21 @@ TEST_CASE("Map keyword version option negative") {
     auto compilation = driver.createCompilation();
     driver.reportCompilation(*compilation, true);
     CHECK_FALSE(driver.reportDiagnostics(true));
+}
+
+TEST_CASE("Map keyword version wrong arguments") {
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format(
+        "testfoo --map-keyword-version \"1364-2005+{0}*.v+\" --map-keyword-version "
+        "\"1364-2005+{0}systemverilog.sv,{0}another_systemverilog.sv\" \"{0}systemverilog.sv\"",
+        findTestDir());
+    CHECK_FALSE(driver.parseCommandLine(args));
+
+    args = fmt::format(
+        "testfoo --map-keyword-version \"1364-2005+{0}*.v\" --map-keyword-version "
+        "\"1364-2005+{0}*.v\" \"{0}systemverilog.sv\"",
+        findTestDir());
+    CHECK_FALSE(driver.parseCommandLine(args));
 }

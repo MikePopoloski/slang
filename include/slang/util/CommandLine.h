@@ -313,8 +313,8 @@ public:
 
     /// Parses keyword to file patterns command line map.
     ///
-    /// @param value a string containing a single column-separated
-    ///              "keyword_version:file_pattern,[...]" pair, where the "keyword_version"
+    /// @param value a string containing a single plus-separated
+    ///              "keyword_version+file_pattern,[...]" pair, where the "keyword_version"
     ///              can pass only such types of values:
     ///              "1364-1995, 1364-2001-noconfig, 1364-2001, 1364-2005, 1800-2005,
     ///              1800-2009, 1800-2012, 1800-2017, 1800-2023". After which starts
