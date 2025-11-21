@@ -206,14 +206,6 @@ void ParserMetadata::visitReferencedSymbols(function_ref<void(std::string_view)>
             func(name);
     }
 
-    for (auto classDecl : classDecls) {
-        if (classDecl->extendsClause) {
-            auto name = classDecl->extendsClause->getFirstToken().valueText();
-            if (!name.empty())
-                func(name);
-        }
-    }
-
     for (auto importDecl : packageImports) {
         for (auto importItem : importDecl->items) {
             std::string_view name = importItem->package.valueText();
