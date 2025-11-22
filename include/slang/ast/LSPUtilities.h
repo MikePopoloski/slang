@@ -195,6 +195,10 @@ public:
     ///
     /// @param alloc The allocator to use for any AST nodes that need to be created
     ///              to represent expanded selections.
+    /// @param expr The expression to visit and potentially expand.
+    /// @param evalContext An evaluation context used to evaluate constsants.
+    /// @param callback The callback to invoke for each found LSP.
+    /// @param isLValue Whether this expression is an lvalue or not.
     static void expandIndirectLSPs(BumpAllocator& alloc, const Expression& expr,
                                    EvalContext& evalContext, LSPCallback callback,
                                    bool isLValue = true);

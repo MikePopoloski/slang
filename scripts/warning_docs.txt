@@ -1201,7 +1201,7 @@ module m(logic p);
 endmodule
 
 module n;
-    int p;
+    wire [3:0] p;
     m m1(.p);
 endmodule
 ```
