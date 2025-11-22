@@ -148,6 +148,11 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   add_compile_options(/utf-8 /bigobj /permissive-)
 endif()
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  # GCC enables this busted warning by default
+  add_compile_options("-Wno-stringop-overflow")
+endif()
+
 if(CMAKE_SYSTEM_NAME MATCHES "WASI")
   add_compile_options(-fno-exceptions)
 
