@@ -28,7 +28,7 @@ ValueDriver* ValueDriver::create(BumpAllocator& alloc, DriverKind kind, const as
         ValueDriver(kind, lsp, containingSymbol, flags);
 
     if (overrideRange)
-        memcpy(result + 1, overrideRange, sizeof(SourceRange));
+        memcpy((void*)(result + 1), overrideRange, sizeof(SourceRange));
 
     return result;
 }
@@ -41,7 +41,7 @@ ValueDriver* ValueDriver::create(BumpAllocator& alloc, const ValueDriver& copyFr
 
     auto result = new (alloc.allocate(size, alignof(ValueDriver))) ValueDriver(copyFrom);
     if (hasOverrideRange)
-        memcpy(result + 1, copyFrom.getOverrideRange(), sizeof(SourceRange));
+        memcpy((void*)(result + 1), copyFrom.getOverrideRange(), sizeof(SourceRange));
 
     return result;
 }
