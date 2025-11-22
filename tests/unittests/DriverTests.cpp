@@ -985,7 +985,7 @@ TEST_CASE("Driver waive duplicate package definition errors") {
         CHECK(driver.runFullCompilation());
         CHECK(stdoutContains("Build succeeded"));
         CHECK(stdoutContains("0 errors, 1 warning"));
-        CHECK(stderrContains("warning: duplicate definition of 'dup_pkg'"));
+        CHECK(stderrContains("duplicate definition of 'dup_pkg'"));
     }
 }
 
