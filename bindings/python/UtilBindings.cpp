@@ -22,6 +22,34 @@
 
 namespace fs = std::filesystem;
 
+std::vector<py::object> argConverter(const Diagnostic& self) {
+    std::vector<py::object> results;
+    for (auto& argVar : self.args) {
+        results.push_back(std::visit(
+            [&](auto&& arg) {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, Diagnostic::CustomArgType>)
+                    return py::cast(std::any_cast<const Type*>(arg.second), byrefint,
+                                    py::cast(&self));
+                else
+                    return py::cast(arg);
+            },
+            argVar));
+    }
+    return results;
+}
+
+std::string argFormatter(const DiagnosticEngine& self, py::object obj) {
+    try {
+        auto arg = obj.cast<const Type*>();
+        return self.formatArg(Diagnostic::CustomArgType{SLANG_TYPEOF(const Type*), arg});
+    }
+    catch (const py::cast_error&) {
+        auto arg = obj.cast<Diagnostic::Arg>();
+        return self.formatArg(arg);
+    }
+}
+
 void registerUtil(py::module_& m) {
     EXPOSE_ENUM(m, ColumnUnit);
 
@@ -219,8 +247,8 @@ void registerUtil(py::module_& m) {
         .def_readonly("code", &Diagnostic::code)
         .def_readonly("location", &Diagnostic::location)
         .def_readonly("symbol", &Diagnostic::symbol)
-        .def_readonly("args", &Diagnostic::args)
         .def_readonly("ranges", &Diagnostic::ranges)
+        .def_property_readonly("args", &argConverter)
         .def("isError", &Diagnostic::isError)
         .def(py::self == py::self)
         .def(py::self != py::self);
@@ -287,6 +315,7 @@ void registerUtil(py::module_& m) {
              py::overload_cast<>(&DiagnosticEngine::setMappingsFromPragmas))
         .def("setMappingsFromPragmas",
              py::overload_cast<BufferID>(&DiagnosticEngine::setMappingsFromPragmas), "buffer"_a)
+        .def("formatArg", argFormatter)
         .def_static("reportAll", &DiagnosticEngine::reportAll, "sourceManager"_a, "diag"_a);
 
     py::classh<ReportedDiagnostic>(m, "ReportedDiagnostic")
