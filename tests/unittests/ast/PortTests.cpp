@@ -1823,3 +1823,25 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::DisallowedPortDefault);
 }
+
+TEST_CASE("Additional implicit port type mismatch checking") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input a, output b);
+endmodule
+
+module top;
+    logic [3:0] a, b;
+    m m1(.a, .*);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ImplicitNamedPortTypeMismatch);
+    CHECK(diags[1].code == diag::PortWidthTruncate);
+    CHECK(diags[2].code == diag::ImplicitNamedPortTypeMismatch);
+    CHECK(diags[3].code == diag::PortWidthExpand);
+}

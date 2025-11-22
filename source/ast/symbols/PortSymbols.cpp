@@ -1332,7 +1332,10 @@ const Type& PortSymbol::getType() const {
         type = internalExpr->type;
 
         if (!internalExpr->bad()) {
-            Expression::checkConnectionDirection(*internalExpr, checkDir, context, location);
+            if (!Expression::checkConnectionDirection(*internalExpr, checkDir, context, location)) {
+                internalExpr = context.getCompilation().emplace<InvalidExpression>(
+                    internalExpr, ErrorType::Instance);
+            }
 
             internalExpr->visitSymbolReferences([&](const Expression& expr, const Symbol&) {
                 if (expr.kind == ExpressionKind::NamedValue)
@@ -1735,45 +1738,45 @@ const Expression* PortConnection::getExpression() const {
         ASTContext context(*scope, ll, flags);
         context.setInstance(parentInstance);
 
-        if (connectedSymbol) {
-            Expression* e = &ValueExpressionBase::fromSymbol(context, *connectedSymbol, nullptr,
-                                                             implicitNameRange);
+        if (!connectedSymbol) {
+            expr = &Expression::bindArgument(*type, direction, {}, *exprSyntax, context);
+            return expr;
+        }
 
-            if (!e->type->isEquivalent(*type)) {
-                auto& comp = context.getCompilation();
-                auto exprType = e->type;
-                if (direction == ArgumentDirection::In) {
-                    e = &Expression::convertAssignment(context, *type, *e, implicitNameRange);
-                }
-                else if (direction != ArgumentDirection::Ref) {
-                    auto rhs = comp.emplace<EmptyArgumentExpression>(*type, implicitNameRange);
-                    Expression::convertAssignment(context, *e->type, *rhs, implicitNameRange, &e);
-                }
+        Expression* e = &ValueExpressionBase::fromSymbol(context, *connectedSymbol, nullptr,
+                                                         implicitNameRange);
+        switch (direction) {
+            case ArgumentDirection::In:
+                expr = &Expression::convertAssignment(context, *type, *e, implicitNameRange);
+                break;
+            case ArgumentDirection::Out:
+            case ArgumentDirection::InOut:
+                expr = &Expression::bindLValue(*e, *type, context,
+                                               direction == ArgumentDirection::InOut
+                                                   ? AssignFlags::InOutPort
+                                                   : AssignFlags::None);
+                break;
+            case ArgumentDirection::Ref:
+                expr = &Expression::bindRefArg(*type, {}, *e, context);
+                break;
+        }
 
-                // We should warn for this case unless convertAssignment already issued an error,
-                // or if we're in an instance array unwrapping case.
-                if ((parentInstance.arrayPath.empty() || direction == ArgumentDirection::Ref) &&
-                    !e->bad() && !type->isError()) {
-                    auto& diag = context.addDiag(diag::ImplicitNamedPortTypeMismatch,
-                                                 implicitNameRange);
-                    diag << port.name;
-                    diag << *type;
-                    diag << *exprType;
-
-                    // There's no way to represent this expression for the ref case.
-                    if (direction == ArgumentDirection::Ref)
-                        e = comp.emplace<InvalidExpression>(e, comp.getErrorType());
-                }
-            }
-
-            expr = e;
-            if (!expr->bad()) {
-                Expression::checkConnectionDirection(*expr, direction, context,
-                                                     expr->sourceRange.start());
+        // Implicit port connections have the additional restriction that they cannot
+        // have implicit conversions attached. We issue a warning and continue on though.
+        auto checkExpr = expr;
+        if (auto assign = expr->as_if<AssignmentExpression>()) {
+            if (auto conv = assign->right().as_if<ConversionExpression>()) {
+                if (conv->operand().kind == ExpressionKind::EmptyArgument)
+                    checkExpr = conv;
             }
         }
-        else {
-            expr = &Expression::bindArgument(*type, direction, {}, *exprSyntax, context);
+
+        if (checkExpr->kind == ExpressionKind::Conversion &&
+            checkExpr->as<ConversionExpression>().isImplicit()) {
+            auto& diag = context.addDiag(diag::ImplicitNamedPortTypeMismatch, implicitNameRange);
+            diag << port.name;
+            diag << *type;
+            diag << *e->type;
         }
     }
     else if (useDefault) {

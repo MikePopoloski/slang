@@ -252,15 +252,8 @@ const Expression& Expression::bind(const ExpressionSyntax& syntax, const ASTCont
 }
 
 const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type& rhs,
-                                         SourceLocation location, const ASTContext& context,
-                                         bool isInout) {
-    Compilation& comp = context.getCompilation();
-
-    // Create a placeholder expression that will carry the type of the rhs.
-    // Nothing will ever actually look at this expression, it's there only
-    // to fill the space in the created AssignmentExpression.
-    auto rhsExpr = comp.emplace<EmptyArgumentExpression>(rhs, SourceRange{location, location});
-
+                                         const ASTContext& context, bool isInout) {
+    auto& comp = context.getCompilation();
     auto instance = context.getInstance();
     Expression* lhsExpr;
     if (lhs.kind == SyntaxKind::StreamingConcatenationExpression && !isInout &&
@@ -273,7 +266,7 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
         if (isInout)
             astFlags |= ASTFlags::LAndRValue;
 
-        lhsExpr = &create(comp, lhs, context, astFlags, rhsExpr->type);
+        lhsExpr = &create(comp, lhs, context, astFlags, &rhs);
         selfDetermined(context, lhsExpr);
     }
 
@@ -281,10 +274,7 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     if (instance && isInout)
         assignFlags = AssignFlags::InOutPort;
 
-    SourceRange lhsRange = lhs.sourceRange();
-    return AssignmentExpression::fromComponents(comp, std::nullopt, assignFlags, *lhsExpr, *rhsExpr,
-                                                lhsRange, /* timingControl */ nullptr, lhsRange,
-                                                context.resetFlags(ASTFlags::OutputArg));
+    return bindLValue(*lhsExpr, rhs, context, assignFlags);
 }
 
 const Expression& Expression::bindLValue(const ExpressionSyntax& syntax, const ASTContext& context,
@@ -292,12 +282,21 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& syntax, const A
     auto& comp = context.getCompilation();
     auto lhs = &create(comp, syntax, context, ASTFlags::LValue);
     selfDetermined(context, lhs);
+    return bindLValue(*lhs, *lhs->type, context, assignFlags);
+}
 
-    auto rhs = comp.emplace<EmptyArgumentExpression>(*lhs->type, lhs->sourceRange);
+const Expression& Expression::bindLValue(Expression& lhs, const Type& rhs,
+                                         const ASTContext& context,
+                                         bitmask<AssignFlags> assignFlags) {
+    // Create a placeholder expression that will carry the type of the rhs.
+    // Nothing will ever actually look at this expression, it's there only
+    // to fill the space in the created AssignmentExpression.
+    auto& comp = context.getCompilation();
+    auto rhsExpr = comp.emplace<EmptyArgumentExpression>(rhs, lhs.sourceRange);
 
-    return AssignmentExpression::fromComponents(comp, std::nullopt, assignFlags, *lhs, *rhs,
-                                                lhs->sourceRange, /* timingControl */ nullptr,
-                                                lhs->sourceRange,
+    return AssignmentExpression::fromComponents(comp, std::nullopt, assignFlags, lhs, *rhsExpr,
+                                                lhs.sourceRange, /* timingControl */ nullptr,
+                                                lhs.sourceRange,
                                                 context.resetFlags(ASTFlags::OutputArg));
 }
 
@@ -369,13 +368,18 @@ static bool canConnectToRefArg(const ASTContext& context, const Expression& expr
 }
 
 const Expression& Expression::bindRefArg(const Type& lhs, bitmask<VariableFlags> argFlags,
-                                         const ExpressionSyntax& rhs, SourceLocation location,
-                                         const ASTContext& context) {
-    Compilation& comp = context.getCompilation();
-    Expression& expr = selfDetermined(comp, rhs, context);
+                                         const ExpressionSyntax& rhs, const ASTContext& context) {
+    auto& comp = context.getCompilation();
+    auto& expr = selfDetermined(comp, rhs, context);
     if (expr.bad())
         return expr;
 
+    return bindRefArg(lhs, argFlags, expr, context);
+}
+
+const Expression& Expression::bindRefArg(const Type& lhs, bitmask<VariableFlags> argFlags,
+                                         const Expression& expr, const ASTContext& context) {
+    auto& comp = context.getCompilation();
     if (lhs.isError())
         return badExpr(comp, &expr);
 
@@ -393,17 +397,17 @@ const Expression& Expression::bindRefArg(const Type& lhs, bitmask<VariableFlags>
             code = diag::AutoVarToRefStatic;
         }
 
-        context.addDiag(code, location) << expr.sourceRange;
+        context.addDiag(code, expr.sourceRange);
         return badExpr(comp, &expr);
     }
 
     if (!lhs.isEquivalent(*expr.type)) {
-        auto& diag = context.addDiag(diag::RefTypeMismatch, location) << expr.sourceRange;
+        auto& diag = context.addDiag(diag::RefTypeMismatch, expr.sourceRange);
         diag << *expr.type << lhs;
         return badExpr(comp, &expr);
     }
 
-    // ref args are considered drivers unless they are const.
+    // ref args are considered lvalue uses unless they are const.
     if (!isConstRef) {
         if (auto sym = expr.getSymbolReference())
             comp.noteReference(*sym, /* isLValue */ true);
@@ -421,11 +425,9 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
             return bindRValue(argType, syntax, {}, context);
         case ArgumentDirection::Out:
         case ArgumentDirection::InOut:
-            return bindLValue(syntax, argType, syntax.getFirstToken().location(), context,
-                              direction == ArgumentDirection::InOut);
+            return bindLValue(syntax, argType, context, direction == ArgumentDirection::InOut);
         case ArgumentDirection::Ref:
-            return bindRefArg(argType, argFlags, syntax, syntax.getFirstToken().location(),
-                              context);
+            return bindRefArg(argType, argFlags, syntax, context);
     }
     SLANG_UNREACHABLE;
 }
