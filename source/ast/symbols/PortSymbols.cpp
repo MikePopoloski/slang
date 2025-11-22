@@ -1307,24 +1307,17 @@ const Type& PortSymbol::getType() const {
         auto& eaps = syntax->as<ExplicitAnsiPortSyntax>();
         SLANG_ASSERT(eaps.expr);
 
-        // The direction of the connection is reversed, as data coming in to an input
-        // port flows out to the internal symbol, and vice versa. Inout and ref
-        // ports don't change.
+        // The explicit connection must always be a valid lvalue, since we're either an
+        // input port which means the external connection assigns to the internal symbol(s),
+        // or we're an output port which means someone internally must be able to assign to us.
         bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural | ASTFlags::NoReference;
         ArgumentDirection checkDir = direction;
-        switch (direction) {
-            case ArgumentDirection::In:
+        if (direction == ArgumentDirection::In || direction == ArgumentDirection::InOut) {
+            astFlags |= ASTFlags::LValue;
+            if (direction == ArgumentDirection::In)
                 checkDir = ArgumentDirection::Out;
-                astFlags |= ASTFlags::LValue;
-                break;
-            case ArgumentDirection::Out:
-                checkDir = ArgumentDirection::In;
-                break;
-            case ArgumentDirection::InOut:
-                astFlags |= ASTFlags::LValue;
-                break;
-            case ArgumentDirection::Ref:
-                break;
+            else
+                astFlags |= ASTFlags::LAndRValue;
         }
 
         ASTContext context(*scope, LookupLocation::max, astFlags);

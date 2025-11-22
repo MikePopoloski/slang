@@ -1114,10 +1114,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::ExpressionNotAssignable);
-    CHECK(diags[1].code == diag::InvalidRefArg);
-    CHECK(diags[2].code == diag::NullPortExpression);
+    CHECK(diags[1].code == diag::ExpressionNotAssignable);
+    CHECK(diags[2].code == diag::InvalidRefArg);
+    CHECK(diags[3].code == diag::NullPortExpression);
 }
 
 TEST_CASE("Ansi port initializers") {
@@ -1844,4 +1845,20 @@ endmodule
     CHECK(diags[1].code == diag::PortWidthTruncate);
     CHECK(diags[2].code == diag::ImplicitNamedPortTypeMismatch);
     CHECK(diags[3].code == diag::PortWidthExpand);
+}
+
+TEST_CASE("Additional explicit port expression checks") {
+    auto tree = SyntaxTree::fromText(R"(
+logic [2:0] foo;
+
+module m(input int a, output .b(foo[a]));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
 }
