@@ -113,10 +113,9 @@ private:
                     DriverKind driverKind, bitmask<DriverFlags> driverFlags,
                     const ast::Symbol& containingSymbol);
 
-    void addFromLSP(AnalysisContext& context, DriverAlloc& driverAlloc, DriverKind driverKind,
-                    bitmask<DriverFlags> driverFlags, const ast::Symbol& containingSymbol,
-                    const ast::ValueSymbol& symbol, const ast::Expression& lsp, bool isLValue,
-                    ast::EvalContext& evalCtx, SmallVector<HierPortDriver>& hierPortDrivers);
+    void addFromLSP(AnalysisContext& context, DriverAlloc& driverAlloc, const ValueDriver& driver,
+                    const ast::ValueSymbol& symbol, ast::EvalContext& evalCtx,
+                    SmallVector<HierPortDriver>& hierPortDrivers);
 
     concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
     concurrent_map<const ast::InstanceBodySymbol*, InstanceDriverState> instanceMap;

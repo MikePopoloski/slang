@@ -178,8 +178,8 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         DriverList perSymbol;
         for (auto it = lvalue.assigned.begin(); it != lvalue.assigned.end(); ++it) {
             auto bounds = it.bounds();
-            auto driver = context.alloc.emplace<ValueDriver>(driverKind, **it, analyzedSymbol,
-                                                             DriverFlags::None);
+            auto driver = ValueDriver::create(context.alloc, driverKind, **it, analyzedSymbol,
+                                              DriverFlags::None);
             perSymbol.emplace_back(driver, bounds);
         }
 

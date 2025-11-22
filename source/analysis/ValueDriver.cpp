@@ -13,10 +13,42 @@ namespace slang::analysis {
 
 using namespace ast;
 
-ValueDriver::ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
-                         const Symbol& containingSymbol, bitmask<DriverFlags> flags) :
-    prefixExpression(&longestStaticPrefix), containingSymbol(&containingSymbol), flags(flags),
-    kind(kind) {
+static_assert(std::is_trivially_destructible_v<ValueDriver>);
+
+ValueDriver* ValueDriver::create(BumpAllocator& alloc, DriverKind kind, const ast::Expression& lsp,
+                                 const ast::Symbol& containingSymbol, bitmask<DriverFlags> flags,
+                                 const SourceRange* overrideRange) {
+    size_t size = sizeof(ValueDriver);
+    if (overrideRange) {
+        size += sizeof(SourceRange);
+        flags |= DriverFlags::HasOverrideRange;
+    }
+
+    auto result = new (alloc.allocate(size, alignof(ValueDriver)))
+        ValueDriver(kind, lsp, containingSymbol, flags);
+
+    if (overrideRange)
+        memcpy(result + 1, overrideRange, sizeof(SourceRange));
+
+    return result;
+}
+
+ValueDriver* ValueDriver::create(BumpAllocator& alloc, const ValueDriver& copyFrom) {
+    size_t size = sizeof(ValueDriver);
+    const bool hasOverrideRange = copyFrom.flags.has(DriverFlags::HasOverrideRange);
+    if (hasOverrideRange)
+        size += sizeof(SourceRange);
+
+    auto result = new (alloc.allocate(size, alignof(ValueDriver))) ValueDriver(copyFrom);
+    if (hasOverrideRange)
+        memcpy(result + 1, copyFrom.getOverrideRange(), sizeof(SourceRange));
+
+    return result;
+}
+
+ValueDriver::ValueDriver(DriverKind kind, const Expression& lsp, const Symbol& containingSymbol,
+                         bitmask<DriverFlags> flags) :
+    lsp(&lsp), containingSymbol(&containingSymbol), flags(flags), kind(kind) {
 
     switch (containingSymbol.kind) {
         case SymbolKind::ProceduralBlock:
@@ -33,9 +65,15 @@ ValueDriver::ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
 }
 
 SourceRange ValueDriver::getSourceRange() const {
-    if (procCallExpression)
-        return procCallExpression->sourceRange;
-    return prefixExpression->sourceRange;
+    if (auto overrideRange = getOverrideRange())
+        return *overrideRange;
+    return lsp->sourceRange;
+}
+
+const SourceRange* ValueDriver::getOverrideRange() const {
+    if (flags.has(DriverFlags::HasOverrideRange))
+        return reinterpret_cast<const SourceRange*>(this + 1);
+    return nullptr;
 }
 
 } // namespace slang::analysis

@@ -33,14 +33,13 @@ void registerAnalysis(py::module_& m) {
         .def_readonly("procedures", &AnalyzedScope::procedures);
 
     py::classh<ValueDriver>(m, "ValueDriver")
-        .def_readonly("prefixExpression", &ValueDriver::prefixExpression)
+        .def_readonly("lsp", &ValueDriver::lsp)
         .def_readonly("containingSymbol", &ValueDriver::containingSymbol)
-        .def_readonly("procCallExpression", &ValueDriver::procCallExpression)
         .def_readonly("flags", &ValueDriver::flags)
         .def_readonly("kind", &ValueDriver::kind)
         .def_readonly("source", &ValueDriver::source)
-        .def_readonly("isFromSideEffect", &ValueDriver::isFromSideEffect)
         .def_property_readonly("sourceRange", &ValueDriver::getSourceRange)
+        .def_property_readonly("overrideRange", &ValueDriver::getOverrideRange)
         .def_property_readonly("isInputPort", &ValueDriver::isInputPort)
         .def_property_readonly("isUnidirectionalPort", &ValueDriver::isUnidirectionalPort)
         .def_property_readonly("isClockVar", &ValueDriver::isClockVar)

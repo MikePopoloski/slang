@@ -1362,7 +1362,7 @@ endmodule
 
     auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
-    CHECK(diags[0].code == diag::MultipleContAssigns);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);
-    CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[2].code == diag::MultipleContAssigns);
 }

@@ -203,10 +203,9 @@ void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbo
 
         DriverList perSymbol;
         for (auto& [driver, bounds] : driverList) {
-            auto newDriver = context.alloc.emplace<ValueDriver>(
-                driver->kind, *driver->prefixExpression, containingSymbol, DriverFlags::None);
-            newDriver->procCallExpression = &expr;
-
+            auto newDriver = ValueDriver::create(context.alloc, driver->kind, *driver->lsp,
+                                                 containingSymbol, DriverFlags::None,
+                                                 &expr.sourceRange);
             perSymbol.emplace_back(newDriver, bounds);
         }
 

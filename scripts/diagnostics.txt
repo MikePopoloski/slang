@@ -1165,6 +1165,7 @@ error AssertionFormalUnassigned "output formal argument '{}' is not definitely a
 error AssertionFormalMultiAssign "cannot bind local variable '{}' to more than one output or inout local variable formal argument"
 note NoteRequiredHere "required here"
 note NoteClockHere "clock here"
+note NotePortConnHere "from port connection here"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning unused-net UnusedNet "unused net '{}'"
 warning unused-implicit-net UnusedImplicitNet "implicit net '{}' is unused elsewhere"
