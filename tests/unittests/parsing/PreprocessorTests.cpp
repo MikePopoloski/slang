@@ -2917,3 +2917,34 @@ endmodule
     CHECK(sawLine);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Preprocessor: Include files expanded from within a macro") {
+    getSourceManager().assignText("inc.svh", "parameter int WIDTH = 8");
+
+    auto& text = R"(
+module m #(`include "inc.svh",
+           parameter int INDEX = 0) ();
+endmodule
+
+`define FOO \
+module n #(`include "inc.svh", \
+           parameter int INDEX = 0) (); \
+endmodule
+`FOO
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == R"(
+module m #(parameter int WIDTH = 8,
+           parameter int INDEX = 0) ();
+endmodule
+module n #(parameter int WIDTH = 8,
+           parameter int INDEX = 0) ();
+endmodule
+)");
+
+    auto tree = SyntaxTree::fromText(text, getSourceManager());
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
