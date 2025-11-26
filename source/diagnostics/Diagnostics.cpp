@@ -20,7 +20,8 @@ bool DiagCode::showNoteWithNoLocation() const {
 bool DiagCode::coalesceWithDifferingArgs() const {
     return *this == diag::MultipleAlwaysAssigns || *this == diag::MultipleContAssigns ||
            *this == diag::MultipleUDNTDrivers || *this == diag::MultipleUWireDrivers ||
-           *this == diag::MixedVarAssigns;
+           *this == diag::MixedVarAssigns || *this == diag::InferredComb ||
+           *this == diag::InferredLatch;
 }
 
 Diagnostic::Diagnostic() noexcept : location(SourceLocation::NoLocation) {

@@ -304,13 +304,10 @@ static bool handleOverlap(AnalysisContext& context, const ValueSymbol& symbol,
     else
         code = diag::MixedVarAssigns;
 
-    // Use the "second" driver for printing the LSP, unless we see that it's
-    // an indirect port connection or we're printing a message about single-driver
-    // procedures, in which case we'll try the other one.
-    if (second->flags.has(DriverFlags::ViaIndirectPort) ||
-        (bothProcedural && !second->isInSingleDriverProcedure())) {
+    // If we're reporting a message about single driver procedures, make sure
+    // the "primary" location is inside a single driver procedure.
+    if (bothProcedural && !second->isInSingleDriverProcedure())
         std::swap(first, second);
-    }
 
     auto secondRange = second->getSourceRange();
     auto& diag = context.addDiag(symbol, code, secondRange);

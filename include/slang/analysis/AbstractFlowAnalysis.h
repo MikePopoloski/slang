@@ -52,6 +52,9 @@ protected:
     /// Tracking for how many steps we've taken while analyzing the body of a loop.
     uint32_t forLoopSteps = 0;
 
+    /// Set to true if we're currently walking through an unrolled for loop.
+    bool inUnrolledForLoop = false;
+
     /// An optional diagnostics collection. If provided, warnings encountered during
     /// analysis will be added to it.
     Diagnostics* diagnostics;
@@ -447,6 +450,7 @@ protected:
         }
         else {
             // We have a set of iteration values that we can use to unroll the loop.
+            auto savedUnrollFlag = std::exchange(inUnrolledForLoop, true);
             for (size_t i = 0; i < iterValues.size();) {
                 for (auto local : localPtrs)
                     *local = std::move(iterValues[i++]);
@@ -456,6 +460,7 @@ protected:
                 for (auto step : stmt.steps)
                     visit(*step);
             }
+            inUnrolledForLoop = savedUnrollFlag;
         }
 
         // Clean up any locals we may have created.

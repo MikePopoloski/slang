@@ -1274,13 +1274,12 @@ endmodule
     AnalysisManager analysisManager;
 
     auto diags = analyze(code, compilation, analysisManager);
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);
     CHECK(diags[2].code == diag::MultipleContAssigns);
     CHECK(diags[3].code == diag::MultipleContAssigns);
     CHECK(diags[4].code == diag::MultipleContAssigns);
-    CHECK(diags[5].code == diag::MultipleContAssigns);
 }
 
 TEST_CASE("Multi assign through ref ports 3") {
@@ -1324,6 +1323,38 @@ endmodule
     CHECK(diags[2].code == diag::MultipleContAssigns);
 }
 
+TEST_CASE("Multi assign through ref ports 4") {
+    auto& code = R"(
+module m(a);
+    ref a;
+    logic [3:0] a;
+
+    always_comb a[3] = 1;
+
+    always_comb begin
+        //for (int i = 0; i < 4; i++)
+        //    a[i] = 1;
+        a[0] = 1;
+        a[1] = 1;
+        a[2] = 1;
+        a[3] = 1;
+    end
+endmodule
+
+module top;
+    logic [3:0] a;
+    m m1(a);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+}
+
 TEST_CASE("Multi assign complicated modport expressions") {
     auto& code = R"(
 class C;
@@ -1362,7 +1393,35 @@ endmodule
 
     auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
-    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);
-    CHECK(diags[2].code == diag::MultipleContAssigns);
+    CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
+}
+
+TEST_CASE("For loop unrolling diagnostic preserves select info") {
+    auto& code = R"(
+module m;
+    logic [3:0] a;
+    always_comb a[2] = 1;
+    always_comb begin
+        for (int i = 0; i < 3; i++)
+            a[i] = 1;
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:7:13: error: variable 'a[2]' driven by always_comb procedure cannot be written to by any other process
+            a[i] = 1;
+            ^~~~
+source:4:17: note: also assigned here
+    always_comb a[2] = 1;
+                ^~~~
+)");
 }

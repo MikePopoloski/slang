@@ -203,6 +203,11 @@ public:
                                    EvalContext& evalContext, LSPCallback callback,
                                    bool isLValue = true);
 
+    /// Clones the given LSP expression tree into a new one that has constant select
+    /// values baked into the tree.
+    static const Expression& cloneLSP(BumpAllocator& alloc, const Expression& expr,
+                                      EvalContext& evalContext);
+
 private:
     LSPUtilities() = delete;
 

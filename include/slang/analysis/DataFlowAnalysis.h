@@ -282,7 +282,7 @@ private:
 
 template<typename TDerived, typename TState>
 void DataFlowAnalysis<TDerived, TState>::noteReference(const ValueSymbol& symbol,
-                                                       const Expression& lsp) {
+                                                       const Expression& originalLsp) {
     // This feels icky but we don't count a symbol as being referenced in the procedure
     // if it's only used inside an unreachable flow path. The alternative would just
     // frustrate users, but the reason it's icky is because whether a path is reachable
@@ -292,7 +292,15 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValueSymbol& symbol
     if (!currState.reachable)
         return;
 
-    auto bounds = LSPUtilities::getBounds(lsp, this->getEvalContext(), symbol.getType());
+    const Expression* lsp = &originalLsp;
+    if (this->inUnrolledForLoop) {
+        // During unrolled for loop evaluation the LSPs we evaluate can depend
+        // on otherwise non-constant values, so we need to clone the LSP tree
+        // and save the constants while we have them.
+        lsp = &LSPUtilities::cloneLSP(context.alloc, originalLsp, this->getEvalContext());
+    }
+
+    auto bounds = LSPUtilities::getBounds(*lsp, this->getEvalContext(), symbol.getType());
     if (!bounds) {
         // This probably cannot be hit given that we early out elsewhere for
         // invalid expressions.
@@ -330,7 +338,7 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValueSymbol& symbol
                 ++lspIt;
             }
         }
-        lspMap.insert(*bounds, &lsp, lspMapAllocator);
+        lspMap.insert(*bounds, lsp, lspMapAllocator);
     }
     else {
         rvalues[&symbol].unionWith(*bounds, {}, bitMapAllocator);

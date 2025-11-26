@@ -291,4 +291,52 @@ void LSPUtilities::expandIndirectLSP(BumpAllocator& alloc, EvalContext& evalCont
     }
 }
 
+const Expression& LSPUtilities::cloneLSP(BumpAllocator& alloc, const Expression& expr,
+                                         EvalContext& evalContext) {
+    auto evalInt = [&](const Expression& e) -> std::optional<int32_t> {
+        if (auto cv = e.eval(evalContext); cv.isInteger())
+            return cv.integer().as<int32_t>();
+        return std::nullopt;
+    };
+
+    switch (expr.kind) {
+        case ExpressionKind::ElementSelect: {
+            auto& ese = expr.as<ElementSelectExpression>();
+            if (auto intVal = evalInt(ese.selector())) {
+                auto& newVal = cloneLSP(alloc, ese.value(), evalContext);
+                auto& result = ElementSelectExpression::fromConstant(
+                    alloc, const_cast<Expression&>(newVal), *intVal, evalContext.astCtx);
+                result.sourceRange = expr.sourceRange;
+                return result;
+            }
+            break;
+        }
+        case ExpressionKind::RangeSelect: {
+            auto& rse = expr.as<RangeSelectExpression>();
+            auto left = evalInt(rse.left());
+            auto right = evalInt(rse.right());
+            if (left && right) {
+                auto& newVal = cloneLSP(alloc, rse.value(), evalContext);
+                auto& result = RangeSelectExpression::fromConstant(
+                    alloc, const_cast<Expression&>(newVal), {*left, *right}, evalContext.astCtx);
+                result.sourceRange = expr.sourceRange;
+                return result;
+            }
+            break;
+        }
+        case ExpressionKind::MemberAccess: {
+            auto& access = expr.as<MemberAccessExpression>();
+            auto& newVal = cloneLSP(alloc, access.value(), evalContext);
+            return *alloc.emplace<MemberAccessExpression>(*expr.type,
+                                                          const_cast<Expression&>(newVal),
+                                                          access.member, expr.sourceRange);
+        }
+        default:
+            break;
+    }
+
+    // Just return the expression as-is, nothing to do here.
+    return expr;
+}
+
 } // namespace slang::ast
