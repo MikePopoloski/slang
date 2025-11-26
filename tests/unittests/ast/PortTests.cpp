@@ -1851,7 +1851,7 @@ TEST_CASE("Additional explicit port expression checks") {
     auto tree = SyntaxTree::fromText(R"(
 logic [2:0] foo;
 
-module m(input int a, output .b(foo[a]));
+module m(input int a, output .b(foo[a]), input .c(foo));
 endmodule
 )");
 
@@ -1859,6 +1859,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[1].code == diag::PortExprMemberParent);
 }

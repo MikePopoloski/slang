@@ -1332,12 +1332,8 @@ module m(a);
     always_comb a[3] = 1;
 
     always_comb begin
-        //for (int i = 0; i < 4; i++)
-        //    a[i] = 1;
-        a[0] = 1;
-        a[1] = 1;
-        a[2] = 1;
-        a[3] = 1;
+        for (int i = 0; i < 4; i++)
+            a[i] = 1;
     end
 endmodule
 

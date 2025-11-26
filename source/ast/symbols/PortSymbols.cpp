@@ -1324,15 +1324,33 @@ const Type& PortSymbol::getType() const {
         internalExpr = &Expression::bind(*eaps.expr, context);
         type = internalExpr->type;
 
+        auto makeBad = [&] {
+            internalExpr = context.getCompilation().emplace<InvalidExpression>(internalExpr,
+                                                                               ErrorType::Instance);
+        };
+
         if (!internalExpr->bad()) {
             if (!Expression::checkConnectionDirection(*internalExpr, checkDir, context, location)) {
-                internalExpr = context.getCompilation().emplace<InvalidExpression>(
-                    internalExpr, ErrorType::Instance);
+                makeBad();
             }
 
-            internalExpr->visitSymbolReferences([&](const Expression& expr, const Symbol&) {
-                if (expr.kind == ExpressionKind::NamedValue)
+            internalExpr->visitSymbolReferences([&](const Expression& expr, const Symbol& symbol) {
+                if (expr.kind == ExpressionKind::MemberAccess)
+                    return;
+
+                if (symbol.getParentScope() != scope || expr.kind != ExpressionKind::NamedValue) {
+                    auto def = scope->asSymbol().getDeclaringDefinition();
+                    SLANG_ASSERT(def);
+
+                    auto& diag = context.addDiag(diag::PortExprMemberParent, expr.sourceRange);
+                    diag << symbol.name;
+                    diag << def->getKindString();
+                    diag.addNote(diag::NoteDeclarationHere, symbol.location);
+                    makeBad();
+                }
+                else {
                     expr.as<NamedValueExpression>().symbol.addPortBackref(*this);
+                }
             });
         }
     }

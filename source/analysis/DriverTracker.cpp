@@ -703,7 +703,6 @@ void DriverTracker::applyInstanceSideEffect(AnalysisContext& context, DriverAllo
     else {
         // Not an interface port, so must be a ref port. Find ourselves in the new
         // instance body and assign an indirect driver, which we'll propagate later.
-        // TODO: add test for explicit port expression that connects hierarchically
         if (auto newTarget = instance.body.find(hierPortDriver.target->name)) {
             auto& valueSym = newTarget->as<ValueSymbol>();
             auto [driver, bounds] = newDriverAndBounds(valueSym);
