@@ -873,6 +873,9 @@ interface J(wire clk);
         int a;
         modport m(input .i({a, q, b}));
         modport n(input b, clocking cb);
+
+        struct { int i; } s;
+        modport o(input .q(s.i));
     endinterface
 
     I i(3);

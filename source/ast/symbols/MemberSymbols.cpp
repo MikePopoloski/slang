@@ -256,15 +256,19 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext
     }
 
     expr.visitSymbolReferences([&](const Expression& refExpr, const Symbol& symbol) {
+        if (refExpr.kind == ExpressionKind::MemberAccess)
+            return;
+
         // "Hierarchical" is ok if it's actually via an interface / modport port
         // on the parent interface itself.
-        if (auto hierVal = refExpr.as_if<HierarchicalValueExpression>()) {
+        auto hierVal = refExpr.as_if<HierarchicalValueExpression>();
+        if (hierVal) {
             auto& ref = hierVal->ref;
             if (ref.isViaIfacePort() && ref.path[0].symbol->getParentScope() == context.scope)
                 return;
         }
 
-        if (symbol.getParentScope() != context.scope) {
+        if (hierVal || symbol.getParentScope() != context.scope) {
             auto& diag = context.addDiag(diag::ModportMemberParent, refExpr.sourceRange);
             diag << symbol.name;
             diag.addNote(diag::NoteDeclarationHere, symbol.location);
