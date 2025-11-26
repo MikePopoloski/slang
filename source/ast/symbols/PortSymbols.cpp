@@ -10,15 +10,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
-#include "slang/ast/expressions/AssignmentExpressions.h"
-#include "slang/ast/expressions/MiscExpressions.h"
-#include "slang/ast/expressions/OperatorExpressions.h"
-#include "slang/ast/symbols/AttributeSymbol.h"
-#include "slang/ast/symbols/InstanceSymbols.h"
-#include "slang/ast/symbols/MemberSymbols.h"
-#include "slang/ast/symbols/VariableSymbols.h"
-#include "slang/ast/types/AllTypes.h"
-#include "slang/ast/types/NetType.h"
+#include "slang/ast/TypeProvider.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
@@ -78,6 +70,24 @@ std::tuple<const DefinitionSymbol*, std::string_view> getInterfacePortInfo(
     }
 
     return {defSym, modport};
+}
+
+const Expression& bindExplicitConnection(Expression& expr, ArgumentDirection direction,
+                                         const Type& type, const ASTContext& context,
+                                         SourceRange assignmentRange) {
+    switch (direction) {
+        case ArgumentDirection::In:
+            return Expression::convertAssignment(context, type, expr, assignmentRange);
+        case ArgumentDirection::Out:
+        case ArgumentDirection::InOut:
+            return Expression::bindLValue(expr, type, context,
+                                          direction == ArgumentDirection::InOut
+                                              ? AssignFlags::InOutPort
+                                              : AssignFlags::None);
+        case ArgumentDirection::Ref:
+            return Expression::bindRefArg(type, {}, expr, context, /* allowPackedSelects */ true);
+    }
+    SLANG_UNREACHABLE;
 }
 
 // Helper class to build up lists of port symbols.
@@ -772,7 +782,10 @@ public:
                           const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) :
         scope(*instance.getParentScope()), instance(instance), comp(scope.getCompilation()),
         lookupLocation(LookupLocation::after(instance)),
+        context(scope, lookupLocation, ASTFlags::NonProcedural),
         connMap(portConnections, scope, lookupLocation) {
+
+        context.setInstance(instance);
 
         // Build up the set of dimensions for the instantiating instance's array parent, if any.
         // This builds up the dimensions in reverse order, so we have to reverse them back.
@@ -938,6 +951,37 @@ public:
         return getImplicitInterface(port, conn.name.range(), attributes, /* isWildcard */ false);
     }
 
+    void expandMultiPortConn(const PortConnection& conn,
+                             SmallVector<const PortConnection*>& results) {
+        auto& mp = conn.port.as<MultiPortSymbol>();
+        auto expr = conn.getExpression();
+        if (!expr || mp.getType().isError() || expr->bad()) {
+            for (auto port : mp.ports)
+                results.push_back(emptyConnection(*port));
+            return;
+        }
+
+        const auto exprWidth = expr->type->getBitWidth();
+
+        bitwidth_t index = 0;
+        for (auto port : std::views::reverse(mp.ports)) {
+            if (index >= exprWidth) {
+                results.push_back(emptyConnection(*port));
+                continue;
+            }
+
+            const auto portWidth = port->getType().getBitWidth();
+            ConstantRange range{int32_t(index + portWidth - 1), int32_t(index)};
+            index += portWidth;
+
+            auto& e = Expression::buildPackedSelectTree(comp, *const_cast<Expression*>(expr), range,
+                                                        context);
+            auto subExpr = &bindExplicitConnection(e, port->direction, port->getType(), context,
+                                                   SourceRange());
+            results.push_back(comp.emplace<PortConnection>(*port, *subExpr));
+        }
+    }
+
     void finalize() {
         if (connMap.usingOrdered) {
             if (orderedIndex < connMap.orderedConns.size()) {
@@ -1003,7 +1047,6 @@ private:
             return emptyConnection(port);
         }
 
-        ASTContext context(scope, lookupLocation, ASTFlags::NonProcedural);
         auto exprSyntax = context.requireSimpleExpr(syntax);
         if (!exprSyntax)
             return emptyConnection(port);
@@ -1071,12 +1114,11 @@ private:
     PortConnection* getInterfaceExpr(const InterfacePortSymbol& port,
                                      const PropertyExprSyntax& syntax,
                                      std::span<const AttributeSymbol* const> attributes) {
-        ASTContext context(scope, lookupLocation, ASTFlags::NonProcedural);
         auto expr = context.requireSimpleExpr(syntax);
         if (!expr)
             return emptyConnection(port);
 
-        auto [conn, connExpr] = getInterfaceConn(context, port, *expr);
+        auto [conn, connExpr] = getInterfaceConn(port, *expr);
         return createConnection(port, conn, connExpr, attributes);
     }
 
@@ -1100,8 +1142,7 @@ private:
         Token id(comp, TokenKind::Identifier, {}, port.name, range.start());
         auto idName = comp.emplace<IdentifierNameSyntax>(id);
 
-        ASTContext context(scope, lookupLocation, ASTFlags::NonProcedural);
-        auto [conn, connExpr] = getInterfaceConn(context, port, *idName);
+        auto [conn, connExpr] = getInterfaceConn(port, *idName);
         return createConnection(port, conn, connExpr, attributes);
     }
 
@@ -1145,7 +1186,7 @@ private:
     }
 
     std::pair<PortConnection::IfaceConn, const Expression*> getInterfaceConn(
-        ASTContext& context, const InterfacePortSymbol& port, const ExpressionSyntax& syntax) {
+        const InterfacePortSymbol& port, const ExpressionSyntax& syntax) {
         SLANG_ASSERT(!port.isInvalid());
 
         auto makeError = []() -> std::pair<PortConnection::IfaceConn, const Expression*> {
@@ -1246,6 +1287,7 @@ private:
     const InstanceSymbol& instance;
     Compilation& comp;
     LookupLocation lookupLocation;
+    ASTContext context;
     PortConnection::ConnMap connMap;
     SmallVector<ConstantRange, 4> instanceDims;
     size_t orderedIndex = 0;
@@ -1678,6 +1720,10 @@ PortConnection::PortConnection(const Symbol& port, const ExpressionSyntax& expr)
     port(port), exprSyntax(&expr) {
 }
 
+PortConnection::PortConnection(const Symbol& port, const Expression& expr) :
+    port(port), expr(&expr) {
+}
+
 PortConnection::PortConnection(const Symbol& port, bool useDefault) :
     port(port), useDefault(useDefault) {
 }
@@ -1750,27 +1796,16 @@ const Expression* PortConnection::getExpression() const {
         context.setInstance(parentInstance);
 
         if (!connectedSymbol) {
-            expr = &Expression::bindArgument(*type, direction, {}, *exprSyntax, context);
+            if (port.kind == SymbolKind::MultiPort)
+                expr = &Expression::bind(*exprSyntax, context);
+            else
+                expr = &Expression::bindArgument(*type, direction, {}, *exprSyntax, context);
             return expr;
         }
 
         Expression* e = &ValueExpressionBase::fromSymbol(context, *connectedSymbol, nullptr,
                                                          implicitNameRange);
-        switch (direction) {
-            case ArgumentDirection::In:
-                expr = &Expression::convertAssignment(context, *type, *e, implicitNameRange);
-                break;
-            case ArgumentDirection::Out:
-            case ArgumentDirection::InOut:
-                expr = &Expression::bindLValue(*e, *type, context,
-                                               direction == ArgumentDirection::InOut
-                                                   ? AssignFlags::InOutPort
-                                                   : AssignFlags::None);
-                break;
-            case ArgumentDirection::Ref:
-                expr = &Expression::bindRefArg(*type, {}, *e, context);
-                break;
-        }
+        expr = &bindExplicitConnection(*e, direction, *type, context, implicitNameRange);
 
         // Implicit port connections have the additional restriction that they cannot
         // have implicit conversions attached. We issue a warning and continue on though.
@@ -1813,16 +1848,11 @@ static const Symbol* findAnyVars(const Expression& expr) {
 }
 
 void PortConnection::checkSimulatedNetTypes() const {
-    if (!getExpression() || expr->bad() || port.kind == SymbolKind::InterfacePort)
+    if (!getExpression() || expr->bad() || port.kind != SymbolKind::Port)
         return;
 
     SmallVector<PortSymbol::NetTypeRange, 4> internal;
-    if (port.kind == SymbolKind::Port)
-        port.as<PortSymbol>().getNetTypes(internal);
-    else {
-        for (auto p : port.as<MultiPortSymbol>().ports)
-            p->getNetTypes(internal);
-    }
+    port.as<PortSymbol>().getNetTypes(internal);
 
     SmallVector<PortSymbol::NetTypeRange, 4> external;
     getNetRanges(*expr, external);
@@ -2071,7 +2101,7 @@ void PortConnection::makeConnections(
             auto& port = portBase->as<MultiPortSymbol>();
             auto conn = builder.getConnection(port);
             SLANG_ASSERT(conn);
-            results.push_back(conn);
+            builder.expandMultiPortConn(*conn, results);
         }
         else {
             auto& port = portBase->as<InterfacePortSymbol>();

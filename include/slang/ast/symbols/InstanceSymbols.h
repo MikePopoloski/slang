@@ -110,7 +110,6 @@ public:
     bool isTopLevel() const;
 
     const PortConnection* getPortConnection(const PortSymbol& port) const;
-    const PortConnection* getPortConnection(const MultiPortSymbol& port) const;
     const PortConnection* getPortConnection(const InterfacePortSymbol& port) const;
     std::span<const PortConnection* const> getPortConnections() const;
 

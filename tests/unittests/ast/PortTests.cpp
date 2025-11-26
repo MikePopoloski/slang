@@ -1349,7 +1349,7 @@ endmodule
     CHECK(diags[3].code == diag::NetRangeInconsistent);
     CHECK(diags[4].code == diag::NetRangeInconsistent);
     CHECK(diags[5].code == diag::NetInconsistent);
-    CHECK(diags[6].code == diag::NetRangeInconsistent);
+    CHECK(diags[6].code == diag::NetInconsistent);
     CHECK(diags[7].code == diag::NetInconsistent);
 }
 
@@ -1415,6 +1415,11 @@ module p({a, b});
     input nt1 a, b;
 endmodule
 
+module q(input .foo({a, b}));
+    nt1 a;
+    wire b;
+endmodule
+
 module top;
     wire signed [5:0] a;
     wire integer b;
@@ -1431,6 +1436,8 @@ module top;
 
     nt1 d;
     p p2({d, d});
+
+    q q1({c, c});
 endmodule
 )");
 
@@ -1438,7 +1445,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 9);
+    REQUIRE(diags.size() == 12);
     CHECK(diags[0].code == diag::MismatchedUserDefPortConn);
     CHECK(diags[1].code == diag::PortWidthTruncate);
     CHECK(diags[2].code == diag::MismatchedUserDefPortDir);
@@ -1446,8 +1453,11 @@ endmodule
     CHECK(diags[4].code == diag::PortWidthTruncate);
     CHECK(diags[5].code == diag::UserDefPortTwoSided);
     CHECK(diags[6].code == diag::PortWidthTruncate);
-    CHECK(diags[7].code == diag::UserDefPortMixedConcat);
+    CHECK(diags[7].code == diag::UserDefPortTwoSided);
     CHECK(diags[8].code == diag::PortWidthExpand);
+    CHECK(diags[9].code == diag::SignConversion);
+    CHECK(diags[10].code == diag::UserDefPortMixedConcat);
+    CHECK(diags[11].code == diag::PortWidthExpand);
 }
 
 TEST_CASE("inout uwire port errors") {

@@ -267,7 +267,6 @@ void LSPUtilities::expandIndirectLSP(BumpAllocator& alloc, EvalContext& evalCont
     bool anyRefPorts = false;
     for (auto backref = symbol.getFirstPortBackref(); backref;
          backref = backref->getNextBackreference()) {
-        // TODO: multiports
         auto& port = *backref->port;
         if (port.direction == ArgumentDirection::Ref) {
             auto scope = symbol.getParentScope();

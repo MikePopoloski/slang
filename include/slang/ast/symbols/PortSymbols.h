@@ -176,6 +176,7 @@ public:
 
     PortConnection(const Symbol& port);
     PortConnection(const Symbol& port, const syntax::ExpressionSyntax& expr);
+    PortConnection(const Symbol& port, const Expression& expr);
     PortConnection(const Symbol& port, bool useDefault);
     PortConnection(const InterfacePortSymbol& port, const IfaceConn& conn, const Expression* expr);
     PortConnection(const Symbol& port, const Symbol* connectedSymbol,

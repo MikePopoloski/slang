@@ -770,17 +770,6 @@ const PortConnection* InstanceSymbol::getPortConnection(const PortSymbol& port) 
     return reinterpret_cast<const PortConnection*>(it->second);
 }
 
-const PortConnection* InstanceSymbol::getPortConnection(const MultiPortSymbol& port) const {
-    if (!connectionMap)
-        resolvePortConnections();
-
-    auto it = connectionMap->find(reinterpret_cast<uintptr_t>(&port));
-    if (it == connectionMap->end())
-        return nullptr;
-
-    return reinterpret_cast<const PortConnection*>(it->second);
-}
-
 const PortConnection* InstanceSymbol::getPortConnection(const InterfacePortSymbol& port) const {
     if (!connectionMap)
         resolvePortConnections();
@@ -840,14 +829,10 @@ void InstanceSymbol::resolvePortConnections() const {
     PortConnection::makeConnections(*this, portList,
                                     syntax->as<HierarchicalInstanceSyntax>().connections, conns);
 
-    auto portIt = portList.begin();
     for (auto conn : conns) {
-        SLANG_ASSERT(portIt != portList.end());
-        connectionMap->emplace(reinterpret_cast<uintptr_t>(*portIt++),
+        connectionMap->emplace(reinterpret_cast<uintptr_t>(&conn->port),
                                reinterpret_cast<uintptr_t>(conn));
     }
-
-    SLANG_ASSERT(portIt == portList.end());
     connections = conns.copy(comp);
 }
 

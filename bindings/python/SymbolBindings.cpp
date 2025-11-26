@@ -393,10 +393,6 @@ void registerSymbols(py::module_& m) {
              py::overload_cast<const PortSymbol&>(&InstanceSymbol::getPortConnection, py::const_),
              byrefint, "port"_a)
         .def("getPortConnection",
-             py::overload_cast<const MultiPortSymbol&>(&InstanceSymbol::getPortConnection,
-                                                       py::const_),
-             byrefint, "port"_a)
-        .def("getPortConnection",
              py::overload_cast<const InterfacePortSymbol&>(&InstanceSymbol::getPortConnection,
                                                            py::const_),
              byrefint, "port"_a);

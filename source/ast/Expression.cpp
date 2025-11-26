@@ -326,9 +326,10 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
 }
 
 static bool canConnectToRefArg(const ASTContext& context, const Expression& expr,
-                               bitmask<VariableFlags> argFlags, bool allowConstClassHandle = false,
+                               bitmask<VariableFlags> argFlags, bool allowPackedSelects,
+                               bool allowConstClassHandle = false,
                                bool disallowDynamicArrays = false) {
-    auto sym = expr.getSymbolReference(/* allowPacked */ false);
+    auto sym = expr.getSymbolReference(allowPackedSelects);
     if (!sym || !VariableSymbol::isKind(sym->kind))
         return false;
 
@@ -355,13 +356,13 @@ static bool canConnectToRefArg(const ASTContext& context, const Expression& expr
     switch (expr.kind) {
         case ExpressionKind::ElementSelect:
             return canConnectToRefArg(context, expr.as<ElementSelectExpression>().value(), argFlags,
-                                      false, isRefStatic);
+                                      allowPackedSelects, false, isRefStatic);
         case ExpressionKind::RangeSelect:
             return canConnectToRefArg(context, expr.as<RangeSelectExpression>().value(), argFlags,
-                                      false, isRefStatic);
+                                      allowPackedSelects, false, isRefStatic);
         case ExpressionKind::MemberAccess:
             return canConnectToRefArg(context, expr.as<MemberAccessExpression>().value(), argFlags,
-                                      true);
+                                      allowPackedSelects, true);
         default:
             return true;
     }
@@ -374,25 +375,28 @@ const Expression& Expression::bindRefArg(const Type& lhs, bitmask<VariableFlags>
     if (expr.bad())
         return expr;
 
-    return bindRefArg(lhs, argFlags, expr, context);
+    return bindRefArg(lhs, argFlags, expr, context, /* allowPackedSelects */ false);
 }
 
 const Expression& Expression::bindRefArg(const Type& lhs, bitmask<VariableFlags> argFlags,
-                                         const Expression& expr, const ASTContext& context) {
+                                         const Expression& expr, const ASTContext& context,
+                                         bool allowPackedSelects) {
     auto& comp = context.getCompilation();
     if (lhs.isError())
         return badExpr(comp, &expr);
 
     const bool isConstRef = argFlags.has(VariableFlags::Const);
-    if (!canConnectToRefArg(context, expr, argFlags)) {
+    if (!canConnectToRefArg(context, expr, argFlags, allowPackedSelects)) {
         DiagCode code = diag::InvalidRefArg;
-        if (!isConstRef && canConnectToRefArg(context, expr, argFlags | VariableFlags::Const)) {
+        if (!isConstRef && canConnectToRefArg(context, expr, argFlags | VariableFlags::Const,
+                                              allowPackedSelects)) {
             // If we can't bind to ref but we can bind to 'const ref', issue a more
             // specific error about constness.
             code = diag::ConstVarToRef;
         }
         else if (argFlags.has(VariableFlags::RefStatic) &&
-                 canConnectToRefArg(context, expr, argFlags & ~VariableFlags::RefStatic)) {
+                 canConnectToRefArg(context, expr, argFlags & ~VariableFlags::RefStatic,
+                                    allowPackedSelects)) {
             // Same idea, but for ref static restrictions.
             code = diag::AutoVarToRefStatic;
         }
@@ -443,7 +447,8 @@ bool Expression::checkConnectionDirection(const Expression& expr, ArgumentDirect
         case ArgumentDirection::InOut:
             return expr.requireLValue(context, loc, AssignFlags::InOutPort);
         case ArgumentDirection::Ref:
-            if (!canConnectToRefArg(context, expr, VariableFlags::None)) {
+            if (!canConnectToRefArg(context, expr, VariableFlags::None,
+                                    /* allowPackedSelects */ false)) {
                 context.addDiag(diag::InvalidRefArg, loc) << expr.sourceRange;
                 return false;
             }

@@ -1274,12 +1274,13 @@ endmodule
     AnalysisManager analysisManager;
 
     auto diags = analyze(code, compilation, analysisManager);
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);
     CHECK(diags[2].code == diag::MultipleContAssigns);
     CHECK(diags[3].code == diag::MultipleContAssigns);
     CHECK(diags[4].code == diag::MultipleContAssigns);
+    CHECK(diags[5].code == diag::MultipleContAssigns);
 }
 
 TEST_CASE("Multi assign through ref ports 3") {
@@ -1420,4 +1421,28 @@ source:4:17: note: also assigned here
     always_comb a[2] = 1;
                 ^~~~
 )");
+}
+
+TEST_CASE("Multi-ports with output segments register drivers correctly") {
+    auto& code = R"(
+module m({a, b});
+    input a;
+    output b;
+endmodule
+
+module top;
+    logic [1:0] a;
+    m m1(a);
+
+    assign a[0] = 1;
+    assign a[1] = 1;
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
 }

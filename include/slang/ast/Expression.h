@@ -143,7 +143,8 @@ public:
 
     /// Binds a connection to a ref argument from the given pre-created target expression.
     static const Expression& bindRefArg(const Type& lhs, bitmask<VariableFlags> argFlags,
-                                        const Expression& rhs, const ASTContext& context);
+                                        const Expression& rhs, const ASTContext& context,
+                                        bool allowPackedSelects);
 
     /// Binds an argument or port connection with the given direction.
     static const Expression& bindArgument(const Type& argType, ArgumentDirection direction,
