@@ -1175,6 +1175,9 @@ struct CheckerArgVisitor : public ASTVisitor<CheckerArgVisitor, true, true> {
     }
 };
 
+static const PropertyExprSyntax* EvaluatingPlaceholder =
+    reinterpret_cast<const PropertyExprSyntax*>(UINTPTR_MAX);
+
 Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRange range,
                                                   const ASTContext& instanceCtx) {
     Compilation& comp = instanceCtx.getCompilation();
@@ -1254,12 +1257,27 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
         return badExpr(comp, nullptr);
     }
 
-    auto [propExpr, argCtx] = it->second;
+    auto& argTuple = const_cast<std::tuple<const syntax::PropertyExprSyntax*, ASTContext>&>(
+        it->second);
+
+    auto propExpr = std::get<0>(argTuple);
+    auto argCtx = std::get<1>(argTuple);
     if (!propExpr) {
         // The expression can be null when making default instances of
         // sequences and properties. Just return an invalid expression.
         return badExpr(comp, nullptr);
     }
+
+    // We need to detect recursive usage of this argument in its own binding.
+    // The modification via const_cast here is a bit gross but we restore the
+    // value at the end of the function so it should be safe.
+    if (propExpr == EvaluatingPlaceholder) {
+        instanceCtx.addDiag(diag::RecursiveDefinition, range) << formal.name;
+        return badExpr(comp, nullptr);
+    }
+
+    std::get<0>(argTuple) = EvaluatingPlaceholder;
+    auto guard = ScopeGuard([&] { std::get<0>(argTuple) = propExpr; });
 
     auto [seqExpr, regExpr] = decomposePropExpr(*propExpr);
 
