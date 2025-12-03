@@ -384,8 +384,9 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         }
         else if (activeInstanceBodies.contains(symbol.getCanonicalBody())) {
             // Detect infinite recursion that we missed earlier because of caching.
+            auto name = symbol.name.empty() ? "<unnamed instance>"sv : symbol.name;
             symbol.getParentScope()->addDiag(diag::InfinitelyRecursiveHierarchy, symbol.location)
-                << symbol.name;
+                << name;
             hierarchyProblem = true;
         }
     }

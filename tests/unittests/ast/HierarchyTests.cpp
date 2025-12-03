@@ -2234,3 +2234,13 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Infinite module hierarchy empty name error message regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module k module f f(
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}

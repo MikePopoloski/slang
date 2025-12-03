@@ -1098,7 +1098,7 @@ warning constant-conversion ConstantConversion "implicit conversion from {} to {
 
 subsystem Compilation
 fatal MaxInstanceDepthExceeded "{} instantiation exceeded maximum depth of {}"
-fatal InfinitelyRecursiveHierarchy "infinitely recursive instantiation of {}"
+fatal InfinitelyRecursiveHierarchy "infinitely recursive instantiation of '{}'"
 error InvalidTopModule "'{}' is not a valid top-level module"
 error TopModuleIfacePort "top-level module '{}' has unconnected interface port '{}'"
 error TopModuleRefPort "top-level module '{}' has unconnected 'ref' port '{}'"
