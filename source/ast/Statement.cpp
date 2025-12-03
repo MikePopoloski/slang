@@ -331,14 +331,17 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
         bindScopeInitializers(context, buffer);
 
         const StatementSyntax* ss;
-        if (syntax.kind == SyntaxKind::PatternCaseItem)
+        bool labelHandled;
+        if (syntax.kind == SyntaxKind::PatternCaseItem) {
             ss = syntax.as<PatternCaseItemSyntax>().statement;
-        else
+            labelHandled = false;
+        }
+        else {
             ss = &syntax.as<StatementSyntax>();
+            labelHandled = true;
+        }
 
-        auto& stmt = bind(*ss, context, stmtCtx, /* inList */ false,
-                          /* labelHandled */ true);
-
+        auto& stmt = bind(*ss, context, stmtCtx, /* inList */ false, labelHandled);
         buffer.push_back(&stmt);
         anyBad |= stmt.bad();
 

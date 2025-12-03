@@ -2134,6 +2134,19 @@ endfunction
     CHECK(!compilation.getAllDiagnostics().empty());
 }
 
+TEST_CASE("More pattern error handling regress") {
+    auto tree = SyntaxTree::fromText(R"(
+always case(matches A j:case)matches
+a
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Just check that the build fails but doesn't crash.
+    CHECK(!compilation.getAllDiagnostics().empty());
+}
+
 TEST_CASE("Tagged pattern eval regress -- GH #1482") {
     auto tree = SyntaxTree::fromText(R"(
 typedef union tagged {
