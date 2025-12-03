@@ -53,11 +53,13 @@ public:
     // Resets the builder to be ready to create more instances with different settings.
     // Must be called at least once prior to creating instances.
     void reset(const DefinitionSymbol& def_, ParameterBuilder& paramBuilder_,
-               const ResolvedConfig* resolvedConfig_, const ConfigBlockSymbol* newConfigRoot_) {
+               const ResolvedConfig* resolvedConfig_, const ConfigBlockSymbol* newConfigRoot_,
+               uint32_t instanceDepth_) {
         definition = &def_;
         paramBuilder = &paramBuilder_;
         resolvedConfig = resolvedConfig_;
         newConfigRoot = newConfigRoot_;
+        instanceDepth = instanceDepth_;
     }
 
     // Creates instance(s) for the given syntax node.
@@ -103,13 +105,14 @@ private:
     SmallVector<uint32_t> path;
     std::span<const AttributeInstanceSyntax* const> attributes;
     bitmask<InstanceFlags> flags;
+    uint32_t instanceDepth = 0;
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax,
                            const HierarchyOverrideNode* overrideNode) {
         paramBuilder->setOverrides(overrideNode);
         auto [name, loc] = ast::detail::getNameLoc(syntax);
-        auto inst = comp.emplace<InstanceSymbol>(comp, name, loc, *definition, *paramBuilder,
-                                                 flags);
+        auto inst = comp.emplace<InstanceSymbol>(comp, name, loc, *definition, *paramBuilder, flags,
+                                                 instanceDepth);
         inst->arrayPath = path.copy(comp);
         inst->setSyntax(syntax);
         inst->setAttributes(*context.scope, attributes);
@@ -352,18 +355,19 @@ void InstanceSymbolBase::getArrayDimensions(SmallVectorBase<ConstantRange>& dime
         getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
 }
 
-InstanceSymbol::InstanceSymbol(std::string_view name, SourceLocation loc,
-                               InstanceBodySymbol& body) :
-    InstanceSymbolBase(SymbolKind::Instance, name, loc), body(body) {
+InstanceSymbol::InstanceSymbol(std::string_view name, SourceLocation loc, InstanceBodySymbol& body,
+                               uint32_t instanceDepth) :
+    InstanceSymbolBase(SymbolKind::Instance, name, loc), body(body), instanceDepth(instanceDepth) {
     body.parentInstance = this;
 }
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                                const DefinitionSymbol& definition, ParameterBuilder& paramBuilder,
-                               bitmask<InstanceFlags> flags) :
+                               bitmask<InstanceFlags> flags, uint32_t instanceDepth) :
     InstanceSymbol(name, loc,
                    InstanceBodySymbol::fromDefinition(compilation, definition, loc, paramBuilder,
-                                                      flags)) {
+                                                      flags),
+                   instanceDepth) {
 }
 
 InstanceSymbol& InstanceSymbol::createDefault(Compilation& comp, const DefinitionSymbol& definition,
@@ -372,10 +376,9 @@ InstanceSymbol& InstanceSymbol::createDefault(Compilation& comp, const Definitio
                                               const ConfigRule* configRule,
                                               SourceLocation locationOverride) {
     auto loc = locationOverride ? locationOverride : definition.location;
-    auto& result = *comp.emplace<InstanceSymbol>(
-        definition.name, loc,
-        InstanceBodySymbol::fromDefinition(comp, definition, loc, InstanceFlags::None,
-                                           hierarchyOverrideNode, configBlock, configRule));
+    auto& body = InstanceBodySymbol::fromDefinition(comp, definition, loc, InstanceFlags::None,
+                                                    hierarchyOverrideNode, configBlock, configRule);
+    auto& result = *comp.emplace<InstanceSymbol>(definition.name, loc, body, 0u);
 
     if (configBlock) {
         auto rc = comp.emplace<ResolvedConfig>(*configBlock, result);
@@ -403,7 +406,7 @@ InstanceSymbol& InstanceSymbol::createVirtual(
 
     auto& comp = context.getCompilation();
     auto& result = *comp.emplace<InstanceSymbol>(comp, definition.name, loc, definition,
-                                                 paramBuilder, InstanceFlags::None);
+                                                 paramBuilder, InstanceFlags::None, 0u);
 
     // Set the parent pointer so that traversing upwards still works to find
     // the instantiation scope. This "virtual" instance never actually gets
@@ -465,14 +468,13 @@ Symbol& InstanceSymbol::createDefaultNested(const Scope& scope,
     return result;
 }
 
-InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
+InstanceSymbol& InstanceSymbol::createInvalid(Compilation& comp,
                                               const DefinitionSymbol& definition) {
     // Give this instance an empty name so that it can't be referenced by name.
-    return *compilation.emplace<InstanceSymbol>(
-        "", SourceLocation::NoLocation,
-        InstanceBodySymbol::fromDefinition(compilation, definition, definition.location,
-                                           InstanceFlags::Uninstantiated, nullptr, nullptr,
-                                           nullptr));
+    auto& body = InstanceBodySymbol::fromDefinition(comp, definition, definition.location,
+                                                    InstanceFlags::Uninstantiated, nullptr, nullptr,
+                                                    nullptr);
+    return *comp.emplace<InstanceSymbol>("", SourceLocation::NoLocation, body, 0u);
 }
 
 void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationSyntax& syntax,
@@ -535,6 +537,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     const DefinitionSymbol* owningDefinition = nullptr;
     const HierarchyOverrideNode* parentOverrideNode = nullptr;
     const ResolvedConfig* resolvedConfig = nullptr;
+    uint32_t instanceDepth = 0;
     if (parentInst) {
         owningDefinition = &parentInst->getDefinition();
 
@@ -548,8 +551,10 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         // Check if our parent has a configuration applied. If so, and if
         // that configuration has instance overrides, we need to check if
         // any of them apply to the instances we're about to create.
-        if (parentInst->parentInstance)
+        if (parentInst->parentInstance) {
             resolvedConfig = parentInst->parentInstance->resolvedConfig;
+            instanceDepth = parentInst->parentInstance->instanceDepth;
+        }
 
         if (flags.has(InstanceFlags::FromBind)) {
             if (flags.has(InstanceFlags::ParentFromBind)) {
@@ -566,6 +571,12 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     InstanceBuilder builder(context, implicitNets, parentOverrideNode, syntax.attributes, flags,
                             overrideSyntax);
 
+    auto createUninstantiated = [&](const HierarchicalInstanceSyntax* specificInstance) {
+        UninstantiatedDefSymbol::fromSyntax(comp, syntax, specificInstance, context, results,
+                                            implicitNets, builder.implicitNetNames,
+                                            builder.netType);
+    };
+
     // Creates instance symbols -- if specificInstance is provided then only that
     // instance will be created, otherwise all instances in the original syntax
     // node will be created in one go.
@@ -573,9 +584,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                                const HierarchicalInstanceSyntax* specificInstance) {
         auto def = defResult.definition;
         if (!def) {
-            UninstantiatedDefSymbol::fromSyntax(comp, syntax, specificInstance, context, results,
-                                                implicitNets, builder.implicitNetNames,
-                                                builder.netType);
+            createUninstantiated(specificInstance);
             return;
         }
 
@@ -628,6 +637,24 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             }
         }
 
+        // This check breaks infinitely recursive hierarchies. Note that this is deliberately
+        // off by one; most of the time this will get hit first in ElabVisitors and we won't
+        // even try to create more instances beneath that. In certain cases (or when visiting
+        // the AST manually) it's possible to get in here instead.
+        if (instanceDepth > comp.getOptions().maxInstanceDepth) {
+            auto loc = syntax.type.location();
+            if (specificInstance)
+                loc = detail::getNameLoc(*specificInstance).second;
+            else if (!syntax.instances.empty())
+                loc = detail::getNameLoc(*syntax.instances[0]).second;
+
+            auto& diag = context.addDiag(diag::MaxInstanceDepthExceeded, loc);
+            diag << definition.getKindString();
+            diag << comp.getOptions().maxInstanceDepth;
+            createUninstantiated(specificInstance);
+            return;
+        }
+
         ParameterBuilder paramBuilder(*context.scope, definition.name, definition.parameters);
         if (syntax.parameters)
             paramBuilder.setAssignments(*syntax.parameters, /* isFromConfig */ false);
@@ -649,7 +676,8 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             }
         }
 
-        builder.reset(definition, paramBuilder, localConfig, defResult.configRoot);
+        builder.reset(definition, paramBuilder, localConfig, defResult.configRoot,
+                      instanceDepth + 1);
 
         if (specificInstance) {
             results.push_back(builder.create(*specificInstance));

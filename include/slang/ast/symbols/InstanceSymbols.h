@@ -98,11 +98,15 @@ public:
     /// the parent instance's config rule if there is one up the stack.
     const ResolvedConfig* resolvedConfig = nullptr;
 
-    InstanceSymbol(std::string_view name, SourceLocation loc, InstanceBodySymbol& body);
+    /// The depth of this instance within the design hierarchy.
+    uint32_t instanceDepth;
+
+    InstanceSymbol(std::string_view name, SourceLocation loc, InstanceBodySymbol& body,
+                   uint32_t instanceDepth);
 
     InstanceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                    const DefinitionSymbol& definition, ParameterBuilder& paramBuilder,
-                   bitmask<InstanceFlags> flags);
+                   bitmask<InstanceFlags> flags, uint32_t instanceDepth);
 
     const DefinitionSymbol& getDefinition() const;
     bool isModule() const;

@@ -2244,3 +2244,16 @@ module k module f f(
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Infinite module hierarchy triggered during scope elaboration") {
+    auto tree = SyntaxTree::fromText(R"(
+I(interface I(d.o;I d
+)");
+
+    CompilationOptions options;
+    options.maxInstanceDepth = 16;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}
