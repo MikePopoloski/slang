@@ -716,7 +716,7 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
             mi.noteCorrespondingImport();
         }
 
-        if (!isElaborating) {
+        if (isElaborating || needsElaboration) {
             // These can't be checked until we can resolve the imports and
             // see if they point to the same symbol.
             compilation.noteNameConflict(member);
@@ -766,7 +766,7 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
         }
     }
 
-    if (!isElaborating && existing->isValue() && member.isValue()) {
+    if ((isElaborating || needsElaboration) && existing->isValue() && member.isValue()) {
         // We want to look at the symbol types here to provide nicer error messages, but
         // it might not be safe to resolve the type at this point (because we're in the
         // middle of elaborating the scope). Save the member for later reporting.

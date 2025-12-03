@@ -1681,6 +1681,8 @@ TEST_CASE("Nested modules with infinite recursion regress") {
  module top;
      I i();
  endmodule
+
+module a a,b b.a,c,c
 )");
 
     Compilation compilation;
