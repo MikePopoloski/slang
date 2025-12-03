@@ -598,7 +598,7 @@ Expression& ClockingEventExpression::fromSyntax(const ClockingPropertyExprSyntax
     // clock to use. We don't want usage inside of an always_comb to report an error
     // about passing time, so clear out the context's procedure to avoid that.
     ASTContext context(argContext);
-    context.clearInstanceAndProc();
+    context.clearSymbolCtx();
     context.flags |= ASTFlags::NonProcedural;
 
     auto& comp = context.getCompilation();

@@ -179,8 +179,8 @@ public:
     PortConnection(const Symbol& port, const Expression& expr);
     PortConnection(const Symbol& port, bool useDefault);
     PortConnection(const InterfacePortSymbol& port, const IfaceConn& conn, const Expression* expr);
-    PortConnection(const Symbol& port, const Symbol* connectedSymbol,
-                   SourceRange implicitNameRange);
+    PortConnection(const Symbol& port, const Symbol* connectedSymbol, SourceRange implicitNameRange,
+                   bool isWildcard);
 
     IfaceConn getIfaceConn() const;
     const Expression* getExpression() const;
@@ -220,6 +220,7 @@ private:
     };
     bool useDefault = false;
     bool isImplicit = false;
+    bool isWildcard = false;
 };
 
 } // namespace slang::ast

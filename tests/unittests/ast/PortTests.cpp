@@ -1873,3 +1873,34 @@ endmodule
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[1].code == diag::PortExprMemberParent);
 }
+
+TEST_CASE("Wildcard port connection diagnostic locations") {
+    auto tree = SyntaxTree::fromText(R"(
+module A(
+    output logic [5:0][31:0] sig
+);
+endmodule
+
+module B;
+    logic [191:0] sig;
+
+    A a(
+        .*
+    );
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK("\n" + report(diags) == R"(
+source:11:9: warning: implicit conversion from 'logic[5:0][31:0]' to 'logic[191:0]' [-Wpacked-array-conv]
+        .*
+        ^~
+source:3:30: note: for connection to port 'sig'
+    output logic [5:0][31:0] sig
+                             ^
+)");
+}

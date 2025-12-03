@@ -1104,7 +1104,7 @@ private:
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
         }
 
-        auto conn = comp.emplace<PortConnection>(port, symbol, range);
+        auto conn = comp.emplace<PortConnection>(port, symbol, range, isWildcard);
         if (!attributes.empty())
             comp.setAttributes(*conn, attributes);
 
@@ -1734,9 +1734,9 @@ PortConnection::PortConnection(const InterfacePortSymbol& port, const IfaceConn&
 }
 
 PortConnection::PortConnection(const Symbol& port, const Symbol* connectedSymbol,
-                               SourceRange implicitNameRange) :
+                               SourceRange implicitNameRange, bool isWildcard) :
     port(port), connectedSymbol(connectedSymbol), implicitNameRange(implicitNameRange),
-    isImplicit(true) {
+    isImplicit(true), isWildcard(isWildcard) {
 }
 
 PortConnection::IfaceConn PortConnection::getIfaceConn() const {
@@ -1792,8 +1792,11 @@ const Expression* PortConnection::getExpression() const {
         if (parentInstance.body.flags.has(InstanceFlags::FromBind))
             flags |= ASTFlags::BindInstantiation;
 
+        if (isWildcard)
+            flags |= ASTFlags::WildcardPortConn;
+
         ASTContext context(*scope, ll, flags);
-        context.setInstance(parentInstance);
+        context.setPort(port);
 
         if (!connectedSymbol) {
             if (port.kind == SymbolKind::MultiPort)

@@ -119,6 +119,7 @@ void registerAST(py::module_& m) {
         .value("ForkJoinAnyNone", ASTFlags::ForkJoinAnyNone)
         .value("DisallowUDNT", ASTFlags::DisallowUDNT)
         .value("BindInstantiation", ASTFlags::BindInstantiation)
+        .value("WildcardPortConn", ASTFlags::WildcardPortConn)
         .finalize();
 
     py::classh<EvaluatedDimension>(m, "EvaluatedDimension")

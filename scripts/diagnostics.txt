@@ -793,6 +793,7 @@ note NoteLogicalNotSilence "add parentheses around left hand side expression to 
 warning conditional-precedence ConditionalPrecedence "operator '?:' has lower precedence than '{}'; '{}' will be evaluated first"
 note NoteConditionalPrecedenceFix "place parentheses around the '?:' expression to evaluate it first"
 warning consecutive-comparison ConsecutiveComparison "comparisons like 'x < y < z' don't have their mathematical meaning"
+note NoteForPortConn "for connection to port '{}'"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
