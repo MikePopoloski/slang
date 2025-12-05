@@ -766,7 +766,7 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
         }
     }
 
-    if ((isElaborating || needsElaboration) && existing->isValue() && member.isValue()) {
+    if (existing->isValue() && member.isValue()) {
         // We want to look at the symbol types here to provide nicer error messages, but
         // it might not be safe to resolve the type at this point (because we're in the
         // middle of elaborating the scope). Save the member for later reporting.

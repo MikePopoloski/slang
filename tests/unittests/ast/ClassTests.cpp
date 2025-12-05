@@ -3552,3 +3552,13 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Generic class crash regress") {
+    auto tree = SyntaxTree::fromText(R"(
+class G#(G#(,)b,b
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}
