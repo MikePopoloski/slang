@@ -641,7 +641,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         // off by one; most of the time this will get hit first in ElabVisitors and we won't
         // even try to create more instances beneath that. In certain cases (or when visiting
         // the AST manually) it's possible to get in here instead.
-        if (instanceDepth > comp.getOptions().maxInstanceDepth) {
+        if (instanceDepth > comp.getOptions().maxInstanceDepth + 1) {
             auto loc = syntax.type.location();
             if (specificInstance)
                 loc = detail::getNameLoc(*specificInstance).second;
