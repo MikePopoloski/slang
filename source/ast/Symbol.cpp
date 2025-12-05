@@ -13,6 +13,7 @@
 #include "slang/ast/types/Type.h"
 #include "slang/text/CharInfo.h"
 #include "slang/text/FormatBuffer.h"
+#include "slang/util/SmallMap.h"
 
 namespace {
 
@@ -87,12 +88,18 @@ const DeclaredType* Symbol::getDeclaredType() const {
     }
 }
 
-static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) {
+static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer,
+                                    SmallSet<const Symbol*, 4>& visited) {
     auto scope = symbol.getParentScope();
     auto current = &symbol;
     if (scope && symbol.kind == SymbolKind::InstanceBody) {
         current = symbol.as<InstanceBodySymbol>().parentInstance;
         SLANG_ASSERT(current);
+
+        if (!visited.emplace(current).second) {
+            buffer.append("<recursive>");
+            return;
+        }
 
         scope = current->getParentScope();
     }
@@ -107,7 +114,7 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
     if (scope) {
         auto& parent = scope->asSymbol();
         if (parent.kind != SymbolKind::Root && parent.kind != SymbolKind::CompilationUnit) {
-            getHierarchicalPathImpl(parent, buffer);
+            getHierarchicalPathImpl(parent, buffer, visited);
             if (parent.kind == SymbolKind::Package || parent.kind == SymbolKind::ClassType ||
                 parent.kind == SymbolKind::CovergroupType) {
                 separator = "::"sv;
@@ -203,7 +210,8 @@ std::string Symbol::getHierarchicalPath() const {
 
 void Symbol::appendHierarchicalPath(std::string& result) const {
     FormatBuffer buffer;
-    getHierarchicalPathImpl(*this, buffer);
+    SmallSet<const Symbol*, 4> visited;
+    getHierarchicalPathImpl(*this, buffer, visited);
     if (buffer.empty())
         buffer.append("$unit");
 
