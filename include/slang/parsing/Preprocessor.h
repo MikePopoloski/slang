@@ -19,6 +19,8 @@
 #include "slang/util/SmallMap.h"
 #include "slang/util/SmallVector.h"
 
+namespace fs = std::filesystem;
+
 namespace slang::syntax {
 
 struct ConditionalDirectiveExpressionSyntax;
@@ -60,6 +62,11 @@ struct SLANG_EXPORT PreprocessorOptions {
 
     /// A set of preprocessor directives to be ignored.
     flat_hash_set<std::string_view> ignoreDirectives;
+
+    /// A map of file patterns to keywords to force the preprocessor
+    /// to check every pushed SourceBuffer on previously specified keyword for it
+    std::map<std::string, std::pair<parsing::KeywordVersion, std::optional<SmallVector<fs::path>>>>
+        keywordMapping;
 };
 
 /// Metadata about an include directive that was invoked.
@@ -145,7 +152,9 @@ public:
     bool getCellDefine() const { return cellDefine; }
 
     /// Gets the currently active keyword version in use by the preprocessor.
-    KeywordVersion getCurrentKeywordVersion() const { return keywordVersionStack.back(); }
+    KeywordVersion getCurrentKeywordVersion() const {
+        return keywordVersionStack.back().keywordVersion;
+    }
 
     /// Gets the currently active source library, or nullptr if none has been set.
     const SourceLibrary* getCurrentLibrary() const;
@@ -449,8 +458,24 @@ private:
     // The include directives that have been encountered thus far in the preprocessor.
     std::vector<IncludeMetadata> includeDirectives;
 
+    // Helper POD type to determine status of current keyword version
+    // on the top of keywordVersionStack:
+    //   - NONE - for sources without previously set keywords version (by default)
+    //   - RESTORED - for same sources as NONE but to distinguish them from keywords
+    //                pushed onto the stack from other sources (such as `begin_keywords)
+    //                and then correctly clear the stack in popSource
+    //   - FORCED - for sources with prefiously set (forced) keywords version
+    struct KeywordVersionState {
+        KeywordVersion keywordVersion;
+
+        enum SetStatus { NONE = 0, RESTORED, FORCED } status;
+
+        KeywordVersionState(KeywordVersion keywordVersion, SetStatus status = SetStatus::NONE) :
+            keywordVersion(keywordVersion), status(status) {};
+    };
+
     /// Various state set by preprocessor directives.
-    std::vector<KeywordVersion> keywordVersionStack;
+    std::vector<KeywordVersionState> keywordVersionStack;
     std::optional<TimeScale> activeTimeScale;
     TokenKind defaultNetType = TokenKind::WireKeyword;
     TokenKind unconnectedDrive = TokenKind::Unknown;

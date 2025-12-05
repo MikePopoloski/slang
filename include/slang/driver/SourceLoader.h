@@ -9,6 +9,7 @@
 
 #include <deque>
 #include <filesystem>
+#include <map>
 #include <memory>
 #include <optional>
 #include <span>
@@ -20,6 +21,8 @@
 #include "slang/util/FlatMap.h"
 #include "slang/util/Function.h"
 #include "slang/util/Util.h"
+
+namespace fs = std::filesystem;
 
 namespace slang {
 
@@ -162,6 +165,31 @@ public:
         SourceManager& sourceManager, const Bag& optionBag,
         std::span<const syntax::DefineDirectiveSyntax* const> inheritedMacros = {});
 
+    /// Add a new keywords to file patterns mapping
+    void addKeywordMapping(
+        const std::map<std::string,
+                       std::pair<parsing::KeywordVersion, std::optional<SmallVector<fs::path>>>>
+            filePatterns) {
+        keywordMapping.insert(filePatterns.begin(), filePatterns.end());
+    }
+
+    /// Search the source file for passed buffer in map of file patterns
+    /// and set keyword for it if it was found. Also cache the results
+    /// of file pattern searching
+    static void findBufferInKeywordMapping(
+        SourceBuffer& buf,
+        std::map<std::string,
+                 std::pair<parsing::KeywordVersion, std::optional<SmallVector<fs::path>>>>&
+            keywordMapping,
+        const SourceManager& sourceManager);
+
+    /// Return stored keywords to file patterns mapping
+    const std::map<std::string,
+                   std::pair<parsing::KeywordVersion, std::optional<SmallVector<fs::path>>>>&
+    getKeywordMapping() const {
+        return keywordMapping;
+    };
+
 private:
     // One entry per unit of files + options to compile them.
     // Only used for addSeparateUnit.
@@ -247,6 +275,8 @@ private:
     flat_hash_set<std::string_view> uniqueExtensions;
     std::vector<std::string> errors;
     SyntaxTreeList libraryMapTrees;
+    std::map<std::string, std::pair<parsing::KeywordVersion, std::optional<SmallVector<fs::path>>>>
+        keywordMapping;
 
     static constexpr int MinFilesForThreading = 4;
 };

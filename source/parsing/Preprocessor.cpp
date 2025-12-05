@@ -9,6 +9,7 @@
 
 #include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
+#include "slang/driver/SourceLoader.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
@@ -98,6 +99,26 @@ void Preprocessor::pushSource(std::string_view source, std::string_view name) {
 void Preprocessor::pushSource(SourceBuffer buffer) {
     SLANG_ASSERT(buffer.id);
 
+    if (!options.keywordMapping.empty()) {
+        if (buffer.forcedKeywordVersion.has_value()) {
+            keywordVersionStack.push_back(
+                {*buffer.forcedKeywordVersion, KeywordVersionState::SetStatus::FORCED});
+        }
+        else if (!keywordVersionStack.empty() &&
+                 keywordVersionStack.back().status == KeywordVersionState::SetStatus::FORCED) {
+            // Find the last stack not forced keyword version to restore it
+            for (auto stackIt = keywordVersionStack.rbegin(); stackIt != keywordVersionStack.rend();
+                 ++stackIt) {
+                if (stackIt->status != KeywordVersionState::SetStatus::FORCED) {
+                    auto stateToRestore = *stackIt;
+                    stateToRestore.status = KeywordVersionState::SetStatus::RESTORED;
+                    keywordVersionStack.push_back(stateToRestore);
+                    break;
+                }
+            }
+        }
+    }
+
     lexerStack.emplace_back(
         std::make_unique<Lexer>(buffer, alloc, diagnostics, sourceManager, lexerOptions));
 
@@ -116,6 +137,10 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
 bool Preprocessor::popSource() {
     if (includeDepth)
         includeDepth--;
+
+    if (!keywordVersionStack.empty() &&
+        keywordVersionStack.back().status != KeywordVersionState::SetStatus::NONE)
+        keywordVersionStack.pop_back();
 
     lexerStack.pop_back();
 
@@ -457,7 +482,7 @@ Token Preprocessor::nextRaw() {
         }
 
         SLANG_ASSERT(!lexerStack.empty());
-        return lexerStack.back()->lex(keywordVersionStack.back());
+        return lexerStack.back()->lex(keywordVersionStack.back().keywordVersion);
     };
 
     auto token = getNext();
@@ -572,6 +597,8 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             addDiag(diag::ExceededMaxIncludeDepth, fileName.range());
         }
         else if (includeOnceHeaders.find(buffer->data.data()) == includeOnceHeaders.end()) {
+            driver::SourceLoader::findBufferInKeywordMapping(buffer.value(), options.keywordMapping,
+                                                             sourceManager);
             includeDepth++;
             pushSource(*buffer);
 
