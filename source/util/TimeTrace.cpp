@@ -132,6 +132,10 @@ void TimeTrace::initialize() {
     profiler = std::make_unique<Profiler>();
 }
 
+void TimeTrace::destroy() {
+    profiler.reset();
+}
+
 void TimeTrace::write(std::ostream& os) {
     SLANG_ASSERT(profiler);
     profiler->write(os);
