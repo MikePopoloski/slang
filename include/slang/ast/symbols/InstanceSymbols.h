@@ -149,7 +149,7 @@ public:
         SourceLocation locationOverride = {});
 
     /// Creates a placeholder instance for a virtual interface type declaration.
-    static InstanceSymbol& createVirtual(
+    static const InstanceSymbol& createVirtual(
         const ASTContext& context, SourceLocation loc, const DefinitionSymbol& definition,
         const syntax::ParameterValueAssignmentSyntax* paramAssignments);
 

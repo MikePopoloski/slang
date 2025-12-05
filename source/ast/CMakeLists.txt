@@ -60,6 +60,7 @@ target_sources(
           Expression.cpp
           FmtHelpers.cpp
           HierarchicalReference.cpp
+          InstanceCacheKey.cpp
           Lookup.cpp
           LSPUtilities.cpp
           LValue.cpp

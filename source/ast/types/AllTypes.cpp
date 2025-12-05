@@ -1205,7 +1205,6 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
     auto loc = syntax.name.location();
     auto& iface = InstanceSymbol::createVirtual(context, loc, def->as<DefinitionSymbol>(),
                                                 syntax.parameters);
-    comp.noteVirtualIfaceInstance(iface);
 
     const ModportSymbol* modport = nullptr;
     std::string_view modportName = syntax.modport ? syntax.modport->member.valueText() : ""sv;

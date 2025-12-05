@@ -395,7 +395,7 @@ InstanceSymbol& InstanceSymbol::createDefault(Compilation& comp, const Definitio
     return result;
 }
 
-InstanceSymbol& InstanceSymbol::createVirtual(
+const InstanceSymbol& InstanceSymbol::createVirtual(
     const ASTContext& context, SourceLocation loc, const DefinitionSymbol& definition,
     const ParameterValueAssignmentSyntax* paramAssignments) {
 
@@ -413,17 +413,8 @@ InstanceSymbol& InstanceSymbol::createVirtual(
     // added to the scope the proper way as a member.
     result.setParent(*context.scope);
 
-    // Force all parameter values to resolve. This is necessary because otherwise we
-    // can get into tricky loops when doing type checking against other virtual
-    // interface type usages.
-    for (auto param : result.body.getParameters()) {
-        if (param->symbol.kind == SymbolKind::Parameter)
-            param->symbol.as<ParameterSymbol>().getValue();
-        else
-            param->symbol.as<TypeParameterSymbol>().targetType.getType();
-    }
-
-    return result;
+    // Allow the compilation to cache this virtual interface instance.
+    return comp.getOrAddVirtualIface(result);
 }
 
 Symbol& InstanceSymbol::createDefaultNested(const Scope& scope,

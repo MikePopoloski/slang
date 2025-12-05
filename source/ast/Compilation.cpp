@@ -1335,9 +1335,16 @@ void Compilation::noteHierarchicalAssignment(const HierarchicalReference& ref) {
     hierarchicalAssignments.push_back(&ref);
 }
 
-void Compilation::noteVirtualIfaceInstance(const InstanceSymbol& symbol) {
-    SLANG_ASSERT(!isFrozen());
-    virtualInterfaceInstances.push_back(&symbol);
+const InstanceSymbol& Compilation::getOrAddVirtualIface(const InstanceSymbol& symbol) {
+    bool valid = true;
+    SmallSet<const InstanceSymbol*, 2> visited;
+    InstanceCacheKey key(symbol, valid, visited);
+
+    auto [it, inserted] = virtualIfaceCache.try_emplace(std::move(key), &symbol);
+    if (inserted)
+        virtualIfaceInstances.push_back(it->second);
+
+    return *it->second;
 }
 
 const Expression* Compilation::getDefaultDisable(const Scope& scope) const {

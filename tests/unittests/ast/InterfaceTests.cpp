@@ -896,3 +896,18 @@ endmodule
     CHECK(diags[1].code == diag::ModportMemberParent);
     CHECK(diags[2].code == diag::ModportMemberParent);
 }
+
+TEST_CASE("Interface containing virtual interface infinite loop regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    virtual I O;
+endinterface
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::VirtualInterfaceIfaceMember);
+}
