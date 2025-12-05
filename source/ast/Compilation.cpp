@@ -2018,7 +2018,9 @@ void Compilation::checkModportExports(
         SLANG_ASSERT(def);
 
         for (auto& method : modport->membersOfType<MethodPrototypeSymbol>()) {
-            if (method.flags.has(MethodFlags::ModportExport)) {
+            if (method.flags.has(MethodFlags::ModportExport) && !method.name.empty() &&
+                !def->name.empty()) {
+
                 bool found = false;
                 auto impl = method.getFirstExternImpl();
                 while (impl) {
