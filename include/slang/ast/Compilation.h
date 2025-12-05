@@ -945,7 +945,8 @@ private:
 
     // A map from syntax node to the definition it represents. Used much less frequently
     // than other ways of looking up definitions which is why it's lower down here.
-    flat_hash_map<const syntax::ModuleDeclarationSyntax*, std::vector<DefinitionSymbol*>>
+    flat_hash_map<const syntax::ModuleDeclarationSyntax*,
+                  flat_hash_map<const Scope*, DefinitionSymbol*>>
         definitionFromSyntax;
 
     // A set of all instantiated names in the design; used for determining whether a given

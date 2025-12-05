@@ -684,6 +684,8 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     void handle(const DefParamSymbol& symbol) {
         if (generateDepth <= generateLevel)
             found.push_back(&symbol);
+        else
+            skippedAnything = true;
     }
 
     void handle(const InstanceSymbol& symbol) {
@@ -729,8 +731,11 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
         if (symbol.isUninstantiated || hierarchyProblem)
             return;
 
-        if (generateDepth >= generateLevel && !inRecursiveInstance)
-            return;
+        if (generateDepth >= generateLevel) {
+            skippedAnything = true;
+            if (!inRecursiveInstance)
+                return;
+        }
 
         // We don't count the case where we are *at* the target level
         // because we're about to descend into the generate block,
@@ -762,6 +767,7 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     size_t numBlocksSeen = 0;
     size_t generateDepth = 0;
     bool inRecursiveInstance = false;
+    bool skippedAnything = false;
     const InstanceSymbol* hierarchyProblem = nullptr;
 };
 

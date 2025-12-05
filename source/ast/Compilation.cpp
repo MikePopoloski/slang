@@ -689,15 +689,7 @@ Compilation::DefinitionLookupResult Compilation::getDefinition(
 const DefinitionSymbol* Compilation::getDefinition(const Scope& scope,
                                                    const ModuleDeclarationSyntax& syntax) const {
     if (auto it = definitionFromSyntax.find(&syntax); it != definitionFromSyntax.end()) {
-        SmallMap<const Scope*, const DefinitionSymbol*, 4> scopeMap;
-        for (auto def : it->second) {
-            auto insertScope = def->getParentScope();
-            if (insertScope && insertScope->asSymbol().kind == SymbolKind::CompilationUnit)
-                insertScope = root.get();
-
-            scopeMap[insertScope] = def;
-        }
-
+        auto& scopeMap = it->second;
         auto lookupScope = &scope;
         do {
             if (auto scopeIt = scopeMap.find(lookupScope); scopeIt != scopeMap.end())
@@ -807,11 +799,12 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
                        scope, location, syntax, *metadata.defaultNetType, metadata.unconnectedDrive,
                        metadata.cellDefine, metadata.timeScale, metadata.tree))
                    .get();
-    definitionFromSyntax[&syntax].push_back(def);
 
     insertDefinition(*def, scope);
 
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
+    definitionFromSyntax[&syntax][targetScope] = def;
+
     const bool isRoot = targetScope == root.get();
     if (isRoot)
         checkElemTimeScale(def->timeScale, syntax.header->name.range());
@@ -2459,7 +2452,7 @@ void Compilation::resolveDefParamsAndBinds() {
 
             // We didn't find any more binds or defparams so increase
             // our generate level and try again.
-            if (nextIt()) {
+            if (nextIt() || !v.skippedAnything) {
                 saveState(v, initialClone);
                 break;
             }
@@ -2474,6 +2467,10 @@ void Compilation::resolveDefParamsAndBinds() {
             numBindsSeen = initialClone.bindDirectives.size();
             continue;
         }
+
+        // If we found no defparams we're done.
+        if (numDefParamsSeen == 0)
+            break;
 
         // defparams can change the value of parameters, further affecting the value of
         // other defparams elsewhere in the design. This means we need to iterate,
