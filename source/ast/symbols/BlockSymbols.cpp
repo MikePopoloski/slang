@@ -385,6 +385,11 @@ const Statement& ProceduralBlockSymbol::getBody() const {
         stmtCtx.blocks = blocks;
 
         stmt = &Statement::bind(*stmtSyntax, context, stmtCtx);
+
+        // If statement creation fails we may leave some blocks behind; clear them out
+        // so that we don't get spurious asserts about it.
+        if (stmt->bad())
+            stmtCtx.blocks = {};
     }
     return *stmt;
 }
