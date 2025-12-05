@@ -2437,7 +2437,7 @@ void Compilation::resolveDefParamsAndBinds() {
         };
 
         while (true) {
-            DefParamVisitor v(options.maxInstanceDepth, generateLevel);
+            DefParamVisitor v(options.maxInstanceDepth, options.maxDefParamBlocks, generateLevel);
             initialClone.getRoot(/* skipDefParamsAndBinds */ true).visit(v);
             if (checkProblem(v))
                 return;
@@ -2481,7 +2481,7 @@ void Compilation::resolveDefParamsAndBinds() {
             Compilation c({}, defaultLibPtr);
             cloneInto(c);
 
-            DefParamVisitor v(options.maxInstanceDepth, generateLevel);
+            DefParamVisitor v(options.maxInstanceDepth, options.maxDefParamBlocks, generateLevel);
             c.getRoot(/* skipDefParamsAndBinds */ true).visit(v);
             if (checkProblem(v))
                 return;

@@ -293,7 +293,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
     CompilationOptions options;
     options.maxInstanceDepth = 16;
+    options.maxCheckerInstanceDepth = 16;
     options.maxDefParamSteps = 32;
+    options.maxDefParamBlocks = 1024;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);

@@ -149,6 +149,11 @@ struct SLANG_EXPORT CompilationOptions {
     /// giving up due to potentially cyclic dependencies in parameter values.
     uint32_t maxDefParamSteps = 128;
 
+    /// The maximum number of blocks that will be allowed before giving up
+    /// on defparam resolution. This is used to keep fuzz testing from
+    /// blowing up on goofy cases.
+    uint32_t maxDefParamBlocks = UINT32_MAX;
+
     /// The maximum number of instances allowed in a single instance array.
     uint32_t maxInstanceArray = 65535;
 

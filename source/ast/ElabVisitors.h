@@ -675,8 +675,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 // with the compilation by Scope::addMembers and then get processed after we finish
 // visiting the tree.
 struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
-    DefParamVisitor(size_t maxInstanceDepth, size_t generateLevel) :
-        maxInstanceDepth(maxInstanceDepth), generateLevel(generateLevel) {}
+    DefParamVisitor(size_t maxInstanceDepth, size_t maxBlocks, size_t generateLevel) :
+        maxInstanceDepth(maxInstanceDepth), generateLevel(generateLevel), maxBlocks(maxBlocks) {}
 
     void handle(const RootSymbol& symbol) { visitDefault(symbol); }
     void handle(const CompilationUnitSymbol& symbol) { visitDefault(symbol); }
@@ -697,7 +697,7 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
         // If we hit max depth we have a problem -- setting the hierarchyProblem
         // member will cause other functions to early out so that we complete
         // this visitation as quickly as possible.
-        if (instanceDepth > maxInstanceDepth) {
+        if (instanceDepth > maxInstanceDepth || numBlocksSeen > maxBlocks) {
             hierarchyProblem = &symbol;
             return;
         }
@@ -765,6 +765,7 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     size_t maxInstanceDepth = 0;
     size_t generateLevel = 0;
     size_t numBlocksSeen = 0;
+    size_t maxBlocks = 0;
     size_t generateDepth = 0;
     bool inRecursiveInstance = false;
     bool skippedAnything = false;
