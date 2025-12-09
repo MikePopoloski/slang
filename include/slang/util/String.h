@@ -84,7 +84,7 @@ int editDistance(std::string_view left, std::string_view right, bool allowReplac
 
 /// Gets a string representation of the given path, in UTF-8 encoding.
 inline std::string getU8Str(const std::filesystem::path& path) {
-    return path.generic_string();
+    return path.string();
 }
 
 #else
