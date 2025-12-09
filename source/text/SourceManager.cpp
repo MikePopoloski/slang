@@ -391,7 +391,11 @@ SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, SmallVecto
                                          const SourceLibrary* library) {
     // first see if we have this file cached
     fs::path path(bufferPath);
+#ifdef _WIN32
+    auto pathStr = path.generic_string();
+#else
     auto pathStr = getU8Str(path);
+#endif
     {
         std::shared_lock<std::shared_mutex> lock(mutex);
         auto it = lookupCache.find(pathStr);
