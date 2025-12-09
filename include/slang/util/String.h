@@ -80,9 +80,20 @@ inline char charToLower(char c) {
 int editDistance(std::string_view left, std::string_view right, bool allowReplacements = true,
                  int maxDistance = 0);
 
+#if defined(_WIN32)
+
 /// Gets a string representation of the given path, in UTF-8 encoding.
 inline std::string getU8Str(const std::filesystem::path& path) {
     return path.generic_string();
 }
+
+#else
+
+/// Gets a string representation of the given path, in UTF-8 encoding.
+inline const std::string& getU8Str(const std::filesystem::path& path) {
+    return path.native();
+}
+
+#endif
 
 } // namespace slang
