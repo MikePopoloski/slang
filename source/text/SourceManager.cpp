@@ -393,7 +393,7 @@ SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, SmallVecto
     fs::path path(bufferPath);
 #ifdef _WIN32
     // this is necessary on windows because fs::path::string returns a backslashed `\\` path.
-    // however weakly_canonical returns a forward slashed `/` path. If we don't do this then 
+    // however weakly_canonical returns a forward slashed `/` path. If we don't do this then
     // it conflicts with the other uses of weakly_canonical (namely in `isCached` and `openCache`)
     auto pathStr = getU8Str(fs::weakly_canonical(path));
 #else
