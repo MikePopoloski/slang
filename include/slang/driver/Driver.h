@@ -12,6 +12,7 @@
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/driver/SourceLoader.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
 #include "slang/util/CommandLine.h"
