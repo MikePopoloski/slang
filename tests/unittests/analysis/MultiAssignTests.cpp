@@ -1446,3 +1446,29 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
+
+TEST_CASE("Hierarchical function call interaction with inst caching") {
+    auto& code = R"(
+module m;
+    function foo;
+        foo = 1;
+    endfunction
+endmodule
+
+module top;
+    m m1();
+    m m2();
+
+    logic a;
+    always_comb begin
+        a = m2.foo();
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}

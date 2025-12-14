@@ -1141,6 +1141,16 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
                                                invocation, withClause, callRange, context);
             invocation = nullptr;
             withClause = nullptr;
+
+            if (result.flags.has(LookupResultFlags::IsHierarchical)) {
+                // A call to a subroutine via a hierarchical name needs to be counted
+                // as a potential "hierachical assignment" since we will need to
+                // descend into the call during analysis to find assignments.
+                auto ref = comp.emplace<HierarchicalReference>(
+                    HierarchicalReference::fromLookup(comp, result));
+                comp.noteHierarchicalAssignment(*ref);
+            }
+
             break;
         }
         case SymbolKind::Sequence:
