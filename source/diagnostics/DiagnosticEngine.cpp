@@ -124,6 +124,11 @@ void DiagnosticEngine::clearMappings(DiagnosticSeverity severity) {
 
 std::error_code DiagnosticEngine::addIgnorePaths(std::string_view pattern) {
     std::error_code ec;
+    if (pattern.starts_with("..."sv)) {
+        ignoreWarnPatterns.emplace_back(pattern);
+        return ec;
+    }
+
     auto p = fs::weakly_canonical(pattern, ec);
     if (!ec)
         ignoreWarnPatterns.emplace_back(std::move(p));
@@ -133,6 +138,11 @@ std::error_code DiagnosticEngine::addIgnorePaths(std::string_view pattern) {
 
 std::error_code DiagnosticEngine::addIgnoreMacroPaths(std::string_view pattern) {
     std::error_code ec;
+    if (pattern.starts_with("..."sv)) {
+        ignoreMacroWarnPatterns.emplace_back(pattern);
+        return ec;
+    }
+
     auto p = fs::weakly_canonical(pattern, ec);
     if (!ec)
         ignoreMacroWarnPatterns.emplace_back(std::move(p));

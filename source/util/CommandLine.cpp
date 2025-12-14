@@ -668,7 +668,9 @@ bool CommandLine::Option::expectsValue() const {
 std::string CommandLine::Option::set(std::string_view name, std::string_view value,
                                      bool ignoreDup) {
     std::string pathMem;
-    if (flags.has(CommandLineFlags::FilePath) && !value.empty() && value != "-") {
+    if (flags.has(CommandLineFlags::FilePath) && !value.empty() && value != "-" &&
+        !value.starts_with("..."sv)) {
+
         std::error_code ec;
         fs::path path = fs::weakly_canonical(value, ec);
         if (!ec) {
