@@ -2994,9 +2994,4 @@ TEST_CASE("Map keyword version wrong arguments") {
         "\"1364-2025+{0}systemverilog.sv,{0}another_systemverilog.sv\" \"{0}systemverilog.sv\"",
         findTestDir());
     CHECK_FALSE(driver.parseCommandLine(args));
-
-    args = fmt::format("testfoo --map-keyword-version \"1364-2005+{0}*.v\" --map-keyword-version "
-                       "\"1364-2005+{0}*.v\" \"{0}systemverilog.sv\"",
-                       findTestDir());
-    CHECK_FALSE(driver.parseCommandLine(args));
 }

@@ -509,14 +509,6 @@ std::map<std::string, parsing::KeywordVersion> Driver::parseMapKeywordVersion(
             startPos = endPos;
         }
 
-        if (keywordMapping.contains(extractedFilePattern) &&
-            keywordMapping[extractedFilePattern] == keywordVersion) {
-            error = fmt::format("file pattern '{}' in argument '{}' was already matched with "
-                                "another keyword version '{}'",
-                                extractedFilePattern, value, keywordVersionStr);
-            return {};
-        }
-
         keywordMapping[extractedFilePattern] = *keywordVersion;
     }
     return keywordMapping;
