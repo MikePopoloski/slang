@@ -636,8 +636,17 @@ void ConversionExpression::checkImplicitConversions(
     if (isCompoundAssign())
         return;
 
-    const Type& lt = targetType.getCanonicalType();
-    const Type& rt = sourceType.getCanonicalType();
+    // Drill through one-element packed arrays, since they can be treated
+    // as implicitly being their one element.
+    auto unwrapType = [&](const Type& t) -> const Type& {
+        auto& ct = t.getCanonicalType();
+        if (ct.kind == SymbolKind::PackedArrayType && ct.getFixedRange().width() == 1)
+            return *ct.getArrayElementType();
+        return ct;
+    };
+
+    auto& lt = unwrapType(targetType);
+    auto& rt = unwrapType(sourceType);
     if (lt.isIntegral() && rt.isIntegral()) {
         // Warn for conversions between different enums/structs/unions.
         if (isStructUnionEnum(lt) && isStructUnionEnum(rt) && !lt.isMatching(rt)) {

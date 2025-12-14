@@ -682,3 +682,38 @@ endmodule
     CHECK(diags[0].code == diag::PackedArrayConv);
     CHECK(diags[1].code == diag::PackedArrayConv);
 }
+
+TEST_CASE("Single dim array conv warning regress -- GH #1601") {
+    auto tree = SyntaxTree::fromText(R"(
+module testA;
+    typedef struct packed {
+        logic a;
+        logic b;
+    } data_t;
+
+    data_t data_in, data_out;
+
+    testB #(
+         .data_t(data_t),
+         .Width(1)
+    ) i_testB (
+        .data_i(data_in),
+        .data_o(data_out)
+    );
+endmodule
+
+module testB #(
+    parameter type data_t = logic,
+    parameter int unsigned Width = 1
+) (
+    input data_t [Width-1:0] data_i,
+    output data_t [Width-1:0] data_o
+);
+    assign data_o = data_i;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
