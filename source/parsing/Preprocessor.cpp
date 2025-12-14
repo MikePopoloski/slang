@@ -1071,7 +1071,8 @@ Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
                 break;
             }
         }
-        keywordVersionStack.erase(stackIt.base());
+
+        keywordVersionStack.erase(stackIt.base() - 1);
     }
 
     return createSimpleDirective(directive);
