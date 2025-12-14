@@ -135,8 +135,8 @@ public:
         /// A set of options controlling translate-off comment directives.
         std::vector<std::string> translateOffOptions;
 
-        /// A map of file patterns to its keyword versions
-        std::map<std::string, parsing::KeywordVersion> keywordMapping;
+        /// A vector of pairs with file patterns mapped to specified keyword versions
+        std::vector<std::pair<std::string, parsing::KeywordVersion>> keywordMapping;
 
         /// Disables "local" include path lookup, where include directives search
         /// relative to the file containing the directive first.

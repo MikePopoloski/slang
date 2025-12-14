@@ -135,7 +135,7 @@ void Driver::addStandardArgs() {
             std::string err = "";
             auto res = parseMapKeywordVersion(value, err);
             if (err.empty())
-                options.keywordMapping.insert(res.begin(), res.end());
+                options.keywordMapping.insert(options.keywordMapping.end(), res.begin(), res.end());
             return err;
         },
         "Forces slang to interpret files which satisfy the passed patterns with specified "
@@ -475,10 +475,9 @@ void Driver::addStandardArgs() {
 std::map<std::string, parsing::KeywordVersion> Driver::parseMapKeywordVersion(
     std::string_view value, std::string& error) {
     const size_t firstPlusIndex = value.find_first_of('+');
-    const size_t lastPlusIndex = value.find_last_of('+');
     std::map<std::string, parsing::KeywordVersion> keywordMapping;
 
-    if (firstPlusIndex == std::string_view::npos || firstPlusIndex != lastPlusIndex) {
+    if (firstPlusIndex == std::string_view::npos) {
         error = fmt::format("missing or extra '+' in argument '{}'", value);
         return {};
     }

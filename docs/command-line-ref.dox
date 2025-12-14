@@ -89,7 +89,7 @@ may still take advantage of threading where possible.
 `--map-keyword-version <keyword-version>+<file-pattern>[,...]`
 
 Forces slang to interpret files which satisfy the passed patterns with specified
-keywords version. For example '--map-keyword-version=1364-2005+*.v,*.vh'
+keywords version. For example '--map-keyword-version=1364-2005+.../*.v,.../*.vh'
 or '--map-keyword-version=1364-2005+/path/to/verilog.v'.
 
 Available keywords is:

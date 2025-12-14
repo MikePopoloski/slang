@@ -9,8 +9,8 @@
 
 #include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
-#include "slang/driver/SourceLoader.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/text/Glob.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/ScopeGuard.h"
@@ -96,8 +96,8 @@ void Preprocessor::pushSource(std::string_view source, std::string_view name) {
         sourceManager.addLineDirective(SourceLocation(buffer.id, 0), 2, name, 0);
 }
 
-std::optional<parsing::KeywordVersion> Preprocessor::findBufferInKeywordMapping(SourceBuffer& buf) {
-    auto& pathToCheck = sourceManager.getFullPath(buf.id);
+std::optional<parsing::KeywordVersion> Preprocessor::findBufferInKeywordMapping(BufferID id) {
+    auto& pathToCheck = sourceManager.getFullPath(id);
     for (auto& [pattern, keywordsVersion] : options.keywordMapping) {
         if (svGlobMatches(pathToCheck, pattern))
             return keywordsVersion;
@@ -109,7 +109,7 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
     SLANG_ASSERT(buffer.id);
 
     if (!options.keywordMapping.empty()) {
-        auto buffKeywordsVersion = findBufferInKeywordMapping(buffer);
+        auto buffKeywordsVersion = findBufferInKeywordMapping(buffer.id);
         if (buffKeywordsVersion.has_value()) {
             keywordVersionStack.push_back(
                 {*buffKeywordsVersion, KeywordVersionState::SetStatus::FORCED});
@@ -1054,10 +1054,25 @@ Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
 Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
     checkOutsideDesignElement(directive);
 
-    if (keywordVersionStack.size() == 1)
+    if (keywordVersionStack.size() == 1) {
         addDiag(diag::MismatchedEndKeywordsDirective, directive.range());
-    else
-        keywordVersionStack.pop_back();
+    }
+    else {
+        // Find the last stack not forced and restored keyword version to pop it.
+        // Forced and restored frames have to be popped by popSoure method calls.
+        auto stackIt = keywordVersionStack.rbegin();
+        for (; stackIt != keywordVersionStack.rend(); ++stackIt) {
+            if (stackIt->status == KeywordVersionState::SetStatus::NONE) {
+                // Prevent attempt to pop the bottom of keyword version stack
+                if (stackIt == keywordVersionStack.rend()) {
+                    addDiag(diag::MismatchedEndKeywordsDirective, directive.range());
+                    return createSimpleDirective(directive);
+                }
+                break;
+            }
+        }
+        keywordVersionStack.erase(stackIt.base());
+    }
 
     return createSimpleDirective(directive);
 }

@@ -2990,8 +2990,8 @@ TEST_CASE("Map keyword version wrong arguments") {
     driver.addStandardArgs();
 
     auto args = fmt::format(
-        "testfoo --map-keyword-version \"1364-2005+{0}*.v+\" --map-keyword-version "
-        "\"1364-2005+{0}systemverilog.sv,{0}another_systemverilog.sv\" \"{0}systemverilog.sv\"",
+        "testfoo --map-keyword-version \"1364-2005+{0}*.v\" --map-keyword-version "
+        "\"1364-2025+{0}systemverilog.sv,{0}another_systemverilog.sv\" \"{0}systemverilog.sv\"",
         findTestDir());
     CHECK_FALSE(driver.parseCommandLine(args));
 
