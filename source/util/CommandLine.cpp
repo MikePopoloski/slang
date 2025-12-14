@@ -906,58 +906,6 @@ std::string CommandLine::addRenameCommand(std::string_view value) {
     return {};
 }
 
-std::map<std::string, std::pair<parsing::KeywordVersion, std::optional<SmallVector<fs::path>>>>
-CommandLine::parseMapKeywordVersion(std::string_view value, std::string& error) {
-    const size_t firstPlusIndex = value.find_first_of('+');
-    const size_t lastPlusIndex = value.find_last_of('+');
-    std::map<std::string, std::pair<parsing::KeywordVersion, std::optional<SmallVector<fs::path>>>>
-        keywordMapping;
-
-    if (firstPlusIndex == std::string_view::npos || firstPlusIndex != lastPlusIndex) {
-        error = fmt::format("missing or extra '+' in argument '{}'", value);
-        return {};
-    }
-
-    const std::string_view fileNamePatterns = value.substr(firstPlusIndex + 1);
-    auto keywordVersionStr = value.substr(0, firstPlusIndex);
-    auto keywordVersion = parsing::LexerFacts::getKeywordVersion(keywordVersionStr);
-    if (!keywordVersion.has_value()) {
-        error = fmt::format("failed to set keyword version in argument '{}'; only such types of "
-                            "keywords are avaliable: '{}'",
-                            value,
-                            "1364-1995, 1364-2001-noconfig, 1364-2001, 1364-2005, 1800-2005, "
-                            "1800-2009, 1800-2012, 1800-2017, 1800-2023");
-        return {};
-    }
-
-    size_t startPos = 0UL;
-    size_t endPos = fileNamePatterns.size();
-    while (startPos != endPos) {
-        std::string extractedFilePattern;
-        if (auto nextComma = fileNamePatterns.find(',', startPos); nextComma != std::string::npos) {
-            extractedFilePattern = std::string(
-                fileNamePatterns.substr(startPos, nextComma - startPos));
-
-            startPos = nextComma + 1;
-        }
-        else {
-            extractedFilePattern = std::string(fileNamePatterns.substr(startPos, endPos));
-            startPos = endPos;
-        }
-
-        if (keywordMapping.contains(extractedFilePattern) &&
-            keywordMapping[extractedFilePattern].first == keywordVersion) {
-            error = fmt::format("file pattern '{}' in argument '{}' was already matched with "
-                                "another keyword version '{}'",
-                                extractedFilePattern, value, keywordVersionStr);
-            return {};
-        }
-
-        keywordMapping[extractedFilePattern] = {*keywordVersion, std::nullopt};
-    }
-    return keywordMapping;
-}
-
 std::string CommandLine::toKebabCase(std::string_view str) {
     std::string result;
     for (size_t i = 0; i < str.size(); ++i) {

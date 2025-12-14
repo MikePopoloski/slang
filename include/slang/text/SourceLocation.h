@@ -213,8 +213,6 @@ struct SLANG_EXPORT SourceBuffer {
     /// The ID assigned to the buffer.
     BufferID id;
 
-    std::optional<parsing::KeywordVersion> forcedKeywordVersion = std::nullopt;
-
     explicit operator bool() const { return id.valid(); }
 };
 

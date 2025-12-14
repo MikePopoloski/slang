@@ -353,14 +353,8 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
 
     if (!searchDirectories.empty()) {
         loadTrees(
-            syntaxTrees,
-            [this](std::string_view name) {
-                auto buffer = findBuffer(name);
-                if (buffer)
-                    findBufferInKeywordMapping(buffer, keywordMapping, sourceManager);
-                return buffer;
-            },
-            sourceManager, optionBag, inheritedMacros);
+            syntaxTrees, [this](std::string_view name) { return findBuffer(name); }, sourceManager,
+            optionBag, inheritedMacros);
     }
 
     return syntaxTrees;
@@ -516,37 +510,6 @@ void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax, const f
     }
 }
 
-void SourceLoader::findBufferInKeywordMapping(
-    SourceBuffer& buf,
-    std::map<std::string, std::pair<parsing::KeywordVersion, std::optional<SmallVector<fs::path>>>>&
-        keywordMapping,
-    const SourceManager& sourceManager) {
-    if (buf.forcedKeywordVersion.has_value())
-        return;
-
-    auto& pathToCheck = sourceManager.getFullPath(buf.id);
-    for (auto& [pattern, keywordWithSearchCache] : keywordMapping) {
-        auto& searchCache = keywordWithSearchCache.second;
-        if (!searchCache.has_value()) {
-            SmallVector<fs::path> files;
-            std::error_code ec;
-            svGlob({}, pattern, GlobMode::Files, files, false, ec);
-            // Do cache file pattern search results
-            searchCache = files;
-            if (ec)
-                continue;
-        }
-
-        for (auto& file : searchCache.value()) {
-            // Find first match to force keywords version
-            if (svGlobMatches(file, pathToCheck)) {
-                buf.forcedKeywordVersion = keywordWithSearchCache.first;
-                return;
-            }
-        }
-    }
-}
-
 SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, const Bag& optionBag,
                                                     const SourceOptions& srcOptions,
                                                     uint64_t fileSortKey) {
@@ -561,7 +524,6 @@ SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, cons
     if (!buffer)
         return std::pair{&entry, buffer.error()};
 
-    findBufferInKeywordMapping(buffer.value(), keywordMapping, sourceManager);
     if (entry.unit) {
         return std::pair{*buffer, entry.unit};
     }

@@ -96,13 +96,23 @@ void Preprocessor::pushSource(std::string_view source, std::string_view name) {
         sourceManager.addLineDirective(SourceLocation(buffer.id, 0), 2, name, 0);
 }
 
+std::optional<parsing::KeywordVersion> Preprocessor::findBufferInKeywordMapping(SourceBuffer& buf) {
+    auto& pathToCheck = sourceManager.getFullPath(buf.id);
+    for (auto& [pattern, keywordsVersion] : options.keywordMapping) {
+        if (svGlobMatches(pathToCheck, pattern))
+            return keywordsVersion;
+    }
+    return std::nullopt;
+}
+
 void Preprocessor::pushSource(SourceBuffer buffer) {
     SLANG_ASSERT(buffer.id);
 
     if (!options.keywordMapping.empty()) {
-        if (buffer.forcedKeywordVersion.has_value()) {
+        auto buffKeywordsVersion = findBufferInKeywordMapping(buffer);
+        if (buffKeywordsVersion.has_value()) {
             keywordVersionStack.push_back(
-                {*buffer.forcedKeywordVersion, KeywordVersionState::SetStatus::FORCED});
+                {*buffKeywordsVersion, KeywordVersionState::SetStatus::FORCED});
         }
         else if (!keywordVersionStack.empty() &&
                  keywordVersionStack.back().status == KeywordVersionState::SetStatus::FORCED) {
@@ -597,8 +607,6 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             addDiag(diag::ExceededMaxIncludeDepth, fileName.range());
         }
         else if (includeOnceHeaders.find(buffer->data.data()) == includeOnceHeaders.end()) {
-            driver::SourceLoader::findBufferInKeywordMapping(buffer.value(), options.keywordMapping,
-                                                             sourceManager);
             includeDepth++;
             pushSource(*buffer);
 

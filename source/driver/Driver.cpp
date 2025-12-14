@@ -133,9 +133,9 @@ void Driver::addStandardArgs() {
         "--map-keyword-version",
         [this](std::string_view value) {
             std::string err = "";
-            auto res = cmdLine.parseMapKeywordVersion(value, err);
+            auto res = parseMapKeywordVersion(value, err);
             if (err.empty())
-                sourceLoader.addKeywordMapping(res);
+                options.keywordMapping.insert(res.begin(), res.end());
             return err;
         },
         "Forces slang to interpret files which satisfy the passed patterns with specified "
@@ -470,6 +470,57 @@ void Driver::addStandardArgs() {
         return false;
     }
     return !anyFailedLoads;
+}
+
+std::map<std::string, parsing::KeywordVersion> Driver::parseMapKeywordVersion(
+    std::string_view value, std::string& error) {
+    const size_t firstPlusIndex = value.find_first_of('+');
+    const size_t lastPlusIndex = value.find_last_of('+');
+    std::map<std::string, parsing::KeywordVersion> keywordMapping;
+
+    if (firstPlusIndex == std::string_view::npos || firstPlusIndex != lastPlusIndex) {
+        error = fmt::format("missing or extra '+' in argument '{}'", value);
+        return {};
+    }
+
+    const std::string_view fileNamePatterns = value.substr(firstPlusIndex + 1);
+    auto keywordVersionStr = value.substr(0, firstPlusIndex);
+    auto keywordVersion = parsing::LexerFacts::getKeywordVersion(keywordVersionStr);
+    if (!keywordVersion.has_value()) {
+        error = fmt::format("failed to set keyword version in argument '{}'; only such types of "
+                            "keywords are avaliable: '{}'",
+                            value,
+                            "1364-1995, 1364-2001-noconfig, 1364-2001, 1364-2005, 1800-2005, "
+                            "1800-2009, 1800-2012, 1800-2017, 1800-2023");
+        return {};
+    }
+
+    size_t startPos = 0UL;
+    size_t endPos = fileNamePatterns.size();
+    while (startPos != endPos) {
+        std::string extractedFilePattern;
+        if (auto nextComma = fileNamePatterns.find(',', startPos); nextComma != std::string::npos) {
+            extractedFilePattern = std::string(
+                fileNamePatterns.substr(startPos, nextComma - startPos));
+
+            startPos = nextComma + 1;
+        }
+        else {
+            extractedFilePattern = std::string(fileNamePatterns.substr(startPos, endPos));
+            startPos = endPos;
+        }
+
+        if (keywordMapping.contains(extractedFilePattern) &&
+            keywordMapping[extractedFilePattern] == keywordVersion) {
+            error = fmt::format("file pattern '{}' in argument '{}' was already matched with "
+                                "another keyword version '{}'",
+                                extractedFilePattern, value, keywordVersionStr);
+            return {};
+        }
+
+        keywordMapping[extractedFilePattern] = *keywordVersion;
+    }
+    return keywordMapping;
 }
 
 bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bool separateUnit) {
@@ -1038,7 +1089,7 @@ void Driver::addParseOptions(Bag& bag) const {
         ppoptions.maxIncludeDepth = *options.maxIncludeDepth;
     for (const auto& d : options.ignoreDirectives)
         ppoptions.ignoreDirectives.emplace(d);
-    ppoptions.keywordMapping = sourceLoader.getKeywordMapping();
+    ppoptions.keywordMapping = options.keywordMapping;
 
     LexerOptions loptions;
     loptions.languageVersion = languageVersion;

@@ -65,8 +65,7 @@ struct SLANG_EXPORT PreprocessorOptions {
 
     /// A map of file patterns to keywords to force the preprocessor
     /// to check every pushed SourceBuffer on previously specified keyword for it
-    std::map<std::string, std::pair<parsing::KeywordVersion, std::optional<SmallVector<fs::path>>>>
-        keywordMapping;
+    std::map<std::string, parsing::KeywordVersion> keywordMapping;
 };
 
 /// Metadata about an include directive that was invoked.
@@ -344,6 +343,11 @@ private:
 
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
     Diagnostic& addDiag(DiagCode code, SourceRange range);
+
+    /// Search the source file for passed buffer in map of file patterns
+    /// and set keyword for it if it was found. Also cache the results
+    /// of file pattern searching
+    std::optional<parsing::KeywordVersion> findBufferInKeywordMapping(SourceBuffer& buf);
 
     // This is a small collection of state used to keep track of where we are in a tree of
     // nested conditional directives.
