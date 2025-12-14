@@ -19,8 +19,6 @@
 #include "slang/util/SmallMap.h"
 #include "slang/util/SmallVector.h"
 
-namespace fs = std::filesystem;
-
 namespace slang::syntax {
 
 struct ConditionalDirectiveExpressionSyntax;

@@ -9,7 +9,6 @@
 
 #include <deque>
 #include <filesystem>
-#include <map>
 #include <memory>
 #include <optional>
 #include <span>
@@ -21,8 +20,6 @@
 #include "slang/util/FlatMap.h"
 #include "slang/util/Function.h"
 #include "slang/util/Util.h"
-
-namespace fs = std::filesystem;
 
 namespace slang {
 

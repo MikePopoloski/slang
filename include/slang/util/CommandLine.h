@@ -16,14 +16,10 @@
 #include <variant>
 #include <vector>
 
-#include "slang/parsing/LexerFacts.h"
 #include "slang/util/Enum.h"
-#include "slang/util/LanguageVersion.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/String.h"
 #include "slang/util/Util.h"
-
-namespace fs = std::filesystem;
 
 namespace slang {
 

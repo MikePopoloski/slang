@@ -11,7 +11,6 @@
 #include <filesystem>
 #include <fmt/core.h>
 
-#include "slang/parsing/LexerFacts.h"
 #include "slang/text/CharInfo.h"
 #include "slang/util/OS.h"
 #include "slang/util/SmallVector.h"

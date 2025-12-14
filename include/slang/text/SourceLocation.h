@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 
-#include "slang/parsing/LexerFacts.h"
 #include "slang/util/Enum.h"
 #include "slang/util/FlatMap.h"
 #include "slang/util/Util.h"
