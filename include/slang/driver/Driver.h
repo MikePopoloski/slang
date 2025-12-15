@@ -12,6 +12,7 @@
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/driver/SourceLoader.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
 #include "slang/util/CommandLine.h"
@@ -133,6 +134,9 @@ public:
 
         /// A set of options controlling translate-off comment directives.
         std::vector<std::string> translateOffOptions;
+
+        /// A vector of pairs with file patterns mapped to specified keyword versions
+        std::vector<std::pair<std::string, parsing::KeywordVersion>> keywordMapping;
 
         /// Disables "local" include path lookup, where include directives search
         /// relative to the file containing the directive first.
@@ -336,6 +340,18 @@ public:
     /// Any errors encountered will be printed to stderr.
     [[nodiscard]] bool parseCommandLine(std::string_view argList,
                                         CommandLine::ParseOptions parseOptions = {});
+
+    /// @brief Parses keyword to file patterns command line map.
+    ///
+    /// @param value a string containing a single plus-separated
+    ///              "keyword_version+file_pattern,[...]" pair, where the "keyword_version"
+    ///              can pass only such types of values:
+    ///              "1364-1995, 1364-2001-noconfig, 1364-2001, 1364-2005, 1800-2005,
+    ///              1800-2009, 1800-2012, 1800-2017, 1800-2023". After which starts
+    ///              the comma-separated list of file patterns.
+    /// @returns a string containing an error message if the @a value is malformed.
+    std::map<std::string, parsing::KeywordVersion> parseMapKeywordVersion(std::string_view value,
+                                                                          std::string& error);
 
     /// @brief Processes the given command file(s) for more options.
     ///

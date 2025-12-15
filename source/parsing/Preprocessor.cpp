@@ -10,6 +10,7 @@
 #include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/text/Glob.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/ScopeGuard.h"
@@ -95,8 +96,38 @@ void Preprocessor::pushSource(std::string_view source, std::string_view name) {
         sourceManager.addLineDirective(SourceLocation(buffer.id, 0), 2, name, 0);
 }
 
+std::optional<parsing::KeywordVersion> Preprocessor::findBufferInKeywordMapping(BufferID id) {
+    auto& pathToCheck = sourceManager.getFullPath(id);
+    for (auto& [pattern, keywordsVersion] : options.keywordMapping) {
+        if (svGlobMatches(pathToCheck, pattern))
+            return keywordsVersion;
+    }
+    return std::nullopt;
+}
+
 void Preprocessor::pushSource(SourceBuffer buffer) {
     SLANG_ASSERT(buffer.id);
+
+    if (!options.keywordMapping.empty()) {
+        auto buffKeywordsVersion = findBufferInKeywordMapping(buffer.id);
+        if (buffKeywordsVersion.has_value()) {
+            keywordVersionStack.push_back(
+                {*buffKeywordsVersion, KeywordVersionState::SetStatus::FORCED});
+        }
+        else if (!keywordVersionStack.empty() &&
+                 keywordVersionStack.back().status == KeywordVersionState::SetStatus::FORCED) {
+            // Find the last stack not forced keyword version to restore it
+            for (auto stackIt = keywordVersionStack.rbegin(); stackIt != keywordVersionStack.rend();
+                 ++stackIt) {
+                if (stackIt->status != KeywordVersionState::SetStatus::FORCED) {
+                    auto stateToRestore = *stackIt;
+                    stateToRestore.status = KeywordVersionState::SetStatus::RESTORED;
+                    keywordVersionStack.push_back(stateToRestore);
+                    break;
+                }
+            }
+        }
+    }
 
     lexerStack.emplace_back(
         std::make_unique<Lexer>(buffer, alloc, diagnostics, sourceManager, lexerOptions));
@@ -116,6 +147,10 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
 bool Preprocessor::popSource() {
     if (includeDepth)
         includeDepth--;
+
+    if (!keywordVersionStack.empty() &&
+        keywordVersionStack.back().status != KeywordVersionState::SetStatus::NONE)
+        keywordVersionStack.pop_back();
 
     lexerStack.pop_back();
 
@@ -457,7 +492,7 @@ Token Preprocessor::nextRaw() {
         }
 
         SLANG_ASSERT(!lexerStack.empty());
-        return lexerStack.back()->lex(keywordVersionStack.back());
+        return lexerStack.back()->lex(keywordVersionStack.back().keywordVersion);
     };
 
     auto token = getNext();
@@ -1019,10 +1054,26 @@ Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
 Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
     checkOutsideDesignElement(directive);
 
-    if (keywordVersionStack.size() == 1)
+    if (keywordVersionStack.size() == 1) {
         addDiag(diag::MismatchedEndKeywordsDirective, directive.range());
-    else
-        keywordVersionStack.pop_back();
+    }
+    else {
+        // Find the last stack not forced and restored keyword version to pop it.
+        // Forced and restored frames have to be popped by popSoure method calls.
+        auto stackIt = keywordVersionStack.rbegin();
+        for (; stackIt != keywordVersionStack.rend(); ++stackIt) {
+            if (stackIt->status == KeywordVersionState::SetStatus::NONE) {
+                // Prevent attempt to pop the bottom of keyword version stack
+                if (stackIt == keywordVersionStack.rend()) {
+                    addDiag(diag::MismatchedEndKeywordsDirective, directive.range());
+                    return createSimpleDirective(directive);
+                }
+                break;
+            }
+        }
+
+        keywordVersionStack.erase(stackIt.base() - 1);
+    }
 
     return createSimpleDirective(directive);
 }

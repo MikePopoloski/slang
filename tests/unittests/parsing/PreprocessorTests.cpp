@@ -3,10 +3,13 @@
 
 #include "Test.h"
 
+#include "slang/driver/Driver.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/text/SourceManager.h"
+
+using namespace slang::driver;
 
 void trimTrailingWhitespace(std::string& str) {
     size_t off = 0;
@@ -2947,4 +2950,48 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Map keyword version option positive") {
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args =
+        fmt::format("testfoo --map-keyword-version \"1364-2005+{0}*.v\" \"{0}systemverilog.sv\"",
+                    findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto compilation = driver.createCompilation();
+    driver.reportCompilation(*compilation, true);
+    CHECK(driver.reportDiagnostics(false));
+}
+
+TEST_CASE("Map keyword version option negative") {
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format(
+        "testfoo --map-keyword-version \"1364-2005+{0}*.v\" --map-keyword-version "
+        "\"1364-2005+{0}systemverilog.sv,{0}another_systemverilog.sv\" \"{0}systemverilog.sv\"",
+        findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto compilation = driver.createCompilation();
+    driver.reportCompilation(*compilation, true);
+    CHECK_FALSE(driver.reportDiagnostics(true));
+}
+
+TEST_CASE("Map keyword version wrong arguments") {
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format(
+        "testfoo --map-keyword-version \"1364-2005+{0}*.v\" --map-keyword-version "
+        "\"1364-2025+{0}systemverilog.sv,{0}another_systemverilog.sv\" \"{0}systemverilog.sv\"",
+        findTestDir());
+    CHECK_FALSE(driver.parseCommandLine(args));
 }
