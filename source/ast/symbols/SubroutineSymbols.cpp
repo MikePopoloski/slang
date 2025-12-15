@@ -54,6 +54,11 @@ const Statement& SubroutineSymbol::getBody() const {
 
             stmt = &Statement::bindItems(syntax->as<FunctionDeclarationSyntax>().items, context,
                                          stmtCtx);
+
+            // If statement creation fails we may leave some blocks behind; clear them out
+            // so that we don't get spurious asserts about it.
+            if (stmt->bad())
+                stmtCtx.blocks = {};
         }
     }
     return *stmt;

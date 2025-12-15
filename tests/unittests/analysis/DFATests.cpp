@@ -3,6 +3,8 @@
 
 #include "AnalysisTests.h"
 
+#include "slang/analysis/DataFlowAnalysis.h"
+
 class TestAnalysis : public AbstractFlowAnalysis<TestAnalysis, int> {
 public:
     TestAnalysis(const Symbol& symbol) : AbstractFlowAnalysis(symbol, {}) {}
@@ -152,7 +154,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::InferredLatch);
     CHECK(diags[1].code == diag::InferredLatch);
@@ -182,7 +184,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     std::string result = "\n" + report(diags);
     CHECK(result == R"(
 source:8:13: warning: latch inferred for 's.a' because it is not assigned on all control paths [-Winferred-latch]
@@ -219,7 +221,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -267,7 +269,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InferredLatch);
 }
@@ -306,7 +308,7 @@ endfunction
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::MissingReturn);
     CHECK(diags[1].code == diag::IncompleteReturn);
@@ -332,7 +334,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InferredLatch);
 }
@@ -352,7 +354,7 @@ endfunction
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -382,7 +384,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -413,7 +415,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -538,7 +540,7 @@ endmodule // test
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 13);
     CHECK(diags[0].code == diag::InferredComb);
     CHECK(diags[1].code == diag::InferredComb);
@@ -570,8 +572,8 @@ endfunction
     compilation.getAllDiagnostics();
     compilation.freeze();
 
-    auto design = analysisManager.analyze(compilation);
-    auto diags = analysisManager.getDiagnostics(compilation.getSourceManager());
+    analysisManager.analyze(compilation);
+    auto diags = analysisManager.getDiagnostics();
     CHECK_DIAGS_EMPTY;
 }
 
@@ -628,7 +630,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::AlwaysWithoutTimingControl);
     CHECK(diags[1].code == diag::AlwaysWithoutTimingControl);
@@ -648,7 +650,7 @@ endmodule
         Compilation compilation;
         AnalysisManager analysisManager;
 
-        auto [diags, design] = analyze(code, compilation, analysisManager);
+        auto diags = analyze(code, compilation, analysisManager);
         CHECK_DIAGS_EMPTY;
     }
 
@@ -664,8 +666,55 @@ endmodule
         Compilation compilation;
         AnalysisManager analysisManager;
 
-        auto [diags, design] = analyze(code, compilation, analysisManager);
+        auto diags = analyze(code, compilation, analysisManager);
         REQUIRE(diags.size() == 1);
         CHECK(diags[0].code == diag::AlwaysWithoutTimingControl);
     }
+}
+
+struct CustomState : public DataFlowState {};
+
+class CustomDFA : public DataFlowAnalysis<CustomDFA, CustomState> {
+public:
+    std::string& callName;
+
+    CustomDFA(AnalysisContext& context, const Symbol& symbol, std::string& callName) :
+        DataFlowAnalysis(context, symbol, false), callName(callName) {}
+
+    void handle(const CallExpression& call) {
+        DataFlowAnalysis::handle(call);
+        callName = std::string(call.getSubroutineName());
+    }
+};
+
+TEST_CASE("Custom DFA API test") {
+    auto& code = R"(
+function void foo;
+endfunction
+
+module m;
+    always_comb foo();
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    std::string callName;
+
+    analysisManager.setCustomDFAProvider([&](AnalysisContext& context, const Symbol& symbol,
+                                             const AnalyzedProcedure* parentProcedure) {
+        CustomDFA dfa(context, symbol, callName);
+        dfa.run();
+
+        if (dfa.bad)
+            return AnalyzedProcedure(symbol, parentProcedure);
+        else
+            return AnalyzedProcedure(context, symbol, parentProcedure, dfa);
+    });
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+
+    CHECK(callName == "foo");
 }

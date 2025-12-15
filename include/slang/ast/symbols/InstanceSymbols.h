@@ -98,11 +98,15 @@ public:
     /// the parent instance's config rule if there is one up the stack.
     const ResolvedConfig* resolvedConfig = nullptr;
 
-    InstanceSymbol(std::string_view name, SourceLocation loc, InstanceBodySymbol& body);
+    /// The depth of this instance within the design hierarchy.
+    uint32_t instanceDepth;
+
+    InstanceSymbol(std::string_view name, SourceLocation loc, InstanceBodySymbol& body,
+                   uint32_t instanceDepth);
 
     InstanceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                    const DefinitionSymbol& definition, ParameterBuilder& paramBuilder,
-                   bitmask<InstanceFlags> flags);
+                   bitmask<InstanceFlags> flags, uint32_t instanceDepth);
 
     const DefinitionSymbol& getDefinition() const;
     bool isModule() const;
@@ -110,7 +114,6 @@ public:
     bool isTopLevel() const;
 
     const PortConnection* getPortConnection(const PortSymbol& port) const;
-    const PortConnection* getPortConnection(const MultiPortSymbol& port) const;
     const PortConnection* getPortConnection(const InterfacePortSymbol& port) const;
     std::span<const PortConnection* const> getPortConnections() const;
 
@@ -146,7 +149,7 @@ public:
         SourceLocation locationOverride = {});
 
     /// Creates a placeholder instance for a virtual interface type declaration.
-    static InstanceSymbol& createVirtual(
+    static const InstanceSymbol& createVirtual(
         const ASTContext& context, SourceLocation loc, const DefinitionSymbol& definition,
         const syntax::ParameterValueAssignmentSyntax* paramAssignments);
 

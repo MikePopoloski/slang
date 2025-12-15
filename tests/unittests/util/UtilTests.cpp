@@ -92,6 +92,8 @@ TEST_CASE("TimeTrace tests") {
 
     std::ostringstream sstr;
     TimeTrace::write(sstr);
+
+    TimeTrace::destroy();
 }
 
 #endif

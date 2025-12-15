@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "slang/ast/ASTDiagMap.h"
+#include "slang/ast/InstanceCacheKey.h"
 #include "slang/ast/OpaqueInstancePath.h"
 #include "slang/ast/Scope.h"
 #include "slang/numeric/Time.h"
@@ -148,6 +149,11 @@ struct SLANG_EXPORT CompilationOptions {
     /// The maximum number of iterations to try to resolve defparams before
     /// giving up due to potentially cyclic dependencies in parameter values.
     uint32_t maxDefParamSteps = 128;
+
+    /// The maximum number of blocks that will be allowed before giving up
+    /// on defparam resolution. This is used to keep fuzz testing from
+    /// blowing up on goofy cases.
+    uint32_t maxDefParamBlocks = UINT32_MAX;
 
     /// The maximum number of instances allowed in a single instance array.
     uint32_t maxInstanceArray = 65535;
@@ -606,8 +612,9 @@ public:
     /// Notes the existence of an assignment to a hierarchical reference.
     void noteHierarchicalAssignment(const HierarchicalReference& ref);
 
-    /// Notes the existence of a virtual interface type declaration for the given instance.
-    void noteVirtualIfaceInstance(const InstanceSymbol& instance);
+    /// Registers and returns the given virtual interface instance with the compilation,
+    /// or if it matches an already existing instance returns that one instead.
+    const InstanceSymbol& getOrAddVirtualIface(const InstanceSymbol& instance);
 
     /// Adds a set of diagnostics to the compilation's list of semantic diagnostics.
     void addDiagnostics(const Diagnostics& diagnostics);
@@ -886,21 +893,6 @@ private:
     // A list of libraries that control the order in which we search for cell bindings.
     std::vector<const SourceLibrary*> defaultLiblist;
 
-    // A list of instances that have been created by virtual interface type declarations.
-    std::vector<const InstanceSymbol*> virtualInterfaceInstances;
-
-    // A list of assignments via hierarchical reference.
-    std::vector<const HierarchicalReference*> hierarchicalAssignments;
-
-    // A map from class name + decl name + scope to out-of-block declarations. These get
-    // registered when we find the initial declaration and later get used when we see
-    // the class prototype. The value also includes a boolean indicating whether anything
-    // has used this declaration -- an error is issued if it's never used.
-    mutable flat_hash_map<
-        std::tuple<std::string_view, std::string_view, const Scope*>,
-        std::tuple<const syntax::SyntaxNode*, const syntax::ScopedNameSyntax*, SymbolIndex, bool>>
-        outOfBlockDecls;
-
     std::unique_ptr<RootSymbol> root;
     SourceManager* sourceManager = nullptr;
     size_t numErrors = 0; // total number of errors inserted into the diagMap
@@ -924,6 +916,22 @@ private:
     // that have been supressed we need space to return *something* to the caller.
     Diagnostic tempDiag;
 
+    // A map of instances that have been created by virtual interface type declarations.
+    flat_hash_map<InstanceCacheKey, const InstanceSymbol*> virtualIfaceCache;
+    std::vector<const InstanceSymbol*> virtualIfaceInstances;
+
+    // A list of assignments via hierarchical reference.
+    std::vector<const HierarchicalReference*> hierarchicalAssignments;
+
+    // A map from class name + decl name + scope to out-of-block declarations. These get
+    // registered when we find the initial declaration and later get used when we see
+    // the class prototype. The value also includes a boolean indicating whether anything
+    // has used this declaration -- an error is issued if it's never used.
+    mutable flat_hash_map<
+        std::tuple<std::string_view, std::string_view, const Scope*>,
+        std::tuple<const syntax::SyntaxNode*, const syntax::ScopedNameSyntax*, SymbolIndex, bool>>
+        outOfBlockDecls;
+
     std::optional<Diagnostics> cachedParseDiagnostics;
     std::optional<Diagnostics> cachedSemanticDiagnostics;
     std::optional<Diagnostics> cachedAllDiagnostics;
@@ -945,7 +953,8 @@ private:
 
     // A map from syntax node to the definition it represents. Used much less frequently
     // than other ways of looking up definitions which is why it's lower down here.
-    flat_hash_map<const syntax::ModuleDeclarationSyntax*, std::vector<DefinitionSymbol*>>
+    flat_hash_map<const syntax::ModuleDeclarationSyntax*,
+                  flat_hash_map<const Scope*, DefinitionSymbol*>>
         definitionFromSyntax;
 
     // A set of all instantiated names in the design; used for determining whether a given

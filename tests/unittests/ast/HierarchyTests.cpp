@@ -86,7 +86,7 @@ endpackage
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::Redefinition);
+    CHECK(diags[0].code == diag::DuplicateDefinition);
 }
 
 TEST_CASE("Instance missing name") {
@@ -1681,6 +1681,8 @@ TEST_CASE("Nested modules with infinite recursion regress") {
  module top;
      I i();
  endmodule
+
+module a a,b b.a,c,c
 )");
 
     Compilation compilation;
@@ -2058,6 +2060,41 @@ endmodule
     CHECK(diags[1].code == diag::HierarchicalRefUnknownModule);
 }
 
+TEST_CASE("Disallow hier-ref to uninstantiated defs spurious error regress -- GH #1571") {
+    auto tree = SyntaxTree::fromText(R"(
+interface bus(input clk);
+	logic a, b;
+	modport primary(input a, output b, input clk);
+	modport secondary(input b, output a, input clk);
+endinterface
+
+module submod(bus.primary intf);
+	assign intf.b = !intf.a;
+endmodule
+
+module top(input logic w1, output logic w2,
+		   input logic clk);
+	bus intf(clk);
+	assign intf.a = w1;
+	assign w2 = intf.b;
+	submod sm(intf);
+endmodule
+
+module top2();
+endmodule
+
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::IgnoreUnknownModules;
+    options.flags |= CompilationFlags::DisallowRefsToUnknownInstances;
+    options.topModules.emplace("top2");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Package ordering dependency 1 -- GH #1424") {
     auto tree = SyntaxTree::fromText(R"(
 package A_pkg;
@@ -2171,4 +2208,52 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InfinitelyRecursiveHierarchy);
+}
+
+TEST_CASE("Uinstantiated module assignment pattern param regress -- GH #1572") {
+    auto tree = SyntaxTree::fromText(R"(
+module uninst;
+    submod #(
+        .PARAM2 ('{default: 0})
+    ) i_submod ();
+endmodule
+
+module submod #(
+    parameter int PARAM2[1:0] = '{default: 0}
+    );
+endmodule
+
+module empty;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("empty");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Infinite module hierarchy empty name error message regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module k module f f(
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Infinite module hierarchy triggered during scope elaboration") {
+    auto tree = SyntaxTree::fromText(R"(
+I(interface I(d.o;I d
+)");
+
+    CompilationOptions options;
+    options.maxInstanceDepth = 16;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
 }

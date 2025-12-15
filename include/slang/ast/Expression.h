@@ -113,17 +113,19 @@ public:
     /// Binds the left hand side of an assignment-like expression from the given syntax nodes.
     /// @param lhs The syntax node representing the expression to bind
     /// @param rhs The type of the right hand side, for type checking
-    /// @param location The location of the assignment, for reporting diagnostics
     /// @param context The AST context under which binding is performed
     /// @param isInout true if the assignment is for an inout port
     static const Expression& bindLValue(const ExpressionSyntax& lhs, const Type& rhs,
-                                        SourceLocation location, const ASTContext& context,
-                                        bool isInout);
+                                        const ASTContext& context, bool isInout);
 
     /// Binds an lvalue that is not a typical assignment-like context. For example, the
     /// output argument of certain system tasks that accept almost any type.
     static const Expression& bindLValue(const ExpressionSyntax& syntax, const ASTContext& context,
                                         bitmask<AssignFlags> assignFlags = {});
+
+    /// Binds an assignment-like expression given an already created lhs.
+    static const Expression& bindLValue(Expression& lhs, const Type& rhs, const ASTContext& context,
+                                        bitmask<AssignFlags> assignFlags);
 
     /// Binds the right hand side of an assignment-like expression from the given syntax nodes.
     /// @param lhs The type of the left hand side, for type checking
@@ -137,8 +139,12 @@ public:
 
     /// Binds a connection to a ref argument from the given syntax nodes.
     static const Expression& bindRefArg(const Type& lhs, bitmask<VariableFlags> argFlags,
-                                        const ExpressionSyntax& rhs, SourceLocation location,
-                                        const ASTContext& context);
+                                        const ExpressionSyntax& rhs, const ASTContext& context);
+
+    /// Binds a connection to a ref argument from the given pre-created target expression.
+    static const Expression& bindRefArg(const Type& lhs, bitmask<VariableFlags> argFlags,
+                                        const Expression& rhs, const ASTContext& context,
+                                        bool allowPackedSelects);
 
     /// Binds an argument or port connection with the given direction.
     static const Expression& bindArgument(const Type& argType, ArgumentDirection direction,

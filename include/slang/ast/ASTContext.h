@@ -180,8 +180,11 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
 
     /// AST binding is for a bind instantiation (port connection or param value).
     BindInstantiation = 1ull << 41,
+
+    /// AST binding is for a wildcard port connection.
+    WildcardPortConn = 1ull << 42,
 };
-SLANG_BITMASK(ASTFlags, BindInstantiation)
+SLANG_BITMASK(ASTFlags, WildcardPortConn)
 
 // clang-format off
 #define DK(x) \
@@ -296,7 +299,7 @@ public:
     bitmask<ASTFlags> flags;
 
 private:
-    const Symbol* instanceOrProc = nullptr;
+    const Symbol* symbolCtx = nullptr;
 
 public:
     /// If any temporary variables have been materialized in this context,
@@ -372,9 +375,12 @@ public:
     /// Sets the procedural block associated with the context.
     void setProceduralBlock(const ProceduralBlockSymbol& block);
 
-    /// Clears the parent instance and parent procedural block symbol
-    /// associated with the context.
-    void clearInstanceAndProc() { instanceOrProc = nullptr; }
+    /// Sets the port associated with the context.
+    void setPort(const Symbol& port);
+
+    /// Clears the symbol assocated with the context (either a parent instance,
+    /// a port, or a procedural block).
+    void clearSymbolCtx() { symbolCtx = nullptr; }
 
     /// Tries to fill the @a assertionInstance member by searching upward through
     /// parent scopes to find an assertion instantiation.

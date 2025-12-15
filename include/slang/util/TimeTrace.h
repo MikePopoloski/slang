@@ -27,6 +27,9 @@ public:
     /// Initializes time tracing support.
     static void initialize();
 
+    /// Turns off time tracing and destroys all resources for it.
+    static void destroy();
+
     /// Writes the results of time tracing to the given stream.
     /// The output is JSON, in Chrome "Trace Event" format, see
     /// https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview

@@ -221,8 +221,8 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         syntaxMetadata[n] = result;
     }
 
-    for (auto& name : tree->getMetadata().globalInstances)
-        globalInstantiations.emplace(name);
+    for (auto& inst : tree->getMetadata().globalInstances)
+        globalInstantiations.emplace(inst->type.valueText());
 
     if (node.kind == SyntaxKind::CompilationUnit) {
         for (auto member : node.as<CompilationUnitSyntax>().members)
@@ -689,15 +689,7 @@ Compilation::DefinitionLookupResult Compilation::getDefinition(
 const DefinitionSymbol* Compilation::getDefinition(const Scope& scope,
                                                    const ModuleDeclarationSyntax& syntax) const {
     if (auto it = definitionFromSyntax.find(&syntax); it != definitionFromSyntax.end()) {
-        SmallMap<const Scope*, const DefinitionSymbol*, 4> scopeMap;
-        for (auto def : it->second) {
-            auto insertScope = def->getParentScope();
-            if (insertScope && insertScope->asSymbol().kind == SymbolKind::CompilationUnit)
-                insertScope = root.get();
-
-            scopeMap[insertScope] = def;
-        }
-
+        auto& scopeMap = it->second;
         auto lookupScope = &scope;
         do {
             if (auto scopeIt = scopeMap.find(lookupScope); scopeIt != scopeMap.end())
@@ -807,11 +799,12 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
                        scope, location, syntax, *metadata.defaultNetType, metadata.unconnectedDrive,
                        metadata.cellDefine, metadata.timeScale, metadata.tree))
                    .get();
-    definitionFromSyntax[&syntax].push_back(def);
 
     insertDefinition(*def, scope);
 
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
+    definitionFromSyntax[&syntax][targetScope] = def;
+
     const bool isRoot = targetScope == root.get();
     if (isRoot)
         checkElemTimeScale(def->timeScale, syntax.header->name.range());
@@ -944,7 +937,7 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
     auto [it, inserted] = packageMap.emplace(package.name, &package);
     if (!inserted && !package.name.empty() &&
         scope.asSymbol().kind == SymbolKind::CompilationUnit) {
-        auto& diag = scope.addDiag(diag::Redefinition, package.location);
+        auto& diag = scope.addDiag(diag::DuplicateDefinition, package.location);
         diag << package.name;
         diag.addNote(diag::NotePreviousDefinition, it->second->location);
     }
@@ -1342,9 +1335,16 @@ void Compilation::noteHierarchicalAssignment(const HierarchicalReference& ref) {
     hierarchicalAssignments.push_back(&ref);
 }
 
-void Compilation::noteVirtualIfaceInstance(const InstanceSymbol& symbol) {
-    SLANG_ASSERT(!isFrozen());
-    virtualInterfaceInstances.push_back(&symbol);
+const InstanceSymbol& Compilation::getOrAddVirtualIface(const InstanceSymbol& symbol) {
+    bool valid = true;
+    SmallSet<const InstanceSymbol*, 2> visited;
+    InstanceCacheKey key(symbol, valid, visited);
+
+    auto [it, inserted] = virtualIfaceCache.try_emplace(std::move(key), &symbol);
+    if (inserted)
+        virtualIfaceInstances.push_back(it->second);
+
+    return *it->second;
 }
 
 const Expression* Compilation::getDefaultDisable(const Scope& scope) const {
@@ -2018,7 +2018,9 @@ void Compilation::checkModportExports(
         SLANG_ASSERT(def);
 
         for (auto& method : modport->membersOfType<MethodPrototypeSymbol>()) {
-            if (method.flags.has(MethodFlags::ModportExport)) {
+            if (method.flags.has(MethodFlags::ModportExport) && !method.name.empty() &&
+                !def->name.empty()) {
+
                 bool found = false;
                 auto impl = method.getFirstExternImpl();
                 while (impl) {
@@ -2442,7 +2444,7 @@ void Compilation::resolveDefParamsAndBinds() {
         };
 
         while (true) {
-            DefParamVisitor v(options.maxInstanceDepth, generateLevel);
+            DefParamVisitor v(options.maxInstanceDepth, options.maxDefParamBlocks, generateLevel);
             initialClone.getRoot(/* skipDefParamsAndBinds */ true).visit(v);
             if (checkProblem(v))
                 return;
@@ -2457,7 +2459,7 @@ void Compilation::resolveDefParamsAndBinds() {
 
             // We didn't find any more binds or defparams so increase
             // our generate level and try again.
-            if (nextIt()) {
+            if (nextIt() || !v.skippedAnything) {
                 saveState(v, initialClone);
                 break;
             }
@@ -2473,6 +2475,10 @@ void Compilation::resolveDefParamsAndBinds() {
             continue;
         }
 
+        // If we found no defparams we're done.
+        if (numDefParamsSeen == 0)
+            break;
+
         // defparams can change the value of parameters, further affecting the value of
         // other defparams elsewhere in the design. This means we need to iterate,
         // reevaluating defparams until they all settle to a stable value or until we
@@ -2482,7 +2488,7 @@ void Compilation::resolveDefParamsAndBinds() {
             Compilation c({}, defaultLibPtr);
             cloneInto(c);
 
-            DefParamVisitor v(options.maxInstanceDepth, generateLevel);
+            DefParamVisitor v(options.maxInstanceDepth, options.maxDefParamBlocks, generateLevel);
             c.getRoot(/* skipDefParamsAndBinds */ true).visit(v);
             if (checkProblem(v))
                 return;

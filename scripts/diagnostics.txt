@@ -416,6 +416,8 @@ error IfaceMethodNotVirtual "class '{}' must provide an implementation for metho
 error NotAllowedInModport "'{}' cannot be listed in a modport"
 error ModportConnMismatch "cannot connect modport '{}.{}' to port requiring modport '{}.{}'"
 error ExpectedImportExport "expected 'import' or 'export' for subroutine '{}' in modport"
+error ModportMemberParent "'{}' cannot be used in this modport because it is not a member of the containing interface"
+error PortExprMemberParent "'{}' cannot be used in this port expression because it is not a member of the containing {}"
 error SingleBitVectored "net of width 1 cannot be 'vectored' or 'scalared'"
 error VarDeclWithDelay "cannot specify a net delay for a variable declaration"
 error InvalidRandType "{} is not a valid type for a '{}' property"
@@ -791,6 +793,7 @@ note NoteLogicalNotSilence "add parentheses around left hand side expression to 
 warning conditional-precedence ConditionalPrecedence "operator '?:' has lower precedence than '{}'; '{}' will be evaluated first"
 note NoteConditionalPrecedenceFix "place parentheses around the '?:' expression to evaluate it first"
 warning consecutive-comparison ConsecutiveComparison "comparisons like 'x < y < z' don't have their mathematical meaning"
+note NoteForPortConn "for connection to port '{}'"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -1096,7 +1099,7 @@ warning constant-conversion ConstantConversion "implicit conversion from {} to {
 
 subsystem Compilation
 fatal MaxInstanceDepthExceeded "{} instantiation exceeded maximum depth of {}"
-fatal InfinitelyRecursiveHierarchy "infinitely recursive instantiation of {}"
+fatal InfinitelyRecursiveHierarchy "infinitely recursive instantiation of '{}'"
 error InvalidTopModule "'{}' is not a valid top-level module"
 error TopModuleIfacePort "top-level module '{}' has unconnected interface port '{}'"
 error TopModuleRefPort "top-level module '{}' has unconnected 'ref' port '{}'"
@@ -1164,6 +1167,7 @@ error AssertionFormalUnassigned "output formal argument '{}' is not definitely a
 error AssertionFormalMultiAssign "cannot bind local variable '{}' to more than one output or inout local variable formal argument"
 note NoteRequiredHere "required here"
 note NoteClockHere "clock here"
+note NotePortConnHere "from port connection here"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning unused-net UnusedNet "unused net '{}'"
 warning unused-implicit-net UnusedImplicitNet "implicit net '{}' is unused elsewhere"

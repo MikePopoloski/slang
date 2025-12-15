@@ -31,10 +31,10 @@ struct SLANG_EXPORT ParserMetadata {
     /// (such as various bits of preprocessor state).
     std::vector<std::pair<const syntax::SyntaxNode*, Node>> nodeMeta;
 
-    /// A list of names of all instantiations of global modules/interfaces/programs.
+    /// A list of all instantiations of global modules/interfaces/programs.
     /// This can be used to determine which modules should be considered as top-level
-    /// roots of the design.
-    std::vector<std::string_view> globalInstances;
+    /// roots of the design, or to find references of a particular module.
+    std::vector<const syntax::HierarchyInstantiationSyntax*> globalInstances;
 
     /// A list of all names parsed that could represent a package or class name,
     /// since they are simple names that appear on the left-hand side of a double colon.
@@ -62,12 +62,6 @@ struct SLANG_EXPORT ParserMetadata {
     /// Constructs a new set of parser metadata by walking the provided syntax tree.
     static ParserMetadata fromSyntax(const syntax::SyntaxNode& root);
 
-    /// Adds a global instance to the metadata if it hasn't already been seen.
-    void addGlobalInstance(std::string_view name) {
-        if (seenGlobalInstances.insert(name).second)
-            globalInstances.push_back(name);
-    }
-
     /// Returns a list of all symbols from @a visitDeclaredSymbols.
     std::vector<std::string_view> getDeclaredSymbols() const;
 
@@ -81,9 +75,6 @@ struct SLANG_EXPORT ParserMetadata {
     /// Visits all top level symbols referenced/used by this metadata, calling the provided
     /// function for each symbol name.
     void visitReferencedSymbols(function_ref<void(std::string_view)> func) const;
-
-private:
-    flat_hash_set<std::string_view> seenGlobalInstances;
 };
 
 } // namespace slang::parsing

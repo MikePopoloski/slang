@@ -860,3 +860,54 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Explicit modport expression issues") {
+    auto tree = SyntaxTree::fromText(R"(
+const int b = 1;
+
+interface J(wire clk);
+    clocking cb @(posedge clk);
+    endclocking
+
+    interface I(input int q);
+        int a;
+        modport m(input .i({a, q, b}));
+        modport n(input b, clocking cb);
+
+        struct { int i; } s;
+        modport o(input .q(s.i));
+    endinterface
+
+    I i(3);
+endinterface
+
+module m;
+    wire clk;
+    J j(clk);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ModportMemberParent);
+    CHECK(diags[1].code == diag::ModportMemberParent);
+    CHECK(diags[2].code == diag::ModportMemberParent);
+}
+
+TEST_CASE("Interface containing virtual interface infinite loop regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    virtual I O;
+endinterface
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::VirtualInterfaceIfaceMember);
+}

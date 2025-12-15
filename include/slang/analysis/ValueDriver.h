@@ -12,6 +12,12 @@
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"
 
+namespace slang {
+
+class BumpAllocator;
+
+}
+
 namespace slang::ast {
 
 class EvalContext;
@@ -54,33 +60,38 @@ enum class SLANG_EXPORT DriverFlags : uint8_t {
 
     /// The assignment is for an input port of a module / interface / program
     /// (the assignment to the internal symbol from the port itself).
-    InputPort = 1 << 1,
+    InputPort = 1 << 0,
 
     /// The assignment is for an output port of a module / interface / program
     /// (the assignment from the port connection).
-    OutputPort = 1 << 2,
+    OutputPort = 1 << 1,
 
     /// The assignment is from a clocking block signal.
-    ClockVar = 1 << 3,
+    ClockVar = 1 << 2,
 
     /// The driver is for a net or variable initializer.
-    Initializer = 1 << 4
+    Initializer = 1 << 3,
+
+    /// The driver is from a side effect of applying a cached instance body.
+    FromSideEffect = 1 << 4,
+
+    /// The ValueDriver object has an override range stored with it.
+    HasOverrideRange = 1 << 5,
+
+    /// The driver connects through an indirect port, such as a modport or ref port.
+    ViaIndirectPort = 1 << 6
 };
-SLANG_BITMASK(DriverFlags, Initializer)
+SLANG_BITMASK(DriverFlags, ViaIndirectPort)
 
 /// Represents an expression that drives a value by assigning
 /// to some range of its type.
 class SLANG_EXPORT ValueDriver {
 public:
-    /// The expression that drives the value.
-    not_null<const ast::Expression*> prefixExpression;
+    /// The longest static prefix expression that drives the value.
+    not_null<const ast::Expression*> lsp;
 
     /// The symbol that contains the driver expression.
     not_null<const ast::Symbol*> containingSymbol;
-
-    /// If the driver is implied inside a procedure by a subroutine,
-    /// this is the call expression for that subroutine.
-    const ast::Expression* procCallExpression = nullptr;
 
     /// Flags that control how the driver operates.
     bitmask<DriverFlags> flags;
@@ -91,13 +102,13 @@ public:
     /// The source of the driver (procedural block, subroutine, etc).
     DriverSource source;
 
-    /// Indicates whether the driver is from a side effect of
-    /// applying a cached instance body.
-    bool isFromSideEffect = false;
+    /// Constructs a new ValueDriver instance.
+    static ValueDriver* create(BumpAllocator& alloc, DriverKind kind, const ast::Expression& lsp,
+                               const ast::Symbol& containingSymbol, bitmask<DriverFlags> flags,
+                               const SourceRange* overrideRange = nullptr);
 
     /// Constructs a new ValueDriver instance.
-    ValueDriver(DriverKind kind, const ast::Expression& longestStaticPrefix,
-                const ast::Symbol& containingSymbol, bitmask<DriverFlags> flags);
+    static ValueDriver* create(BumpAllocator& alloc, const ValueDriver& copyFrom);
 
     /// Indicates whether the driver is for an input port.
     bool isInputPort() const { return flags.has(DriverFlags::InputPort); }
@@ -118,6 +129,14 @@ public:
 
     /// Gets the source range describing the driver as written in the source code.
     SourceRange getSourceRange() const;
+
+    /// Gets an optional extra source range that indicates the driver actually came
+    /// from some other, indirected location (like a modport port expansion).
+    const SourceRange* getOverrideRange() const;
+
+private:
+    ValueDriver(DriverKind kind, const ast::Expression& lsp, const ast::Symbol& containingSymbol,
+                bitmask<DriverFlags> flags);
 };
 
 } // namespace slang::analysis

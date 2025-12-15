@@ -172,7 +172,7 @@ private:
     // Internal methods to grab and handle the next token
     Token nextProcessed();
     Token nextRaw();
-    void popSource();
+    bool popSource();
 
     // directive handling methods
     Token handleDirectives(Token token);
@@ -395,6 +395,23 @@ private:
         uint32_t currentIndex = 0;
     };
 
+    // a pointer into expandedTokens if we're currently expanding a macro
+    Token* currentMacroToken = nullptr;
+
+    // the latest token pulled from a lexer
+    Token currentToken;
+
+    // the last token consumed before the currentToken; used to back up and
+    // report errors in a different location in certain scenarios
+    Token lastConsumed;
+
+    // Directives don't get handled when lexing within a macro body
+    // (either define or usage).
+    bool inMacroBody = false;
+
+    // Special handling for pulling directives when in an ifdef condition expr.
+    bool inIfDefCondition = false;
+
     SourceManager& sourceManager;
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
@@ -412,21 +429,6 @@ private:
 
     // list of expanded macro tokens to drain before continuing with active lexer
     SmallVector<Token> expandedTokens;
-    Token* currentMacroToken = nullptr;
-
-    // the latest token pulled from a lexer
-    Token currentToken;
-
-    // the last token consumed before the currentToken; used to back up and
-    // report errors in a different location in certain scenarios
-    Token lastConsumed;
-
-    // Directives don't get handled when lexing within a macro body
-    // (either define or usage).
-    bool inMacroBody = false;
-
-    // Special handling for pulling directives when in an ifdef condition expr.
-    bool inIfDefCondition = false;
 
     // A buffer used to hold tokens while we're busy consuming them for directives.
     SmallVector<Token> scratchTokenBuffer;
@@ -434,6 +436,15 @@ private:
     // A set of files (identified by a pointer to the start of their text buffer) that
     // have been marked pragma once so that we avoid trying to include them more than once.
     flat_hash_set<const char*> includeOnceHeaders;
+
+    // If we encounter an include directive while expanding a macro
+    // we will use this stack to pause playing out the macro tokens
+    // while we process the include file.
+    struct MacroBufferFrame {
+        SmallVector<Token> tokens;
+        ptrdiff_t index = 0;
+    };
+    SmallVector<MacroBufferFrame> pendingMacroFrames;
 
     // The include directives that have been encountered thus far in the preprocessor.
     std::vector<IncludeMetadata> includeDirectives;

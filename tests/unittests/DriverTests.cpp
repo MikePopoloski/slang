@@ -952,6 +952,43 @@ TEST_CASE("Driver compat mode all") {
     CHECK(stdoutContains("0 errors, 1 warning"));
 }
 
+TEST_CASE("Driver waive duplicate package definition errors") {
+    auto testDir = findTestDir();
+    auto argsBase = fmt::format("\"{0}dup_pkg.sv\"", testDir);
+
+    {
+        auto guard = OS::captureOutput();
+
+        Driver driver;
+        driver.addStandardArgs();
+
+        auto args = fmt::format("testfoo {}", argsBase);
+        CHECK(driver.parseCommandLine(args));
+        CHECK(driver.processOptions());
+        CHECK(driver.parseAllSources());
+        CHECK(!driver.runFullCompilation());
+        CHECK(stdoutContains("Build failed"));
+        CHECK(stdoutContains("1 error, 0 warnings"));
+        CHECK(stderrContains("duplicate definition of 'dup_pkg'"));
+    }
+
+    {
+        auto guard = OS::captureOutput();
+
+        Driver driver;
+        driver.addStandardArgs();
+
+        auto args = fmt::format("testfoo {} -Wno-error=duplicate-definition", argsBase);
+        CHECK(driver.parseCommandLine(args));
+        CHECK(driver.processOptions());
+        CHECK(driver.parseAllSources());
+        CHECK(driver.runFullCompilation());
+        CHECK(stdoutContains("Build succeeded"));
+        CHECK(stdoutContains("0 errors, 1 warning"));
+        CHECK(stderrContains("duplicate definition of 'dup_pkg'"));
+    }
+}
+
 TEST_CASE("Driver disable local includes") {
     auto guard = OS::captureOutput();
 

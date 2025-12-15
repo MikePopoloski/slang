@@ -337,7 +337,7 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
     }
 
     ASTContext ctx = context;
-    ctx.clearInstanceAndProc();
+    ctx.clearSymbolCtx();
 
     auto& prop = AssertionExpr::bind(*syntax.propertySpec, ctx);
     bool bad = prop.bad();

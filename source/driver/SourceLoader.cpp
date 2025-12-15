@@ -184,6 +184,26 @@ std::vector<SourceBuffer> SourceLoader::loadSources() {
     return results;
 }
 
+SourceBuffer SourceLoader::findBuffer(std::string_view name) const {
+    for (auto& dir : searchDirectories) {
+        fs::path path(dir);
+        path /= name;
+
+        for (auto& ext : searchExtensions) {
+            path.replace_extension(ext);
+            if (!sourceManager.isCached(path)) {
+                // This file is never part of a library because if
+                // it was we would have already loaded it earlier.
+                auto readResult = sourceManager.readSource(path, /* library */ nullptr);
+                if (readResult) {
+                    return *readResult;
+                }
+            }
+        }
+    }
+    return {};
+}
+
 SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& optionBag) {
     SyntaxTreeList syntaxTrees;
     std::vector<SourceBuffer> singleUnitBuffers;
@@ -332,76 +352,65 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
     }
 
     if (!searchDirectories.empty()) {
-        // If library directories are specified, see if we have any unknown instantiations
-        // or package names for which we should search for additional source files to load.
-        flat_hash_set<std::string_view> knownNames;
-        auto addKnownNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
-            auto& meta = tree->getMetadata();
-            meta.visitDeclaredSymbols([&](std::string_view name) { knownNames.emplace(name); });
-        };
-
-        auto findMissingNames = [&](const std::shared_ptr<SyntaxTree>& tree,
-                                    flat_hash_set<std::string_view>& missing) {
-            auto& meta = tree->getMetadata();
-            meta.visitReferencedSymbols([&](std::string_view name) {
-                if (knownNames.find(name) == knownNames.end())
-                    missing.emplace(name);
-            });
-        };
-
-        for (auto& tree : syntaxTrees)
-            addKnownNames(tree);
-
-        flat_hash_set<std::string_view> missingNames;
-        for (auto& tree : syntaxTrees)
-            findMissingNames(tree, missingNames);
-
-        // Keep loading new files as long as we are making forward progress.
-        flat_hash_set<std::string_view> nextMissingNames;
-        while (true) {
-            for (auto name : missingNames) {
-                SourceBuffer buffer;
-                for (auto& dir : searchDirectories) {
-                    fs::path path(dir);
-                    path /= name;
-
-                    for (auto& ext : searchExtensions) {
-                        path.replace_extension(ext);
-                        if (!sourceManager.isCached(path)) {
-                            // This file is never part of a library because if
-                            // it was we would have already loaded it earlier.
-                            auto readResult = sourceManager.readSource(path, /* library */ nullptr);
-                            if (readResult) {
-                                buffer = *readResult;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (buffer)
-                        break;
-                }
-
-                if (buffer) {
-                    auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
-                                                       inheritedMacros);
-                    tree->isLibraryUnit = true;
-                    syntaxTrees.emplace_back(tree);
-
-                    addKnownNames(tree);
-                    findMissingNames(tree, nextMissingNames);
-                }
-            }
-
-            if (nextMissingNames.empty())
-                break;
-
-            missingNames = std::move(nextMissingNames);
-            nextMissingNames = {};
-        }
+        loadTrees(
+            syntaxTrees, [this](std::string_view name) { return findBuffer(name); }, sourceManager,
+            optionBag, inheritedMacros);
     }
 
     return syntaxTrees;
+}
+
+void SourceLoader::loadTrees(
+    SyntaxTreeList& syntaxTrees, function_ref<SourceBuffer(std::string_view)> findBufferFunc,
+    SourceManager& sourceManager, const Bag& optionBag,
+    std::span<const syntax::DefineDirectiveSyntax* const> inheritedMacros) {
+    // If library directories are specified, see if we have any unknown instantiations
+    // or package names for which we should search for additional source files to load.
+    flat_hash_set<std::string_view> knownNames;
+    auto addKnownNames = [&](const std::shared_ptr<syntax::SyntaxTree>& tree) {
+        auto& meta = tree->getMetadata();
+        meta.visitDeclaredSymbols([&](std::string_view name) { knownNames.emplace(name); });
+    };
+
+    auto findMissingNames = [&](const std::shared_ptr<syntax::SyntaxTree>& tree,
+                                flat_hash_set<std::string_view>& missing) {
+        auto& meta = tree->getMetadata();
+        meta.visitReferencedSymbols([&](std::string_view name) {
+            if (knownNames.find(name) == knownNames.end())
+                missing.emplace(name);
+        });
+    };
+
+    for (auto& tree : syntaxTrees)
+        addKnownNames(tree);
+
+    flat_hash_set<std::string_view> missingNames;
+    for (auto& tree : syntaxTrees)
+        findMissingNames(tree, missingNames);
+
+    // Keep loading new files as long as we are making forward progress.
+    flat_hash_set<std::string_view> nextMissingNames;
+    while (true) {
+        for (auto name : missingNames) {
+            auto buffer = findBufferFunc(name);
+
+            if (buffer) {
+                auto tree = syntax::SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
+                                                           inheritedMacros);
+                tree->isLibraryUnit = true;
+                syntaxTrees.emplace_back(tree);
+
+                addKnownNames(tree);
+                findMissingNames(tree, nextMissingNames);
+            }
+        }
+
+        if (nextMissingNames.empty())
+            break;
+
+        missingNames = std::move(nextMissingNames);
+        nextMissingNames = {};
+    }
 }
 
 SourceLibrary* SourceLoader::getOrAddLibrary(std::string_view name) {

@@ -1501,3 +1501,15 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("defparam OOM regress") {
+    auto tree = SyntaxTree::fromText(R"(
+defparam;I d
+interface I
+I I I d(
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}

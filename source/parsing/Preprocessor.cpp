@@ -100,12 +100,40 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
 
     lexerStack.emplace_back(
         std::make_unique<Lexer>(buffer, alloc, diagnostics, sourceManager, lexerOptions));
+
+    // If we have an active macro expansion we need to pause it while
+    // we process this new buffer.
+    if (currentMacroToken) {
+        auto& frame = pendingMacroFrames.emplace_back();
+        frame.index = currentMacroToken - expandedTokens.begin();
+        frame.tokens = std::move(expandedTokens);
+
+        currentMacroToken = nullptr;
+        expandedTokens.clear();
+    }
 }
 
-void Preprocessor::popSource() {
+bool Preprocessor::popSource() {
     if (includeDepth)
         includeDepth--;
+
     lexerStack.pop_back();
+
+    if (!pendingMacroFrames.empty()) {
+        auto& frame = pendingMacroFrames.back();
+        expandedTokens = std::move(frame.tokens);
+        currentMacroToken = expandedTokens.begin() + frame.index;
+        pendingMacroFrames.pop_back();
+        return false;
+    }
+
+    if (!lexerStack.empty())
+        return false;
+
+    if (!branchStack.empty())
+        addDiag(diag::MissingEndIfDirective, branchStack.back().directive.range());
+
+    return true;
 }
 
 void Preprocessor::predefine(const std::string& definition, std::string_view name) {
@@ -416,39 +444,30 @@ Token Preprocessor::nextRaw() {
     if (currentToken)
         return std::exchange(currentToken, Token());
 
-    // if we just expanded a macro we'll have tokens from that to return
-    if (currentMacroToken) {
-        auto result = *currentMacroToken;
-        currentMacroToken++;
-        if (currentMacroToken == expandedTokens.end()) {
-            currentMacroToken = nullptr;
-            expandedTokens.clear();
+    auto getNext = [&] {
+        // if we are expandeding a macro we'll have tokens from that to return
+        if (currentMacroToken) {
+            auto result = *currentMacroToken;
+            currentMacroToken++;
+            if (currentMacroToken == expandedTokens.end()) {
+                currentMacroToken = nullptr;
+                expandedTokens.clear();
+            }
+            return result;
         }
-        return result;
-    }
 
-    // if this assert fires, the user disregarded an EoF and kept calling next()
-    SLANG_ASSERT(!lexerStack.empty());
+        SLANG_ASSERT(!lexerStack.empty());
+        return lexerStack.back()->lex(keywordVersionStack.back());
+    };
 
-    // Pull the next token from the active source.
-    // This is the common case.
-    auto& source = lexerStack.back();
-    auto token = source->lex(keywordVersionStack.back());
+    auto token = getNext();
     if (token.kind != TokenKind::EndOfFile)
         return token;
 
-    auto checkBranchStack = [&] {
-        if (!branchStack.empty())
-            addDiag(diag::MissingEndIfDirective, branchStack.back().directive.range());
-    };
-
     // don't return EndOfFile tokens for included files, fall
     // through to loop to merge trivia
-    popSource();
-    if (lexerStack.empty()) {
-        checkBranchStack();
+    if (popSource())
         return token;
-    }
 
     // Rare case: we have an EoF from an include file... we don't want to return
     // that one, but we do want to merge its trivia with whatever comes next.
@@ -461,20 +480,10 @@ Token Preprocessor::nextRaw() {
     };
 
     appendTrivia(token);
-
-    while (true) {
-        auto& nextSource = lexerStack.back();
-        token = nextSource->lex(keywordVersionStack.back());
+    do {
+        token = getNext();
         appendTrivia(token);
-        if (token.kind != TokenKind::EndOfFile)
-            break;
-
-        popSource();
-        if (lexerStack.empty()) {
-            checkBranchStack();
-            break;
-        }
-    }
+    } while (token.kind == TokenKind::EndOfFile && !popSource());
 
     // Ensure EoL at the end of trivia to prevent inlining issues
     if (trivia.empty() || trivia.back().kind != TriviaKind::EndOfLine)

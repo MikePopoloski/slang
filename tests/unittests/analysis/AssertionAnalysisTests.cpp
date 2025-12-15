@@ -8,9 +8,23 @@ static void ltrim(std::string& s) {
             std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !std::isspace(ch); }));
 }
 
+static std::string clkStr(const TimingControl* clock) {
+    if (!clock)
+        return "";
+
+    REQUIRE(clock->syntax);
+    auto result = clock->syntax->toString();
+    ltrim(result);
+    return result;
+}
+
 static std::string testInferredClock(const char* text) {
     Compilation compilation;
     AnalysisManager analysisManager;
+
+    std::string clockResult;
+    analysisManager.addListener(
+        [&](const AnalyzedProcedure& proc) { clockResult = clkStr(proc.getInferredClock()); });
 
     auto fullText = fmt::format(R"(
 module m(input clk_default);
@@ -22,26 +36,13 @@ module m(input clk_default);
 endmodule)",
                                 text);
 
-    auto [diags, design] = analyze(fullText, compilation, analysisManager);
+    auto diags = analyze(fullText, compilation, analysisManager);
     if (!diags.empty()) {
         FAIL_CHECK(report(diags));
         return "";
     }
 
-    REQUIRE(design.topInstances.size() == 1);
-    auto& instance = design.topInstances[0];
-    auto body = instance.tryGet();
-    REQUIRE(body);
-    REQUIRE(body->procedures.size() == 1);
-    auto& proc = body->procedures[0];
-    auto inferredClock = proc.getInferredClock();
-    if (!inferredClock)
-        return "";
-
-    REQUIRE(inferredClock->syntax);
-    auto result = inferredClock->syntax->toString();
-    ltrim(result);
-    return result;
+    return clockResult;
 }
 
 TEST_CASE("Procedure inferred clocks") {
@@ -296,7 +297,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::SampledValueFuncClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
@@ -338,7 +339,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::MulticlockedInClockingBlock);
     CHECK(diags[1].code == diag::DifferentClockInClockingBlock);
@@ -398,7 +399,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::InvalidMulticlockedSeqOp);
     CHECK(diags[1].code == diag::InvalidMulticlockedSeqOp);
@@ -434,7 +435,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -490,7 +491,7 @@ endmodule // c4
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -601,7 +602,7 @@ endmodule // c5
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::AssertionNoClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
@@ -693,7 +694,7 @@ endmodule // c10
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::SampledValueFuncClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
@@ -765,7 +766,7 @@ endmodule // m
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -832,7 +833,7 @@ endmodule // m5
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::NoUniqueClock);
     CHECK(diags[1].code == diag::NoUniqueClock);
@@ -887,7 +888,7 @@ endmodule // hint
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -931,7 +932,7 @@ endmodule // multiclock
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::InvalidMulticlockedSeqOp);
     CHECK(diags[1].code == diag::NoUniqueClock);
@@ -1014,7 +1015,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::NoUniqueClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
@@ -1105,7 +1106,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::SampledValueFuncClock);
 }
@@ -1195,7 +1196,7 @@ endmodule // mc_14
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AssertionNoClock);
 }
@@ -1304,7 +1305,7 @@ endmodule // mc_21
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::AssertionNoClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
@@ -1489,7 +1490,7 @@ endmodule :m_10
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::AssertionNoClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
@@ -1596,7 +1597,7 @@ endmodule // mm_09
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::AssertionNoClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
@@ -1626,7 +1627,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InvalidMulticlockedSeqOp);
 }
@@ -1674,7 +1675,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::NoInferredClock);
     CHECK(diags[1].code == diag::InvalidMulticlockedSeqOp);
@@ -1703,7 +1704,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -1751,7 +1752,7 @@ endmodule : m
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -1784,7 +1785,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -1844,7 +1845,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -1879,7 +1880,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AssertionNoClock);
 }
@@ -1923,7 +1924,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::SampledValueFuncClock);
     CHECK(diags[1].code == diag::SampledValueFuncClock);
@@ -1974,7 +1975,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::AssertionNoClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
@@ -2007,7 +2008,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::GFSVMatchItems);
 }
@@ -2042,7 +2043,7 @@ endmodule : mod_sva_checks
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::SampledValueFuncClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
@@ -2079,7 +2080,7 @@ endmodule : mod_sva_checks
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -2106,7 +2107,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::AssertionLocalUnassigned);
     CHECK(diags[1].code == diag::AssertionLocalUnassigned);
@@ -2136,7 +2137,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AssertionFormalUnassigned);
 }
@@ -2190,7 +2191,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::AssertionLocalUnassigned);
     CHECK(diags[1].code == diag::AssertionLocalUnassigned);
@@ -2216,7 +2217,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -2251,7 +2252,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::AssertionLocalUnassigned);
     CHECK(diags[1].code == diag::AssertionLocalUnassigned);
@@ -2294,7 +2295,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AssertionLocalUnassigned);
 }
@@ -2318,7 +2319,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AssertionFormalMultiAssign);
 }
@@ -2356,8 +2357,56 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(text, compilation, analysisManager);
+    auto diags = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::AssertionLocalUnassigned);
     CHECK(diags[1].code == diag::AssertionLocalUnassigned);
+}
+
+TEST_CASE("Assertion analysis visitation") {
+    auto& text = R"(
+module m;
+    logic clk1, clk2;
+    logic x, y;
+
+    sequence seq1;
+        @(posedge clk1) y ##1 @(posedge clk1) x;
+    endsequence
+
+    sequence seq2;
+        @(posedge clk2) x ##0 @(posedge clk2) y;
+    endsequence
+
+    property prop1;
+        @(posedge clk1) disable iff(!$rose(clk1, @(posedge clk1))) seq1 |-> seq2;
+    endproperty
+
+    property prop2;
+        @(posedge clk2) disable iff(!$rose(clk2, @(posedge clk2))) seq2 |-> seq1;
+    endproperty
+
+    assert property (prop1);
+    assert property (prop2);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    analysisManager.addListener([](const AnalyzedAssertion& assertion) {
+        auto slc = clkStr(assertion.getSemanticLeadingClock());
+        auto& root = assertion.getRoot();
+        auto& inst = root.as<SimpleAssertionExpr>().expr.as<AssertionInstanceExpression>();
+        if (inst.symbol.name == "prop1") {
+            CHECK(slc == "@(posedge clk1)");
+            CHECK(clkStr(assertion.getClock(inst.body)) == "@(posedge clk1)");
+        }
+        else {
+            CHECK(slc == "@(posedge clk2)");
+            CHECK(clkStr(assertion.getClock(inst.body)) == "@(posedge clk2)");
+        }
+    });
+
+    auto diags = analyze(text, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
 }

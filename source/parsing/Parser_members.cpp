@@ -2724,16 +2724,17 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attri
     // If this is an instantiation of a global module/interface/program,
     // keep track of it in our instantiatedModules set.
     std::string_view name = type.valueText();
+    bool addToInstances = true;
     if (!name.empty() && type.kind == TokenKind::Identifier) {
-        bool found = false;
         for (auto& set : moduleDeclStack) {
             if (set.find(name) != set.end()) {
-                found = true;
+                addToInstances = false;
                 break;
             }
         }
-        if (!found)
-            meta.addGlobalInstance(name);
+    }
+    else {
+        addToInstances = false;
     }
 
     Token semi;
@@ -2743,7 +2744,12 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attri
                                                diag::ExpectedHierarchicalInstantiation,
                                                [this] { return &parseHierarchicalInstance(); });
 
-    return factory.hierarchyInstantiation(attributes, type, parameters, items.copy(alloc), semi);
+    auto& ret = factory.hierarchyInstantiation(attributes, type, parameters, items.copy(alloc),
+                                               semi);
+
+    if (addToInstances)
+        meta.globalInstances.push_back(&ret);
+    return ret;
 }
 
 PrimitiveInstantiationSyntax& Parser::parsePrimitiveInstantiation(AttrList attributes) {

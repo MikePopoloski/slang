@@ -10,10 +10,12 @@
 #if defined(SLANG_USE_THREADS)
 #    include <BS_thread_pool.hpp>
 #endif
+#include <functional>
 #include <mutex>
 #include <optional>
 
 #include "slang/analysis/AnalysisOptions.h"
+#include "slang/analysis/AnalyzedAssertion.h"
 #include "slang/analysis/AnalyzedProcedure.h"
 #include "slang/analysis/DriverTracker.h"
 #include "slang/diagnostics/Diagnostics.h"
@@ -23,6 +25,7 @@
 
 namespace slang::ast {
 
+class CheckerInstanceSymbol;
 class Compilation;
 class Scope;
 class SubroutineSymbol;
@@ -33,26 +36,10 @@ class Symbol;
 namespace slang::analysis {
 
 class AnalysisManager;
-class AnalyzedScope;
+class DFAResults;
 
-/// Represents a pending analysis for a particular AST symbol,
-/// such as a module or interface instance, a class type, etc.
-class SLANG_EXPORT PendingAnalysis {
-public:
-    /// The symbol that was analyzed.
-    not_null<const ast::Symbol*> symbol;
-
-    /// Constructs a new AnalyzedInstance object.
-    PendingAnalysis(AnalysisManager& analysisManager, const ast::Symbol& symbol) :
-        symbol(&symbol), analysisManager(&analysisManager) {}
-
-    /// Returns the analyzed body of the symbol if available,
-    /// or nullptr if the symbol has not been analyzed yet.
-    const AnalyzedScope* tryGet() const;
-
-private:
-    not_null<AnalysisManager*> analysisManager;
-};
+template<typename T, typename TVisitor>
+concept HasVisitExprs = requires(const T& t, TVisitor&& visitor) { t.visitExprs(visitor); };
 
 /// Represents an analyzed AST scope.
 class SLANG_EXPORT AnalyzedScope {
@@ -60,37 +47,11 @@ public:
     /// The scope that was analyzed.
     const ast::Scope& scope;
 
-    /// The analyzed child scopes in the scope. This includes things
-    /// like class types and checker instances.
-    std::vector<PendingAnalysis> childScopes;
-
     /// The procedures in the scope.
     std::vector<AnalyzedProcedure> procedures;
 
     /// Constructs a new AnalyzedScope object.
     explicit AnalyzedScope(const ast::Scope& scope) : scope(scope) {}
-};
-
-/// Represents the result of analyzing a full design.
-class SLANG_EXPORT AnalyzedDesign {
-public:
-    /// The compilation that was analyzed.
-    const ast::Compilation* compilation = nullptr;
-
-    /// The analyzed compilation units in the design.
-    std::vector<const AnalyzedScope*> compilationUnits;
-
-    /// The analyzed packages in the design.
-    std::vector<const AnalyzedScope*> packages;
-
-    /// The analyzed top-level instances in the design.
-    std::vector<PendingAnalysis> topInstances;
-
-    /// Default constructor.
-    AnalyzedDesign() = default;
-
-    /// Constructs a new AnalyzedDesign object.
-    explicit AnalyzedDesign(const ast::Compilation& compilation) : compilation(&compilation) {}
 };
 
 /// Holds various bits of state needed to perform analysis.
@@ -131,11 +92,46 @@ public:
     /// Returns true if the given flag(s) are enabled for this analysis.
     bool hasFlag(bitmask<AnalysisFlags> flags) const { return options.flags.has(flags); }
 
+    /// Adds a listener that will be invoked when a procedure is analyzed.
+    ///
+    /// @note The listener may be invoked on multiple threads simultaneously.
+    void addListener(std::function<void(const AnalyzedProcedure&)> listener) {
+        procListeners.push_back(std::move(listener));
+    }
+
+    /// Adds a listener that will be invoked when a scope is analyzed.
+    ///
+    /// @note The listener may be invoked on multiple threads simultaneously.
+    /// Also note that child scopes are not guaranteed to be completely analyzed
+    /// when the listener is invoked.
+    void addListener(std::function<void(const AnalyzedScope&)> listener) {
+        scopeListeners.push_back(std::move(listener));
+    }
+
+    /// Adds a listener that will be invoked when an assertion is analyzed.
+    ///
+    /// @note The listener may be invoked on multiple threads simultaneously.
+    void addListener(std::function<void(const AnalyzedAssertion&)> listener) {
+        assertListeners.push_back(std::move(listener));
+    }
+
+    using CustomDFAProvider = std::function<AnalyzedProcedure(AnalysisContext&, const ast::Symbol&,
+                                                              const AnalyzedProcedure*)>;
+
+    /// Sets a callback that will be invoked whenever a procedure needs to be analyzed.
+    ///
+    /// The callback should perform whatever custom data flow analysis is desired and
+    /// then return a properly constructed AnalyzedProcedure object.
+    void setCustomDFAProvider(CustomDFAProvider provider) {
+        SLANG_ASSERT(!customDFAProvider);
+        customDFAProvider = provider;
+    }
+
     /// Analyzes the given compilation and returns a representation of the design.
     ///
     /// @note The provided compilation must be finalized and frozen
     ///       before it can be analyzed.
-    AnalyzedDesign analyze(const ast::Compilation& compilation);
+    void analyze(const ast::Compilation& compilation);
 
     /// Returns all of the known drivers for the given symbol.
     DriverList getDrivers(const ast::ValueSymbol& symbol) const;
@@ -145,15 +141,7 @@ public:
         const ast::InstanceBodySymbol& symbol) const;
 
     /// Collects and returns all issued analysis diagnostics.
-    /// If @a sourceManager is provided it will be used to sort the diagnostics.
-    Diagnostics getDiagnostics(const SourceManager* sourceManager);
-
-    /// Analyzes the given scope, in blocking fashion.
-    ///
-    /// @note The result is not stored in the manager and so
-    /// won't be visible via calls to @a getAnalyzedScope.
-    const AnalyzedScope& analyzeScopeBlocking(const ast::Scope& scope,
-                                              const AnalyzedProcedure* parentProcedure = nullptr);
+    Diagnostics getDiagnostics();
 
     /// Returns the results of a previous analysis of a scope, if available.
     const AnalyzedScope* getAnalyzedScope(const ast::Scope& scope) const;
@@ -162,28 +150,29 @@ public:
     /// Otherwise returns nullptr.
     const AnalyzedProcedure* getAnalyzedSubroutine(const ast::SubroutineSymbol& symbol) const;
 
-    /// Adds a new analyzed subroutine to the manager's cache for later lookup.
-    const AnalyzedProcedure* addAnalyzedSubroutine(const ast::SubroutineSymbol& symbol,
-                                                   std::unique_ptr<AnalyzedProcedure> procedure);
+    /// Returns all analyzed assertions for the given symbol.
+    std::vector<const AnalyzedAssertion*> getAnalyzedAssertions(const ast::Symbol& symbol) const;
 
-    /// Notes that the given expression is a driver and should be added to the driver tracker.
-    void noteDriver(const ast::Expression& expr, const ast::Symbol& containingSymbol);
+    /// Analyzes the non-procedural expressions in the given symbol.
+    template<std::derived_from<ast::Symbol> TSymbol>
+    void analyzeNonProceduralExprs(const TSymbol& symbol) {
+        if constexpr (HasVisitExprs<TSymbol, NonProceduralExprVisitor>) {
+            NonProceduralExprVisitor visitor(*this, symbol);
+            symbol.visitExprs(visitor);
+        }
+    }
 
-    /// Notes the existence of the given symbol value drivers.
-    void noteDrivers(std::span<const SymbolDriverListPair> drivers);
+    /// Analyzes the non-procedural expressions in the given timing control.
+    void analyzeNonProceduralExprs(const ast::TimingControl& timing,
+                                   const ast::Symbol& containingSymbol);
 
-    /// Helper method to get the indirect drivers from a call to a function.
-    void getFunctionDrivers(const ast::CallExpression& expr, const ast::Symbol& containingSymbol,
-                            SmallSet<const ast::SubroutineSymbol*, 2>& visited,
-                            std::vector<SymbolDriverListPair>& drivers);
-
-    /// Helper method to get all timing controls from a call to a task.
-    void getTaskTimingControls(const ast::CallExpression& expr,
-                               SmallSet<const ast::SubroutineSymbol*, 2>& visited,
-                               std::vector<const ast::Statement*>& controls);
+    /// Analyzes the given non-procedural expression.
+    void analyzeNonProceduralExprs(const ast::Expression& expr, const ast::Symbol& containingSymbol,
+                                   bool isDisableCondition = false);
 
 private:
     friend struct AnalysisScopeVisitor;
+    friend class AnalyzedProcedure;
 
     // Per-thread state.
     struct WorkerState {
@@ -194,8 +183,35 @@ private:
         WorkerState(AnalysisManager& manager) : context(manager), driverAlloc(context.alloc) {}
     };
 
-    PendingAnalysis analyzeSymbol(const ast::Symbol& symbol);
+    const AnalyzedScope& analyzeScopeBlocking(const ast::Scope& scope,
+                                              const AnalyzedProcedure* parentProcedure = nullptr);
+    void analyzeSymbolAsync(const ast::Symbol& symbol);
     void analyzeScopeAsync(const ast::Scope& scope);
+    void analyzeAssertion(const AnalyzedProcedure& procedure,
+                          const ast::ConcurrentAssertionStatement& stmt);
+    void analyzeAssertion(const AnalyzedProcedure& procedure,
+                          const ast::AssertionInstanceExpression& expr);
+    void analyzeAssertion(const ast::TimingControl* contextualClock,
+                          const ast::Symbol& parentSymbol,
+                          const ast::AssertionInstanceExpression& expr);
+    void analyzeCheckerInstance(const ast::CheckerInstanceSymbol& symbol,
+                                const AnalyzedProcedure& parentProcedure);
+
+    AnalyzedProcedure analyzeProcedure(AnalysisContext& context, const ast::Symbol& symbol,
+                                       const AnalyzedProcedure* parentProcedure = nullptr);
+    const AnalyzedProcedure& analyzeSubroutine(AnalysisContext& context,
+                                               const ast::SubroutineSymbol& symbol,
+                                               const AnalyzedProcedure* parentProcedure = nullptr);
+
+    void getFunctionDrivers(const ast::CallExpression& expr, const ast::Symbol& containingSymbol,
+                            SmallSet<const ast::SubroutineSymbol*, 2>& visited,
+                            std::vector<SymbolDriverListPair>& drivers);
+
+    void getTaskTimingControls(const ast::CallExpression& expr,
+                               SmallSet<const ast::SubroutineSymbol*, 2>& visited,
+                               std::vector<const ast::Statement*>& controls);
+
+    void handleAssertion(std::unique_ptr<AnalyzedAssertion>&& assertion);
     void wait();
     WorkerState& getState();
 
@@ -205,8 +221,17 @@ private:
     concurrent_map<const ast::Scope*, std::optional<const AnalyzedScope*>> analyzedScopes;
     concurrent_map<const ast::SubroutineSymbol*, std::unique_ptr<AnalyzedProcedure>>
         analyzedSubroutines;
+    concurrent_map<const ast::Symbol*, std::vector<std::unique_ptr<AnalyzedAssertion>>>
+        analyzedAssertions;
 
     DriverTracker driverTracker;
+
+    CustomDFAProvider customDFAProvider;
+    std::vector<std::function<void(const AnalyzedProcedure&)>> procListeners;
+    std::vector<std::function<void(const AnalyzedScope&)>> scopeListeners;
+    std::vector<std::function<void(const AnalyzedAssertion&)>> assertListeners;
+
+    const SourceManager* sourceManager = nullptr;
 
 #if defined(SLANG_USE_THREADS)
     BS::thread_pool<> threadPool;
@@ -215,6 +240,36 @@ private:
     std::mutex mutex;
     std::exception_ptr pendingException;
 #endif
+
+    struct NonProceduralExprVisitor {
+        NonProceduralExprVisitor(AnalysisManager& manager, const ast::Symbol& containingSymbol,
+                                 bool isDisableCondition = false) :
+            manager(manager), containingSymbol(containingSymbol),
+            isDisableCondition(isDisableCondition) {}
+
+        template<typename T>
+        void visit(const T& expr) {
+            if constexpr (std::is_same_v<T, ast::CallExpression>) {
+                visitCall(expr);
+            }
+            else if constexpr (std::is_same_v<T, ast::AssertionInstanceExpression>) {
+                manager.analyzeAssertion(getDefaultClocking(), containingSymbol, expr);
+            }
+
+            if constexpr (HasVisitExprs<T, NonProceduralExprVisitor>) {
+                expr.visitExprs(*this);
+            }
+        }
+
+    private:
+        AnalysisManager& manager;
+        const ast::Symbol& containingSymbol;
+        SmallSet<const ast::SubroutineSymbol*, 2> visitedSubroutines;
+        bool isDisableCondition;
+
+        const ast::TimingControl* getDefaultClocking() const;
+        void visitCall(const ast::CallExpression& expr);
+    };
 };
 
 } // namespace slang::analysis

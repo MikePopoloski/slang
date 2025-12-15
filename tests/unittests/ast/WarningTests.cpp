@@ -632,3 +632,88 @@ endmodule
     CHECK(diags[1].code == diag::UnnamedGenerate);
     CHECK(diags[2].code == diag::UnnamedGenerate);
 }
+
+TEST_CASE("Array concat width warning regress -- GH #1519") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    localparam bit [4:0][7:0] A = {
+        6'd2,
+        6'd4,
+        6'd9,
+        6'd24,
+        6'd24
+    };
+
+    localparam bit [4:0][7:0] B = {
+        8'd2,
+        8'd4,
+        8'd9,
+        8'd24,
+        8'd24
+    };
+
+    logic [4:0][7:0] b;
+
+    always_comb begin
+        b = {
+            6'd2,
+            6'd4,
+            6'd9,
+            6'd24,
+            6'd24
+        };
+
+        b = {
+            8'd2,
+            8'd4,
+            8'd9,
+            8'd24,
+            8'd24
+        };
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::PackedArrayConv);
+    CHECK(diags[1].code == diag::PackedArrayConv);
+}
+
+TEST_CASE("Single dim array conv warning regress -- GH #1601") {
+    auto tree = SyntaxTree::fromText(R"(
+module testA;
+    typedef struct packed {
+        logic a;
+        logic b;
+    } data_t;
+
+    data_t data_in, data_out;
+
+    testB #(
+         .data_t(data_t),
+         .Width(1)
+    ) i_testB (
+        .data_i(data_in),
+        .data_o(data_out)
+    );
+endmodule
+
+module testB #(
+    parameter type data_t = logic,
+    parameter int unsigned Width = 1
+) (
+    input data_t [Width-1:0] data_i,
+    output data_t [Width-1:0] data_o
+);
+    assign data_o = data_i;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

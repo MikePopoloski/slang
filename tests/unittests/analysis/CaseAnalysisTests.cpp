@@ -281,7 +281,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager(options);
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::CaseNotWildcard);
     CHECK(diags[1].code == diag::CaseNotWildcard);
@@ -342,7 +342,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::CaseIncomplete);
     CHECK(diags[1].code == diag::InferredLatch);
@@ -375,7 +375,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
 
@@ -420,7 +420,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::CaseEnumExplicit);
     CHECK(diags[1].code == diag::CaseEnumExplicit);
@@ -455,7 +455,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::CaseDup);
     CHECK(diags[1].code == diag::CaseDup);
@@ -489,7 +489,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::CaseUnreachable);
     CHECK(diags[1].code == diag::CaseOverlap);
@@ -534,7 +534,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::CaseUnreachable);
     CHECK(diags[1].code == diag::CaseOverlap);
@@ -562,7 +562,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::CaseNotWildcard);
     CHECK(diags[1].code == diag::CaseNotWildcard);
@@ -603,7 +603,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager(options);
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CaseComplex);
 }
@@ -624,7 +624,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CaseNone);
 }
@@ -661,7 +661,7 @@ endmodule
     Compilation compilation;
     AnalysisManager analysisManager;
 
-    auto [diags, design] = analyze(code, compilation, analysisManager);
+    auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CaseDup);
 }

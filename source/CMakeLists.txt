@@ -70,7 +70,7 @@ add_library(
   analysis/AnalyzedProcedure.cpp
   analysis/CaseDecisionDag.cpp
   analysis/ClockInference.cpp
-  analysis/DataFlowAnalysis.cpp
+  analysis/DFAResults.cpp
   analysis/DriverTracker.cpp
   analysis/ValueDriver.cpp
   diagnostics/DiagnosticClient.cpp

@@ -17,9 +17,8 @@
 
 using namespace slang::analysis;
 
-inline std::pair<Diagnostics, AnalyzedDesign> analyze(const std::string& text,
-                                                      Compilation& compilation,
-                                                      AnalysisManager& analysisManager) {
+inline Diagnostics analyze(const std::string& text, Compilation& compilation,
+                           AnalysisManager& analysisManager) {
     auto tree = SyntaxTree::fromText(text);
     compilation.addSyntaxTree(tree);
     auto diags = compilation.getAllDiagnostics();
@@ -30,6 +29,6 @@ inline std::pair<Diagnostics, AnalyzedDesign> analyze(const std::string& text,
 
     compilation.freeze();
 
-    auto design = analysisManager.analyze(compilation);
-    return {analysisManager.getDiagnostics(compilation.getSourceManager()), design};
+    analysisManager.analyze(compilation);
+    return analysisManager.getDiagnostics();
 }

@@ -1785,3 +1785,18 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Property expansion stack overflow regress") {
+    auto tree = SyntaxTree::fromText(R"(
+property p(o=o);
+    1;
+endproperty
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RecursiveDefinition);
+}

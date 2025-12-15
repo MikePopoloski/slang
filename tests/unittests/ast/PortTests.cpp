@@ -1114,10 +1114,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::ExpressionNotAssignable);
-    CHECK(diags[1].code == diag::InvalidRefArg);
-    CHECK(diags[2].code == diag::NullPortExpression);
+    CHECK(diags[1].code == diag::ExpressionNotAssignable);
+    CHECK(diags[2].code == diag::InvalidRefArg);
+    CHECK(diags[3].code == diag::NullPortExpression);
 }
 
 TEST_CASE("Ansi port initializers") {
@@ -1348,7 +1349,7 @@ endmodule
     CHECK(diags[3].code == diag::NetRangeInconsistent);
     CHECK(diags[4].code == diag::NetRangeInconsistent);
     CHECK(diags[5].code == diag::NetInconsistent);
-    CHECK(diags[6].code == diag::NetRangeInconsistent);
+    CHECK(diags[6].code == diag::NetInconsistent);
     CHECK(diags[7].code == diag::NetInconsistent);
 }
 
@@ -1414,6 +1415,11 @@ module p({a, b});
     input nt1 a, b;
 endmodule
 
+module q(input .foo({a, b}));
+    nt1 a;
+    wire b;
+endmodule
+
 module top;
     wire signed [5:0] a;
     wire integer b;
@@ -1430,6 +1436,8 @@ module top;
 
     nt1 d;
     p p2({d, d});
+
+    q q1({c, c});
 endmodule
 )");
 
@@ -1437,7 +1445,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 9);
+    REQUIRE(diags.size() == 12);
     CHECK(diags[0].code == diag::MismatchedUserDefPortConn);
     CHECK(diags[1].code == diag::PortWidthTruncate);
     CHECK(diags[2].code == diag::MismatchedUserDefPortDir);
@@ -1445,8 +1453,11 @@ endmodule
     CHECK(diags[4].code == diag::PortWidthTruncate);
     CHECK(diags[5].code == diag::UserDefPortTwoSided);
     CHECK(diags[6].code == diag::PortWidthTruncate);
-    CHECK(diags[7].code == diag::UserDefPortMixedConcat);
+    CHECK(diags[7].code == diag::UserDefPortTwoSided);
     CHECK(diags[8].code == diag::PortWidthExpand);
+    CHECK(diags[9].code == diag::SignConversion);
+    CHECK(diags[10].code == diag::UserDefPortMixedConcat);
+    CHECK(diags[11].code == diag::PortWidthExpand);
 }
 
 TEST_CASE("inout uwire port errors") {
@@ -1822,4 +1833,74 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::DisallowedPortDefault);
+}
+
+TEST_CASE("Additional implicit port type mismatch checking") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input a, output b);
+endmodule
+
+module top;
+    logic [3:0] a, b;
+    m m1(.a, .*);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ImplicitNamedPortTypeMismatch);
+    CHECK(diags[1].code == diag::PortWidthTruncate);
+    CHECK(diags[2].code == diag::ImplicitNamedPortTypeMismatch);
+    CHECK(diags[3].code == diag::PortWidthExpand);
+}
+
+TEST_CASE("Additional explicit port expression checks") {
+    auto tree = SyntaxTree::fromText(R"(
+logic [2:0] foo;
+
+module m(input int a, output .b(foo[a]), input .c(foo));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[1].code == diag::PortExprMemberParent);
+}
+
+TEST_CASE("Wildcard port connection diagnostic locations") {
+    auto tree = SyntaxTree::fromText(R"(
+module A(
+    output logic [5:0][31:0] sig
+);
+endmodule
+
+module B;
+    logic [191:0] sig;
+
+    A a(
+        .*
+    );
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK("\n" + report(diags) == R"(
+source:11:9: warning: implicit conversion from 'logic[5:0][31:0]' to 'logic[191:0]' [-Wpacked-array-conv]
+        .*
+        ^~
+source:3:30: note: for connection to port 'sig'
+    output logic [5:0][31:0] sig
+                             ^
+)");
 }

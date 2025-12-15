@@ -63,12 +63,17 @@ void registerCompilation(py::module_& m) {
         .def(py::init<>())
         .def_readwrite("flags", &CompilationOptions::flags)
         .def_readwrite("maxInstanceDepth", &CompilationOptions::maxInstanceDepth)
+        .def_readwrite("maxCheckerInstanceDepth", &CompilationOptions::maxCheckerInstanceDepth)
         .def_readwrite("maxGenerateSteps", &CompilationOptions::maxGenerateSteps)
         .def_readwrite("maxConstexprDepth", &CompilationOptions::maxConstexprDepth)
         .def_readwrite("maxConstexprSteps", &CompilationOptions::maxConstexprSteps)
         .def_readwrite("maxConstexprBacktrace", &CompilationOptions::maxConstexprBacktrace)
         .def_readwrite("maxDefParamSteps", &CompilationOptions::maxDefParamSteps)
+        .def_readwrite("maxDefParamBlocks", &CompilationOptions::maxDefParamBlocks)
         .def_readwrite("maxInstanceArray", &CompilationOptions::maxInstanceArray)
+        .def_readwrite("maxRecursiveClassSpecialization",
+                       &CompilationOptions::maxRecursiveClassSpecialization)
+        .def_readwrite("maxUDPCoverageNotes", &CompilationOptions::maxUDPCoverageNotes)
         .def_readwrite("errorLimit", &CompilationOptions::errorLimit)
         .def_readwrite("typoCorrectionLimit", &CompilationOptions::typoCorrectionLimit)
         .def_readwrite("minTypMax", &CompilationOptions::minTypMax)
@@ -170,6 +175,7 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("ignoreDuplicates", &CommandLine::ParseOptions::ignoreDuplicates);
 
     py::native_enum<LanguageVersion>(m, "LanguageVersion", "enum.Enum")
+        .value("v1364_2005", LanguageVersion::v1364_2005)
         .value("v1800_2017", LanguageVersion::v1800_2017)
         .value("v1800_2023", LanguageVersion::v1800_2023)
         .value("Default", LanguageVersion::Default)

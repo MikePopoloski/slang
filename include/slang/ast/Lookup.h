@@ -54,37 +54,33 @@ enum class SLANG_EXPORT LookupFlags {
     /// Allow lookup to resolve to incomplete forward class types.
     AllowIncompleteForwardTypedefs = 1 << 5,
 
-    /// The lookup should not continue looking into parent scopes if the name
-    /// is not found in the initial search scope.
-    NoParentScope = 1 << 6,
-
     /// Additional name selectors are not allowed in the final result.
-    NoSelectors = 1 << 7,
+    NoSelectors = 1 << 6,
 
     /// Lookup is allowed to return the root symbol via the '$root' scope specifier.
-    AllowRoot = 1 << 8,
+    AllowRoot = 1 << 7,
 
     /// Lookup is allowed to return the nearest compilation unit via the '$unit' scope specifier.
-    AllowUnit = 1 << 9,
+    AllowUnit = 1 << 8,
 
     /// Lookup is resolving an interface port connection expression.
-    IfacePortConn = 1 << 10,
+    IfacePortConn = 1 << 9,
 
     /// Lookup is within a static initializer expression.
-    StaticInitializer = 1 << 11,
+    StaticInitializer = 1 << 10,
 
     /// Lookup is happening within a type reference expression.
-    TypeReference = 1 << 12,
+    TypeReference = 1 << 11,
 
     /// Always allow upward name lookup to occur, even with simple identifiers.
-    AlwaysAllowUpward = 1 << 13,
+    AlwaysAllowUpward = 1 << 12,
 
     /// Disallow resolving a name to a member declared or imported into
     /// the $unit compilation unit scope.
-    DisallowUnitReferences = 1 << 14,
+    DisallowUnitReferences = 1 << 13,
 
     /// Allow unnamed generate blocks to be looked up by their external name.
-    AllowUnnamedGenerate = 1 << 15,
+    AllowUnnamedGenerate = 1 << 14,
 
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated

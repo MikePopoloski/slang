@@ -78,8 +78,8 @@ Driver::~Driver() = default;
 
 void Driver::addStandardArgs() {
     cmdLine.add("--std", options.languageVersion,
-                "The version of the SystemVerilog language to use",
-                "(1800-2017 | 1800-2023 | latest)");
+                "The version of the Verilog or SystemVerilog language to use",
+                "(1364-2005 | 1800-2017 | 1800-2023 | latest)");
 
     // Include paths
     cmdLine.add(
@@ -531,7 +531,9 @@ bool Driver::processOptions() {
     }
 
     if (options.languageVersion.has_value()) {
-        if (options.languageVersion == "1800-2017")
+        if (options.languageVersion == "1364-2005")
+            languageVersion = LanguageVersion::v1364_2005;
+        else if (options.languageVersion == "1800-2017")
             languageVersion = LanguageVersion::v1800_2017;
         else if (options.languageVersion == "1800-2023" || options.languageVersion == "latest")
             languageVersion = LanguageVersion::v1800_2023;
@@ -1163,7 +1165,7 @@ std::unique_ptr<AnalysisManager> Driver::runAnalysis(ast::Compilation& compilati
     if (!options.lintMode()) {
         analysisManager->analyze(compilation);
 
-        for (auto& diag : analysisManager->getDiagnostics(compilation.getSourceManager()))
+        for (auto& diag : analysisManager->getDiagnostics())
             diagEngine.issue(diag);
     }
 

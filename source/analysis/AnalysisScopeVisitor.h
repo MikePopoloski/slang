@@ -7,8 +7,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "NonProceduralExprVisitor.h"
-
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/diagnostics/AnalysisDiags.h"
@@ -42,7 +40,7 @@ struct AnalysisScopeVisitor {
         if (symbol.body.flags.has(InstanceFlags::Uninstantiated))
             return;
 
-        result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
+        manager.analyzeSymbolAsync(symbol);
         visitExprs(symbol);
 
         for (auto conn : symbol.getPortConnections())
@@ -54,7 +52,7 @@ struct AnalysisScopeVisitor {
         if (symbol.body.flags.has(InstanceFlags::Uninstantiated) || symbol.body.isProcedural)
             return;
 
-        result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
+        manager.analyzeSymbolAsync(symbol);
         visitExprs(symbol);
 
         for (auto& conn : symbol.getPortConnections()) {
@@ -105,8 +103,10 @@ struct AnalysisScopeVisitor {
     template<typename T>
         requires(IsAnyOf<T, ProceduralBlockSymbol, ContinuousAssignSymbol>)
     void visit(const T& symbol) {
-        result.procedures.emplace_back(context, symbol, parentProcedure);
+        result.procedures.emplace_back(manager.analyzeProcedure(context, symbol, parentProcedure));
         manager.driverTracker.add(state.context, state.driverAlloc, result.procedures.back());
+        for (auto& listener : manager.procListeners)
+            listener(result.procedures.back());
     }
 
     void visit(const SubroutineSymbol& symbol) {
@@ -116,10 +116,7 @@ struct AnalysisScopeVisitor {
             return;
         }
 
-        if (!manager.getAnalyzedSubroutine(symbol)) {
-            manager.addAnalyzedSubroutine(
-                symbol, std::make_unique<AnalyzedProcedure>(context, symbol, parentProcedure));
-        }
+        manager.analyzeSubroutine(context, symbol, parentProcedure);
 
         visitMembers(symbol);
     }
@@ -130,12 +127,10 @@ struct AnalysisScopeVisitor {
             sub->visit(*this);
     }
 
-    void visit(const ClassType& symbol) {
-        result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
-    }
+    void visit(const ClassType& symbol) { manager.analyzeSymbolAsync(symbol); }
 
     void visit(const CovergroupType& symbol) {
-        result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
+        manager.analyzeSymbolAsync(symbol);
         visitExprs(symbol);
     }
 
@@ -149,11 +144,7 @@ struct AnalysisScopeVisitor {
 
         // Check that there are no drivers for the argument to the resolution function.
         if (auto func = symbol.getResolutionFunction()) {
-            auto proc = manager.getAnalyzedSubroutine(*func);
-            if (!proc) {
-                auto newProc = std::make_unique<AnalyzedProcedure>(context, *func);
-                proc = manager.addAnalyzedSubroutine(*func, std::move(newProc));
-            }
+            manager.analyzeSubroutine(context, *func, parentProcedure);
 
             auto args = func->getArguments();
             if (args.size() == 1) {
@@ -328,10 +319,7 @@ private:
 
     template<typename T>
     void visitExprs(const T& symbol) {
-        if constexpr (HasVisitExprs<T, NonProceduralExprVisitor>) {
-            NonProceduralExprVisitor visitor(context, symbol);
-            symbol.visitExprs(visitor);
-        }
+        manager.analyzeNonProceduralExprs(symbol);
     }
 
     void checkValueUnused(const ValueSymbol& symbol, DiagCode unusedCode,

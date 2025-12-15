@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Covergroup formal arguments are now correctly always considered `const`
 * Checker arguments that reference automatic variables or have const casts are now correctly disallowed from being used in procedural code
 * Checker procedures are now correctly disallowed from referencing covergroup types
+* Removed the restriction that covergroup expressions must be constant expressions -- the implementation was buggy, other tools don't implement it, and the details in the LRM are not well defined
+* Modport ports now correctly require that their target references are members of their parent interface
+* Explicit port expressions now correctly require that their target references are members of their parent module
 
 ### Notable Breaking Changes
 * AST serialization: typedefs and enum type references are now printed as links to the original definition instead of repeating the type for each usage
@@ -29,24 +32,59 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added a `--depfile-trim` option to remove dependencies from the written depfile that aren't actually used in the design (thanks to @AndrewNolte)
 * The `--compat` flag now accepts `all` to enable all compatibility flags at once, to maximize the chances that slang will accept your code that works with other tools but may not comply with the LRM
 * Added a `--disable-local-includes` flag to mimic the behavior of VCS where `` `include `` directives don't search relative to the including file
+* The `--std` argument now accepts `1364-2005` as a value, which disables all SystemVerilog keywords during parsing for Verilog compatibility (thanks to @povik)
 
 ### Improvements
 * -Wcase-dup no longer warns if the duplicate items are all constant case items that don't match a known constant case expression
 * Performing concatenation of two slashes in a macro expansion now expands to a line comment, matching the behavior of other tools
 * The preprocessor will now implicitly concatenate tokens that result from back-to-back macro expansions even if there is no explicit macro concatenation operator used, to increase compatibility with other tools
+* Instances that have type parameters set to identical but not technically "matching" struct types are now eligible for instance caching, which can speed up elaboration of certain designs
+* -Wpacked-array-conv now also applies to cases where one side of the assignment has a multi-dimensional array type and the other does not (previously both sides had to be multi-dimensional arrays)
+* The AnalysisManager API has been reworked to allow providing listener callbacks for various analysis events, to retrieve the results of assertion analysis, and to allow substituting custom data flow analysis passes in place of the default
+* Duplicate packages are now diagnosed with -Wduplicate-definition, allowing them to be downgraded to a warning just like duplicate modules (thanks to @sjalloq)
+* Improved the diagnostic message and source ranges reported for duplicate drivers involving modport ports to be more clear about where the connections are going
+* The preprocessor now supports processing `` `include `` directives inside of macro expansions
+* Drivers through ref ports are now correctly applied to their connections hierarchically
+* Warnings related to wildcard port connections now contain additional context showing which port triggered the warning
+* Made several tweaks to slightly improve defparam and bind evaluation performance
+* The AST for multi-ports has been reworked to represent each sub port connection expression separately
 
 ### Fixes
 * Unnamed covergroup types now print with a placeholder name in diagnostics and AST dumping instead of just an empty string
 * Fixed a bug where sequences and properties with local variable formal arguments would rewrite their formal args when expanding, potentially resulting in spurious errors
 * Fixed source ranges written by AST serialization for AST nodes that don't have syntax pointers
 * Fixed lint-only mode to not run the analysis pass
+* Fixed a crash in analysis that could occur after exiting elaboration early due to hitting the configured error limit
+* Fixed the source ranges of chained select expression AST nodes
+* Fixed a preprocessor crash when encountering certain specially crafted malformed pragma directives
+* Fixed expansion of `__FILE__` and `__LINE__` macros to use proper source locations (thanks to @g4rry1)
+* Fixed a spurious error when referring to a generic class declared within a package using an explicit package scope qualifier
+* Fixed a spurious error when an uninstantiated module's parameter values are set using an assignment pattern expression
+* Fixed a spurious error when an uninstantiated module references an unknown instance hierarchically and `--disallow-refs-to-unknown-instances` is in use
+* Fixed several issues where driver analysis did not correctly apply through non-trivial modport port expressions
+* Fixed a parser bug that misparsed delay controls followed by an assignment pattern expression (thanks to @sjalloq)
+* Fixed the AST representation of implicit named port connections for output (and inout) ports to always use an AssignmentExpression
+* Fixed several bugs with direction checking of explicit ANSI port connections
+* Fixed a bug where multi-driven diagnostics could print an expression path with "<unset>" as index values instead of the correct constant value
+* Fixed ICE when sequence and property arguments refer to themselves in their default expressions
+* Fixed ICE when pattern case items have a statement label
+* Fixed ICE when recursive module instances contain certain kinds of variable name conflicts
+* Fixed ICE involving unnamed recursive module instances
+* Fixed a case where the max instance hierarchy depth wasn't being enforced, leading to infinite recursion
+* Fixed ICE when a modport export's method name is empty
+* Fixed ICE involving virtual interface types where the interface instance contains a self-referential virtual interface member
+* Fixed ICE involving analysis of hierarchical calls to subroutines inside cached instance symbols
+
 
 ### Tools & Bindings
 #### pyslang
 * Upgraded to pybind11 3.0, which brings improved performance, smart_holder and native_enum features
+* The `Lexer` class is now exposed to the Python bindings (thanks to @paulgrahek)
+* Fixed binding of Diagnostic arguments, exposed DiagnosticEngine::formatArg
 
 #### slang-tidy
 * The `--skip-file` and `--skip-path` slang-tidy options now also imply `--suppress-warnings` for those same paths
+* Fixed the undriven range checker to handle variables with non-zero lower bounds in their range (thanks to @jameshanlon)
 
 #### rewriter
 * Added a `--squash-blanklines` option to remove extra blank lines in the rewritten output (thanks to @AndrewNolte)

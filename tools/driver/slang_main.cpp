@@ -12,8 +12,10 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
 #include "slang/syntax/CSTSerializer.h"
+#include "slang/syntax/SyntaxTree.h"
 #include "slang/text/Json.h"
 #include "slang/util/TimeTrace.h"
 #include "slang/util/VersionInfo.h"
@@ -291,7 +293,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
     CompilationOptions options;
     options.maxInstanceDepth = 16;
+    options.maxCheckerInstanceDepth = 16;
     options.maxDefParamSteps = 32;
+    options.maxDefParamBlocks = 1024;
+    options.maxGenerateSteps = 128;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);

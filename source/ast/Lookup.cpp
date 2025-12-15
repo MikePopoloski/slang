@@ -410,8 +410,9 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
             // If we found an uninstantiated def, exit silently. An appropriate error was
             // already issued, so no need to pile on.
             if (symbol->kind == SymbolKind::UninstantiatedDef &&
-                !context.getCompilation().hasFlag(
-                    CompilationFlags::DisallowRefsToUnknownInstances)) {
+                (!context.getCompilation().hasFlag(
+                     CompilationFlags::DisallowRefsToUnknownInstances) ||
+                 context.scope->isUninstantiated())) {
                 return false;
             }
 
@@ -776,12 +777,10 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
         result.path.emplace_back(*symbol);
     }
 
-    auto validateSymbol = [&] {
-        // Handle generic classes and parameter assignments. If this is a generic class,
-        // we must have param assignments here (even if the generic class has a default
-        // specialization, the spec says you can't use that with colon-scoped lookup).
+    auto validateSymbol = [&](bool isLast) {
         if (symbol->kind == SymbolKind::GenericClassDef) {
             if (name.paramAssignments) {
+                // We have param assignments, so use that to get the specialization.
                 auto& type = symbol->as<GenericClassDefSymbol>().getSpecialization(
                     context, *name.paramAssignments);
                 if (type.isError())
@@ -790,10 +789,14 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
                 symbol = &type;
                 name.paramAssignments = nullptr;
             }
-            else {
-                // The unadorned generic class name here is an error if we're outside the context
-                // of the class itself. If we're within the class, it refers to the "current"
-                // specialization, not the default specialization.
+            else if (!isLast) {
+                // If this is the last component in the colon resolution chain we can use the
+                // default specialization, so we'll just return the generic class def and let
+                // our caller do that for us.
+                //
+                // Otherwise, the unadorned generic class name here is an error if we're outside
+                // the context of the class itself. If we're within the class, it refers to the
+                // "current" specialization, not the default specialization.
                 auto [parent, _] = Lookup::getContainingClass(*context.scope);
                 if (!parent || parent->genericClass != symbol) {
                     result.addDiag(*context.scope, diag::GenericClassScopeResolution, name.range);
@@ -844,7 +847,7 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
             }
         }
 
-        if (!validateSymbol())
+        if (!validateSymbol(false))
             return false;
 
         name = part.name;
@@ -887,7 +890,7 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
         nameParts.pop_back();
     }
 
-    if (!validateSymbol())
+    if (!validateSymbol(true))
         return false;
 
     // The initial symbol found cannot be resolved via a forward typedef (i.e. "incomplete")
