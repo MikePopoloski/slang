@@ -1,13 +1,16 @@
-# CMake script to generate Python stubs during installation This runs as a
-# post-install step to generate .pyi files
+# CMake script to generate Python stubs during installation
+# This runs as a post-install step to generate .pyi files
 
 message(STATUS "Generating Python stubs for pyslang...")
 
-# Find Python executable
-find_package(
-  Python
-  COMPONENTS Interpreter
-  REQUIRED)
+# Use the Python executable passed from the parent CMake, or fall back to find_package
+if(NOT DEFINED STUBGEN_PYTHON_EXECUTABLE)
+  message(WARNING "STUBGEN_PYTHON_EXECUTABLE not set, falling back to find_package(Python)")
+  find_package(Python COMPONENTS Interpreter REQUIRED)
+  set(STUBGEN_PYTHON_EXECUTABLE "${Python_EXECUTABLE}")
+endif()
+
+message(STATUS "Using Python: ${STUBGEN_PYTHON_EXECUTABLE}")
 
 # Check if we're in a wheel build (CMAKE_INSTALL_PREFIX will be set to wheel
 # staging directory)
@@ -19,25 +22,25 @@ endif()
 
 message(STATUS "Install directory: ${INSTALL_DIR}")
 
-# Try to install pybind11-stubgen if not available
+# Try to check if pybind11-stubgen is available
 execute_process(
-  COMMAND ${Python_EXECUTABLE} -c "import pybind11_stubgen"
+  COMMAND ${STUBGEN_PYTHON_EXECUTABLE} -c "import pybind11_stubgen"
   RESULT_VARIABLE STUBGEN_CHECK
   OUTPUT_QUIET ERROR_QUIET)
 
 if(NOT STUBGEN_CHECK EQUAL 0)
   message(STATUS "Installing pybind11-stubgen...")
   execute_process(
-    COMMAND ${Python_EXECUTABLE} -m pip install pybind11-stubgen
+    COMMAND ${STUBGEN_PYTHON_EXECUTABLE} -m pip install pybind11-stubgen
     RESULT_VARIABLE PIP_RESULT
     OUTPUT_QUIET ERROR_QUIET)
 endif()
 
-# Generate stubs Add install dir to Python path so it can import the module
+# Generate stubs - Add install dir to Python path so it can import the module
 set(ENV{PYTHONPATH} "${INSTALL_DIR}:$ENV{PYTHONPATH}")
 
 execute_process(
-  COMMAND ${Python_EXECUTABLE} -m pybind11_stubgen pyslang -o "${INSTALL_DIR}"
+  COMMAND ${STUBGEN_PYTHON_EXECUTABLE} -m pybind11_stubgen pyslang -o "${INSTALL_DIR}"
           --root-suffix ""
   WORKING_DIRECTORY ${INSTALL_DIR}
   RESULT_VARIABLE STUBGEN_RESULT
