@@ -1,12 +1,18 @@
-# CMake script to generate Python stubs during installation
-# This runs as a post-install step to generate .pyi files
+# CMake script to generate Python stubs during installation This runs as a
+# post-install step to generate .pyi files
 
 message(STATUS "Generating Python stubs for pyslang...")
 
-# Use the Python executable passed from the parent CMake, or fall back to find_package
+# Use the Python executable passed from the parent CMake, or fall back to
+# find_package
 if(NOT DEFINED STUBGEN_PYTHON_EXECUTABLE)
-  message(WARNING "STUBGEN_PYTHON_EXECUTABLE not set, falling back to find_package(Python)")
-  find_package(Python COMPONENTS Interpreter REQUIRED)
+  message(
+    WARNING
+      "STUBGEN_PYTHON_EXECUTABLE not set, falling back to find_package(Python)")
+  find_package(
+    Python
+    COMPONENTS Interpreter
+    REQUIRED)
   set(STUBGEN_PYTHON_EXECUTABLE "${Python_EXECUTABLE}")
 endif()
 
@@ -40,8 +46,8 @@ endif()
 set(ENV{PYTHONPATH} "${INSTALL_DIR}:$ENV{PYTHONPATH}")
 
 execute_process(
-  COMMAND ${STUBGEN_PYTHON_EXECUTABLE} -m pybind11_stubgen pyslang -o "${INSTALL_DIR}"
-          --root-suffix ""
+  COMMAND ${STUBGEN_PYTHON_EXECUTABLE} -m pybind11_stubgen pyslang -o
+          "${INSTALL_DIR}" --root-suffix ""
   WORKING_DIRECTORY ${INSTALL_DIR}
   RESULT_VARIABLE STUBGEN_RESULT
   OUTPUT_VARIABLE STUBGEN_OUTPUT

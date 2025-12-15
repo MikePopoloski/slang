@@ -68,16 +68,17 @@ install(
 
 # Install py.typed marker file for PEP 561 compliance
 install(
-  FILES 
-    ${CMAKE_CURRENT_SOURCE_DIR}/../pyslang/pyslang/py.typed
-    ${CMAKE_CURRENT_SOURCE_DIR}/../pyslang/pyslang/__init__.py
+  FILES ${CMAKE_CURRENT_SOURCE_DIR}/../pyslang/pyslang/py.typed
+        ${CMAKE_CURRENT_SOURCE_DIR}/../pyslang/pyslang/__init__.py
   COMPONENT pylib
   DESTINATION .)
 
-# Generate Python stubs as a post-install step
-# Pass the Python executable to the stub generation script so it uses the correct interpreter
-install(CODE "
+# Generate Python stubs as a post-install step Pass the Python executable to the
+# stub generation script so it uses the correct interpreter
+install(
+  CODE "
   set(STUBGEN_PYTHON_EXECUTABLE \"${Python_EXECUTABLE}\")
   set(CMAKE_INSTALL_PREFIX \"${CMAKE_INSTALL_PREFIX}\")
   include(\"${CMAKE_CURRENT_SOURCE_DIR}/generate_stubs.cmake\")
-" COMPONENT pylib)
+"
+  COMPONENT pylib)
