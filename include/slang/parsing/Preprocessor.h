@@ -61,9 +61,8 @@ struct SLANG_EXPORT PreprocessorOptions {
     /// A set of preprocessor directives to be ignored.
     flat_hash_set<std::string_view> ignoreDirectives;
 
-    /// A vector of pairs of file patterns mapped to keyword version to force the preprocessor
-    /// to check every pushed SourceBuffer on previously specified keyword for it
-    std::vector<std::pair<std::string, parsing::KeywordVersion>> keywordMapping;
+    /// A list of mappings from file patterns to language keyword versions.
+    std::vector<std::pair<std::string, KeywordVersion>> keywordMapping;
 };
 
 /// Metadata about an include directive that was invoked.
@@ -149,9 +148,7 @@ public:
     bool getCellDefine() const { return cellDefine; }
 
     /// Gets the currently active keyword version in use by the preprocessor.
-    KeywordVersion getCurrentKeywordVersion() const {
-        return keywordVersionStack.back().keywordVersion;
-    }
+    KeywordVersion getCurrentKeywordVersion() const { return keywordVersionStack.back().version; }
 
     /// Gets the currently active source library, or nullptr if none has been set.
     const SourceLibrary* getCurrentLibrary() const;
@@ -342,10 +339,6 @@ private:
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
     Diagnostic& addDiag(DiagCode code, SourceRange range);
 
-    /// Search the source file for passed buffer id in map of file patterns
-    /// and return keyword for it if it was found.
-    std::optional<parsing::KeywordVersion> findBufferInKeywordMapping(BufferID id);
-
     // This is a small collection of state used to keep track of where we are in a tree of
     // nested conditional directives.
     struct BranchEntry {
@@ -459,20 +452,21 @@ private:
     // The include directives that have been encountered thus far in the preprocessor.
     std::vector<IncludeMetadata> includeDirectives;
 
-    // Helper POD type to determine status of current keyword version
-    // on the top of keywordVersionStack:
-    //   - NONE - for sources without previously set keywords version (by default)
-    //   - RESTORED - for same sources as NONE but to distinguish them from keywords
-    //                pushed onto the stack from other sources (such as `begin_keywords)
-    //                and then correctly clear the stack in popSource
-    //   - FORCED - for sources with prefiously set (forced) keywords version
+    // Helper struct for entries on the keyword version stack.
     struct KeywordVersionState {
-        KeywordVersion keywordVersion;
+        KeywordVersion version;
 
-        enum SetStatus { NONE = 0, RESTORED, FORCED } status;
+        // The source of the keyword version change:
+        // - Directive: from a user-specified `begin_keywords directive
+        //              (also used for the default / initial version)
+        // - Mapping: from mapping options provided in PreprocessorOptions
+        // - Restored: an unmapped file has been pushed on top of a previously
+        //             mapped file and so we're restoring the state from the
+        //             last directive (or the default)
+        enum class Source : uint8_t { Directive, Mapping, Restored } source;
 
-        KeywordVersionState(KeywordVersion keywordVersion, SetStatus status = SetStatus::NONE) :
-            keywordVersion(keywordVersion), status(status) {};
+        KeywordVersionState(KeywordVersion keywordVersion, Source source = Source::Directive) :
+            version(keywordVersion), source(source) {};
     };
 
     /// Various state set by preprocessor directives.

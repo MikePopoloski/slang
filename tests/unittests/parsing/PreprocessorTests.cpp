@@ -4,6 +4,7 @@
 #include "Test.h"
 
 #include "slang/driver/Driver.h"
+#include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxPrinter.h"
@@ -2952,46 +2953,35 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Map keyword version option positive") {
-    Driver driver;
-    driver.addStandardArgs();
+TEST_CASE("Preprocessor: non-trivial restore of begin_keywords vs mapped option") {
+    getSourceManager().assignText("inc2.svh", R"(
+config cfg;
+    design m;
+endconfig
 
-    auto args =
-        fmt::format("testfoo --map-keyword-version \"1364-2005+{0}*.v\" \"{0}systemverilog.sv\"",
-                    findTestDir());
-    CHECK(driver.parseCommandLine(args));
-    CHECK(driver.processOptions());
-    CHECK(driver.parseAllSources());
+`include "inc3.foo"
+)");
 
-    auto compilation = driver.createCompilation();
-    driver.reportCompilation(*compilation, true);
-    CHECK(driver.reportDiagnostics(false));
-}
+    getSourceManager().assignText("inc3.foo", R"(
+config cfg;
+    design m;
+endconfig
+)");
 
-TEST_CASE("Map keyword version option negative") {
-    Driver driver;
-    driver.addStandardArgs();
+    PreprocessorOptions options;
+    options.keywordMapping.push_back({"*.svh", KeywordVersion::v1800_2023});
 
-    auto args = fmt::format(
-        "testfoo --map-keyword-version \"1364-2005+{0}*.v\" --map-keyword-version "
-        "\"1364-2005+{0}systemverilog.sv,{0}another_systemverilog.sv\" \"{0}systemverilog.sv\"",
-        findTestDir());
-    CHECK(driver.parseCommandLine(args));
-    CHECK(driver.processOptions());
-    CHECK(driver.parseAllSources());
+    diagnostics.clear();
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics, options);
+    preprocessor.pushSource(R"(
+`begin_keywords "1364-2001-noconfig"
+`include "inc2.svh"
+`end_keywords
+)");
 
-    auto compilation = driver.createCompilation();
-    driver.reportCompilation(*compilation, true);
-    CHECK_FALSE(driver.reportDiagnostics(true));
-}
+    Parser parser(preprocessor);
+    parser.parseCompilationUnit();
 
-TEST_CASE("Map keyword version wrong arguments") {
-    Driver driver;
-    driver.addStandardArgs();
-
-    auto args = fmt::format(
-        "testfoo --map-keyword-version \"1364-2005+{0}*.v\" --map-keyword-version "
-        "\"1364-2025+{0}systemverilog.sv,{0}another_systemverilog.sv\" \"{0}systemverilog.sv\"",
-        findTestDir());
-    CHECK_FALSE(driver.parseCommandLine(args));
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedDeclarator);
 }

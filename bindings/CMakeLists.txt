@@ -73,8 +73,7 @@ install(
   COMPONENT pylib
   DESTINATION .)
 
-# Generate Python stubs as a post-install step Pass the Python executable to the
-# stub generation script so it uses the correct interpreter
+# Generate Python stubs as a post-install step
 install(
   CODE "
   set(STUBGEN_PYTHON_EXECUTABLE \"${Python_EXECUTABLE}\")

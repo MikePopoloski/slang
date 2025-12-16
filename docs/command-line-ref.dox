@@ -86,16 +86,6 @@ Note that multithreading *parsing* cannot be supported when running
 with `--single-unit`, though other parts of the compilation process
 may still take advantage of threading where possible.
 
-`--map-keyword-version <keyword-version>+<file-pattern>[,...]`
-
-Forces slang to interpret files which satisfy the passed patterns with specified
-keywords version. For example '--map-keyword-version=1364-2005+.../*.v,.../*.vh'
-or '--map-keyword-version=1364-2005+/path/to/verilog.v'.
-
-Available keywords is:
-'1364-1995, 1364-2001-noconfig, 1364-2001, 1364-2005, 1800-2005,'
-' 1800-2009, 1800-2012, 1800-2017, 1800-2023'.
-
 @section Actions
 
 These options control what action the tool will perform when run.
@@ -219,6 +209,19 @@ module m;
     // pragma translate_on
 endmodule
 @endcode
+
+`--map-keyword-version <keyword-version>+<file-pattern>[,...]`
+
+Indicates that any files used during parsing which match the given patterns should
+be parsed using the provided language keywords version, as if they contained a
+`` `begin_keywords `` directive.
+
+For example `` --map-keyword-version=1364-2005+...*.v,...*.vh ``
+or `--map-keyword-version=1364-2005+/path/to/verilog.v`.
+
+Available keyword versions are:
+`1364-1995`, `1364-2001-noconfig`, `1364-2001`, `1364-2005`, `1800-2005`,
+`1800-2009`, `1800-2012`, `1800-2017`, `1800-2023`.
 
 `--obfuscate-ids`
 
