@@ -52,6 +52,13 @@
 ##! M_SEARCH_BASE_URL = https://sv-lang.com/
 ##! M_SEARCH_EXTERNAL_URL = "https://google.com/search?q=site:sv-lang.com+{query}"
 
+##! M_HTML_HEADER = \
+##!  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /> \
+##!  <link rel="preload" as="style" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=swap" /> \
+##!  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=swap" media="print" onload="this.media='all'" /> \
+##!  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=swap" /></noscript> \
+##!  <meta name="description" content="Documentation for the slang SystemVerilog compiler library" />
+
 DOXYFILE_ENCODING      = UTF-8
 
 # The PROJECT_NAME tag is a single word (or a sequence of words surrounded by
