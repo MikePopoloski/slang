@@ -95,45 +95,57 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
     }
 
     if (analyzedSymbol.kind == SymbolKind::ProceduralBlock) {
+        auto getTaskTimingControls =
+            [&]() -> std::pair<const CallExpression*, std::vector<const Statement*>> {
+            SmallSet<const SubroutineSymbol*, 2> visited;
+            for (auto call : dfaCalls) {
+                std::vector<const Statement*> results;
+                manager.getTaskTimingControls(*call, visited, results);
+                if (!results.empty())
+                    return {call, results};
+            }
+            return {nullptr, {}};
+        };
+
         auto& procedure = analyzedSymbol.as<ProceduralBlockSymbol>();
-
-        if (procedure.procedureKind == ProceduralBlockKind::AlwaysComb) {
-            dfa.visitPartiallyAssigned(/* skipAutomatic */ true, [&](const Symbol&,
-                                                                     const Expression& expr) {
-                FormatBuffer buffer;
-                LSPUtilities::stringifyLSP(expr, evalContext, buffer);
-
-                context.addDiag(procedure, diag::InferredLatch, expr.sourceRange) << buffer.str();
-            });
-        }
-        else if (procedure.procedureKind == ProceduralBlockKind::AlwaysLatch) {
-            dfa.visitDefinitelyAssigned(/* skipAutomatic */ true, [&](const Symbol&,
-                                                                      const Expression& expr) {
-                FormatBuffer buffer;
-                LSPUtilities::stringifyLSP(expr, evalContext, buffer);
-
-                context.addDiag(procedure, diag::InferredComb, expr.sourceRange) << buffer.str();
-            });
-        }
-        else if (procedure.procedureKind == ProceduralBlockKind::Always) {
+        const auto procKind = procedure.procedureKind;
+        if (procKind == ProceduralBlockKind::Always) {
             // Generic always procedures must have timing controls
-            if (!procedure.isFromAssertion && timingControls.empty()) {
-                // Check if any called subroutines have timing controls
-                bool hasTimingInSubroutines = false;
-                SmallSet<const SubroutineSymbol*, 2> taskVisited;
-                std::vector<const ast::Statement*> taskTimingControls;
-                for (auto call : dfaCalls) {
-                    manager.getTaskTimingControls(*call, taskVisited, taskTimingControls);
-                    if (!taskTimingControls.empty()) {
-                        hasTimingInSubroutines = true;
-                        break;
-                    }
-                }
+            if (!procedure.isFromAssertion && timingControls.empty() &&
+                getTaskTimingControls().second.empty()) {
+                context.addDiag(procedure, diag::AlwaysWithoutTimingControl, procedure.location);
+            }
+        }
+        else if (procKind != ProceduralBlockKind::Initial) {
+            // Called tasks cannot have any timing controls.
+            auto [taskCall, timingStmts] = getTaskTimingControls();
+            if (taskCall) {
+                auto& diag = context.addDiag(procedure, diag::BlockingDelayInTask,
+                                             timingStmts.front()->sourceRange);
+                diag << taskCall->getSubroutineName();
+                diag << SemanticFacts::getProcedureKindStr(procKind);
+                diag.addNote(diag::NoteCalledHere, taskCall->sourceRange);
+            }
 
-                if (!hasTimingInSubroutines) {
-                    context.addDiag(procedure, diag::AlwaysWithoutTimingControl,
-                                    procedure.location);
-                }
+            auto reportInferredDiag = [&](DiagCode code, const Expression& expr) {
+                FormatBuffer buffer;
+                LSPUtilities::stringifyLSP(expr, evalContext, buffer);
+                context.addDiag(procedure, code, expr.sourceRange) << buffer.str();
+            };
+
+            if (procKind == ProceduralBlockKind::AlwaysComb) {
+                // Check for partially assigned variables, which infer latches.
+                dfa.visitPartiallyAssigned(/* skipAutomatic */ true,
+                                           [&](const Symbol&, const Expression& expr) {
+                                               reportInferredDiag(diag::InferredLatch, expr);
+                                           });
+            }
+            else if (procKind == ProceduralBlockKind::AlwaysLatch) {
+                // Check for definitely assigned variables, which infer comb logic.
+                dfa.visitDefinitelyAssigned(/* skipAutomatic */ true,
+                                            [&](const Symbol&, const Expression& expr) {
+                                                reportInferredDiag(diag::InferredComb, expr);
+                                            });
             }
         }
     }
