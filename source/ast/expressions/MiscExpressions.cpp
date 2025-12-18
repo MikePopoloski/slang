@@ -469,14 +469,19 @@ bool NamedValueExpression::checkConstant(EvalContext& context) const {
     return true;
 }
 
-HierarchicalValueExpression::HierarchicalValueExpression(const Scope& scope,
-                                                         const ValueSymbol& symbol,
+HierarchicalValueExpression::HierarchicalValueExpression(const ValueSymbol& symbol,
                                                          const HierarchicalReference& ref,
                                                          SourceRange sourceRange) :
     ValueExpressionBase(ExpressionKind::HierarchicalValue, symbol, sourceRange), ref(ref) {
     SLANG_ASSERT(ref.target == &symbol);
     this->ref.expr = this;
+}
 
+HierarchicalValueExpression::HierarchicalValueExpression(const Scope& scope,
+                                                         const ValueSymbol& symbol,
+                                                         const HierarchicalReference& ref,
+                                                         SourceRange sourceRange) :
+    HierarchicalValueExpression(symbol, ref, sourceRange) {
     if (this->ref.isUpward())
         scope.getCompilation().noteUpwardReference(scope, this->ref);
 }

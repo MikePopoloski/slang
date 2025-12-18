@@ -676,7 +676,7 @@ void DriverTracker::applyInstanceSideEffect(AnalysisContext& context, DriverAllo
                                             const InstanceSymbol& instance) {
     auto newDriverAndBounds = [&](const ValueSymbol& newTarget)
         -> std::pair<ValueDriver*, std::optional<DriverBitRange>> {
-        auto driver = ValueDriver::create(context.alloc, *hierPortDriver.driver);
+        auto driver = ValueDriver::create(context.alloc, *hierPortDriver.driver, newTarget);
         driver->containingSymbol = &instance;
         driver->flags |= DriverFlags::FromSideEffect;
 

@@ -72,6 +72,9 @@ public:
     /// Information about the hierarchical reference.
     HierarchicalReference ref;
 
+    HierarchicalValueExpression(const ValueSymbol& symbol, const HierarchicalReference& ref,
+                                SourceRange sourceRange);
+
     HierarchicalValueExpression(const Scope& scope, const ValueSymbol& symbol,
                                 const HierarchicalReference& ref, SourceRange sourceRange);
 

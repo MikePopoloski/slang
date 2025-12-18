@@ -108,7 +108,8 @@ public:
                                const SourceRange* overrideRange = nullptr);
 
     /// Constructs a new ValueDriver instance.
-    static ValueDriver* create(BumpAllocator& alloc, const ValueDriver& copyFrom);
+    static ValueDriver* create(BumpAllocator& alloc, const ValueDriver& copyFrom,
+                               const ast::ValueSymbol& newTarget);
 
     /// Indicates whether the driver is for an input port.
     bool isInputPort() const { return flags.has(DriverFlags::InputPort); }

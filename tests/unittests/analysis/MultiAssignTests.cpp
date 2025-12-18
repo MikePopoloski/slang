@@ -1472,3 +1472,29 @@ endmodule
     auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Multi-assign through iface modports false positive") {
+    auto& code = R"(
+interface I;
+    logic a;
+    modport i(input a);
+    modport o(output a);
+endinterface
+
+module m(I.i incoming, I.o outgoing);
+    assign outgoing.a = incoming.a;
+endmodule
+
+module top;
+    I a(), b(), c();
+    m m1(a, b);
+    m m2(b, c);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}

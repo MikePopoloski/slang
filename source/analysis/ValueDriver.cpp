@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/ValueDriver.h"
 
+#include "slang/ast/LSPUtilities.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 
 namespace slang::analysis {
@@ -33,7 +34,8 @@ ValueDriver* ValueDriver::create(BumpAllocator& alloc, DriverKind kind, const as
     return result;
 }
 
-ValueDriver* ValueDriver::create(BumpAllocator& alloc, const ValueDriver& copyFrom) {
+ValueDriver* ValueDriver::create(BumpAllocator& alloc, const ValueDriver& copyFrom,
+                                 const ValueSymbol& newTarget) {
     size_t size = sizeof(ValueDriver);
     const bool hasOverrideRange = copyFrom.flags.has(DriverFlags::HasOverrideRange);
     if (hasOverrideRange)
@@ -42,6 +44,8 @@ ValueDriver* ValueDriver::create(BumpAllocator& alloc, const ValueDriver& copyFr
     auto result = new (alloc.allocate(size, alignof(ValueDriver))) ValueDriver(copyFrom);
     if (hasOverrideRange)
         memcpy((void*)(result + 1), copyFrom.getOverrideRange(), sizeof(SourceRange));
+
+    result->lsp = &LSPUtilities::retargetLSP(alloc, *result->lsp, newTarget);
 
     return result;
 }

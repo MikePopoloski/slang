@@ -338,4 +338,46 @@ const Expression& LSPUtilities::cloneLSP(BumpAllocator& alloc, const Expression&
     return expr;
 }
 
+const Expression& LSPUtilities::retargetLSP(BumpAllocator& alloc, const Expression& expr,
+                                            const ValueSymbol& target) {
+    switch (expr.kind) {
+        case ExpressionKind::ElementSelect: {
+            auto& ese = expr.as<ElementSelectExpression>();
+            auto& newVal = retargetLSP(alloc, ese.value(), target);
+            return *alloc.emplace<ElementSelectExpression>(*ese.type,
+                                                           const_cast<Expression&>(newVal),
+                                                           ese.selector(), ese.sourceRange);
+        }
+        case ExpressionKind::RangeSelect: {
+            auto& rse = expr.as<RangeSelectExpression>();
+            auto& newVal = retargetLSP(alloc, rse.value(), target);
+            return *alloc.emplace<RangeSelectExpression>(rse.getSelectionKind(), *rse.type,
+                                                         const_cast<Expression&>(newVal),
+                                                         rse.left(), rse.right(), rse.sourceRange);
+        }
+        case ExpressionKind::MemberAccess: {
+            auto& access = expr.as<MemberAccessExpression>();
+            auto& newVal = retargetLSP(alloc, access.value(), target);
+            return *alloc.emplace<MemberAccessExpression>(*expr.type,
+                                                          const_cast<Expression&>(newVal),
+                                                          access.member, expr.sourceRange);
+        }
+        case ExpressionKind::NamedValue: {
+            auto& nve = expr.as<NamedValueExpression>();
+            SLANG_ASSERT(nve.symbol.getType().isMatching(target.getType()));
+            return *alloc.emplace<NamedValueExpression>(target, nve.sourceRange);
+        }
+        case ExpressionKind::HierarchicalValue: {
+            auto& hve = expr.as<HierarchicalValueExpression>();
+            SLANG_ASSERT(hve.symbol.getType().isMatching(target.getType()));
+
+            auto ref = hve.ref;
+            ref.target = &target;
+            return *alloc.emplace<HierarchicalValueExpression>(target, ref, hve.sourceRange);
+        }
+        default:
+            return expr;
+    }
+}
+
 } // namespace slang::ast

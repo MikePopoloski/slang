@@ -208,6 +208,13 @@ public:
     static const Expression& cloneLSP(BumpAllocator& alloc, const Expression& expr,
                                       EvalContext& evalContext);
 
+    /// Clones the given LSP expression tree and replaces the base of it to point to
+    /// the new target symbol.
+    ///
+    /// It is assumed that the new target has the same type as the old one.
+    static const Expression& retargetLSP(BumpAllocator& alloc, const Expression& expr,
+                                         const ValueSymbol& target);
+
 private:
     LSPUtilities() = delete;
 
