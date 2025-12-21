@@ -12,6 +12,7 @@
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
 #include "slang/ast/TypeProvider.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
@@ -288,10 +289,14 @@ void DeclaredType::checkType(const ASTContext& context) const {
             if (!type->isIntegral() && (lv < LanguageVersion::v1800_2023 || !type->isFloating()))
                 context.addDiag(diag::InvalidCoverageExpr, parent.location) << *type;
             break;
-        case uint32_t(DeclaredTypeFlags::InterfaceVariable):
-            if (!isValidForIfaceVar(*type))
+        case uint32_t(DeclaredTypeFlags::IfaceOrGenBlkVar): {
+            auto def = context.scope->asSymbol().getDeclaringDefinition();
+            if (def && def->definitionKind == DefinitionKind::Interface &&
+                !isValidForIfaceVar(*type)) {
                 context.addDiag(diag::VirtualInterfaceIfaceMember, parent.location);
+            }
             break;
+        }
         default:
             SLANG_UNREACHABLE;
     }

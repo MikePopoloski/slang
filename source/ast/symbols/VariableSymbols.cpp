@@ -80,10 +80,12 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     if (!hasExplicitLifetime)
         lifetime = getDefaultLifetime(scope);
 
-    const bool isInIface =
-        scope.asSymbol().kind == SymbolKind::InstanceBody &&
-        scope.asSymbol().as<InstanceBodySymbol>().getDefinition().definitionKind ==
-            DefinitionKind::Interface;
+    auto& parentSym = scope.asSymbol();
+    const bool isInIfaceOrGenBlk =
+        parentSym.kind == SymbolKind::GenerateBlock ||
+        (parentSym.kind == SymbolKind::InstanceBody &&
+         parentSym.as<InstanceBodySymbol>().getDefinition().definitionKind ==
+             DefinitionKind::Interface);
 
     for (auto declarator : syntax.declarators) {
         auto variable = compilation.emplace<VariableSymbol>(declarator->name.valueText(),
@@ -99,8 +101,8 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
         if (isCheckerFreeVar)
             variable->flags |= VariableFlags::CheckerFreeVariable;
 
-        if (isInIface)
-            variable->getDeclaredType()->addFlags(DeclaredTypeFlags::InterfaceVariable);
+        if (isInIfaceOrGenBlk)
+            variable->getDeclaredType()->addFlags(DeclaredTypeFlags::IfaceOrGenBlkVar);
 
         // If this is a static variable in a procedural context and it has an initializer,
         // the spec requires that the static keyword must be explicitly provided.

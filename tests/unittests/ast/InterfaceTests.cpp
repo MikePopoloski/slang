@@ -911,3 +911,32 @@ endinterface
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::VirtualInterfaceIfaceMember);
 }
+
+TEST_CASE("Interface containing virtual interface items in generate blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+interface A;
+endinterface
+
+interface B;
+endinterface
+
+interface C #(bit P);
+    if (P) begin: PSET
+        virtual A intf;
+    end else begin: PUNSET
+        virtual B intf;
+    end
+endinterface
+
+module top;
+    C #(1) c();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::VirtualInterfaceIfaceMember);
+}
