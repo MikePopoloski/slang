@@ -386,10 +386,28 @@ void registerSyntax(py::module_& m) {
             py::arg("mode") = CSTJsonMode::Full,
             "Convert this syntax tree to JSON string with optional formatting mode");
 
+    py::classh<CommentHandler> commentHandler(m, "CommentHandler");
+    commentHandler.def(py::init<>())
+        .def(py::init<CommentHandler::Kind, std::string_view>(), "kind"_a, "endRegion"_a)
+        .def_readwrite("kind", &CommentHandler::kind)
+        .def_readwrite("endRegion", &CommentHandler::endRegion);
+
+    py::native_enum<CommentHandler::Kind>(commentHandler, "Kind", "enum.Enum")
+        .value("Protect", CommentHandler::Protect)
+        .value("TranslateOff", CommentHandler::TranslateOff)
+        .value("LintOn", CommentHandler::LintOn)
+        .value("LintOff", CommentHandler::LintOff)
+        .value("LintSave", CommentHandler::LintSave)
+        .value("LintRestore", CommentHandler::LintRestore)
+        .export_values()
+        .finalize();
+
     py::classh<LexerOptions>(m, "LexerOptions")
         .def(py::init<>())
         .def_readwrite("maxErrors", &LexerOptions::maxErrors)
-        .def_readwrite("languageVersion", &LexerOptions::languageVersion);
+        .def_readwrite("languageVersion", &LexerOptions::languageVersion)
+        .def_readwrite("enableLegacyProtect", &LexerOptions::enableLegacyProtect)
+        .def_readwrite("commentHandlers", &LexerOptions::commentHandlers);
 
     py::classh<Lexer>(m, "Lexer")
         .def(py::init<SourceBuffer, BumpAllocator&, Diagnostics&, SourceManager&, LexerOptions>(),
