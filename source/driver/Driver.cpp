@@ -45,7 +45,6 @@ using namespace analysis;
 #define VCS_COMP_FLAGS \
     CompilationFlags::AllowHierarchicalConst, \
     CompilationFlags::RelaxEnumConversions, \
-    CompilationFlags::AllowUseBeforeDeclare, \
     CompilationFlags::RelaxStringConversions, \
     CompilationFlags::AllowRecursiveImplicitCall, \
     CompilationFlags::AllowBareValParamAssignment, \
@@ -56,7 +55,8 @@ static constexpr auto vcsCompFlags = {VCS_COMP_FLAGS};
 static constexpr auto allCompFlags = {
     VCS_COMP_FLAGS,
     CompilationFlags::AllowTopLevelIfacePorts,
-    CompilationFlags::AllowUnnamedGenerate
+    CompilationFlags::AllowUnnamedGenerate,
+    CompilationFlags::AllowUseBeforeDeclare
 };
 
 #define VCS_ANALYSIS_FLAGS \
@@ -668,6 +668,9 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::BadProceduralForce, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
     }
+
+    if (options.compilationFlags.at(CompilationFlags::AllowUseBeforeDeclare))
+        diagEngine.setSeverity(diag::UsedBeforeDeclared, DiagnosticSeverity::Warning);
 
     if (options.compat == CompatMode::Vcs || options.compat == CompatMode::All) {
         diagEngine.setSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);

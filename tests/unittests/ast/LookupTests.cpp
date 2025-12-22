@@ -2080,7 +2080,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Used-before-declared opt-in corner case of self-referential symbol") {
+TEST_CASE("Used-before-declared opt-in corner cases of self-referential symbol") {
     auto tree = SyntaxTree::fromText(R"(
 parameter int i = 1;
 
@@ -2092,6 +2092,68 @@ int foo;
 covergroup cg;
     foo: coverpoint foo;
 endgroup
+
+module paramTest1 ();
+    parameter P = P;
+endmodule
+
+module paramTest2 ();
+    parameter P = P1
+    parameter P1 = P;
+endmodule
+
+module paramTest3 #(parameter W = WIDTH) ();
+    parameter WIDTH = BITS * W;
+    localparam BITS = (WIDTH * DEPTH) - 1;
+endmodule
+
+module paramTest4(input logic [W-1:0] a, logic [$bits(a)-1:0] b);
+    logic [3:0] c;
+    function int foo;
+        return $bits(b);
+    endfunction
+    parameter W = $bits(c) + foo();
+endmodule
+
+module paramTest5(input logic [W-1:0] a, logic [$bits(a)-1:0] b);
+    logic [3:0] c;
+    function int foo;
+        parameter W = C;
+        return $bits(b) + W;
+    endfunction
+    parameter W = $bits(c) + foo();
+
+    parameter C = W + foo();
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowUseBeforeDeclare;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 10);
+}
+
+TEST_CASE("Use then declare parameters positive tests") {
+    auto tree = SyntaxTree::fromText(R"(
+module paramTest1();
+    parameter P = P1;
+    parameter P1 = 1;
+endmodule
+
+module paramTest2(input logic [C-1:0] a, logic [$bits(a)-1:0] b);
+    logic [3:0] c;
+    function int foo;
+        parameter W = C;
+        return $bits(b) + W;
+    endfunction
+    parameter W = $bits(c) + foo();
+    parameter A = C + W;
+    parameter C = 1;
+endmodule
 )");
 
     CompilationOptions options;

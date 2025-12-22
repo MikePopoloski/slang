@@ -113,7 +113,10 @@ enum class SLANG_EXPORT LookupResultFlags : uint8_t {
     FromForwardTypedef = 1 << 4,
 
     /// The lookup was resolved through an interface port connection.
-    IfacePort = 1 << 5
+    IfacePort = 1 << 5,
+
+    /// It was found that symbol may declared before than it was used
+    ReportDeclaredBefore = 1 << 6
 };
 SLANG_BITMASK(LookupResultFlags, IfacePort)
 

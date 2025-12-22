@@ -440,7 +440,7 @@ TEST_CASE("Driver failed compilation") {
     CHECK(driver.parseAllSources());
     CHECK(!driver.runFullCompilation());
     CHECK(stdoutContains("Build failed"));
-    CHECK(stdoutContains("1 error, 1 warning"));
+    CHECK(stdoutContains("1 error, 2 warning"));
 }
 
 TEST_CASE("Driver command files") {
