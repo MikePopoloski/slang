@@ -484,12 +484,15 @@ rules about assigning to lvalues with loop indices used to select subsets of a v
 
 @section compat-option Compatibility
 
-`--compat vcs|all`
+`--compat vcs|vivado|yosys|all`
 
 Attempt to increase compatibility with the specified tool. Various options will
 be set and some warnings will be silenced to mimic the given tool as closely as possible.
-Supported values are 'vcs' to match compatibility with Synopsys VCS, and 'all' to enable
-all possible compatibility options included with slang.
+Supported values are:
+ - 'vcs' to match compatibility with Synopsys VCS
+ - 'vivado' to match compatibility with AMD Vivado
+ - 'yosys' to match compatibility with Yosys logic synthesis tool
+ - 'all' to enable all possible compatibility options included with slang.
 
 `--allow-use-before-declare`
 

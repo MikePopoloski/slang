@@ -936,6 +936,38 @@ TEST_CASE("Driver deplist missing top modules") {
     CHECK(stderrContains("warning: using --depfile-trim with no top modules"));
 }
 
+TEST_CASE("Driver compat vivado") {
+    auto testDir = findTestDir();
+
+    {
+        Driver driver;
+        driver.addStandardArgs();
+        auto guard = OS::captureOutput();
+        // Check compatibility with parameters which are used before declared
+        auto args = fmt::format("testfoo \"{0}test8.sv\" --compat=vivado", testDir);
+        CHECK(driver.parseCommandLine(args));
+        CHECK(driver.processOptions());
+        CHECK(driver.parseAllSources());
+        CHECK(driver.runFullCompilation());
+        CHECK(stdoutContains("Build succeeded"));
+        CHECK(stdoutContains("0 errors, 10 warnings"));
+    }
+
+    {
+        Driver driver;
+        driver.addStandardArgs();
+        auto guard = OS::captureOutput();
+        // Check compatibility on parameters usage with self-dependancy errors
+        auto args = fmt::format("testfoo \"{0}test9.sv\" --compat=vivado", testDir);
+        CHECK(driver.parseCommandLine(args));
+        CHECK(driver.processOptions());
+        CHECK(driver.parseAllSources());
+        CHECK(!driver.runFullCompilation());
+        CHECK(stdoutContains("Build failed"));
+        CHECK(stdoutContains("7 errors, 8 warnings"));
+    }
+}
+
 TEST_CASE("Driver compat mode all") {
     auto guard = OS::captureOutput();
 

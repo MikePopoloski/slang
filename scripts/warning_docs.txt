@@ -1276,6 +1276,16 @@ module m;
 endmodule
 ```
 
+-Wused-before-declared
+A variable or parameter is used but declared later. This is not allowed in SystemVerilog
+but can be downgraded to a warning for compatibility with other tools.
+```
+module m();
+    parameter A = B;
+    parameter B = 1;
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste

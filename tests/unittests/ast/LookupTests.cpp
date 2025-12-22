@@ -1972,7 +1972,7 @@ task t;
     x = 5 + $unit::b; // illegal - $unit adds no special forward referencing
 endtask
 
-bit b;
+int b;
 )");
 
     Compilation compilation;
