@@ -940,8 +940,8 @@ TEST_CASE("Driver compat vivado") {
     auto testDir = findTestDir();
 
     {
-    Driver driver;
-    driver.addStandardArgs();
+        Driver driver;
+        driver.addStandardArgs();
         auto guard = OS::captureOutput();
         // Check compatibility with parameters which are used before declared
         auto args = fmt::format("testfoo \"{0}test8.sv\" --compat=vivado", testDir);
@@ -954,8 +954,8 @@ TEST_CASE("Driver compat vivado") {
     }
 
     {
-    Driver driver;
-    driver.addStandardArgs();
+        Driver driver;
+        driver.addStandardArgs();
         auto guard = OS::captureOutput();
         // Check compatibility on parameters usage with self-dependancy errors
         auto args = fmt::format("testfoo \"{0}test9.sv\" --compat=vivado", testDir);
