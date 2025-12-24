@@ -45,6 +45,7 @@ using namespace analysis;
 #define VCS_COMP_FLAGS \
     CompilationFlags::AllowHierarchicalConst, \
     CompilationFlags::RelaxEnumConversions, \
+    CompilationFlags::AllowUseBeforeDeclare, \
     CompilationFlags::RelaxStringConversions, \
     CompilationFlags::AllowRecursiveImplicitCall, \
     CompilationFlags::AllowBareValParamAssignment, \
@@ -52,11 +53,12 @@ using namespace analysis;
     CompilationFlags::AllowMergingAnsiPorts
 
 static constexpr auto vcsCompFlags = {VCS_COMP_FLAGS};
+static constexpr auto vivadoCompFlags = {CompilationFlags::AllowUseBeforeDeclare, CompilationFlags::ReportDeclaredBefore};
 static constexpr auto allCompFlags = {
     VCS_COMP_FLAGS,
     CompilationFlags::AllowTopLevelIfacePorts,
     CompilationFlags::AllowUnnamedGenerate,
-    CompilationFlags::AllowUseBeforeDeclare
+    CompilationFlags::ReportDeclaredBefore
 };
 
 #define VCS_ANALYSIS_FLAGS \
@@ -250,6 +252,8 @@ void Driver::addStandardArgs() {
     addCompFlag(CompilationFlags::AllowUnnamedGenerate, "--allow-genblk-reference",
                 "Allow references to unnamed generate blocks via their external names "
                 "(e.g. genblk1)");
+    addCompFlag(CompilationFlags::ReportDeclaredBefore, "--report-declared-before",
+                "Emit a warning on using of names before their declarations");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "
@@ -558,6 +562,9 @@ bool Driver::processOptions() {
             compFlags = vcsCompFlags;
             analysisFlags = vcsAnalysisFlags;
         }
+        else if (options.compat == CompatMode::Vivado || options.compat == CompatMode::Yosys) {
+            compFlags = vivadoCompFlags;
+        }
         else {
             compFlags = allCompFlags;
             analysisFlags = allAnalysisFlags;
@@ -669,7 +676,8 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
     }
 
-    if (options.compilationFlags.at(CompilationFlags::AllowUseBeforeDeclare))
+    if (options.compat == CompatMode::Vivado || options.compat == CompatMode::Yosys ||
+        options.compat == CompatMode::All)
         diagEngine.setSeverity(diag::UsedBeforeDeclared, DiagnosticSeverity::Warning);
 
     if (options.compat == CompatMode::Vcs || options.compat == CompatMode::All) {

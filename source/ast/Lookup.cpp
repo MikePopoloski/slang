@@ -1829,29 +1829,27 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                     // Sequences and properties can always be referenced before declaration.
                     locationGood = true;
                     break;
-                case SymbolKind::Parameter: {
-                    if (flags.has(LookupFlags::AllowDeclaredAfter)) {
+                case SymbolKind::Parameter:
+                case SymbolKind::Specparam: {
+                    // Constants except in case of compability with commercial tools can
+                    // never be looked up before their declaration, to avoid problems with recursive
+                    // constant evaluation.
+                    if (flags.has(LookupFlags::ReportDeclaredBefore)) {
                         // To report a params which depends on its definitions.
-                        flags.has(LookupFlags::AllowDeclaredAfter);
-                        reportDeclaredBefore = locationGood;
+                        locationGood = reportDeclaredBefore = true;
                     }
                     else {
                         flags &= ~LookupFlags::AllowDeclaredAfter;
                     }
                     break;
                 }
-                case SymbolKind::Specparam:
                 case SymbolKind::EnumValue:
-                    // Constants except of params in case of compability with commercial tools can
-                    // never be looked up before their declaration, to avoid problems with recursive
-                    // constant evaluation.
                     flags &= ~LookupFlags::AllowDeclaredAfter;
-                    reportDeclaredBefore = flags.has(LookupFlags::AllowDeclaredAfter);
                     break;
                 case SymbolKind::Port:
                 case SymbolKind::Net:
                 case SymbolKind::Variable:
-                    reportDeclaredBefore = flags.has(LookupFlags::AllowDeclaredAfter);
+                    reportDeclaredBefore = flags.has(LookupFlags::ReportDeclaredBefore);
                     break;
                 default:
                     break;
