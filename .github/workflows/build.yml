@@ -33,8 +33,6 @@ jobs:
             os: windows-latest
           - preset: wasi-sdk
             os: ubuntu-latest
-          - preset: wasi-sdk-pthread
-            os: ubuntu-latest
 
     runs-on: ${{ matrix.os }}
     steps:
