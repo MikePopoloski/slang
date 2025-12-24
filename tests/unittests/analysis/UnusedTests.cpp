@@ -300,6 +300,19 @@ endmodule
     CHECK_DIAGS_EMPTY;
 }
 
+TEST_CASE("No unused warning for error typed value") {
+    auto& text = R"(
+module m;
+    missing_type unused;
+endmodule
+)";
+
+    Compilation compilation;
+    auto diags = analyze(text, compilation);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].isError());
+}
+
 TEST_CASE("Undriven net via unused modport writer") {
     auto& text = R"(
 interface status_if;
