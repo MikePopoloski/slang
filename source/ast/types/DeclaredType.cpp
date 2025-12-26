@@ -20,6 +20,7 @@
 #include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
@@ -149,9 +150,22 @@ void DeclaredType::resolveType(const ASTContext& typeContext,
             type = &comp.getType(*type, *dimensions, typeContext);
 
         if (typedefTarget) {
-            // When resolving a typedef target we need to force resolution
-            // of the canonical type to make sure there are no cycles.
-            type->getCanonicalType();
+            // When resolving a typedef target we need to check resolution of aliases
+            // to make sure there are no cycles.
+            auto tt = type;
+            while (tt->isAlias()) {
+                auto& alias = tt->as<TypeAliasType>();
+                if (alias.targetType.isEvaluating()) {
+                    auto& diag = typeContext.addDiag(diag::RecursiveDefinition,
+                                                     syntax->sourceRange());
+                    diag << alias.name;
+                    diag.addNote(diag::NoteDeclarationHere, alias.location);
+                    type = &comp.getErrorType();
+                    break;
+                }
+
+                tt = &alias.targetType.getType();
+            }
         }
     }
 

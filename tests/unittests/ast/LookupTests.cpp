@@ -2567,3 +2567,27 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Recursive package import regress") {
+    auto tree = SyntaxTree::fromText(R"(
+package p1;
+    import p2::*;
+    typedef T T2;
+endpackage
+
+package p2;
+    import p1::*;
+    typedef T2 T;
+endpackage
+
+module m;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RecursiveDefinition);
+}
