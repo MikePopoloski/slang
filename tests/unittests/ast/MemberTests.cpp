@@ -147,7 +147,7 @@ module m;
     assign l = d[2];
 
     logic q[$];
-    logic [1:0] qp;
+    logic qp[$];
     assign qp = q[1:0];
 
     virtual I vif;

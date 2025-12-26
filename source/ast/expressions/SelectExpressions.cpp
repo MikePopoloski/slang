@@ -982,19 +982,23 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::ClassProperty: {
             Lookup::ensureVisible(*member, context, selector.nameRange);
             auto& prop = member->as<ClassPropertySymbol>();
-            if (prop.lifetime == VariableLifetime::Automatic && errorIfAssertion())
-                return badExpr(comp, &expr);
+            if (prop.lifetime == VariableLifetime::Automatic) {
+                if (errorIfAssertion())
+                    return badExpr(comp, &expr);
 
-            warnIfNotProcedural();
+                warnIfNotProcedural();
+            }
             return *comp.emplace<MemberAccessExpression>(prop.getType(), expr, prop, range);
         }
         case SymbolKind::Subroutine: {
             Lookup::ensureVisible(*member, context, selector.nameRange);
             auto& sub = member->as<SubroutineSymbol>();
-            if (!sub.flags.has(MethodFlags::Static) && errorIfAssertion())
-                return badExpr(comp, &expr);
+            if (!sub.flags.has(MethodFlags::Static)) {
+                if (errorIfAssertion())
+                    return badExpr(comp, &expr);
 
-            warnIfNotProcedural();
+                warnIfNotProcedural();
+            }
             return CallExpression::fromLookup(comp, &sub, &expr, invocation, withClause, range,
                                               context);
         }
