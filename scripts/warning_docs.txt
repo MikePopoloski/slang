@@ -1265,6 +1265,17 @@ class A;
 endclass
 ```
 
+-Wdynamic-non-procedural
+A member or element of a dynamic type is accessed outside of a procedural context (such as in
+a continuous assignment). This is not allowed in SystemVerilog but can be downgraded to a
+warning for compatibility with other tools.
+```
+module m;
+    int a[];
+    assign i = a[3];
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste

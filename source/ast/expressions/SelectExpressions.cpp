@@ -185,7 +185,6 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     }
     else if (context.flags.has(ASTFlags::NonProcedural)) {
         context.addDiag(diag::DynamicNotProcedural, fullRange);
-        return badExpr(compilation, result);
     }
 
     return *result;
@@ -468,7 +467,6 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
 
     if (!valueType.hasFixedRange() && context.flags.has(ASTFlags::NonProcedural)) {
         context.addDiag(diag::DynamicNotProcedural, fullRange);
-        return badExpr(comp, result);
     }
 
     // If this is selecting from a queue, the result is always a queue.
@@ -851,14 +849,14 @@ static Expression* tryBindSpecialMethod(Compilation& compilation, const Expressi
 }
 
 Expression& MemberAccessExpression::fromSelector(
-    Compilation& compilation, Expression& expr, const LookupResult::MemberSelector& selector,
+    Compilation& comp, Expression& expr, const LookupResult::MemberSelector& selector,
     const InvocationExpressionSyntax* invocation,
     const ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context,
     bool isFromLookupChain) {
 
     // If the selector name is invalid just give up early.
     if (selector.name.empty())
-        return badExpr(compilation, &expr);
+        return badExpr(comp, &expr);
 
     // The source range of the entire member access starts from the value being selected.
     SourceRange range{expr.sourceRange.start(), selector.nameRange.end()};
@@ -871,9 +869,8 @@ Expression& MemberAccessExpression::fromSelector(
         if (symKind == SymbolKind::Iterator) {
             auto& iter = sym.as<IteratorSymbol>();
             if (iter.indexMethodName == selector.name) {
-                auto result = CallExpression::fromBuiltInMethod(compilation, symKind, expr,
-                                                                "index"sv, invocation, withClause,
-                                                                context);
+                auto result = CallExpression::fromBuiltInMethod(comp, symKind, expr, "index"sv,
+                                                                invocation, withClause, context);
                 if (result)
                     return *result;
             }
@@ -886,12 +883,9 @@ Expression& MemberAccessExpression::fromSelector(
         context.addDiag(diag::ChainedMethodParens, range);
     }
 
-    auto errorIfNotProcedural = [&] {
-        if (context.flags.has(ASTFlags::NonProcedural)) {
+    auto warnIfNotProcedural = [&] {
+        if (context.flags.has(ASTFlags::NonProcedural))
             context.addDiag(diag::DynamicNotProcedural, range);
-            return true;
-        }
-        return false;
     };
     auto errorIfAssertion = [&] {
         if (context.flags.has(ASTFlags::AssertionExpr)) {
@@ -914,7 +908,7 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::ClassType: {
             auto& ct = type.as<ClassType>();
             if (auto base = ct.getBaseClass(); base && base->isError())
-                return badExpr(compilation, &expr);
+                return badExpr(comp, &expr);
 
             scope = &ct;
             break;
@@ -930,16 +924,16 @@ Expression& MemberAccessExpression::fromSelector(
         case SymbolKind::QueueType:
         case SymbolKind::EventType:
         case SymbolKind::SequenceType: {
-            if (auto result = tryBindSpecialMethod(compilation, expr, selector, invocation,
-                                                   withClause, context)) {
+            if (auto result = tryBindSpecialMethod(comp, expr, selector, invocation, withClause,
+                                                   context)) {
                 return *result;
             }
 
-            return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
-                                                    withClause, context);
+            return CallExpression::fromSystemMethod(comp, expr, selector, invocation, withClause,
+                                                    context);
         }
         case SymbolKind::ErrorType:
-            return badExpr(compilation, &expr);
+            return badExpr(comp, &expr);
         case SymbolKind::VoidType:
             if (auto sym = expr.getSymbolReference()) {
                 if (sym->kind == SymbolKind::Coverpoint) {
@@ -953,8 +947,8 @@ Expression& MemberAccessExpression::fromSelector(
             }
             [[fallthrough]];
         default: {
-            if (auto result = tryBindSpecialMethod(compilation, expr, selector, invocation,
-                                                   withClause, context)) {
+            if (auto result = tryBindSpecialMethod(comp, expr, selector, invocation, withClause,
+                                                   context)) {
                 return *result;
             }
 
@@ -962,13 +956,13 @@ Expression& MemberAccessExpression::fromSelector(
             diag << expr.sourceRange;
             diag << selector.nameRange;
             diag << *expr.type;
-            return badExpr(compilation, &expr);
+            return badExpr(comp, &expr);
         }
     }
 
     const Symbol* member = scope->find(selector.name);
     if (!member) {
-        if (auto result = tryBindSpecialMethod(compilation, expr, selector, invocation, withClause,
+        if (auto result = tryBindSpecialMethod(comp, expr, selector, invocation, withClause,
                                                context)) {
             return *result;
         }
@@ -977,44 +971,39 @@ Expression& MemberAccessExpression::fromSelector(
         diag << expr.sourceRange;
         diag << selector.name;
         diag << *expr.type;
-        return badExpr(compilation, &expr);
+        return badExpr(comp, &expr);
     }
 
     switch (member->kind) {
         case SymbolKind::Field: {
             auto& field = member->as<FieldSymbol>();
-            return *compilation.emplace<MemberAccessExpression>(field.getType(), expr, field,
-                                                                range);
+            return *comp.emplace<MemberAccessExpression>(field.getType(), expr, field, range);
         }
         case SymbolKind::ClassProperty: {
             Lookup::ensureVisible(*member, context, selector.nameRange);
             auto& prop = member->as<ClassPropertySymbol>();
-            if (prop.lifetime == VariableLifetime::Automatic &&
-                (errorIfNotProcedural() || errorIfAssertion())) {
-                return badExpr(compilation, &expr);
-            }
+            if (prop.lifetime == VariableLifetime::Automatic && errorIfAssertion())
+                return badExpr(comp, &expr);
 
-            return *compilation.emplace<MemberAccessExpression>(prop.getType(), expr, prop, range);
+            warnIfNotProcedural();
+            return *comp.emplace<MemberAccessExpression>(prop.getType(), expr, prop, range);
         }
         case SymbolKind::Subroutine: {
             Lookup::ensureVisible(*member, context, selector.nameRange);
             auto& sub = member->as<SubroutineSymbol>();
-            if (!sub.flags.has(MethodFlags::Static) &&
-                (errorIfNotProcedural() || errorIfAssertion())) {
-                return badExpr(compilation, &expr);
-            }
+            if (!sub.flags.has(MethodFlags::Static) && errorIfAssertion())
+                return badExpr(comp, &expr);
 
-            return CallExpression::fromLookup(compilation, &sub, &expr, invocation, withClause,
-                                              range, context);
+            warnIfNotProcedural();
+            return CallExpression::fromLookup(comp, &sub, &expr, invocation, withClause, range,
+                                              context);
         }
         case SymbolKind::ConstraintBlock:
         case SymbolKind::Coverpoint:
         case SymbolKind::CoverCross:
         case SymbolKind::CoverageBin: {
-            if (errorIfNotProcedural())
-                return badExpr(compilation, &expr);
-            return *compilation.emplace<MemberAccessExpression>(compilation.getVoidType(), expr,
-                                                                *member, range);
+            warnIfNotProcedural();
+            return *comp.emplace<MemberAccessExpression>(comp.getVoidType(), expr, *member, range);
         }
         case SymbolKind::EnumValue:
             // The thing being selected from doesn't actually matter, since the
@@ -1023,8 +1012,7 @@ Expression& MemberAccessExpression::fromSelector(
         default: {
             if (member->isValue()) {
                 auto& value = member->as<ValueSymbol>();
-                return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value,
-                                                                    range);
+                return *comp.emplace<MemberAccessExpression>(value.getType(), expr, value, range);
             }
 
             auto& diag = context.addDiag(diag::InvalidClassAccess, selector.dotLocation);
@@ -1032,7 +1020,7 @@ Expression& MemberAccessExpression::fromSelector(
             diag << expr.sourceRange;
             diag << selector.name;
             diag << *expr.type;
-            return badExpr(compilation, &expr);
+            return badExpr(comp, &expr);
         }
     }
 }

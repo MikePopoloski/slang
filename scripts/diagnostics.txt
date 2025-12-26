@@ -683,7 +683,6 @@ error MissingInvocationParens "parentheses are required when invoking function '
 error ChainedMethodParens "parentheses are required when chaining method calls"
 error NameListWithScopeRandomize "lookup restriction list not allowed for std::randomize call"
 error UnboundedNotAllowed "unbounded literal '$' not allowed here"
-error DynamicNotProcedural "cannot refer to an element or member of a dynamic type outside of a procedural context"
 error DynamicFromChecker "cannot refer to an element or member of a dynamic type from within a checker"
 error CheckerForkJoinRef "checkers cannot refer to members of fork-join blocks from their enclosing scopes"
 error CheckerAutoVarRef "cannot refer to automatic variable '{}' from procedural code in a checker"
@@ -794,6 +793,7 @@ warning conditional-precedence ConditionalPrecedence "operator '?:' has lower pr
 note NoteConditionalPrecedenceFix "place parentheses around the '?:' expression to evaluate it first"
 warning consecutive-comparison ConsecutiveComparison "comparisons like 'x < y < z' don't have their mathematical meaning"
 note NoteForPortConn "for connection to port '{}'"
+warning dynamic-non-procedural DynamicNotProcedural "cannot refer to an element or member of a dynamic type outside of a procedural context"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -1228,7 +1228,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
                   split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
                   dup-config-rule unused-config-cell unused-config-instance specify-condition-expr
-                  seq-no-match case-too-complex nested-solve-before }
+                  seq-no-match case-too-complex nested-solve-before dynamic-non-procedural }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
