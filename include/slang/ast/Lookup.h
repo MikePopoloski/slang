@@ -82,10 +82,13 @@ enum class SLANG_EXPORT LookupFlags {
     /// Allow unnamed generate blocks to be looked up by their external name.
     AllowUnnamedGenerate = 1 << 14,
 
+    /// To report symbols which may declared before than it was used
+    ReportDeclaredBefore = 1 << 15,
+
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated
 };
-SLANG_BITMASK(LookupFlags, AllowUnnamedGenerate)
+SLANG_BITMASK(LookupFlags, ReportDeclaredBefore)
 
 /// Flags that indicate additional details about the result of a lookup operation.
 enum class SLANG_EXPORT LookupResultFlags : uint8_t {
@@ -113,9 +116,12 @@ enum class SLANG_EXPORT LookupResultFlags : uint8_t {
     FromForwardTypedef = 1 << 4,
 
     /// The lookup was resolved through an interface port connection.
-    IfacePort = 1 << 5
+    IfacePort = 1 << 5,
+
+    /// To report symbols which may declared before than it was used
+    ReportDeclaredBefore = 1 << 6
 };
-SLANG_BITMASK(LookupResultFlags, IfacePort)
+SLANG_BITMASK(LookupResultFlags, ReportDeclaredBefore)
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.

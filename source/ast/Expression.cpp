@@ -1011,6 +1011,9 @@ Expression& Expression::bindName(Compilation& comp, const NameSyntax& syntax,
         flags |= LookupFlags::AllowDeclaredAfter;
     }
 
+    if (comp.hasFlag(CompilationFlags::ReportDeclaredBefore))
+        flags |= LookupFlags::ReportDeclaredBefore;
+
     if (context.flags.has(ASTFlags::StaticInitializer))
         flags |= LookupFlags::StaticInitializer;
 

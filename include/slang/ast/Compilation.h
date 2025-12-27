@@ -114,9 +114,13 @@ enum class SLANG_EXPORT CompilationFlags {
     DisallowRefsToUnknownInstances = 1 << 12,
 
     /// Allow unnamed generate blocks (e.g. genblk) to be referenced
-    AllowUnnamedGenerate = 1 << 13
+    AllowUnnamedGenerate = 1 << 13,
+
+    /// Allow but report constant, variable and net symbols usage before declaration in case of
+    /// compatibility with commercial tools.
+    ReportDeclaredBefore = 1 << 14
 };
-SLANG_BITMASK(CompilationFlags, AllowUnnamedGenerate)
+SLANG_BITMASK(CompilationFlags, ReportDeclaredBefore)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {
