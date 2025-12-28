@@ -109,7 +109,8 @@ public:
                                   const ASTContext& context);
 
     static Expression& fromConstant(const TypeProvider& typeProvider, Expression& value,
-                                    ConstantRange range, const ASTContext& context);
+                                    ConstantRange range, const ASTContext& context,
+                                    RangeSelectionKind selectionKind = RangeSelectionKind::Simple);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RangeSelect; }
 

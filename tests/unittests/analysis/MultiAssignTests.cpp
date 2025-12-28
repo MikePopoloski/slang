@@ -1498,3 +1498,29 @@ endmodule
     auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Multi-assign loop unroll in genblk regress") {
+    auto& code = R"(
+module m #(parameter int p);
+    logic [2:0][4*p-1:0] arr;
+    for (genvar g = 0; g < p; g++) begin
+        localparam int lp = g * 4;
+        always_comb begin
+            for (int i = 0; i < 3; i++) begin
+                arr[i][lp+:2] = '1;
+            end
+        end
+    end
+endmodule
+
+module top;
+    m #(4) m1();
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}

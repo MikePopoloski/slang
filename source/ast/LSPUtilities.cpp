@@ -317,7 +317,8 @@ const Expression& LSPUtilities::cloneLSP(BumpAllocator& alloc, const Expression&
             if (left && right) {
                 auto& newVal = cloneLSP(alloc, rse.value(), evalContext);
                 auto& result = RangeSelectExpression::fromConstant(
-                    alloc, const_cast<Expression&>(newVal), {*left, *right}, evalContext.astCtx);
+                    alloc, const_cast<Expression&>(newVal), {*left, *right}, evalContext.astCtx,
+                    rse.getSelectionKind());
                 result.sourceRange = expr.sourceRange;
                 return result;
             }

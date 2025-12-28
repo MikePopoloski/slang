@@ -619,14 +619,14 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
 }
 
 Expression& RangeSelectExpression::fromConstant(const TypeProvider& typeProvider, Expression& value,
-                                                ConstantRange range, const ASTContext& context) {
+                                                ConstantRange range, const ASTContext& context,
+                                                RangeSelectionKind selectionKind) {
     auto& left = IntegerLiteral::fromConstant(typeProvider, range.left);
     auto& right = IntegerLiteral::fromConstant(typeProvider, range.right);
 
     auto& alloc = typeProvider.alloc;
-    auto result = alloc.emplace<RangeSelectExpression>(RangeSelectionKind::Simple,
-                                                       typeProvider.getErrorType(), value, left,
-                                                       right, value.sourceRange);
+    auto result = alloc.emplace<RangeSelectExpression>(selectionKind, typeProvider.getErrorType(),
+                                                       value, left, right, value.sourceRange);
     if (value.bad() || left.bad() || right.bad())
         return badExpr(alloc, result);
 
@@ -637,8 +637,15 @@ Expression& RangeSelectExpression::fromConstant(const TypeProvider& typeProvider
     if (elementType.isError())
         return badExpr(alloc, result);
 
+    const auto valueRange = valueType.getFixedRange();
+    if (selectionKind != RangeSelectionKind::Simple) {
+        range = ConstantRange::getIndexedRange(range.left, range.right, valueRange.isLittleEndian(),
+                                               selectionKind == RangeSelectionKind::IndexedUp)
+                    .value();
+    }
+
     // This method is only called on expressions with a fixed range type.
-    SLANG_ASSERT(range.isLittleEndian() == valueType.getFixedRange().isLittleEndian());
+    SLANG_ASSERT(range.isLittleEndian() == valueRange.isLittleEndian());
     SLANG_ASSERT(valueType.hasFixedRange());
 
     if (valueType.isUnpackedArray()) {
