@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Removed the restriction that covergroup expressions must be constant expressions -- the implementation was buggy, other tools don't implement it, and the details in the LRM are not well defined
 * Modport ports now correctly require that their target references are members of their parent interface
 * Explicit port expressions now correctly require that their target references are members of their parent module
+* Tasks that contain blocking timing controls are now correctly disallowed from being called from always_comb/latch/ff blocks
 
 ### Notable Breaking Changes
 * AST serialization: typedefs and enum type references are now printed as links to the original definition instead of repeating the type for each usage
@@ -33,6 +34,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The `--compat` flag now accepts `all` to enable all compatibility flags at once, to maximize the chances that slang will accept your code that works with other tools but may not comply with the LRM
 * Added a `--disable-local-includes` flag to mimic the behavior of VCS where `` `include `` directives don't search relative to the including file
 * The `--std` argument now accepts `1364-2005` as a value, which disables all SystemVerilog keywords during parsing for Verilog compatibility (thanks to @povik)
+* Added a `--map-keyword-version` option to allow overriding language keyword versions for specified groups of files (thanks to @likeamahoney)
 
 ### Improvements
 * -Wcase-dup no longer warns if the duplicate items are all constant case items that don't match a known constant case expression
@@ -48,6 +50,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Warnings related to wildcard port connections now contain additional context showing which port triggered the warning
 * Made several tweaks to slightly improve defparam and bind evaluation performance
 * The AST for multi-ports has been reworked to represent each sub port connection expression separately
+* Selection of elements of dynamic types is now a downgradeable warning (`-Wdynamic-non-procedural`) for compatibility with other tools
 
 ### Fixes
 * Unnamed covergroup types now print with a placeholder name in diagnostics and AST dumping instead of just an empty string
@@ -74,6 +77,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed ICE when a modport export's method name is empty
 * Fixed ICE involving virtual interface types where the interface instance contains a self-referential virtual interface member
 * Fixed ICE involving analysis of hierarchical calls to subroutines inside cached instance symbols
+* Fixed handling of file patterns starting with recursive wildcards -- they were canonicalized incorrectly on some platforms
+* Fixed infinite loop caused by recursive typedef references across packages
 
 
 ### Tools & Bindings
