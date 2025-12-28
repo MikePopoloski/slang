@@ -657,7 +657,7 @@ const SubroutineSymbol* ClassType::getConstructor() const {
             SubroutineSymbol::inheritDefaultedArgList(builder.symbol, *this,
                                                       *extendsClause->defaultedArg, builder.args);
 
-            insertMember(&builder.symbol, getLastMember(), true, true);
+            insertMember(&builder.symbol, getLastMember(), true);
             return &builder.symbol;
         }
     }

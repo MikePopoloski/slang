@@ -349,7 +349,7 @@ void CovergroupType::inheritMembers(function_ref<void(const Symbol&)> insertCB) 
         // provided insertion callback. We insert them as TransparentMemberSymbols
         // so that we can trace a path back to the actual location they are declared.
         auto wrapper = comp.emplace<TransparentMemberSymbol>(*toWrap);
-        body.insertMember(wrapper, body.lastBuiltinMember, true, false);
+        body.insertMember(wrapper, body.lastBuiltinMember, false);
     }
 
     // Also inherit any argument symbols are in the base covergroup type itself,

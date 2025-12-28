@@ -43,7 +43,7 @@ public:
     Scope& operator=(const Scope&) = delete;
 
     /// Adds a symbol as a member to the scope.
-    void addMember(const Symbol& symbol) { insertMember(&symbol, lastMember, false, true); }
+    void addMember(const Symbol& symbol) { insertMember(&symbol, lastMember, true); }
 
     /// Creates and adds one or more member symbols to the scope from the given syntax node.
     void addMembers(const syntax::SyntaxNode& syntax);
@@ -269,8 +269,7 @@ protected:
     /// Add a preconstructed wildcard import to this scope.
     void addWildcardImport(const WildcardImportSymbol& item);
 
-    void insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
-                      bool incrementIndex) const;
+    void insertMember(const Symbol* member, const Symbol* at, bool incrementIndex) const;
 
 private:
     friend class Compilation;
@@ -278,8 +277,7 @@ private:
     void addDeferredMembers(const syntax::SyntaxNode& syntax);
     void elaborate() const;
     void handleNameConflict(const Symbol& member) const;
-    void handleNameConflict(const Symbol& member, const Symbol*& existing,
-                            bool isElaborating) const;
+    void handleNameConflict(const Symbol& member, const Symbol*& existing) const;
     void handleDataDeclaration(
         const ASTContext& context, const syntax::DataDeclarationSyntax& syntax,
         const Symbol*& insertionPoint,

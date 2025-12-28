@@ -2257,3 +2257,20 @@ I(interface I(d.o;I d
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Package import from later package regress") {
+    auto tree = SyntaxTree::fromText(R"(
+package p1;
+    import p2::baz;
+    export p2::baz;
+endpackage
+
+package p2;
+    function void baz; endfunction
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

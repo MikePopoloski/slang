@@ -622,8 +622,7 @@ static bool canLookupByName(SymbolKind kind) {
     }
 }
 
-void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
-                         bool incrementIndex) const {
+void Scope::insertMember(const Symbol* member, const Symbol* at, bool incrementIndex) const {
     SLANG_ASSERT(!member->parentScope);
     SLANG_ASSERT(!member->nextInScope);
 
@@ -645,12 +644,11 @@ void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborat
     if (!member->name.empty() && canLookupByName(member->kind)) {
         auto pair = nameMap->emplace(member->name, member);
         if (!pair.second)
-            handleNameConflict(*member, pair.first->second, isElaborating);
+            handleNameConflict(*member, pair.first->second);
     }
 }
 
-void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
-                               bool isElaborating) const {
+void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing) const {
     // We have a name collision; first check if this is ok (forwarding typedefs share a
     // name with the actual typedef) and if not give the user a helpful error message.
     if (existing->kind == SymbolKind::TypeAlias && member.kind == SymbolKind::ForwardingTypedef) {
@@ -716,14 +714,9 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
             mi.noteCorrespondingImport();
         }
 
-        if (isElaborating || needsElaboration) {
-            // These can't be checked until we can resolve the imports and
-            // see if they point to the same symbol.
-            compilation.noteNameConflict(member);
-        }
-        else {
-            checkImportConflict(member, *existing);
-        }
+        // These can't be checked until we can resolve the imports and
+        // see if they point to the same symbol.
+        compilation.noteNameConflict(member);
         return;
     }
 
@@ -848,7 +841,7 @@ void Scope::elaborate() const {
         SLANG_ASSERT(at);
         at->indexInScope -= (uint32_t)members.size();
         for (auto member : members) {
-            insertMember(member, at, true, true);
+            insertMember(member, at, true);
             at = member;
         }
     };
@@ -857,13 +850,13 @@ void Scope::elaborate() const {
         SLANG_ASSERT(at);
         at->indexInScope -= (uint32_t)members.size() + 1;
         for (auto net : implicitNets) {
-            insertMember(net, at, true, false);
+            insertMember(net, at, false);
             at = net;
         }
 
         at->indexInScope += 1;
         for (auto member : members) {
-            insertMember(member, at, true, true);
+            insertMember(member, at, true);
             at = member;
         }
     };
@@ -891,7 +884,7 @@ void Scope::elaborate() const {
                         compilation, node.as<EnumTypeSyntax>(), context,
                         [this, &symbol](const Symbol& member) {
                             auto wrapped = compilation.emplace<TransparentMemberSymbol>(member);
-                            insertMember(wrapped, symbol, true, false);
+                            insertMember(wrapped, symbol, false);
                             symbol = wrapped;
                         });
                     break;
@@ -919,7 +912,7 @@ void Scope::elaborate() const {
     // members from parent classes. Inherited members get inserted at the beginning
     // of the scope with an overridden index of zero so everything can reference them.
     auto inheritMemberCB = [this](const Symbol& member) {
-        insertMember(&member, nullptr, true, false);
+        insertMember(&member, nullptr, false);
         member.indexInScope = SymbolIndex{0};
     };
     if (thisSym->kind == SymbolKind::ClassType)
@@ -1022,7 +1015,7 @@ void Scope::elaborate() const {
                 auto array = &GenerateBlockArraySymbol::fromSyntax(
                     compilation, member.node.as<LoopGenerateSyntax>(), symbol->getIndex(), context,
                     constructIndex);
-                insertMember(array, symbol, true, true);
+                insertMember(array, symbol, true);
                 if (array->isUnnamed)
                     unnamedGenblks.push_back(array);
                 constructIndex++;
@@ -1034,7 +1027,7 @@ void Scope::elaborate() const {
                 auto block = &GenerateBlockSymbol::fromSyntax(*this,
                                                               member.node.as<GenerateBlockSyntax>(),
                                                               constructIndex);
-                insertMember(block, symbol, true, true);
+                insertMember(block, symbol, true);
                 if (block->isUnnamed)
                     unnamedGenblks.push_back(block);
                 constructIndex++;
@@ -1049,7 +1042,7 @@ void Scope::elaborate() const {
                 insertMembers(ports, symbol);
 
                 for (auto [implicitMember, insertionPoint] : implicitMembers)
-                    insertMember(implicitMember, insertionPoint, true, false);
+                    insertMember(implicitMember, insertionPoint, false);
 
                 // Let the instance know its list of ports. This is kind of annoying because it
                 // inverts the dependency tree but it's better than giving all symbols a virtual
@@ -1161,7 +1154,7 @@ void Scope::elaborate() const {
                 auto subroutine = SubroutineSymbol::fromSyntax(
                     compilation, member.node.as<ClassMethodDeclarationSyntax>(), *this);
                 if (subroutine)
-                    insertMember(subroutine, symbol, true, true);
+                    insertMember(subroutine, symbol, true);
                 break;
             }
             case SyntaxKind::EnumType:
@@ -1175,7 +1168,7 @@ void Scope::elaborate() const {
             case SyntaxKind::ClockingDeclaration:
                 insertMember(&ClockingBlockSymbol::fromSyntax(
                                  *this, member.node.as<ClockingDeclarationSyntax>()),
-                             symbol, true, true);
+                             symbol, true);
                 break;
             default:
                 SLANG_UNREACHABLE;
@@ -1220,14 +1213,14 @@ void Scope::elaborate() const {
         // list before allowing anyone else to access the contained statements.
         const Symbol* at = nullptr;
         thisSym->as<StatementBlockSymbol>().elaborateVariables([this, &at](const Symbol& member) {
-            insertMember(&member, at, true, false);
+            insertMember(&member, at, false);
             at = &member;
         });
     }
     else if (thisSym->kind == SymbolKind::InstanceBody) {
         // Allow instances to perform post-elaboration finalization.
         thisSym->as<InstanceBodySymbol>().finishElaboration(
-            [this](const Symbol& member) { insertMember(&member, lastMember, true, true); });
+            [this](const Symbol& member) { insertMember(&member, lastMember, true); });
     }
 
     SLANG_ASSERT(!needsElaboration);
@@ -1243,7 +1236,7 @@ void Scope::handleDataDeclaration(
         SLANG_ASSERT(insertionPoint);
         insertionPoint->indexInScope -= (uint32_t)members.size();
         for (auto member : members) {
-            insertMember(member, insertionPoint, true, true);
+            insertMember(member, insertionPoint, true);
             insertionPoint = member;
         }
     };
@@ -1262,7 +1255,7 @@ void Scope::handleDataDeclaration(
                                                       netType);
             net->setFromDeclarator(*decl);
             net->setAttributes(*this, syntax.attributes);
-            insertMember(net, insertionPoint, true, true);
+            insertMember(net, insertionPoint, true);
             insertionPoint = net;
         }
 
@@ -1343,7 +1336,7 @@ void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const 
         return;
 
     auto& inst = InstanceSymbol::createDefaultNested(*this, syntax);
-    insertMember(&inst, lastMember, /* isElaborating */ true, /* incrementIndex */ true);
+    insertMember(&inst, lastMember, /* incrementIndex */ true);
 }
 
 void Scope::handleExportedMethods() const {
@@ -1352,7 +1345,7 @@ void Scope::handleExportedMethods() const {
 
     auto create = [&](const ModportSubroutinePortSyntax& syntax) {
         auto& symbol = MethodPrototypeSymbol::implicitExtern(*this, syntax);
-        insertMember(&symbol, nullptr, true, true);
+        insertMember(&symbol, nullptr, true);
     };
 
     for (auto symbol = firstMember; symbol; symbol = symbol->nextInScope) {
