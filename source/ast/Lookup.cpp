@@ -1168,14 +1168,14 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
     unqualifiedImpl(scope, name.text, context.getLocation(), name.range, flags, {}, result, scope,
                     &syntax);
 
-    if (!result.found) {
-        if (flags.has(LookupFlags::AlwaysAllowUpward)) {
-            if (!lookupUpward({}, name, context, flags, result))
-                return;
-        }
+    if (!result.found && flags.has(LookupFlags::AlwaysAllowUpward)) {
+        if (!lookupUpward({}, name, context, flags, result))
+            return;
+    }
 
-        if (!result.found && !result.hasError())
-            reportUndeclared(scope, name.text, name.range, flags, false, result);
+    if ((!result.found && !result.hasError()) ||
+        (result.found && result.flags.has(LookupResultFlags::ReportDeclaredBefore))) {
+        reportUndeclared(scope, name.text, name.range, flags, false, result);
     }
 
     if (result.found && name.paramAssignments) {
@@ -1227,8 +1227,10 @@ const Symbol* Lookup::unqualifiedAt(const Scope& scope, std::string_view name,
     SLANG_ASSERT(result.selectors.empty());
     unwrapResult(scope, result, /* unwrapGenericClasses */ false);
 
-    if (!result.found && !result.hasError())
+    if ((!result.found && !result.hasError()) ||
+        (result.found && result.flags.has(LookupResultFlags::ReportDeclaredBefore))) {
         reportUndeclared(scope, name, sourceRange, flags, false, result);
+    }
 
     if (result.hasError())
         scope.getCompilation().addDiagnostics(result.getDiagnostics());
@@ -1774,6 +1776,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         symbol = it->second;
 
         bool locationGood = LookupLocation::before(*symbol) < location;
+        bool reportDeclaredBefore = false;
         if (!locationGood) {
             // A type alias can have forward definitions, so check those locations as well.
             // The forward decls form a linked list that are always ordered by location,
@@ -1827,11 +1830,26 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                     locationGood = true;
                     break;
                 case SymbolKind::Parameter:
-                case SymbolKind::Specparam:
+                case SymbolKind::Specparam: {
+                    // Constants except in case of compability with commercial tools can
+                    // never be looked up before their declaration, to avoid problems with recursive
+                    // constant evaluation.
+                    if (flags.has(LookupFlags::ReportDeclaredBefore)) {
+                        // To report a params which depends on its definitions.
+                        locationGood = reportDeclaredBefore = true;
+                    }
+                    else {
+                        flags &= ~LookupFlags::AllowDeclaredAfter;
+                    }
+                    break;
+                }
                 case SymbolKind::EnumValue:
-                    // Constants can never be looked up before their declaration,
-                    // to avoid problems with recursive constant evaluation.
                     flags &= ~LookupFlags::AllowDeclaredAfter;
+                    break;
+                case SymbolKind::Port:
+                case SymbolKind::Net:
+                case SymbolKind::Variable:
+                    reportDeclaredBefore = flags.has(LookupFlags::ReportDeclaredBefore);
                     break;
                 default:
                     break;
@@ -1929,6 +1947,9 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
             // like a parameter and a function, so detect and report the error here to avoid a
             // stack overflow.
             if (result.found) {
+                if (reportDeclaredBefore)
+                    result.flags |= LookupResultFlags::ReportDeclaredBefore;
+
                 auto declaredType = result.found->getDeclaredType();
                 if (declaredType && declaredType->isEvaluating()) {
                     if (locationGood) {
@@ -2234,7 +2255,8 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
     // downward lookup (if any), so it's fine to just return it as is. If we never found any
     // symbol originally, issue an appropriate error for that.
     result = originalResult;
-    if (!result.found && !result.hasError()) {
+    if ((!result.found && !result.hasError()) ||
+        (result.found && result.flags.has(LookupResultFlags::ReportDeclaredBefore))) {
         reportUndeclared(scope, name, first.range,
                          flags | LookupFlags::NoUndeclaredErrorIfUninstantiated, true, result);
     }
@@ -2320,7 +2342,8 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
             return true;
         };
 
-        if (!flags.has(LookupFlags::AllowDeclaredAfter)) {
+        if (!flags.has(LookupFlags::AllowDeclaredAfter) ||
+            result.flags.has(LookupResultFlags::ReportDeclaredBefore)) {
             actualSym = scope->find(name);
             if (actualSym) {
                 usedBeforeDeclared = isViable(*actualSym);
@@ -2373,6 +2396,10 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
         diag.addNote(diag::NoteDeclarationHere, actualSym->location);
         return;
     }
+
+    // In case of ReportDeclaredBefore flag set leave the function without any other error.
+    if (result.flags.has(LookupResultFlags::ReportDeclaredBefore))
+        return;
 
     // Otherwise, check if this names a definition, in which case we can give a nicer error.
     if (auto def = comp.tryGetDefinition(name, initialScope).definition;
