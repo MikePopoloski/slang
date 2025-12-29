@@ -320,10 +320,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
         TimeTraceScope timeScope("AST Instance", [&] { return symbol.getHierarchicalPath(); });
 
-        for (auto conn : symbol.getPortConnections()) {
+        for (auto conn : symbol.getPortConnections())
             conn->getExpression();
-            conn->checkSimulatedNetTypes();
-        }
 
         if (!visitInstances)
             return;

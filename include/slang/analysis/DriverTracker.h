@@ -117,6 +117,8 @@ private:
                     const ast::ValueSymbol& symbol, ast::EvalContext& evalCtx,
                     SmallVector<HierPortDriver>& hierPortDrivers);
 
+    void checkNetCollapsing(AnalysisContext& context, const ast::PortConnection& conn);
+
     concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
     concurrent_map<const ast::InstanceBodySymbol*, InstanceDriverState> instanceMap;
     concurrent_map<const ast::ValueSymbol*, DriverList> indirectDrivers;
