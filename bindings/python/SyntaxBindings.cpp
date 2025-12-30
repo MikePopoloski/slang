@@ -6,6 +6,8 @@
 #include "PyVisitors.h"
 #include "pyslang.h"
 
+#include <cstring>
+
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
@@ -99,14 +101,28 @@ public:
     BumpAllocator& getAllocator() { return alloc; }
 
     Token py_makeToken(TokenKind kind, std::string_view text, std::span<const Trivia> trivia = {}) {
-        return this->makeToken(kind, text, trivia);
+        char* textCopy = reinterpret_cast<char*>(alloc.allocate(text.size(), 1));
+        std::memcpy(textCopy, text.data(), text.size());
+        std::string_view persistentText(textCopy, text.size());
+        auto persistentTrivia = alloc.copyFrom(trivia);
+        return this->makeToken(kind, persistentText, persistentTrivia);
     }
 
     Token py_makeId(std::string_view text, std::span<const Trivia> trivia = {}) {
-        return this->makeId(text, trivia);
+        char* textCopy = reinterpret_cast<char*>(alloc.allocate(text.size(), 1));
+        std::memcpy(textCopy, text.data(), text.size());
+        std::string_view persistentText(textCopy, text.size());
+        auto persistentTrivia = alloc.copyFrom(trivia);
+        return this->makeId(persistentText, persistentTrivia);
     }
 
     Token py_makeComma() { return this->makeComma(); }
+
+    Trivia py_makeTrivia(TriviaKind kind, std::string_view text) {
+        char* allocated = reinterpret_cast<char*>(alloc.allocate(text.size(), alignof(char)));
+        std::memcpy(allocated, text.data(), text.size());
+        return Trivia(kind, std::string_view(allocated, text.size()));
+    }
 
     SyntaxNode* py_clone(const SyntaxNode& node) {
         return slang::syntax::clone(node, this->alloc);
@@ -537,6 +553,9 @@ void registerSyntax(py::module_& m) {
              "Create an identifier token")
         .def("make_comma", &PySyntaxRewriter::py_makeComma,
              "Create a comma token")
+        .def("make_trivia", &PySyntaxRewriter::py_makeTrivia,
+             py::arg("kind"), py::arg("text"),
+             "Create a trivia with text allocated in the rewriter's allocator")
         .def("clone", &PySyntaxRewriter::py_clone, byrefint,
              py::arg("node"),
              "Create a shallow clone of the given syntax node")

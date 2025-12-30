@@ -234,7 +234,7 @@ private:
     static_assert(alignof(SyntaxList<T>) == alignof(SyntaxList<SyntaxNode>),
                   "SyntaxList<T> alignment must be identical for all T");
 
-                  public:
+public:
     static constexpr auto name = const_name("SyntaxList");
 
     bool load(handle src, bool) {
@@ -329,6 +329,57 @@ public:
     operator SeparatedSyntaxList<T>&() {
         if (!ptr)
             throw std::runtime_error("SeparatedSyntaxList type cast failed: null pointer");
+        return *ptr;
+    }
+    template<typename T_>
+    using cast_op_type = pybind11::detail::cast_op_type<T_>;
+};
+
+template<>
+struct type_caster<TokenList> {
+private:
+    TokenList* ptr = nullptr;
+
+public:
+    static constexpr auto name = const_name("TokenList");
+
+    bool load(handle src, bool) {
+        type_caster<SyntaxNode> node_caster;
+        if (!node_caster.load(src, false))
+            return false;
+
+        SyntaxNode* node = static_cast<SyntaxNode*>(node_caster);
+        if (!node || node->kind != SyntaxKind::TokenList)
+            return false;
+
+        auto* listBase = static_cast<SyntaxListBase*>(node);
+
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreinterpret-base-class"
+#endif
+        ptr = reinterpret_cast<TokenList*>(listBase);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+
+        return true;
+    }
+
+    static handle cast(const TokenList& src, return_value_policy policy, handle parent) {
+        return type_caster<SyntaxNode>::cast(static_cast<const SyntaxNode&>(src), policy, parent);
+    }
+
+    static handle cast(const TokenList* src, return_value_policy policy, handle parent) {
+        if (!src)
+            return none().release();
+        return cast(*src, policy, parent);
+    }
+
+    operator TokenList*() { return ptr; }
+    operator TokenList&() {
+        if (!ptr)
+            throw std::runtime_error("TokenList type cast failed: null pointer");
         return *ptr;
     }
     template<typename T_>
