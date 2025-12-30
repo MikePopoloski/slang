@@ -20,28 +20,28 @@
 
 using namespace slang::driver;
 
-void registerCompilation(py::module_& m) {
-    EXPOSE_ENUM(m, VariableLifetime);
-    EXPOSE_ENUM(m, Visibility);
-    EXPOSE_ENUM(m, ArgumentDirection);
-    EXPOSE_ENUM(m, ProceduralBlockKind);
-    EXPOSE_ENUM(m, StatementBlockKind);
-    EXPOSE_ENUM(m, DefinitionKind);
-    EXPOSE_ENUM(m, UnconnectedDrive);
-    EXPOSE_ENUM(m, EdgeKind);
-    EXPOSE_ENUM(m, SubroutineKind);
-    EXPOSE_ENUM(m, AssertionKind);
-    EXPOSE_ENUM(m, ElabSystemTaskKind);
-    EXPOSE_ENUM(m, RandMode);
-    EXPOSE_ENUM(m, PrimitivePortDirection);
+void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) {
+    EXPOSE_ENUM(ast, VariableLifetime);
+    EXPOSE_ENUM(ast, Visibility);
+    EXPOSE_ENUM(ast, ArgumentDirection);
+    EXPOSE_ENUM(ast, ProceduralBlockKind);
+    EXPOSE_ENUM(ast, StatementBlockKind);
+    EXPOSE_ENUM(ast, DefinitionKind);
+    EXPOSE_ENUM(ast, UnconnectedDrive);
+    EXPOSE_ENUM(ast, EdgeKind);
+    EXPOSE_ENUM(ast, SubroutineKind);
+    EXPOSE_ENUM(ast, AssertionKind);
+    EXPOSE_ENUM(ast, ElabSystemTaskKind);
+    EXPOSE_ENUM(ast, RandMode);
+    EXPOSE_ENUM(ast, PrimitivePortDirection);
 
-    py::native_enum<MinTypMax>(m, "MinTypMax", "enum.Enum")
+    py::native_enum<MinTypMax>(ast, "MinTypMax", "enum.Enum")
         .value("Min", MinTypMax::Min)
         .value("Typ", MinTypMax::Typ)
         .value("Max", MinTypMax::Max)
         .finalize();
 
-    py::native_enum<CompilationFlags>(m, "CompilationFlags", "enum.Flag")
+    py::native_enum<CompilationFlags>(ast, "CompilationFlags", "enum.Flag")
         .value("None_", CompilationFlags::None)
         .value("AllowHierarchicalConst", CompilationFlags::AllowHierarchicalConst)
         .value("RelaxEnumConversions", CompilationFlags::RelaxEnumConversions)
@@ -59,7 +59,7 @@ void registerCompilation(py::module_& m) {
         .value("AllowUnnamedGenerate", CompilationFlags::AllowUnnamedGenerate)
         .finalize();
 
-    py::classh<CompilationOptions>(m, "CompilationOptions")
+    py::classh<CompilationOptions>(ast, "CompilationOptions")
         .def(py::init<>())
         .def_readwrite("flags", &CompilationOptions::flags)
         .def_readwrite("maxInstanceDepth", &CompilationOptions::maxInstanceDepth)
@@ -83,7 +83,7 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("paramOverrides", &CompilationOptions::paramOverrides)
         .def_readwrite("defaultLiblist", &CompilationOptions::defaultLiblist);
 
-    py::classh<Compilation> comp(m, "Compilation");
+    py::classh<Compilation> comp(ast, "Compilation");
     comp.def(py::init<>())
         .def(py::init<const Bag&>(), "options"_a)
         .def_property_readonly("options", &Compilation::getOptions)
@@ -159,7 +159,7 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("configRoot", &Compilation::DefinitionLookupResult::configRoot)
         .def_readwrite("configRule", &Compilation::DefinitionLookupResult::configRule);
 
-    py::classh<ScriptSession>(m, "ScriptSession")
+    py::classh<ScriptSession>(ast, "ScriptSession")
         .def(py::init<>())
         .def_readonly("compilation", &ScriptSession::compilation)
         .def("eval", &ScriptSession::eval, "text"_a)
@@ -167,21 +167,21 @@ void registerCompilation(py::module_& m) {
         .def("evalStatement", &ScriptSession::evalStatement, "expr"_a)
         .def("getDiagnostics", &ScriptSession::getDiagnostics);
 
-    py::classh<CommandLine::ParseOptions>(m, "CommandLineOptions")
+    py::classh<CommandLine::ParseOptions>(driver, "CommandLineOptions")
         .def(py::init<>())
         .def_readwrite("supportsComments", &CommandLine::ParseOptions::supportComments)
         .def_readwrite("ignoreProgramName", &CommandLine::ParseOptions::ignoreProgramName)
         .def_readwrite("expandEnvVars", &CommandLine::ParseOptions::expandEnvVars)
         .def_readwrite("ignoreDuplicates", &CommandLine::ParseOptions::ignoreDuplicates);
 
-    py::native_enum<LanguageVersion>(m, "LanguageVersion", "enum.Enum")
+    py::native_enum<LanguageVersion>(ast, "LanguageVersion", "enum.Enum")
         .value("v1364_2005", LanguageVersion::v1364_2005)
         .value("v1800_2017", LanguageVersion::v1800_2017)
         .value("v1800_2023", LanguageVersion::v1800_2023)
         .value("Default", LanguageVersion::Default)
         .finalize();
 
-    py::classh<Driver>(m, "Driver")
+    py::classh<Driver>(driver, "Driver")
         .def(py::init<>())
         .def_readonly("sourceManager", &Driver::sourceManager)
         .def_readonly("diagEngine", &Driver::diagEngine)
@@ -212,14 +212,14 @@ void registerCompilation(py::module_& m) {
         .def("reportDiagnostics", &Driver::reportDiagnostics, "quiet"_a)
         .def("runFullCompilation", &Driver::runFullCompilation, "quiet"_a = false);
 
-    py::classh<SourceOptions>(m, "SourceOptions")
+    py::classh<SourceOptions>(driver, "SourceOptions")
         .def(py::init<>())
         .def_readwrite("numThreads", &SourceOptions::numThreads)
         .def_readwrite("singleUnit", &SourceOptions::singleUnit)
         .def_readwrite("onlyLint", &SourceOptions::onlyLint)
         .def_readwrite("librariesInheritMacros", &SourceOptions::librariesInheritMacros);
 
-    py::classh<SourceLoader> sourceLoader(m, "SourceLoader");
+    py::classh<SourceLoader> sourceLoader(driver, "SourceLoader");
     sourceLoader.def(py::init<SourceManager&>(), "sourceManager"_a)
         .def("addFiles", &SourceLoader::addFiles, "pattern"_a)
         .def("addLibraryFiles", &SourceLoader::addLibraryFiles, "libraryName"_a, "pattern"_a)
@@ -279,7 +279,7 @@ void registerCompilation(py::module_& m) {
         using SystemSubroutine::unevaluatedContext;
     };
 
-    py::classh<SystemSubroutine, PySystemSubroutine> systemSub(m, "SystemSubroutine");
+    py::classh<SystemSubroutine, PySystemSubroutine> systemSub(ast, "SystemSubroutine");
     systemSub.def(py::init_alias<const std::string&, SubroutineKind>(), "name"_a, "kind"_a)
         .def_readwrite("name", &SystemSubroutine::name)
         .def_readwrite("kind", &SystemSubroutine::kind)
@@ -326,13 +326,13 @@ void registerCompilation(py::module_& m) {
     };
 
     py::classh<SimpleSystemSubroutine, SystemSubroutine, PySimpleSystemSubroutine>(
-        m, "SimpleSystemSubroutine")
+        ast, "SimpleSystemSubroutine")
         .def(py::init_alias<const std::string&, SubroutineKind, size_t,
                             const std::vector<const Type*>&, const Type&, bool, bool>(),
              "name"_a, "kind"_a, "requiredArgs"_a, "argTypes"_a, "returnType"_a, "isMethod"_a,
              "isFirstArgLValue"_a = false);
 
-    py::classh<NonConstantFunction, SimpleSystemSubroutine>(m, "NonConstantFunction")
+    py::classh<NonConstantFunction, SimpleSystemSubroutine>(ast, "NonConstantFunction")
         .def(py::init<const std::string&, const Type&, size_t, const std::vector<const Type*>&,
                       bool>(),
              "name"_a, "returnType"_a, "requiredArgs"_a = 0,

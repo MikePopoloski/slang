@@ -36,9 +36,9 @@ add_custom_command(
   DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
   COMMENT "Generating syntax bindings")
 
-# Add the _pyslang module via pybind11
+# Add the pyslang module via pybind11
 pybind11_add_module(
-  _pyslang
+  pyslang
   MODULE
   python/AnalysisBindings.cpp
   python/ASTBindings.cpp
@@ -58,23 +58,19 @@ pybind11_add_module(
 set_source_files_properties(
   python/pyslang.cpp PROPERTIES COMPILE_DEFINITIONS
                                 VERSION_INFO=${PROJECT_VERSION})
-target_link_libraries(_pyslang PUBLIC slang::slang)
-target_include_directories(_pyslang PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/python)
+target_link_libraries(pyslang PUBLIC slang::slang)
+target_include_directories(pyslang PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/python)
 
 install(
-  TARGETS _pyslang
+  TARGETS pyslang
   COMPONENT pylib
-  DESTINATION pyslang)
+  DESTINATION .)
 
-# Install pyslang Python package with submodules
+# Install py.typed marker file for PEP 561 compliance
 install(
-  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../pyslang/pyslang/
+  FILES ${CMAKE_CURRENT_SOURCE_DIR}/../pyslang/pyslang/py.typed
   COMPONENT pylib
-  DESTINATION pyslang
-  FILES_MATCHING
-  PATTERN "*.py"
-  PATTERN "py.typed"
-  PATTERN "__pycache__" EXCLUDE)
+  DESTINATION .)
 
 # Generate Python stubs as a post-install step
 install(
