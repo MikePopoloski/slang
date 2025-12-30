@@ -96,6 +96,66 @@ public:
 
     SyntaxFactory& getFactory() { return factory; }
 
+    BumpAllocator& getAllocator() { return alloc; }
+
+    Token py_makeToken(TokenKind kind, std::string_view text, std::span<const Trivia> trivia = {}) {
+        return this->makeToken(kind, text, trivia);
+    }
+
+    Token py_makeId(std::string_view text, std::span<const Trivia> trivia = {}) {
+        return this->makeId(text, trivia);
+    }
+
+    Token py_makeComma() { return this->makeComma(); }
+
+    SyntaxNode* py_clone(const SyntaxNode& node) {
+        return slang::syntax::clone(node, this->alloc);
+    }
+
+    SyntaxNode* py_deepClone(const SyntaxNode& node) {
+        return slang::syntax::deepClone(node, this->alloc);
+    }
+
+    template<typename T>
+    SyntaxList<T>& py_makeSyntaxList(py::list items) {
+        SmallVector<T*> buffer;
+        for (auto item : items) {
+            buffer.push_back(&cloneNode(item.cast<T&>()));
+        }
+        return *alloc.emplace<SyntaxList<T>>(buffer.copy(alloc));
+    }
+
+    SyntaxList<SyntaxNode>& py_makeSyntaxListGeneric(py::list items) {
+        return py_makeSyntaxList<SyntaxNode>(items);
+    }
+
+    template<typename T>
+    SeparatedSyntaxList<T>& py_makeSeparatedSyntaxList(py::list items) {
+        SmallVector<TokenOrSyntax> buffer;
+        for (size_t i = 0; i < py::len(items); i++) {
+            auto item = items[i];
+            if (py::isinstance<Token>(item)) {
+                buffer.push_back(item.cast<Token>());
+            }
+            else {
+                buffer.push_back(&cloneNode(item.cast<SyntaxNode&>()));
+            }
+        }
+        return *alloc.emplace<SeparatedSyntaxList<T>>(buffer.copy(alloc));
+    }
+
+    SeparatedSyntaxList<SyntaxNode>& py_makeSeparatedSyntaxListGeneric(py::list items) {
+        return py_makeSeparatedSyntaxList<SyntaxNode>(items);
+    }
+
+    TokenList& py_makeTokenList(py::list items) {
+        SmallVector<Token> buffer;
+        for (auto item : items) {
+            buffer.push_back(item.cast<Token>());
+        }
+        return *alloc.emplace<TokenList>(buffer.copy(alloc));
+    }
+
 private:
     pybind11::function handler;
 
@@ -463,7 +523,47 @@ void registerSyntax(py::module_& m) {
              py::arg("newNode"), py::arg("separator") = Token())
         .def("insert_at_back", &PySyntaxRewriter::py_insertAtBack, py::arg("list"),
              py::arg("newNode"), py::arg("separator") = Token())
-        .def_property_readonly("factory", &PySyntaxRewriter::getFactory);
+        .def_property_readonly("factory", &PySyntaxRewriter::getFactory,
+             py::return_value_policy::reference_internal,
+             "Get the SyntaxFactory for creating new syntax nodes")
+        .def_property_readonly("alloc", &PySyntaxRewriter::getAllocator,
+             py::return_value_policy::reference_internal,
+             "Get the allocator for creating tokens and trivia")
+        .def("make_token", &PySyntaxRewriter::py_makeToken,
+             py::arg("kind"), py::arg("text"), py::arg("trivia") = std::span<const Trivia>{},
+             "Create a new token with the given kind and text")
+        .def("make_id", &PySyntaxRewriter::py_makeId,
+             py::arg("text"), py::arg("trivia") = std::span<const Trivia>{},
+             "Create an identifier token")
+        .def("make_comma", &PySyntaxRewriter::py_makeComma,
+             "Create a comma token")
+        .def("clone", &PySyntaxRewriter::py_clone, byrefint,
+             py::arg("node"),
+             "Create a shallow clone of the given syntax node")
+        .def("deep_clone", &PySyntaxRewriter::py_deepClone, byrefint,
+             py::arg("node"),
+             "Create a deep clone of the given syntax node and all its children")
+        .def("make_list", &PySyntaxRewriter::py_makeSyntaxListGeneric, byrefint,
+             py::arg("items"),
+             "Create a SyntaxList from a list of syntax nodes")
+        .def("make_separated_list", &PySyntaxRewriter::py_makeSeparatedSyntaxListGeneric, byrefint,
+             py::arg("items"),
+             "Create a SeparatedSyntaxList from a list of syntax nodes and separator tokens")
+        .def("make_token_list", &PySyntaxRewriter::py_makeTokenList, byrefint,
+             py::arg("items"),
+             "Create a TokenList from a list of tokens");
 
     m.def("rewrite", &pySyntaxRewrite, py::arg("tree"), py::arg("handler"));
+
+    m.def("clone", [](const SyntaxNode& node, BumpAllocator& alloc) {
+        return slang::syntax::clone(node, alloc);
+    }, byrefint, py::keep_alive<0, 2>(),
+       py::arg("node"), py::arg("alloc"),
+       "Create a shallow clone of the given syntax node");
+
+    m.def("deep_clone", [](const SyntaxNode& node, BumpAllocator& alloc) {
+        return slang::syntax::deepClone(node, alloc);
+    }, byrefint, py::keep_alive<0, 2>(),
+       py::arg("node"), py::arg("alloc"),
+       "Create a deep clone of the given syntax node and all its children");
 }

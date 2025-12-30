@@ -218,6 +218,123 @@ public:
     explicit operator bitmask<type>() { return cast_op<type>(subcaster); }
 };
 
+// SyntaxList<T> type caster which accepts any SyntaxListBase with SyntaxKind::SyntaxList.,
+// allowing make_list() results to be passed to factory methods expecting typed lists.
+// remains safe because std::span<T*>'s and SyntaxListBase's inheritance to SyntaxList<t> 
+// makes it fixed size, since std::span<T*> only stores {pointer, size}, and all pointers are the same size,
+// and the template parameter T only affects the type of dereferenced elements, not layout,
+// hence all SyntaxList<T> instantiations have identical memory layout.
+template<typename T>
+struct type_caster<SyntaxList<T>,
+                   enable_if_t<!std::is_same_v<T, SyntaxNode>>> {
+private:
+    SyntaxList<T>* ptr = nullptr;
+    static_assert(sizeof(SyntaxList<T>) == sizeof(SyntaxList<SyntaxNode>),
+                  "SyntaxList<T> layout must be identical for all T");
+    static_assert(alignof(SyntaxList<T>) == alignof(SyntaxList<SyntaxNode>),
+                  "SyntaxList<T> alignment must be identical for all T");
+
+                  public:
+    static constexpr auto name = const_name("SyntaxList");
+
+    bool load(handle src, bool) {
+        type_caster<SyntaxNode> node_caster;
+        if (!node_caster.load(src, false))
+            return false;
+
+        SyntaxNode* node = static_cast<SyntaxNode*>(node_caster);
+        if (!node || node->kind != SyntaxKind::SyntaxList)
+            return false;
+
+        // SyntaxNode* -static-> SyntaxListBase* and then SyntaxListBase* -reinterpret-> SyntaxList<T>*
+        auto* listBase = static_cast<SyntaxListBase*>(node);
+        // this is an intentional reinterpret_cast as layout verified by static_assert above
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreinterpret-base-class"
+#endif
+        ptr = reinterpret_cast<SyntaxList<T>*>(listBase);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+        return true;
+    }
+
+    static handle cast(const SyntaxList<T>& src, return_value_policy policy, handle parent) {
+        return type_caster<SyntaxNode>::cast(static_cast<const SyntaxNode&>(src), policy, parent);
+    }
+
+    static handle cast(const SyntaxList<T>* src, return_value_policy policy, handle parent) {
+        if (!src)
+            return none().release();
+        return cast(*src, policy, parent);
+    }
+
+    operator SyntaxList<T>*() { return ptr; }
+    operator SyntaxList<T>&() {
+        if (!ptr)
+            throw std::runtime_error("SyntaxList type cast failed: null pointer");
+        return *ptr;
+    }
+    template<typename T_>
+    using cast_op_type = pybind11::detail::cast_op_type<T_>;
+};
+
+template<typename T>
+struct type_caster<SeparatedSyntaxList<T>,
+                   enable_if_t<!std::is_same_v<T, SyntaxNode>>> {
+private:
+    SeparatedSyntaxList<T>* ptr = nullptr;
+    static_assert(sizeof(SeparatedSyntaxList<T>) == sizeof(SeparatedSyntaxList<SyntaxNode>),
+                  "SeparatedSyntaxList<T> layout must be identical for all T");
+    static_assert(alignof(SeparatedSyntaxList<T>) == alignof(SeparatedSyntaxList<SyntaxNode>),
+                  "SeparatedSyntaxList<T> alignment must be identical for all T");
+
+public:
+    static constexpr auto name = const_name("SeparatedSyntaxList");
+
+    bool load(handle src, bool) {
+        type_caster<SyntaxNode> node_caster;
+        if (!node_caster.load(src, false))
+            return false;
+
+        SyntaxNode* node = static_cast<SyntaxNode*>(node_caster);
+        if (!node || node->kind != SyntaxKind::SeparatedList)
+            return false;
+        auto* listBase = static_cast<SyntaxListBase*>(node);
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreinterpret-base-class"
+#endif
+        ptr = reinterpret_cast<SeparatedSyntaxList<T>*>(listBase);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+        return true;
+    }
+
+    static handle cast(const SeparatedSyntaxList<T>& src, return_value_policy policy,
+                       handle parent) {
+        return type_caster<SyntaxNode>::cast(static_cast<const SyntaxNode&>(src), policy, parent);
+    }
+
+    static handle cast(const SeparatedSyntaxList<T>* src, return_value_policy policy,
+                       handle parent) {
+        if (!src)
+            return none().release();
+        return cast(*src, policy, parent);
+    }
+
+    operator SeparatedSyntaxList<T>*() { return ptr; }
+    operator SeparatedSyntaxList<T>&() {
+        if (!ptr)
+            throw std::runtime_error("SeparatedSyntaxList type cast failed: null pointer");
+        return *ptr;
+    }
+    template<typename T_>
+    using cast_op_type = pybind11::detail::cast_op_type<T_>;
+};
+
 } // namespace detail
 
 template<typename T>
