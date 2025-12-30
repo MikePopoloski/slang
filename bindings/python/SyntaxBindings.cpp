@@ -9,6 +9,7 @@
 #include <cstring>
 
 #include "slang/parsing/Lexer.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/CSTSerializer.h"
@@ -106,6 +107,16 @@ public:
         std::string_view persistentText(textCopy, text.size());
         auto persistentTrivia = alloc.copyFrom(trivia);
         return this->makeToken(kind, persistentText, persistentTrivia);
+    }
+
+    Token py_makeTokenFromKind(TokenKind kind, std::span<const Trivia> trivia = {}) {
+        auto text = LexerFacts::getTokenKindText(kind);
+        if (text.empty()) {
+            throw std::invalid_argument(
+                "TokenKind requires explicit text (use make_token(kind, text) instead)");
+        }
+        auto persistentTrivia = alloc.copyFrom(trivia);
+        return this->makeToken(kind, text, persistentTrivia);
     }
 
     Token py_makeId(std::string_view text, std::span<const Trivia> trivia = {}) {
@@ -548,6 +559,9 @@ void registerSyntax(py::module_& m) {
         .def("make_token", &PySyntaxRewriter::py_makeToken,
              py::arg("kind"), py::arg("text"), py::arg("trivia") = std::span<const Trivia>{},
              "Create a new token with the given kind and text")
+        .def("make_token", &PySyntaxRewriter::py_makeTokenFromKind,
+             py::arg("kind"), py::arg("trivia") = std::span<const Trivia>{},
+             "Create a token with text inferred from kind (for keywords/punctuation)")
         .def("make_id", &PySyntaxRewriter::py_makeId,
              py::arg("text"), py::arg("trivia") = std::span<const Trivia>{},
              "Create an identifier token")
