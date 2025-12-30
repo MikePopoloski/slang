@@ -309,9 +309,9 @@ public:
     /// resolved and all symbols have been created. This is distinct from being finalized,
     /// which only means that the design has been parsed and syntax trees have been added.
     ///
-    /// This is only set once getAllDiagnostics() is called, after which point the compilation
+    /// This is only set once getSemanticDiagnostics() is called, after which point the compilation
     /// is functionally immutable.
-    bool isElaborated() const { return cachedAllDiagnostics.has_value(); }
+    bool isElaborated() const { return cachedSemanticDiagnostics.has_value(); }
 
     /// Gets the diagnostics produced during lexing, preprocessing, and syntax parsing.
     const Diagnostics& getParseDiagnostics();
