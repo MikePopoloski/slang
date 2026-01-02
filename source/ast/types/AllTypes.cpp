@@ -249,6 +249,10 @@ ConstantValue FloatingType::getDefaultValueImpl() const {
     return real_t(0.0);
 }
 
+void ScalarType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("isSigned", isSigned);
+}
+
 EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType_,
                    const ASTContext& context) :
     IntegralType(SymbolKind::EnumType, "", loc, baseType_.getBitWidth(), baseType_.isSigned(),
