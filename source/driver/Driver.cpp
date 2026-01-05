@@ -1099,6 +1099,24 @@ void Driver::addCompilationOptions(Bag& bag) const {
     bag.set(coptions);
 }
 
+analysis::AnalysisOptions Driver::getAnalysisOptions() const {
+    using namespace slang::analysis;
+
+    AnalysisOptions ao;
+    ao.numThreads = options.numThreads.value_or(0);
+    ao.flags |= AnalysisFlags::CheckUnused;
+    if (options.maxCaseAnalysisSteps)
+        ao.maxCaseAnalysisSteps = *options.maxCaseAnalysisSteps;
+    if (options.maxLoopAnalysisSteps)
+        ao.maxLoopAnalysisSteps = *options.maxLoopAnalysisSteps;
+
+    for (auto& [flag, value] : options.analysisFlags) {
+        if (value == true)
+            ao.flags |= flag;
+    }
+    return ao;
+}
+
 std::unique_ptr<Compilation> Driver::createCompilation() {
     SourceLibrary* defaultLib;
     if (options.defaultLibName && !options.defaultLibName->empty())
@@ -1149,25 +1167,11 @@ void Driver::reportCompilation(Compilation& compilation, bool quiet) {
 }
 
 std::unique_ptr<AnalysisManager> Driver::runAnalysis(ast::Compilation& compilation) {
-    using namespace slang::analysis;
 
     compilation.getAllDiagnostics();
     compilation.freeze();
 
-    AnalysisOptions ao;
-    ao.numThreads = options.numThreads.value_or(0);
-    ao.flags |= AnalysisFlags::CheckUnused;
-    if (options.maxCaseAnalysisSteps)
-        ao.maxCaseAnalysisSteps = *options.maxCaseAnalysisSteps;
-    if (options.maxLoopAnalysisSteps)
-        ao.maxLoopAnalysisSteps = *options.maxLoopAnalysisSteps;
-
-    for (auto& [flag, value] : options.analysisFlags) {
-        if (value == true)
-            ao.flags |= flag;
-    }
-
-    auto analysisManager = std::make_unique<AnalysisManager>(ao);
+    auto analysisManager = std::make_unique<analysis::AnalysisManager>(getAnalysisOptions());
 
     // We can't / shouldn't run analysis in lint-only mode.
     // We'll just return an empty analysis manager in that case.
