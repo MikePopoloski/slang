@@ -133,6 +133,31 @@ struct CSTJsonVisitor {
         writeChildren(separatedList);
     }
 
+    void writeTrivia(parsing::Trivia trivia) {
+        writer.startObject();
+        writer.writeProperty("kind");
+        writer.writeValue(toString(trivia.kind));
+        switch (trivia.kind) {
+            case parsing::TriviaKind::Directive:
+            case parsing::TriviaKind::SkippedSyntax: {
+                writer.writeProperty("syntax");
+                trivia.syntax()->visit(*this);
+            } break;
+            case parsing::TriviaKind::SkippedTokens: {
+                writer.writeProperty("tokens");
+                writer.startArray();
+                for (auto token : trivia.getSkippedTokens())
+                    writeTokenValue(token);
+                writer.endArray();
+            } break;
+            default: {
+                writer.writeProperty("text");
+                writer.writeValue(trivia.getRawText());
+            } break;
+        }
+        writer.endObject();
+    }
+
     void writeTokenValue(parsing::Token token) {
         // If simple-tokens mode, just write the text value
         if (mode == CSTJsonMode::SimpleTokens) {
@@ -161,12 +186,7 @@ struct CSTJsonVisitor {
                 // Write trivia kind and value
                 writer.startArray();
                 for (auto trivia : token.trivia()) {
-                    writer.startObject();
-                    writer.writeProperty("kind");
-                    writer.writeValue(toString(trivia.kind));
-                    writer.writeProperty("text");
-                    writer.writeValue(trivia.getRawText());
-                    writer.endObject();
+                    writeTrivia(trivia);
                 }
                 writer.endArray();
             }
