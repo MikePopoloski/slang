@@ -881,7 +881,7 @@ private:
     };
 
     // Map from syntax nodes to parse-time metadata about them.
-    flat_hash_map<const syntax::SyntaxNode*, SyntaxMetadata> syntaxMetadata;
+    flat_hash_map<const syntax::ModuleDeclarationSyntax*, SyntaxMetadata> syntaxMetadata;
 
     // A list of all created definitions, as storage for their memory.
     std::vector<std::unique_ptr<DefinitionSymbol>> definitionMemory;
