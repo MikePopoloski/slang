@@ -172,8 +172,7 @@ std::vector<std::string_view> ParserMetadata::getDeclaredSymbols() const {
 }
 
 void ParserMetadata::visitDeclaredSymbols(function_ref<void(std::string_view)> func) const {
-    for (auto& [n, _] : nodeMeta) {
-        auto decl = &n->as<ModuleDeclarationSyntax>();
+    for (auto& [decl, _] : nodeMeta) {
         std::string_view name = decl->header->name.valueText();
         if (!name.empty())
             func(name);
