@@ -199,6 +199,7 @@ void registerCompilation(py::module_& m) {
         .def("processCommandFiles", &Driver::processCommandFiles, "fileName"_a, "makeRelative"_a,
              "separateUnit"_a)
         .def("processOptions", &Driver::processOptions)
+        .def("getAnalysisOptions", &Driver::getAnalysisOptions)
         .def("runPreprocessor", &Driver::runPreprocessor, "includeComments"_a,
              "includeDirectives"_a, "obfuscateIds"_a, "useFixedObfuscationSeed"_a = false)
         .def("reportMacros", &Driver::reportMacros)
