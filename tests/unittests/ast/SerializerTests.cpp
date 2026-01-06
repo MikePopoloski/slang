@@ -825,7 +825,8 @@ typedef enum logic [1:0] {
                   "kind": "PackedArrayType",
                   "elementType": {
                     "name": "logic",
-                    "kind": "ScalarType"
+                    "kind": "ScalarType",
+                    "isSigned": false
                   },
                   "range": "[31:0]"
                 },
@@ -863,7 +864,8 @@ typedef enum logic [1:0] {
                           "kind": "PackedArrayType",
                           "elementType": {
                             "name": "logic",
-                            "kind": "ScalarType"
+                            "kind": "ScalarType",
+                            "isSigned": false
                           },
                           "range": "[31:0]"
                         },
@@ -885,7 +887,8 @@ typedef enum logic [1:0] {
                 "kind": "Field",
                 "type": {
                   "name": "logic",
-                  "kind": "ScalarType"
+                  "kind": "ScalarType",
+                  "isSigned": false
                 },
                 "lifetime": "Automatic",
                 "bitOffset": 0,
@@ -911,7 +914,8 @@ typedef enum logic [1:0] {
                     "kind": "PackedArrayType",
                     "elementType": {
                       "name": "logic",
-                      "kind": "ScalarType"
+                      "kind": "ScalarType",
+                      "isSigned": false
                     },
                     "range": "[1:0]"
                   },
@@ -922,7 +926,8 @@ typedef enum logic [1:0] {
                       "kind": "PackedArrayType",
                       "elementType": {
                         "name": "bit",
-                        "kind": "ScalarType"
+                        "kind": "ScalarType",
+                        "isSigned": false
                       },
                       "range": "[1:0]"
                     },
@@ -943,7 +948,8 @@ typedef enum logic [1:0] {
                     "kind": "PackedArrayType",
                     "elementType": {
                       "name": "logic",
-                      "kind": "ScalarType"
+                      "kind": "ScalarType",
+                      "isSigned": false
                     },
                     "range": "[1:0]"
                   },
@@ -954,7 +960,8 @@ typedef enum logic [1:0] {
                       "kind": "PackedArrayType",
                       "elementType": {
                         "name": "bit",
-                        "kind": "ScalarType"
+                        "kind": "ScalarType",
+                        "isSigned": false
                       },
                       "range": "[1:0]"
                     },
@@ -975,7 +982,8 @@ typedef enum logic [1:0] {
                     "kind": "PackedArrayType",
                     "elementType": {
                       "name": "logic",
-                      "kind": "ScalarType"
+                      "kind": "ScalarType",
+                      "isSigned": false
                     },
                     "range": "[1:0]"
                   },
@@ -986,7 +994,8 @@ typedef enum logic [1:0] {
                       "kind": "PackedArrayType",
                       "elementType": {
                         "name": "bit",
-                        "kind": "ScalarType"
+                        "kind": "ScalarType",
+                        "isSigned": false
                       },
                       "range": "[1:0]"
                     },
@@ -1007,7 +1016,8 @@ typedef enum logic [1:0] {
                     "kind": "PackedArrayType",
                     "elementType": {
                       "name": "logic",
-                      "kind": "ScalarType"
+                      "kind": "ScalarType",
+                      "isSigned": false
                     },
                     "range": "[1:0]"
                   },
@@ -1018,7 +1028,8 @@ typedef enum logic [1:0] {
                       "kind": "PackedArrayType",
                       "elementType": {
                         "name": "bit",
-                        "kind": "ScalarType"
+                        "kind": "ScalarType",
+                        "isSigned": false
                       },
                       "range": "[1:0]"
                     },
@@ -1035,7 +1046,8 @@ typedef enum logic [1:0] {
               "kind": "PackedArrayType",
               "elementType": {
                 "name": "logic",
-                "kind": "ScalarType"
+                "kind": "ScalarType",
+                "isSigned": false
               },
               "range": "[1:0]"
             }
