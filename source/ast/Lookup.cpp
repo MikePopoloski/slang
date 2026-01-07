@@ -61,6 +61,9 @@ bool LookupResult::hasError() const {
         return true;
 
     for (auto& diag : diagnostics) {
+        if (diag.code == diag::UsedBeforeDeclared)
+            return true;
+
         if (diag.isError())
             return true;
     }
@@ -1767,6 +1770,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
     // Try a simple name lookup to see if we find anything.
     auto& nameMap = scope.getNameMap();
     const Symbol* symbol = nullptr;
+    bool reportDeclaredAfter = false;
     if (auto it = nameMap.find(name); it != nameMap.end()) {
         // If the lookup is for a local name, check that we can access the symbol (it must be
         // declared before use). Callables and block names can be referenced anywhere in the
@@ -1828,11 +1832,14 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                     break;
                 case SymbolKind::Parameter:
                 case SymbolKind::Specparam:
-                case SymbolKind::EnumValue:
-                    // Constants can never be looked up before their declaration,
-                    // to avoid problems with recursive constant evaluation.
-                    flags &= ~LookupFlags::AllowDeclaredAfter;
+                case SymbolKind::Port:
+                case SymbolKind::Net:
+                case SymbolKind::Variable: {
+                    // It is needed to defer reporting of use before declared
+                    // because of wildcard import and class scope later resolving.
+                    reportDeclaredAfter = true;
                     break;
+                }
                 default:
                     break;
             }
@@ -1917,6 +1924,14 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                     else {
                         result.found = symbol;
                     }
+                    break;
+                case SymbolKind::Parameter:
+                case SymbolKind::Specparam:
+                case SymbolKind::EnumValue:
+                    // If location doesn't match for constant then try to search
+                    // in outer scopes to find a better match.
+                    result.found = symbol;
+                    done = locationGood;
                     break;
                 default:
                     result.found = symbol;
@@ -2076,8 +2091,28 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         return;
     }
 
-    return unqualifiedImpl(*location.getScope(), name, location, sourceRange, flags,
-                           outOfBlockIndex, result, originalScope, originalSyntax);
+    unqualifiedImpl(*location.getScope(), name, location, sourceRange, flags, outOfBlockIndex,
+                    result, originalScope, originalSyntax);
+    if (reportDeclaredAfter && !result.found) {
+        auto isViable = [&originalScope](const Symbol* s) {
+            return !(VariableSymbol::isKind(s->kind) &&
+                     s->as<VariableSymbol>().flags.has(VariableFlags::CompilerGenerated)) &&
+                   isVisibleFrom(*s, originalScope);
+        };
+        if (isViable(symbol) && sourceRange && !flags.has(LookupFlags::AllowDeclaredAfter)) {
+            auto& diag = result.addDiag(originalScope, diag::UsedBeforeDeclared, *sourceRange);
+            diag << name;
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
+
+            result.found = symbol;
+            auto declaredType = result.found->getDeclaredType();
+            if (declaredType && declaredType->isEvaluating()) {
+                reportRecursiveError(*result.found);
+                return;
+            }
+        }
+    }
+    return;
 }
 
 void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context,

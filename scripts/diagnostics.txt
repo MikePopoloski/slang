@@ -932,7 +932,6 @@ error ImportNameCollision "import of '{}' collides with an existing declaration"
 error UndeclaredIdentifier "use of undeclared identifier '{}'"
 error TypoIdentifier "use of undeclared identifier '{}'; did you mean '{}'?"
 error UnknownClassOrPackage "unknown class or package '{}'"
-error UsedBeforeDeclared "identifier '{}' used before its declaration"
 error NotAType "'{}' is not a type"
 error NotAValue "'{}' cannot be used in an expression"
 error NotAHierarchicalScope "cannot use dot operator on '{}'; it is not a variable or hierarchical scope"
@@ -991,6 +990,7 @@ error CompilationUnitFromPackage "cannot reference compilation unit item from wi
 error InvalidHierarchicalIfacePortConn "cannot connect interface port hierarchically through a generate block or instance array"
 error UnnamedGenerateReference "cannot reference unnamed generate block via external name '{}' (use --allow-genblk-reference to allow this)"
 warning unknown-sys-name UnknownSystemName "unknown system name '{}'"
+warning used-before-declared UsedBeforeDeclared "identifier '{}' used before its declaration"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 warning duplicate-definition DuplicateDefinition "duplicate definition of '{}'"
 
@@ -1228,7 +1228,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
                   split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
                   dup-config-rule unused-config-cell unused-config-instance specify-condition-expr
-                  seq-no-match case-too-complex nested-solve-before dynamic-non-procedural }
+                  seq-no-match case-too-complex nested-solve-before dynamic-non-procedural used-before-declared }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

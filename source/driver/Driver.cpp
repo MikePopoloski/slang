@@ -558,7 +558,7 @@ bool Driver::processOptions() {
             compFlags = vcsCompFlags;
             analysisFlags = vcsAnalysisFlags;
         }
-        else {
+        else if (options.compat != CompatMode::Vivado && options.compat != CompatMode::Yosys) {
             compFlags = allCompFlags;
             analysisFlags = allAnalysisFlags;
         }
@@ -668,6 +668,10 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::BadProceduralForce, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
     }
+
+    if (options.compat != CompatMode::Vivado && options.compat != CompatMode::Yosys &&
+        options.compat != CompatMode::All)
+        diagEngine.setSeverity(diag::UsedBeforeDeclared, DiagnosticSeverity::Error);
 
     if (options.compat == CompatMode::Vcs || options.compat == CompatMode::All) {
         diagEngine.setSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);
