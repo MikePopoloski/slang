@@ -1826,12 +1826,20 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                     // Sequences and properties can always be referenced before declaration.
                     locationGood = true;
                     break;
+                // If we find a constant (param, specparam, enum) that's currently evaluating
+                // we won't allow looking it up before decl because otherwise it could find
+                // itself in its own initializer.
                 case SymbolKind::Parameter:
+                    if (symbol->as<ParameterSymbol>().isEvaluating())
+                        flags &= ~LookupFlags::AllowDeclaredAfter;
+                    break;
                 case SymbolKind::Specparam:
+                    if (symbol->as<SpecparamSymbol>().isEvaluating())
+                        flags &= ~LookupFlags::AllowDeclaredAfter;
+                    break;
                 case SymbolKind::EnumValue:
-                    // Constants can never be looked up before their declaration,
-                    // to avoid problems with recursive constant evaluation.
-                    flags &= ~LookupFlags::AllowDeclaredAfter;
+                    if (symbol->as<EnumValueSymbol>().isEvaluating())
+                        flags &= ~LookupFlags::AllowDeclaredAfter;
                     break;
                 default:
                     break;

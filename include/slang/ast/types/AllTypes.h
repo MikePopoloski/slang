@@ -143,6 +143,8 @@ public:
     /// Sets the value of the enum member.
     void setValue(ConstantValue value);
 
+    bool isEvaluating() const { return evaluating; }
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static EnumValueSymbol& fromSyntax(Compilation& compilation,

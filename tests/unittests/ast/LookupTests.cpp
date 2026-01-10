@@ -2591,3 +2591,47 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::RecursiveDefinition);
 }
+
+TEST_CASE("Used-before-declared flag with parameters") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(
+  input wire clk,
+  output wire [WIDTH-1:0] rd, // use before declaration
+  input wire we,
+  input wire [1:0] delta,
+  input wire [WIDTH-1:0] wd // use before declaration
+);
+
+  parameter DEPTH = 16;
+  parameter WIDTH = 16;
+  localparam BITS = (WIDTH * DEPTH) - 1;
+endmodule
+
+module DFFRAM_4K
+(
+    CLK,
+    WE,
+    EN,
+    Di,
+    Do,
+    A
+);
+    input           CLK;
+    input   [3:0]   WE;
+    input           EN;
+    input   [31:0]  Di;
+    output  [31:0]  Do;
+    input   [7+$clog2(COLS):0]   A;
+
+    //WBD
+    localparam COLS=4;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowUseBeforeDeclare;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
