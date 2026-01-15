@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+### Notable Breaking Changes
+### New Features
+### Improvements
+### Fixes
+### Tools & Bindings
+
+
+## [v10.0] - 2026-01-15
+### Language Support
 * Implemented all of the rules related to assertion local variable definite assignment flow. slang will now diagnose use of assertion locals before they have been assigned, according to the rules in the LRM.
 * Explicit package export directives now correctly require a corresponding import (wildcard or explicit)
 * Non-variable and non-output ANSI port declarations are now correctly prevented from specifying an initializer expression
