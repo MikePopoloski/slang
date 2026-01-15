@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Made several tweaks to slightly improve defparam and bind evaluation performance
 * The AST for multi-ports has been reworked to represent each sub port connection expression separately
 * Selection of elements of dynamic types is now a downgradeable warning (`-Wdynamic-non-procedural`) for compatibility with other tools
+* AST JSON serialization for scalar types now contains an isSigned field (thanks to @dinoruic)
 
 ### Fixes
 * Unnamed covergroup types now print with a placeholder name in diagnostics and AST dumping instead of just an empty string
@@ -79,6 +80,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed ICE involving analysis of hierarchical calls to subroutines inside cached instance symbols
 * Fixed handling of file patterns starting with recursive wildcards -- they were canonicalized incorrectly on some platforms
 * Fixed infinite loop caused by recursive typedef references across packages
+* Fixed --allow-use-before-declare to also apply for references to parameters
+* Fixed a crash when querying bitstream width of classes containing properties with unpacked arrays of their containing class type
 
 
 ### Tools & Bindings
