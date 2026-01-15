@@ -3562,3 +3562,19 @@ class G#(G#(,)b,b
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Class cycles with arrays regress -- GH #1639") {
+    auto tree = SyntaxTree::fromText(R"(
+class uvm_domain;
+  uvm_domain m_domains[string];
+  function uvm_domain get_common_domain();
+    uvm_domain domain;
+    return m_domains[domain];
+  endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}

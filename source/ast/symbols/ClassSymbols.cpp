@@ -865,6 +865,32 @@ void ClassType::computeSize() const {
         cachedBitstreamWidth = totalWidth;
 }
 
+static bool typeHasCycles(const Type& type) {
+    auto& ct = type.getCanonicalType();
+    if (ct.isUnpackedArray()) {
+        return typeHasCycles(*ct.getArrayElementType());
+    }
+    else if (ct.isUnpackedStruct()) {
+        auto& us = ct.as<UnpackedStructType>();
+        for (auto field : us.fields) {
+            if (typeHasCycles(field->getType()))
+                return true;
+        }
+    }
+    else if (ct.isUnpackedUnion()) {
+        auto& us = ct.as<UnpackedUnionType>();
+        for (auto field : us.fields) {
+            if (typeHasCycles(field->getType()))
+                return true;
+        }
+    }
+    else if (ct.isClass()) {
+        return ct.as<ClassType>().hasCycles();
+    }
+
+    return false;
+}
+
 void ClassType::computeCycles() const {
     // Start out by setting hasCycles to true, so that if we call into
     // hasCycles() in a re-entrant fashion we'll see this result right away.
@@ -872,8 +898,7 @@ void ClassType::computeCycles() const {
     cachedHasCycles = true;
 
     for (auto& prop : membersOfType<ClassPropertySymbol>()) {
-        auto& propType = prop.getType().getCanonicalType();
-        if (propType.isClass() && propType.as<ClassType>().hasCycles())
+        if (typeHasCycles(prop.getType()))
             return;
     }
 
