@@ -218,12 +218,6 @@ public:
     explicit operator bitmask<type>() { return cast_op<type>(subcaster); }
 };
 
-// SyntaxList<T> type caster which accepts any SyntaxListBase with SyntaxKind::SyntaxList.,
-// allowing make_list() results to be passed to factory methods expecting typed lists.
-// remains safe because std::span<T*>'s and SyntaxListBase's inheritance to SyntaxList<t>
-// makes it fixed size, since std::span<T*> only stores {pointer, size}, and all pointers are the
-// same size, and the template parameter T only affects the type of dereferenced elements, not
-// layout, hence all SyntaxList<T> instantiations have identical memory layout.
 template<typename T>
 struct type_caster<SyntaxList<T>, enable_if_t<!std::is_same_v<T, SyntaxNode>>> {
 private:
@@ -245,18 +239,8 @@ public:
         if (!node || node->kind != SyntaxKind::SyntaxList)
             return false;
 
-        // SyntaxNode* -static-> SyntaxListBase* and then SyntaxListBase* -reinterpret->
-        // SyntaxList<T>*
         auto* listBase = static_cast<SyntaxListBase*>(node);
-        // this is an intentional reinterpret_cast as layout verified by static_assert above
-#if defined(__clang__)
-#    pragma clang diagnostic push
-#    pragma clang diagnostic ignored "-Wreinterpret-base-class"
-#endif
-        ptr = reinterpret_cast<SyntaxList<T>*>(listBase);
-#if defined(__clang__)
-#    pragma clang diagnostic pop
-#endif
+        ptr = static_cast<SyntaxList<T>*>(listBase);
         return true;
     }
 
@@ -301,14 +285,7 @@ public:
         if (!node || node->kind != SyntaxKind::SeparatedList)
             return false;
         auto* listBase = static_cast<SyntaxListBase*>(node);
-#if defined(__clang__)
-#    pragma clang diagnostic push
-#    pragma clang diagnostic ignored "-Wreinterpret-base-class"
-#endif
-        ptr = reinterpret_cast<SeparatedSyntaxList<T>*>(listBase);
-#if defined(__clang__)
-#    pragma clang diagnostic pop
-#endif
+        ptr = static_cast<SeparatedSyntaxList<T>*>(listBase);
         return true;
     }
 
@@ -352,16 +329,7 @@ public:
             return false;
 
         auto* listBase = static_cast<SyntaxListBase*>(node);
-
-#if defined(__clang__)
-#    pragma clang diagnostic push
-#    pragma clang diagnostic ignored "-Wreinterpret-base-class"
-#endif
-        ptr = reinterpret_cast<TokenList*>(listBase);
-#if defined(__clang__)
-#    pragma clang diagnostic pop
-#endif
-
+        ptr = static_cast<TokenList*>(listBase);
         return true;
     }
 

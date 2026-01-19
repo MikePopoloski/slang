@@ -5,7 +5,6 @@
 //------------------------------------------------------------------------------
 #include "PyVisitors.h"
 #include "pyslang.h"
-#include <cstring>
 
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/LexerFacts.h"
@@ -18,6 +17,7 @@
 #include "slang/syntax/SyntaxVisitor.h"
 #include "slang/text/Json.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/String.h"
 
 namespace fs = std::filesystem;
 
@@ -101,37 +101,28 @@ public:
     BumpAllocator& getAllocator() { return alloc; }
 
     Token py_makeToken(TokenKind kind, std::string_view text, std::span<const Trivia> trivia = {}) {
-        char* textCopy = reinterpret_cast<char*>(alloc.allocate(text.size(), 1));
-        std::memcpy(textCopy, text.data(), text.size());
-        std::string_view persistentText(textCopy, text.size());
-        auto persistentTrivia = alloc.copyFrom(trivia);
-        return this->makeToken(kind, persistentText, persistentTrivia);
+        return this->makeToken(kind, toStringView(alloc.copyFrom(std::span(text))),
+                               alloc.copyFrom(trivia));
     }
 
     Token py_makeTokenFromKind(TokenKind kind, std::span<const Trivia> trivia = {}) {
         auto text = LexerFacts::getTokenKindText(kind);
         if (text.empty()) {
             throw std::invalid_argument(
-                "TokenKind requires explicit text (use make_token(kind, text) instead)");
+                "TokenKind requires explicit text (use makeToken(kind, text) instead)");
         }
         auto persistentTrivia = alloc.copyFrom(trivia);
         return this->makeToken(kind, text, persistentTrivia);
     }
 
     Token py_makeId(std::string_view text, std::span<const Trivia> trivia = {}) {
-        char* textCopy = reinterpret_cast<char*>(alloc.allocate(text.size(), 1));
-        std::memcpy(textCopy, text.data(), text.size());
-        std::string_view persistentText(textCopy, text.size());
-        auto persistentTrivia = alloc.copyFrom(trivia);
-        return this->makeId(persistentText, persistentTrivia);
+        return this->makeId(toStringView(alloc.copyFrom(std::span(text))), alloc.copyFrom(trivia));
     }
 
     Token py_makeComma() { return this->makeComma(); }
 
     Trivia py_makeTrivia(TriviaKind kind, std::string_view text) {
-        char* allocated = reinterpret_cast<char*>(alloc.allocate(text.size(), alignof(char)));
-        std::memcpy(allocated, text.data(), text.size());
-        return Trivia(kind, std::string_view(allocated, text.size()));
+        return Trivia(kind, toStringView(alloc.copyFrom(std::span(text))));
     }
 
     SyntaxNode* py_clone(const SyntaxNode& node) { return slang::syntax::clone(node, this->alloc); }
@@ -541,39 +532,37 @@ void registerSyntax(py::module_& m) {
         .def("remove", &PySyntaxRewriter::py_remove)
         .def("replace", &PySyntaxRewriter::py_replace, "oldNode"_a, "newNode"_a,
              "preserveTrivia"_a = false)
-        .def("insert_before", &PySyntaxRewriter::py_insertBefore)
-        .def("insert_after", &PySyntaxRewriter::py_insertAfter)
-        .def("insert_at_front", &PySyntaxRewriter::py_insertAtFront, py::arg("list"),
+        .def("insertBefore", &PySyntaxRewriter::py_insertBefore)
+        .def("insertAfter", &PySyntaxRewriter::py_insertAfter)
+        .def("insertAtFront", &PySyntaxRewriter::py_insertAtFront, py::arg("list"),
              py::arg("newNode"), py::arg("separator") = Token())
-        .def("insert_at_back", &PySyntaxRewriter::py_insertAtBack, py::arg("list"),
+        .def("insertAtBack", &PySyntaxRewriter::py_insertAtBack, py::arg("list"),
              py::arg("newNode"), py::arg("separator") = Token())
         .def_property_readonly("factory", &PySyntaxRewriter::getFactory,
-                               py::return_value_policy::reference_internal,
                                "Get the SyntaxFactory for creating new syntax nodes")
         .def_property_readonly("alloc", &PySyntaxRewriter::getAllocator,
-                               py::return_value_policy::reference_internal,
                                "Get the allocator for creating tokens and trivia")
-        .def("make_token", &PySyntaxRewriter::py_makeToken, py::arg("kind"), py::arg("text"),
+        .def("makeToken", &PySyntaxRewriter::py_makeToken, py::arg("kind"), py::arg("text"),
              py::arg("trivia") = std::span<const Trivia>{},
              "Create a new token with the given kind and text")
-        .def("make_token", &PySyntaxRewriter::py_makeTokenFromKind, py::arg("kind"),
+        .def("makeToken", &PySyntaxRewriter::py_makeTokenFromKind, py::arg("kind"),
              py::arg("trivia") = std::span<const Trivia>{},
              "Create a token with text inferred from kind (for keywords/punctuation)")
-        .def("make_id", &PySyntaxRewriter::py_makeId, py::arg("text"),
+        .def("makeId", &PySyntaxRewriter::py_makeId, py::arg("text"),
              py::arg("trivia") = std::span<const Trivia>{}, "Create an identifier token")
-        .def("make_comma", &PySyntaxRewriter::py_makeComma, "Create a comma token")
-        .def("make_trivia", &PySyntaxRewriter::py_makeTrivia, py::arg("kind"), py::arg("text"),
+        .def("makeComma", &PySyntaxRewriter::py_makeComma, "Create a comma token")
+        .def("makeTrivia", &PySyntaxRewriter::py_makeTrivia, py::arg("kind"), py::arg("text"),
              "Create a trivia with text allocated in the rewriter's allocator")
         .def("clone", &PySyntaxRewriter::py_clone, byrefint, py::arg("node"),
              "Create a shallow clone of the given syntax node")
-        .def("deep_clone", &PySyntaxRewriter::py_deepClone, byrefint, py::arg("node"),
+        .def("deepClone", &PySyntaxRewriter::py_deepClone, byrefint, py::arg("node"),
              "Create a deep clone of the given syntax node and all its children")
-        .def("make_list", &PySyntaxRewriter::py_makeSyntaxListGeneric, byrefint, py::arg("items"),
+        .def("makeList", &PySyntaxRewriter::py_makeSyntaxListGeneric, byrefint, py::arg("items"),
              "Create a SyntaxList from a list of syntax nodes")
-        .def("make_separated_list", &PySyntaxRewriter::py_makeSeparatedSyntaxListGeneric, byrefint,
+        .def("makeSeparatedList", &PySyntaxRewriter::py_makeSeparatedSyntaxListGeneric, byrefint,
              py::arg("items"),
              "Create a SeparatedSyntaxList from a list of syntax nodes and separator tokens")
-        .def("make_token_list", &PySyntaxRewriter::py_makeTokenList, byrefint, py::arg("items"),
+        .def("makeTokenList", &PySyntaxRewriter::py_makeTokenList, byrefint, py::arg("items"),
              "Create a TokenList from a list of tokens");
 
     m.def("rewrite", &pySyntaxRewrite, py::arg("tree"), py::arg("handler"));
@@ -587,7 +576,7 @@ void registerSyntax(py::module_& m) {
         "Create a shallow clone of the given syntax node");
 
     m.def(
-        "deep_clone",
+        "deepClone",
         [](const SyntaxNode& node, BumpAllocator& alloc) {
             return slang::syntax::deepClone(node, alloc);
         },

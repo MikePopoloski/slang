@@ -27,7 +27,7 @@ endif()
 add_custom_command(
   COMMAND
     ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir
-    ${CMAKE_CURRENT_BINARY_DIR} --python-bindings --python-factory --syntax
+    ${CMAKE_CURRENT_BINARY_DIR} --python-bindings --syntax
     ${SCRIPTS_DIR}/syntax.txt
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings0.cpp
          ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings1.cpp

@@ -54,24 +54,15 @@ def main():
     parser = argparse.ArgumentParser(description="Diagnostic source generator")
     parser.add_argument("--dir", default=os.getcwd(), help="Output directory")
     parser.add_argument("--python-bindings", action="store_true")
-    parser.add_argument(
-        "--python-factory",
-        action="store_true",
-        help="Generate SyntaxFactory bindings (requires --python-bindings)",
-    )
     parser.add_argument("--syntax", help="full path to syntax file")
     args = parser.parse_args()
-
-    if args.python_factory and not args.python_bindings:
-        parser.error("--python-factory requires --python-bindings")
 
     inputdir = os.path.dirname(args.syntax)
     alltypes, kindmap = loadalltypes(inputdir)
 
     if args.python_bindings:
         generatePyBindings(args.dir, alltypes)
-        if args.python_factory:
-            generatePyFactoryBindings(args.dir, alltypes)
+        generatePyFactoryBindings(args.dir, alltypes)
     else:
         generateSyntaxClone(args.dir, alltypes, kindmap)
         # generateSyntax modifies alltypes
