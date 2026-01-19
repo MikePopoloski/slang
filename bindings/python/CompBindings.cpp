@@ -189,6 +189,7 @@ void registerCompilation(py::module_& m) {
         .def_readonly("sourceLoader", &Driver::sourceLoader)
         .def_readonly("syntaxTrees", &Driver::syntaxTrees)
         .def_readwrite("languageVersion", &Driver::languageVersion)
+        .def_property_readonly("analysisOptions", &Driver::getAnalysisOptions)
         .def("addStandardArgs", &Driver::addStandardArgs)
         .def(
             "parseCommandLine",
@@ -199,7 +200,6 @@ void registerCompilation(py::module_& m) {
         .def("processCommandFiles", &Driver::processCommandFiles, "fileName"_a, "makeRelative"_a,
              "separateUnit"_a)
         .def("processOptions", &Driver::processOptions)
-        .def("getAnalysisOptions", &Driver::getAnalysisOptions)
         .def("runPreprocessor", &Driver::runPreprocessor, "includeComments"_a,
              "includeDirectives"_a, "obfuscateIds"_a, "useFixedObfuscationSeed"_a = false)
         .def("reportMacros", &Driver::reportMacros)

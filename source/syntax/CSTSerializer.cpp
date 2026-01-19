@@ -139,21 +139,21 @@ struct CSTJsonVisitor {
         writer.writeValue(toString(trivia.kind));
         switch (trivia.kind) {
             case parsing::TriviaKind::Directive:
-            case parsing::TriviaKind::SkippedSyntax: {
+            case parsing::TriviaKind::SkippedSyntax:
                 writer.writeProperty("syntax");
                 trivia.syntax()->visit(*this);
-            } break;
-            case parsing::TriviaKind::SkippedTokens: {
+                break;
+            case parsing::TriviaKind::SkippedTokens:
                 writer.writeProperty("tokens");
                 writer.startArray();
                 for (auto token : trivia.getSkippedTokens())
                     writeTokenValue(token);
                 writer.endArray();
-            } break;
-            default: {
+                break;
+            default:
                 writer.writeProperty("text");
                 writer.writeValue(trivia.getRawText());
-            } break;
+                break;
         }
         writer.endObject();
     }
