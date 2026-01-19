@@ -7,8 +7,7 @@ import pyslang
 def test_driver_analysis():
     """Test analysis of variable drivers"""
 
-    tree = pyslang.SyntaxTree.fromText(
-        """
+    tree = pyslang.SyntaxTree.fromText("""
 module m;
     int i;
     always @* i = 1;
@@ -19,8 +18,7 @@ module top;
 
     always @* m1.i = 2;
 endmodule
-"""
-    )
+""")
     compilation = pyslang.Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()

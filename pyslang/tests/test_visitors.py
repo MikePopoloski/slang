@@ -36,8 +36,7 @@ def test_timing_control_visitor():
     https://www.chipverify.com/verilog/verilog-always-block
     """
 
-    tree = pyslang.SyntaxTree.fromText(
-        """
+    tree = pyslang.SyntaxTree.fromText("""
         module tff (input  d,
                     clk,
                     rstn,
@@ -53,8 +52,7 @@ def test_timing_control_visitor():
                         q <= q;
             end
         endmodule
-        """
-    )
+        """)
     c = pyslang.Compilation()
     c.addSyntaxTree(tree)
     insts = c.getRoot().topInstances
@@ -88,8 +86,7 @@ def test_ast_visitor_single_counting_of_statements():
     `tests/unittests/VisitorTests.cpp:"Test single counting of statements"`.
     """
 
-    tree = pyslang.SyntaxTree.fromText(
-        """
+    tree = pyslang.SyntaxTree.fromText("""
 module m;
     int j;
     initial begin : asdf
@@ -103,8 +100,7 @@ module m;
         end
     end
 endmodule
-    """
-    )
+    """)
 
     class Visitor:
         def __init__(self):
