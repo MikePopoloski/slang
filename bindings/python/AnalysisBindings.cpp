@@ -37,9 +37,9 @@ public:
     py::object onLoopBegin;        // (Statement) -> None (any loop statement)
 
     // State management callbacks
-    py::object onBranchMerge;      // (state1: object, state2: object) -> object (merged state)
-    py::object onStateCopy;        // (state: object) -> object (copied state)
-    py::object createTopState;     // () -> object (initial state)
+    py::object onBranchMerge;  // (state1: object, state2: object) -> object (merged state)
+    py::object onStateCopy;    // (state: object) -> object (copied state)
+    py::object createTopState; // () -> object (initial state)
 
     PyFlowAnalysis(const Symbol& symbol, AnalysisOptions options = {}) : Base(symbol, options) {}
 
@@ -237,7 +237,8 @@ void registerAnalysis(py::module_& m) {
         .def_property_readonly("root", &AnalyzedAssertion::getRoot)
         .def("getClock", &AnalyzedAssertion::getClock, "expr"_a, byrefint);
 
-    py::classh<PyFlowAnalysis>(m, "FlowAnalysis",
+    py::classh<PyFlowAnalysis>(
+        m, "FlowAnalysis",
         "A flow analysis visitor that walks statements with proper control flow handling.\n\n"
         "Set callback attributes before calling run():\n"
         "- onAssignment: called for each assignment expression\n"
@@ -256,10 +257,8 @@ void registerAnalysis(py::module_& m) {
              "Run the analysis on a statement")
         .def("run", py::overload_cast<const Expression&>(&PyFlowAnalysis::run), "expr"_a,
              "Run the analysis on an expression")
-        .def_property("currentState",
-                      &PyFlowAnalysis::getCurrentState,
-                      &PyFlowAnalysis::setCurrentState,
-                      "The current flow state's user data")
+        .def_property("currentState", &PyFlowAnalysis::getCurrentState,
+                      &PyFlowAnalysis::setCurrentState, "The current flow state's user data")
         .def_property_readonly("bad", &PyFlowAnalysis::isBad,
                                "True if the analysis detected an error")
         .def_property_readonly("evalContext", &PyFlowAnalysis::getEvalCtx, byrefint,
@@ -283,14 +282,16 @@ void registerAnalysis(py::module_& m) {
         .def_readwrite("createTopState", &PyFlowAnalysis::createTopState,
                        "Callback to create initial state: () -> state");
 
-    py::classh<LSPUtilities>(m, "LSPUtilities",
+    py::classh<LSPUtilities>(
+        m, "LSPUtilities",
         "Utility methods for working with Longest Static Prefix (LSP) expressions.\n\n"
         "An LSP expression is the longest static prefix of an expression that can be\n"
         "used to identify a particular driver of a variable. For example, in the\n"
         "expression `a.b[3].c.d[2:0]`, if all of the selects are constant, then the entire\n"
         "expression is the LSP. If instead we had `a.b[i].c.d[2:0]`, then the LSP would be\n"
         "`a.b` (the `[i]` part is not static).")
-        .def_static("getBounds",
+        .def_static(
+            "getBounds",
             [](const Expression& lsp, EvalContext& evalContext) -> py::object {
                 // Walk the LSP expression to find the root ValueSymbol
                 const Expression* expr = &lsp;
@@ -327,7 +328,8 @@ void registerAnalysis(py::module_& m) {
             "Computes bit bounds for a driver given its longest static prefix expression.\n\n"
             "Returns a tuple (lower, upper) representing the bit range, or None if bounds\n"
             "cannot be determined.")
-        .def_static("stringifyLSP",
+        .def_static(
+            "stringifyLSP",
             [](const Expression& expr, Compilation& compilation) -> std::string {
                 ASTContext astCtx(compilation.getRoot(), LookupLocation::max);
                 EvalContext evalCtx(astCtx);
@@ -337,7 +339,8 @@ void registerAnalysis(py::module_& m) {
             },
             "expr"_a, "compilation"_a,
             "Converts an LSP expression to a human-friendly string representation.")
-        .def_static("visitLSPs",
+        .def_static(
+            "visitLSPs",
             [](const Expression& expr, Compilation& compilation, py::function callback,
                bool isLValue) {
                 ASTContext astCtx(compilation.getRoot(), LookupLocation::max);

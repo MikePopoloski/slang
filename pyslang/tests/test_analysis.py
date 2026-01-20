@@ -37,8 +37,7 @@ endmodule
 
 def test_flow_analysis():
     """Test FlowAnalysis with callbacks"""
-    tree = pyslang.SyntaxTree.fromText(
-        """
+    tree = pyslang.SyntaxTree.fromText("""
 module m;
     int a, b, c;
     always_comb begin
@@ -51,8 +50,7 @@ module m;
         end
     end
 endmodule
-"""
-    )
+""")
     compilation = pyslang.Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
@@ -79,20 +77,27 @@ endmodule
         conditionals.append(stmt)
 
     flow = pyslang.FlowAnalysis(proc_block)
-    flow.onAssignment, flow.onVariableRef, flow.onConditionalBegin = on_assignment, on_var_ref, on_conditional
+    flow.onAssignment, flow.onVariableRef, flow.onConditionalBegin = (
+        on_assignment,
+        on_var_ref,
+        on_conditional,
+    )
     flow.run(proc_block.body)
     assert len(assignments) == 4  # a = 1, b = a + 2, c = b, c = 0
     assert len(conditionals) == 1  # if (a > 0)
-    assert "a" in [ref.symbol.name for ref in var_refs], "Should reference 'a' in condition and RHS"
-    assert "b" in [ref.symbol.name for ref in var_refs], "Should reference 'b' in RHS of c=b"
+    assert "a" in [
+        ref.symbol.name for ref in var_refs
+    ], "Should reference 'a' in condition and RHS"
+    assert "b" in [
+        ref.symbol.name for ref in var_refs
+    ], "Should reference 'b' in RHS of c=b"
 
     assert not flow.bad
 
 
 def test_flow_analysis_with_state():
     """Test FlowAnalysis with custom state management"""
-    tree = pyslang.SyntaxTree.fromText(
-        """
+    tree = pyslang.SyntaxTree.fromText("""
 module m;
     int x;
     always_comb begin
@@ -103,8 +108,7 @@ module m;
         end
     end
 endmodule
-"""
-    )
+""")
     compilation = pyslang.Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
@@ -148,8 +152,7 @@ endmodule
 
 def test_lsp_utilities_stringify():
 
-    tree = pyslang.SyntaxTree.fromText(
-        """
+    tree = pyslang.SyntaxTree.fromText("""
 module m;
     int arr[10];
     int x;
@@ -158,8 +161,7 @@ module m;
         x = arr[5];
     end
 endmodule
-"""
-    )
+""")
     compilation = pyslang.Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
@@ -191,16 +193,14 @@ endmodule
 
 def test_lsp_utilities_visit_lsps():
 
-    tree = pyslang.SyntaxTree.fromText(
-        """
+    tree = pyslang.SyntaxTree.fromText("""
 module m;
     int a, b;
     always_comb begin
         a = b + 1;
     end
 endmodule
-"""
-    )
+""")
     compilation = pyslang.Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
@@ -227,9 +227,7 @@ endmodule
         lsps_found.append((symbol.name, is_lvalue))
 
     if isinstance(stmt, pyslang.ExpressionStatement):
-        pyslang.LSPUtilities.visitLSPs(
-            stmt.expr, compilation, on_lsp, is_lvalue=True
-        )
+        pyslang.LSPUtilities.visitLSPs(stmt.expr, compilation, on_lsp, is_lvalue=True)
 
     assert "a" in {name for name, _ in lsps_found}, "Should find 'a' as lvalue"
     assert "b" in {name for name, _ in lsps_found}, "Should find 'b' as rvalue"
@@ -244,8 +242,7 @@ def test_driver_kind_enum():
 def test_lsp_utilities_get_bounds():
     """Test LSPUtilities.getBounds returns correct bit ranges"""
 
-    tree = pyslang.SyntaxTree.fromText(
-        """
+    tree = pyslang.SyntaxTree.fromText("""
 module m;
     logic [31:0] data;
     logic [7:0] arr[4];
@@ -254,8 +251,7 @@ module m;
         arr[2] = 8'h00;
     end
 endmodule
-"""
-    )
+""")
     compilation = pyslang.Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
@@ -293,8 +289,7 @@ endmodule
 def test_flow_analysis_loop_callbacks():
     """Test that loop callbacks fire for various loop types"""
 
-    tree = pyslang.SyntaxTree.fromText(
-        """
+    tree = pyslang.SyntaxTree.fromText("""
 module m;
     int i, j, sum;
     int arr[10];
@@ -312,8 +307,7 @@ module m;
         end
     end
 endmodule
-"""
-    )
+""")
     compilation = pyslang.Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
@@ -348,14 +342,12 @@ endmodule
 def test_flow_analysis_empty_body():
     """Test that empty procedure body works without error"""
 
-    tree = pyslang.SyntaxTree.fromText(
-        """
+    tree = pyslang.SyntaxTree.fromText("""
 module m;
     always_comb begin
     end
 endmodule
-"""
-    )
+""")
     compilation = pyslang.Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
@@ -384,8 +376,7 @@ endmodule
 def test_flow_analysis_call_expression():
     """Test that function calls trigger the onCallExpression callback"""
 
-    tree = pyslang.SyntaxTree.fromText(
-        """
+    tree = pyslang.SyntaxTree.fromText("""
 module m;
     function int add(int a, int b);
         return a + b;
@@ -398,8 +389,7 @@ module m;
         result = add(x, y);
     end
 endmodule
-"""
-    )
+""")
     compilation = pyslang.Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
