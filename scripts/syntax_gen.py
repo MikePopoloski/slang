@@ -615,8 +615,7 @@ size_t SyntaxNode::getChildCount() const {
         cppf.write("}\n\n")
 
     # Write out toString methods for SyntaxKind enum.
-    cppf.write(
-        """
+    cppf.write("""
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
     os << toString(kind);
     return os;
@@ -628,33 +627,27 @@ std::string_view toString(SyntaxKind kind) {
         case SyntaxKind::SyntaxList: return "SyntaxList";
         case SyntaxKind::TokenList: return "TokenList";
         case SyntaxKind::SeparatedList: return "SeparatedList";
-"""
-    )
+""")
 
     for k, _ in sorted(kindmap.items()):
         cppf.write('        case SyntaxKind::{}: return "{}";\n'.format(k, k))
 
-    cppf.write(
-        """    }
+    cppf.write("""    }
     return "";
 }
 
-"""
-    )
+""")
 
     # Write out traits member list for SyntaxKind enum.
     cppf.write("decltype(SyntaxKind_traits::values) SyntaxKind_traits::values = {\n")
-    cppf.write(
-        """    SyntaxKind::Unknown,
+    cppf.write("""    SyntaxKind::Unknown,
     SyntaxKind::SyntaxList,
     SyntaxKind::TokenList,
     SyntaxKind::SeparatedList,
-"""
-    )
+""")
     for k, _ in sorted(kindmap.items()):
         cppf.write("    SyntaxKind::{},\n".format(k))
-    cppf.write(
-        """};
+    cppf.write("""};
 
 #ifdef SLANG_RTTI_ENABLED
 const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
@@ -664,20 +657,17 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
         case SyntaxKind::TokenList:
         case SyntaxKind::SeparatedList:
             return &typeid(SyntaxNode);
-"""
-    )
+""")
 
     for k, v in sorted(kindmap.items()):
         cppf.write("        case SyntaxKind::{}: return &typeid({});\n".format(k, v))
-    cppf.write(
-        """    }
+    cppf.write("""    }
     return nullptr;
 }
 #endif
 
 }
-"""
-    )
+""")
 
     outf.write("\n")
     outf.write("private:\n")
@@ -786,8 +776,7 @@ enum class SLANG_EXPORT SyntaxKind {
     for k, _ in sorted(kindmap.items()):
         outf.write("    {},\n".format(k))
 
-    outf.write(
-        """}};
+    outf.write("""}};
 
 SLANG_EXPORT std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
 SLANG_EXPORT std::string_view toString(SyntaxKind kind);
@@ -800,10 +789,7 @@ public:
 SLANG_EXPORT const std::type_info* typeFromSyntaxKind(SyntaxKind kind);
 
 }}
-""".format(
-            len(kindmap.items()) + 4
-        )
-    )
+""".format(len(kindmap.items()) + 4))
 
     # Write the forward declaration header file.
     outf = open(os.path.join(headerdir, "SyntaxFwd.h"), "w")
@@ -859,8 +845,7 @@ SyntaxNode* clone(const T& node, BumpAllocator& alloc) {
 
 """
     )
-    clonef.write(
-        """namespace slang::syntax::deep {
+    clonef.write("""namespace slang::syntax::deep {
 
 template<typename T>
 SyntaxNode* clone(const T& node, BumpAllocator& alloc) {
@@ -871,8 +856,7 @@ SyntaxNode* clone(const SyntaxListBase&, BumpAllocator&) {
     return nullptr;
 }
 
-"""
-    )
+""")
     # Write out deepClone methods for each derived type.
     for k, v in sorted(alltypes.items()):
         if not v.final:
@@ -916,8 +900,7 @@ SyntaxNode* clone(const SyntaxListBase&, BumpAllocator&) {
             clonef.write("    );\n")
             clonef.write("}\n\n")
     clonef.write("}\n\n")
-    clonef.write(
-        """namespace slang::syntax {
+    clonef.write("""namespace slang::syntax {
 
 struct CloneVisitor {
     template<typename T>
@@ -948,8 +931,7 @@ SyntaxNode* clone(const SyntaxNode& node, BumpAllocator& alloc) {
 }
 
 }
-"""
-    )
+""")
 
 
 def loadkinds(ourdir, filename):
@@ -969,8 +951,7 @@ def writekinddecl(outf, name, basetype, kinds):
     for k in kinds:
         outf.write("    {},\n".format(k))
 
-    outf.write(
-        """}};
+    outf.write("""}};
 
 SLANG_EXPORT std::ostream& operator<<(std::ostream& os, {} kind);
 SLANG_EXPORT std::string_view toString({} kind);
@@ -980,50 +961,35 @@ public:
     static const std::array<{}, {}> values;
 }};
 
-""".format(
-            name, name, name, name, len(kinds)
-        )
-    )
+""".format(name, name, name, name, len(kinds)))
 
 
 def writekindimpls(outf, name, kinds):
-    outf.write(
-        """std::ostream& operator<<(std::ostream& os, {} kind) {{
+    outf.write("""std::ostream& operator<<(std::ostream& os, {} kind) {{
     os << toString(kind);
     return os;
 }}
 
 std::string_view toString({} kind) {{
     switch (kind) {{
-""".format(
-            name, name
-        )
-    )
+""".format(name, name))
 
     for k in kinds:
         outf.write('        case {}::{}: return "{}";\n'.format(name, k, k))
-    outf.write(
-        """    }
+    outf.write("""    }
     return "";
 }
 
-"""
-    )
+""")
 
-    outf.write(
-        """decltype({}_traits::values) {}_traits::values = {{
-""".format(
-            name, name
-        )
-    )
+    outf.write("""decltype({}_traits::values) {}_traits::values = {{
+""".format(name, name))
 
     for k in kinds:
         outf.write("    {}::{},\n".format(name, k))
-    outf.write(
-        """};
+    outf.write("""};
 
-"""
-    )
+""")
 
 
 def generateTokenKinds(ourdir, builddir):
@@ -1124,8 +1090,7 @@ enum class SLANG_EXPORT KnownSystemName {
     for name in names:
         outf.write("    {},\n".format(name[1]))
 
-    outf.write(
-        """}};
+    outf.write("""}};
 
 SLANG_EXPORT std::ostream& operator<<(std::ostream& os, KnownSystemName ksn);
 SLANG_EXPORT std::string_view toString(KnownSystemName ksn);
@@ -1137,10 +1102,7 @@ public:
 }};
 
 }}
-""".format(
-            len(names) + 1
-        )
-    )
+""".format(len(names) + 1))
 
     outf = open(os.path.join(builddir, "KnownSystemName.cpp"), "w")
     outf.write(
@@ -1173,20 +1135,17 @@ std::string_view toString(KnownSystemName ksn) {
             '        case KnownSystemName::{}: return "{}";\n'.format(name[1], name[0])
         )
 
-    outf.write(
-        """    }
+    outf.write("""    }
     return "";
 }
 
 const static flat_hash_map<std::string_view, KnownSystemName> ksnTable = {
-"""
-    )
+""")
 
     for name in names:
         outf.write('    {{ "{}", KnownSystemName::{} }},\n'.format(name[0], name[1]))
 
-    outf.write(
-        """};
+    outf.write("""};
 
 KnownSystemName parseKnownSystemName(std::string_view str) {
     if (auto it = ksnTable.find(str); it != ksnTable.end())
@@ -1196,18 +1155,15 @@ KnownSystemName parseKnownSystemName(std::string_view str) {
 
 decltype(KnownSystemName_traits::values) KnownSystemName_traits::values = {
     KnownSystemName::Unknown,
-"""
-    )
+""")
 
     for name in names:
         outf.write("    KnownSystemName::{},\n".format(name[1]))
 
-    outf.write(
-        """};
+    outf.write("""};
 
 }
-"""
-    )
+""")
 
 
 def generatePyBindings(builddir, alltypes):
@@ -1271,11 +1227,9 @@ def generateCSTJson(builddir, alltypes):
         if not typeinfo.combinedMembers:
             continue
 
-        cppf.write(
-            f"""
+        cppf.write(f"""
     void handle(const {typename}& node) {{
-"""
-        )
+""")
 
         # Generate code for each member (including inherited)
         for member in typeinfo.combinedMembers:
