@@ -27,27 +27,48 @@ class PyFlowAnalysis : public AbstractFlowAnalysis<PyFlowAnalysis, PyFlowState> 
 public:
     using Base = AbstractFlowAnalysis<PyFlowAnalysis, PyFlowState>;
     friend Base;
+
+    // Callbacks for expression/statement handling
     py::object onAssignment;       // (AssignmentExpression) -> None
+    py::object onVariableRef;      // (NamedValueExpression) -> None
+    py::object onCallExpression;   // (CallExpression) -> None
     py::object onConditionalBegin; // (ConditionalStatement) -> None
     py::object onCaseBegin;        // (CaseStatement) -> None
+    py::object onLoopBegin;        // (Statement) -> None (any loop statement)
+
+    // State management callbacks
     py::object onBranchMerge;      // (state1: object, state2: object) -> object (merged state)
     py::object onStateCopy;        // (state: object) -> object (copied state)
     py::object createTopState;     // () -> object (initial state)
 
     PyFlowAnalysis(const Symbol& symbol, AnalysisOptions options = {}) : Base(symbol, options) {}
 
-    void runOnStatement(const Statement& stmt) { Base::run(stmt); }
-
-    void runOnExpression(const Expression& expr) { Base::run(expr); }
+    using Base::run;
 
     py::object getCurrentState() const { return getState().userData; }
 
     void setCurrentState(py::object state) { getState().userData = std::move(state); }
 
+    bool isBad() const { return bad; }
+
+    EvalContext& getEvalCtx() const { return getEvalContext(); }
+
 protected:
     void handle(const AssignmentExpression& expr) {
         if (onAssignment && !onAssignment.is_none())
             onAssignment(&expr);
+        visitExpr(expr);
+    }
+
+    void handle(const NamedValueExpression& expr) {
+        if (onVariableRef && !onVariableRef.is_none())
+            onVariableRef(&expr);
+        visitExpr(expr);
+    }
+
+    void handle(const CallExpression& expr) {
+        if (onCallExpression && !onCallExpression.is_none())
+            onCallExpression(&expr);
         visitExpr(expr);
     }
 
@@ -60,6 +81,42 @@ protected:
     void handle(const CaseStatement& stmt) {
         if (onCaseBegin && !onCaseBegin.is_none())
             onCaseBegin(&stmt);
+        visitStmt(stmt);
+    }
+
+    void handle(const ForLoopStatement& stmt) {
+        if (onLoopBegin && !onLoopBegin.is_none())
+            onLoopBegin(&stmt);
+        visitStmt(stmt);
+    }
+
+    void handle(const WhileLoopStatement& stmt) {
+        if (onLoopBegin && !onLoopBegin.is_none())
+            onLoopBegin(&stmt);
+        visitStmt(stmt);
+    }
+
+    void handle(const DoWhileLoopStatement& stmt) {
+        if (onLoopBegin && !onLoopBegin.is_none())
+            onLoopBegin(&stmt);
+        visitStmt(stmt);
+    }
+
+    void handle(const ForeverLoopStatement& stmt) {
+        if (onLoopBegin && !onLoopBegin.is_none())
+            onLoopBegin(&stmt);
+        visitStmt(stmt);
+    }
+
+    void handle(const ForeachLoopStatement& stmt) {
+        if (onLoopBegin && !onLoopBegin.is_none())
+            onLoopBegin(&stmt);
+        visitStmt(stmt);
+    }
+
+    void handle(const RepeatLoopStatement& stmt) {
+        if (onLoopBegin && !onLoopBegin.is_none())
+            onLoopBegin(&stmt);
         visitStmt(stmt);
     }
 
@@ -180,31 +237,45 @@ void registerAnalysis(py::module_& m) {
         .def_property_readonly("root", &AnalyzedAssertion::getRoot)
         .def("getClock", &AnalyzedAssertion::getClock, "expr"_a, byrefint);
 
-    py::class_<PyFlowAnalysis>(
-        m, "FlowAnalysis",
+    py::classh<PyFlowAnalysis>(m, "FlowAnalysis",
         "A flow analysis visitor that walks statements with proper control flow handling.\n\n"
         "Set callback attributes before calling run():\n"
         "- onAssignment: called for each assignment expression\n"
+        "- onVariableRef: called for each variable reference (NamedValueExpression)\n"
+        "- onCallExpression: called for each function/task call\n"
         "- onConditionalBegin: called when entering an if/else\n"
         "- onCaseBegin: called when entering a case statement\n"
+        "- onLoopBegin: called when entering any loop statement\n"
         "- onBranchMerge: called when control flow paths merge (state1, state2) -> merged_state\n"
         "- onStateCopy: called to copy state when forking (state) -> copied_state\n"
         "- createTopState: called to create initial state () -> state")
         .def(py::init<const Symbol&, AnalysisOptions>(), "symbol"_a,
              "options"_a = AnalysisOptions(),
              "Create a flow analysis for the given symbol (procedural block, subroutine, etc.)")
-        .def("runOnStatement", &PyFlowAnalysis::runOnStatement, "stmt"_a,
+        .def("run", py::overload_cast<const Statement&>(&PyFlowAnalysis::run), "stmt"_a,
              "Run the analysis on a statement")
-        .def("runOnExpression", &PyFlowAnalysis::runOnExpression, "expr"_a,
+        .def("run", py::overload_cast<const Expression&>(&PyFlowAnalysis::run), "expr"_a,
              "Run the analysis on an expression")
-        .def_property("currentState", &PyFlowAnalysis::getCurrentState,
-                      &PyFlowAnalysis::setCurrentState, "The current flow state's user data")
+        .def_property("currentState",
+                      &PyFlowAnalysis::getCurrentState,
+                      &PyFlowAnalysis::setCurrentState,
+                      "The current flow state's user data")
+        .def_property_readonly("bad", &PyFlowAnalysis::isBad,
+                               "True if the analysis detected an error")
+        .def_property_readonly("evalContext", &PyFlowAnalysis::getEvalCtx, byrefint,
+                               "The evaluation context for use during analysis")
         .def_readwrite("onAssignment", &PyFlowAnalysis::onAssignment,
                        "Callback for assignment expressions: (AssignmentExpression) -> None")
+        .def_readwrite("onVariableRef", &PyFlowAnalysis::onVariableRef,
+                       "Callback for variable references: (NamedValueExpression) -> None")
+        .def_readwrite("onCallExpression", &PyFlowAnalysis::onCallExpression,
+                       "Callback for function/task calls: (CallExpression) -> None")
         .def_readwrite("onConditionalBegin", &PyFlowAnalysis::onConditionalBegin,
                        "Callback when entering conditional: (ConditionalStatement) -> None")
         .def_readwrite("onCaseBegin", &PyFlowAnalysis::onCaseBegin,
                        "Callback when entering case: (CaseStatement) -> None")
+        .def_readwrite("onLoopBegin", &PyFlowAnalysis::onLoopBegin,
+                       "Callback when entering any loop: (Statement) -> None")
         .def_readwrite("onBranchMerge", &PyFlowAnalysis::onBranchMerge,
                        "Callback when branches merge: (state1, state2) -> merged_state")
         .def_readwrite("onStateCopy", &PyFlowAnalysis::onStateCopy,
@@ -212,31 +283,51 @@ void registerAnalysis(py::module_& m) {
         .def_readwrite("createTopState", &PyFlowAnalysis::createTopState,
                        "Callback to create initial state: () -> state");
 
-    py::class_<LSPUtilities>(
-        m, "LSPUtilities",
+    py::classh<LSPUtilities>(m, "LSPUtilities",
         "Utility methods for working with Longest Static Prefix (LSP) expressions.\n\n"
         "An LSP expression is the longest static prefix of an expression that can be\n"
         "used to identify a particular driver of a variable. For example, in the\n"
         "expression `a.b[3].c.d[2:0]`, if all of the selects are constant, then the entire\n"
         "expression is the LSP. If instead we had `a.b[i].c.d[2:0]`, then the LSP would be\n"
-        "`a.b[i]`.")
-        .def_static(
-            "getBounds",
-            [](const Expression& lsp, Compilation& compilation) -> py::object {
-                ASTContext astCtx(compilation.getRoot(), LookupLocation::max);
-                EvalContext evalCtx(astCtx);
-                auto result = LSPUtilities::getBounds(lsp, evalCtx, lsp.type->getCanonicalType());
+        "`a.b` (the `[i]` part is not static).")
+        .def_static("getBounds",
+            [](const Expression& lsp, EvalContext& evalContext) -> py::object {
+                // Walk the LSP expression to find the root ValueSymbol
+                const Expression* expr = &lsp;
+                while (true) {
+                    switch (expr->kind) {
+                        case ExpressionKind::NamedValue:
+                        case ExpressionKind::HierarchicalValue:
+                            goto found;
+                        case ExpressionKind::Conversion:
+                            expr = &expr->as<ConversionExpression>().operand();
+                            break;
+                        case ExpressionKind::ElementSelect:
+                            expr = &expr->as<ElementSelectExpression>().value();
+                            break;
+                        case ExpressionKind::RangeSelect:
+                            expr = &expr->as<RangeSelectExpression>().value();
+                            break;
+                        case ExpressionKind::MemberAccess:
+                            expr = &expr->as<MemberAccessExpression>().value();
+                            break;
+                        default:
+                            return py::none();
+                    }
+                }
+            found:
+                const Type& rootType = expr->as<ValueExpressionBase>().symbol.getType();
+                auto result = LSPUtilities::getBounds(lsp, evalContext, rootType);
                 if (result) {
                     return py::make_tuple(result->first, result->second);
                 }
                 return py::none();
             },
-            "lsp"_a, "compilation"_a,
+            "lsp"_a, "eval_context"_a,
             "Computes bit bounds for a driver given its longest static prefix expression.\n\n"
-            "Returns a tuple (upper, lower) representing the bit range, or None if bounds\n"
+            "Returns a tuple (lower, upper) representing the bit range, or None if bounds\n"
             "cannot be determined.")
-        .def_static(
-            "stringifyLSP",
+        .def_static("stringifyLSP",
             [](const Expression& expr, Compilation& compilation) -> std::string {
                 ASTContext astCtx(compilation.getRoot(), LookupLocation::max);
                 EvalContext evalCtx(astCtx);
@@ -246,8 +337,7 @@ void registerAnalysis(py::module_& m) {
             },
             "expr"_a, "compilation"_a,
             "Converts an LSP expression to a human-friendly string representation.")
-        .def_static(
-            "visitLSPs",
+        .def_static("visitLSPs",
             [](const Expression& expr, Compilation& compilation, py::function callback,
                bool isLValue) {
                 ASTContext astCtx(compilation.getRoot(), LookupLocation::max);
