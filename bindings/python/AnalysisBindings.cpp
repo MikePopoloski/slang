@@ -253,9 +253,9 @@ void registerAnalysis(py::module_& m) {
         .def(py::init<const Symbol&, AnalysisOptions>(), "symbol"_a,
              "options"_a = AnalysisOptions(),
              "Create a flow analysis for the given symbol (procedural block, subroutine, etc.)")
-        .def("run", py::overload_cast<const Statement&>(&PyFlowAnalysis::run), "stmt"_a,
+        .def("run", [](PyFlowAnalysis& self, const Statement& stmt) { self.run(stmt); }, "stmt"_a,
              "Run the analysis on a statement")
-        .def("run", py::overload_cast<const Expression&>(&PyFlowAnalysis::run), "expr"_a,
+        .def("run", [](PyFlowAnalysis& self, const Expression& expr) { self.run(expr); }, "expr"_a,
              "Run the analysis on an expression")
         .def_property("currentState", &PyFlowAnalysis::getCurrentState,
                       &PyFlowAnalysis::setCurrentState, "The current flow state's user data")
