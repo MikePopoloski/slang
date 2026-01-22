@@ -8,6 +8,12 @@ import argparse
 import math
 import os
 
+# member tuple indices for combinedMembers entries: (type, name, base_type)
+# - MEMBER_TYPE: the C++ type (e.g. "Token", "SyntaxList<...>" etc.)
+# - MEMBER_NAME: the member variable's name
+# - MEMBER_BASE_TYPE: for pointer/optional members, the underlying type (only present for some)
+MEMBER_TYPE, MEMBER_NAME, MEMBER_BASE_TYPE = 0, 1, 2
+
 
 class TypeInfo:
     def __init__(
@@ -56,6 +62,7 @@ def main():
 
     if args.python_bindings:
         generatePyBindings(args.dir, alltypes)
+        generatePyFactoryBindings(args.dir, alltypes)
     else:
         generateSyntaxClone(args.dir, alltypes, kindmap)
         # generateSyntax modifies alltypes
@@ -1212,6 +1219,78 @@ void registerSyntaxNodes{0}(py::module_& m) {{
         outf.write("}\n")
 
 
+def generatePyFactoryBindings(builddir, alltypes):
+    """Generate Python bindings for SyntaxFactory class and all its methods."""
+
+    outf = open(os.path.join(builddir, "PySyntaxFactory.cpp"), "w")
+    outf.write(
+        """//------------------------------------------------------------------------------
+// PySyntaxFactory.cpp
+// Generated Python bindings for SyntaxFactory
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+#include "pyslang.h"
+
+#include "slang/syntax/AllSyntax.h"
+
+void registerSyntaxFactory(py::module_& m) {
+    py::classh<SyntaxFactory>(m, "SyntaxFactory",
+        "Factory for creating syntax nodes. Access via SyntaxRewriter.factory.")
+"""
+    )
+
+    factory_methods = []
+    for name, typeinfo in sorted(alltypes.items()):
+        if name == "SyntaxNode":
+            continue
+        if not typeinfo.final:
+            continue
+        factory_methods.append((name, typeinfo))
+
+    methods_by_letter = {}
+    for name, typeinfo in factory_methods:
+        first_letter = name[0].upper()
+        if first_letter not in methods_by_letter:
+            methods_by_letter[first_letter] = []
+        methods_by_letter[first_letter].append((name, typeinfo))
+
+    for letter in sorted(methods_by_letter.keys()):
+        outf.write(f"\n        // --- {letter} ---\n")
+        for name, typeinfo in methods_by_letter[letter]:
+            method_name = name
+            if method_name.endswith("Syntax"):
+                method_name = method_name[:-6]
+            method_name = method_name[0].lower() + method_name[1:]
+
+            outf.write(f'        .def("{method_name}", &SyntaxFactory::{method_name}')
+            outf.write(", py::return_value_policy::reference_internal")
+
+            for arg in typeinfo.argNames:
+                if arg in typeinfo.optionalMembers:
+                    for m in typeinfo.combinedMembers:
+                        if m[MEMBER_NAME] == arg:
+                            if len(m) <= MEMBER_BASE_TYPE:
+                                raise ValueError(
+                                    f"Optional member '{arg}' in '{name}' is missing "
+                                    f"base type information (expected at index {MEMBER_BASE_TYPE})"
+                                )
+                            base_type = m[MEMBER_BASE_TYPE]
+                            outf.write(
+                                f', py::arg("{arg}") = static_cast<{base_type}*>(nullptr)'
+                            )
+                            break
+                else:
+                    outf.write(f', "{arg}"_a')
+
+            outf.write(")\n")
+
+    outf.write("    ;\n")
+    outf.write("}\n")
+    outf.close()
+
+
 def generateCSTJson(builddir, alltypes):
     cppf = open(os.path.join(builddir, "slang", "syntax", "CSTJsonVisitorGen.h"), "w")
 
@@ -1233,7 +1312,7 @@ def generateCSTJson(builddir, alltypes):
 
         # Generate code for each member (including inherited)
         for member in typeinfo.combinedMembers:
-            memberType, memberName = member[0], member[1]
+            memberType, memberName = member[MEMBER_TYPE], member[MEMBER_NAME]
 
             # Check if member is optional
             isOptional = memberName in typeinfo.optionalMembers
