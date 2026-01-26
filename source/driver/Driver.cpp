@@ -50,7 +50,8 @@ using namespace analysis;
     CompilationFlags::AllowRecursiveImplicitCall, \
     CompilationFlags::AllowBareValParamAssignment, \
     CompilationFlags::AllowSelfDeterminedStreamConcat, \
-    CompilationFlags::AllowMergingAnsiPorts
+    CompilationFlags::AllowMergingAnsiPorts, \
+    CompilationFlags::AllowVirtualIfaceWithOverride
 
 static constexpr auto vcsCompFlags = {VCS_COMP_FLAGS};
 static constexpr auto allCompFlags = {
@@ -250,6 +251,10 @@ void Driver::addStandardArgs() {
     addCompFlag(CompilationFlags::AllowUnnamedGenerate, "--allow-genblk-reference",
                 "Allow references to unnamed generate blocks via their external names "
                 "(e.g. genblk1)");
+    addCompFlag(CompilationFlags::AllowVirtualIfaceWithOverride,
+                "--allow-virtual-iface-with-override",
+                "Allow interface instances that are bind/defparam targets to be assigned "
+                "to virtual interfaces (matches Cadence Xcelium behavior)");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "

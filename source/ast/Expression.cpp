@@ -1442,7 +1442,8 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
     }
 
     if (!isInterfacePort) {
-        if (iface->hierarchyOverrideNode) {
+        if (iface->hierarchyOverrideNode &&
+            !comp.hasFlag(CompilationFlags::AllowVirtualIfaceWithOverride)) {
             auto& diag = context.addDiag(diag::VirtualIfaceDefparam, sourceRange);
             if (auto source = findOverrideNodeSource(*iface->hierarchyOverrideNode))
                 diag.addNote(diag::NoteDeclarationHere, source->sourceRange());
