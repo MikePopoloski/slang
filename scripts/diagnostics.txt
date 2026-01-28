@@ -310,6 +310,7 @@ warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disa
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
 warning lifetime-prototype LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
 warning nonstandard-dist NonstandardDist "use of parentheses around 'dist' expression is non-standard"
+warning nonstandard-edge-control NonstandardEdgeControl "use of edge keyword before parenthesis in event control is non-standard"
 warning empty-body EmptyBody "{} has empty body (put the semicolon on a separate line to silence this warning)"
 warning split-distweight-op SplitDistWeightOp "split dist weight operator is not allowed; SystemVerilog requires that they be joined together"
 warning nested-solve-before SolveBeforeDisallowed "constraint ordering directive is not allowed within a nested constraint block"

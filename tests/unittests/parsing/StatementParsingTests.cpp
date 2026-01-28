@@ -148,6 +148,25 @@ TEST_CASE("Timing control statements") {
                       SyntaxKind::EventControlWithExpression);
 }
 
+TEST_CASE("Nonstandard edge control syntax") {
+    auto& stmt1 = parseStatement("@posedge (clk) ;");
+    REQUIRE(stmt1.kind == SyntaxKind::TimingControlStatement);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::NonstandardEdgeControl);
+    diagnostics.clear();
+
+    auto& stmt2 = parseStatement("@negedge (clk) ;");
+    REQUIRE(stmt2.kind == SyntaxKind::TimingControlStatement);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::NonstandardEdgeControl);
+    diagnostics.clear();
+
+    auto& stmt3 = parseStatement("@edge (clk) ;");
+    REQUIRE(stmt3.kind == SyntaxKind::TimingControlStatement);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::NonstandardEdgeControl);
+}
+
 void testStatement(std::string_view text, SyntaxKind kind) {
     auto& stmt = parseStatement(std::string(text));
 

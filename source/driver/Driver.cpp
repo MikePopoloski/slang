@@ -676,6 +676,7 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::NonstandardSysFunc, DiagnosticSeverity::Ignored);
         diagEngine.setSeverity(diag::NonstandardForeach, DiagnosticSeverity::Ignored);
         diagEngine.setSeverity(diag::NonstandardDist, DiagnosticSeverity::Ignored);
+        diagEngine.setSeverity(diag::NonstandardEdgeControl, DiagnosticSeverity::Ignored);
     }
     else {
         // These warnings are set to Error severity by default, unless we're in vcs compat mode.

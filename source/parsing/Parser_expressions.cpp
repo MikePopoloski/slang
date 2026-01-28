@@ -1247,6 +1247,23 @@ TimingControlSyntax* Parser::parseTimingControl(bool inAssertion) {
                 case TokenKind::SystemIdentifier:
                     return &factory.eventControl(at,
                                                  parsePrimaryExpression(ExpressionOptions::None));
+                case TokenKind::EdgeKeyword:
+                case TokenKind::PosEdgeKeyword:
+                case TokenKind::NegEdgeKeyword: {
+                    // Verilator-style extension: @posedge (clk) instead of @(posedge clk)
+                    // Transform it into the standard @(posedge clk) form.
+                    auto edge = consume();
+                    addDiag(diag::NonstandardEdgeControl, edge.location());
+                    auto openParen = expect(TokenKind::OpenParenthesis);
+                    auto& expr = parseExpression();
+                    auto closeParen = expect(TokenKind::CloseParenthesis);
+
+                    // Create a parenthesized expression for the signal
+                    auto& parenExpr = factory.parenthesizedExpression(openParen, expr, closeParen);
+                    // Create a signal event expression with the edge and the expression
+                    auto& eventExpr = factory.signalEventExpression(edge, parenExpr, nullptr);
+                    return &factory.eventControlWithExpression(at, eventExpr);
+                }
                 default:
                     return &factory.eventControl(at, parseName(NameOptions::NoClassScope));
             }
