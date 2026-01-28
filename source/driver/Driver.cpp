@@ -50,14 +50,14 @@ using namespace analysis;
     CompilationFlags::AllowRecursiveImplicitCall, \
     CompilationFlags::AllowBareValParamAssignment, \
     CompilationFlags::AllowSelfDeterminedStreamConcat, \
-    CompilationFlags::AllowMergingAnsiPorts, \
-    CompilationFlags::AllowVirtualIfaceWithOverride
+    CompilationFlags::AllowMergingAnsiPorts
 
 static constexpr auto vcsCompFlags = {VCS_COMP_FLAGS};
 static constexpr auto allCompFlags = {
     VCS_COMP_FLAGS,
     CompilationFlags::AllowTopLevelIfacePorts,
-    CompilationFlags::AllowUnnamedGenerate
+    CompilationFlags::AllowUnnamedGenerate,
+    CompilationFlags::AllowVirtualIfaceWithOverride
 };
 
 #define VCS_ANALYSIS_FLAGS \
@@ -254,7 +254,7 @@ void Driver::addStandardArgs() {
     addCompFlag(CompilationFlags::AllowVirtualIfaceWithOverride,
                 "--allow-virtual-iface-with-override",
                 "Allow interface instances that are bind/defparam targets to be assigned "
-                "to virtual interfaces (matches Cadence Xcelium behavior)");
+                "to virtual interfaces");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "
