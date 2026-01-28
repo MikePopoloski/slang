@@ -3687,3 +3687,40 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpectedVariableName);
 }
+
+TEST_CASE("Re-entrant getBaseConstructorCall during forceElaborate regress") {
+    // Reproducer for assertion failure in getBaseConstructorCall when:
+    // 1. A class inside a package extends a parameterized class with a virtual
+    //    interface type parameter
+    // 2. That virtual interface imports from the package and uses a re-exported type
+    // 3. This triggers forceElaborate on the package during handleExtends
+    // 4. forceElaborate visits the GenericClassDefSymbol and its specializations
+    // 5. getBaseConstructorCall is called before handleExtends completes
+    auto tree = SyntaxTree::fromText(R"(
+package inner_pkg;
+endpackage
+
+package main_pkg;
+  import inner_pkg::*;
+  export inner_pkg::*;
+
+  class Base #(type T);
+  endclass
+
+  class Config extends Base #(virtual Ifc);
+  endclass
+
+endpackage
+
+interface Ifc;
+  import main_pkg::*;
+  some_t mode;
+endinterface
+)");
+
+    // This test verifies we don't assert during elaboration.
+    // There may be diagnostics about the re-export not working.
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}
