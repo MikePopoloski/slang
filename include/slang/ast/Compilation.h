@@ -570,6 +570,11 @@ public:
     /// if no such declaration is in effect.
     const Expression* getDefaultDisable(const Scope& scope) const;
 
+    /// Gets the map of scopes containing default disable directives.
+    const flat_hash_map<const Scope*, const Expression*>& getDefaultDisableMap() const {
+        return defaultDisableMap;
+    }
+
     /// Notes the existence of an extern module/interface/program/primitive declaration.
     void noteExternDefinition(const Scope& scope, const syntax::SyntaxNode& syntax);
 

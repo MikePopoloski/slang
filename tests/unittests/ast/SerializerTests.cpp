@@ -337,6 +337,7 @@ endsequence
 
 module m(input y1, input x1, input clk);
     cover property (s(((x1 iff y1) or negedge clk)));
+    default disable iff (x1 && y1);
 endmodule
 )");
 
@@ -517,6 +518,24 @@ endmodule
                 "kind": "Empty"
               },
               "assertionKind": "CoverProperty"
+            }
+          },
+          {
+            "kind": "defaultDisable",
+            "expr": {
+              "kind": "BinaryOp",
+              "type": "logic",
+              "op": "LogicalAnd",
+              "left": {
+                "kind": "NamedValue",
+                "type": "logic",
+                "symbol": "x1"
+              },
+              "right": {
+                "kind": "NamedValue",
+                "type": "logic",
+                "symbol": "y1"
+              }
             }
           }
         ],

@@ -1726,10 +1726,14 @@ ClockingBlockSymbol& ClockingBlockSymbol::fromSyntax(const Scope& scope,
                                                     syntax.blockName.location());
     result->setSyntax(syntax);
 
-    if (syntax.globalOrDefault.kind == TokenKind::DefaultKeyword)
+    if (syntax.globalOrDefault.kind == TokenKind::DefaultKeyword) {
         comp.noteDefaultClocking(scope, *result, syntax.clocking.range());
+        result->isDefault = true;
+    }
     else if (syntax.globalOrDefault.kind == TokenKind::GlobalKeyword) {
         comp.noteGlobalClocking(scope, *result, syntax.clocking.range());
+        result->isGlobal = true;
+
         if (scope.asSymbol().kind == SymbolKind::GenerateBlock)
             scope.addDiag(diag::GlobalClockingGenerate, syntax.clocking.range());
     }
@@ -1823,6 +1827,10 @@ ClockingSkew ClockingBlockSymbol::getDefaultOutputSkew() const {
 
 void ClockingBlockSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("event", getEvent());
+    if (isDefault)
+        serializer.write("isDefault", isDefault);
+    if (isGlobal)
+        serializer.write("isGlobal", isGlobal);
 
     if (auto skew = getDefaultInputSkew(); skew.hasValue()) {
         serializer.writeProperty("defaultInputSkew");

@@ -368,6 +368,9 @@ public:
 /// Represents a clocking block.
 class SLANG_EXPORT ClockingBlockSymbol final : public Symbol, public Scope {
 public:
+    bool isDefault = false;
+    bool isGlobal = false;
+
     ClockingBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc);
 
     const TimingControl& getEvent() const;

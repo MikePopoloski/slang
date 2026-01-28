@@ -370,6 +370,15 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
                 startArray("members");
                 for (auto& member : elem.members())
                     serialize(member, /* inMembersArray */ true);
+
+                auto& ddm = compilation.getDefaultDisableMap();
+                if (auto it = ddm.find(&elem); it != ddm.end()) {
+                    writer.startObject();
+                    write("kind", "defaultDisable"sv);
+                    write("expr", *it->second);
+                    writer.endObject();
+                }
+
                 endArray();
             }
         }
