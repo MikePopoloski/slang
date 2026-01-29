@@ -119,8 +119,9 @@ public:
                                    Token right);
 
     /// Converts a range of tokens into a string literal; used for macro stringification.
-    static Token stringify(Lexer& parentLexer, Token startToken, std::span<Token> bodyTokens,
-                           Token endToken);
+    static Token stringify(BumpAllocator& alloc, SourceManager& sourceManager,
+                           const LexerOptions& options, Token startToken,
+                           std::span<Token> bodyTokens, Token endToken);
 
     /// Converts a range of tokens into a block comment; used for macro expansion.
     static Trivia commentify(BumpAllocator& alloc, SourceManager& sourceManager,

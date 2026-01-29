@@ -3010,3 +3010,17 @@ endmodule
     CHECK(result == expected);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Macro missing arg with stringification crash regress") {
+    auto& text = R"(
+`define A(a, b) $error(`"\"a\"`");
+`define B(a, b) a + b
+
+module m;
+    localparam int x = `B(a,
+    `A(a, b)
+endmodule
+)";
+
+    preprocess(text);
+}
