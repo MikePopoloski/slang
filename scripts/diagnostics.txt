@@ -1038,6 +1038,7 @@ error PlaRangeInAscendingOrder "must specify dimensions in ascending order for P
 error SysFuncHierarchicalNotAllowed "hierarchical references are not allowed in calls to '{}'"
 error TypeIsNotAClass "{} is not a class type"
 error ExpectedNetRef "expected a reference to a net"
+warning nonstandard-randomize NonstandardScopeRandomize "element select or member access in std::randomize argument is non-standard"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 warning finish-num BadFinishNum "finish argument must have value of 0, 1, or 2"
 warning missing-format MissingFormatSpecifier "missing format specifier"
@@ -1240,7 +1241,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 case-wildcard-2state inferred-latch inferred-comb }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
-                   nonstandard-sys-func nonstandard-foreach nonstandard-dist isunbounded-param-arg udp-coverage }
+                   nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
                      constant-conversion sign-conversion float-bool-conv int-bool-conv float-int-conv

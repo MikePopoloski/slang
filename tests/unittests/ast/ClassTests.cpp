@@ -2107,7 +2107,7 @@ class B;
         k = a.randomize with { k + this.l < $bits(super.IntT) + $bits(this.super.IntT); };
         k = a.randomize with { k + local::this.l < 10; };
         k = a.randomize with (a.l, 1+k) { 1; };
-        k = local::k; // error
+        k = local::k; // LocalNotAllowed
         k = a.randomize (l, j);
         k = a.randomize (l, j) with (l) { l[0] > 1; };
         k = randomize (k) with { this.k < 10; };
@@ -2115,9 +2115,9 @@ class B;
         k = randomize (k[0]);
         k = randomize (null);
         k = std::randomize(a, k) with { k < a.j; };
-        k = std::randomize(a.j, u) with { k < a.j; };
-        k = std::randomize(u) with { k < a.j; };
-        k = std::randomize() with (a, b) { k < a.j; };
+        k = std::randomize(a.j, u) with { k < a.j; }; // NonstandardScopeRandomize, InvalidRandType
+        k = std::randomize(u) with { k < a.j; }; // InvalidRandType
+        k = std::randomize() with (a, b) { k < a.j; }; // NameListWithScopeRandomize
     endfunction
 endclass
 )");
@@ -2126,7 +2126,7 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 10);
+    REQUIRE(diags.size() == 11);
     CHECK(diags[0].code == diag::BadBinaryExpression);
     CHECK(diags[1].code == diag::UnknownMember);
     CHECK(diags[2].code == diag::ExpectedIdentifier);
@@ -2134,9 +2134,10 @@ endclass
     CHECK(diags[4].code == diag::LocalNotAllowed);
     CHECK(diags[5].code == diag::ExpectedClassPropertyName);
     CHECK(diags[6].code == diag::ExpectedClassPropertyName);
-    CHECK(diags[7].code == diag::ExpectedVariableName);
+    CHECK(diags[7].code == diag::NonstandardScopeRandomize);
     CHECK(diags[8].code == diag::InvalidRandType);
-    CHECK(diags[9].code == diag::NameListWithScopeRandomize);
+    CHECK(diags[9].code == diag::InvalidRandType);
+    CHECK(diags[10].code == diag::NameListWithScopeRandomize);
 }
 
 TEST_CASE("Scope randomize rand variables") {
@@ -3577,4 +3578,112 @@ endclass
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();
+}
+
+TEST_CASE("std::randomize with element select") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int segment_size[2];
+    int traffic_type[2];
+
+    function automatic void test;
+        int idx = 1;
+
+        // Randomize with element select and dist constraint
+        void'(std::randomize(traffic_type[idx]) with {
+            traffic_type[idx] dist {
+                0 :/ 1,
+                1 :/ 10,
+                2 :/ 2
+            };
+        });
+
+        // Randomize with element select and inside constraint
+        void'(std::randomize(segment_size[0]) with {
+            segment_size[0] inside {[10:10000]};
+        });
+
+        // Randomize with element select, variable index
+        void'(std::randomize(segment_size[idx]) with {
+            segment_size[idx] inside {[1:100]};
+        });
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::NonstandardScopeRandomize);
+    CHECK(diags[1].code == diag::NonstandardScopeRandomize);
+    CHECK(diags[2].code == diag::NonstandardScopeRandomize);
+}
+
+TEST_CASE("std::randomize with member access") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct { int x; } s;
+    struct { int arr[2]; } s2;
+
+    function automatic void test;
+        // Struct member access - non-standard but allowed
+        void'(std::randomize(s.x));
+
+        // Element select on struct member - non-standard but allowed
+        void'(std::randomize(s2.arr[0]));
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::NonstandardScopeRandomize);
+    CHECK(diags[1].code == diag::NonstandardScopeRandomize);
+}
+
+TEST_CASE("std::randomize with function return value") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function automatic int test;
+        int a = 1;
+        // Randomize the function's return value along with a local variable
+        void'(std::randomize(test, a) with {
+            test inside {[0:100]};
+            a inside {[0:50]};
+        });
+        return test;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("std::randomize with hierarchical reference error") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    int x;
+endmodule
+
+module m;
+    function automatic void test;
+        // Hierarchical reference not allowed - not in current scope
+        void'(std::randomize($root.top.x));
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpectedVariableName);
 }

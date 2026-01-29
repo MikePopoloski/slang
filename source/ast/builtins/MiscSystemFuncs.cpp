@@ -174,6 +174,13 @@ public:
 };
 
 class ScopeRandomizeFunction : public SystemSubroutine {
+    // 18.12
+    // The scope randomize function behaves exactly the same as a class randomize method, except
+    // that it operates on the variables of the current scope instead of class member variables.
+    // Arguments to this function specify the variables that are to be assigned random values, i.e.,
+    // the random variables.
+    //
+    // It's a common non-standard extension to allow element selects and member accesses
 public:
     ScopeRandomizeFunction() :
         SystemSubroutine(KnownSystemName::Randomize, SubroutineKind::Function) {
@@ -192,18 +199,42 @@ public:
             return comp.getErrorType();
 
         for (auto arg : args) {
-            auto sym = arg->getSymbolReference();
-            if (!sym || arg->kind != ExpressionKind::Assignment ||
-                arg->as<AssignmentExpression>().left().kind != ExpressionKind::NamedValue) {
+            if (arg->kind != ExpressionKind::Assignment) {
                 context.addDiag(diag::ExpectedVariableName, arg->sourceRange);
                 return comp.getErrorType();
             }
 
-            auto dt = sym->getDeclaredType();
-            SLANG_ASSERT(dt);
-            if (!dt->getType().isValidForRand(RandMode::Rand, comp.languageVersion())) {
-                context.addDiag(diag::InvalidRandType, arg->sourceRange)
-                    << dt->getType() << "rand"sv;
+            // Allow element selects and member accesses to support randomizing
+            // array elements and struct members (non-standard extension).
+            auto* left = &arg->as<AssignmentExpression>().left();
+            bool isNonstandard = false;
+            while (true) {
+                if (left->kind == ExpressionKind::ElementSelect) {
+                    isNonstandard = true;
+                    left = &left->as<ElementSelectExpression>().value();
+                }
+                else if (left->kind == ExpressionKind::MemberAccess) {
+                    isNonstandard = true;
+                    left = &left->as<MemberAccessExpression>().value();
+                }
+                else {
+                    break;
+                }
+            }
+
+            if (left->kind != ExpressionKind::NamedValue) {
+                context.addDiag(diag::ExpectedVariableName, arg->sourceRange);
+                return comp.getErrorType();
+            }
+
+            if (isNonstandard)
+                context.addDiag(diag::NonstandardScopeRandomize, arg->sourceRange);
+
+            // Use the type of the actual expression (which may be an element type)
+            // rather than the declared type of the base symbol.
+            auto& targetType = *arg->as<AssignmentExpression>().left().type;
+            if (!targetType.isValidForRand(RandMode::Rand, comp.languageVersion())) {
+                context.addDiag(diag::InvalidRandType, arg->sourceRange) << targetType << "rand"sv;
             }
         }
 
