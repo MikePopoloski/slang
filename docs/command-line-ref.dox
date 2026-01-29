@@ -569,6 +569,12 @@ Unnamed generate blocks are not allowed to be referenced from within the languag
 but they do have externally visible names (following a 'genblk###' pattern). This flag
 allows hierarchical references to unnamed generate blocks via those external names.
 
+`--allow-virtual-iface-with-override`
+
+Allow interface instances that are bind/defparam targets to be assigned to virtual interfaces.
+SystemVerilog doesn't permit this, but some tools allow it anyway so this flag can be used
+for compatibility purposes.
+
 `--cmd-ignore <vendor_cmd>,<N>`
 
 Define rule to ignore vendor command &lt;vendor_cmd> with its following &lt;N> parameters.

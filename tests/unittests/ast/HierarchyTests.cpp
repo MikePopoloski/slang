@@ -1844,6 +1844,39 @@ endmodule
     CHECK(diags[1].code == diag::VirtualIfaceDefparam);
 }
 
+TEST_CASE("AllowVirtualIfaceWithOverride flag") {
+    auto tree = SyntaxTree::fromText(R"(
+interface J;
+    parameter q = 1;
+endinterface
+
+interface I;
+    J j();
+endinterface
+
+interface K;
+endinterface
+
+module m;
+    I i1();
+    I i2();
+
+    virtual I vi1 = i1;
+    virtual I vi2 = i2;
+
+    defparam i1.j.q = 2;
+    bind i2.j K k();
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowVirtualIfaceWithOverride;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Spurious errors in uninstantiated blocks, GH #1028") {
     auto tree = SyntaxTree::fromText(R"(
 typedef struct packed {

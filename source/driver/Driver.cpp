@@ -56,7 +56,8 @@ static constexpr auto vcsCompFlags = {VCS_COMP_FLAGS};
 static constexpr auto allCompFlags = {
     VCS_COMP_FLAGS,
     CompilationFlags::AllowTopLevelIfacePorts,
-    CompilationFlags::AllowUnnamedGenerate
+    CompilationFlags::AllowUnnamedGenerate,
+    CompilationFlags::AllowVirtualIfaceWithOverride
 };
 
 #define VCS_ANALYSIS_FLAGS \
@@ -250,6 +251,10 @@ void Driver::addStandardArgs() {
     addCompFlag(CompilationFlags::AllowUnnamedGenerate, "--allow-genblk-reference",
                 "Allow references to unnamed generate blocks via their external names "
                 "(e.g. genblk1)");
+    addCompFlag(CompilationFlags::AllowVirtualIfaceWithOverride,
+                "--allow-virtual-iface-with-override",
+                "Allow interface instances that are bind/defparam targets to be assigned "
+                "to virtual interfaces");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "
