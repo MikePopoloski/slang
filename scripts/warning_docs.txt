@@ -210,6 +210,20 @@ module m;
 endmodule
 ```
 
+-Wnonstandard-randomize
+An argument to a scoped randomize call (`std::randomize`) contains accesses rather than simple variables.
+```
+module m;
+    int x[2];
+    struct { int y; } s;
+
+    function automatic void test;
+        std::randomize(x[0]);
+        std::randomize(s.y);
+    endfunction
+endmodule
+```
+
 -Wformat-real
 A string formatting function was passed a real value for an integer format specifier,
 which will force the value to round to an integer.
