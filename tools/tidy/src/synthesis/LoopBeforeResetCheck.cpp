@@ -24,7 +24,7 @@ struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true, false, t
             // Check if this loop contains a reset check inside it
             ResetInLoopVisitor resetVisitor(resetName);
             statement.body.visit(resetVisitor);
-            
+
             if (resetVisitor.hasResetCheck()) {
                 hasError = true;
                 errorLocation = statement.sourceRange.start();
@@ -122,19 +122,19 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true, fal
             return;
 
         auto& timedStmt = symbol.getBody().as<TimedStatement>();
-        
+
         // Check if reset signal is present in the sensitivity list
         auto& configs = config.getCheckConfigs();
         LookupIdentifier resetInSensitivityList(configs.resetName, false);
         timedStmt.timing.visit(resetInSensitivityList);
-        
+
         // Only apply the check if reset is in the sensitivity list
         if (!resetInSensitivityList.found())
             return;
 
         AlwaysFFVisitor visitor(configs.resetName, configs.resetIsActiveHigh);
         symbol.getBody().visit(visitor);
-        
+
         if (visitor.getHasError()) {
             diags.add(diag::LoopBeforeResetCheck,
                       visitor.getErrorLocation().value_or(symbol.location));
