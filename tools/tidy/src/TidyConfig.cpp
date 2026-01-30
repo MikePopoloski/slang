@@ -47,6 +47,7 @@ TidyConfig::TidyConfig() {
     synthesisChecks.emplace("AlwaysFFAssignmentOutsideConditional", CheckOptions());
     synthesisChecks.emplace("UnusedSensitiveSignal", CheckOptions());
     synthesisChecks.emplace("UndrivenRange", CheckOptions());
+    synthesisChecks.emplace("LoopBeforeResetCheck", CheckOptions());
     checkKinds.insert({slang::TidyKind::Synthesis, synthesisChecks});
 }
 
