@@ -749,6 +749,19 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
     bool good = false;
     switch (op) {
         case BinaryOperator::Add:
+            if (bothStrings) {
+                good = true;
+                result->type = &compilation.getStringType();
+                context.addDiag(diag::NonstandardStringConcat, opRange);
+
+                // If there is a literal involved, make sure it's converted to string.
+                contextDetermined(context, result->left_, result, compilation.getStringType(),
+                                  opRange);
+                contextDetermined(context, result->right_, result, compilation.getStringType(),
+                                  opRange);
+                break;
+            }
+            [[fallthrough]];
         case BinaryOperator::Subtract:
         case BinaryOperator::Multiply:
             good = bothNumeric;

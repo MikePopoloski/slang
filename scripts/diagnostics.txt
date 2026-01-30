@@ -786,6 +786,7 @@ note NoteConditionalPrecedenceFix "place parentheses around the '?:' expression 
 warning consecutive-comparison ConsecutiveComparison "comparisons like 'x < y < z' don't have their mathematical meaning"
 note NoteForPortConn "for connection to port '{}'"
 warning dynamic-non-procedural DynamicNotProcedural "cannot refer to an element or member of a dynamic type outside of a procedural context"
+warning nonstandard-string-concat NonstandardStringConcat "string concatenation using '+' operator is non-standard"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -1241,7 +1242,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 case-wildcard-2state inferred-latch inferred-comb }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
-                   nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }
+                   nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize nonstandard-string-concat isunbounded-param-arg udp-coverage }
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
                      constant-conversion sign-conversion float-bool-conv int-bool-conv float-int-conv

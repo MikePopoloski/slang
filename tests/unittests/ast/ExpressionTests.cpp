@@ -1890,6 +1890,32 @@ endmodule
     CHECK(diags[0].code == diag::ExpressionNotAssignable);
 }
 
+TEST_CASE("Nonstandard string concatenation with + and += operators") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam string s = foo();
+    function automatic string foo();
+        string a = "hello";
+        string b = " world";
+        a += b;
+        a = a + "!";
+        return a;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::NonstandardStringConcat);
+    CHECK(diags[1].code == diag::NonstandardStringConcat);
+
+    auto& s = compilation.getRoot().lookupName<ParameterSymbol>("m.s");
+    CHECK(s.getValue().str() == "hello world!");
+}
+
 TEST_CASE("Implicit param string literal propagation") {
     auto tree = SyntaxTree::fromText(R"(
 module n #(parameter foo);

@@ -1290,6 +1290,20 @@ module m;
 endmodule
 ```
 
+-Wnonstandard-string-concat
+String concatenation using the `+` operator is not part of the SystemVerilog standard but is
+supported by some commercial tools. This warning is issued when `+` or `+=` is used to
+concatenate strings.
+```
+module m;
+    function automatic string foo();
+        string a = "hello";
+        a += " world";
+        return a;
+    endfunction
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste
