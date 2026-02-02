@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/driver/Driver.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
@@ -119,7 +120,7 @@ TEST_CASE("Include directive errors") {
     preprocess(text, options);
 
     REQUIRE(diagnostics.size() == 5);
-    CHECK(diagnostics[0].code == diag::CouldNotOpenIncludeFile);
+    CHECK(diagnostics[0].code == diag::ExceededMaxIncludeDepth);
     CHECK(diagnostics[1].code == diag::ExpectedIncludeFileName);
     CHECK(diagnostics[2].code == diag::ExpectedIncludeFileName);
     CHECK(diagnostics[3].code == diag::ExpectedIncludeFileName);

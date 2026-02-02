@@ -675,33 +675,37 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         bool isSystem = path[0] == '<';
         path = path.substr(1, path.length() - 2);
 
-        auto buffer = sourceManager.readHeader(path, directive.location(), getCurrentLibrary(),
-                                               isSystem, options.additionalIncludePaths);
-        if (!buffer) {
-            addDiag(diag::CouldNotOpenIncludeFile, fileName.range())
-                << path << buffer.error().message();
-        }
-        else if (includeDepth >= options.maxIncludeDepth) {
+        SourceBuffer sourceBuffer;
+        if (includeDepth >= options.maxIncludeDepth) {
             addDiag(diag::ExceededMaxIncludeDepth, fileName.range());
         }
-        else if (auto onceIt = includeOnceHeaders.find(buffer->data.data());
-                 onceIt == includeOnceHeaders.end() ||
-                 (!onceIt->second.empty() && !isDefined(onceIt->second))) {
-            includeDepth++;
-            hasProtectedCode = false;
-            expectedEndKind = TokenKind::Unknown;
-            pushSource(*buffer);
-
-            includeDirectives.push_back(IncludeMetadata{
-                .syntax = syntax,
-                .path = path,
-                .buffer = *buffer,
-                .isSystem = isSystem,
-            });
+        else {
+            auto buffer = sourceManager.readHeader(path, directive.location(), getCurrentLibrary(),
+                                                   isSystem, options.additionalIncludePaths);
+            if (!buffer) {
+                addDiag(diag::CouldNotOpenIncludeFile, fileName.range())
+                    << path << buffer.error().message();
+            }
+            else if (auto onceIt = includeOnceHeaders.find(buffer->data.data());
+                     onceIt == includeOnceHeaders.end() ||
+                     (!onceIt->second.empty() && !isDefined(onceIt->second))) {
+                includeDepth++;
+                hasProtectedCode = false;
+                expectedEndKind = TokenKind::Unknown;
+                pushSource(*buffer);
+                sourceBuffer = *buffer;
+            }
+            else if (options.bufferChangeCB) {
+                options.bufferChangeCB(buffer->id, false, true);
+                sourceBuffer = *buffer;
+            }
         }
-        else if (options.bufferChangeCB) {
-            options.bufferChangeCB(buffer->id, false, true);
-        }
+        includeDirectives.push_back(IncludeMetadata{
+            .syntax = syntax,
+            .path = path,
+            .buffer = sourceBuffer,
+            .isSystem = isSystem,
+        });
     }
 
     return Trivia(TriviaKind::Directive, syntax);
