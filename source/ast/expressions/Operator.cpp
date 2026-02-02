@@ -352,6 +352,7 @@ ConstantValue OpInfo::eval(BinaryOperator op, const ConstantValue& cvl, const Co
         auto& r = cvr.str();
 
         switch (op) {
+            OP(Add, std::string(l) + std::string(r));
             OP(GreaterThanEqual, SVInt(l >= r));
             OP(GreaterThan, SVInt(l > r));
             OP(LessThanEqual, SVInt(l <= r));

@@ -786,6 +786,7 @@ note NoteConditionalPrecedenceFix "place parentheses around the '?:' expression 
 warning consecutive-comparison ConsecutiveComparison "comparisons like 'x < y < z' don't have their mathematical meaning"
 note NoteForPortConn "for connection to port '{}'"
 warning dynamic-non-procedural DynamicNotProcedural "cannot refer to an element or member of a dynamic type outside of a procedural context"
+warning nonstandard-string-concat NonstandardStringConcat "string concatenation using '+' operator is non-standard"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"

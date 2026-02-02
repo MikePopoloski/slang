@@ -1890,6 +1890,50 @@ endmodule
     CHECK(diags[0].code == diag::ExpressionNotAssignable);
 }
 
+TEST_CASE("Nonstandard string concatenation with + and += operators") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function automatic string foo();
+        string a = "a";
+        string b = "b";
+        a += b; // String concatentation using +=
+        return a;
+    endfunction
+    localparam string ab1 = foo();
+
+    // integer addition
+    localparam int ab2 = int'("a" + "b");
+    localparam int ab3 = int'("ab");
+
+    // If a and b were concatenated, this would fire.
+    $static_assert(ab2 != ab3);
+
+    localparam string ab4 = "a" + "b";
+    $static_assert(int'(ab4) == ab2);
+
+    // Another non-standard concat, since one is not a string literal
+    localparam string ab5 = "a" + ab4;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::NonstandardStringConcat);
+    CHECK(diags[1].code == diag::NonstandardStringConcat);
+
+    auto& ab1 = compilation.getRoot().lookupName<ParameterSymbol>("m.ab1");
+    CHECK(ab1.getValue().str() == "ab");
+
+    auto& ab5 = compilation.getRoot().lookupName<ParameterSymbol>("m.ab5");
+    auto& abv = ab5.getValue().str();
+    CHECK(abv.at(0) == 'a');
+    CHECK((uint8_t)abv.at(1) == (uint8_t)('a' + 'b'));
+}
+
 TEST_CASE("Implicit param string literal propagation") {
     auto tree = SyntaxTree::fromText(R"(
 module n #(parameter foo);
