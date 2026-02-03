@@ -245,6 +245,17 @@ TEST_CASE("Block Comment (nested)") {
     CHECK(diagnostics.back().code == diag::NestedBlockComment);
 }
 
+TEST_CASE("Block Comment (slash corner case)") {
+    auto& text = "/*/*/";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.toString() == text);
+    CHECK(token.trivia().size() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
+    REQUIRE(diagnostics.empty());
+}
+
 TEST_CASE("Whitespace") {
     auto& text = " \t\v\f token";
     Token token = lexToken(text);
