@@ -749,6 +749,21 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
     bool good = false;
     switch (op) {
         case BinaryOperator::Add:
+            // Allow string concatenation with + only if at least one operand is
+            // actually of string type and not a string literal. This is a non-standard extension.
+            if ((lt->isString() || rt->isString()) && bothStrings) {
+                good = true;
+                result->type = &compilation.getStringType();
+                context.addDiag(diag::NonstandardStringConcat, opRange);
+
+                // If there is a literal involved, make sure it's converted to string.
+                contextDetermined(context, result->left_, result, compilation.getStringType(),
+                                  opRange);
+                contextDetermined(context, result->right_, result, compilation.getStringType(),
+                                  opRange);
+                break;
+            }
+            [[fallthrough]];
         case BinaryOperator::Subtract:
         case BinaryOperator::Multiply:
             good = bothNumeric;

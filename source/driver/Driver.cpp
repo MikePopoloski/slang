@@ -694,6 +694,7 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::SpecifyPathConditionExpr, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::SolveBeforeDisallowed, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::DynamicNotProcedural, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::NonstandardStringConcat, DiagnosticSeverity::Error);
     }
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
