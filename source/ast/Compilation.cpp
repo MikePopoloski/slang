@@ -616,12 +616,18 @@ static Token getExternNameToken(const SyntaxNode& sn) {
                                                    : sn.as<ExternUdpDeclSyntax>().name;
 }
 
-Compilation::DefinitionLookupResult Compilation::getDefinition(std::string_view name,
-                                                               const Scope& scope,
-                                                               SourceRange sourceRange,
-                                                               DiagCode code) const {
+Compilation::DefinitionLookupResult Compilation::getDefinition(
+    std::string_view name, const Scope& scope, SourceRange sourceRange, DiagCode code,
+    std::span<syntax::AttributeInstanceSyntax* const> attributes) const {
     if (auto result = tryGetDefinition(name, scope); result.definition)
         return result;
+
+    for (auto attrInst : attributes) {
+        for (auto spec : attrInst->specs) {
+            if (spec->name.valueText() == "maybe_unknown"sv)
+                return {};
+        }
+    }
 
     errorMissingDef(name, scope, sourceRange, code);
     return {};

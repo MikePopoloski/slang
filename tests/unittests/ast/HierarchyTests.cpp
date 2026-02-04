@@ -2128,6 +2128,28 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("maybe_unknown attribute suppresses unknown module errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    // This should error - unknown module without attribute
+    unknown_ip u1();
+
+    // This should NOT error - has maybe_unknown attribute
+    (* maybe_unknown *) unknown_ip2 u2();
+
+    // This should also work with multiple attributes
+    (* other_attr, maybe_unknown *) unknown_ip3 u3();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownModule);
+}
+
 TEST_CASE("Package ordering dependency 1 -- GH #1424") {
     auto tree = SyntaxTree::fromText(R"(
 package A_pkg;

@@ -406,9 +406,11 @@ public:
     DefinitionLookupResult tryGetDefinition(std::string_view name, const Scope& scope) const;
 
     /// Gets the definition with the given name, or nullptr if there is no such definition.
-    /// If no definition is found an appropriate diagnostic will be issued.
-    DefinitionLookupResult getDefinition(std::string_view name, const Scope& scope,
-                                         SourceRange sourceRange, DiagCode code) const;
+    /// If no definition is found an appropriate diagnostic will be issued, unless the
+    /// instantiation has a maybe_unknown attribute.
+    DefinitionLookupResult getDefinition(
+        std::string_view name, const Scope& scope, SourceRange sourceRange, DiagCode code,
+        std::span<syntax::AttributeInstanceSyntax* const> attributes = {}) const;
 
     /// Gets the definition indicated by the given config rule, or nullptr if it does not exist.
     /// If no definition is found an appropriate diagnostic will be issued.
