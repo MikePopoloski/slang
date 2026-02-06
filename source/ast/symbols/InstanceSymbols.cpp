@@ -718,7 +718,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
 
     // Simple case: look up the definition and create all instances in one go.
     auto defResult = comp.getDefinition(defName, *context.scope, syntax.type.range(),
-                                        diag::UnknownModule);
+                                        diag::UnknownModule, syntax.attributes);
     createInstances(defResult, nullptr);
 }
 
