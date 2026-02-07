@@ -289,22 +289,22 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
 void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const ASTContext& context,
                               function_ref<void(const Symbol&)> insertCB) const {
     auto& comp = context.getCompilation();
+    // Set a sentinel value immediately to handle re-entrant elaboration.
+    baseClass = &comp.getErrorType();
+
     auto baseType = Lookup::findClass(*extendsClause.baseName, context);
     if (!baseType) {
-        baseClass = &comp.getErrorType();
         return;
     }
 
     // A normal class can't extend an interface class. This method won't be called
     // for an interface class, so we don't need to check that again here.
     if (baseType->isInterface) {
-        baseClass = &comp.getErrorType();
         context.addDiag(diag::ExtendIfaceFromClass, extendsClause.sourceRange()) << baseType->name;
         return;
     }
 
     if (baseType->isFinal) {
-        baseClass = &comp.getErrorType();
         context.addDiag(diag::ExtendFromFinal, extendsClause.sourceRange()) << baseType->name;
         return;
     }
@@ -314,7 +314,6 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
     while (true) {
         if (currBase == this) {
             context.addDiag(diag::ClassInheritanceCycle, extendsClause.sourceRange()) << name;
-            baseClass = &comp.getErrorType();
             return;
         }
 
