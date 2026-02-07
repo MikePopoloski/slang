@@ -3698,6 +3698,7 @@ TEST_CASE("Re-entrant getBaseConstructorCall during forceElaborate regress") {
     // 5. getBaseConstructorCall is called before handleExtends completes
     auto tree = SyntaxTree::fromText(R"(
 package inner_pkg;
+  typedef int some_t;
 endpackage
 
 package main_pkg;
@@ -3705,22 +3706,18 @@ package main_pkg;
   export inner_pkg::*;
 
   class Base #(type T);
+    some_t t;
   endclass
 
   class Config extends Base #(virtual Ifc);
   endclass
-
 endpackage
 
-interface Ifc;
-  import main_pkg::*;
-  some_t mode;
+interface Ifc import main_pkg::*; #(parameter some_t p = 1);
 endinterface
 )");
 
-    // This test verifies we don't assert during elaboration.
-    // There may be diagnostics about the re-export not working.
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
+    NO_COMPILATION_ERRORS;
 }

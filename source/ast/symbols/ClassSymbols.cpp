@@ -288,14 +288,13 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
 
 void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const ASTContext& context,
                               function_ref<void(const Symbol&)> insertCB) const {
-    auto& comp = context.getCompilation();
     // Set a sentinel value immediately to handle re-entrant elaboration.
+    auto& comp = context.getCompilation();
     baseClass = &comp.getErrorType();
 
     auto baseType = Lookup::findClass(*extendsClause.baseName, context);
-    if (!baseType) {
+    if (!baseType)
         return;
-    }
 
     // A normal class can't extend an interface class. This method won't be called
     // for an interface class, so we don't need to check that again here.
@@ -327,6 +326,15 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
     // Assign this member before resolving anything below, because they
     // may try to check the base class of this type.
     baseClass = baseType;
+
+    // After resolving the base class we need to unset any other cached
+    // fields that may have depended on knowing it. In very rare cases
+    // we can call back in to one of the methods that compute and cache
+    // these before the class is fully elaborated, so their results will
+    // be wrong. Clear them here so they get recomputed later.
+    baseConstructorCall.reset();
+    cachedBitstreamWidth.reset();
+    cachedHasCycles.reset();
 
     // Inherit all base class members that don't conflict with our declared symbols.
     auto& scopeNameMap = getNameMap();

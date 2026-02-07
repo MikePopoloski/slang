@@ -1718,6 +1718,11 @@ void Compilation::forceElaborate(const Symbol& symbol) {
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     visitor.visitInstances = false;
     symbol.visit(visitor);
+
+    // Make sure each generic class we found is touched at least
+    // once so that all name lookups are performed.
+    for (auto genericClass : visitor.genericClasses)
+        genericClass->getInvalidSpecialization().visit(visitor);
 }
 
 const Type& Compilation::getType(SyntaxKind typeKind) const {

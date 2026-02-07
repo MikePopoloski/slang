@@ -671,7 +671,7 @@ disable the limit. The default is 64.
 `--ignore-unknown-modules`
 
 Don't issue an error for instantiations of unknown modules, interface, and programs.
-Alternatively, selected instantiations of unknown modules can be ignore with the `(* maybe_unknown *)` attribute.
+Alternatively, selected instantiations of unknown modules can be ignored with the `(* maybe_unknown *)` attribute.
 
 `--disallow-refs-to-unknown-instances`
 

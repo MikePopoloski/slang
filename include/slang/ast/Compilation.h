@@ -113,12 +113,11 @@ enum class SLANG_EXPORT CompilationFlags {
     /// be errors issued for the unknown instances.
     DisallowRefsToUnknownInstances = 1 << 12,
 
-    /// Allow unnamed generate blocks (e.g. genblk) to be referenced
+    /// Allow unnamed generate blocks (e.g. genblk) to be referenced.
     AllowUnnamedGenerate = 1 << 13,
 
     /// Allow interface instances that are bind/defparam targets to be assigned
-    /// to virtual interfaces. This violates IEEE 1800-2017 but matches behavior
-    /// of some commercial tools like Cadence Xcelium.
+    /// to virtual interfaces.
     AllowVirtualIfaceWithOverride = 1 << 14
 };
 SLANG_BITMASK(CompilationFlags, AllowVirtualIfaceWithOverride)
