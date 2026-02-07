@@ -1524,3 +1524,20 @@ endmodule
     auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Multi-assign with pre/post unary operators") {
+    auto& code = R"(
+module m;
+    int i;
+    always_comb i[1:0]++;
+    always_comb --i[1:0];
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+}

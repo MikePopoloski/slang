@@ -90,10 +90,10 @@ protected:
     void handle(const ProceduralAssignStatement& stmt) {
         // Procedural force statements don't act as drivers
         // of their lvalue target.
-        if (stmt.isForce) {
-            prohibitLValue = true;
-            this->visitStmt(stmt);
-            prohibitLValue = false;
+        if (stmt.isForce && stmt.assignment.kind == ExpressionKind::Assignment) {
+            auto& assign = stmt.assignment.as<AssignmentExpression>();
+            this->visit(assign.left());
+            this->visit(assign.right());
         }
         else {
             this->visitStmt(stmt);
@@ -101,20 +101,15 @@ protected:
     }
 
     void handle(const AssignmentExpression& expr) {
-        // Note that this method mirrors the logic in the base class
-        // handler but we need to track the LValue status of the lhs.
-        if (!prohibitLValue) {
-            SLANG_ASSERT(!isLValue);
-            isLValue = true;
-            this->visit(expr.left());
-            isLValue = false;
-        }
-        else {
-            this->visit(expr.left());
+        if (expr.isLValueArg()) {
+            // This is a pseudo-assignment expression fabricated for
+            // things like output ports, so there is no rhs to visit.
+            visitLValue(expr.left());
+            return;
         }
 
-        if (!expr.isLValueArg())
-            this->visit(expr.right());
+        visitLValue(expr.left());
+        this->visit(expr.right());
 
         if (expr.timingControl)
             handleTiming(*expr.timingControl);
@@ -129,14 +124,10 @@ protected:
             size_t argIndex = 0;
             for (auto arg : expr.arguments()) {
                 if (!sub.isArgUnevaluated(argIndex)) {
-                    if (sub.isArgByRef(argIndex)) {
-                        isLValue = true;
+                    if (sub.isArgByRef(argIndex))
+                        visitLValue(*arg);
+                    else
                         this->visit(*arg);
-                        isLValue = false;
-                    }
-                    else {
-                        this->visit(*arg);
-                    }
                 }
                 argIndex++;
             }
@@ -152,13 +143,11 @@ protected:
 
             for (size_t i = 0; i < formals.size(); i++) {
                 // Non-const ref args are special because they don't have an assignment
-                // expression generated for them but still act as output drivers.
+                // expression generated for them but still act as lvalues.
                 auto& formal = *formals[i];
                 if (formal.direction == ArgumentDirection::Ref &&
                     !formal.flags.has(VariableFlags::Const)) {
-                    isLValue = true;
-                    this->visit(*args[i]);
-                    isLValue = false;
+                    visitLValue(*args[i]);
                 }
                 else {
                     this->visit(*args[i]);
@@ -167,6 +156,13 @@ protected:
         }
 
         callExpressions.push_back(&expr);
+    }
+
+    void handle(const UnaryExpression& expr) {
+        if (OpInfo::isLValue(expr.op))
+            visitLValue(expr.operand());
+        else
+            this->visitExpr(expr);
     }
 
     void handle(const ExpressionStatement& stmt) {
@@ -258,7 +254,13 @@ private:
 
     LSPVisitor<TDerived> lspVisitor;
     bool isLValue = false;
-    bool prohibitLValue = false;
+
+    void visitLValue(const Expression& expr) {
+        SLANG_ASSERT(!isLValue);
+        isLValue = true;
+        this->visit(expr);
+        isLValue = false;
+    }
 
     void handleTiming(const TimingControl& timing) {
         if (timing.bad()) {
