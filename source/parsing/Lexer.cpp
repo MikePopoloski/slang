@@ -1266,7 +1266,7 @@ void Lexer::scanBlockComment() {
             else if (c == '/' && peek(1) == '*') {
                 // nested block comments disallowed by the standard; ignore and continue
                 addDiag(diag::NestedBlockComment, currentOffset());
-                advance(2);
+                advance();
             }
             else if (c == '\0') {
                 if (reallyAtEnd()) {

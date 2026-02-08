@@ -3776,3 +3776,19 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AssignmentNotAllowed);
 }
+
+TEST_CASE("Nested block comments, slash corner case") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  $info("Hello" /*/*/, " World" /**/);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InfoTask);
+    CHECK(diags[1].code == diag::NestedBlockComment);
+}
