@@ -263,7 +263,7 @@ bool Type::isBitstreamType(bool destination) const {
         if (classType.isInterface || classType.hasCycles())
             return false;
 
-        for (auto& prop : classType.membersOfType<ClassPropertySymbol>()) {
+        for (auto& prop : classType.properties()) {
             if (!prop.getType().isBitstreamType(destination))
                 return false;
         }

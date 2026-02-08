@@ -3714,6 +3714,7 @@ package main_pkg;
 endpackage
 
 interface Ifc import main_pkg::*; #(parameter some_t p = 1);
+  $static_assert($bits(Config) == 32);
 endinterface
 )");
 

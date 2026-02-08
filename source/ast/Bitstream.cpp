@@ -117,7 +117,7 @@ static DynamicSize dynamicBitstreamSize(const Type& type, BitstreamSizeMode mode
     else if (type.isClass()) {
         auto& ct = type.getCanonicalType().as<ClassType>();
         SLANG_ASSERT(!ct.hasCycles());
-        for (auto& prop : ct.membersOfType<ClassPropertySymbol>()) {
+        for (auto& prop : ct.properties()) {
             if (!handleField(prop))
                 return {};
         }
@@ -619,7 +619,7 @@ bool Bitstream::checkClassAccess(const Type& type, const ASTContext& context,
         return true;
 
     auto& ct = type.getCanonicalType().as<ClassType>();
-    for (auto& prop : ct.membersOfType<ClassPropertySymbol>()) {
+    for (auto& prop : ct.properties()) {
         if (prop.visibility != Visibility::Public && prop.lifetime == VariableLifetime::Automatic) {
             if (!Lookup::isVisibleFrom(prop, *context.scope)) {
                 context.addDiag(diag::ClassPrivateMembersBitstream, sourceRange) << type;

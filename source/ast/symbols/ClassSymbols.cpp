@@ -146,6 +146,27 @@ ConstantValue ClassType::getDefaultValueImpl() const {
     return ConstantValue::NullPlaceholder{};
 }
 
+const ClassPropertySymbol& ClassType::property_iterator::dereference() const {
+    auto sym = current;
+    while (sym->kind == SymbolKind::TransparentMember)
+        sym = &sym->as<TransparentMemberSymbol>().wrapped;
+
+    return sym->as<ClassPropertySymbol>();
+}
+
+void ClassType::property_iterator::skipToNext() {
+    while (current) {
+        auto sym = current;
+        while (sym->kind == SymbolKind::TransparentMember)
+            sym = &sym->as<TransparentMemberSymbol>().wrapped;
+
+        if (sym->kind == SymbolKind::ClassProperty)
+            break;
+
+        current = current->getNextSibling();
+    }
+}
+
 const Symbol& ClassType::fromSyntax(const Scope& scope, const ClassDeclarationSyntax& syntax) {
     // If this class declaration has parameter ports it's actually a generic class definition.
     // Create that now and wait until someone specializes it in order to get an actual type.
@@ -856,7 +877,7 @@ void ClassType::computeSize() const {
     // to zero up above, which will avoid re-entering this function.
     uint64_t totalWidth = 0;
     bool hasDynamic = false;
-    for (auto& prop : membersOfType<ClassPropertySymbol>()) {
+    for (auto& prop : properties()) {
         uint64_t width = prop.getType().getBitstreamWidth();
         if (width == 0)
             hasDynamic = true;
@@ -904,7 +925,7 @@ void ClassType::computeCycles() const {
     ensureElaborated();
     cachedHasCycles = true;
 
-    for (auto& prop : membersOfType<ClassPropertySymbol>()) {
+    for (auto& prop : properties()) {
         if (typeHasCycles(prop.getType()))
             return;
     }
