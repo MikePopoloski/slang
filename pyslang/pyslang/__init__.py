@@ -1,8 +1,8 @@
 import sys
 
 from pyslang.pyslang import (Bag, BumpAllocator, VersionInfo,  # noqa: F401
-                             analysis, ast, diagnostics, driver, numeric,
-                             parsing, syntax, text)
+                             __version__, analysis, ast, diagnostics, driver,
+                             numeric, parsing, syntax, text)
 
 for _name, _mod in [
     ("pyslang.ast", ast),
