@@ -2,8 +2,7 @@ import re
 
 import pytest
 from pyslang.parsing import Token, TokenKind
-from pyslang.syntax import (SyntaxKind, SyntaxNode, SyntaxRewriter, SyntaxTree,
-                            rewrite)
+from pyslang.syntax import SyntaxKind, SyntaxNode, SyntaxRewriter, SyntaxTree, rewrite
 
 
 def test_rewriter_handler_function_called_with_right_args():

@@ -2,8 +2,12 @@
 # SPDX-License-Identifier: MIT
 
 from pyslang.analysis import AnalysisManager, DriverKind, FlowAnalysis
-from pyslang.ast import (Compilation, ExpressionStatement, LSPUtilities,
-                         ProceduralBlockSymbol)
+from pyslang.ast import (
+    Compilation,
+    ExpressionStatement,
+    LSPUtilities,
+    ProceduralBlockSymbol,
+)
 from pyslang.syntax import SyntaxTree
 
 

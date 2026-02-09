@@ -3,8 +3,14 @@
 
 import pytest
 from pyslang.parsing import TokenKind, TriviaKind
-from pyslang.syntax import (SyntaxFactory, SyntaxKind, SyntaxTree, clone,
-                            deepClone, rewrite)
+from pyslang.syntax import (
+    SyntaxFactory,
+    SyntaxKind,
+    SyntaxTree,
+    clone,
+    deepClone,
+    rewrite,
+)
 
 from pyslang import BumpAllocator
 
