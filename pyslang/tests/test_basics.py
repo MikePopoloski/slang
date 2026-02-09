@@ -3,11 +3,13 @@
 
 from pathlib import Path
 
-from pyslang import (Bag, ConstantRange, ConstantValue, DiagnosticEngine, Diags,
-                     SVInt, SourceLocation, SourceManager, clog2, logic_t)
 from pyslang.ast import Compilation, ScriptSession, SymbolKind
 from pyslang.parsing import LexerOptions, ParserOptions
 from pyslang.syntax import SyntaxKind, SyntaxTree
+
+from pyslang import (Bag, ConstantRange, ConstantValue, DiagnosticEngine,
+                     Diags, SourceLocation, SourceManager, SVInt, clog2,
+                     logic_t)
 
 testFile = """
 module m(input i, output o);

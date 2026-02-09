@@ -1,9 +1,10 @@
 """Test accessing `std::span` elements."""
 
-from pyslang import BumpAllocator, SourceLocation
 from pyslang.ast import Compilation, CompilationUnitSymbol, Symbol
 from pyslang.parsing import Token, TokenKind, Trivia
 from pyslang.syntax import SyntaxTree
+
+from pyslang import BumpAllocator, SourceLocation
 
 CASE_STATEMENT_VERILOG_1 = """
 module simple_alu (

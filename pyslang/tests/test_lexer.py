@@ -1,6 +1,7 @@
 import pytest
-from pyslang import BumpAllocator, Diagnostics, SourceManager
 from pyslang.parsing import Lexer, TokenKind
+
+from pyslang import BumpAllocator, Diagnostics, SourceManager
 
 
 @pytest.fixture

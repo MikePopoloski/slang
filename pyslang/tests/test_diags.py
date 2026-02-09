@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
 
-from pyslang import DiagnosticEngine
 from pyslang.ast import Compilation, SymbolKind
 from pyslang.syntax import SyntaxTree
+
+from pyslang import DiagnosticEngine
 
 
 def test_diag_args():
