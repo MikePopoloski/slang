@@ -20,7 +20,7 @@
 
 using namespace slang::driver;
 
-void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) {
+void registerCompilation(py::module_& ast, py::module_& driver) {
     EXPOSE_ENUM(ast, VariableLifetime);
     EXPOSE_ENUM(ast, Visibility);
     EXPOSE_ENUM(ast, ArgumentDirection);

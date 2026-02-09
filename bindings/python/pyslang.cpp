@@ -7,7 +7,7 @@
 
 void registerAnalysis(py::module_& m, py::module_& ast);
 void registerAST(py::module_& m);
-void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver);
+void registerCompilation(py::module_& ast, py::module_& driver);
 void registerExpressions(py::module_& m);
 void registerNumeric(py::module_& m);
 void registerDiagnostics(py::module_& m);
@@ -43,7 +43,7 @@ PYBIND11_MODULE(pyslang, m) {
 
     registerAnalysis(analysis, ast);
     registerAST(ast);
-    registerCompilation(m, ast, driver);
+    registerCompilation(ast, driver);
     registerExpressions(ast);
     registerNumeric(numeric);
     registerDiagnostics(diagnostics);
