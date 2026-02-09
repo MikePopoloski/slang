@@ -5,7 +5,7 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
-void registerAnalysis(py::module_& m);
+void registerAnalysis(py::module_& m, py::module_& ast);
 void registerAST(py::module_& m);
 void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver);
 void registerExpressions(py::module_& m);
@@ -41,7 +41,7 @@ PYBIND11_MODULE(pyslang, m) {
     auto diagnostics = m.def_submodule("diagnostics", "Diagnostic engine and types");
     auto text = m.def_submodule("text", "Source management utilities");
 
-    registerAnalysis(analysis);
+    registerAnalysis(analysis, ast);
     registerAST(ast);
     registerCompilation(m, ast, driver);
     registerExpressions(ast);

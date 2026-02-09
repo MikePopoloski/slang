@@ -51,8 +51,6 @@ std::string argFormatter(const DiagnosticEngine& self, py::object obj) {
 }
 
 void registerText(py::module_& m) {
-    EXPOSE_ENUM(m, ColumnUnit);
-
     py::classh<BufferID>(m, "BufferID")
         .def(py::init<>())
         .def_property_readonly("id", &BufferID::getId)
@@ -185,6 +183,7 @@ void registerText(py::module_& m) {
 }
 
 void registerDiagnostics(py::module_& m) {
+    EXPOSE_ENUM(m, ColumnUnit);
     EXPOSE_ENUM(m, DiagSubsystem);
     EXPOSE_ENUM(m, DiagnosticSeverity);
 

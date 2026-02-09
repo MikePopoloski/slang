@@ -192,7 +192,7 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
     EXPOSE_ENUM(parsing, TriviaKind);
     EXPOSE_ENUM(parsing, TokenKind);
     EXPOSE_ENUM(m, SyntaxKind);
-    EXPOSE_ENUM(m, KnownSystemName);
+    EXPOSE_ENUM(parsing, KnownSystemName);
     EXPOSE_ENUM(m, CSTJsonMode);
 
     py::classh<Trivia>(parsing, "Trivia")

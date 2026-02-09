@@ -71,6 +71,7 @@ install(
 # Install py.typed marker file for PEP 561 compliance
 install(
   FILES ${CMAKE_CURRENT_SOURCE_DIR}/../pyslang/pyslang/py.typed
+        ${CMAKE_CURRENT_SOURCE_DIR}/../pyslang/pyslang/__init__.py
   COMPONENT pylib
   DESTINATION .)
 
