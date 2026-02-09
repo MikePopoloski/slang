@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
 
+from pyslang import DiagnosticEngine
 from pyslang.ast import (Compilation, NonConstantFunction,
                          SimpleSystemSubroutine, SubroutineKind)
-from pyslang.diagnostics import DiagnosticEngine
 from pyslang.syntax import SyntaxTree
 
 testfile = """

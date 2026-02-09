@@ -37,17 +37,14 @@ PYBIND11_MODULE(pyslang, m) {
     auto parsing = m.def_submodule("parsing", "Lexer, parser, preprocessor types");
     auto analysis = m.def_submodule("analysis", "Code analysis utilities");
     auto driver = m.def_submodule("driver", "Compilation driver");
-    auto numeric = m.def_submodule("numeric", "Numeric types: SVInt, ConstantValue");
-    auto diagnostics = m.def_submodule("diagnostics", "Diagnostic engine and types");
-    auto text = m.def_submodule("text", "Source management utilities");
 
     registerAnalysis(analysis, ast);
     registerAST(ast);
     registerCompilation(ast, driver);
     registerExpressions(ast);
-    registerNumeric(numeric);
-    registerDiagnostics(diagnostics);
-    registerText(text);
+    registerNumeric(m);
+    registerDiagnostics(m);
+    registerText(m);
     registerUtil(m);
     registerStatements(ast);
     registerSymbols(ast);
