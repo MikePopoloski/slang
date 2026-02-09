@@ -3,7 +3,7 @@
 
 """Basic tests checking that syntax tree equality checks work as expected."""
 
-import pyslang
+from pyslang.syntax import SyntaxTree
 
 
 def is_verilog_equal(verilog_left: str, verilog_right: str) -> bool:
@@ -11,8 +11,8 @@ def is_verilog_equal(verilog_left: str, verilog_right: str) -> bool:
 
     Helper function for repeated check in upcoming tests.
     """
-    ast_left = pyslang.SyntaxTree.fromText(verilog_left)
-    ast_right = pyslang.SyntaxTree.fromText(verilog_right)
+    ast_left = SyntaxTree.fromText(verilog_left)
+    ast_right = SyntaxTree.fromText(verilog_right)
     return (ast_left.root).isEquivalentTo(ast_right.root)
 
 
@@ -91,16 +91,16 @@ def test_verilog_equality() -> None:
         endmodule
     """
 
-    st1 = pyslang.SyntaxTree.fromText(input_1)
-    st1_again = pyslang.SyntaxTree.fromText(input_1)
-    st1_stripped = pyslang.SyntaxTree.fromText(input_1.strip())
+    st1 = SyntaxTree.fromText(input_1)
+    st1_again = SyntaxTree.fromText(input_1)
+    st1_stripped = SyntaxTree.fromText(input_1.strip())
 
     assert st1.root.isEquivalentTo(st1_again.root)
     assert st1.root.isEquivalentTo(st1_stripped.root)
     assert st1_again.root.isEquivalentTo(st1_stripped.root)
 
-    st2 = pyslang.SyntaxTree.fromText(input_2)
-    st2_stripped = pyslang.SyntaxTree.fromText(input_2.strip())
+    st2 = SyntaxTree.fromText(input_2)
+    st2_stripped = SyntaxTree.fromText(input_2.strip())
 
     assert st1_stripped.root.isEquivalentTo(st2.root)
     assert st1.root.isEquivalentTo(st2.root)
@@ -109,7 +109,7 @@ def test_verilog_equality() -> None:
 
 def test_verilog_equality_with_whitespaces_around_operators() -> None:
     """Test a specific case with structs."""
-    tree1 = pyslang.SyntaxTree.fromText(
+    tree1 = SyntaxTree.fromText(
         """
         module m;
             struct {logic logic_signal_to_insert;
@@ -119,7 +119,7 @@ def test_verilog_equality_with_whitespaces_around_operators() -> None:
         "test.sv",
     )
 
-    tree2 = pyslang.SyntaxTree.fromText(
+    tree2 = SyntaxTree.fromText(
         """
     module m;
         struct {logic logic_signal_to_insert;
@@ -131,7 +131,7 @@ def test_verilog_equality_with_whitespaces_around_operators() -> None:
 
     assert tree1.root.isEquivalentTo(tree2.root) is True
 
-    tree3 = pyslang.SyntaxTree.fromText(
+    tree3 = SyntaxTree.fromText(
         """
         module m;
             struct {

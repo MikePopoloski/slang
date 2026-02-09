@@ -59,15 +59,6 @@ PYBIND11_MODULE(pyslang, m) {
     registerSyntaxFactory(syntax);
     registerTypes(ast);
 
-    for (auto& submod : {ast, syntax, parsing, numeric, diagnostics, text, driver, analysis}) {
-        for (auto item : submod.attr("__dict__").cast<py::dict>()) {
-            auto name = item.first.cast<std::string>();
-            if (name[0] != '_' && !py::hasattr(m, name.c_str())) {
-                m.attr(name.c_str()) = item.second;
-            }
-        }
-    }
-
     py::register_exception_translator([](std::exception_ptr p) {
         try {
             if (p)

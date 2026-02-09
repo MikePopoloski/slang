@@ -16,7 +16,9 @@ all logic declarations found in the code.
 
 from typing import Union
 
-import pyslang
+from pyslang.ast import Compilation, PackedArrayType, ScalarType, VariableSymbol
+from pyslang.parsing import Token
+from pyslang.syntax import SyntaxNode, SyntaxTree
 
 
 class LogicDeclarationExtractor:
@@ -43,18 +45,18 @@ class LogicDeclarationExtractor:
             True if the type is logic or an array of logic types
         """
         # Check if it's a scalar logic type
-        if isinstance(var_type, pyslang.ScalarType):
-            return var_type.scalarKind == pyslang.ScalarType.Kind.Logic
+        if isinstance(var_type, ScalarType):
+            return var_type.scalarKind == ScalarType.Kind.Logic
 
         # Check if it's a packed array type
-        elif isinstance(var_type, pyslang.PackedArrayType):
+        elif isinstance(var_type, PackedArrayType):
             # Recursively check the element type
             return self._is_logic_type(var_type.elementType)
 
         # Not a logic type
         return False
 
-    def __call__(self, obj: Union[pyslang.Token, pyslang.SyntaxNode]) -> None:
+    def __call__(self, obj: Union[Token, SyntaxNode]) -> None:
         """Visit method called for each node in the AST.
 
         Args:
@@ -62,7 +64,7 @@ class LogicDeclarationExtractor:
                  We're specifically interested in VariableSymbol nodes.
         """
         # Check if this is a variable symbol (includes logic declarations)
-        if isinstance(obj, pyslang.VariableSymbol):
+        if isinstance(obj, VariableSymbol):
             # Get the type of the variable
             var_type = obj.type
 
@@ -85,10 +87,10 @@ def extract_logic_declaration_names(systemverilog_code: str) -> list[str]:
     """
     try:
         # Parse the SystemVerilog code into a syntax tree
-        tree = pyslang.SyntaxTree.fromText(systemverilog_code)
+        tree = SyntaxTree.fromText(systemverilog_code)
 
         # Create a compilation unit and add the syntax tree
-        compilation = pyslang.Compilation()
+        compilation = Compilation()
         compilation.addSyntaxTree(tree)
 
         # Check for any diagnostics (errors/warnings) during compilation

@@ -1,7 +1,9 @@
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
 
-import pyslang
+from pyslang.ast import Compilation, NonConstantFunction, SimpleSystemSubroutine, SubroutineKind
+from pyslang.diagnostics import DiagnosticEngine
+from pyslang.syntax import SyntaxTree
 
 testfile = """
 module m;
@@ -16,18 +18,18 @@ endmodule
 
 
 def test_custom_systasks():
-    c = pyslang.Compilation()
-    c.addSyntaxTree(pyslang.SyntaxTree.fromText(testfile))
+    c = Compilation()
+    c.addSyntaxTree(SyntaxTree.fromText(testfile))
 
-    foo = pyslang.NonConstantFunction("$foo", c.realType, 1, [c.stringType])
+    foo = NonConstantFunction("$foo", c.realType, 1, [c.stringType])
     c.addSystemSubroutine(foo)
 
-    class BarFunc(pyslang.SimpleSystemSubroutine):
+    class BarFunc(SimpleSystemSubroutine):
         def __init__(self):
-            pyslang.SimpleSystemSubroutine.__init__(
+            SimpleSystemSubroutine.__init__(
                 self,
                 "$bar",
-                pyslang.SubroutineKind.Function,
+                SubroutineKind.Function,
                 1,
                 [c.intType],
                 c.intType,
@@ -45,7 +47,7 @@ def test_custom_systasks():
     c.addSystemSubroutine(BarFunc())
 
     diags = c.getAllDiagnostics()
-    report = pyslang.DiagnosticEngine.reportAll(c.sourceManager, diags)
+    report = DiagnosticEngine.reportAll(c.sourceManager, diags)
     assert ("\n" + report) == """
 source:8:5: note: $info encountered: bar:52
     $info("bar:%0d", $bar(42));

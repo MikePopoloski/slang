@@ -1,6 +1,10 @@
 """Test accessing `std::span` elements."""
 
-import pyslang
+from pyslang.ast import Compilation, CompilationUnitSymbol, Symbol
+from pyslang.parsing import Token, TokenKind, Trivia
+from pyslang.syntax import SyntaxTree
+from pyslang.text import SourceLocation
+from pyslang import BumpAllocator
 
 CASE_STATEMENT_VERILOG_1 = """
 module simple_alu (
@@ -25,9 +29,9 @@ endmodule
 
 
 def test_continuous_assign_expression_access_span() -> None:
-    tree = pyslang.SyntaxTree.fromText(CASE_STATEMENT_VERILOG_1, "test.sv")
+    tree = SyntaxTree.fromText(CASE_STATEMENT_VERILOG_1, "test.sv")
 
-    compilation = pyslang.Compilation()
+    compilation = Compilation()
     compilation.addSyntaxTree(tree)
 
     # `compilation.getCompilationUnits()`, in C++, returns a `std::span` object. Check that it is
@@ -36,20 +40,20 @@ def test_continuous_assign_expression_access_span() -> None:
     assert std_span_as_list is not None
     assert isinstance(std_span_as_list, list)
     assert len(std_span_as_list) == 1
-    assert isinstance(std_span_as_list[0], pyslang.Symbol)
-    assert isinstance(std_span_as_list[0], pyslang.CompilationUnitSymbol)
+    assert isinstance(std_span_as_list[0], Symbol)
+    assert isinstance(std_span_as_list[0], CompilationUnitSymbol)
 
 
 def test_token_construction() -> None:
-    t1 = pyslang.Token()
-    assert isinstance(t1, pyslang.Token)
+    t1 = Token()
+    assert isinstance(t1, Token)
 
-    t2 = pyslang.Token(
-        pyslang.BumpAllocator(),
-        pyslang.TokenKind(12),
-        [pyslang.Trivia()],  # This argument, in C++, is a `std::span` object.
+    t2 = Token(
+        BumpAllocator(),
+        TokenKind(12),
+        [Trivia()],  # This argument, in C++, is a `std::span` object.
         "'{",
-        pyslang.SourceLocation(),
+        SourceLocation(),
     )
-    assert isinstance(t2, pyslang.Token)
+    assert isinstance(t2, Token)
     assert str(t2) == "'{"
