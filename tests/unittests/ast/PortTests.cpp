@@ -1305,54 +1305,6 @@ endmodule
     CHECK(diags[14].code == diag::PortDoesNotExist);
 }
 
-TEST_CASE("Inconsistent port collapsing") {
-    auto tree = SyntaxTree::fromText(R"(
-module m (input .a({b, {c[1:0], d}}), input uwire [2:1] f);
-    wand b;
-    wand [3:0] c;
-    supply0 d;
-endmodule
-
-module n ({b[1:0], a});
-    input tri0 a;
-    input tri1 [3:0] b;
-endmodule
-
-module x(input trireg in);
-    y y(.in);
-    y y1(in);
-    y y2(.in(in));
-endmodule
-
-module y(input wor in);
-endmodule
-
-module top;
-    wand a;
-    wor b;
-    trireg [1:0] c;
-
-    m m1({a, b, c}, c);
-    n n1({{a, a}, c[0]});
-    x x1(b);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
-    CHECK(diags[0].code == diag::ImplicitConnNetInconsistent);
-    CHECK(diags[1].code == diag::NetInconsistent);
-    CHECK(diags[2].code == diag::NetInconsistent);
-    CHECK(diags[3].code == diag::NetRangeInconsistent);
-    CHECK(diags[4].code == diag::NetRangeInconsistent);
-    CHECK(diags[5].code == diag::NetInconsistent);
-    CHECK(diags[6].code == diag::NetInconsistent);
-    CHECK(diags[7].code == diag::NetInconsistent);
-}
-
 TEST_CASE("Inout port conn to variable") {
     auto tree = SyntaxTree::fromText(R"(
 module m(logic a);
@@ -1396,68 +1348,6 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::RefPortUnnamedUnconnected);
     CHECK(diags[1].code == diag::RefPortUnconnected);
-}
-
-TEST_CASE("User-defined nettype port connection errors") {
-    auto tree = SyntaxTree::fromText(R"(
-nettype integer nt1;
-
-module m(nt1 foo, bar, input nt1 baz);
-endmodule
-
-module n(input signed foo);
-endmodule
-
-module o(nt1 a);
-endmodule
-
-module p({a, b});
-    input nt1 a, b;
-endmodule
-
-module q(input .foo({a, b}));
-    nt1 a;
-    wire b;
-endmodule
-
-module top;
-    wire signed [5:0] a;
-    wire integer b;
-
-    m m1(a, b, b);
-
-    nettype logic signed[5:0] nt2;
-    nt2 c;
-    n n1(c);
-
-    o o1(c);
-
-    p p1({c, c});
-
-    nt1 d;
-    p p2({d, d});
-
-    q q1({c, c});
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 12);
-    CHECK(diags[0].code == diag::MismatchedUserDefPortConn);
-    CHECK(diags[1].code == diag::PortWidthTruncate);
-    CHECK(diags[2].code == diag::MismatchedUserDefPortDir);
-    CHECK(diags[3].code == diag::MismatchedUserDefPortConn);
-    CHECK(diags[4].code == diag::PortWidthTruncate);
-    CHECK(diags[5].code == diag::UserDefPortTwoSided);
-    CHECK(diags[6].code == diag::PortWidthTruncate);
-    CHECK(diags[7].code == diag::UserDefPortTwoSided);
-    CHECK(diags[8].code == diag::PortWidthExpand);
-    CHECK(diags[9].code == diag::SignConversion);
-    CHECK(diags[10].code == diag::UserDefPortMixedConcat);
-    CHECK(diags[11].code == diag::PortWidthExpand);
 }
 
 TEST_CASE("inout uwire port errors") {
@@ -1524,16 +1414,10 @@ module o({a, b});
     input b;
 endmodule
 
-module p(input interconnect a);
-endmodule
-
 module q(input int b);
 endmodule
 
 module top;
-    logic a;
-    p p1(.a);
-
     interconnect b;
     q q1(.b);
 endmodule
@@ -1543,12 +1427,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::InterconnectInitializer);
     CHECK(diags[1].code == diag::InterconnectTypeSyntax);
     CHECK(diags[2].code == diag::InterconnectMultiPort);
-    CHECK(diags[3].code == diag::InterconnectPortVar);
-    CHECK(diags[4].code == diag::InterconnectReference);
+    CHECK(diags[3].code == diag::InterconnectReference);
 }
 
 TEST_CASE("More interconnect ports") {

@@ -210,6 +210,20 @@ module m;
 endmodule
 ```
 
+-Wnonstandard-randomize
+An argument to a scoped randomize call (`std::randomize`) contains accesses rather than simple variables.
+```
+module m;
+    int x[2];
+    struct { int y; } s;
+
+    function automatic void test;
+        std::randomize(x[0]);
+        std::randomize(s.y);
+    endfunction
+endmodule
+```
+
 -Wformat-real
 A string formatting function was passed a real value for an integer format specifier,
 which will force the value to round to an integer.
@@ -1273,6 +1287,30 @@ warning for compatibility with other tools.
 module m;
     int a[];
     assign i = a[3];
+endmodule
+```
+
+-Wnonstandard-string-concat
+String concatenation using the `+` operator is not part of the SystemVerilog standard but is
+supported by some commercial tools. This warning is issued when `+` or `+=` is used to
+concatenate strings.
+```
+module m;
+    function automatic string foo();
+        string a = "hello";
+        a += " world";
+        return a;
+    endfunction
+endmodule
+```
+
+-Wnested-comment
+Nested block comments are not allowed in SystemVerilog but most tools ignore them and
+just include them as part of the containing comment block. Note that the opening characters
+are simply skipped, meaning the next closing '*/' will end the containing block instead.
+```
+/* foo /* bar */
+module m;
 endmodule
 ```
 

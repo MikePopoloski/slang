@@ -42,6 +42,7 @@ enum class CompilationFlags;
 
 namespace slang::analysis {
 
+struct AnalysisOptions;
 class AnalysisManager;
 enum class AnalysisFlags;
 
@@ -356,6 +357,10 @@ public:
     /// Processes and applies all configured options.
     /// @returns true on success and false if errors were encountered.
     [[nodiscard]] bool processOptions();
+
+    /// Returns the analysis options constructed from flags.
+    [[nodiscard]]
+    analysis::AnalysisOptions getAnalysisOptions() const;
 
     /// @brief Runs the preprocessor on all loaded buffers and outputs the result to stdout.
     ///

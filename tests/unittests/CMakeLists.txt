@@ -9,6 +9,7 @@ add_executable(
   analysis/CaseAnalysisTests.cpp
   analysis/DFATests.cpp
   analysis/MultiAssignTests.cpp
+  analysis/PortAnalysisTests.cpp
   analysis/UnusedTests.cpp
   ast/AssertionTests.cpp
   ast/CheckerTests.cpp

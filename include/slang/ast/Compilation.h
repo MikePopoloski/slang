@@ -113,10 +113,14 @@ enum class SLANG_EXPORT CompilationFlags {
     /// be errors issued for the unknown instances.
     DisallowRefsToUnknownInstances = 1 << 12,
 
-    /// Allow unnamed generate blocks (e.g. genblk) to be referenced
-    AllowUnnamedGenerate = 1 << 13
+    /// Allow unnamed generate blocks (e.g. genblk) to be referenced.
+    AllowUnnamedGenerate = 1 << 13,
+
+    /// Allow interface instances that are bind/defparam targets to be assigned
+    /// to virtual interfaces.
+    AllowVirtualIfaceWithOverride = 1 << 14
 };
-SLANG_BITMASK(CompilationFlags, AllowUnnamedGenerate)
+SLANG_BITMASK(CompilationFlags, AllowVirtualIfaceWithOverride)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {
@@ -309,9 +313,9 @@ public:
     /// resolved and all symbols have been created. This is distinct from being finalized,
     /// which only means that the design has been parsed and syntax trees have been added.
     ///
-    /// This is only set once getAllDiagnostics() is called, after which point the compilation
+    /// This is only set once getSemanticDiagnostics() is called, after which point the compilation
     /// is functionally immutable.
-    bool isElaborated() const { return cachedAllDiagnostics.has_value(); }
+    bool isElaborated() const { return cachedSemanticDiagnostics.has_value(); }
 
     /// Gets the diagnostics produced during lexing, preprocessing, and syntax parsing.
     const Diagnostics& getParseDiagnostics();
@@ -401,9 +405,11 @@ public:
     DefinitionLookupResult tryGetDefinition(std::string_view name, const Scope& scope) const;
 
     /// Gets the definition with the given name, or nullptr if there is no such definition.
-    /// If no definition is found an appropriate diagnostic will be issued.
-    DefinitionLookupResult getDefinition(std::string_view name, const Scope& scope,
-                                         SourceRange sourceRange, DiagCode code) const;
+    /// If no definition is found an appropriate diagnostic will be issued, unless the
+    /// instantiation has a maybe_unknown attribute.
+    DefinitionLookupResult getDefinition(
+        std::string_view name, const Scope& scope, SourceRange sourceRange, DiagCode code,
+        std::span<syntax::AttributeInstanceSyntax* const> attributes = {}) const;
 
     /// Gets the definition indicated by the given config rule, or nullptr if it does not exist.
     /// If no definition is found an appropriate diagnostic will be issued.
@@ -569,6 +575,11 @@ public:
     /// Finds an applicable default disable expression for the given scope, or returns nullptr
     /// if no such declaration is in effect.
     const Expression* getDefaultDisable(const Scope& scope) const;
+
+    /// Gets the map of scopes containing default disable directives.
+    const flat_hash_map<const Scope*, const Expression*>& getDefaultDisableMap() const {
+        return defaultDisableMap;
+    }
 
     /// Notes the existence of an extern module/interface/program/primitive declaration.
     void noteExternDefinition(const Scope& scope, const syntax::SyntaxNode& syntax);
@@ -881,7 +892,7 @@ private:
     };
 
     // Map from syntax nodes to parse-time metadata about them.
-    flat_hash_map<const syntax::SyntaxNode*, SyntaxMetadata> syntaxMetadata;
+    flat_hash_map<const syntax::ModuleDeclarationSyntax*, SyntaxMetadata> syntaxMetadata;
 
     // A list of all created definitions, as storage for their memory.
     std::vector<std::unique_ptr<DefinitionSymbol>> definitionMemory;

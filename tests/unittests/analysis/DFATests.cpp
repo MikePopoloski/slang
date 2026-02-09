@@ -739,3 +739,85 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BlockingDelayInTask);
 }
+
+TEST_CASE("DFA handles ambiguous conditional expression") {
+    auto& code = R"(
+module m(input l);
+    int a;
+    always_comb begin
+        if (l) begin
+            automatic int i = 'x ? (a = 1) : 3;
+        end
+        else begin
+            a = 1;
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("DFA general randsequence") {
+    auto& code = R"(
+module m;
+    int a;
+    int cnt;
+
+    always_comb begin
+        randsequence (main)
+            main : first second done ;
+            first : add("foo") | dec ;
+            second : pop | push ;
+            done : { $display("done"); return; } ;
+            add(string s) : { $display(s); } ;
+            dec : { begin : foo $display("dec"); break; end } ;
+            pop : repeat($urandom_range( 2, 6 )) push;
+            push : if (1) done else pop | rand join (0.5) first second done;
+            baz : case (a & 7) 1, 2: push; 3: pop; default done; endcase;
+        endsequence
+
+        randsequence( bin_op )
+            void bin_op : value operator value // void type is optional
+            { $display("%s %b %b", operator, value[1], value[2]); }
+            ;
+            bit [7:0] value : { return 8'($urandom); } ;
+            string operator : add := 5 { return "+" ; }
+                            | dec := 2 { return "-" ; }
+                            | mult := 1 { return "*" ; }
+            ;
+            add : { $display("add"); };
+            dec : { $display("dec"); };
+            mult : { $display("mult"); };
+        endsequence
+
+        cnt = 0;
+        randsequence( A )
+            void A : A1 A2;
+            void A1 : { cnt = 1; } B repeat(5) C B
+            { $display("c=%d, b1=%d, b2=%d", C, B[1], B[2]); }
+            ;
+            void A2 : if (a != 0) D(5) else D(20)
+            { $display("d1=%d, d2=%d", D[1], D[2]); }
+            ;
+            int B : C { return C;}
+                  | C C { return C[2]; }
+                  | C C C { return C[3]; }
+            ;
+            int C : { cnt = cnt + 1; return cnt; };
+            int D (int prm) : { return prm; };
+        endsequence
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}

@@ -455,7 +455,6 @@ protected:
                 for (auto local : localPtrs)
                     *local = std::move(iterValues[i++]);
 
-                // TODO: give up if state becomes unreachable?
                 visit(stmt.body);
                 for (auto step : stmt.steps)
                     visit(*step);
@@ -576,11 +575,36 @@ protected:
     }
 
     void visitStmt(const RandSequenceStatement& stmt) {
-        // TODO: could check for unreachable productions
-        // TODO: handle special break / return rules
+        using RSPS = RandSeqProductionSymbol;
+
         auto initialState = (DERIVED).copyState(state);
         auto finalState = std::move(state);
 
+        // Calling break from within a randsequence production jumps to
+        // the end of the randsequence block.
+        auto oldBreakStates = std::move(breakStates);
+        breakStates.clear();
+
+        auto visitCodeBlock = [&](const RSPS::CodeBlockProd& prod) {
+            if (auto blockBody = prod.block->tryGetStatement()) {
+                // Return statements in code blocks just jump to the
+                // end of the block, like a break statement in a loop.
+                auto oldReturnStates = std::move(returnStates);
+                returnStates.clear();
+
+                visit(*blockBody);
+
+                for (auto& rs : returnStates)
+                    (DERIVED).joinState(state, rs);
+
+                returnStates = std::move(oldReturnStates);
+            }
+        };
+
+        // Right now we just run through all productions in order and assume
+        // we could have any combination of them. We could be smarter here and
+        // model the control flow of the productions, figuring out which ones are
+        // reachable and in which order.
         for (auto production : stmt.productions) {
             for (auto& rule : production->getRules()) {
                 setState((DERIVED).copyState(initialState));
@@ -591,18 +615,13 @@ protected:
                 if (rule.randJoinExpr)
                     visit(*rule.randJoinExpr);
 
-                using RSPS = RandSeqProductionSymbol;
-
                 for (auto prod : rule.prods) {
                     switch (prod->kind) {
                         case RSPS::ProdKind::Item:
                             ((const RSPS::ProdItem*)prod)->visitExprs(DERIVED);
                             break;
                         case RSPS::ProdKind::CodeBlock: {
-                            auto blockBody =
-                                ((const RSPS::CodeBlockProd*)prod)->block->tryGetStatement();
-                            if (blockBody)
-                                visit(*blockBody);
+                            visitCodeBlock(*(const RSPS::CodeBlockProd*)prod);
                             break;
                         }
                         case RSPS::ProdKind::IfElse: {
@@ -662,16 +681,15 @@ protected:
                     }
                 }
 
-                if (rule.codeBlock) {
-                    if (auto blockBody = rule.codeBlock->block->tryGetStatement())
-                        visit(*blockBody);
-                }
+                if (rule.codeBlock)
+                    visitCodeBlock(*rule.codeBlock);
 
                 (DERIVED).joinState(finalState, state);
             }
         }
 
-        setState(std::move(finalState));
+        // Not actually a loop but the behavior is the same.
+        loopTail(std::move(finalState), std::move(oldBreakStates));
     }
 
     void visitStmt(const ImmediateAssertionStatement& stmt) {
@@ -787,15 +805,19 @@ protected:
     }
 
     void visitExpr(const ConditionalExpression& expr) {
-        // TODO: handle the special ambiguous 'x merging of both sides
         ConstantValue knownVal = SVInt::One;
         auto falseState = (DERIVED).unreachableState();
         for (auto& cond : expr.conditions) {
             auto cv = visitCondition(*cond.expr);
-            if (cv && knownVal)
-                knownVal = SVInt(knownVal.isTrue() && cv.isTrue() ? 1 : 0);
-            else
+            if (cv && knownVal) {
+                if (cv.isInteger() && (cv.hasUnknown() || knownVal.hasUnknown()))
+                    knownVal = SVInt::createFillX(1, false);
+                else
+                    knownVal = SVInt(knownVal.isTrue() && cv.isTrue() ? 1 : 0);
+            }
+            else {
                 knownVal = nullptr;
+            }
 
             if (cond.pattern)
                 visit(*cond.pattern);
@@ -814,7 +836,13 @@ protected:
             // Special case: if the condition is constant, we will visit
             // the opposing side first and then essentially throw that
             // state away instead of joining it.
-            if (knownVal.isTrue()) {
+            if (knownVal.isInteger() && knownVal.hasUnknown()) {
+                setState(std::move(trueState));
+                visit(expr.left());
+                (DERIVED).meetState(falseState, state);
+                visit(expr.right());
+            }
+            else if (knownVal.isTrue()) {
                 visitSide(expr.right(), std::move(falseState));
                 visitSide(expr.left(), std::move(trueState));
             }

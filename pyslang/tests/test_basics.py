@@ -74,9 +74,7 @@ def test_compilation():
     assert diags[1].code == pyslang.Diags.ArithOpMismatch
 
     report = pyslang.DiagnosticEngine.reportAll(comp.sourceManager, diags)
-    assert (
-        ("\n" + report)
-        == """
+    assert ("\n" + report) == """
 source:3:20: warning: implicit conversion truncates from 32 to 1 bits [-Wwidth-trunc]
     assign #2 o = (~i + 32'd1234);
                 ~  ^~~~~~~~~~~~~
@@ -84,17 +82,12 @@ source:3:23: warning: arithmetic between operands of different types ('logic' an
     assign #2 o = (~i + 32'd1234);
                    ~~ ^ ~~~~~~~~
 """
-    )
 
 
 def test_include_metadata():
-    tree = pyslang.SyntaxTree.fromText(
-        """
+    tree = pyslang.SyntaxTree.fromText("""
     `include "{}/some_file.svh"
-    """.format(
-            Path(__file__).parent
-        )
-    )
+    """.format(Path(__file__).parent))
     includes = tree.getIncludeDirectives()
     assert len(includes) == 1
     assert includes[0].path.endswith("some_file.svh")
@@ -103,8 +96,7 @@ def test_include_metadata():
 def test_script_session():
     session = pyslang.ScriptSession()
     session.eval("""integer arr[string] = '{"Hello":4, "World":8, default:-1};""")
-    session.eval(
-        """
+    session.eval("""
 function int func(int i, integer arr[string]);
     case (i) inside
         [32'sd1:32'sd2]: return 1;
@@ -112,8 +104,7 @@ function int func(int i, integer arr[string]);
     endcase
     return 3;
 endfunction
-"""
-    )
+""")
 
     assert session.eval("func(4, arr)").value == 2
 

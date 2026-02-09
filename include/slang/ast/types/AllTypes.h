@@ -66,7 +66,7 @@ public:
     ScalarType(Kind scalarKind);
     ScalarType(Kind scalarKind, bool isSigned);
 
-    void serializeTo(ASTSerializer&) const {}
+    void serializeTo(ASTSerializer&) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ScalarType; }
 };
@@ -142,6 +142,8 @@ public:
 
     /// Sets the value of the enum member.
     void setValue(ConstantValue value);
+
+    bool isEvaluating() const { return evaluating; }
 
     void serializeTo(ASTSerializer& serializer) const;
 

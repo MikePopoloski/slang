@@ -26,7 +26,6 @@ error MisplacedDirectiveChar "expected directive name"
 error EscapedWhitespace "unexpected whitespace after escape character"
 error ExpectedClosingQuote "missing closing quote"
 error UnterminatedBlockComment "block comment unclosed at end of file"
-error NestedBlockComment "nested block comments are disallowed by SystemVerilog"
 error ExpectedIntegerBaseAfterSigned "expected integer base specifier after signed specifier"
 error OctalEscapeCodeTooBig "octal escape code is too large to be an ASCII character"
 error InvalidHexEscapeCode "invalid hexadecimal number"
@@ -43,6 +42,7 @@ warning invalid-source-encoding InvalidUTF8Seq "invalid UTF-8 sequence in source
 warning protect-encoding-bytes ProtectEncodingBytes "{} bytes decoded in protected envelope but encoding pragma said to expect {}"
 warning invalid-encoding-byte InvalidEncodingByte "invalid {} byte '{}' -- attempting to skip remaining encoded text"
 warning raw-protect-eof RawProtectEOF "reached end of file while processing 'raw' encoded protected envelope"
+warning nested-comment NestedBlockComment "nested block comments are disallowed by SystemVerilog"
 
 subsystem Numeric
 error LiteralSizeIsZero "size of vector literal cannot be zero"
@@ -404,7 +404,6 @@ error InvalidPortType "{} is not a valid type for a port"
 error InvalidPortSubType "{} is not a valid type for a port because it contains type {}"
 error InvalidNetType "{} is not a valid type for a net; only 4-state integral types and unpacked structs/unions and arrays of such types are allowed"
 error InvalidUserDefinedNetType "{} is not a valid type for a user-defined nettype; only integral types, floating types, and unpacked structs, unions, and arrays of such types are allowed"
-error ImplicitConnNetInconsistent "net type '{}' of implicit named connection is inconsistent with net type '{}' of port"
 error ExtendIfaceFromClass "a normal (or virtual) class cannot extend interface class '{}'"
 error ExtendClassFromIface "an interface class cannot extend non-interface class '{}'"
 error ExtendFromFinal "cannot extend '{}' because it is marked 'final'"
@@ -474,12 +473,7 @@ error DisallowedPortDefault "only 'output' variable port declarations may have a
 error AnsiIfacePortDefault "interface port cannot have an initializer expression"
 error RefPortUnconnected "'ref' port '{}' cannot be left unconnected"
 error RefPortUnnamedUnconnected "an unnamed 'ref' port has been left unconnected"
-error MismatchedUserDefPortConn "user-defined nettype '{}' on one side of this connection means that the type of the port {} must match the type of the connection {}"
-error MismatchedUserDefPortDir "user-defined nettype '{}' on one side of this connection means that the port must have 'input' or 'output' direction"
-error UserDefPortTwoSided "user-defined nettype '{}' of the port does not match '{}' of the connection"
-error UserDefPortMixedConcat "cannot mix and match nets with user-defined nettypes in port concatenation (see '{}' and '{}')"
 error InterconnectMultiPort "cannot use interconnect nets in a port concatenation"
-error InterconnectPortVar "cannot connect '{}' to an interconnect port"
 error IfaceMethodNotExtern "cannot provide an implementation for an interface method '{}' that is not declared 'extern'"
 error DupInterfaceExternMethod "more than one implementation provided for extern {} {}.{}"
 error ExternFuncForkJoin "only extern tasks can be declared 'forkjoin'"
@@ -567,8 +561,6 @@ warning ineffective-sign SignednessNoEffect "'{}' on I/O declaration has no effe
 warning constraint-missing NoConstraintBody "no body for implicit constraint block '{}'"
 warning dpi-spec DPISpecDisallowed "'DPI' specified subroutines are not supported and will be treated as 'DPI-C'. Note that this may require changes to the application's C code."
 warning udp-port-empty EmptyUdpPort "primitive port connection is empty"
-warning net-inconsistent NetInconsistent "net type '{}' of connection is inconsistent with net type '{}' of port"
-warning net-inconsistent NetRangeInconsistent "net type '{}' of connection bits [{}:{}] is inconsistent with net type '{}' of corresponding port range"
 warning dup-timing-path DupTimingPath "duplicate timing path"
 warning invalid-pulsestyle InvalidPulseStyle "invalid use of {} for '{}' since it has previously appeared in a path declaration"
 warning implicit-port-type-mismatch ImplicitNamedPortTypeMismatch "implicit named port '{}' of type {} connects to value of inequivalent type {}"
@@ -794,6 +786,7 @@ note NoteConditionalPrecedenceFix "place parentheses around the '?:' expression 
 warning consecutive-comparison ConsecutiveComparison "comparisons like 'x < y < z' don't have their mathematical meaning"
 note NoteForPortConn "for connection to port '{}'"
 warning dynamic-non-procedural DynamicNotProcedural "cannot refer to an element or member of a dynamic type outside of a procedural context"
+warning nonstandard-string-concat NonstandardStringConcat "string concatenation using '+' operator is non-standard"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -1046,6 +1039,7 @@ error PlaRangeInAscendingOrder "must specify dimensions in ascending order for P
 error SysFuncHierarchicalNotAllowed "hierarchical references are not allowed in calls to '{}'"
 error TypeIsNotAClass "{} is not a class type"
 error ExpectedNetRef "expected a reference to a net"
+warning nonstandard-randomize NonstandardScopeRandomize "element select or member access in std::randomize argument is non-standard"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 warning finish-num BadFinishNum "finish argument must have value of 0, 1, or 2"
 warning missing-format MissingFormatSpecifier "missing format specifier"
@@ -1166,6 +1160,12 @@ error AssertionLocalUnassigned "cannot reference local variable '{}' because it 
 error AssertionFormalUnassigned "output formal argument '{}' is not definitely assigned at the end of the sequence"
 error AssertionFormalMultiAssign "cannot bind local variable '{}' to more than one output or inout local variable formal argument"
 error BlockingDelayInTask "task '{}' called from '{}' procedure cannot contain blocking timing controls"
+error InterconnectPortVar "cannot connect '{}' to an interconnect port"
+error ImplicitConnNetInconsistent "net type '{}' of implicit named connection is inconsistent with net type '{}' of port"
+error MismatchedUserDefPortConn "user-defined nettype '{}' on one side of this connection means that the type of the port {} must match the type of the connection {}"
+error MismatchedUserDefPortDir "user-defined nettype '{}' on one side of this connection means that the port must have 'input' or 'output' direction"
+error UserDefPortTwoSided "user-defined nettype '{}' of the port does not match '{}' of the connection"
+error UserDefPortMixedConcat "cannot mix and match nets with user-defined nettypes in port concatenation (see '{}' and '{}')"
 note NoteRequiredHere "required here"
 note NoteClockHere "clock here"
 note NotePortConnHere "from port connection here"
@@ -1205,6 +1205,8 @@ warning case-incomplete CaseIncomplete "'{}' statement does not handle all possi
 warning case-none CaseNone "'{}' does not match any item in '{}' statement and no default item is provided"
 warning port-coercion InputPortCoercion "input net port '{}' coerced to 'inout'"
 warning port-coercion OutputPortCoercion "output net port '{}' coerced to 'inout'"
+warning net-inconsistent NetInconsistent "net type '{}' of connection is inconsistent with net type '{}' of port"
+warning net-inconsistent NetRangeInconsistent "net type '{}' of connection bits [{}:{}] is inconsistent with net type '{}' of corresponding port range"
 
 subsystem Meta
 fatal TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
@@ -1228,7 +1230,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
                   split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
                   dup-config-rule unused-config-cell unused-config-instance specify-condition-expr
-                  seq-no-match case-too-complex nested-solve-before dynamic-non-procedural }
+                  seq-no-match case-too-complex nested-solve-before dynamic-non-procedural
+                  nonstandard-string-concat nested-comment }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
@@ -1240,7 +1243,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 case-wildcard-2state inferred-latch inferred-comb }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
-                   nonstandard-sys-func nonstandard-foreach nonstandard-dist isunbounded-param-arg udp-coverage }
+                   nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
                      constant-conversion sign-conversion float-bool-conv int-bool-conv float-int-conv

@@ -21,10 +21,10 @@
 #    ifndef STRICT
 #        define STRICT
 #    endif
-#    include <Windows.h>
 #    include <fcntl.h>
 #    include <io.h>
 #    include <process.h>
+#    include <windows.h>
 
 #else
 #    include <fcntl.h>

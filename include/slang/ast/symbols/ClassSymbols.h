@@ -124,6 +124,44 @@ public:
         return *cachedHasCycles;
     }
 
+    /// An iterator for properties of a class type.
+    class property_iterator : public iterator_facade<property_iterator> {
+    public:
+        /// Constructs a default iterator that points nowhere.
+        property_iterator() : current(nullptr) {}
+
+        /// Constructs an iterator pointing at the given child symbol in the scope.
+        ///
+        /// @note If the given symbol is not of the desired type the iterator
+        /// will be advanced until one is found or the end of the scope is reached.
+        property_iterator(const Symbol* firstSymbol) : current(firstSymbol) { skipToNext(); }
+
+        /// Dereferences the iterator, resolving it to a symbol.
+        const ClassPropertySymbol& dereference() const;
+
+        /// Advances the iterator to the next symbol in the scope
+        /// that is of the desired type.
+        void increment() {
+            current = current->getNextSibling();
+            skipToNext();
+        }
+
+        /// @returns true if the given iterator is equal to this one.
+        bool equals(const property_iterator& other) const { return current == other.current; }
+
+    private:
+        void skipToNext();
+
+        const Symbol* current;
+    };
+
+    /// Gets an iterator range for all properties of the class, including those
+    /// inherited from parent classes.
+    std::ranges::subrange<property_iterator> properties() const {
+        ensureElaborated();
+        return {getFirstMember(), nullptr};
+    }
+
     static const Symbol& fromSyntax(const Scope& scope,
                                     const syntax::ClassDeclarationSyntax& syntax);
 

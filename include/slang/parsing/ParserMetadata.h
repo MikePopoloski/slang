@@ -29,7 +29,7 @@ struct SLANG_EXPORT ParserMetadata {
 
     /// Specific metadata that was in effect when certain syntax nodes were parsed
     /// (such as various bits of preprocessor state).
-    std::vector<std::pair<const syntax::SyntaxNode*, Node>> nodeMeta;
+    std::vector<std::pair<const syntax::ModuleDeclarationSyntax*, Node>> nodeMeta;
 
     /// A list of all instantiations of global modules/interfaces/programs.
     /// This can be used to determine which modules should be considered as top-level

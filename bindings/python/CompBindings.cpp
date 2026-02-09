@@ -189,6 +189,7 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def_readonly("sourceLoader", &Driver::sourceLoader)
         .def_readonly("syntaxTrees", &Driver::syntaxTrees)
         .def_readwrite("languageVersion", &Driver::languageVersion)
+        .def_property_readonly("analysisOptions", &Driver::getAnalysisOptions)
         .def("addStandardArgs", &Driver::addStandardArgs)
         .def(
             "parseCommandLine",

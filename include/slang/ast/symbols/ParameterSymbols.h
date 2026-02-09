@@ -62,6 +62,8 @@ public:
     bool isFromGenvar() const { return isFromGv; }
     void setIsFromGenvar(bool newIsFromGenvar) { isFromGv = newIsFromGenvar; }
 
+    bool isEvaluating() const { return evaluating; }
+
     void serializeTo(ASTSerializer& serializer) const;
 
 private:
@@ -145,6 +147,8 @@ public:
             resolvePathPulse();
         return pathDest;
     }
+
+    bool isEvaluating() const { return evaluating; }
 
     static void fromSyntax(const Scope& scope, const syntax::SpecparamDeclarationSyntax& syntax,
                            SmallVectorBase<const SpecparamSymbol*>& results);

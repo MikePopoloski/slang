@@ -56,7 +56,8 @@ static constexpr auto vcsCompFlags = {VCS_COMP_FLAGS};
 static constexpr auto allCompFlags = {
     VCS_COMP_FLAGS,
     CompilationFlags::AllowTopLevelIfacePorts,
-    CompilationFlags::AllowUnnamedGenerate
+    CompilationFlags::AllowUnnamedGenerate,
+    CompilationFlags::AllowVirtualIfaceWithOverride
 };
 
 #define VCS_ANALYSIS_FLAGS \
@@ -250,6 +251,10 @@ void Driver::addStandardArgs() {
     addCompFlag(CompilationFlags::AllowUnnamedGenerate, "--allow-genblk-reference",
                 "Allow references to unnamed generate blocks via their external names "
                 "(e.g. genblk1)");
+    addCompFlag(CompilationFlags::AllowVirtualIfaceWithOverride,
+                "--allow-virtual-iface-with-override",
+                "Allow interface instances that are bind/defparam targets to be assigned "
+                "to virtual interfaces");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "
@@ -667,6 +672,7 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::DuplicateDefinition, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::BadProceduralForce, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::NonstandardStringConcat, DiagnosticSeverity::Error);
     }
 
     if (options.compat == CompatMode::Vcs || options.compat == CompatMode::All) {
@@ -1099,6 +1105,24 @@ void Driver::addCompilationOptions(Bag& bag) const {
     bag.set(coptions);
 }
 
+analysis::AnalysisOptions Driver::getAnalysisOptions() const {
+    using namespace slang::analysis;
+
+    AnalysisOptions ao;
+    ao.numThreads = options.numThreads.value_or(0);
+    ao.flags |= AnalysisFlags::CheckUnused;
+    if (options.maxCaseAnalysisSteps)
+        ao.maxCaseAnalysisSteps = *options.maxCaseAnalysisSteps;
+    if (options.maxLoopAnalysisSteps)
+        ao.maxLoopAnalysisSteps = *options.maxLoopAnalysisSteps;
+
+    for (auto& [flag, value] : options.analysisFlags) {
+        if (value == true)
+            ao.flags |= flag;
+    }
+    return ao;
+}
+
 std::unique_ptr<Compilation> Driver::createCompilation() {
     SourceLibrary* defaultLib;
     if (options.defaultLibName && !options.defaultLibName->empty())
@@ -1149,25 +1173,11 @@ void Driver::reportCompilation(Compilation& compilation, bool quiet) {
 }
 
 std::unique_ptr<AnalysisManager> Driver::runAnalysis(ast::Compilation& compilation) {
-    using namespace slang::analysis;
 
     compilation.getAllDiagnostics();
     compilation.freeze();
 
-    AnalysisOptions ao;
-    ao.numThreads = options.numThreads.value_or(0);
-    ao.flags |= AnalysisFlags::CheckUnused;
-    if (options.maxCaseAnalysisSteps)
-        ao.maxCaseAnalysisSteps = *options.maxCaseAnalysisSteps;
-    if (options.maxLoopAnalysisSteps)
-        ao.maxLoopAnalysisSteps = *options.maxLoopAnalysisSteps;
-
-    for (auto& [flag, value] : options.analysisFlags) {
-        if (value == true)
-            ao.flags |= flag;
-    }
-
-    auto analysisManager = std::make_unique<AnalysisManager>(ao);
+    auto analysisManager = std::make_unique<analysis::AnalysisManager>(getAnalysisOptions());
 
     // We can't / shouldn't run analysis in lint-only mode.
     // We'll just return an empty analysis manager in that case.

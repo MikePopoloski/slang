@@ -64,6 +64,9 @@ public:
     };
     void getNetTypes(SmallVectorBase<NetTypeRange>& ranges) const;
 
+    static void getNetRanges(const Expression& expr,
+                             SmallVectorBase<PortSymbol::NetTypeRange>& ranges);
+
     bool isNetPort() const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -184,7 +187,6 @@ public:
 
     IfaceConn getIfaceConn() const;
     const Expression* getExpression() const;
-    void checkSimulatedNetTypes() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -219,6 +221,8 @@ private:
         SourceRange implicitNameRange;
     };
     bool useDefault = false;
+
+public:
     bool isImplicit = false;
     bool isWildcard = false;
 };

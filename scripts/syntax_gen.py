@@ -8,6 +8,12 @@ import argparse
 import math
 import os
 
+# member tuple indices for combinedMembers entries: (type, name, base_type)
+# - MEMBER_TYPE: the C++ type (e.g. "Token", "SyntaxList<...>" etc.)
+# - MEMBER_NAME: the member variable's name
+# - MEMBER_BASE_TYPE: for pointer/optional members, the underlying type (only present for some)
+MEMBER_TYPE, MEMBER_NAME, MEMBER_BASE_TYPE = 0, 1, 2
+
 
 class TypeInfo:
     def __init__(
@@ -56,6 +62,7 @@ def main():
 
     if args.python_bindings:
         generatePyBindings(args.dir, alltypes)
+        generatePyFactoryBindings(args.dir, alltypes)
     else:
         generateSyntaxClone(args.dir, alltypes, kindmap)
         # generateSyntax modifies alltypes
@@ -615,8 +622,7 @@ size_t SyntaxNode::getChildCount() const {
         cppf.write("}\n\n")
 
     # Write out toString methods for SyntaxKind enum.
-    cppf.write(
-        """
+    cppf.write("""
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
     os << toString(kind);
     return os;
@@ -628,33 +634,27 @@ std::string_view toString(SyntaxKind kind) {
         case SyntaxKind::SyntaxList: return "SyntaxList";
         case SyntaxKind::TokenList: return "TokenList";
         case SyntaxKind::SeparatedList: return "SeparatedList";
-"""
-    )
+""")
 
     for k, _ in sorted(kindmap.items()):
         cppf.write('        case SyntaxKind::{}: return "{}";\n'.format(k, k))
 
-    cppf.write(
-        """    }
+    cppf.write("""    }
     return "";
 }
 
-"""
-    )
+""")
 
     # Write out traits member list for SyntaxKind enum.
     cppf.write("decltype(SyntaxKind_traits::values) SyntaxKind_traits::values = {\n")
-    cppf.write(
-        """    SyntaxKind::Unknown,
+    cppf.write("""    SyntaxKind::Unknown,
     SyntaxKind::SyntaxList,
     SyntaxKind::TokenList,
     SyntaxKind::SeparatedList,
-"""
-    )
+""")
     for k, _ in sorted(kindmap.items()):
         cppf.write("    SyntaxKind::{},\n".format(k))
-    cppf.write(
-        """};
+    cppf.write("""};
 
 #ifdef SLANG_RTTI_ENABLED
 const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
@@ -664,20 +664,17 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
         case SyntaxKind::TokenList:
         case SyntaxKind::SeparatedList:
             return &typeid(SyntaxNode);
-"""
-    )
+""")
 
     for k, v in sorted(kindmap.items()):
         cppf.write("        case SyntaxKind::{}: return &typeid({});\n".format(k, v))
-    cppf.write(
-        """    }
+    cppf.write("""    }
     return nullptr;
 }
 #endif
 
 }
-"""
-    )
+""")
 
     outf.write("\n")
     outf.write("private:\n")
@@ -786,8 +783,7 @@ enum class SLANG_EXPORT SyntaxKind {
     for k, _ in sorted(kindmap.items()):
         outf.write("    {},\n".format(k))
 
-    outf.write(
-        """}};
+    outf.write("""}};
 
 SLANG_EXPORT std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
 SLANG_EXPORT std::string_view toString(SyntaxKind kind);
@@ -800,10 +796,7 @@ public:
 SLANG_EXPORT const std::type_info* typeFromSyntaxKind(SyntaxKind kind);
 
 }}
-""".format(
-            len(kindmap.items()) + 4
-        )
-    )
+""".format(len(kindmap.items()) + 4))
 
     # Write the forward declaration header file.
     outf = open(os.path.join(headerdir, "SyntaxFwd.h"), "w")
@@ -859,8 +852,7 @@ SyntaxNode* clone(const T& node, BumpAllocator& alloc) {
 
 """
     )
-    clonef.write(
-        """namespace slang::syntax::deep {
+    clonef.write("""namespace slang::syntax::deep {
 
 template<typename T>
 SyntaxNode* clone(const T& node, BumpAllocator& alloc) {
@@ -871,8 +863,7 @@ SyntaxNode* clone(const SyntaxListBase&, BumpAllocator&) {
     return nullptr;
 }
 
-"""
-    )
+""")
     # Write out deepClone methods for each derived type.
     for k, v in sorted(alltypes.items()):
         if not v.final:
@@ -916,8 +907,7 @@ SyntaxNode* clone(const SyntaxListBase&, BumpAllocator&) {
             clonef.write("    );\n")
             clonef.write("}\n\n")
     clonef.write("}\n\n")
-    clonef.write(
-        """namespace slang::syntax {
+    clonef.write("""namespace slang::syntax {
 
 struct CloneVisitor {
     template<typename T>
@@ -948,8 +938,7 @@ SyntaxNode* clone(const SyntaxNode& node, BumpAllocator& alloc) {
 }
 
 }
-"""
-    )
+""")
 
 
 def loadkinds(ourdir, filename):
@@ -969,8 +958,7 @@ def writekinddecl(outf, name, basetype, kinds):
     for k in kinds:
         outf.write("    {},\n".format(k))
 
-    outf.write(
-        """}};
+    outf.write("""}};
 
 SLANG_EXPORT std::ostream& operator<<(std::ostream& os, {} kind);
 SLANG_EXPORT std::string_view toString({} kind);
@@ -980,50 +968,35 @@ public:
     static const std::array<{}, {}> values;
 }};
 
-""".format(
-            name, name, name, name, len(kinds)
-        )
-    )
+""".format(name, name, name, name, len(kinds)))
 
 
 def writekindimpls(outf, name, kinds):
-    outf.write(
-        """std::ostream& operator<<(std::ostream& os, {} kind) {{
+    outf.write("""std::ostream& operator<<(std::ostream& os, {} kind) {{
     os << toString(kind);
     return os;
 }}
 
 std::string_view toString({} kind) {{
     switch (kind) {{
-""".format(
-            name, name
-        )
-    )
+""".format(name, name))
 
     for k in kinds:
         outf.write('        case {}::{}: return "{}";\n'.format(name, k, k))
-    outf.write(
-        """    }
+    outf.write("""    }
     return "";
 }
 
-"""
-    )
+""")
 
-    outf.write(
-        """decltype({}_traits::values) {}_traits::values = {{
-""".format(
-            name, name
-        )
-    )
+    outf.write("""decltype({}_traits::values) {}_traits::values = {{
+""".format(name, name))
 
     for k in kinds:
         outf.write("    {}::{},\n".format(name, k))
-    outf.write(
-        """};
+    outf.write("""};
 
-"""
-    )
+""")
 
 
 def generateTokenKinds(ourdir, builddir):
@@ -1124,8 +1097,7 @@ enum class SLANG_EXPORT KnownSystemName {
     for name in names:
         outf.write("    {},\n".format(name[1]))
 
-    outf.write(
-        """}};
+    outf.write("""}};
 
 SLANG_EXPORT std::ostream& operator<<(std::ostream& os, KnownSystemName ksn);
 SLANG_EXPORT std::string_view toString(KnownSystemName ksn);
@@ -1137,10 +1109,7 @@ public:
 }};
 
 }}
-""".format(
-            len(names) + 1
-        )
-    )
+""".format(len(names) + 1))
 
     outf = open(os.path.join(builddir, "KnownSystemName.cpp"), "w")
     outf.write(
@@ -1173,20 +1142,17 @@ std::string_view toString(KnownSystemName ksn) {
             '        case KnownSystemName::{}: return "{}";\n'.format(name[1], name[0])
         )
 
-    outf.write(
-        """    }
+    outf.write("""    }
     return "";
 }
 
 const static flat_hash_map<std::string_view, KnownSystemName> ksnTable = {
-"""
-    )
+""")
 
     for name in names:
         outf.write('    {{ "{}", KnownSystemName::{} }},\n'.format(name[0], name[1]))
 
-    outf.write(
-        """};
+    outf.write("""};
 
 KnownSystemName parseKnownSystemName(std::string_view str) {
     if (auto it = ksnTable.find(str); it != ksnTable.end())
@@ -1196,18 +1162,15 @@ KnownSystemName parseKnownSystemName(std::string_view str) {
 
 decltype(KnownSystemName_traits::values) KnownSystemName_traits::values = {
     KnownSystemName::Unknown,
-"""
-    )
+""")
 
     for name in names:
         outf.write("    KnownSystemName::{},\n".format(name[1]))
 
-    outf.write(
-        """};
+    outf.write("""};
 
 }
-"""
-    )
+""")
 
 
 def generatePyBindings(builddir, alltypes):
@@ -1256,6 +1219,78 @@ void registerSyntaxNodes{0}(py::module_& m) {{
         outf.write("}\n")
 
 
+def generatePyFactoryBindings(builddir, alltypes):
+    """Generate Python bindings for SyntaxFactory class and all its methods."""
+
+    outf = open(os.path.join(builddir, "PySyntaxFactory.cpp"), "w")
+    outf.write(
+        """//------------------------------------------------------------------------------
+// PySyntaxFactory.cpp
+// Generated Python bindings for SyntaxFactory
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+#include "pyslang.h"
+
+#include "slang/syntax/AllSyntax.h"
+
+void registerSyntaxFactory(py::module_& m) {
+    py::classh<SyntaxFactory>(m, "SyntaxFactory",
+        "Factory for creating syntax nodes. Access via SyntaxRewriter.factory.")
+"""
+    )
+
+    factory_methods = []
+    for name, typeinfo in sorted(alltypes.items()):
+        if name == "SyntaxNode":
+            continue
+        if not typeinfo.final:
+            continue
+        factory_methods.append((name, typeinfo))
+
+    methods_by_letter = {}
+    for name, typeinfo in factory_methods:
+        first_letter = name[0].upper()
+        if first_letter not in methods_by_letter:
+            methods_by_letter[first_letter] = []
+        methods_by_letter[first_letter].append((name, typeinfo))
+
+    for letter in sorted(methods_by_letter.keys()):
+        outf.write(f"\n        // --- {letter} ---\n")
+        for name, typeinfo in methods_by_letter[letter]:
+            method_name = name
+            if method_name.endswith("Syntax"):
+                method_name = method_name[:-6]
+            method_name = method_name[0].lower() + method_name[1:]
+
+            outf.write(f'        .def("{method_name}", &SyntaxFactory::{method_name}')
+            outf.write(", py::return_value_policy::reference_internal")
+
+            for arg in typeinfo.argNames:
+                if arg in typeinfo.optionalMembers:
+                    for m in typeinfo.combinedMembers:
+                        if m[MEMBER_NAME] == arg:
+                            if len(m) <= MEMBER_BASE_TYPE:
+                                raise ValueError(
+                                    f"Optional member '{arg}' in '{name}' is missing "
+                                    f"base type information (expected at index {MEMBER_BASE_TYPE})"
+                                )
+                            base_type = m[MEMBER_BASE_TYPE]
+                            outf.write(
+                                f', py::arg("{arg}") = static_cast<{base_type}*>(nullptr)'
+                            )
+                            break
+                else:
+                    outf.write(f', "{arg}"_a')
+
+            outf.write(")\n")
+
+    outf.write("    ;\n")
+    outf.write("}\n")
+    outf.close()
+
+
 def generateCSTJson(builddir, alltypes):
     cppf = open(os.path.join(builddir, "slang", "syntax", "CSTJsonVisitorGen.h"), "w")
 
@@ -1271,15 +1306,13 @@ def generateCSTJson(builddir, alltypes):
         if not typeinfo.combinedMembers:
             continue
 
-        cppf.write(
-            f"""
+        cppf.write(f"""
     void handle(const {typename}& node) {{
-"""
-        )
+""")
 
         # Generate code for each member (including inherited)
         for member in typeinfo.combinedMembers:
-            memberType, memberName = member[0], member[1]
+            memberType, memberName = member[MEMBER_TYPE], member[MEMBER_NAME]
 
             # Check if member is optional
             isOptional = memberName in typeinfo.optionalMembers

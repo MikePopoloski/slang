@@ -168,7 +168,7 @@ def test_rewriter_insert_after_with_new_declaration_outside():
             if node[0].kind == pyslang.SyntaxKind.SyntaxList:
                 check_func_called["SyntaxList_count"] += 1
 
-                rewriter.insert_after(node, new_decl)
+                rewriter.insertAfter(node, new_decl)
                 check_func_called["insertion_point_match_count"] += 1
 
     result = pyslang.rewrite(input_tree, insert_logic_var)
@@ -231,7 +231,7 @@ def test_rewriter_insert_after_with_new_declaration_inside():
                 # This test is special because `new_decl` is constructed inside this handler function!
                 new_decl = pyslang.SyntaxTree.fromText("logic j;", "new.sv").root
 
-                rewriter.insert_after(node, new_decl)
+                rewriter.insertAfter(node, new_decl)
                 check_func_called["insertion_point_match_count"] += 1
 
     result = pyslang.rewrite(input_tree, insert_logic_var)
@@ -390,7 +390,7 @@ def test_rewriter_nested():
 
                         check_func_called["insert_match_count"] += 1
 
-                        rewriter.insert_before(node, new_decl)
+                        rewriter.insertBefore(node, new_decl)
 
     result = pyslang.rewrite(input_tree, modify_struct)
     assert result is not None

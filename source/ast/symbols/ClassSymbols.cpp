@@ -146,6 +146,27 @@ ConstantValue ClassType::getDefaultValueImpl() const {
     return ConstantValue::NullPlaceholder{};
 }
 
+const ClassPropertySymbol& ClassType::property_iterator::dereference() const {
+    auto sym = current;
+    while (sym->kind == SymbolKind::TransparentMember)
+        sym = &sym->as<TransparentMemberSymbol>().wrapped;
+
+    return sym->as<ClassPropertySymbol>();
+}
+
+void ClassType::property_iterator::skipToNext() {
+    while (current) {
+        auto sym = current;
+        while (sym->kind == SymbolKind::TransparentMember)
+            sym = &sym->as<TransparentMemberSymbol>().wrapped;
+
+        if (sym->kind == SymbolKind::ClassProperty)
+            break;
+
+        current = current->getNextSibling();
+    }
+}
+
 const Symbol& ClassType::fromSyntax(const Scope& scope, const ClassDeclarationSyntax& syntax) {
     // If this class declaration has parameter ports it's actually a generic class definition.
     // Create that now and wait until someone specializes it in order to get an actual type.
@@ -288,23 +309,22 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
 
 void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const ASTContext& context,
                               function_ref<void(const Symbol&)> insertCB) const {
+    // Set a sentinel value immediately to handle re-entrant elaboration.
     auto& comp = context.getCompilation();
+    baseClass = &comp.getErrorType();
+
     auto baseType = Lookup::findClass(*extendsClause.baseName, context);
-    if (!baseType) {
-        baseClass = &comp.getErrorType();
+    if (!baseType)
         return;
-    }
 
     // A normal class can't extend an interface class. This method won't be called
     // for an interface class, so we don't need to check that again here.
     if (baseType->isInterface) {
-        baseClass = &comp.getErrorType();
         context.addDiag(diag::ExtendIfaceFromClass, extendsClause.sourceRange()) << baseType->name;
         return;
     }
 
     if (baseType->isFinal) {
-        baseClass = &comp.getErrorType();
         context.addDiag(diag::ExtendFromFinal, extendsClause.sourceRange()) << baseType->name;
         return;
     }
@@ -314,7 +334,6 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
     while (true) {
         if (currBase == this) {
             context.addDiag(diag::ClassInheritanceCycle, extendsClause.sourceRange()) << name;
-            baseClass = &comp.getErrorType();
             return;
         }
 
@@ -328,6 +347,15 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
     // Assign this member before resolving anything below, because they
     // may try to check the base class of this type.
     baseClass = baseType;
+
+    // After resolving the base class we need to unset any other cached
+    // fields that may have depended on knowing it. In very rare cases
+    // we can call back in to one of the methods that compute and cache
+    // these before the class is fully elaborated, so their results will
+    // be wrong. Clear them here so they get recomputed later.
+    baseConstructorCall.reset();
+    cachedBitstreamWidth.reset();
+    cachedHasCycles.reset();
 
     // Inherit all base class members that don't conflict with our declared symbols.
     auto& scopeNameMap = getNameMap();
@@ -849,7 +877,7 @@ void ClassType::computeSize() const {
     // to zero up above, which will avoid re-entering this function.
     uint64_t totalWidth = 0;
     bool hasDynamic = false;
-    for (auto& prop : membersOfType<ClassPropertySymbol>()) {
+    for (auto& prop : properties()) {
         uint64_t width = prop.getType().getBitstreamWidth();
         if (width == 0)
             hasDynamic = true;
@@ -865,15 +893,40 @@ void ClassType::computeSize() const {
         cachedBitstreamWidth = totalWidth;
 }
 
+static bool typeHasCycles(const Type& type) {
+    auto& ct = type.getCanonicalType();
+    if (ct.isUnpackedArray()) {
+        return typeHasCycles(*ct.getArrayElementType());
+    }
+    else if (ct.isUnpackedStruct()) {
+        auto& us = ct.as<UnpackedStructType>();
+        for (auto field : us.fields) {
+            if (typeHasCycles(field->getType()))
+                return true;
+        }
+    }
+    else if (ct.isUnpackedUnion()) {
+        auto& us = ct.as<UnpackedUnionType>();
+        for (auto field : us.fields) {
+            if (typeHasCycles(field->getType()))
+                return true;
+        }
+    }
+    else if (ct.isClass()) {
+        return ct.as<ClassType>().hasCycles();
+    }
+
+    return false;
+}
+
 void ClassType::computeCycles() const {
     // Start out by setting hasCycles to true, so that if we call into
     // hasCycles() in a re-entrant fashion we'll see this result right away.
     ensureElaborated();
     cachedHasCycles = true;
 
-    for (auto& prop : membersOfType<ClassPropertySymbol>()) {
-        auto& propType = prop.getType().getCanonicalType();
-        if (propType.isClass() && propType.as<ClassType>().hasCycles())
+    for (auto& prop : properties()) {
+        if (typeHasCycles(prop.getType()))
             return;
     }
 

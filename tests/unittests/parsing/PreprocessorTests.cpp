@@ -968,7 +968,7 @@ TEST_CASE("Nested ifdef and macros") {
     `endif
 `FOO
 )";
-    auto& expected = "\n\n\n        asdfasdf\n\n";
+    auto& expected = "\n\n        asdfasdf\n\n";
 
     std::string result = preprocess(text);
     CHECK(result == expected);
@@ -2984,4 +2984,43 @@ endconfig
 
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ExpectedDeclarator);
+}
+
+TEST_CASE("Comments before endifs should be elided") {
+    auto& text = R"(
+module my_mod #(
+        parameter int PARAM_A = 1 //! One comment
+        `ifdef MYDEF
+        ,
+        parameter int PARAM_B = 1 //! Another comment
+        `endif
+)();
+endmodule
+)";
+
+    auto& expected = R"(
+module my_mod #(
+        parameter int PARAM_A = 1 //! One comment
+
+)();
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Macro missing arg with stringification crash regress") {
+    auto& text = R"(
+`define A(a, b) $error(`"\"a\"`");
+`define B(a, b) a + b
+
+module m;
+    localparam int x = `B(a,
+    `A(a, b)
+endmodule
+)";
+
+    preprocess(text);
 }

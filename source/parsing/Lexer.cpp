@@ -104,7 +104,8 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, SourceManager& sourceManage
     return token.clone(alloc, trivia, token.rawText(), location);
 }
 
-Token Lexer::stringify(Lexer& parentLexer, Token startToken, std::span<Token> bodyTokens,
+Token Lexer::stringify(BumpAllocator& alloc, SourceManager& sourceManager,
+                       const LexerOptions& options, Token startToken, std::span<Token> bodyTokens,
                        Token endToken) {
     SmallVector<char> text;
     text.push_back('"');
@@ -166,18 +167,16 @@ Token Lexer::stringify(Lexer& parentLexer, Token startToken, std::span<Token> bo
     text.push_back('"');
     text.push_back('\0');
 
-    std::string_view raw = toStringView(text.copy(parentLexer.alloc));
+    std::string_view raw = toStringView(text.copy(alloc));
 
     Diagnostics unused;
-    Lexer lexer{BufferID::getPlaceholder(), raw,    raw.data(),
-                parentLexer.alloc,          unused, parentLexer.sourceManager,
-                parentLexer.options};
+    Lexer lexer{BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, sourceManager, options};
 
     auto token = lexer.lex();
     SLANG_ASSERT(token.kind == TokenKind::StringLiteral);
     SLANG_ASSERT(lexer.lex().kind == TokenKind::EndOfFile);
 
-    return token.clone(parentLexer.alloc, startToken.trivia(), raw.substr(0, raw.length() - 1),
+    return token.clone(alloc, startToken.trivia(), raw.substr(0, raw.length() - 1),
                        startToken.location());
 }
 
@@ -211,7 +210,7 @@ void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
                         KeywordVersion keywordVersion, SmallVectorBase<Token>& results) {
     auto loc = sourceToken.location();
     if (sourceManager.isMacroLoc(loc))
-        loc = sourceManager.getOriginalLoc(loc);
+        loc = sourceManager.getFullyOriginalLoc(loc);
 
     auto sourceText = sourceManager.getSourceText(loc.buffer());
     SLANG_ASSERT(!sourceText.empty());
@@ -1267,7 +1266,7 @@ void Lexer::scanBlockComment() {
             else if (c == '/' && peek(1) == '*') {
                 // nested block comments disallowed by the standard; ignore and continue
                 addDiag(diag::NestedBlockComment, currentOffset());
-                advance(2);
+                advance();
             }
             else if (c == '\0') {
                 if (reallyAtEnd()) {

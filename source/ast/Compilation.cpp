@@ -616,12 +616,18 @@ static Token getExternNameToken(const SyntaxNode& sn) {
                                                    : sn.as<ExternUdpDeclSyntax>().name;
 }
 
-Compilation::DefinitionLookupResult Compilation::getDefinition(std::string_view name,
-                                                               const Scope& scope,
-                                                               SourceRange sourceRange,
-                                                               DiagCode code) const {
+Compilation::DefinitionLookupResult Compilation::getDefinition(
+    std::string_view name, const Scope& scope, SourceRange sourceRange, DiagCode code,
+    std::span<syntax::AttributeInstanceSyntax* const> attributes) const {
     if (auto result = tryGetDefinition(name, scope); result.definition)
         return result;
+
+    for (auto attrInst : attributes) {
+        for (auto spec : attrInst->specs) {
+            if (spec->name.valueText() == "maybe_unknown"sv)
+                return {};
+        }
+    }
 
     errorMissingDef(name, scope, sourceRange, code);
     return {};
@@ -1712,6 +1718,11 @@ void Compilation::forceElaborate(const Symbol& symbol) {
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     visitor.visitInstances = false;
     symbol.visit(visitor);
+
+    // Make sure each generic class we found is touched at least
+    // once so that all name lookups are performed.
+    for (auto genericClass : visitor.genericClasses)
+        genericClass->getInvalidSpecialization().visit(visitor);
 }
 
 const Type& Compilation::getType(SyntaxKind typeKind) const {

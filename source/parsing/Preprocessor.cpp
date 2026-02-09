@@ -839,8 +839,25 @@ Trivia Preprocessor::parseBranchDirective(Token directive,
             }
 
             if (done) {
-                // put the token back so that we'll look at it next
-                currentToken = token;
+                // Put the token back so that we'll look at it next, but with
+                // its trivia rewritten to change comments and whitespace to disabled
+                // text, since this branch was not taken and we want the comments to
+                // disappear in the preprocessed output.
+                SmallVector<Trivia, 2> trivia(token.trivia());
+                for (auto& t : trivia) {
+                    switch (t.kind) {
+                        case TriviaKind::LineComment:
+                        case TriviaKind::BlockComment:
+                        case TriviaKind::Whitespace:
+                        case TriviaKind::EndOfLine:
+                            t.kind = TriviaKind::DisabledText;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                currentToken = token.withTrivia(alloc, trivia.copy(alloc));
                 break;
             }
             scratchTokenBuffer.push_back(token);

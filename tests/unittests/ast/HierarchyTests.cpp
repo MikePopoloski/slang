@@ -1844,6 +1844,39 @@ endmodule
     CHECK(diags[1].code == diag::VirtualIfaceDefparam);
 }
 
+TEST_CASE("AllowVirtualIfaceWithOverride flag") {
+    auto tree = SyntaxTree::fromText(R"(
+interface J;
+    parameter q = 1;
+endinterface
+
+interface I;
+    J j();
+endinterface
+
+interface K;
+endinterface
+
+module m;
+    I i1();
+    I i2();
+
+    virtual I vi1 = i1;
+    virtual I vi2 = i2;
+
+    defparam i1.j.q = 2;
+    bind i2.j K k();
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowVirtualIfaceWithOverride;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Spurious errors in uninstantiated blocks, GH #1028") {
     auto tree = SyntaxTree::fromText(R"(
 typedef struct packed {
@@ -2093,6 +2126,28 @@ endmodule
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("maybe_unknown attribute suppresses unknown module errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    // This should error - unknown module without attribute
+    unknown_ip u1();
+
+    // This should NOT error - has maybe_unknown attribute
+    (* maybe_unknown *) unknown_ip2 u2();
+
+    // This should also work with multiple attributes
+    (* other_attr, maybe_unknown *) unknown_ip3 u3();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownModule);
 }
 
 TEST_CASE("Package ordering dependency 1 -- GH #1424") {

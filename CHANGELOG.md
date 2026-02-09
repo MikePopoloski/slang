@@ -6,6 +6,38 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+* Added a `--allow-virtual-iface-with-override` flag to allow interface instances that are bind/defparam targets to be assigned to virtual interfaces, for compatibility with other tools (thanks to @thomasnormal)
+* The error for invalid arguments to std::randomize has been made downgradeable via `-Wnonstandard-randomize`, for compatibility with other tools (thanks to @AndrewNolte)
+* Added support for conatenating strings with operator '+' (which will now issue `-Wnonstandard-string-concat`), for compatibility with other tools (thanks to @AndrewNolte)
+* The error for nested block comments is now a warning by default (`-Wnested-comment`)
+
+### Notable Breaking Changes
+
+### New Features
+* Instantiations of unknown modules can now be ignored by putting a `(* maybe_unknown *)` attribute on the instantation itself (thanks to @AndrewNolte)
+
+### Improvements
+* Made several minor improvements to data flow modeling in the analysis pass to better represent SystemVerilog control flow
+* Added AST serialization for default disable directives and default / global clocking block modifiers
+
+### Fixes
+* Fixed an issue where comments immediately preceeding a disabled `` `endif `` directive could erroneously show up in preprocessed output
+* Fixed a preprocessor crash with invalid macro usage syntax when the macro contains a stringify operator
+* Unary increment and decrement operators now properly count as a driver for their operand, for purposes of multi-driver checking
+* Fixed miscompilation when a generic class with a virtual interface type parameter declared within a package triggers an import lookup within that package
+* Fixed a bug where various operations on class types (such as computing their bitstream width) would not take into account base class properties
+
+### Tools & Bindings
+#### pyslang
+* Added FlowAnalysis and LSPUtilities bindings (thanks to @CheeksTheGeek)
+* Added SyntaxFactory bindings (thanks to @CheeksTheGeek)
+
+#### slang-tidy
+* Added a new LoopBeforeReset check (thanks to @spomata)
+
+
+## [v10.0] - 2026-01-15
+### Language Support
 * Implemented all of the rules related to assertion local variable definite assignment flow. slang will now diagnose use of assertion locals before they have been assigned, according to the rules in the LRM.
 * Explicit package export directives now correctly require a corresponding import (wildcard or explicit)
 * Non-variable and non-output ANSI port declarations are now correctly prevented from specifying an initializer expression
@@ -51,6 +83,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Made several tweaks to slightly improve defparam and bind evaluation performance
 * The AST for multi-ports has been reworked to represent each sub port connection expression separately
 * Selection of elements of dynamic types is now a downgradeable warning (`-Wdynamic-non-procedural`) for compatibility with other tools
+* AST JSON serialization for scalar types now contains an isSigned field (thanks to @dinoruic)
 
 ### Fixes
 * Unnamed covergroup types now print with a placeholder name in diagnostics and AST dumping instead of just an empty string
@@ -79,7 +112,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed ICE involving analysis of hierarchical calls to subroutines inside cached instance symbols
 * Fixed handling of file patterns starting with recursive wildcards -- they were canonicalized incorrectly on some platforms
 * Fixed infinite loop caused by recursive typedef references across packages
-
+* Fixed --allow-use-before-declare to also apply for references to parameters
+* Fixed a crash when querying bitstream width of classes containing properties with unpacked arrays of their containing class type
 
 ### Tools & Bindings
 #### pyslang

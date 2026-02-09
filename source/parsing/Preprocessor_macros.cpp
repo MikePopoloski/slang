@@ -165,6 +165,13 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
         syntheticComment = Token();
     };
 
+    auto doStringify = [&](Token token) {
+        auto result = Lexer::stringify(alloc, sourceManager, lexerOptions, stringify,
+                                       stringifyBuffer, token);
+        stringify = Token();
+        return result;
+    };
+
     for (size_t i = 0; i < tokens.size(); i++) {
         Token newToken;
         bool nextDidConcat = false;
@@ -188,9 +195,7 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                 }
                 else if (token.kind == stringify.kind) {
                     // all done stringifying; convert saved tokens to string
-                    newToken = Lexer::stringify(*lexerStack.back(), stringify, stringifyBuffer,
-                                                token);
-                    stringify = Token();
+                    newToken = doStringify(token);
                 }
                 else if (stringify.kind == TokenKind::MacroTripleQuote) {
                     // We found a `" inside of a triple quoted stringification.
@@ -204,9 +209,7 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                     // append the essentially empty string literal after it.
                     // This will cause an error down the line since two string literals
                     // next to each other isn't ever valid.
-                    newToken = Lexer::stringify(*lexerStack.back(), stringify, stringifyBuffer,
-                                                token);
-                    stringify = Token();
+                    newToken = doStringify(token);
                     extraToAppend = Token(alloc, TokenKind::StringLiteral, {}, "\"\"",
                                           token.location() + 2, ""sv);
                 }
@@ -364,11 +367,9 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                 if (startIsTriple == endIsTriple || !startIsTriple) {
                     stringifyBuffer.push_back(newToken.withRawText(alloc, raw.substr(0, offset)));
 
-                    // Note: endToken parameter here doesn't matter,
+                    // Note: token parameter here doesn't matter,
                     // we know there is no trivia to take.
-                    dest.push_back(
-                        Lexer::stringify(*lexerStack.back(), stringify, stringifyBuffer, Token()));
-                    stringify = Token();
+                    dest.push_back(doStringify(Token()));
 
                     // Now we have the unfortunate task of re-lexing the remaining stuff after the
                     // split and then appending those tokens to the destination as well.

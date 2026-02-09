@@ -32,10 +32,13 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
         return;
 
     ArgumentDirection direction;
-    if (port.kind == SymbolKind::Port)
+    if (port.kind == SymbolKind::Port) {
         direction = port.as<PortSymbol>().direction;
-    else
+        checkNetCollapsing(context, connection);
+    }
+    else {
         direction = port.as<MultiPortSymbol>().direction;
+    }
 
     // Input and ref ports are not drivers.
     if (direction == ArgumentDirection::In || direction == ArgumentDirection::Ref)
@@ -712,6 +715,210 @@ void DriverTracker::applyInstanceSideEffect(AnalysisContext& context, DriverAllo
             auto updater = [&](auto& item) { item.second.emplace_back(driver, *bounds); };
             indirectDrivers.try_emplace_and_visit(&valueSym, updater, updater);
         }
+    }
+}
+
+static const Symbol* findAnyVars(const Expression& expr) {
+    if (auto sym = expr.getSymbolReference(); sym && sym->kind != SymbolKind::Net)
+        return sym;
+
+    if (expr.kind == ExpressionKind::Concatenation) {
+        for (auto op : expr.as<ConcatenationExpression>().operands()) {
+            if (auto sym = findAnyVars(*op))
+                return sym;
+        }
+    }
+
+    return nullptr;
+}
+
+void DriverTracker::checkNetCollapsing(AnalysisContext& context, const PortConnection& conn) {
+    auto expr = conn.getExpression();
+    SLANG_ASSERT(expr && !expr->bad() && conn.port.kind == SymbolKind::Port);
+
+    // If there are nets on either side of the connection we may need
+    // to do dissimilar net type collapsing. All such checks happen
+    // on bit ranges, as different bits may have different net types.
+    SmallVector<PortSymbol::NetTypeRange, 4> internal;
+    auto& port = conn.port.as<PortSymbol>();
+    port.getNetTypes(internal);
+
+    SmallVector<PortSymbol::NetTypeRange, 4> external;
+    PortSymbol::getNetRanges(*expr, external);
+
+    // There might not be any nets, in which case we should just leave.
+    if (internal.empty() && external.empty())
+        return;
+
+    // Do additional checking on the expression for interconnect port connections.
+    if (internal.size() == 1 && internal[0].netType->netKind == NetType::Interconnect) {
+        if (auto sym = findAnyVars(*expr)) {
+            context.addDiag(port, diag::InterconnectPortVar, expr->sourceRange) << sym->name;
+            return;
+        }
+    }
+
+    auto requireMatching = [&](const NetType& udnt) {
+        // Types are more restricted; they must match instead of just being
+        // assignment compatible. Also direction must be input or output.
+        // We need to do this dance to get at the type of the connection prior
+        // to it being converted to match the type of the port.
+        auto exprType = expr->type.get();
+        if (expr->kind == ExpressionKind::Conversion) {
+            auto& conv = expr->as<ConversionExpression>();
+            if (conv.isImplicit())
+                exprType = conv.operand().type;
+        }
+        else if (expr->kind == ExpressionKind::Assignment) {
+            auto& assign = expr->as<AssignmentExpression>();
+            if (assign.isLValueArg())
+                exprType = assign.left().type;
+        }
+
+        auto& type = port.getType();
+        if (!type.isMatching(*exprType)) {
+            // If this is from an interconnect connection, don't require matching types.
+            auto isInterconnect = [](const Type& t) {
+                auto curr = &t;
+                while (curr->isArray())
+                    curr = curr->getArrayElementType();
+
+                return curr->isUntypedType();
+            };
+
+            if (isInterconnect(type) || isInterconnect(*exprType))
+                return;
+
+            auto& diag = context.addDiag(port, diag::MismatchedUserDefPortConn, expr->sourceRange);
+            diag << udnt.name;
+            diag << type;
+            diag << *exprType;
+        }
+        else if (port.direction != ArgumentDirection::In &&
+                 port.direction != ArgumentDirection::Out) {
+            auto& diag = context.addDiag(port, diag::MismatchedUserDefPortDir, expr->sourceRange);
+            diag << udnt.name;
+        }
+    };
+
+    // If only one side has net types, check for user-defined nettypes,
+    // which impose additional restrictions on the connection.
+    if (internal.empty() || external.empty()) {
+        const NetType* udnt = nullptr;
+        auto checker = [&](auto& list) {
+            for (auto& ntr : list) {
+                if (!ntr.netType->isBuiltIn()) {
+                    udnt = ntr.netType;
+                    break;
+                }
+            }
+        };
+
+        checker(internal);
+        checker(external);
+        if (udnt)
+            requireMatching(*udnt);
+
+        return;
+    }
+
+    // Simple case is one net connected on each side.
+    if (internal.size() == 1 && external.size() == 1) {
+        auto& inNt = *internal[0].netType;
+        auto& exNt = *external[0].netType;
+        if (&inNt == &exNt)
+            return;
+
+        if (!inNt.isBuiltIn() || !exNt.isBuiltIn()) {
+            // If both sides are user-defined nettypes they need to match.
+            if (!inNt.isBuiltIn() && !exNt.isBuiltIn()) {
+                auto& diag = context.addDiag(port, diag::UserDefPortTwoSided, expr->sourceRange);
+                diag << inNt.name << exNt.name;
+            }
+            else if (!inNt.isBuiltIn()) {
+                requireMatching(inNt);
+            }
+            else {
+                requireMatching(exNt);
+            }
+        }
+        else {
+            // Otherwise both sides are built-in nettypes.
+            bool shouldWarn;
+            NetType::getSimulatedNetType(inNt, exNt, shouldWarn);
+            if (shouldWarn) {
+                auto diagCode = conn.isImplicit ? diag::ImplicitConnNetInconsistent
+                                                : diag::NetInconsistent;
+                auto& diag = context.addDiag(port, diagCode, expr->sourceRange);
+                diag << exNt.name;
+                diag << inNt.name;
+                diag.addNote(diag::NoteDeclarationHere, port.location);
+            }
+        }
+
+        return;
+    }
+
+    // Otherwise we need to compare ranges of net types for differences.
+    auto in = internal.begin();
+    auto ex = external.begin();
+    bitwidth_t currBit = 0;
+    bitwidth_t exprWidth = expr->type->getBitWidth();
+    bool shownDeclaredHere = false;
+
+    while (true) {
+        bool shouldWarn;
+        auto& inNt = *in->netType;
+        auto& exNt = *ex->netType;
+
+        if (!inNt.isBuiltIn() || !exNt.isBuiltIn()) {
+            if (&inNt != &exNt) {
+                context.addDiag(port, diag::UserDefPortMixedConcat, expr->sourceRange)
+                    << inNt.name << exNt.name;
+                return;
+            }
+            shouldWarn = false;
+        }
+        else {
+            NetType::getSimulatedNetType(inNt, exNt, shouldWarn);
+        }
+
+        bitwidth_t width;
+        if (in->width < ex->width) {
+            width = in->width;
+            ex->width -= width;
+            in++;
+        }
+        else {
+            width = ex->width;
+            ex++;
+
+            if (in->width == width)
+                in++;
+            else
+                in->width -= width;
+        }
+
+        if (shouldWarn) {
+            SLANG_ASSERT(exprWidth >= currBit + width);
+            bitwidth_t left = exprWidth - currBit - 1;
+            bitwidth_t right = left - (width - 1);
+
+            auto& diag = context.addDiag(port, diag::NetRangeInconsistent, expr->sourceRange);
+            diag << exNt.name;
+            diag << left << right;
+            diag << inNt.name;
+
+            if (!shownDeclaredHere) {
+                diag.addNote(diag::NoteDeclarationHere, port.location);
+                shownDeclaredHere = true;
+            }
+        }
+
+        if (in == internal.end() || ex == external.end())
+            break;
+
+        currBit += width;
     }
 }
 

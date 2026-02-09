@@ -20,6 +20,7 @@ void registerSyntaxNodes0(py::module_& m);
 void registerSyntaxNodes1(py::module_& m);
 void registerSyntaxNodes2(py::module_& m);
 void registerSyntaxNodes3(py::module_& m);
+void registerSyntaxFactory(py::module_& m);
 void registerTypes(py::module_& m);
 
 PYBIND11_MODULE(pyslang, m) {
@@ -55,6 +56,7 @@ PYBIND11_MODULE(pyslang, m) {
     registerSyntaxNodes1(syntax);
     registerSyntaxNodes2(syntax);
     registerSyntaxNodes3(syntax);
+    registerSyntaxFactory(syntax);
     registerTypes(ast);
 
     for (auto& submod : {ast, syntax, parsing, numeric, diagnostics, text, driver, analysis}) {
