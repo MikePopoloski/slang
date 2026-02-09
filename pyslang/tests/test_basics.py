@@ -4,14 +4,13 @@
 from pathlib import Path
 
 from pyslang.ast import Compilation, ScriptSession, SymbolKind
-from pyslang.diagnostics import Diags
-from pyslang.diagnostics import DiagnosticEngine
+from pyslang.diagnostics import DiagnosticEngine, Diags
 from pyslang.numeric import ConstantRange, ConstantValue, SVInt, clog2, logic_t
 from pyslang.parsing import LexerOptions, ParserOptions
 from pyslang.syntax import SyntaxKind, SyntaxTree
 from pyslang.text import SourceLocation, SourceManager
-from pyslang import Bag
 
+from pyslang import Bag
 
 testFile = """
 module m(input i, output o);

@@ -5,8 +5,8 @@ import json
 from functools import cache
 from typing import Any, Dict, List, Union
 
-from pyslang.syntax import CSTJsonMode, SyntaxKind, SyntaxTree
 from pyslang.parsing import TokenKind, TriviaKind
+from pyslang.syntax import CSTJsonMode, SyntaxKind, SyntaxTree
 
 
 def to_dict(tree, mode: CSTJsonMode):

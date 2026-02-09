@@ -3,15 +3,9 @@
 
 from typing import Union
 
-from pyslang.ast import (
-    Compilation,
-    NamedValueExpression,
-    ProceduralBlockSymbol,
-    SignalEventControl,
-    Statement,
-    TimedStatement,
-    TimingControl,
-)
+from pyslang.ast import (Compilation, NamedValueExpression,
+                         ProceduralBlockSymbol, SignalEventControl, Statement,
+                         TimedStatement, TimingControl)
 from pyslang.parsing import Token, TokenKind
 from pyslang.syntax import SyntaxNode, SyntaxTree
 

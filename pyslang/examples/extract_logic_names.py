@@ -16,7 +16,8 @@ all logic declarations found in the code.
 
 from typing import Union
 
-from pyslang.ast import Compilation, PackedArrayType, ScalarType, VariableSymbol
+from pyslang.ast import (Compilation, PackedArrayType, ScalarType,
+                         VariableSymbol)
 from pyslang.parsing import Token
 from pyslang.syntax import SyntaxNode, SyntaxTree
 

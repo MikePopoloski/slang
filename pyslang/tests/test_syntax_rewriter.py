@@ -1,9 +1,9 @@
 import re
 
 import pytest
-
 from pyslang.parsing import Token, TokenKind
-from pyslang.syntax import SyntaxKind, SyntaxNode, SyntaxRewriter, SyntaxTree, rewrite
+from pyslang.syntax import (SyntaxKind, SyntaxNode, SyntaxRewriter, SyntaxTree,
+                            rewrite)
 
 
 def test_rewriter_handler_function_called_with_right_args():
@@ -93,9 +93,7 @@ def test_rewriter_remove():
         "remove_match_count": 0,
     }
 
-    def remove_int_var(
-        node: SyntaxNode, rewriter: SyntaxRewriter
-    ) -> None:
+    def remove_int_var(node: SyntaxNode, rewriter: SyntaxRewriter) -> None:
         assert isinstance(node, SyntaxNode)
         assert isinstance(rewriter, SyntaxRewriter)
 
@@ -274,9 +272,7 @@ def test_rewriter_replace():
         "replacement_point_match_count": 0,
     }
 
-    def replace_int_var(
-        node: SyntaxNode, rewriter: SyntaxRewriter
-    ) -> None:
+    def replace_int_var(node: SyntaxNode, rewriter: SyntaxRewriter) -> None:
         """Replace int i with logic j."""
         assert isinstance(node, SyntaxNode)
         assert isinstance(rewriter, SyntaxRewriter)
@@ -291,9 +287,7 @@ def test_rewriter_replace():
                         check_func_called["replacement_point_match_count"] += 1
 
                         # Create new variable declaration to insert.
-                        new_decl = SyntaxTree.fromText(
-                            "logic j;", "new.sv"
-                        ).root
+                        new_decl = SyntaxTree.fromText("logic j;", "new.sv").root
 
                         rewriter.replace(node, new_decl)
 
@@ -347,9 +341,7 @@ def test_rewriter_nested():
         "insert_match_count": 0,
     }
 
-    def modify_struct(
-        node: SyntaxNode, rewriter: SyntaxRewriter
-    ) -> None:
+    def modify_struct(node: SyntaxNode, rewriter: SyntaxRewriter) -> None:
         """Modify the struct with several operations.
 
         Multiple operations:
@@ -439,9 +431,7 @@ def test_rewriter_skip():
         "test.sv",
     )
 
-    def skip_module_body(
-        node: SyntaxNode, rewriter: SyntaxRewriter
-    ) -> None:
+    def skip_module_body(node: SyntaxNode, rewriter: SyntaxRewriter) -> None:
         # Skip processing the module's body.
         if node.kind == SyntaxKind.ModuleDeclaration:
             rewriter.remove(node)
@@ -461,9 +451,7 @@ def test_rewriter_handler_errors_are_propagated():
     """
     input_tree = SyntaxTree.fromText(input_str, "test.sv")
 
-    def handler_with_error(
-        node: SyntaxNode, rewriter: SyntaxRewriter
-    ) -> None:
+    def handler_with_error(node: SyntaxNode, rewriter: SyntaxRewriter) -> None:
         assert isinstance(node, SyntaxNode)
         assert isinstance(rewriter, SyntaxRewriter)
 

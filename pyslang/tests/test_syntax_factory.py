@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: MIT
 
 import pytest
-
 from pyslang.parsing import TokenKind, TriviaKind
-from pyslang.syntax import SyntaxFactory, SyntaxKind, SyntaxTree, clone, deepClone, rewrite
+from pyslang.syntax import (SyntaxFactory, SyntaxKind, SyntaxTree, clone,
+                            deepClone, rewrite)
+
 from pyslang import BumpAllocator
 
 
@@ -18,9 +19,7 @@ class TestMakeToken:
                 token_created["token"] = token
                 assert token.kind == TokenKind.Semicolon
 
-        rewrite(
-            SyntaxTree.fromText("module m; endmodule", "test.sv"), handler
-        )
+        rewrite(SyntaxTree.fromText("module m; endmodule", "test.sv"), handler)
         assert "token" in token_created
 
     def test_makeToken_inferred_text(self):
@@ -33,9 +32,7 @@ class TestMakeToken:
                 token_created["token"] = token
                 assert token.kind == TokenKind.Semicolon
 
-        rewrite(
-            SyntaxTree.fromText("module m; endmodule", "test.sv"), handler
-        )
+        rewrite(SyntaxTree.fromText("module m; endmodule", "test.sv"), handler)
         assert "token" in token_created
 
     def test_makeToken_requires_explicit_text_for_identifier(self):
@@ -49,9 +46,7 @@ class TestMakeToken:
                 except Exception as e:
                     error_raised["error"] = str(e)
 
-        rewrite(
-            SyntaxTree.fromText("module m; endmodule", "test.sv"), handler
-        )
+        rewrite(SyntaxTree.fromText("module m; endmodule", "test.sv"), handler)
         assert "error" in error_raised
         assert "explicit text" in error_raised["error"]
 
@@ -66,9 +61,7 @@ class TestMakeToken:
                 assert token.kind == TokenKind.Identifier
                 assert token.value == "my_identifier"
 
-        rewrite(
-            SyntaxTree.fromText("module m; endmodule", "test.sv"), handler
-        )
+        rewrite(SyntaxTree.fromText("module m; endmodule", "test.sv"), handler)
         assert "token" in token_created
 
     def test_makeComma(self):
@@ -80,9 +73,7 @@ class TestMakeToken:
                 token_created["token"] = token
                 assert token.kind == TokenKind.Comma
 
-        rewrite(
-            SyntaxTree.fromText("module m; endmodule", "test.sv"), handler
-        )
+        rewrite(SyntaxTree.fromText("module m; endmodule", "test.sv"), handler)
         assert "token" in token_created
 
     def test_makeTrivia(self):
@@ -95,9 +86,7 @@ class TestMakeToken:
                 trivia_created["trivia"] = trivia
                 assert trivia.kind == TriviaKind.Whitespace
 
-        rewrite(
-            SyntaxTree.fromText("module m; endmodule", "test.sv"), handler
-        )
+        rewrite(SyntaxTree.fromText("module m; endmodule", "test.sv"), handler)
         assert "trivia" in trivia_created
 
 
@@ -219,9 +208,7 @@ class TestMakeList:
                 list_result["token_list"] = token_list
                 assert token_list is not None
 
-        rewrite(
-            SyntaxTree.fromText("module m; endmodule", "test.sv"), handler
-        )
+        rewrite(SyntaxTree.fromText("module m; endmodule", "test.sv"), handler)
         assert "token_list" in list_result
 
 
@@ -239,9 +226,7 @@ class TestSyntaxFactory:
                 assert factory is not None
                 assert isinstance(factory, SyntaxFactory)
 
-        rewrite(
-            SyntaxTree.fromText("module m; endmodule", "test.sv"), handler
-        )
+        rewrite(SyntaxTree.fromText("module m; endmodule", "test.sv"), handler)
         assert "factory" in factory_accessed
 
     def test_alloc_property_accessible(self):
@@ -255,9 +240,7 @@ class TestSyntaxFactory:
                 assert alloc is not None
                 assert isinstance(alloc, BumpAllocator)
 
-        rewrite(
-            SyntaxTree.fromText("module m; endmodule", "test.sv"), handler
-        )
+        rewrite(SyntaxTree.fromText("module m; endmodule", "test.sv"), handler)
         assert "alloc" in alloc_accessed
 
     def test_factory_can_create_simple_node(self):
@@ -277,9 +260,7 @@ class TestSyntaxFactory:
                 assert empty_stmt is not None
                 assert empty_stmt.kind == SyntaxKind.EmptyStatement
 
-        rewrite(
-            SyntaxTree.fromText("module m; endmodule", "test.sv"), handler
-        )
+        rewrite(SyntaxTree.fromText("module m; endmodule", "test.sv"), handler)
         assert "node" in node_created
 
 
@@ -305,9 +286,7 @@ class TestMemorySafety:
 
                 test_passed["passed"] = True
 
-        rewrite(
-            SyntaxTree.fromText("module m; endmodule", "test.sv"), handler
-        )
+        rewrite(SyntaxTree.fromText("module m; endmodule", "test.sv"), handler)
         assert test_passed["passed"], "Handler assertions should have passed"
 
     def test_trivia_created_successfully(self):
@@ -330,9 +309,7 @@ class TestMemorySafety:
                 assert len(trivia_created) == 5
                 test_passed["passed"] = True
 
-        rewrite(
-            SyntaxTree.fromText("module m; endmodule", "test.sv"), handler
-        )
+        rewrite(SyntaxTree.fromText("module m; endmodule", "test.sv"), handler)
         assert test_passed["passed"], "Handler assertions should have passed"
 
 
