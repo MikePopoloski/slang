@@ -61,9 +61,9 @@ We can use slang to load the syntax tree and inspect it:
 
 .. code-block:: python
 
-    import pyslang
+    from pyslang.syntax import SyntaxTree
 
-    tree = pyslang.SyntaxTree.fromFile('test.sv')
+    tree = SyntaxTree.fromFile('test.sv')
     mod = tree.root.members[0]
     print(mod.header.name.value)
     print(mod.members[0].kind)
@@ -81,7 +81,9 @@ We can also evaluate arbitrary SystemVerilog expressions:
 
 .. code-block:: python
 
-    session = pyslang.ScriptSession()
+    from pyslang.ast import ScriptSession
+
+    session = ScriptSession()
     session.eval("logic bit_arr [16] = '{0:1, 1:1, 2:1, default:0};")
     result = session.eval("bit_arr.sum with ( int'(item) );")
     print(result)

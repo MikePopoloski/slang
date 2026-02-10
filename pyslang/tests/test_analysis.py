@@ -1,13 +1,20 @@
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
 
-import pyslang
+from pyslang.analysis import AnalysisManager, DriverKind, FlowAnalysis
+from pyslang.ast import (
+    Compilation,
+    ExpressionStatement,
+    LSPUtilities,
+    ProceduralBlockSymbol,
+)
+from pyslang.syntax import SyntaxTree
 
 
 def test_driver_analysis():
     """Test analysis of variable drivers"""
 
-    tree = pyslang.SyntaxTree.fromText("""
+    tree = SyntaxTree.fromText("""
 module m;
     int i;
     always @* i = 1;
@@ -19,13 +26,13 @@ module top;
     always @* m1.i = 2;
 endmodule
 """)
-    compilation = pyslang.Compilation()
+    compilation = Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
 
     i = compilation.getRoot().lookupName("top.m1.i")
 
-    analysisManager = pyslang.AnalysisManager()
+    analysisManager = AnalysisManager()
     analysisManager.analyze(compilation)
 
     assert i is not None
@@ -35,7 +42,7 @@ endmodule
 
 def test_flow_analysis():
     """Test FlowAnalysis with callbacks"""
-    tree = pyslang.SyntaxTree.fromText("""
+    tree = SyntaxTree.fromText("""
 module m;
     int a, b, c;
     always_comb begin
@@ -49,7 +56,7 @@ module m;
     end
 endmodule
 """)
-    compilation = pyslang.Compilation()
+    compilation = Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
     root = compilation.getRoot()
@@ -57,7 +64,7 @@ endmodule
 
     proc_block = None
     for member in m.body:
-        if isinstance(member, pyslang.ProceduralBlockSymbol):
+        if isinstance(member, ProceduralBlockSymbol):
             proc_block = member
             break
 
@@ -74,7 +81,7 @@ endmodule
     def on_conditional(stmt):
         conditionals.append(stmt)
 
-    flow = pyslang.FlowAnalysis(proc_block)
+    flow = FlowAnalysis(proc_block)
     flow.onAssignment, flow.onVariableRef, flow.onConditionalBegin = (
         on_assignment,
         on_var_ref,
@@ -95,7 +102,7 @@ endmodule
 
 def test_flow_analysis_with_state():
     """Test FlowAnalysis with custom state management"""
-    tree = pyslang.SyntaxTree.fromText("""
+    tree = SyntaxTree.fromText("""
 module m;
     int x;
     always_comb begin
@@ -107,13 +114,13 @@ module m;
     end
 endmodule
 """)
-    compilation = pyslang.Compilation()
+    compilation = Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
 
     proc_block = None
     for member in compilation.getRoot().lookupName("m").body:
-        if isinstance(member, pyslang.ProceduralBlockSymbol):
+        if isinstance(member, ProceduralBlockSymbol):
             proc_block = member
             break
 
@@ -138,7 +145,7 @@ endmodule
         if hasattr(expr.left, "symbol"):
             assigned_vars.append(expr.left.symbol.name)
 
-    flow = pyslang.FlowAnalysis(proc_block)
+    flow = FlowAnalysis(proc_block)
     flow.createTopState = create_top_state
     flow.onStateCopy = copy_state
     flow.onBranchMerge = merge_states
@@ -150,7 +157,7 @@ endmodule
 
 def test_lsp_utilities_stringify():
 
-    tree = pyslang.SyntaxTree.fromText("""
+    tree = SyntaxTree.fromText("""
 module m;
     int arr[10];
     int x;
@@ -160,7 +167,7 @@ module m;
     end
 endmodule
 """)
-    compilation = pyslang.Compilation()
+    compilation = Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
 
@@ -169,13 +176,13 @@ endmodule
 
     proc_block = None
     for member in m.body:
-        if isinstance(member, pyslang.ProceduralBlockSymbol):
+        if isinstance(member, ProceduralBlockSymbol):
             proc_block = member
             break
 
     assert proc_block is not None
 
-    am = pyslang.AnalysisManager()
+    am = AnalysisManager()
     am.analyze(compilation)
 
     arr = root.lookupName("m.arr")
@@ -185,13 +192,13 @@ endmodule
     for driver_tuple in drivers:
         driver = driver_tuple[0]
         if driver.lsp is not None:
-            lsp_str = pyslang.LSPUtilities.stringifyLSP(driver.lsp, compilation)
+            lsp_str = LSPUtilities.stringifyLSP(driver.lsp, compilation)
             assert "arr" in lsp_str
 
 
 def test_lsp_utilities_visit_lsps():
 
-    tree = pyslang.SyntaxTree.fromText("""
+    tree = SyntaxTree.fromText("""
 module m;
     int a, b;
     always_comb begin
@@ -199,7 +206,7 @@ module m;
     end
 endmodule
 """)
-    compilation = pyslang.Compilation()
+    compilation = Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
 
@@ -208,7 +215,7 @@ endmodule
 
     proc_block = None
     for member in m.body:
-        if isinstance(member, pyslang.ProceduralBlockSymbol):
+        if isinstance(member, ProceduralBlockSymbol):
             proc_block = member
             break
 
@@ -224,23 +231,22 @@ endmodule
     def on_lsp(symbol, lsp_expr, is_lvalue):
         lsps_found.append((symbol.name, is_lvalue))
 
-    if isinstance(stmt, pyslang.ExpressionStatement):
-        pyslang.LSPUtilities.visitLSPs(stmt.expr, compilation, on_lsp, is_lvalue=True)
+    if isinstance(stmt, ExpressionStatement):
+        LSPUtilities.visitLSPs(stmt.expr, compilation, on_lsp, is_lvalue=True)
 
     assert "a" in {name for name, _ in lsps_found}, "Should find 'a' as lvalue"
     assert "b" in {name for name, _ in lsps_found}, "Should find 'b' as rvalue"
 
 
 def test_driver_kind_enum():
-    assert hasattr(pyslang, "DriverKind")
-    assert hasattr(pyslang.DriverKind, "Procedural")
-    assert hasattr(pyslang.DriverKind, "Continuous")
+    assert hasattr(DriverKind, "Procedural")
+    assert hasattr(DriverKind, "Continuous")
 
 
 def test_lsp_utilities_get_bounds():
     """Test LSPUtilities.getBounds returns correct bit ranges"""
 
-    tree = pyslang.SyntaxTree.fromText("""
+    tree = SyntaxTree.fromText("""
 module m;
     logic [31:0] data;
     logic [7:0] arr[4];
@@ -250,13 +256,13 @@ module m;
     end
 endmodule
 """)
-    compilation = pyslang.Compilation()
+    compilation = Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
 
     root = compilation.getRoot()
 
-    am = pyslang.AnalysisManager()
+    am = AnalysisManager()
     am.analyze(compilation)
 
     data = root.lookupName("m.data")
@@ -270,13 +276,13 @@ endmodule
             m = root.lookupName("m")
             proc_block = None
             for member in m.body:
-                if isinstance(member, pyslang.ProceduralBlockSymbol):
+                if isinstance(member, ProceduralBlockSymbol):
                     proc_block = member
                     break
             assert proc_block is not None
 
-            flow = pyslang.FlowAnalysis(proc_block)
-            bounds = pyslang.LSPUtilities.getBounds(driver.lsp, flow.evalContext)
+            flow = FlowAnalysis(proc_block)
+            bounds = LSPUtilities.getBounds(driver.lsp, flow.evalContext)
             # getBounds returns (lower_bound, upper_bound) for the bit range
             if bounds is not None:
                 lower, upper = bounds
@@ -287,7 +293,7 @@ endmodule
 def test_flow_analysis_loop_callbacks():
     """Test that loop callbacks fire for various loop types"""
 
-    tree = pyslang.SyntaxTree.fromText("""
+    tree = SyntaxTree.fromText("""
 module m;
     int i, j, sum;
     int arr[10];
@@ -306,7 +312,7 @@ module m;
     end
 endmodule
 """)
-    compilation = pyslang.Compilation()
+    compilation = Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
 
@@ -315,7 +321,7 @@ endmodule
 
     proc_block = None
     for member in m.body:
-        if isinstance(member, pyslang.ProceduralBlockSymbol):
+        if isinstance(member, ProceduralBlockSymbol):
             proc_block = member
             break
 
@@ -326,7 +332,7 @@ endmodule
     def on_loop(stmt):
         loops_found.append(type(stmt).__name__)
 
-    flow = pyslang.FlowAnalysis(proc_block)
+    flow = FlowAnalysis(proc_block)
     flow.onLoopBegin = on_loop
 
     flow.run(proc_block.body)
@@ -340,19 +346,19 @@ endmodule
 def test_flow_analysis_empty_body():
     """Test that empty procedure body works without error"""
 
-    tree = pyslang.SyntaxTree.fromText("""
+    tree = SyntaxTree.fromText("""
 module m;
     always_comb begin
     end
 endmodule
 """)
-    compilation = pyslang.Compilation()
+    compilation = Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
 
     proc_block = None
     for member in compilation.getRoot().lookupName("m").body:
-        if isinstance(member, pyslang.ProceduralBlockSymbol):
+        if isinstance(member, ProceduralBlockSymbol):
             proc_block = member
             break
 
@@ -363,7 +369,7 @@ endmodule
     def on_assignment(expr):
         assignments.append(expr)
 
-    flow = pyslang.FlowAnalysis(proc_block)
+    flow = FlowAnalysis(proc_block)
     flow.onAssignment = on_assignment
     flow.run(proc_block.body)
 
@@ -374,7 +380,7 @@ endmodule
 def test_flow_analysis_call_expression():
     """Test that function calls trigger the onCallExpression callback"""
 
-    tree = pyslang.SyntaxTree.fromText("""
+    tree = SyntaxTree.fromText("""
 module m;
     function int add(int a, int b);
         return a + b;
@@ -388,13 +394,13 @@ module m;
     end
 endmodule
 """)
-    compilation = pyslang.Compilation()
+    compilation = Compilation()
     compilation.addSyntaxTree(tree)
     compilation.getAllDiagnostics()
 
     proc_block = None
     for member in compilation.getRoot().lookupName("m").body:
-        if isinstance(member, pyslang.ProceduralBlockSymbol):
+        if isinstance(member, ProceduralBlockSymbol):
             proc_block = member
             break
 
@@ -406,7 +412,7 @@ endmodule
         if hasattr(expr, "subroutine"):
             calls_found.append(expr.subroutine.name)
 
-    flow = pyslang.FlowAnalysis(proc_block)
+    flow = FlowAnalysis(proc_block)
     flow.onCallExpression = on_call
     flow.run(proc_block.body)
 

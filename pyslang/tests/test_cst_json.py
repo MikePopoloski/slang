@@ -5,10 +5,11 @@ import json
 from functools import cache
 from typing import Any, Dict, List, Union
 
-import pyslang
+from pyslang.parsing import TokenKind, TriviaKind
+from pyslang.syntax import CSTJsonMode, SyntaxKind, SyntaxTree
 
 
-def to_dict(tree, mode: pyslang.CSTJsonMode):
+def to_dict(tree, mode: CSTJsonMode):
     json_str = tree.to_json(mode)
     return json.loads(json_str)
 
@@ -17,15 +18,15 @@ def get_enum_names(enum_class) -> set:
     return set([k for k in enum_class.__members__])
 
 
-SYNTAX_KINDS = get_enum_names(pyslang.SyntaxKind)
-TOKEN_KINDS = get_enum_names(pyslang.TokenKind)
-TRIVIA_KINDS = get_enum_names(pyslang.TriviaKind)
+SYNTAX_KINDS = get_enum_names(SyntaxKind)
+TOKEN_KINDS = get_enum_names(TokenKind)
+TRIVIA_KINDS = get_enum_names(TriviaKind)
 
 
 class CSTValidator:
     """Validates CST JSON structure properties based on serialization mode."""
 
-    def __init__(self, mode: pyslang.CSTJsonMode):
+    def __init__(self, mode: CSTJsonMode):
         self.mode = mode
         self.errors = list[str]()
 
@@ -80,7 +81,7 @@ class CSTValidator:
         """Validate a token node."""
         kind = token["kind"]
 
-        if self.mode == pyslang.CSTJsonMode.SimpleTokens:
+        if self.mode == CSTJsonMode.SimpleTokens:
             # In SimpleTokens mode, some tokens might be collapsed to strings
             return
 
@@ -116,7 +117,7 @@ class CSTValidator:
                 for i, item in enumerate(value):
                     if isinstance(item, dict):
                         self._validate_node(item, f"{child_path}[{i}]")
-                    elif self.mode == pyslang.CSTJsonMode.SimpleTokens and isinstance(
+                    elif self.mode == CSTJsonMode.SimpleTokens and isinstance(
                         item, str
                     ):
                         # In SimpleTokens mode, some nested structures might be strings
@@ -129,7 +130,7 @@ class CSTValidator:
                         )
             elif isinstance(value, str):
                 # In SimpleTokens mode, some fields might be collapsed to strings
-                if self.mode == pyslang.CSTJsonMode.SimpleTokens:
+                if self.mode == CSTJsonMode.SimpleTokens:
                     if not value.strip():
                         self._error("Empty string value", child_path)
                 else:
@@ -139,11 +140,11 @@ class CSTValidator:
 
     def _validate_trivia(self, trivia: Any, path: str):
         """Validate trivia field."""
-        if self.mode == pyslang.CSTJsonMode.NoTrivia:
+        if self.mode == CSTJsonMode.NoTrivia:
             self._error("Trivia should not be present in NoTrivia mode", path)
             return
 
-        if self.mode == pyslang.CSTJsonMode.SimpleTrivia:
+        if self.mode == CSTJsonMode.SimpleTrivia:
             if not isinstance(trivia, str):
                 self._error(
                     f"Trivia should be string in SimpleTrivia mode, got {type(trivia)}",
@@ -152,7 +153,7 @@ class CSTValidator:
             return
 
         # Full mode: trivia should be a list of trivia objects
-        if self.mode == pyslang.CSTJsonMode.Full:
+        if self.mode == CSTJsonMode.Full:
             if not isinstance(trivia, list):
                 self._error(
                     f"Trivia should be list in Full mode, got {type(trivia)}", path
@@ -189,7 +190,7 @@ class CSTValidator:
         """Validate trivia constraints based on mode."""
         has_trivia = "trivia" in node
 
-        if self.mode == pyslang.CSTJsonMode.NoTrivia and has_trivia:
+        if self.mode == CSTJsonMode.NoTrivia and has_trivia:
             self._error("Node should not have trivia in NoTrivia mode", path)
 
         if has_trivia:
@@ -206,13 +207,13 @@ def test_cst_json():
     ]
 
     for test_code in test_cases:
-        tree = pyslang.SyntaxTree.fromText(test_code)
+        tree = SyntaxTree.fromText(test_code)
 
         for mode in [
-            pyslang.CSTJsonMode.Full,
-            pyslang.CSTJsonMode.SimpleTrivia,
-            pyslang.CSTJsonMode.NoTrivia,
-            pyslang.CSTJsonMode.SimpleTokens,
+            CSTJsonMode.Full,
+            CSTJsonMode.SimpleTrivia,
+            CSTJsonMode.NoTrivia,
+            CSTJsonMode.SimpleTokens,
         ]:
             json_data = to_dict(tree, mode)
 

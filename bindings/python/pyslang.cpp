@@ -5,15 +5,17 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
-void registerAnalysis(py::module_& m);
+void registerAnalysis(py::module_& m, py::module_& ast);
 void registerAST(py::module_& m);
-void registerCompilation(py::module_& m);
+void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver);
 void registerExpressions(py::module_& m);
 void registerNumeric(py::module_& m);
+void registerDiagnostics(py::module_& m);
+void registerText(py::module_& m);
 void registerUtil(py::module_& m);
 void registerStatements(py::module_& m);
 void registerSymbols(py::module_& m);
-void registerSyntax(py::module_& m);
+void registerSyntax(py::module_& syntax, py::module_& parsing);
 void registerSyntaxNodes0(py::module_& m);
 void registerSyntaxNodes1(py::module_& m);
 void registerSyntaxNodes2(py::module_& m);
@@ -30,21 +32,29 @@ PYBIND11_MODULE(pyslang, m) {
     m.attr("__version__") = "dev";
 #endif
 
-    registerAnalysis(m);
-    registerAST(m);
-    registerCompilation(m);
-    registerExpressions(m);
+    auto ast = m.def_submodule("ast", "AST types: symbols, expressions, statements, types");
+    auto syntax = m.def_submodule("syntax", "Syntax tree nodes and utilities");
+    auto parsing = m.def_submodule("parsing", "Lexer, parser, preprocessor types");
+    auto analysis = m.def_submodule("analysis", "Code analysis utilities");
+    auto driver = m.def_submodule("driver", "Compilation driver");
+
+    registerAnalysis(analysis, ast);
+    registerAST(ast);
+    registerCompilation(m, ast, driver);
+    registerExpressions(ast);
     registerNumeric(m);
+    registerDiagnostics(m);
+    registerText(m);
     registerUtil(m);
-    registerStatements(m);
-    registerSymbols(m);
-    registerSyntax(m);
-    registerSyntaxNodes0(m);
-    registerSyntaxNodes1(m);
-    registerSyntaxNodes2(m);
-    registerSyntaxNodes3(m);
-    registerSyntaxFactory(m);
-    registerTypes(m);
+    registerStatements(ast);
+    registerSymbols(ast);
+    registerSyntax(syntax, parsing);
+    registerSyntaxNodes0(syntax);
+    registerSyntaxNodes1(syntax);
+    registerSyntaxNodes2(syntax);
+    registerSyntaxNodes3(syntax);
+    registerSyntaxFactory(syntax);
+    registerTypes(ast);
 
     py::register_exception_translator([](std::exception_ptr p) {
         try {

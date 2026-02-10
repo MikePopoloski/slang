@@ -160,7 +160,7 @@ protected:
     }
 };
 
-void registerAnalysis(py::module_& m) {
+void registerAnalysis(py::module_& m, py::module_& ast) {
     py::native_enum<DriverKind>(m, "DriverKind", "enum.Enum")
         .value("Procedural", DriverKind::Procedural)
         .value("Continuous", DriverKind::Continuous)
@@ -285,7 +285,7 @@ void registerAnalysis(py::module_& m) {
                        "Callback to create initial state: () -> state");
 
     py::classh<LSPUtilities>(
-        m, "LSPUtilities",
+        ast, "LSPUtilities",
         "Utility methods for working with Longest Static Prefix (LSP) expressions.\n\n"
         "An LSP expression is the longest static prefix of an expression that can be\n"
         "used to identify a particular driver of a variable. For example, in the\n"

@@ -187,14 +187,15 @@ std::shared_ptr<SyntaxTree> pySyntaxRewrite(const std::shared_ptr<SyntaxTree>& t
 
 } // end namespace
 
-void registerSyntax(py::module_& m) {
-    EXPOSE_ENUM(m, TriviaKind);
-    EXPOSE_ENUM(m, TokenKind);
+void registerSyntax(py::module_& syntax, py::module_& parsing) {
+    auto& m = syntax;
+    EXPOSE_ENUM(parsing, TriviaKind);
+    EXPOSE_ENUM(parsing, TokenKind);
     EXPOSE_ENUM(m, SyntaxKind);
-    EXPOSE_ENUM(m, KnownSystemName);
+    EXPOSE_ENUM(parsing, KnownSystemName);
     EXPOSE_ENUM(m, CSTJsonMode);
 
-    py::classh<Trivia>(m, "Trivia")
+    py::classh<Trivia>(parsing, "Trivia")
         .def(py::init<>())
         .def(py::init<TriviaKind, std::string_view>(), "kind"_a, "rawText"_a)
         .def_readonly("kind", &Trivia::kind)
@@ -206,7 +207,7 @@ void registerSyntax(py::module_& m) {
             return fmt::format("Trivia(TriviaKind.{})", toString(self.kind));
         });
 
-    py::classh<Token>(m, "Token")
+    py::classh<Token>(parsing, "Token")
         .def(py::init<>())
         .def(py::init([](BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
                          std::string_view rawText, SourceLocation location) {
@@ -477,14 +478,14 @@ void registerSyntax(py::module_& m) {
         .export_values()
         .finalize();
 
-    py::classh<LexerOptions>(m, "LexerOptions")
+    py::classh<LexerOptions>(parsing, "LexerOptions")
         .def(py::init<>())
         .def_readwrite("maxErrors", &LexerOptions::maxErrors)
         .def_readwrite("languageVersion", &LexerOptions::languageVersion)
         .def_readwrite("enableLegacyProtect", &LexerOptions::enableLegacyProtect)
         .def_readwrite("commentHandlers", &LexerOptions::commentHandlers);
 
-    py::classh<Lexer>(m, "Lexer")
+    py::classh<Lexer>(parsing, "Lexer")
         .def(py::init<SourceBuffer, BumpAllocator&, Diagnostics&, SourceManager&, LexerOptions>(),
              py::keep_alive<1, 3>(), py::keep_alive<1, 4>(), py::keep_alive<1, 5>(), "buffer"_a,
              "alloc"_a, "diagnostics"_a, "sourceManager"_a, "options"_a = LexerOptions())
@@ -492,7 +493,7 @@ void registerSyntax(py::module_& m) {
         .def("isNextTokenOnSameLine", &Lexer::isNextTokenOnSameLine)
         .def_property_readonly("library", &Lexer::getLibrary);
 
-    py::classh<PreprocessorOptions>(m, "PreprocessorOptions")
+    py::classh<PreprocessorOptions>(parsing, "PreprocessorOptions")
         .def(py::init<>())
         .def_readwrite("maxIncludeDepth", &PreprocessorOptions::maxIncludeDepth)
         .def_readwrite("languageVersion", &PreprocessorOptions::languageVersion)
@@ -502,7 +503,7 @@ void registerSyntax(py::module_& m) {
         .def_readwrite("additionalIncludePaths", &PreprocessorOptions::additionalIncludePaths)
         .def_readwrite("ignoreDirectives", &PreprocessorOptions::ignoreDirectives);
 
-    py::classh<ParserOptions>(m, "ParserOptions")
+    py::classh<ParserOptions>(parsing, "ParserOptions")
         .def(py::init<>())
         .def_readwrite("maxRecursionDepth", &ParserOptions::maxRecursionDepth)
         .def_readwrite("languageVersion", &ParserOptions::languageVersion);

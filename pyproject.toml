@@ -58,5 +58,8 @@ test-command = "pytest {project}/pyslang/tests"
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
 
+[tool.isort]
+profile = "black"
+
 [tool.pytest.ini_options]
 testpaths = ["pyslang/tests"]

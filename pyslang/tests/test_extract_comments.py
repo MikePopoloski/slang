@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
 
-import pyslang
+from pyslang.parsing import TriviaKind
+from pyslang.syntax import ImplicitNonAnsiPortSyntax, SyntaxKind, SyntaxTree
 
 testfile = """
 //! Module description
@@ -27,12 +28,12 @@ endmodule
 
 
 def test_extract_comments():
-    tree = pyslang.SyntaxTree.fromText(testfile)
-    assert tree.root.kind == pyslang.SyntaxKind.ModuleDeclaration
+    tree = SyntaxTree.fromText(testfile)
+    assert tree.root.kind == SyntaxKind.ModuleDeclaration
 
     moduleComments = []
     for t in tree.root.getFirstToken().trivia:
-        if t.kind == pyslang.TriviaKind.LineComment:
+        if t.kind == TriviaKind.LineComment:
             comment = t.getRawText()
             if comment.startswith("//!"):
                 moduleComments.append(comment[3:].strip())
@@ -44,16 +45,16 @@ def test_extract_comments():
     def getLeadingComments(tok):
         if lastPort is not None:
             for t in tok.trivia:
-                if t.kind == pyslang.TriviaKind.LineComment:
+                if t.kind == TriviaKind.LineComment:
                     comment = t.getRawText()
                     if comment.startswith("//!"):
                         portComments[lastPort].append(comment[3:].strip())
-                elif t.kind == pyslang.TriviaKind.EndOfLine:
+                elif t.kind == TriviaKind.EndOfLine:
                     break
 
     if portList is not None:
         for port in portList.ports:
-            if isinstance(port, pyslang.ImplicitNonAnsiPortSyntax):
+            if isinstance(port, ImplicitNonAnsiPortSyntax):
                 tok = port.getFirstToken()
                 getLeadingComments(tok)
 
