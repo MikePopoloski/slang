@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/DataFlowAnalysis.h"
 
+#include <bit>
+
 #include "slang/diagnostics/AnalysisDiags.h"
 
 namespace slang::analysis {
@@ -72,6 +74,7 @@ void ExpressionSequenceChecker::checkUsage(const ValueSymbol& symbol, DriverBitR
         bool warned : 1;
     };
     static_assert(sizeof(Tag) == sizeof(uint32_t));
+    static_assert(std::has_unique_object_representations_v<Tag>);
 
     // Loop over all existing uses of this object and see if they conflict,
     // i.e. with two writes or a read+write of the same symbol / LSP.
@@ -79,7 +82,7 @@ void ExpressionSequenceChecker::checkUsage(const ValueSymbol& symbol, DriverBitR
     auto& map = trackedUses[&symbol];
     auto end = map.end();
     for (auto it = map.find(bounds); it != end; ++it) {
-        const Tag tag = std::bit_cast<Tag>((*it).second);
+        const Tag tag = std::bit_cast<Tag, uint32_t>((*it).second);
         if (tag.warned)
             return;
 
