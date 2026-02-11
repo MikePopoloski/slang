@@ -7,8 +7,6 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/DataFlowAnalysis.h"
 
-#include <bit>
-
 #include "slang/diagnostics/AnalysisDiags.h"
 
 namespace slang::analysis {
@@ -73,8 +71,14 @@ void ExpressionSequenceChecker::checkUsage(const ValueSymbol& symbol, DriverBitR
         bool isMod : 1;
         bool warned : 1;
     };
-    static_assert(sizeof(Tag) == sizeof(uint32_t));
-    static_assert(std::has_unique_object_representations_v<Tag>);
+
+    // We can't just use std::bit_cast here because MSVC is garbage.
+    auto toTag = [](uint32_t i) {
+        return Tag{.seq = i & 0x3FFFFFFF, .isMod = bool((i >> 30) & 0x1), .warned = bool(i >> 31)};
+    };
+    auto fromTag = [](Tag t) {
+        return t.seq | (t.isMod ? (1u << 30) : 0u) | (t.warned ? (1u << 31) : 0u);
+    };
 
     // Loop over all existing uses of this object and see if they conflict,
     // i.e. with two writes or a read+write of the same symbol / LSP.
@@ -82,7 +86,7 @@ void ExpressionSequenceChecker::checkUsage(const ValueSymbol& symbol, DriverBitR
     auto& map = trackedUses[&symbol];
     auto end = map.end();
     for (auto it = map.find(bounds); it != end; ++it) {
-        const Tag tag = std::bit_cast<Tag, uint32_t>((*it).second);
+        const Tag tag = toTag((*it).second);
         if (tag.warned)
             return;
 
@@ -100,7 +104,7 @@ void ExpressionSequenceChecker::checkUsage(const ValueSymbol& symbol, DriverBitR
     }
 
     Tag newTag{.seq = currRegion, .isMod = isMod, .warned = warned};
-    map.insert(bounds, {&lsp, std::bit_cast<uint32_t, Tag>(newTag)}, context->taggedLSPAlloc);
+    map.insert(bounds, {&lsp, fromTag(newTag)}, context->taggedLSPAlloc);
 }
 
 bool ExpressionSequenceChecker::isUnsequenced(uint32_t seq) {
