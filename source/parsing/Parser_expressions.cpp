@@ -327,9 +327,7 @@ ExpressionSyntax& Parser::parseIntegerExpression(bool disallowVector) {
 
 void Parser::handleExponentSplit(Token token, size_t offset) {
     SmallVector<Token, 4> split;
-    Lexer::splitTokens(alloc, getDiagnostics(), getPP().getSourceManager(), token, offset,
-                       getPP().getCurrentKeywordVersion(), split);
-
+    getPP().splitTokens(token, offset, split);
     pushTokens(split);
 }
 

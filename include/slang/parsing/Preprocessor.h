@@ -168,6 +168,10 @@ public:
     /// Gets all include directives that have been encountered thus far in the preprocessor.
     std::vector<IncludeMetadata> getIncludeDirectives() const;
 
+    /// Splits the provided token at the given offset, taking into account the current state
+    /// of the preprocessor (this calls into Lexer::splitTokens).
+    void splitTokens(Token sourceToken, size_t offset, SmallVectorBase<Token>& results);
+
 private:
     friend class MacroOpEvaluator;
 
@@ -324,7 +328,6 @@ private:
     bool expandReplacementList(std::span<Token const>& tokens,
                                SmallSet<const syntax::DefineDirectiveSyntax*, 8>& alreadyExpanded);
     void createBuiltInMacro(std::string_view name, int value, std::string_view valueStr = {});
-    void splitTokens(Token sourceToken, size_t offset, SmallVectorBase<Token>& results);
     Token getLastConsumed() const { return lastConsumed; }
 
     static bool isSameMacro(const syntax::DefineDirectiveSyntax& left,

@@ -3024,3 +3024,19 @@ endmodule
 
     preprocess(text);
 }
+
+TEST_CASE("Macro concat regress -- GH #1651") {
+    auto& text = R"(
+`define FOO(a) a``30.value
+
+module m;
+    struct { int value; } a30;
+    int i;
+    assign i = `FOO(a);
+endmodule
+)";
+
+    Compilation compilation;
+    compilation.addSyntaxTree(SyntaxTree::fromText(text));
+    NO_COMPILATION_ERRORS;
+}

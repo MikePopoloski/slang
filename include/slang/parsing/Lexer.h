@@ -114,9 +114,12 @@ public:
     /// Returns the library with which the lexer's source buffer is associated.
     const SourceLibrary* getLibrary() const { return library; }
 
-    /// Concatenates two tokens together; used for macro pasting.
-    static Token concatenateTokens(BumpAllocator& alloc, SourceManager& sourceManager, Token left,
-                                   Token right);
+    /// Concatenates two tokens together. This may result in more than one output token
+    /// if the right hand token being concatenated ends up splitting and being re-lexed.
+    /// Returns true if the concatenation succeeded and false otherwise.
+    static bool concatenateTokens(BumpAllocator& alloc, SourceManager& sourceManager,
+                                  const LexerOptions& options, Token left, Token right,
+                                  SmallVectorBase<Token>& results);
 
     /// Converts a range of tokens into a string literal; used for macro stringification.
     static Token stringify(BumpAllocator& alloc, SourceManager& sourceManager,
@@ -125,16 +128,17 @@ public:
 
     /// Converts a range of tokens into a block comment; used for macro expansion.
     static Trivia commentify(BumpAllocator& alloc, SourceManager& sourceManager,
-                             std::span<Token> tokens);
+                             const LexerOptions& options, std::span<Token> tokens);
 
     /// Splits the given token at the specified offset into its raw source text. The trailing
     /// portion of the split is lexed into new tokens and appened to @a results
     static void splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
-                            SourceManager& sourceManager, Token sourceToken, size_t offset,
-                            KeywordVersion keywordVersion, SmallVectorBase<Token>& results);
+                            SourceManager& sourceManager, const LexerOptions& options,
+                            Token sourceToken, size_t offset, KeywordVersion keywordVersion,
+                            SmallVectorBase<Token>& results);
 
 private:
-    Lexer(BufferID bufferId, std::string_view source, const char* startPtr, BumpAllocator& alloc,
+    Lexer(BufferID bufferId, std::string_view source, BumpAllocator& alloc,
           Diagnostics& diagnostics, SourceManager& sourceManager, LexerOptions options);
 
     Token lexToken(KeywordVersion keywordVersion);

@@ -285,7 +285,8 @@ private:
 
     void finishSyntheticComment() {
         emptyArgTrivia.append_range(syntheticComment.trivia());
-        emptyArgTrivia.push_back(Lexer::commentify(pp.alloc, pp.sourceManager, commentBuffer));
+        emptyArgTrivia.push_back(
+            Lexer::commentify(pp.alloc, pp.sourceManager, pp.lexerOptions, commentBuffer));
         syntheticComment = Token();
     }
 
@@ -297,17 +298,20 @@ private:
     }
 
     bool doConcat(SmallVectorBase<Token>& targetBuf, Token right) {
-        auto newToken = Lexer::concatenateTokens(pp.alloc, pp.sourceManager, targetBuf.back(),
-                                                 right);
-        if (!newToken)
+        SmallVector<Token> results;
+        if (!Lexer::concatenateTokens(pp.alloc, pp.sourceManager, pp.lexerOptions, targetBuf.back(),
+                                      right, results)) {
             return false;
+        }
 
         targetBuf.pop_back();
-        append(newToken);
 
-        if (!stringify) {
-            anyNewMacros |= newToken.kind == TokenKind::Directive &&
-                            newToken.directiveKind() == SyntaxKind::MacroUsage;
+        for (auto& newToken : results) {
+            append(newToken);
+            if (!stringify) {
+                anyNewMacros |= newToken.kind == TokenKind::Directive &&
+                                newToken.directiveKind() == SyntaxKind::MacroUsage;
+            }
         }
 
         didConcat = true;
@@ -575,10 +579,12 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         // See note above about weird macro usage being argument replaced.
         // In that case we want to fabricate the correct directive token here.
         if (token.kind == TokenKind::Directive) {
+            SmallVector<Token> concatResult;
             Token grave(alloc, TokenKind::Unknown, first.trivia(), "`"sv, firstLoc);
-            Token combined = Lexer::concatenateTokens(alloc, sourceManager, grave, first);
-            if (combined) {
-                first = combined;
+            if (Lexer::concatenateTokens(alloc, sourceManager, lexerOptions, grave, first,
+                                         concatResult) &&
+                concatResult.size() == 1) {
+                first = concatResult[0];
             }
             else {
                 // Failed to combine, so ignore the grave and issue an error.
@@ -946,7 +952,7 @@ Token Preprocessor::MacroParser::expect(TokenKind kind) {
 }
 
 void Preprocessor::splitTokens(Token sourceToken, size_t offset, SmallVectorBase<Token>& results) {
-    Lexer::splitTokens(alloc, diagnostics, sourceManager, sourceToken, offset,
+    Lexer::splitTokens(alloc, diagnostics, sourceManager, lexerOptions, sourceToken, offset,
                        getCurrentKeywordVersion(), results);
 }
 
