@@ -821,3 +821,78 @@ endmodule
     auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("DFA unsequenced expression warnings") {
+    auto& code = R"(
+function void f1(input int a, output int b);
+endfunction
+
+function void f2(input int a, b);
+endfunction
+
+class C;
+    function void foo(output C c); endfunction
+    function void bar(C c); endfunction
+endclass
+
+module m;
+    int i, j;
+    C c;
+    initial begin
+        j = i++ + (i = i - 1);
+        j = i++ + (i = 1);
+        j[j++] = i; // ok
+        j[j++] = j;
+        j[(i = 1)] = i;
+        j = (j = 1); // ok
+        j += (j = 1);
+
+        f1(i, i); // ok
+        f1(i++, i);
+        f2(i++, (i = 1));
+
+        if ((++i || i == 1) + i) begin end
+
+        c.foo(c);
+        c.bar((c = new));
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::ReadWriteExpr);
+    CHECK(diags[1].code == diag::MultiWriteExpr);
+    CHECK(diags[2].code == diag::ReadWriteExpr);
+    CHECK(diags[3].code == diag::ReadWriteExpr);
+    CHECK(diags[4].code == diag::ReadWriteExpr);
+    CHECK(diags[5].code == diag::ReadWriteExpr);
+    CHECK(diags[6].code == diag::MultiWriteExpr);
+    CHECK(diags[7].code == diag::ReadWriteExpr);
+    CHECK(diags[8].code == diag::ReadWriteExpr);
+}
+
+TEST_CASE("DFA unsequenced expression corner cases") {
+    auto& code = R"(
+module m;
+    int i, j;
+    initial begin
+        // ok due to intra-assignment delay
+        j[(i = 1)] = #3 i;
+
+        if (++i || i == 1) begin end
+        if (++i && i == 1) begin end
+        if ((i = 1) ? i : i) begin end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}

@@ -15,6 +15,101 @@
 
 namespace slang::analysis {
 
+namespace detail {
+
+// A helper type that diagnoses conflicting unsequenced operations
+// within a single expression tree, such as in the expression:
+//    j = i++ + (i = i - 1);
+//
+class SLANG_EXPORT ExpressionSequenceChecker {
+public:
+    ExpressionSequenceChecker(FlowAnalysisBase& base, AnalysisContext* context);
+
+    bool isEnabled() const { return context != nullptr; }
+
+    void clear();
+
+    void noteUse(const ValueSymbol& symbol, DriverBitRange bounds, const Expression& lsp,
+                 bool isLValue);
+
+    // Sequence regions form a tree, with child regions being unsequenced
+    // with respect to their parents, and sequenced with respect to their
+    // siblings. When we're done with a region we merge it into its parent.
+    uint32_t allocSeq() {
+        seqTree.push_back(currRegion);
+        return uint32_t(seqTree.size() - 1u);
+    }
+
+    void mergeSeq(uint32_t seq) { seqTree[seq].merged = true; }
+
+    // A stack frame that captures lvalue references and stores them so that
+    // they can be registered after visiting sub-expressions. This is to model
+    // the behavior of assignment expressions, where the write to the lhs is
+    // sequenced after evaluation of both the lhs and rhs.
+    struct LValueFrame {
+        LValueFrame(ExpressionSequenceChecker& parent, bool isAlsoRVal) :
+            parent(parent), prevFrame(std::exchange(parent.currFrame, this)),
+            readRegion(parent.allocSeq()), writeRegion(parent.allocSeq()),
+            parentRegion(std::exchange(parent.currRegion, readRegion)), isAlsoRVal(isAlsoRVal) {}
+
+        ~LValueFrame() {
+            parent.currRegion = writeRegion;
+            parent.applyPendingLValues();
+            parent.currFrame = prevFrame;
+
+            parent.currRegion = parentRegion;
+            parent.mergeSeq(readRegion);
+            parent.mergeSeq(writeRegion);
+        }
+
+        ExpressionSequenceChecker& parent;
+        SmallVector<std::tuple<const ValueSymbol*, DriverBitRange, const Expression*>> lvals;
+        LValueFrame* prevFrame;
+        uint32_t readRegion;
+        uint32_t writeRegion;
+        uint32_t parentRegion;
+        bool isAlsoRVal;
+    };
+
+    struct RValueFrame {
+        RValueFrame(ExpressionSequenceChecker& parent) :
+            parent(parent), prevFrame(std::exchange(parent.currFrame, nullptr)) {}
+
+        ~RValueFrame() { parent.currFrame = prevFrame; }
+
+    private:
+        ExpressionSequenceChecker& parent;
+        LValueFrame* prevFrame;
+    };
+
+    LValueFrame* currFrame = nullptr;
+    uint32_t currRegion = 0;
+
+private:
+    friend struct LValueFrame;
+
+    void applyPendingLValues();
+    void checkUsage(const ValueSymbol& symbol, DriverBitRange bounds, const Expression& lsp,
+                    bool isMod);
+    bool isUnsequenced(uint32_t seq);
+    uint32_t representative(uint32_t seq);
+
+    FlowAnalysisBase& base;
+    AnalysisContext* context;
+
+    // A region within an expression that may be sequenced with respect to some other region.
+    struct SeqRegion {
+        uint32_t parent : 31;
+        bool merged : 1;
+        SeqRegion(uint32_t parent) : parent(parent), merged(false) {}
+    };
+
+    SmallVector<SeqRegion> seqTree;
+    flat_hash_map<const ValueSymbol*, TaggedLSPMap> trackedUses;
+};
+
+} // namespace detail
+
 /// The base class for data flow analysis implementations.
 ///
 /// Augments the AbstractFlowAnalysis class with logic for tracking assigned
@@ -56,11 +151,15 @@ public:
 protected:
     friend AFABase;
 
+    using LValueFrame = detail::ExpressionSequenceChecker::LValueFrame;
+    using RValueFrame = detail::ExpressionSequenceChecker::RValueFrame;
+
     /// Constructs a new DataFlowAnalysis object.
     DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol, bool reportDiags) :
         AFABase(symbol, context.manager->getOptions(),
                 reportDiags ? &context.diagnostics : nullptr),
         DFAResults(context, this->getState().assigned), context(context),
+        sequenceChecker(*this, reportDiags ? &context : nullptr),
         lspVisitor(*static_cast<TDerived*>(this)) {}
 
     template<typename T>
@@ -108,15 +207,46 @@ protected:
             return;
         }
 
-        visitLValue(expr.left());
-        this->visit(expr.right());
-
-        if (expr.timingControl)
+        // If there is an intra-assignment timing control there is a guaranteed
+        // order between the lhs and the rhs (unless it's a compound assignment
+        // since then we need to eval the lhs as part of the operator anyway).
+        if (expr.timingControl) {
             handleTiming(*expr.timingControl);
+
+            if (!expr.isCompound()) {
+                visitSequenced<true>(expr.right(), expr.left());
+                return;
+            }
+        }
+
+        // The write to the lhs is sequenced after evaluation of both
+        // the lhs and the rhs.
+        LValueFrame lvalFrame(sequenceChecker, expr.isCompound());
+        visitLValue(expr.left());
+
+        RValueFrame rvalFrame(sequenceChecker);
+        this->visit(expr.right());
     }
 
     void handle(const CallExpression& expr) {
+        // Writes to lvalue args (output, inout, ref) are sequenced
+        // after the called subroutine runs.
+        LValueFrame lvalFrame(sequenceChecker, /* isAlsoRVal */ true);
+
+        callExpressions.push_back(&expr);
         expr.visitExprsNoArgs(*this);
+
+        auto visitArg = [&](const Expression& arg) {
+            if (auto assign = arg.as_if<AssignmentExpression>()) {
+                if (assign->isLValueArg()) {
+                    this->visit(arg);
+                    return;
+                }
+            }
+
+            RValueFrame rval(sequenceChecker);
+            this->visit(arg);
+        };
 
         if (auto sysCall = std::get_if<CallExpression::SystemCallInfo>(&expr.subroutine)) {
             auto& sub = *sysCall->subroutine;
@@ -127,7 +257,7 @@ protected:
                     if (sub.isArgByRef(argIndex))
                         visitLValue(*arg);
                     else
-                        this->visit(*arg);
+                        visitArg(*arg);
                 }
                 argIndex++;
             }
@@ -150,12 +280,10 @@ protected:
                     visitLValue(*args[i]);
                 }
                 else {
-                    this->visit(*args[i]);
+                    visitArg(*args[i]);
                 }
             }
         }
-
-        callExpressions.push_back(&expr);
     }
 
     void handle(const UnaryExpression& expr) {
@@ -163,6 +291,46 @@ protected:
             visitLValue(expr.operand());
         else
             this->visitExpr(expr);
+    }
+
+    void handle(const BinaryExpression& expr) {
+        lspVisitor.clear();
+
+        if (!OpInfo::isShortCircuit(expr.op)) {
+            this->visitExpr(expr);
+            return;
+        }
+
+        // Short-circuit ops have a well defined sequencing of
+        // evaluation, so model that here.
+        auto firstRegion = sequenceChecker.allocSeq();
+        auto secondRegion = sequenceChecker.allocSeq();
+
+        auto parentRegion = std::exchange(sequenceChecker.currRegion, firstRegion);
+        this->visitShortCircuitOp(expr, [&] { sequenceChecker.currRegion = secondRegion; });
+
+        sequenceChecker.currRegion = parentRegion;
+        sequenceChecker.mergeSeq(firstRegion);
+        sequenceChecker.mergeSeq(secondRegion);
+    }
+
+    void handle(const ConditionalExpression& expr) {
+        lspVisitor.clear();
+
+        // The condition expression is sequenced before evaluating
+        // the selected value expression. Note that there is *not* a
+        // defined sequence between the left and right value expression
+        // because the handling of conditions with unknowns means that
+        // both sides can end up being evaluated.
+        auto firstRegion = sequenceChecker.allocSeq();
+        auto secondRegion = sequenceChecker.allocSeq();
+
+        auto parentRegion = std::exchange(sequenceChecker.currRegion, firstRegion);
+        this->visitExpr(expr, [&] { sequenceChecker.currRegion = secondRegion; });
+
+        sequenceChecker.currRegion = parentRegion;
+        sequenceChecker.mergeSeq(firstRegion);
+        sequenceChecker.mergeSeq(secondRegion);
     }
 
     void handle(const ExpressionStatement& stmt) {
@@ -197,6 +365,8 @@ protected:
             handleTiming(*stmt.timing);
         this->visitStmt(stmt);
     }
+
+    void finishExpr(const Expression&) { sequenceChecker.clear(); }
 
     // **** State Management ****
 
@@ -249,6 +419,8 @@ protected:
     TState topState() const { return {}; }
 
 private:
+    detail::ExpressionSequenceChecker sequenceChecker;
+
     template<typename TOwner>
     friend struct ast::LSPVisitor;
 
@@ -260,6 +432,25 @@ private:
         isLValue = true;
         this->visit(expr);
         isLValue = false;
+    }
+
+    template<bool SecondIsLVal = false>
+    void visitSequenced(const Expression& first, const Expression& second) {
+        auto firstRegion = sequenceChecker.allocSeq();
+        auto secondRegion = sequenceChecker.allocSeq();
+
+        auto parentRegion = std::exchange(sequenceChecker.currRegion, firstRegion);
+        this->visit(first);
+
+        sequenceChecker.currRegion = secondRegion;
+        if (SecondIsLVal)
+            visitLValue(second);
+        else
+            this->visit(second);
+
+        sequenceChecker.currRegion = parentRegion;
+        sequenceChecker.mergeSeq(firstRegion);
+        sequenceChecker.mergeSeq(secondRegion);
     }
 
     void handleTiming(const TimingControl& timing) {
@@ -274,7 +465,15 @@ private:
     }
 
     [[nodiscard]] auto saveLValueFlag() {
-        auto guard = ScopeGuard([this, savedLVal = isLValue] { isLValue = savedLVal; });
+        // This is called by LSPVisitor when we're entering a non-lvalue portion
+        // of an lhs expression, such as the index portion of an element select.
+        // We need to save off the lvalue flag, and also the current sequence
+        // checker frame that may be buffering lvalue writes.
+        auto guard = ScopeGuard([this, savedLVal = isLValue,
+                                 savedFrame = std::exchange(sequenceChecker.currFrame, nullptr)] {
+            isLValue = savedLVal;
+            sequenceChecker.currFrame = savedFrame;
+        });
         isLValue = false;
         return guard;
     }
@@ -308,6 +507,8 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValueSymbol& symbol
         // invalid expressions.
         return;
     }
+
+    sequenceChecker.noteUse(symbol, *bounds, *lsp, isLValue);
 
     if (isLValue) {
         auto [it, inserted] = symbolToSlot.try_emplace(&symbol, (uint32_t)lvalues.size());

@@ -41,6 +41,8 @@ class DFAResults;
 template<typename T, typename TVisitor>
 concept HasVisitExprs = requires(const T& t, TVisitor&& visitor) { t.visitExprs(visitor); };
 
+using TaggedLSPMap = IntervalMap<uint64_t, std::pair<const ast::Expression*, uint32_t>, 4>;
+
 /// Represents an analyzed AST scope.
 class SLANG_EXPORT AnalyzedScope {
 public:
@@ -66,8 +68,11 @@ public:
     /// Diagnostics collected during analysis.
     Diagnostics diagnostics;
 
+    /// An allocator for LSP interval maps that contain a tag bit.
+    TaggedLSPMap::allocator_type taggedLSPAlloc;
+
     /// Constructs a new AnalysisContext object.
-    explicit AnalysisContext(AnalysisManager& manager) : manager(&manager) {}
+    explicit AnalysisContext(AnalysisManager& manager) : manager(&manager), taggedLSPAlloc(alloc) {}
 
     /// Issues a new diagnostic.
     Diagnostic& addDiag(const ast::Symbol& symbol, DiagCode code, SourceLocation location);

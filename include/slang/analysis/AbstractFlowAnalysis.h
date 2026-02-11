@@ -771,7 +771,8 @@ protected:
             visit(*range);
     }
 
-    void visitShortCircuitOp(const BinaryExpression& expr) {
+    template<typename AfterLeftCB = std::nullptr_t>
+    void visitShortCircuitOp(const BinaryExpression& expr, AfterLeftCB&& afterLeftCB = {}) {
         // Visit the LHS -- after this the state is guaranteed to be split.
         visitCondition(expr.left());
 
@@ -782,6 +783,11 @@ protected:
         auto trueState = std::move(stateWhenTrue), falseState = std::move(stateWhenFalse);
         setState(expr.op == BinaryOperator::LogicalOr ? std::move(falseState)
                                                       : std::move(trueState));
+
+        if constexpr (!std::is_same_v<AfterLeftCB, std::nullptr_t>) {
+            afterLeftCB();
+        }
+
         visitCondition(expr.right());
 
         // Join the states from the two branches. For example,
@@ -804,7 +810,8 @@ protected:
         adjustConditionalState(expr);
     }
 
-    void visitExpr(const ConditionalExpression& expr) {
+    template<typename AfterConditionCB = std::nullptr_t>
+    void visitExpr(const ConditionalExpression& expr, AfterConditionCB&& afterConditionCB = {}) {
         ConstantValue knownVal = SVInt::One;
         auto falseState = (DERIVED).unreachableState();
         for (auto& cond : expr.conditions) {
@@ -824,6 +831,10 @@ protected:
 
             (DERIVED).joinState(falseState, stateWhenFalse);
             setState(std::move(stateWhenTrue));
+        }
+
+        if constexpr (!std::is_same_v<AfterConditionCB, std::nullptr_t>) {
+            afterConditionCB();
         }
 
         auto visitSide = [this](const Expression& expr, TState&& newState) {
@@ -961,6 +972,11 @@ protected:
         else {
             // If the derived type provides a handler then dispatch to it.
             // Otherwise dispatch to our own handler for whatever this is.
+            const bool wasInExpression = inExpression;
+            if constexpr (std::is_base_of_v<Expression, T>) {
+                inExpression = true;
+            }
+
             if constexpr (requires { (DERIVED).handle(t); })
                 (DERIVED).handle(t);
             else if constexpr (std::is_base_of_v<Statement, T>)
@@ -989,6 +1005,13 @@ protected:
                 // previously mentioned expressions.
                 if (!inCondition)
                     unsplit();
+
+                if (!wasInExpression) {
+                    inExpression = false;
+                    if constexpr (requires { (DERIVED).finishExpr(t); }) {
+                        (DERIVED).finishExpr(t);
+                    }
+                }
             }
         }
     }
@@ -1004,6 +1027,7 @@ private:
     TState stateWhenFalse;
     bool isStateSplit = false;
     bool inCondition = false;
+    bool inExpression = false;
 
     SmallVector<TState> breakStates;
     SmallVector<TState> returnStates;

@@ -1062,6 +1062,30 @@ module m(input clk, a, b);
 endmodule
 ```
 
+-Wmulti-write
+A variable is written more than once within a single expression, in a way
+that has undefined sequencing semantics.
+```
+module m;
+    int i;
+    initial begin
+        i = ++i + i++;
+    end
+endmodule
+```
+
+-Wmulti-read
+A variable is both read and written within a single expression, in a way
+that has undefined sequencing semantics.
+```
+module m;
+    int i, j;
+    initial begin
+        j = i + ++i;
+    end
+endmodule
+```
+
 @category Compatibility
 
 -Wdpi-spec
