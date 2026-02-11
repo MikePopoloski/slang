@@ -148,7 +148,7 @@ std::pair<SubroutineSymbol*, bool> SubroutineSymbol::fromSyntax(
         // The function gets an implicit variable inserted that represents the return value.
         auto implicitReturnVar = compilation.emplace<VariableSymbol>(result->name, result->location,
                                                                      VariableLifetime::Automatic);
-        implicitReturnVar->setDeclaredType(*proto->returnType);
+        implicitReturnVar->getDeclaredType()->setLink(result->declaredReturnType);
         implicitReturnVar->flags |= VariableFlags::CompilerGenerated;
         result->addMember(*implicitReturnVar);
         result->returnValVar = implicitReturnVar;

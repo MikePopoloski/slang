@@ -517,12 +517,10 @@ endfunction
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
-    CHECK(diags[0].code == diag::NotAType);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::RecursiveDefinition);
     CHECK(diags[1].code == diag::RecursiveDefinition);
-    CHECK(diags[2].code == diag::RecursiveDefinition);
-    CHECK(diags[3].code == diag::NotAType);
-    CHECK(diags[4].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
 }
 
 TEST_CASE("Extern interface method errors") {
@@ -650,4 +648,36 @@ endfunction
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
     CHECK(diags[1].code == diag::InvalidRefArg);
+}
+
+TEST_CASE("Used-before-declared with function return types regress -- GH #1662") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+
+localparam K = 4;
+bit[31:0] inp = 128;
+bit [K-1:0] out;
+
+function automatic bit [K-1:0] f;
+    input bit [31:0] K;
+
+    $display("f: K=%d", K);
+    f = 12;
+endfunction
+
+initial
+begin
+    out = f(inp);
+    $display("inp=%d, out=%d", inp, out);
+end
+
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowUseBeforeDeclare;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }
