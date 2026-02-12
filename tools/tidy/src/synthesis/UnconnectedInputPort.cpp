@@ -30,7 +30,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false, fa
 
             // Get all ports from the module definition
             auto ports = childInstance.body.getPortList();
-            
+
             // Build a set of all port names
             SmallMap<std::string_view, const PortSymbol*, 8> inputPorts;
             for (const auto* portBase : ports) {
