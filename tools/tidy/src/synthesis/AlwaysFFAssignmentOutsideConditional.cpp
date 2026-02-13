@@ -96,7 +96,7 @@ public:
         return diagnostics.empty();
     }
 
-    DiagCode diagCode() const override { return diag::RegisterNotAssignedOnReset; }
+    DiagCode diagCode() const override { return diag::AlwaysFFAssignmentOutsideConditional; }
 
     std::string diagString() const override {
         return "register '{}' has an assignment outside a conditional block with reset. Consider "
