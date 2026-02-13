@@ -1331,7 +1331,7 @@ endmodule
 -Wnested-comment
 Nested block comments are not allowed in SystemVerilog but most tools ignore them and
 just include them as part of the containing comment block. Note that the opening characters
-are simply skipped, meaning the next closing '*/' will end the containing block instead.
+are simply skipped, meaning the next closing comment sequence will end the containing block instead.
 ```
 /* foo /* bar */
 module m;
