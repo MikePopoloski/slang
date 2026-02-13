@@ -69,17 +69,6 @@
       }
     },
     {
-      "name": "win64-debug-shared",
-      "displayName": "Win64 Debug Shared",
-      "inherits": [
-        "win64-debug"
-      ],
-      "cacheVariables": {
-        "BUILD_SHARED_LIBS": "ON",
-        "SLANG_USE_MIMALLOC": "OFF"
-      }
-    },
-    {
       "name": "win64-debug-noexcept",
       "displayName": "Win64 Debug No Exceptions",
       "inherits": [

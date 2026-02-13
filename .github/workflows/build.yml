@@ -27,8 +27,6 @@ jobs:
             os: macos-latest
           - preset: win64-release
             os: windows-latest
-          - preset: win64-debug-shared
-            os: windows-latest
           - preset: win64-debug-noexcept
             os: windows-latest
           - preset: wasi-sdk
