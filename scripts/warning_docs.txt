@@ -1074,7 +1074,7 @@ module m;
 endmodule
 ```
 
--Wmulti-read
+-Wread-write
 A variable is both read and written within a single expression, in a way
 that has undefined sequencing semantics.
 ```
