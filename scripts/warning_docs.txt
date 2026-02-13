@@ -1338,6 +1338,42 @@ module m;
 endmodule
 ```
 
+-Wmixed-var-assigns
+A mix of procedural and continuous assignments are applied to the same variable (or longest static
+prefix of a variable). This is not allowed in SystemVerilog but can be downgraded to a warning for
+compatibility with other tools.
+```
+module m;
+    int i;
+    assign i = 1;
+    initial i = 2;
+endmodule
+```
+
+-Wmultiple-cont-assigns
+Multiple continuous assignments are applied to the same variable (or longest static
+prefix of a variable). This is not allowed in SystemVerilog but can be downgraded to a warning for
+compatibility with other tools.
+```
+module m;
+    int i;
+    assign i = 1;
+    assign i = 2;
+endmodule
+```
+
+-Wmultiple-always-assigns
+Multiple always_comb/latch/ff blocks assign to the same variable (or longest static
+prefix of a variable). This is not allowed in SystemVerilog but can be downgraded to a warning for
+compatibility with other tools.
+```
+module m;
+    int i;
+    always_comb i = 1;
+    always_comb i = 2;
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste

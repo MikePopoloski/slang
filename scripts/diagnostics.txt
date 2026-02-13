@@ -1148,9 +1148,6 @@ error SampledValueFuncClock "could not determine clocking event for '{}'"
 error SeqMethodEndClock "the ending clock of the sequence to which '{}' is applied differs from the clock of the calling context"
 error GFSVMatchItems "cannot call '{}' in an assertion that has sequence match items"
 error NTResolveArgModify "resolution function for nettype '{}' cannot modify its input argument '{}'"
-error MixedVarAssigns "cannot mix continuous and procedural assignments to variable '{}'"
-error MultipleContAssigns "cannot have multiple continuous assignments to variable '{}'"
-error MultipleAlwaysAssigns "variable '{}' driven by {} procedure cannot be written to by any other process"
 error MultipleUWireDrivers "'uwire' net '{}' cannot have multiple drivers"
 error MultipleUDNTDrivers "net '{}' with user-defined nettype '{}' cannot have multiple drivers because it does not specify a resolution function"
 error InputPortAssign "cannot assign to input port '{}'"
@@ -1209,6 +1206,9 @@ warning net-inconsistent NetInconsistent "net type '{}' of connection is inconsi
 warning net-inconsistent NetRangeInconsistent "net type '{}' of connection bits [{}:{}] is inconsistent with net type '{}' of corresponding port range"
 warning multi-write MultiWriteExpr "'{}' is modified more than once in the same expression; the order of evaluation is undefined"
 warning read-write ReadWriteExpr "'{}' is both read and modified in the same expression; the order of evaluation is undefined"
+warning mixed-var-assigns MixedVarAssigns "cannot mix continuous and procedural assignments to variable '{}'"
+warning multiple-cont-assigns MultipleContAssigns "cannot have multiple continuous assignments to variable '{}'"
+warning multiple-always-assigns MultipleAlwaysAssigns "variable '{}' driven by {} procedure cannot be written to by any other process"
 
 subsystem Meta
 fatal TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
@@ -1233,7 +1233,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
                   dup-config-rule unused-config-cell unused-config-instance specify-condition-expr
                   seq-no-match case-too-complex nested-solve-before dynamic-non-procedural
-                  nonstandard-string-concat nested-comment multi-write read-write }
+                  nonstandard-string-concat nested-comment multi-write read-write mixed-var-assigns
+                  multiple-cont-assigns multiple-always-assigns }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

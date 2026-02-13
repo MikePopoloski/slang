@@ -14,6 +14,7 @@
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/diagnostics/AnalysisDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
@@ -673,6 +674,9 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::BadProceduralForce, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::NonstandardStringConcat, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::MixedVarAssigns, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::MultipleContAssigns, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::MultipleAlwaysAssigns, DiagnosticSeverity::Error);
     }
 
     if (options.compat == CompatMode::Vcs || options.compat == CompatMode::All) {
