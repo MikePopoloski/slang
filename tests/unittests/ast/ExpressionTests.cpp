@@ -3792,3 +3792,33 @@ endmodule
     CHECK(diags[0].code == diag::InfoTask);
     CHECK(diags[1].code == diag::NestedBlockComment);
 }
+
+TEST_CASE("Endianness mismatch error suppressed in untaken conditionals") {
+    auto tree = SyntaxTree::fromText(R"(
+module test #(
+    parameter int DELAY = 1
+) (
+    input  logic clk,
+    input  [7:0]  in_byte,
+    output [7:0]  out_byte
+);
+
+  logic [DELAY-1:0][7:0] byte_dl;
+
+  always_ff @(clk) begin
+    byte_dl[0] <= in_byte;
+
+    if (DELAY > 1) begin
+      byte_dl[DELAY-1:1] <= byte_dl[DELAY-2:0];
+    end
+  end
+
+  assign out_byte = byte_dl[DELAY-1];
+
+endmodule : test
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
