@@ -717,3 +717,20 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Comparison mismatch with unpacked array selects -- GH #1637") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [3:0] current_num [16];
+    logic comps [8];
+    genvar i;
+    generate for (genvar i=0; i < 8; i++) begin : g_COMP_BLOCKS
+        assign comps[i] = current_num[0 +: i+1]==current_num[i+1 +: i+1];
+    end endgenerate
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -1121,6 +1121,10 @@ void BinaryExpression::analyzeOpTypes(const Type& clt, const Type& crt, const Ty
         // Ignore operations between strings and string literals.
         return;
     }
+    else if (clt.isUnpackedArray() && crt.isUnpackedArray() && clt.isEquivalent(crt)) {
+        // Allow unpacked array bounds to differ as long as width is the same.
+        return;
+    }
 
     auto& diag = context.addDiag(code, opRange);
     if (extraDiagArg)
