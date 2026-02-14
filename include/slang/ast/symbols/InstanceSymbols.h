@@ -137,9 +137,7 @@ public:
     void setBindScope(const Scope* scope) const { bindScope_ = scope; }
 
     /// Sets the bind directive syntax for lazy scope resolution.
-    void setBindSyntax(const syntax::BindDirectiveSyntax* syntax) const {
-        bindSyntax_ = syntax;
-    }
+    void setBindSyntax(const syntax::BindDirectiveSyntax* syntax) const { bindSyntax_ = syntax; }
 
     void serializeTo(ASTSerializer& serializer) const;
 

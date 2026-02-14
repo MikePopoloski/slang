@@ -787,8 +787,7 @@ public:
         if (!bs)
             return nullptr;
         // Only use bind scope if it's inside an instance body (module scope).
-        if (bs->asSymbol().kind == SymbolKind::InstanceBody ||
-            bs->getContainingInstance())
+        if (bs->asSymbol().kind == SymbolKind::InstanceBody || bs->getContainingInstance())
             return bs;
         return nullptr;
     }
@@ -799,8 +798,7 @@ public:
         // port connection resolution. For bind instances, names that aren't found
         // in the target scope are looked up in the bind scope as a fallback
         // (see implicitNamedPort and getImplicitInterface).
-        scope(*instance.getParentScope()),
-        instance(instance), comp(scope.getCompilation()),
+        scope(*instance.getParentScope()), instance(instance), comp(scope.getCompilation()),
         lookupLocation(LookupLocation::after(instance)),
         context(scope, lookupLocation, ASTFlags::NonProcedural),
         connMap(portConnections, scope, lookupLocation) {
@@ -1819,8 +1817,8 @@ const Expression* PortConnection::getExpression() const {
         if (parentInstance.body.flags.has(InstanceFlags::FromBind)) {
             auto bindScope = parentInstance.getBindScope();
             bool isModuleBindScope = bindScope &&
-                (bindScope->asSymbol().kind == SymbolKind::InstanceBody ||
-                 bindScope->getContainingInstance());
+                                     (bindScope->asSymbol().kind == SymbolKind::InstanceBody ||
+                                      bindScope->getContainingInstance());
             if (isModuleBindScope && bindScope != scope) {
                 if (connectedSymbol) {
                     // For implicit named ports, symbol was already resolved.
