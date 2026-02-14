@@ -109,6 +109,32 @@ endmodule
     CHECK(diags[20].code == diag::FormatRealInt);
 }
 
+TEST_CASE("Format string - class handle and null types") {
+    auto tree = SyntaxTree::fromText(R"(
+class my_class;
+    int x;
+endclass
+
+module m;
+    my_class obj;
+    chandle ch;
+    initial begin
+        obj = new();
+        $display("obj=%0d", obj);
+        $display("obj=%0x", obj);
+        $display("obj=%0o", obj);
+        $display("obj=%0b", obj);
+        $display("null=%0d", null);
+        $display("ch=%0d", ch);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("String output task - not an lvalue error") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
