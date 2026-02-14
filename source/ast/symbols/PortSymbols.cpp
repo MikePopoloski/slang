@@ -815,15 +815,21 @@ public:
                 }
             }
             else {
+                const bool isInput = port.direction == ArgumentDirection::In ||
+                                     port.direction == ArgumentDirection::InOut;
                 if (port.name.empty()) {
                     if (!warnedAboutUnnamed) {
-                        auto& diag = scope.addDiag(diag::UnconnectedUnnamedPort, instance.location);
+                        auto code = isInput ? diag::UnconnectedUnnamedInputPort
+                                            : diag::UnconnectedUnnamedPort;
+                        auto& diag = scope.addDiag(code, instance.location);
                         diag.addNote(diag::NoteDeclarationHere, port.location);
                         warnedAboutUnnamed = true;
                     }
                 }
                 else {
-                    scope.addDiag(diag::UnconnectedNamedPort, instance.location) << port.name;
+                    auto code = isInput ? diag::UnconnectedInputPort
+                                        : diag::UnconnectedNamedPort;
+                    scope.addDiag(code, instance.location) << port.name;
                 }
             }
             return emptyConnection(port);

@@ -389,14 +389,14 @@ endmodule
     CHECK((it++)->code == diag::UsedBeforeDeclared);
     CHECK((it++)->code == diag::UsedBeforeDeclared);
     CHECK((it++)->code == diag::UsedBeforeDeclared);
-    CHECK((it++)->code == diag::UnconnectedNamedPort);
-    CHECK((it++)->code == diag::UnconnectedNamedPort);
-    CHECK((it++)->code == diag::UnconnectedNamedPort);
+    CHECK((it++)->code == diag::UnconnectedInputPort);
+    CHECK((it++)->code == diag::UnconnectedInputPort);
+    CHECK((it++)->code == diag::UnconnectedInputPort);
     CHECK((it++)->code == diag::MixingOrderedAndNamedPorts);
     CHECK((it++)->code == diag::DuplicateWildcardPortConnection);
-    CHECK((it++)->code == diag::UnconnectedNamedPort);
-    CHECK((it++)->code == diag::UnconnectedNamedPort);
-    CHECK((it++)->code == diag::UnconnectedNamedPort);
+    CHECK((it++)->code == diag::UnconnectedInputPort);
+    CHECK((it++)->code == diag::UnconnectedInputPort);
+    CHECK((it++)->code == diag::UnconnectedInputPort);
     CHECK((it++)->code == diag::DuplicatePortConnection);
     CHECK((it++)->code == diag::InterfacePortNotConnected);
     CHECK((it++)->code == diag::InterfacePortInvalidExpression);
@@ -717,7 +717,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::UnconnectedUnnamedPort);
+    CHECK(diags[0].code == diag::UnconnectedUnnamedInputPort);
     CHECK(diags[1].code == diag::NullPortExpression);
 }
 
@@ -1292,7 +1292,7 @@ endmodule
     CHECK(diags[1].code == diag::TooManyPortConnections);
     CHECK(diags[2].code == diag::ImplicitNamedPortNotFound);
     CHECK(diags[3].code == diag::InterfacePortNotConnected);
-    CHECK(diags[4].code == diag::UnconnectedUnnamedPort);
+    CHECK(diags[4].code == diag::UnconnectedUnnamedInputPort);
     CHECK(diags[5].code == diag::InterfacePortNotConnected);
     CHECK(diags[6].code == diag::PortDoesNotExist);
     CHECK(diags[7].code == diag::ImplicitNamedPortNotFound);
@@ -1301,7 +1301,7 @@ endmodule
     CHECK(diags[10].code == diag::PortConnDimensionsMismatch);
     CHECK(diags[11].code == diag::ImplicitNamedPortTypeMismatch);
     CHECK(diags[12].code == diag::PortWidthExpand);
-    CHECK(diags[13].code == diag::UnconnectedUnnamedPort);
+    CHECK(diags[13].code == diag::UnconnectedUnnamedInputPort);
     CHECK(diags[14].code == diag::PortDoesNotExist);
 }
 
@@ -1786,4 +1786,24 @@ source:3:30: note: for connection to port 'sig'
     output logic [5:0][31:0] sig
                              ^
 )");
+}
+
+TEST_CASE("Direction-specific unconnected port warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input int a, output int b, inout logic c);
+endmodule
+
+module top;
+    m m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UnconnectedInputPort);
+    CHECK(diags[1].code == diag::UnconnectedInputPort);
+    CHECK(diags[2].code == diag::UnconnectedNamedPort);
 }

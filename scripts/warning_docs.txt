@@ -244,6 +244,31 @@ module n;
 endmodule
 ```
 
+-Wunconnected-input-port
+An input port was left unconnected and it has no default value.
+This is a more specific version of `-Wunconnected-port` that only fires for input and inout ports.
+```
+module m(input int i, output int o);
+endmodule
+
+module n;
+    m m1();
+endmodule
+```
+
+-Wunconnected-unnamed-input-port
+An unnamed input port was left unconnected.
+This is a more specific version of `-Wunconnected-unnamed-port` that only fires for input and inout ports.
+```
+module m({a, b});
+    input a, b;
+endmodule
+
+module n;
+    m m1();
+endmodule
+```
+
 -Wudp-port-empty
 A connection to a user-defined primitive instance is an empty expression.
 While allowed, this is easily confused with a misplaced comma and is likely
