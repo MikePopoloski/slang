@@ -778,9 +778,29 @@ private:
 
 class PortConnectionBuilder {
 public:
+    // Returns the bind scope only if it is an instance body scope (i.e., the bind
+    // directive was written inside a module body). For definition-level binds at
+    // the compilation unit scope, port connections should resolve in the target
+    // module scope, not the compilation unit scope.
+    static const Scope* getInstanceBindScope(const InstanceSymbol& inst) {
+        auto bs = inst.getBindScope();
+        if (!bs)
+            return nullptr;
+        // Only use bind scope if it's inside an instance body (module scope).
+        if (bs->asSymbol().kind == SymbolKind::InstanceBody ||
+            bs->getContainingInstance())
+            return bs;
+        return nullptr;
+    }
+
     PortConnectionBuilder(const InstanceSymbol& instance,
                           const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) :
-        scope(*instance.getParentScope()), instance(instance), comp(scope.getCompilation()),
+        // Use the target module scope (parent scope) as the primary scope for
+        // port connection resolution. For bind instances, names that aren't found
+        // in the target scope are looked up in the bind scope as a fallback
+        // (see implicitNamedPort and getImplicitInterface).
+        scope(*instance.getParentScope()),
+        instance(instance), comp(scope.getCompilation()),
         lookupLocation(LookupLocation::after(instance)),
         context(scope, lookupLocation, ASTFlags::NonProcedural),
         connMap(portConnections, scope, lookupLocation) {
@@ -789,7 +809,8 @@ public:
 
         // Build up the set of dimensions for the instantiating instance's array parent, if any.
         // This builds up the dimensions in reverse order, so we have to reverse them back.
-        auto parent = &scope;
+        // Always use the actual parent scope, not the bind scope, for array dimensions.
+        auto parent = instance.getParentScope();
         while (parent && parent->asSymbol().kind == SymbolKind::InstanceArray) {
             auto& sym = parent->asSymbol().as<InstanceArraySymbol>();
             instanceDims.push_back(sym.range);
@@ -1086,6 +1107,14 @@ private:
             flags |= LookupFlags::DisallowWildcardImport | LookupFlags::DisallowUnitReferences;
 
         auto symbol = Lookup::unqualified(scope, port.name, flags);
+        bool usedBindScope = false;
+        if (!symbol && instance.body.flags.has(InstanceFlags::FromBind)) {
+            auto bindScope = getInstanceBindScope(instance);
+            if (bindScope && bindScope != &scope) {
+                symbol = Lookup::unqualified(*bindScope, port.name, flags);
+                usedBindScope = symbol != nullptr;
+            }
+        }
         if (!symbol) {
             // If this is a wildcard connection, we're allowed to use the port's default value,
             // if it has one.
@@ -1096,7 +1125,8 @@ private:
             return emptyConnection(port);
         }
 
-        if (!symbol->isDeclaredBefore(lookupLocation).value_or(true) &&
+        auto useLookupLocation = usedBindScope ? LookupLocation::max : lookupLocation;
+        if (!symbol->isDeclaredBefore(useLookupLocation).value_or(true) &&
             !comp.hasFlag(CompilationFlags::AllowUseBeforeDeclare)) {
 
             auto& diag = scope.addDiag(diag::UsedBeforeDeclared, range);
@@ -1126,6 +1156,11 @@ private:
                                          std::span<const AttributeSymbol* const> attributes,
                                          bool isWildcard) {
         auto symbol = Lookup::unqualified(scope, port.name);
+        if (!symbol && instance.body.flags.has(InstanceFlags::FromBind)) {
+            auto bindScope = getInstanceBindScope(instance);
+            if (bindScope && bindScope != &scope)
+                symbol = Lookup::unqualified(*bindScope, port.name);
+        }
         if (!symbol) {
             scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
             return emptyConnection(port);
@@ -1772,8 +1807,45 @@ const Expression* PortConnection::getExpression() const {
 
     if (connectedSymbol || exprSyntax) {
         auto& parentInstance = getParentInstance();
-        auto ll = LookupLocation::after(parentInstance);
-        auto scope = ll.getScope();
+        const Scope* scope;
+        LookupLocation ll;
+        // Default: use parent scope (target module scope).
+        ll = LookupLocation::after(parentInstance);
+        scope = ll.getScope();
+
+        // For bind instances, names may come from either the target scope or
+        // the bind scope. Use the target scope as default, and fall back to
+        // the bind scope when a name isn't found in the target scope.
+        if (parentInstance.body.flags.has(InstanceFlags::FromBind)) {
+            auto bindScope = parentInstance.getBindScope();
+            bool isModuleBindScope = bindScope &&
+                (bindScope->asSymbol().kind == SymbolKind::InstanceBody ||
+                 bindScope->getContainingInstance());
+            if (isModuleBindScope && bindScope != scope) {
+                if (connectedSymbol) {
+                    // For implicit named ports, symbol was already resolved.
+                    // Use bind scope if the symbol isn't in the target scope.
+                    if (!Lookup::unqualified(*scope, connectedSymbol->name)) {
+                        scope = bindScope;
+                        ll = LookupLocation::max;
+                    }
+                }
+                else if (exprSyntax) {
+                    // For explicit port expressions, check if the first
+                    // identifier resolves in the target scope. If not, try
+                    // the bind scope.
+                    auto firstToken = exprSyntax->getFirstToken();
+                    if (firstToken.kind == TokenKind::Identifier) {
+                        auto name = firstToken.valueText();
+                        if (!Lookup::unqualified(*scope, name) &&
+                            Lookup::unqualified(*bindScope, name)) {
+                            scope = bindScope;
+                            ll = LookupLocation::max;
+                        }
+                    }
+                }
+            }
+        }
         SLANG_ASSERT(scope);
 
         const bool isNetPort = port.kind == SymbolKind::Port && port.as<PortSymbol>().isNetPort();

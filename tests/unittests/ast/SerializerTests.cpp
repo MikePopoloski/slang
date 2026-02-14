@@ -1272,16 +1272,6 @@ endmodule
                   "direction": "In"
                 },
                 {
-                  "name": "print_msg",
-                  "kind": "Variable",
-                  "source_file": "source",
-                  "source_line": 14,
-                  "source_column": 19,
-                  "type": "void",
-                  "lifetime": "Automatic",
-                  "flags": "compiler_generated"
-                },
-                {
                   "name": "this",
                   "kind": "Variable",
                   "source_file": "source",

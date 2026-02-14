@@ -2329,3 +2329,30 @@ endpackage
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Bind directive scope resolution") {
+    // Per LRM 23.11, port connection names in bind directives should resolve
+    // in the scope where the bind was written, not in the target module scope.
+    auto tree = SyntaxTree::fromText(R"(
+module target(input wire sig);
+endmodule
+
+module wrapper;
+    logic my_signal;
+    logic dummy;
+    target t(.sig(dummy));
+
+    // 'my_signal' should resolve in wrapper's scope, not in target's scope.
+    // Without bind scope tracking, this would fail because 'my_signal' is
+    // not visible inside the target module.
+    bind target target_checker check_inst(.sig(my_signal));
+endmodule
+
+module target_checker(input wire sig);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

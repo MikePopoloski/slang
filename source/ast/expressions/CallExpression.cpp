@@ -701,8 +701,8 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     for (size_t i = 0; i < formals.size(); i++)
         context.createLocal(formals[i], args[i]);
 
-    SLANG_ASSERT(symbol.returnValVar);
-    context.createLocal(symbol.returnValVar);
+    if (symbol.returnValVar)
+        context.createLocal(symbol.returnValVar);
 
     using ER = Statement::EvalResult;
     ER er = symbol.getBody().eval(context);
@@ -713,7 +713,9 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     if (er == ER::Disable)
         context.addDiag(diag::ConstEvalDisableTarget, context.getDisableRange());
 
-    ConstantValue result = std::move(*context.findLocal(symbol.returnValVar));
+    ConstantValue result;
+    if (symbol.returnValVar)
+        result = std::move(*context.findLocal(symbol.returnValVar));
     context.popFrame();
 
     if (er == ER::Fail || er == ER::Disable)

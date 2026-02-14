@@ -778,6 +778,17 @@ bool InstanceSymbol::isTopLevel() const {
            !body.flags.has(InstanceFlags::Uninstantiated);
 }
 
+const Scope* InstanceSymbol::getBindScope() const {
+    if (!bindScope_ && bindSyntax_) {
+        // Lazy lookup: the bind directive's scope may not have been available
+        // during handleBind (e.g., when virtual interfaces cause early target
+        // elaboration before the containing scope has been fully elaborated).
+        // By port connection time, all scopes are elaborated.
+        bindScope_ = getParentScope()->getCompilation().getBindDirectiveScope(bindSyntax_);
+    }
+    return bindScope_;
+}
+
 const PortConnection* InstanceSymbol::getPortConnection(const PortSymbol& port) const {
     if (!connectionMap)
         resolvePortConnections();
@@ -1108,8 +1119,17 @@ void InstanceBodySymbol::finishElaboration(function_ref<void(const Symbol&)> ins
 
             for (auto sym : implicitNets)
                 insertCB(*sym);
-            for (auto sym : instances)
+            for (auto sym : instances) {
+                // Per LRM 23.11, store the bind directive's syntax on the instance
+                // so port connections can lazily resolve names in the correct scope.
+                // The scope lookup is deferred to getBindScope() because at this point
+                // the containing scope may not have been elaborated yet (e.g., when
+                // virtual interfaces cause early target elaboration).
+                if (sym->kind == SymbolKind::Instance) {
+                    sym->as<InstanceSymbol>().setBindSyntax(info.bindSyntax);
+                }
                 insertCB(*sym);
+            }
         };
 
         if (auto node = hierarchyOverrideNode) {

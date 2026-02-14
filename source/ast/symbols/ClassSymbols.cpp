@@ -268,9 +268,13 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
 void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const {
     // Check for invalid overrides of the special pre and post randomize methods.
     auto checkOverride = [](auto& s) {
+        // Allow MethodFlags::Virtual since pre_randomize/post_randomize are
+        // implicitly virtual per IEEE 1800-2017 Section 18.6.1, so explicitly
+        // marking them as 'virtual' is valid.
+        auto validFlags = s.flags & ~MethodFlags::Virtual;
         return s.subroutineKind == SubroutineKind::Function && s.getArguments().empty() &&
                s.getReturnType().isVoid() && s.visibility == Visibility::Public &&
-               s.flags == MethodFlags::None;
+               validFlags == MethodFlags::None;
     };
 
     auto checkPrePost = [&](std::string_view funcName) {

@@ -146,12 +146,18 @@ std::pair<SubroutineSymbol*, bool> SubroutineSymbol::fromSyntax(
     }
     else if (subroutineKind == SubroutineKind::Function) {
         // The function gets an implicit variable inserted that represents the return value.
-        auto implicitReturnVar = compilation.emplace<VariableSymbol>(result->name, result->location,
-                                                                     VariableLifetime::Automatic);
-        implicitReturnVar->getDeclaredType()->setLink(result->declaredReturnType);
-        implicitReturnVar->flags |= VariableFlags::CompilerGenerated;
-        result->addMember(*implicitReturnVar);
-        result->returnValVar = implicitReturnVar;
+        // Per IEEE 1800-2017 Section 13.4.1, only non-void functions have the implicit
+        // return value variable. For void functions, skip creating it to avoid name
+        // conflicts with parameters that have the same name as the function.
+        bool isVoidReturn = proto->returnType->kind == SyntaxKind::VoidType;
+        if (!isVoidReturn) {
+            auto implicitReturnVar = compilation.emplace<VariableSymbol>(
+                result->name, result->location, VariableLifetime::Automatic);
+            implicitReturnVar->getDeclaredType()->setLink(result->declaredReturnType);
+            implicitReturnVar->flags |= VariableFlags::CompilerGenerated;
+            result->addMember(*implicitReturnVar);
+            result->returnValVar = implicitReturnVar;
+        }
         result->declaredReturnType.setTypeSyntax(*proto->returnType);
     }
     else {

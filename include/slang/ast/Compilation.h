@@ -224,6 +224,10 @@ struct SLANG_EXPORT BindDirectiveInfo {
     /// A liblist that applies to the newly bound instance.
     std::span<const SourceLibrary* const> liblist;
 
+    /// The scope where the bind directive was written. Used for resolving
+    /// names in port connections per LRM 23.11.
+    const Scope* bindScope = nullptr;
+
     /// If true, the new instance is also a new config root,
     /// and @a configRootSyntax points to the config block
     /// for that root. Otherwise, it points either to nullptr,
@@ -525,6 +529,10 @@ public:
     /// Notes the presence of a bind directive. These can be later checked during
     /// scope elaboration to include the newly bound instances.
     void noteBindDirective(const syntax::BindDirectiveSyntax& syntax, const Scope& scope);
+
+    /// Returns the scope where a bind directive was written, for resolving
+    /// port connection names per LRM 23.11. Returns nullptr if not found.
+    const Scope* getBindDirectiveScope(const syntax::BindDirectiveSyntax* syntax) const;
 
     /// Notes an instance that contains a bind directive targeting a global definition.
     /// These are later checked for correctness.

@@ -665,7 +665,22 @@ Compilation::DefinitionLookupResult Compilation::getDefinition(
             case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ProgramDeclaration: {
                 auto& mds = bindInfo.instantiationDefSyntax->as<ModuleDeclarationSyntax>();
-                result.definition = getDefinition(scope, mds);
+                // Try bind scope first (where the bind directive was written), then target scope.
+                // For nested definitions, the scope where the bind is written may differ from
+                // the scope where the definition was registered (InstanceBody vs Definition).
+                if (bindInfo.bindScope)
+                    result.definition = getDefinition(*bindInfo.bindScope, mds);
+                if (!result.definition)
+                    result.definition = getDefinition(scope, mds);
+                // If still not found, the syntax uniquely identifies the definition,
+                // so pick any definition for that syntax (handles nested definitions
+                // where the registering scope differs from both bind and target scopes).
+                if (!result.definition) {
+                    if (auto it = definitionFromSyntax.find(&mds);
+                        it != definitionFromSyntax.end() && !it->second.empty()) {
+                        result.definition = it->second.begin()->second;
+                    }
+                }
                 if (!result.definition)
                     errorMissingDef(name, scope, sourceRange, diag::UnknownModule);
                 break;
@@ -1101,6 +1116,14 @@ void Compilation::noteBindDirective(const BindDirectiveSyntax& syntax, const Sco
         bindDirectives.emplace_back(&syntax, &scope);
         noteCannotCache(scope);
     }
+}
+
+const Scope* Compilation::getBindDirectiveScope(const BindDirectiveSyntax* syntax) const {
+    for (auto& [s, scope] : bindDirectives) {
+        if (s == syntax)
+            return scope;
+    }
+    return nullptr;
 }
 
 void Compilation::noteInstanceWithDefBind(const Symbol& instance) {
@@ -2376,6 +2399,16 @@ void Compilation::resolveDefParamsAndBinds() {
 
             BindDirectiveInfo info;
             info.bindSyntax = syntax;
+            // Resolve the bind scope from the main compilation (this),
+            // not from the clone, since the clone's scopes will be
+            // destroyed when the clone goes out of scope.
+            info.bindScope = nullptr;
+            for (auto [mainSyntax, mainScope] : bindDirectives) {
+                if (mainSyntax == syntax) {
+                    info.bindScope = mainScope;
+                    break;
+                }
+            }
 
             auto& def = resolvedBind.instanceDef;
             info.configRuleSyntax = def.configRule ? def.configRule->syntax.get() : nullptr;

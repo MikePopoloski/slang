@@ -127,6 +127,20 @@ public:
         canonicalBody = newCanonical;
     }
 
+    /// Returns the scope where the bind directive was written, if this
+    /// instance was created from a bind directive. Used for resolving
+    /// port connection names per LRM 23.11.
+    /// Performs lazy lookup if the scope hasn't been resolved yet.
+    const Scope* getBindScope() const;
+
+    /// Sets the bind directive scope for port connection name resolution.
+    void setBindScope(const Scope* scope) const { bindScope_ = scope; }
+
+    /// Sets the bind directive syntax for lazy scope resolution.
+    void setBindSyntax(const syntax::BindDirectiveSyntax* syntax) const {
+        bindSyntax_ = syntax;
+    }
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation,
@@ -174,6 +188,8 @@ private:
     mutable PointerMap* connectionMap = nullptr;
     mutable std::span<const PortConnection* const> connections;
     mutable const InstanceBodySymbol* canonicalBody = nullptr;
+    mutable const Scope* bindScope_ = nullptr;
+    mutable const syntax::BindDirectiveSyntax* bindSyntax_ = nullptr;
 };
 
 /// The body of a module, interface, or program instance, which acts as the scope for its members.
