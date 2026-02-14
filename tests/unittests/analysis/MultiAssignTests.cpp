@@ -1541,3 +1541,43 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }
+
+TEST_CASE("Multi-assign for static local variables") {
+    auto& code = R"(
+module m(input a, int b);
+    always_comb begin
+        if (a) begin
+        end
+        else begin
+            int i, j;
+            i = b;
+
+            if (a) begin
+                j = 1;
+            end
+        end
+    end
+
+    always_latch begin
+        if (a) begin
+        end
+        else begin
+            int i, j;
+            i = b;
+
+            if (a) begin
+                j = 1;
+            end
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InferredLatch);
+    CHECK(diags[1].code == diag::InferredComb);
+}

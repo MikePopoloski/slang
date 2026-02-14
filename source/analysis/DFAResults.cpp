@@ -66,18 +66,28 @@ void DFAResults::visitPartiallyAssigned(bool skipAutomatic, AssignedSymbolCB cb)
         auto& left = symbolState.assigned;
         SLANG_ASSERT(!left.empty());
 
-        // Each interval in the left map is a range that needs to be fully covered
-        // by our final state, otherwise that interval is not fully assigned.
-        if (currState.size() <= index) {
-            for (auto it = left.begin(); it != left.end(); ++it)
-                cb(symbol, **it);
-            continue;
+        const SymbolBitMap* right = nullptr;
+        if (symbolState.isLocallyDeclared) {
+            auto it = localLValStates.find(&symbol);
+            SLANG_ASSERT(it != localLValStates.end());
+
+            right = &it->second;
+        }
+        else {
+            // Each interval in the left map is a range that needs to be fully covered
+            // by our final state, otherwise that interval is not fully assigned.
+            if (currState.size() <= index) {
+                for (auto it = left.begin(); it != left.end(); ++it)
+                    cb(symbol, **it);
+                continue;
+            }
+
+            right = &currState[index];
         }
 
-        auto& right = currState[index];
         for (auto lit = left.begin(); lit != left.end(); ++lit) {
             auto lbounds = lit.bounds();
-            if (auto rit = right.find(lbounds); rit != right.end()) {
+            if (auto rit = right->find(lbounds); rit != right->end()) {
                 // If this right hand side interval doesn't completely cover
                 // the left hand side one then we don't need to look further.
                 // The rhs intervals are unioned so there otherwise must be a
@@ -92,21 +102,17 @@ void DFAResults::visitPartiallyAssigned(bool skipAutomatic, AssignedSymbolCB cb)
 }
 
 void DFAResults::visitDefinitelyAssigned(bool skipAutomatic, AssignedSymbolCB cb) const {
-    auto& currState = *stateRef;
-    for (size_t index = 0; index < currState.size(); index++) {
-        auto& symbolState = lvalues[index];
-        auto& symbol = *symbolState.symbol;
-
+    auto handleSym = [&](const ValueSymbol& symbol, const SymbolBitMap& imap, size_t index) {
         if (skipAutomatic && VariableSymbol::isKind(symbol.kind) &&
             symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
-            continue;
+            return;
         }
 
-        auto& imap = currState[index];
         for (auto it = imap.begin(); it != imap.end(); ++it) {
             // We know this range is definitely assigned. In order to provide an
             // example expression for the LSP we need to look up a range that
             // overlaps from the procedure-wide tracking map.
+            auto& symbolState = lvalues[index];
             std::optional<std::pair<uint64_t, uint64_t>> prevBounds;
             for (auto lspIt = symbolState.assigned.find(it.bounds());
                  lspIt != symbolState.assigned.end(); ++lspIt) {
@@ -121,6 +127,16 @@ void DFAResults::visitDefinitelyAssigned(bool skipAutomatic, AssignedSymbolCB cb
                 prevBounds = curBounds;
             }
         }
+    };
+
+    auto& currState = *stateRef;
+    for (size_t index = 0; index < currState.size(); index++)
+        handleSym(*lvalues[index].symbol, currState[index], index);
+
+    for (auto& [symbol, imap] : localLValStates) {
+        auto it = symbolToSlot.find(symbol);
+        SLANG_ASSERT(it != symbolToSlot.end());
+        handleSym(*symbol, imap, it->second);
     }
 }
 

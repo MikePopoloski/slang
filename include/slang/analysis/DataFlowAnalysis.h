@@ -366,6 +366,32 @@ protected:
         this->visitStmt(stmt);
     }
 
+    void handle(const BlockStatement& stmt) {
+        this->visitStmt(stmt);
+
+        // When we finish a block that declares local static variables
+        // we capture the assigned states for those variables, because
+        // there is otherwise no way to determine whether they've been
+        // fully assigned within their scope.
+        if (stmt.blockSymbol) {
+            auto& currState = this->getState();
+            for (auto& var : stmt.blockSymbol->membersOfType<VariableSymbol>()) {
+                if (var.lifetime == VariableLifetime::Static &&
+                    !var.flags.has(VariableFlags::CompilerGenerated)) {
+
+                    if (auto it = symbolToSlot.find(&var); it != symbolToSlot.end()) {
+                        auto index = it->second;
+                        if (index < currState.assigned.size()) {
+                            lvalues[index].isLocallyDeclared = true;
+                            localLValStates[&var] = currState.assigned[index].clone(
+                                bitMapAllocator);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     void finishExpr(const Expression&) { sequenceChecker.clear(); }
 
     // **** State Management ****

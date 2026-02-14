@@ -100,6 +100,10 @@ public:
         /// The assigned bit ranges of the symbol.
         SymbolLSPMap assigned;
 
+        /// Set to true if the symbol is declared locally to the procedure,
+        /// is static, and has assignments to it.
+        bool isLocallyDeclared = false;
+
         LValueSymbol(const ast::ValueSymbol& symbol) : symbol(&symbol) {}
     };
 
@@ -124,6 +128,10 @@ protected:
 
     /// All of the nets and variables that have been read in the procedure.
     SmallMap<const ast::ValueSymbol*, SymbolBitMap, 4> rvalues;
+
+    /// For locally declared static variables only, the assigned ranges at
+    /// end of their declaring scope.
+    SmallMap<const ast::ValueSymbol*, SymbolBitMap, 2> localLValStates;
 
     /// All statements that have timing controls associated with them.
     SmallVector<const ast::Statement*> timedStatements;
