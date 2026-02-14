@@ -827,8 +827,7 @@ public:
                     }
                 }
                 else {
-                    auto code = isInput ? diag::UnconnectedInputPort
-                                        : diag::UnconnectedNamedPort;
+                    auto code = isInput ? diag::UnconnectedInputPort : diag::UnconnectedNamedPort;
                     scope.addDiag(code, instance.location) << port.name;
                 }
             }
