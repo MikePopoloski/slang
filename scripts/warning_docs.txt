@@ -1960,6 +1960,15 @@ module top;
 endmodule
 ```
 
+-Wmisplaced-trailing-separator
+A trailing separator (comma or semicolon) was found in a list where it is not
+allowed by the SystemVerilog standard. This is an error by default but can be
+downgraded to a warning for compatibility with tools like Yosys.
+```
+module m(input a, output b,);
+endmodule
+```
+
 -Wunknown-warning-option
 <ignored>
 

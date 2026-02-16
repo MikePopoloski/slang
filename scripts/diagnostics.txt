@@ -116,7 +116,7 @@ error ExpectedIdentifier "expected identifier"
 error ExpectedStringLiteral "expected string literal"
 error ExpectedIntegerLiteral "expected integer literal"
 error ExpectedToken "expected '{}'"
-error MisplacedTrailingSeparator "misplaced trailing '{}'"
+warning misplaced-trailing-separator MisplacedTrailingSeparator "misplaced trailing '{}'"
 error ImplicitNotAllowed "expected data type (implicit type name not allowed)"
 error InvalidAccessDotColon "invalid access token; '{}' should be '{}'"
 error ExpectedMember "expected member"
@@ -1234,7 +1234,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   dup-config-rule unused-config-cell unused-config-instance specify-condition-expr
                   seq-no-match case-too-complex nested-solve-before dynamic-non-procedural
                   nonstandard-string-concat nested-comment multi-write read-write mixed-var-assigns
-                  multiple-cont-assigns multiple-always-assigns }
+                  multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
