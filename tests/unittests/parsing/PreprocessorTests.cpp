@@ -2613,6 +2613,35 @@ FOO
     CHECK(diagnostics[3].code == diag::WrongLanguageVersion);
 }
 
+TEST_CASE("Conditional ifdef operator precedence") {
+    // Regression: A && B || C must parse as (A && B) || C, not A && (B || C).
+    // Before the fix, parseConditionalExpr() called itself for the right operand
+    // of every binary operator, greedily consuming all remaining operators.
+    //
+    // Key test: X && Y || Z where X is undefined, Y is undefined, Z is defined.
+    // Correct: (X && Y) || Z = (false && false) || true = true  -> CRITICAL included
+    // Bug:     X && (Y || Z) = false && (false || true) = false -> CRITICAL excluded
+    auto& text = R"(
+`define Z
+
+`ifdef (X && Y || Z)
+CRITICAL
+`endif
+`ifdef (Z || X && Y)
+ALSO_PASS
+`endif
+)";
+
+    auto& expected = R"(
+CRITICAL
+ALSO_PASS
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Macro expansion with asterisks regress") {
     auto& text = R"(
 `define FOO(x) x

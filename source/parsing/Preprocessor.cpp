@@ -1229,15 +1229,17 @@ Trivia Preprocessor::handleDefaultTriregStrengthDirective(Token directive) {
 }
 
 ConditionalDirectiveExpressionSyntax* Preprocessor::parseConditionalExpr() {
-    auto isBinaryOp = [](TokenKind kind) {
+    auto getPrecedence = [](TokenKind kind) {
         switch (kind) {
             case TokenKind::DoubleAnd:
+                return 20;
             case TokenKind::DoubleOr:
+                return 10;
             case TokenKind::MinusArrow:
             case TokenKind::LessThanMinusArrow:
-                return true;
+                return 5;
             default:
-                return false;
+                return -1;
         }
     };
 
@@ -1251,50 +1253,49 @@ ConditionalDirectiveExpressionSyntax* Preprocessor::parseConditionalExpr() {
                                                                                     *operand,
                                                                                     closeParen);
         }
-        else {
-            auto id = expect(TokenKind::Identifier);
-            return alloc.emplace<NamedConditionalDirectiveExpressionSyntax>(id);
-        }
+        auto id = expect(TokenKind::Identifier);
+        return alloc.emplace<NamedConditionalDirectiveExpressionSyntax>(id);
     };
 
-    ConditionalDirectiveExpressionSyntax* left;
-    if (peek(TokenKind::Exclamation)) {
-        auto op = consume();
-        auto operand = parsePrimary();
-        left = alloc.emplace<UnaryConditionalDirectiveExpressionSyntax>(op, *operand);
-    }
-    else {
-        left = parsePrimary();
-    }
+    auto parseExpr = [&](auto&& self, int minPrecedence) -> ConditionalDirectiveExpressionSyntax* {
+        auto parseUnary = [&](auto&& unarySelf) -> ConditionalDirectiveExpressionSyntax* {
+            if (peek(TokenKind::Exclamation)) {
+                auto op = consume();
+                auto operand = unarySelf(unarySelf);
+                return alloc.emplace<UnaryConditionalDirectiveExpressionSyntax>(op, *operand);
+            }
+            return parsePrimary();
+        };
 
-    while (true) {
-        if (!isBinaryOp(peek().kind))
-            break;
+        auto left = parseUnary(parseUnary);
+        while (true) {
+            if (!peekSameLine())
+                break;
+            int prec = getPrecedence(peek().kind);
+            if (prec < minPrecedence)
+                break;
+            auto op = consume();
+            auto right = self(self, prec + 1);
+            left = alloc.emplace<BinaryConditionalDirectiveExpressionSyntax>(*left, op, *right);
+        }
+        return left;
+    };
 
-        auto op = consume();
-        auto right = parseConditionalExpr();
-        left = alloc.emplace<BinaryConditionalDirectiveExpressionSyntax>(*left, op, *right);
-    }
-
-    return left;
+    return parseExpr(parseExpr, 0);
 }
 
 ConditionalDirectiveExpressionSyntax& Preprocessor::parseConditionalExprTop() {
-    SLANG_ASSERT(!inIfDefCondition);
-    auto guard = ScopeGuard([this] { inIfDefCondition = false; });
+    bool prevIfDefCondition = inIfDefCondition;
+    auto guard = ScopeGuard([this, prevIfDefCondition] { inIfDefCondition = prevIfDefCondition; });
     inIfDefCondition = true;
 
-    if (peek(TokenKind::OpenParenthesis)) {
-        auto result = parseConditionalExpr();
-        if (options.languageVersion < LanguageVersion::v1800_2023) {
-            addDiag(diag::WrongLanguageVersion, result->sourceRange())
-                << toString(options.languageVersion);
-        }
-        return *result;
+    bool startsWithParen = peek(TokenKind::OpenParenthesis);
+    auto result = parseConditionalExpr();
+    if (startsWithParen && options.languageVersion < LanguageVersion::v1800_2023) {
+        addDiag(diag::WrongLanguageVersion, result->sourceRange())
+            << toString(options.languageVersion);
     }
-
-    auto id = expect(TokenKind::Identifier);
-    return *alloc.emplace<NamedConditionalDirectiveExpressionSyntax>(id);
+    return *result;
 }
 
 bool Preprocessor::evalConditionalExpr(
