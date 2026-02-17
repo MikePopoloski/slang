@@ -1,6 +1,7 @@
 import sys as _sys
 
 from pyslang.pyslang import *  # noqa: F401,F403
+
 # from pyslang.pyslang import driver  # noqa: F401
 # from pyslang.pyslang import __version__, analysis, ast, parsing, syntax
 
