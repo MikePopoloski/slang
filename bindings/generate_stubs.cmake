@@ -1,7 +1,10 @@
 message(STATUS "Generating Python stubs for pyslang...")
 
 if(NOT DEFINED STUBGEN_PYTHON_EXECUTABLE)
-  find_package(Python COMPONENTS Interpreter REQUIRED)
+  find_package(
+    Python
+    COMPONENTS Interpreter
+    REQUIRED)
   set(STUBGEN_PYTHON_EXECUTABLE "${Python_EXECUTABLE}")
 endif()
 
@@ -38,8 +41,8 @@ endif()
 # Step 1: Create a temporary importable package structure
 #
 # The install layout is flat (DESTINATION .), so files are directly in
-# INSTALL_DIR. Python needs a parent directory with a pyslang/ subdirectory
-# to resolve "import pyslang.pyslang". We create a temporary symlink/copy.
+# INSTALL_DIR. Python needs a parent directory with a pyslang/ subdirectory to
+# resolve "import pyslang.pyslang". We create a temporary symlink/copy.
 # ---------------------------------------------------------------------------
 set(STUBGEN_TMPDIR "${INSTALL_DIR}/_stubgen_tmp")
 set(STUBGEN_PKGDIR "${STUBGEN_TMPDIR}/pyslang")
@@ -48,13 +51,14 @@ set(STUBGEN_PKGDIR "${STUBGEN_TMPDIR}/pyslang")
 file(REMOVE_RECURSE "${STUBGEN_TMPDIR}")
 file(MAKE_DIRECTORY "${STUBGEN_TMPDIR}")
 
-# Create a symlink (or copy on Windows) so that
-#   _stubgen_tmp/pyslang/ -> ${INSTALL_DIR}/
-# which gives us _stubgen_tmp/pyslang/__init__.py, etc.
+# Create a symlink (or copy on Windows) so that _stubgen_tmp/pyslang/ ->
+# ${INSTALL_DIR}/ which gives us _stubgen_tmp/pyslang/__init__.py, etc.
 if(WIN32)
   # Windows: copy instead of symlink (symlinks need admin on some configs)
-  file(COPY "${INSTALL_DIR}/" DESTINATION "${STUBGEN_PKGDIR}"
-       PATTERN "_stubgen_tmp" EXCLUDE)
+  file(
+    COPY "${INSTALL_DIR}/"
+    DESTINATION "${STUBGEN_PKGDIR}"
+    PATTERN "_stubgen_tmp" EXCLUDE)
 else()
   file(CREATE_LINK "${INSTALL_DIR}" "${STUBGEN_PKGDIR}" SYMBOLIC)
 endif()
@@ -62,14 +66,17 @@ endif()
 # Verify the structure
 message(STATUS "Temp package dir: ${STUBGEN_PKGDIR}")
 execute_process(
-  COMMAND ${STUBGEN_PYTHON_EXECUTABLE} -c
+  COMMAND
+    ${STUBGEN_PYTHON_EXECUTABLE} -c
     "import sys; sys.path.insert(0, '${STUBGEN_TMPDIR}'); import pyslang.pyslang; print('Import OK')"
   RESULT_VARIABLE IMPORT_RESULT
   OUTPUT_VARIABLE IMPORT_OUTPUT
   ERROR_VARIABLE IMPORT_ERROR)
 
 if(NOT IMPORT_RESULT EQUAL 0)
-  message(WARNING "Cannot import pyslang.pyslang from temp structure: ${IMPORT_ERROR}")
+  message(
+    WARNING "Cannot import pyslang.pyslang from temp structure: ${IMPORT_ERROR}"
+  )
   file(REMOVE_RECURSE "${STUBGEN_TMPDIR}")
   return()
 endif()
@@ -80,13 +87,15 @@ message(STATUS "Import test passed: ${IMPORT_OUTPUT}")
 # ---------------------------------------------------------------------------
 execute_process(
   COMMAND ${STUBGEN_PYTHON_EXECUTABLE} -c "import pybind11_stubgen"
-  RESULT_VARIABLE STUBGEN_CHECK OUTPUT_QUIET ERROR_QUIET)
+  RESULT_VARIABLE STUBGEN_CHECK
+  OUTPUT_QUIET ERROR_QUIET)
 
 if(NOT STUBGEN_CHECK EQUAL 0)
   message(STATUS "Installing pybind11-stubgen...")
   execute_process(
     COMMAND ${STUBGEN_PYTHON_EXECUTABLE} -m pip install pybind11-stubgen
-    RESULT_VARIABLE PIP_RESULT OUTPUT_QUIET ERROR_QUIET)
+    RESULT_VARIABLE PIP_RESULT
+    OUTPUT_QUIET ERROR_QUIET)
   if(NOT PIP_RESULT EQUAL 0)
     message(WARNING "Failed to install pybind11-stubgen")
     file(REMOVE_RECURSE "${STUBGEN_TMPDIR}")
@@ -129,10 +138,8 @@ set(STUBGEN_OUTDIR "${INSTALL_DIR}/_stubgen_out")
 file(REMOVE_RECURSE "${STUBGEN_OUTDIR}")
 
 execute_process(
-  COMMAND ${STUBGEN_PYTHON_EXECUTABLE} -m pybind11_stubgen pyslang.pyslang
-          -o "${STUBGEN_OUTDIR}"
-          --root-suffix ""
-          --ignore-invalid-expressions=all
+  COMMAND ${STUBGEN_PYTHON_EXECUTABLE} -m pybind11_stubgen pyslang.pyslang -o
+          "${STUBGEN_OUTDIR}" --root-suffix "" --ignore-invalid-expressions=all
   WORKING_DIRECTORY ${STUBGEN_TMPDIR}
   RESULT_VARIABLE STUBGEN_RESULT
   OUTPUT_VARIABLE STUBGEN_OUTPUT
@@ -151,11 +158,9 @@ endif()
 # ---------------------------------------------------------------------------
 # Step 5: Discover and flatten generated stubs into the install directory
 #
-# stubgen may produce:
-#   _stubgen_out/pyslang/pyslang/__init__.pyi   (submodule stubs)
-#   _stubgen_out/pyslang/pyslang/ast.pyi
-# OR:
-#   _stubgen_out/pyslang/pyslang.pyi            (single-file stub)
+# stubgen may produce: _stubgen_out/pyslang/pyslang/__init__.pyi   (submodule
+# stubs) _stubgen_out/pyslang/pyslang/ast.pyi OR:
+# _stubgen_out/pyslang/pyslang.pyi            (single-file stub)
 #
 # We need everything to end up flat in INSTALL_DIR (which IS the package).
 # ---------------------------------------------------------------------------
@@ -176,10 +181,12 @@ if(IS_DIRECTORY "${NESTED_DIR}")
   endforeach()
 elseif(EXISTS "${STUBGEN_OUTDIR}/pyslang/pyslang.pyi")
   # Single-file stub
-  file(COPY "${STUBGEN_OUTDIR}/pyslang/pyslang.pyi" DESTINATION "${INSTALL_DIR}")
+  file(COPY "${STUBGEN_OUTDIR}/pyslang/pyslang.pyi"
+       DESTINATION "${INSTALL_DIR}")
   message(STATUS "  Copied pyslang.pyi (single-file stub)")
 else()
-  message(WARNING "No stubs found in expected locations under ${STUBGEN_OUTDIR}")
+  message(
+    WARNING "No stubs found in expected locations under ${STUBGEN_OUTDIR}")
   file(REMOVE_RECURSE "${STUBGEN_TMPDIR}" "${STUBGEN_OUTDIR}")
   return()
 endif()
@@ -205,7 +212,7 @@ foreach(SUB ${SUBMODULES})
   set(PROXY_FILE "${INSTALL_DIR}/${SUB}.py")
   if(NOT EXISTS "${PROXY_FILE}")
     file(WRITE "${PROXY_FILE}"
-      "from pyslang.pyslang.${SUB} import *  # noqa: F401,F403\n")
+         "from pyslang.pyslang.${SUB} import *  # noqa: F401,F403\n")
     message(STATUS "  Created ${SUB}.py")
   endif()
 endforeach()
