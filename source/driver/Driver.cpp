@@ -18,6 +18,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
+#include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
@@ -700,6 +701,7 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::NonstandardSysFunc, DiagnosticSeverity::Ignored);
         diagEngine.setSeverity(diag::NonstandardForeach, DiagnosticSeverity::Ignored);
         diagEngine.setSeverity(diag::NonstandardDist, DiagnosticSeverity::Ignored);
+        diagEngine.setSeverity(diag::NestedBlockComment, DiagnosticSeverity::Ignored);
     }
     else {
         // These warnings are set to Error severity by default, unless we're in vcs compat mode.
