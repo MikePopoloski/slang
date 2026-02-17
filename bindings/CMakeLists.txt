@@ -79,7 +79,7 @@ install(
 install(
   CODE "
   set(STUBGEN_PYTHON_EXECUTABLE \"${Python_EXECUTABLE}\")
-  set(CMAKE_INSTALL_PREFIX \"${CMAKE_INSTALL_PREFIX}\")
+  # Do NOT override CMAKE_INSTALL_PREFIX - the install-time value is correct
   include(\"${CMAKE_CURRENT_SOURCE_DIR}/generate_stubs.cmake\")
 "
   COMPONENT pylib)
