@@ -7,7 +7,7 @@
 set(fmt_min_version "12.1")
 set(mimalloc_min_version "2.2")
 set(cpptrace_min_version "1.0")
-set(catch2_min_version "3.12")
+set(catch2_min_version "3.13")
 
 # --- fmt lib ---
 set(find_pkg_args "")
@@ -190,7 +190,7 @@ if(SLANG_INCLUDE_TESTS)
   FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.12.0
+    GIT_TAG v3.13.0
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(Catch2)
