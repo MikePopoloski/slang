@@ -1414,6 +1414,7 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass, bool hasBaseClass) {
 
         // Pure or extern functions don't have bodies.
         if (isPureOrExtern) {
+            funcOptions |= FunctionOptions::AllowImplicitReturn;
             auto& proto = parseFunctionPrototype(SyntaxKind::ClassDeclaration,
                                                  funcOptions | FunctionOptions::IsPrototype);
             checkProto(proto, false);
