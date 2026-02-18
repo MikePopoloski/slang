@@ -2187,6 +2187,33 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Implicit string conversion for methods compat flag") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    reg [31:0] r;
+
+    function void f(string s);
+    endfunction
+
+    task t(string s);
+    endtask
+
+    initial begin
+        f(r);
+        t(r);
+        void'($fopen(r, "r"));
+    end
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::RelaxStringConversions;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Forward typedef restriction regress") {
     auto tree = SyntaxTree::fromText(R"(
 typedef struct s;

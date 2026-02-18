@@ -98,6 +98,11 @@ bool Expression::isImplicitlyAssignableTo(Compilation& compilation, const Type& 
         return true;
     }
 
+    if (targetType.isString() && type->isIntegral() &&
+        compilation.hasFlag(CompilationFlags::RelaxStringConversions)) {
+        return true;
+    }
+
     return false;
 }
 
