@@ -370,7 +370,6 @@ error MaxGenerateStepsExceeded "generate loop hit maximum step limit; possible i
 error MixingSubroutinePortKinds "port declarations not allowed when subroutine defines a formal argument list"
 error UnpackedArrayParamType "unpacked array parameter requires explicit data type"
 error AutomaticNotAllowed "automatic variables can only be declared in procedural contexts"
-error NoMemberImplFound "no implementation found in parent scope for '{}'"
 error MethodKindMismatch "mismatch between 'function' and 'task' declared in prototype"
 error MethodReturnMismatch "return type {} of method '{}' does not match {} declared in its prototype"
 error MethodArgCountMismatch "definition of method '{}' has different number of arguments from its prototype"
@@ -573,6 +572,7 @@ warning unused-config-instance UnusedConfigInstance "unused config rule -- insta
 warning static-init-order StaticInitOrder "initializer for static variable '{}' refers to another static variable '{}' which will be initialized in an indeterminate order"
 warning static-init-value StaticInitValue "initializer for static variable '{}' refers to '{}' which will not have a value at initialization time"
 warning unnamed-generate UnnamedGenerate "generate block is unnamed"
+warning member-impl-not-found MemberImplNotFound "implementation not found in parent scope for '{}'"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -1258,7 +1258,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   seq-no-match case-too-complex nested-solve-before dynamic-non-procedural
                   nonstandard-string-concat nested-comment multi-write read-write mixed-var-assigns
                   multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
-                  qualifiers-on-out-of-block }
+                  qualifiers-on-out-of-block member-impl-not-found }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

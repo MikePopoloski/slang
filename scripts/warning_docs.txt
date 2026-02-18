@@ -1464,6 +1464,19 @@ module memMod();
 endmodule
 ```
 
+-Wmember-impl-not-found
+A class has the declaration for a member method, but the implementation of that member method is not
+found either in the class or as an out of body definition.
+This is an error by default but can be downgraded to a warning for compatibility with tools.
+```
+module m;
+class c;
+   extern function int f();
+endclass
+
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste
