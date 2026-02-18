@@ -1502,7 +1502,89 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
+
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::FormatMismatchedType);
+}
+
+TEST_CASE("$sformat eval corner cases") {
+    auto tree = SyntaxTree::fromText(R"(
+function string f1;
+    return "%f %d";
+endfunction
+
+function string f2;
+    return "%d";
+endfunction
+
+function string f3;
+    return "%q";
+endfunction
+
+module m;
+    int a[];
+    int b;
+
+    $info($sformatf(f1(), 3.2));
+    $info($sformatf(f2(), ));
+    $info($sformatf(f2(), 3, 4));
+    $info($sformatf(f2(), a));
+    $info($sformatf(f2(), b));
+    $info($sformatf(f3(), b));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 8);
+    CHECK(diags[0].code == diag::FormatNoArgument);
+    CHECK(diags[1].code == diag::EmptyArgNotAllowed);
+    CHECK(diags[2].code == diag::InfoTask);
+    CHECK(diags[3].code == diag::FormatTooManyArgs);
+    CHECK(diags[4].code == diag::FormatMismatchedType);
+    CHECK(diags[5].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[6].code == diag::UnknownFormatSpecifier);
+    CHECK(diags[7].code == diag::FormatTooManyArgs);
+}
+
+TEST_CASE("$sformat diag locs with escape codes") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    $info($sformatf("""\x250d""", 3));
+
+    int a[];
+    initial begin
+        string s;
+        s = $sformatf("""\t\n %d \x250d \1 \xf""", a);
+        s = $sformatf(""")"
+                                     "\n\r\n"
+                                     R"(\45d""");
+    end
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:3:5: note: $info encountered: 3
+    $info($sformatf("""\x250d""", 3));
+    ^
+source:8:34: error: no argument provided for '%d' format specifier
+        s = $sformatf("""\t\n %d \x250d \1 \xf""", a);
+                                 ^~~~~~
+source:8:52: error: value of type 'dynamic array of int' is invalid for '%d' format specifier
+        s = $sformatf("""\t\n %d \x250d \1 \xf""", a);
+                              ~~                   ^
+source:11:1: error: no argument provided for '%d' format specifier
+\45d""");
+^~~~
+)");
 }

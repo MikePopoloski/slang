@@ -709,7 +709,7 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     auto result = "\n" + report(diagnostics);
     auto expected = R"(
-source:4:5: note: $info encountered: \"\module. .\foo. \"
+source:4:5: note: $info encountered: "\module. .\foo. "
     $info("\"%m\"");
     ^
 )";

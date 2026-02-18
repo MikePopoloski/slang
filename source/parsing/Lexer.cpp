@@ -699,6 +699,9 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
 }
 
 Token Lexer::lexStringLiteral() {
+    // Note: if adding new string features to this function,
+    // keep them in sync with getLocForStringChar below
+
     bool tripleQuoted = false;
     if (peek() == '"' && peek(1) == '"') {
         // New in v1800-2023: triple quoted string literals
@@ -848,6 +851,72 @@ Token Lexer::lexStringLiteral() {
     }
 
     return create(TokenKind::StringLiteral, toStringView(stringBuffer.copy(alloc)));
+}
+
+size_t Lexer::getLocForStringChar(std::string_view rawStr, size_t targetIndex, size_t& charLen) {
+    // Skip the leading opening quote(s), they aren't counted in the index.
+    auto ptr = rawStr.data();
+    auto end = rawStr.data() + rawStr.length();
+    if (ptr != end && *ptr == '"') {
+        ptr++;
+        if (rawStr.length() >= 3 && ptr[0] == '"' && ptr[1] == '"')
+            ptr += 2;
+    }
+
+    size_t idx = 0;
+    while (idx <= targetIndex && ptr != end) {
+        char c = *ptr++;
+        if (c != '\\' || ptr == end) {
+            charLen = 1;
+            idx++;
+            continue;
+        }
+
+        // Initial backslash is ignored. The next character has four possible cases:
+        // 1. Escaped newlines are completely ignored
+        // 2. Octal escapes
+        // 3. Hex escapes
+        // 4. Everything else is a single character in the output string
+        charLen = 2;
+        c = *ptr++;
+        switch (c) {
+            case '\n':
+                break;
+            case '\r':
+                if (ptr != end && *ptr == '\n')
+                    ptr++;
+                break;
+            case 'x':
+                // Hex escapes can be up to two characters long.
+                for (int i = 0; i < 2; i++) {
+                    if (ptr != end && isHexDigit(*ptr)) {
+                        ptr++;
+                        charLen++;
+                    }
+                    else
+                        break;
+                }
+                idx++;
+                break;
+            default:
+                // Octal escapes can be up to three characters long,
+                // but we're already looking at the first one.
+                if (isOctalDigit(c)) {
+                    for (int i = 0; i < 2; i++) {
+                        if (ptr != end && isOctalDigit(*ptr)) {
+                            ptr++;
+                            charLen++;
+                        }
+                        else
+                            break;
+                    }
+                }
+                idx++;
+                break;
+        }
+    }
+
+    return size_t(ptr - rawStr.data());
 }
 
 Token Lexer::lexEscapeSequence(bool isMacroName) {

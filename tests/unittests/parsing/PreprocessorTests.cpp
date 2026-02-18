@@ -3040,3 +3040,30 @@ endmodule
     compilation.addSyntaxTree(SyntaxTree::fromText(text));
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Macro stringify escapes are processed correctly") {
+    auto& text = R"(
+`define A(a) $error(`"`\`"a`\`"`")
+`define B(a) $error(`"\"a\"`")
+`A(foo);
+`B(foo);
+)";
+
+    auto& expected = R"(
+$error("\"foo\"");
+$error("\"a\"");
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    auto tree = SyntaxTree::fromText(text);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ErrorTask);
+    CHECK(diags[1].code == diag::ErrorTask);
+}

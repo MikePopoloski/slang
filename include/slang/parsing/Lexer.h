@@ -137,6 +137,15 @@ public:
                             Token sourceToken, size_t offset, KeywordVersion keywordVersion,
                             SmallVectorBase<Token>& results);
 
+    /// Given a char index into a processed string literal and the raw string representing
+    /// that literal, returns the offset within the raw string that matches that character.
+    /// This essentially backs out the processing of things like escape character codes.
+    ///
+    /// If the given character index ends up pointing at a hex or octal encoded escape character,
+    /// the @a charLen parameter will receive the length of that escape sequence. Otherwise it
+    /// will be set to 1.
+    static size_t getLocForStringChar(std::string_view rawStr, size_t charIndex, size_t& charLen);
+
 private:
     Lexer(BufferID bufferId, std::string_view source, BumpAllocator& alloc,
           Diagnostics& diagnostics, SourceManager& sourceManager, LexerOptions options);
