@@ -1606,3 +1606,23 @@ endmodule
     CHECK(diagnostics[1].code == diag::ImplicitParamTypeKeyword);
     CHECK(diagnostics[2].code == diag::ImplicitParamTypeKeyword);
 }
+
+TEST_CASE("Trailing comma in ANSI port list") {
+    auto& text = "module foo(input wire a, input wire b,); endmodule";
+    const auto& module = parseModule(text);
+
+    REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
+    CHECK(module.header->ports->kind == SyntaxKind::AnsiPortList);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::MisplacedTrailingSeparator);
+}
+
+TEST_CASE("No trailing comma in ANSI port list still works") {
+    auto& text = "module foo(input wire a, input wire b); endmodule";
+    const auto& module = parseModule(text);
+
+    REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
+    CHECK(module.header->ports->kind == SyntaxKind::AnsiPortList);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

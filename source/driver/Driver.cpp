@@ -677,6 +677,7 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::MixedVarAssigns, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::MultipleContAssigns, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::MultipleAlwaysAssigns, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::MisplacedTrailingSeparator, DiagnosticSeverity::Error);
     }
 
     if (options.compat == CompatMode::Vcs || options.compat == CompatMode::All) {
