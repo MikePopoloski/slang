@@ -10,6 +10,14 @@ New changes will almost always require corresponding unit tests and likely updat
 
 Otherwise, happy hacking and thanks for contributing!
 
+## AI Policy
+
+The project's AI policy is largely the same as the [LLVM AI Tool Use Policy](https://llvm.org/docs/AIToolPolicy.html) so read that for details. To summarize:
+* Use of generative AI must be disclosed in the PR description.
+* There must be a human in the loop -- contributors must read and review all LLM-generated code or text before they ask other project members to review it.
+* The contributor is always the author and is fully accountable for their contributions.
+* Contributors should be sufficiently confident that the contribution is high enough quality that asking for a review is a good use of scarce maintainer time, and they should be able to answer questions about their work during review.
+
 ## Builds and Warnings
 
 CI builds are run with high warnings levels. It's highly recommended that you run locally with those same settings to avoid long iteration cycles of uploading changes and finding they break the CI build. You can use CMake's presets functionality with some of the presets included in the CMakePresets.json file. Customize them for your local system by creating a CMakeUserPresets.json file locally and inheriting your configurations from one of the project-level presets.
