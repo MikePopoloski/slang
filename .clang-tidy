@@ -17,6 +17,7 @@ Checks: >
     -modernize-use-designated-initializers,
     -modernize-use-ranges,
     -modernize-use-integer-sign-comparison,
+    -modernize-concat-nested-namespaces,
     -bugprone-suspicious-semicolon,
     -bugprone-branch-clone,
     -bugprone-sizeof-expression,
