@@ -1882,6 +1882,161 @@ module m;
 endmodule
 ```
 
+-Wunused-class-property
+A class property is declared but never used.
+```
+class C;
+    int i;
+endclass
+```
+
+-Wunused-but-set-property
+A class property has a value assigned but that value is never used.
+```
+class C;
+    int i;
+
+    function void foo;
+        i = 42;
+    endfunction
+endclass
+```
+
+-Wunassigned-property
+A class property is used but never has a value assigned.
+```
+class C;
+    int i;
+
+    function void foo;
+        int j = i;
+    endfunction
+endclass
+```
+
+-Wunused-local-class-property
+A 'local' (i.e. private) class property is declared but never used.
+```
+class C;
+    local int i;
+endclass
+```
+
+-Wunused-but-set-local-property
+A 'local' (i.e. private) class property has a value assigned but that value is never used.
+```
+class C;
+    local int i;
+
+    function void foo;
+        i = 42;
+    endfunction
+endclass
+```
+
+-Wunassigned-local-property
+A 'local' (i.e. private) class property is used but never has a value assigned.
+```
+class C;
+    local int i;
+
+    function void foo;
+        int j = i;
+    endfunction
+endclass
+```
+
+-Wunused-subroutine
+A task or function is declared but never called.
+```
+function foo;
+endfunction
+```
+
+-Wunused-dpi-import
+A DPI import is declared but never called.
+```
+import "DPI-C" function void dpi_func(int i);
+```
+
+-Wunused-class-method
+A class method is declared but never called.
+```
+class C;
+    function void foo;
+    endfunction
+endclass
+```
+
+-Wunused-local-class-method
+A 'local' (i.e. private) class method is declared but never called.
+```
+class C;
+    local function void foo;
+    endfunction
+endclass
+```
+
+-Wunused-constructor
+A class constructor is declared but never called.
+```
+class C;
+    function new;
+    endfunction
+endclass
+```
+
+-Wunused-package-var
+A variable declared in a package is never used.
+```
+package p;
+    int i;
+endpackage
+```
+
+-Wunused-package-typedef
+A typedef declared in a package is never used.
+```
+package p;
+    typedef int I;
+endpackage
+```
+
+-Wunused-package-parameter
+A parameter declared in a package is never used.
+```
+package p;
+    parameter p = 1;
+endpackage
+```
+
+-Wunused-package-type-parameter
+A type parameter declared in a package is never used.
+```
+package p;
+    parameter type p = int;
+endpackage
+```
+
+-Wunused-package-assertion-decl
+An assertion declaration (sequence, property, or let) declared in a package is never used.
+```
+package p;
+    sequence s;
+        1;
+    endsequence
+endpackage
+```
+
+-Wunused-package-subroutine
+A task or function declared in a package is never used.
+```
+package p;
+    function void foo;
+    endfunction
+endpackage
+```
+
 @category Libraries and Configurations
 
 -Wunknown-library
