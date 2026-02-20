@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+
 import re
 
 import pytest

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+
 import pytest
 from pyslang.parsing import Lexer, TokenKind
 

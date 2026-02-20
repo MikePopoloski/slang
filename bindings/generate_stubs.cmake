@@ -1,3 +1,8 @@
+# ~~~
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+# ~~~
+
 message(STATUS "Generating Python stubs for pyslang...")
 
 if(NOT DEFINED STUBGEN_PYTHON_EXECUTABLE)

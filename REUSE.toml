@@ -4,13 +4,44 @@ SPDX-PackageSupplier = "Michael Popoloski <mike@popoloski.com>"
 SPDX-PackageDownloadLocation = "https://sv-lang.com/"
 
 [[annotations]]
-path = "**"
+path = [
+    "docs/**.dox",
+    "docs/grammar.md",
+    "docs/index.html",
+    "docs/Doxyfile.in",
+    "external/ieee1800/*.h",
+    "pyslang/docs/pages/index.rst",
+    "pyslang/examples/README.md",
+    "pyslang/tests/some_file.svh",
+    "scripts/**",
+    "tests/unittests/data/**",
+    "tests/regression/**",
+    "tools/**/README.md",
+    ".github/**",
+    ".vscode/**",
+    ".clang-format",
+    ".clang-tidy",
+    ".editorconfig",
+    ".flake8",
+    ".git_archival.txt",
+    ".gitattributes",
+    ".gitignore",
+    ".lcovrc",
+    ".pre-commit-config.yaml",
+    "CHANGELOG.md",
+    "codecov.yml",
+    "CMakePresets.json",
+    "CODE_OF_CONDUCT.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "README.md",
+]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Michael Popoloski"
 SPDX-License-Identifier = "MIT"
 
 [[annotations]]
-path = "external/boost_unordered.hpp"
+path = ["external/boost_unordered.hpp", "external/boost_concurrent.hpp"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Boost authors"
 SPDX-License-Identifier = "BSL-1.0"
@@ -26,3 +57,9 @@ path = "external/BS_thread_pool.hpp"
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Barak Shoshany"
 SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "docs/cppreference-doxygen-web.tag.xml"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "cppreference.com"
+SPDX-License-Identifier = "CC-BY-SA-3.0"

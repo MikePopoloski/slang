@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+
 """Test accessing `std::span` elements."""
 
 from pyslang.ast import Compilation, CompilationUnitSymbol, Symbol

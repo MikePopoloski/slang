@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+
 # Docs: https://mcss.mosra.cz/documentation/python/
 # Run this file with `<mcss_clone_path>/documentation/python.py <path_to_this_file>`
 

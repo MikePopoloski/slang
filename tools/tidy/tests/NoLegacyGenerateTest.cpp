@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: Michael Popoloski
-// SPDX-FileCopyrightText: MIT
+// SPDX-License-Identifier: MIT
 
 #include "Test.h"
 #include "TidyFactory.h"

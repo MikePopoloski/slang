@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+
 import sys as _sys
 
 from pyslang.pyslang import *  # noqa: F401,F403
