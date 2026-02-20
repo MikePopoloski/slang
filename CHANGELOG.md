@@ -12,13 +12,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The error for nested block comments is now a warning by default (`-Wnested-comment`)
 
 ### Notable Breaking Changes
+* pyslang bindings are now separated into submodules matching the C++ API namespaces, which will require adding imports to your existing scripts to make them continue to run
 
 ### New Features
-* Instantiations of unknown modules can now be ignored by putting a `(* maybe_unknown *)` attribute on the instantation itself (thanks to @AndrewNolte)
+* Instantiations of unknown modules can now be ignored by putting a `(* maybe_unknown *)` attribute on the instantiation itself (thanks to @AndrewNolte)
+* Added [-Wmulti-read](https://sv-lang.com/warning-ref.html#read-write) and [-Wmulti-write](https://sv-lang.com/warning-ref.html#multi-write) for detecting undefined sequencing of operations involving a single variable (both on by default)
+* Added `-Wunused-subroutine`, `-Wunused-dpi-import`, `-Wunused-class-method`, `-Wunused-local-class-method`, and `-Wunused-constructor` for detecting various kinds of unused tasks and functions
+* Added `-Wunused-class-property`, `-Wunused-but-set-property`, `-Wunassigned-property`, `-Wunused-local-class-property`, `-Wunused-but-set-local-property`, and `-Wunassigned-local-property` for detecting various forms of unused class properties
+* Added `-Wunused-package-var`, `-Wunused-package-typedef`, `-Wunused-package-parameter`, `-Wunused-package-type-parameter`, `-Wunused-package-assertion-decl`, and `-Wunused-package-subroutine` for detecting unused items declared inside packages
 
 ### Improvements
 * Made several minor improvements to data flow modeling in the analysis pass to better represent SystemVerilog control flow
 * Added AST serialization for default disable directives and default / global clocking block modifiers
+* Made the diagnostics for multiple overlapping assignments downgradeable to warnings, for compatibility with other tools (via the new warnings [-Wmixed-var-assigns](https://sv-lang.com/warning-ref.html#mixed-var-assigns), [-Wmultiple-cont-assigns](https://sv-lang.com/warning-ref.html#multiple-cont-assigns), and [-Wmultiple-always-assigns](https://sv-lang.com/warning-ref.html#multiple-always-assigns))
+* The error issued for incorrect range select endianness is now suppressed inside conditional blocks that are statically known to be untaken
+* The string formatting functions now allow passing class handles, chandles, and null literals as arguments to integer format specifiers, for compatibility with other tools (thanks to @thomasnormal)
+* Misplaced trailing separator errors are now downgradeable to a warning, for compatibility with other tools (via the new warning [-Wmisplaced-trailing-separator](https://sv-lang.com/warning-ref.html#misplaced-trailing-separator)) (thanks to @thomasnormal)
 
 ### Fixes
 * Fixed an issue where comments immediately preceeding a disabled `` `endif `` directive could erroneously show up in preprocessed output
@@ -26,14 +35,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Unary increment and decrement operators now properly count as a driver for their operand, for purposes of multi-driver checking
 * Fixed miscompilation when a generic class with a virtual interface type parameter declared within a package triggers an import lookup within that package
 * Fixed a bug where various operations on class types (such as computing their bitstream width) would not take into account base class properties
+* Fixed a bug in macro token concatenation where the second token needs to be split and re-lexed to function properly
+* Fixed a bug with looking up the return type of implicit function return value variables when `--allow-use-before-declare` is used
+* Fixed `-Wcomparison-mismatch` to not warn when comparing unpacked array types with the same width but differing range indices
+* Fixed data flow analysis to work correctly with locally declared static variables in procedural blocks
+* Fixed string format diagnostic locations when the format string contains escape characters
+* Fixed constant evaluated string formatting when the format string is triple quoted or contains escape characters
 
 ### Tools & Bindings
 #### pyslang
 * Added FlowAnalysis and LSPUtilities bindings (thanks to @CheeksTheGeek)
 * Added SyntaxFactory bindings (thanks to @CheeksTheGeek)
+* Organized pyslang bindings into submodules (thanks to @CheeksTheGeek)
+* Fixed stub generation for the pyslang bindings (thanks to @ilthraim)
 
 #### slang-tidy
 * Added a new LoopBeforeReset check (thanks to @spomata)
+* Fixed the diagnostic issued for the AlwaysFFAssignmentOutsideConditional check (thanks to @spomata)
 
 
 ## [v10.0] - 2026-01-15
