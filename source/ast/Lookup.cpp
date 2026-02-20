@@ -1170,8 +1170,11 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
 
     if (!result.found) {
         if (flags.has(LookupFlags::AlwaysAllowUpward)) {
+            LookupResult originalResult = result;
             if (!lookupUpward({}, name, context, flags, result))
                 return;
+            if (!result.found)
+                result = originalResult;
         }
 
         if (!result.found && !result.hasError())

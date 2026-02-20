@@ -1006,10 +1006,10 @@ Expression& Expression::bindName(Compilation& comp, const NameSyntax& syntax,
                                  const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                  const ASTContext& context) {
     bitmask<LookupFlags> flags = LookupFlags::None;
-    if ((invocation && invocation->arguments) ||
-        comp.hasFlag(CompilationFlags::AllowUseBeforeDeclare)) {
+    if (invocation && invocation->arguments)
+        flags |= LookupFlags::AllowDeclaredAfter | LookupFlags::AlwaysAllowUpward;
+    if (comp.hasFlag(CompilationFlags::AllowUseBeforeDeclare))
         flags |= LookupFlags::AllowDeclaredAfter;
-    }
 
     if (context.flags.has(ASTFlags::StaticInitializer))
         flags |= LookupFlags::StaticInitializer;

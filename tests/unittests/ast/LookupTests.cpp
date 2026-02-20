@@ -2677,3 +2677,35 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Method lookup within parent modules") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    child ch();
+
+    function automatic int f;
+        return 12;
+    endfunction
+
+    task t;
+    endtask
+endmodule
+
+module child;
+    grandchild gc();
+
+    initial $display(f());
+endmodule
+
+module grandchild;
+    initial begin
+        $display(f());
+        t();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
