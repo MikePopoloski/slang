@@ -1374,6 +1374,15 @@ module m;
 endmodule
 ```
 
+-Wmisplaced-trailing-separator
+A trailing separator (comma or semicolon) was found in a list where it is not
+allowed by the SystemVerilog standard. This is an error by default but can be
+downgraded to a warning for compatibility with tools like Yosys.
+```
+module m(input a, output b,);
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste
@@ -1957,15 +1966,6 @@ module top;
     for (genvar i = 0; i < 8; i++) begin
         a a_inst();
     end
-endmodule
-```
-
--Wmisplaced-trailing-separator
-A trailing separator (comma or semicolon) was found in a list where it is not
-allowed by the SystemVerilog standard. This is an error by default but can be
-downgraded to a warning for compatibility with tools like Yosys.
-```
-module m(input a, output b,);
 endmodule
 ```
 
