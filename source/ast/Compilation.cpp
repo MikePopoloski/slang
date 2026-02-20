@@ -2013,8 +2013,7 @@ void Compilation::checkExternIfaceMethods(std::span<const MethodPrototypeSymbol*
             auto& parent = scope->asSymbol();
             if (!parent.name.empty() && !proto->name.empty()) {
                 auto& diag = scope->addDiag(diag::MissingExternImpl, proto->location);
-                diag << (proto->subroutineKind == SubroutineKind::Function ? "function"sv
-                                                                           : "task"sv);
+                diag << SemanticFacts::getSubroutineKindStr(proto->subroutineKind);
                 diag << parent.name << proto->name;
             }
         }

@@ -150,6 +150,9 @@ public:
     /// Gets a human-friendly string name of a case statement condition kind.
     static std::string_view getCaseConditionStr(CaseStatementCondition kind);
 
+    /// Gets the human-friendly string name of a subroutine kind.
+    static std::string_view getSubroutineKindStr(SubroutineKind kind);
+
     /// Gets the optional drive strength values associated with the given net strength syntax node.
     static std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> getDriveStrength(
         const syntax::NetStrengthSyntax& syntax);

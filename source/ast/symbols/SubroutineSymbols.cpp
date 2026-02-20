@@ -468,6 +468,10 @@ SubroutineSymbol& SubroutineSymbol::createFromPrototype(Compilation& compilation
     result->flags = prototype.flags;
     result->arguments = cloneArguments(compilation, *result, prototype.getArguments());
     result->prototype = &prototype;
+
+    if (auto s = prototype.getSyntax())
+        result->setSyntax(*s);
+
     return *result;
 }
 
@@ -855,7 +859,7 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
 
     if (!proto->flags.has(MethodFlags::ForkJoin) && proto->getFirstExternImpl() != nullptr) {
         auto& diag = scope->addDiag(diag::DupInterfaceExternMethod, location);
-        diag << (subroutineKind == SubroutineKind::Function ? "function"sv : "task"sv);
+        diag << SemanticFacts::getSubroutineKindStr(subroutineKind);
         diag << ifaceName << name;
         diag.addNote(diag::NotePreviousDefinition, proto->getFirstExternImpl()->impl->location);
     }

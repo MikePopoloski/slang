@@ -151,6 +151,10 @@ std::string_view SemanticFacts::getCaseConditionStr(CaseStatementCondition kind)
     }
 }
 
+std::string_view SemanticFacts::getSubroutineKindStr(SubroutineKind kind) {
+    return kind == SubroutineKind::Task ? "task"sv : "function"sv;
+}
+
 static DriveStrength getDriveStrengthVal(TokenKind kind) {
     switch (kind) {
         case TokenKind::Supply0Keyword:

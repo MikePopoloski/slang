@@ -26,7 +26,7 @@ const Expression& SystemSubroutine::bindArgument(size_t, const ASTContext& conte
 }
 
 std::string_view SystemSubroutine::kindStr() const {
-    return kind == SubroutineKind::Task ? "task"sv : "function"sv;
+    return SemanticFacts::getSubroutineKindStr(kind);
 }
 
 bool SystemSubroutine::checkArgCount(const ASTContext& context, bool isMethod, const Args& args,

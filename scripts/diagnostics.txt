@@ -1186,6 +1186,24 @@ warning unused-genvar UnusedGenvar "unused genvar '{}'"
 warning unused-assertion-decl UnusedAssertionDecl "unused {} '{}'"
 warning unused-import UnusedImport "unused import '{}'"
 warning unused-wildcard-import UnusedWildcardImport "unused wildcard import"
+warning unused-subroutine UnusedSubroutine "unused {} '{}'"
+warning unused-dpi-import UnusedDPIImport "unused DPI import '{}'"
+warning unused-package-var UnusedPackageVar "unused package variable '{}'"
+warning unused-package-typedef UnusedPackageTypedef "unused package typedef '{}'"
+warning unused-package-parameter UnusedPackageParameter "unused package parameter '{}'"
+warning unused-package-type-parameter UnusedPackageTypeParameter "unused package type parameter '{}'"
+warning unused-package-assertion-decl UnusedPackageAssertionDecl "unused package {} '{}'"
+warning unused-package-subroutine UnusedPackageSubroutine "unused package {} '{}'"
+warning unused-constructor UnusedConstructor "unused class constructor for '{}'"
+warning unused-class-method UnusedClassMethod "unused class method '{}'"
+warning unused-class-property UnusedClassProperty "unused class property '{}'"
+warning unused-but-set-property UnusedButSetProperty "class property '{}' is assigned but its value is never used"
+warning unassigned-property UnassignedProperty "class property '{}' is never assigned a value"
+warning unused-local-class-method UnusedLocalClassMethod "unused 'local' class method '{}'"
+warning unused-local-class-property UnusedLocalClassProperty "unused 'local' class property '{}'"
+warning unused-but-set-local-property UnusedButSetLocalProperty "'local' class property '{}' is assigned but its value is never used"
+warning unassigned-local-property UnassignedLocalProperty "'local' class property '{}' is never assigned a value"
+
 warning inferred-latch InferredLatch "latch inferred for '{}' because it is not assigned on all control paths"
 warning inferred-comb InferredComb "combinational logic inferred for '{}' because it is assigned on all control paths"
 warning incomplete-return IncompleteReturn "non-void function '{}' does not return a value on all control paths"
@@ -1255,7 +1273,12 @@ group conversion = { width-trunc width-expand port-width-trunc port-width-expand
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument
                  unused-parameter unused-type-parameter unused-typedef unused-genvar unused-assertion-decl
-                 unused-but-set-port unused-config-cell unused-config-instance unused-import unused-wildcard-import }
+                 unused-but-set-port unused-config-cell unused-config-instance unused-import unused-wildcard-import
+                 unused-subroutine unused-package-var unused-package-typedef unused-package-parameter
+                 unused-package-subroutine unused-class-property unused-class-method unused-constructor
+                 unused-package-type-parameter unused-package-assertion-decl unused-but-set-property
+                 unassigned-property unused-local-class-method unused-local-class-property unused-but-set-local-property
+                 unassigned-local-property unused-dpi-import }
 
 group parentheses = { bitwise-rel-precedence arith-in-shift logical-not-parentheses bitwise-op-parentheses
                       logical-op-parentheses conditional-precedence consecutive-comparison }

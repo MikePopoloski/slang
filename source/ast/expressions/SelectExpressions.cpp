@@ -999,6 +999,15 @@ Expression& MemberAccessExpression::fromSelector(
 
                 warnIfNotProcedural();
             }
+
+            // We need to note the reference to the property here.
+            if (auto syntax = member->getSyntax()) {
+                const bool isLValue = context.flags.has(ASTFlags::LValue);
+                comp.noteReference(*syntax, isLValue);
+                if (isLValue && context.flags.has(ASTFlags::LAndRValue))
+                    comp.noteReference(*syntax, /* isLValue */ false);
+            }
+
             return *comp.emplace<MemberAccessExpression>(prop.getType(), expr, prop, range);
         }
         case SymbolKind::Subroutine: {

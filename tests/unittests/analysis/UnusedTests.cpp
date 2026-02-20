@@ -234,7 +234,7 @@ endmodule
 endmodule
 
 package p;
-    int i;
+    (* unused *) int i;
 endpackage
 
 module q(
@@ -265,11 +265,11 @@ function int C::foo(int a);
     return a;
 endfunction
 
-import "DPI-C" function void dpi_func(int i);
+(*unused*) import "DPI-C" function void dpi_func(int i);
 
 class D;
-    int s1[$];
-    int s2[int];
+    (*maybe_unused*) int s1[$];
+    (*maybe_unused*) int s2[int];
     function void f();
         int i = 0;
         foreach (s2[j]) begin
@@ -278,6 +278,16 @@ class D;
         end
     endfunction
 endclass
+
+module s;
+    C c = new;
+    D d = new;
+    initial begin
+        void'(c.bar(0));
+        void'(c.foo(0));
+        d.f();
+    end
+endmodule
 )";
 
     Compilation compilation;
@@ -300,6 +310,8 @@ class C;
 endclass
 
 module top;
+    C c = new;
+    initial void'(c.f2());
 endmodule
 )";
 
@@ -320,8 +332,8 @@ interface I;
 endinterface
 
 class TB;
-    virtual I intf;
-    task run();
+    (* unused *) virtual I intf;
+    (* unused *) task run();
         @(intf.cb);
         if (intf.cb.a) begin
             $display("error!");
@@ -381,7 +393,7 @@ class C;
         i.cb_driver.a <= 1'b0;
     endtask
 
-    logic q = i.a;
+    (*unused*) logic q = i.a;
 endclass
 
 module top;
@@ -408,7 +420,7 @@ endmodule
 
 TEST_CASE("Unused function args") {
     auto& text = R"(
-function foo(input x, output y);
+(*unused*) function foo(input x, output y);
     y = 1;
     return 0;
 endfunction
@@ -426,7 +438,7 @@ endmodule
 TEST_CASE("System function args count as outputs") {
     auto& text = R"(
 class C;
-    function bit f();
+    (* maybe_unused *) function bit f();
         bit a;
         int rc = std::randomize(a);
         assert(rc != 0);
@@ -460,7 +472,8 @@ endclass
 
 class C;
     task t1(A a);
-        a.i = 3;
+        if (a.i != 3)
+            a.i = 3;
     endtask
 
     task t2(A a);
@@ -470,6 +483,12 @@ class C;
 endclass
 
 module m;
+    A a = new;
+    C c = new;
+    initial begin
+        c.t1(a);
+        c.t2(a);
+    end
 endmodule
 )";
 
@@ -501,8 +520,11 @@ endclass
 
 module top;
     I intf();
+    C c = new;
     initial begin
         intf.clk = 0;
+        c.i = intf;
+        c.t();
         forever begin
             #1ns;
             intf.clk = ~intf.clk;
@@ -651,9 +673,10 @@ endmodule
 
     Compilation compilation;
     auto diags = analyze(text, compilation);
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::UnusedImport);
-    CHECK(diags[1].code == diag::UnusedWildcardImport);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UnusedPackageVar);
+    CHECK(diags[1].code == diag::UnusedImport);
+    CHECK(diags[2].code == diag::UnusedWildcardImport);
 }
 
 TEST_CASE("Not gate undriven warning regress GH #1227") {
@@ -670,4 +693,115 @@ endmodule
     Compilation compilation;
     auto diags = analyze(text, compilation);
     CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Unused package stuff") {
+    auto& text = R"(
+package p;
+    int a;
+
+    sequence s;
+        1;
+    endsequence
+
+    typedef int I;
+
+    parameter p = 1;
+    parameter type T = real;
+
+    function void foo;
+    endfunction
+endpackage
+)";
+
+    Compilation compilation;
+    auto diags = analyze(text, compilation);
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::UnusedPackageVar);
+    CHECK(diags[1].code == diag::UnusedPackageAssertionDecl);
+    CHECK(diags[2].code == diag::UnusedPackageTypedef);
+    CHECK(diags[3].code == diag::UnusedPackageParameter);
+    CHECK(diags[4].code == diag::UnusedPackageTypeParameter);
+    CHECK(diags[5].code == diag::UnusedPackageSubroutine);
+}
+
+TEST_CASE("Unused subroutines") {
+    auto& text = R"(
+task t;
+endtask
+
+virtual class A;
+    virtual function void g;
+    endfunction
+
+    pure virtual function void h;
+endclass
+
+class C extends A;
+    function int f;
+        return 0;
+    endfunction
+
+    function void g;
+    endfunction
+
+    function void h;
+    endfunction
+
+    function new;
+    endfunction
+
+    local function void i;
+    endfunction
+endclass
+
+class D;
+    function new; endfunction
+endclass
+
+module m;
+    A a = C::new;
+    initial a.g();
+endmodule
+
+import "DPI-C" function void dpi_func(int i);
+)";
+
+    Compilation compilation;
+    auto diags = analyze(text, compilation);
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::UnusedSubroutine);
+    CHECK(diags[1].code == diag::UnusedClassMethod);
+    CHECK(diags[2].code == diag::UnusedClassMethod);
+    CHECK(diags[3].code == diag::UnusedLocalClassMethod);
+    CHECK(diags[4].code == diag::UnusedConstructor);
+    CHECK(diags[5].code == diag::UnusedDPIImport);
+}
+
+TEST_CASE("Unused class properties") {
+    auto& text = R"(
+class C;
+    int i;
+    int j;
+    int k;
+    local int l;
+    local int m;
+    local int n;
+
+    (*unused*) function void foo;
+        j = k;
+        m = n;
+    endfunction
+endclass
+)";
+
+    Compilation compilation;
+    auto diags = analyze(text, compilation);
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::UnusedClassProperty);
+    CHECK(diags[1].code == diag::UnusedButSetProperty);
+    CHECK(diags[2].code == diag::UnassignedProperty);
+    CHECK(diags[3].code == diag::UnusedLocalClassProperty);
+    CHECK(diags[4].code == diag::UnusedButSetLocalProperty);
+    CHECK(diags[5].code == diag::UnassignedLocalProperty);
 }

@@ -303,19 +303,20 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
     return !bad;
 }
 
-Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine& subroutine,
+Expression& CallExpression::fromArgs(Compilation& comp, const Subroutine& subroutine,
                                      const Expression* thisClass,
                                      const ArgumentListSyntax* argSyntax, SourceRange range,
                                      const ASTContext& context) {
-    SmallVector<const Expression*> boundArgs;
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
+    comp.noteReference(symbol);
+
+    SmallVector<const Expression*> boundArgs;
     bool bad = !bindArgs(argSyntax, symbol.getArguments(), symbol.name, range, context, boundArgs);
 
-    auto result = compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(), thisClass,
-                                                      boundArgs.copy(compilation),
-                                                      context.getLocation(), range);
+    auto result = comp.emplace<CallExpression>(&symbol, symbol.getReturnType(), thisClass,
+                                               boundArgs.copy(comp), context.getLocation(), range);
     if (bad)
-        return badExpr(compilation, result);
+        return badExpr(comp, result);
 
     if (context.flags.has(ASTFlags::Function | ASTFlags::Final) &&
         symbol.subroutineKind == SubroutineKind::Task) {
@@ -328,11 +329,11 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
         else
             context.addDiag(diag::TaskFromFinal, range);
 
-        return badExpr(compilation, result);
+        return badExpr(comp, result);
     }
 
     if (!checkOutputArgs(context, symbol.hasOutputArgs(), range))
-        return badExpr(compilation, result);
+        return badExpr(comp, result);
 
     return *result;
 }
