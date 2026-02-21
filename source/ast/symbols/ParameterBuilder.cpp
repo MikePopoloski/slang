@@ -276,8 +276,18 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
         if (auto paramSyntax = param->getSyntax(); overrideNode && paramSyntax && !isFromConfig) {
             if (auto it = overrideNode->paramOverrides.find(paramSyntax);
                 it != overrideNode->paramOverrides.end()) {
-                param->setValue(comp, it->second.first, /* needsCoercion */ true);
-                return *param;
+
+                // If there is an expression tree here use that as the initializer syntax.
+                // Otherwise we expect the value to override is already evaluated.
+                if (!it->second.expr) {
+                    param->setValue(comp, it->second.cv, /* needsCoercion */ true);
+                    return *param;
+                }
+
+                // Fall through to the logic below that will evaluate the initializer.
+                newInitializer = it->second.expr;
+                param->setInitializerSyntax(*newInitializer,
+                                            newInitializer->getFirstToken().location());
             }
         }
 

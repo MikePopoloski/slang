@@ -1287,8 +1287,8 @@ static const SyntaxNode* findOverrideNodeSource(const HierarchyOverrideNode& nod
     // caused us to have this override node.
     if (!node.paramOverrides.empty()) {
         for (auto& [_, val] : node.paramOverrides) {
-            if (val.second)
-                return val.second;
+            if (val.defparam)
+                return val.defparam;
         }
     }
 

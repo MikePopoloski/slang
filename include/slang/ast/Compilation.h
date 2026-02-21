@@ -234,18 +234,26 @@ struct SLANG_EXPORT BindDirectiveInfo {
     bool isNewConfigRoot = false;
 };
 
-/// A node in a tree representing an instance in the design
-/// hierarchy where parameters should be overriden and/or
-/// bind directives should be applied. These are assembled
-/// from defparam values, bind directives, and command-line
-/// specified overrides.
+/// A node in a tree representing an instance in the design hierarchy where parameters
+/// should be overriden and/or bind directives should be applied. These are assembled
+/// from defparam values, bind directives, and command-line specified overrides.
 struct SLANG_EXPORT HierarchyOverrideNode {
+    /// Represents a single parameter override value.
+    struct ParamOverride {
+        /// The pre-evaluated constant value. Empty when @a expr is set instead.
+        ConstantValue cv;
+
+        /// An expression syntax to evaluate with type context (for CLI overrides).
+        /// Null when @a cv is set instead.
+        const syntax::ExpressionSyntax* expr = nullptr;
+
+        /// The source defparam syntax node doing the overriding, if any (can be null).
+        const syntax::SyntaxNode* defparam = nullptr;
+    };
+
     /// A map of parameters in the current scope to override.
-    /// The key is the syntax node representing the parameter and the value is a pair,
-    /// the first element of which is the value to set the parameter to and the second
-    /// is the source defparam doing the overriding, if any (can be null).
-    flat_hash_map<const syntax::SyntaxNode*, std::pair<ConstantValue, const syntax::SyntaxNode*>>
-        paramOverrides;
+    /// The key is the syntax node representing the parameter.
+    flat_hash_map<const syntax::SyntaxNode*, ParamOverride> paramOverrides;
 
     /// A map of child scopes that also contain overrides.
     flat_hash_map<OpaqueInstancePath::Entry, HierarchyOverrideNode> childNodes;
@@ -802,8 +810,9 @@ private:
     const RootSymbol& getRoot(bool skipDefParamsAndBinds);
     void elaborate();
     void insertDefinition(Symbol& symbol, const Scope& scope);
-    void parseParamOverrides(bool skipDefParams,
-                             flat_hash_map<std::string_view, const ConstantValue*>& results);
+    void parseParamOverrides(
+        bool skipDefParams,
+        flat_hash_map<std::string_view, HierarchyOverrideNode::ParamOverride>& results);
     void checkDPIMethods(std::span<const SubroutineSymbol* const> dpiImports);
     void checkExternIfaceMethods(std::span<const MethodPrototypeSymbol* const> protos);
     void checkModportExports(
@@ -1016,6 +1025,9 @@ private:
     // The key is a combination of definition name + the scope in which it was declared.
     flat_hash_map<std::tuple<std::string_view, const Scope*>, const syntax::SyntaxNode*>
         externDefMap;
+
+    // A list of syntax trees that were parsed for CLI parameter override expressions.
+    std::vector<std::shared_ptr<syntax::SyntaxTree>> paramOverrideTrees;
 
     struct NetAlias {
         const Symbol* sym;

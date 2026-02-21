@@ -19,6 +19,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/CharInfo.h"
 #include "slang/util/TimeTrace.h"
@@ -294,7 +295,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     }
 
     // If any top-level parameter overrides were provided, parse them now.
-    flat_hash_map<std::string_view, const ConstantValue*> cliOverrides;
+    flat_hash_map<std::string_view, HierarchyOverrideNode::ParamOverride> cliOverrides;
     parseParamOverrides(skipDefParamsAndBinds, cliOverrides);
 
     // If there are defparams we need to fully resolve their values up front before
@@ -502,8 +503,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     });
     std::ranges::sort(unreferencedDefs, [](auto a, auto b) { return a->name < b->name; });
 
-    // If we have any cli param overrides we should apply them to
-    // each top-level instance.
+    // If we have any cli param overrides we should apply them to each top-level instance.
     if (!cliOverrides.empty()) {
         for (auto [result, _] : topDefs) {
             auto& def = result.definition->as<DefinitionSymbol>();
@@ -512,7 +512,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                     auto it = cliOverrides.find(param.name);
                     if (it != cliOverrides.end()) {
                         hierarchyOverrides.childNodes[*def.getSyntax()].paramOverrides.emplace(
-                            param.valueDecl, std::pair{*it->second, nullptr});
+                            param.valueDecl, it->second);
                     }
                 }
             }
@@ -1788,20 +1788,14 @@ const Type& Compilation::getTypeRefType() const {
 }
 
 void Compilation::parseParamOverrides(
-    bool skipDefParams, flat_hash_map<std::string_view, const ConstantValue*>& results) {
-
-    if (options.paramOverrides.empty())
-        return;
-
-    ScriptSession session;
-    session.copyPackagesFrom(*this);
+    bool skipDefParams,
+    flat_hash_map<std::string_view, HierarchyOverrideNode::ParamOverride>& results) {
 
     for (auto& opt : options.paramOverrides) {
         // Strings must be of the form <name>=<value>
         size_t index = opt.find('=');
         if (index != std::string::npos) {
             // We found the equals sign, so split out the name and parse that.
-            // For now, the name must always be a simple identifier.
             Diagnostics localDiags;
             std::string_view optView = opt;
             std::string_view name = optView.substr(0, index);
@@ -1809,15 +1803,21 @@ void Compilation::parseParamOverrides(
             auto& nameSyntax = tryParseName(name, localDiags);
             if (localDiags.empty()) {
                 if (nameSyntax.kind == SyntaxKind::IdentifierName) {
-                    // The name is good, evaluate the value string. Using the ScriptSession
-                    // here is a little bit lazy but oh well, this executes almost never
-                    // compared to everything else during compilation.
                     std::string_view value = optView.substr(index + 1);
-                    ConstantValue cv = session.eval(value);
-                    if (cv) {
-                        // Success, store in the map so we can apply the value later.
-                        results.emplace(name, allocConstant(std::move(cv)));
-                        continue;
+                    if (!value.empty()) {
+                        SLANG_ASSERT(sourceManager);
+                        auto tree = SyntaxTree::fromText(value, *sourceManager, "<command-line>"sv);
+
+                        auto& treeRoot = tree->root();
+                        if (tree->diagnostics().empty() &&
+                            ExpressionSyntax::isKind(treeRoot.kind)) {
+
+                            paramOverrideTrees.push_back(std::move(tree));
+                            results.emplace(name, HierarchyOverrideNode::ParamOverride{
+                                                      ConstantValue{},
+                                                      &treeRoot.as<ExpressionSyntax>(), nullptr});
+                            continue;
+                        }
                     }
                 }
                 else {
@@ -2307,13 +2307,14 @@ void Compilation::resolveDefParamsAndBinds() {
 
             auto node = getNodeFor(entry.path, c);
             auto [it, inserted] = node->paramOverrides.emplace(
-                entry.targetSyntax, std::pair{entry.value, entry.defparamSyntax});
+                entry.targetSyntax,
+                HierarchyOverrideNode::ParamOverride{entry.value, nullptr, entry.defparamSyntax});
 
             if (!inserted && isFinal) {
-                SLANG_ASSERT(it->second.second);
+                SLANG_ASSERT(it->second.defparam);
                 auto& diag = c.root->addDiag(diag::DuplicateDefparam,
                                              entry.defparamSyntax->sourceRange());
-                diag.addNote(diag::NotePreviousDefinition, it->second.second->sourceRange());
+                diag.addNote(diag::NotePreviousDefinition, it->second.defparam->sourceRange());
             }
         }
 
