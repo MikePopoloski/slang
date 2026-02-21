@@ -1666,6 +1666,21 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
             }
 
             result.found = classScope.find(name.text);
+
+            // Warn if the same identifier is also declared as a value in an enclosing
+            // scope. This is a common source of bugs in testbench code: the programmer
+            // may expect 'y' to refer to a local variable, but inside a randomize 'with'
+            // block it resolves to the class member instead.
+            if (result.found && result.found->isValue()) {
+                auto* localSym = Lookup::unqualified(*context.scope, name.text);
+                if (localSym && localSym->isValue() && localSym != result.found) {
+                    auto& diag = result.addDiag(*context.scope, diag::RandomizeConstraintShadow,
+                                                name.range);
+                    diag << name.text << classScope.asSymbol().name << name.text << name.text;
+                    diag.addNote(diag::NoteDeclarationHere, localSym->location);
+                }
+            }
+
             break;
         case SyntaxKind::ThisHandle:
             result.found = details.thisVar;

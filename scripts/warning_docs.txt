@@ -1108,6 +1108,30 @@ module m;
 endmodule
 ```
 
+-Wrandomize-var-shadow
+An identifier used inside a `randomize()` 'with' constraint block resolves to a member of
+the class being randomized, but a variable with the same name also exists in an enclosing
+scope. This is a frequent source of subtle bugs where the programmer intended to reference
+the outer variable but unintentionally references the class member instead.
+Use the `local::` prefix to explicitly reference the variable from the enclosing scope,
+or the `this.` prefix to indicate the intention to use the class member.
+```
+class A;
+    rand int x;
+    rand int y;
+endclass
+
+class B;
+    function void f();
+        A a;
+        int y = 5;
+        // 'y' below refers to A::y, not the local 'y'.
+        // Use 'local::y' to reference the local variable.
+        a.randomize() with { x == y; };
+    endfunction
+endclass
+```
+
 @category Compatibility
 
 -Wdpi-spec

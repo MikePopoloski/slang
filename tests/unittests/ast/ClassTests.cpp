@@ -3722,3 +3722,73 @@ endinterface
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Randomize constraint variable shadow warning") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+    rand int y;
+endclass
+
+class B;
+    function void f();
+        A a;
+        int y = 5;
+        // y refers to A::y here, not the local y -- should warn
+        void'(a.randomize() with { x == y; });
+        // Using local:: is explicit -- no warning
+        void'(a.randomize() with { x == local::y; });
+        // x is only in A, no local x -- no warning
+        void'(a.randomize() with { x < 10; });
+    endfunction
+endclass
+
+module m;
+    int x;
+    A a;
+    initial begin
+        // x refers to A::x since classScope.find("x") succeeds; local x also exists -- warn
+        void'(a.randomize() with { x < 10; });
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::RandomizeConstraintShadow);
+    CHECK(diags[1].code == diag::RandomizeConstraintShadow);
+}
+
+TEST_CASE("Randomize constraint variable shadow warning -- no false positives") {
+    // No warning when name only exists in class, when using local::, or
+    // when the 'with(varlist)' restriction excludes the name.
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+    rand int y;
+endclass
+
+class B;
+    function void f();
+        A a;
+        // y is only in A -- no local y, no warning
+        void'(a.randomize() with { y < 10; });
+    endfunction
+
+    function void g();
+        A a;
+        int y = 5;
+        // 'with(x)' restricts the constraint to x only; y is not resolved in class scope
+        void'(a.randomize() with (x) { x < y; });
+        void'(a.randomize() with { x < this.y; });
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

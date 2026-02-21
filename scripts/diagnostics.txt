@@ -997,6 +997,7 @@ error UnnamedGenerateReference "cannot reference unnamed generate block via exte
 warning unknown-sys-name UnknownSystemName "unknown system name '{}'"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 warning duplicate-definition DuplicateDefinition "duplicate definition of '{}'"
+warning randomize-var-shadow RandomizeConstraintShadow "'{}' in randomize constraint block refers to class member of '{}', but a variable with the same name exists in an enclosing scope; disambiguate with 'local::{}' to reference the enclosing scope variable or 'this.{}' for the class member"
 
 subsystem SysFuncs
 error BadSystemSubroutineArg "invalid argument type {} to system {}"
@@ -1265,7 +1266,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 float-narrow bitwise-rel-precedence arith-in-shift logical-not-parentheses
                 consecutive-comparison case-outside-range case-enum case-dup case-overlap
                 case-unreachable incomplete-return missing-return case-redundant-default case-incomplete
-                case-wildcard-2state inferred-latch inferred-comb }
+                case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }
