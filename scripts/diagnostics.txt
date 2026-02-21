@@ -552,7 +552,9 @@ note NoteUdpCoverage "missed desired output for rows:\n{}"
 warning explicit-static StaticInitializerMustBeExplicit "initializing a static variable in a procedural context requires an explicit 'static' keyword"
 warning case-gen-dup CaseGenerateDup "more than one case generate block matches the value {}"
 warning case-gen-none CaseGenerateNoBlock "no case generate expression matches the value {}"
-warning unconnected-port UnconnectedNamedPort "port '{}' has no connection"
+warning unconnected-input-port UnconnectedInputPort "input port '{}' has no connection"
+warning unconnected-output-port UnconnectedOutputPort "output port '{}' has no connection"
+warning unconnected-inout-port UnconnectedInOutPort "inout port '{}' has no connection"
 warning unconnected-unnamed-port UnconnectedUnnamedPort "instance does not provide a connection for an unnamed port"
 warning implicit-net-port ImplicitNetPortNoDefault "implicit net port disallowed because `default_nettype is set to 'none'"
 warning dup-attr DuplicateAttribute "duplicate attribute definition '{}'; taking last value"
@@ -1236,7 +1238,8 @@ warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'
 // Following are groups of diagnostics, to make it easy to control them from the command line.
 // The default group is the set of warnings that are enabled by default.
 
-group default = { real-underflow real-overflow vector-overflow int-overflow unconnected-port
+group default = { real-underflow real-overflow vector-overflow int-overflow unconnected-input-port
+                  unconnected-output-port unconnected-inout-port
                   unconnected-unnamed-port redef-macro unknown-pragma unknown-warning-option
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
@@ -1283,3 +1286,5 @@ group unused = { unused-def unused-net unused-implicit-net unused-variable undri
 
 group parentheses = { bitwise-rel-precedence arith-in-shift logical-not-parentheses bitwise-op-parentheses
                       logical-op-parentheses conditional-precedence consecutive-comparison }
+
+group unconnected-port = { unconnected-input-port unconnected-output-port unconnected-inout-port }

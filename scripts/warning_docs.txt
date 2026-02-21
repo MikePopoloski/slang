@@ -235,10 +235,32 @@ endmodule
 
 @category Port Connections
 
--Wunconnected-port
-An instance port was left unconnected and it has no default value.
+-Wunconnected-input-port
+An instance input port was left unconnected and it has no default value.
 ```
 module m(input int i);
+endmodule
+
+module n;
+    m m1();
+endmodule
+```
+
+-Wunconnected-output-port
+An instance output port was left unconnected and it has no default value.
+```
+module m(output int o);
+endmodule
+
+module n;
+    m m1();
+endmodule
+```
+
+-Wunconnected-inout-port
+An instance inout port was left unconnected.
+```
+module m(inout wire w);
 endmodule
 
 module n;

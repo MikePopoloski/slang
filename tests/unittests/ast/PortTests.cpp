@@ -389,14 +389,14 @@ endmodule
     CHECK((it++)->code == diag::UsedBeforeDeclared);
     CHECK((it++)->code == diag::UsedBeforeDeclared);
     CHECK((it++)->code == diag::UsedBeforeDeclared);
-    CHECK((it++)->code == diag::UnconnectedNamedPort);
-    CHECK((it++)->code == diag::UnconnectedNamedPort);
-    CHECK((it++)->code == diag::UnconnectedNamedPort);
+    CHECK((it++)->code == diag::UnconnectedInputPort);
+    CHECK((it++)->code == diag::UnconnectedInputPort);
+    CHECK((it++)->code == diag::UnconnectedInputPort);
     CHECK((it++)->code == diag::MixingOrderedAndNamedPorts);
     CHECK((it++)->code == diag::DuplicateWildcardPortConnection);
-    CHECK((it++)->code == diag::UnconnectedNamedPort);
-    CHECK((it++)->code == diag::UnconnectedNamedPort);
-    CHECK((it++)->code == diag::UnconnectedNamedPort);
+    CHECK((it++)->code == diag::UnconnectedInputPort);
+    CHECK((it++)->code == diag::UnconnectedInputPort);
+    CHECK((it++)->code == diag::UnconnectedInputPort);
     CHECK((it++)->code == diag::DuplicatePortConnection);
     CHECK((it++)->code == diag::InterfacePortNotConnected);
     CHECK((it++)->code == diag::InterfacePortInvalidExpression);
@@ -1143,7 +1143,25 @@ endmodule
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[1].code == diag::AnsiIfacePortDefault);
-    CHECK(diags[2].code == diag::UnconnectedNamedPort);
+    CHECK(diags[2].code == diag::UnconnectedOutputPort);
+}
+
+TEST_CASE("Unconnected inout port warning") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(inout wire w);
+endmodule
+
+module top;
+    m m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnconnectedInOutPort);
 }
 
 TEST_CASE("Implicit named port connection directions") {

@@ -823,7 +823,19 @@ public:
                     }
                 }
                 else {
-                    scope.addDiag(diag::UnconnectedNamedPort, instance.location) << port.name;
+                    DiagCode code;
+                    switch (port.direction) {
+                        case ArgumentDirection::Out:
+                            code = diag::UnconnectedOutputPort;
+                            break;
+                        case ArgumentDirection::InOut:
+                            code = diag::UnconnectedInOutPort;
+                            break;
+                        default:
+                            code = diag::UnconnectedInputPort;
+                            break;
+                    }
+                    scope.addDiag(code, instance.location) << port.name;
                 }
             }
             return emptyConnection(port);
