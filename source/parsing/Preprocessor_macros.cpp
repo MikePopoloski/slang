@@ -719,6 +719,7 @@ bool Preprocessor::expandReplacementList(
     SmallVector<Token, 16> outBuffer;
     SmallVector<Token, 16> expansionBuffer;
 
+    bool inDefineDirective = false;
     bool expandedSomething = false;
     MacroParser parser(*this);
     parser.setBuffer(tokens);
@@ -726,7 +727,20 @@ bool Preprocessor::expandReplacementList(
     // loop through each token in the replacement list and expand it if it's a nested macro
     Token token;
     while ((token = parser.next())) {
+        if (inDefineDirective) {
+            // If we're in a nested define directive we don't expand any macros we find,
+            // just skip right over tokens until we get to the next line.
+            if (token.isOnSameLine()) {
+                outBuffer.push_back(token);
+                continue;
+            }
+
+            inDefineDirective = false;
+        }
+
         if (token.kind != TokenKind::Directive || token.directiveKind() != SyntaxKind::MacroUsage) {
+            inDefineDirective = token.kind == TokenKind::Directive &&
+                                token.directiveKind() == SyntaxKind::DefineDirective;
             outBuffer.push_back(token);
             continue;
         }
