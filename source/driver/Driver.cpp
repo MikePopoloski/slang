@@ -359,6 +359,17 @@ void Driver::addStandardArgs() {
         CommandLineFlags::CommaList);
 
     cmdLine.add(
+        "--dir-prefix",
+        [this](std::string_view value) {
+            sourceLoader.addDirPrefix(value);
+            return "";
+        },
+        "Directory prefix to prepend to source file paths when the file is not found at "
+        "the listed path. Multiple prefixes are tried in the order they are specified. "
+        "Must be specified before the source files that may need it.",
+        "<prefix>", CommandLineFlags::CommaList);
+
+    cmdLine.add(
         "-Y,--libext,+libext",
         [this](std::string_view value) {
             sourceLoader.addSearchExtension(value);

@@ -97,6 +97,17 @@ public:
     /// search extensions.
     void addSearchDirectories(std::string_view pattern);
 
+    /// @brief Adds a directory prefix for source file path resolution.
+    ///
+    /// When a source file is listed but cannot be found at the given path,
+    /// the loader will retry by prepending each registered directory prefix to
+    /// the path in the order they were added.
+    ///
+    /// For example, if the prefix @c foo/bar is registered and a source file
+    /// @c dir_a/mod_b.sv is listed but does not exist, the path
+    /// @c foo/bar/dir_a/mod_b.sv will be tried.
+    void addDirPrefix(std::string_view prefix);
+
     /// @brief Adds an extension used to search for library module files.
     ///
     /// A search for a library module occurs when there are instantiations found
@@ -242,6 +253,7 @@ private:
     flat_hash_map<std::filesystem::path, size_t> fileIndex;
     flat_hash_map<std::string, std::unique_ptr<SourceLibrary>> libraries;
     std::deque<UnitEntry> unitEntries;
+    std::vector<std::string> dirPrefixes;
     std::vector<std::filesystem::path> searchDirectories;
     std::vector<std::filesystem::path> searchExtensions;
     flat_hash_set<std::string_view> uniqueExtensions;

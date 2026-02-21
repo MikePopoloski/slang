@@ -254,6 +254,20 @@ parsed in its entirety, and the algorithm will be triggered again on any new nam
 
 See @ref library-search for more details.
 
+`--dir-prefix <prefix>`
+
+Adds a directory prefix that is prepended to source file paths when the original path cannot be
+found. This is useful when the paths written into a command file (or specified on the command line)
+are relative paths that need a root prepended depending on where the tools are invoked from.
+
+For example, if a file list contains the relative path `dir_a/mod_b.sv` and that path does not
+exist in the current working directory, slang will retry the lookup as `<prefix>/dir_a/mod_b.sv`.
+The prefix fallback is only attempted when the original path is not found — if the file exists
+at the listed path, the prefix is never consulted.
+
+Multiple `--dir-prefix` options may be specified; they are tried in the order they appear on the
+command line and the first one whose combined path resolves to an existing file is used.
+
 `-Y,--libext <ext>`
 `+libext+<ext>[+<ext>...]`
 

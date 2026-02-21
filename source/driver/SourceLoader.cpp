@@ -72,6 +72,10 @@ void SourceLoader::addSearchExtension(std::string_view extension) {
         searchExtensions.emplace_back(extension);
 }
 
+void SourceLoader::addDirPrefix(std::string_view prefix) {
+    dirPrefixes.emplace_back(prefix);
+}
+
 static std::string_view getPathFromSpec(const FilePathSpecSyntax& syntax) {
     auto path = syntax.path.valueText();
     if (path.length() < 3)
@@ -431,6 +435,25 @@ void SourceLoader::addFilesInternal(std::string_view pattern, const fs::path& ba
     SmallVector<fs::path> files;
     std::error_code ec;
     auto rank = svGlob(basePath, pattern, GlobMode::Files, files, expandEnvVars, ec);
+
+    if (ec && !dirPrefixes.empty()) {
+        // The file was not found at the given path; try prepending each
+        // registered directory prefix in the order they were added.
+        auto patternStr = "/"s + std::string(pattern);
+        for (auto& prefix : dirPrefixes) {
+            SmallVector<fs::path> prefixed;
+            std::error_code prefixEc;
+            auto prefixRank = svGlob(basePath, prefix + patternStr, GlobMode::Files, prefixed,
+                                     expandEnvVars, prefixEc);
+            if (!prefixEc) {
+                files = std::move(prefixed);
+                rank = prefixRank;
+                ec.clear();
+                break;
+            }
+        }
+    }
+
     if (ec) {
         addError(pattern, ec);
         return;
