@@ -197,6 +197,8 @@ void Driver::addStandardArgs() {
                 "<limit>");
     cmdLine.add("--max-instance-array", options.maxInstanceArray,
                 "Maximum number of instances allowed in a single instance array", "<limit>");
+    cmdLine.add("--max-enum-values", options.maxEnumValues,
+                "Maximum number of members allowed in a single enum declaration", "<limit>");
     cmdLine.add("--max-udp-coverage-notes", options.maxUDPCoverageNotes,
                 "Maximum number of UDP coverage notes that will be generated for a single "
                 "warning about missing edge transitions",
@@ -1096,6 +1098,8 @@ void Driver::addCompilationOptions(Bag& bag) const {
         coptions.maxConstexprBacktrace = *options.maxConstexprBacktrace;
     if (options.maxInstanceArray.has_value())
         coptions.maxInstanceArray = *options.maxInstanceArray;
+    if (options.maxEnumValues.has_value())
+        coptions.maxEnumValues = *options.maxEnumValues;
     if (options.maxUDPCoverageNotes.has_value())
         coptions.maxUDPCoverageNotes = *options.maxUDPCoverageNotes;
     if (options.errorLimit.has_value())

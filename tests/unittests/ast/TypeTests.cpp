@@ -148,6 +148,42 @@ endmodule
     CHECK(diags[10].code == diag::EnumIncrementUnknown);
 }
 
+TEST_CASE("Enum value count limit") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef enum logic [31:0] { BIG[0:99999] } big_e;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.maxEnumValues = 16;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::EnumValueCountExceeded);
+}
+
+TEST_CASE("Enum value count limit - scalar members") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef enum { A, B, C, D, E } small_e;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.maxEnumValues = 3;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::EnumValueCountExceeded);
+}
+
 TEST_CASE("Enum assignment exception") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

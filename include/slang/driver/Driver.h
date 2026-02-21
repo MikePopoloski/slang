@@ -183,6 +183,9 @@ public:
         /// The maximum number of instances allowed in a single instance array.
         std::optional<uint32_t> maxInstanceArray;
 
+        /// The maximum number of members allowed in a single enum declaration.
+        std::optional<uint32_t> maxEnumValues;
+
         /// The maximum number of UDP coverage notes that will be generated for a single
         /// warning about missing edge transitions.
         std::optional<uint32_t> maxUDPCoverageNotes;

@@ -416,6 +416,13 @@ Set the maximum number of instances allowed in a single instance array.
 The limit exists to prevent runaway compilation times on invalid input.
 The default is 65535.
 
+`--max-enum-values <limit>`
+
+Set the maximum number of members allowed in a single enum declaration.
+The limit exists to prevent runaway compilation times on invalid input, particularly
+when using the array range syntax (e.g. `enum { A[0:N] }`) with a very large N.
+The default is 65535.
+
 `--max-udp-coverage-notes <limit>`
 
 When reporting a warning for a UDP that doesn't cover all possible input

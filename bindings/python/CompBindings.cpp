@@ -71,6 +71,7 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def_readwrite("maxDefParamSteps", &CompilationOptions::maxDefParamSteps)
         .def_readwrite("maxDefParamBlocks", &CompilationOptions::maxDefParamBlocks)
         .def_readwrite("maxInstanceArray", &CompilationOptions::maxInstanceArray)
+        .def_readwrite("maxEnumValues", &CompilationOptions::maxEnumValues)
         .def_readwrite("maxRecursiveClassSpecialization",
                        &CompilationOptions::maxRecursiveClassSpecialization)
         .def_readwrite("maxUDPCoverageNotes", &CompilationOptions::maxUDPCoverageNotes)

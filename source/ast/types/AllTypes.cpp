@@ -470,8 +470,18 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
         previousRange = range;
     };
 
+    const uint32_t maxEnumValues = comp.getOptions().maxEnumValues;
+    uint32_t enumValueCount = 0;
+
     for (auto member : syntax.members) {
         if (member->dimensions.empty()) {
+            if (enumValueCount >= maxEnumValues) {
+                auto& diag = context.addDiag(diag::EnumValueCountExceeded, member->sourceRange());
+                diag << enumValueCount + 1 << maxEnumValues;
+                break;
+            }
+            ++enumValueCount;
+
             auto& ev = EnumValueSymbol::fromSyntax(comp, *member, *resultType, std::nullopt);
             enumType->addMember(ev);
             insertCB(ev);
@@ -500,6 +510,16 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
 
             // Enum ranges must be integer literals.
             checkEnumRange(context, *member->dimensions[0]);
+
+            // Check that this range won't exceed the member count limit.
+            auto rangeWidth = dim.range.width();
+            if (rangeWidth > maxEnumValues - enumValueCount) {
+                auto& diag = context.addDiag(diag::EnumValueCountExceeded,
+                                             member->dimensions[0]->sourceRange());
+                diag << enumValueCount + rangeWidth << maxEnumValues;
+                continue;
+            }
+            enumValueCount += rangeWidth;
 
             // Set up the first element using the initializer. All other elements (if there are any)
             // don't get the initializer.
