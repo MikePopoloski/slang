@@ -2305,3 +2305,53 @@ source:11:1: error: no argument provided for '%d' format specifier
 ^~~~
 )");
 }
+
+TEST_CASE("$deposit system task") {
+    auto tree = SyntaxTree::fromText(R"(
+module child;
+    reg r;
+    reg [7:0] byte_r;
+    reg [31:0] word_r;
+endmodule
+
+module top;
+    child ch();
+
+    initial begin
+        // Single-bit deposit
+        $deposit(ch.r, 1'b0);
+        // Multi-bit deposits: value type matches the target width
+        $deposit(ch.byte_r, 8'hAB);
+        $deposit(ch.word_r, 32'hDEAD_BEEF);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("$deposit system task -- errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    reg [7:0] r;
+    string s;
+
+    initial begin
+        $deposit(r);           // too few arguments
+        $deposit(r, 8'h0, 0);  // too many arguments
+        $deposit(r, s);        // incompatible type: string vs integral
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::TooFewArguments);
+    CHECK(diags[1].code == diag::TooManyArguments);
+    CHECK(diags[2].code == diag::NoImplicitConversion);
+}
