@@ -143,6 +143,7 @@ $assertfailoff AssertFailOff
 $assertnonvacuouson AssertNonvacuousOn
 $assertvacuousoff AssertVacuousOff
 
+$deposit Deposit
 $display Display
 $displayb DisplayB
 $displayo DisplayO

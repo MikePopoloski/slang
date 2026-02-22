@@ -1588,3 +1588,21 @@ source:11:1: error: no argument provided for '%d' format specifier
 ^~~~
 )");
 }
+
+TEST_CASE("Non-lrm system tasks/functions") {
+    auto tree = SyntaxTree::fromText(R"(
+module child;
+    reg r;
+endmodule
+
+module top;
+    child ch();
+
+    initial $deposit(ch.r, 1'b0);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

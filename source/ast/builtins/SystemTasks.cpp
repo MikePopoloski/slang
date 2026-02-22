@@ -977,6 +977,7 @@ void Builtins::registerSystemTasks() {
     TASK(KnownSystemName::MonitorOn, 0, );
     TASK(KnownSystemName::MonitorOff, 0, );
 
+    TASK(KnownSystemName::Deposit, 0, &logicType, &logicType);
     TASK(KnownSystemName::DumpFile, 0, &stringType);
     TASK(KnownSystemName::DumpOn, 0, );
     TASK(KnownSystemName::DumpOff, 0, );
