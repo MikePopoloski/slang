@@ -50,7 +50,7 @@ repos:
 
 # Sort your python imports in a standard form
 - repo: https://github.com/PyCQA/isort
-  rev: 7.0.0
+  rev: 8.0.0
   hooks:
   - id: isort
 
