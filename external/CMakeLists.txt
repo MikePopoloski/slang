@@ -45,7 +45,8 @@ endif()
 
 if(fmt_FOUND)
   get_target_property(FMT_CFG fmt::fmt IMPORTED_CONFIGURATIONS)
-  get_target_property(FMT_LIB fmt::fmt IMPORTED_LOCATION_${FMT_CFG})
+  list(GET FMT_CFG 0 FMT_CFG_FIRST)
+  get_target_property(FMT_LIB fmt::fmt IMPORTED_LOCATION_${FMT_CFG_FIRST})
   get_target_property(FMT_INC fmt::fmt INTERFACE_INCLUDE_DIRECTORIES)
   message(STATUS "Found system fmt library: ${FMT_LIB}")
   message(STATUS "Using system fmt include: ${FMT_INC}")
@@ -77,7 +78,7 @@ if(SLANG_USE_MIMALLOC)
 
   set(find_pkg_args "")
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-    set(find_pkg_args "FIND_PACKAGE_ARGS" "${mimalloc_min_version}")
+    set(find_pkg_args "FIND_PACKAGE_ARGS")
   endif()
 
   set(MI_OVERRIDE
@@ -117,8 +118,9 @@ if(SLANG_USE_MIMALLOC)
     endif()
 
     get_target_property(MIMALLOC_CFG ${mimalloc_target} IMPORTED_CONFIGURATIONS)
+    list(GET MIMALLOC_CFG 0 MIMALLOC_CFG_FIRST)
     get_target_property(MIMALLOC_LIB ${mimalloc_target}
-                        IMPORTED_LOCATION_${MIMALLOC_CFG})
+                        IMPORTED_LOCATION_${MIMALLOC_CFG_FIRST})
     get_target_property(MIMALLOC_INC ${mimalloc_target}
                         INTERFACE_INCLUDE_DIRECTORIES)
     message(STATUS "Found system mimalloc library: ${MIMALLOC_LIB}")
