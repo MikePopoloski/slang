@@ -181,6 +181,22 @@ endfunction : new
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Extern/Pure implicit function parsing") {
+    auto& text = R"(
+module memMod();
+    class C;
+        extern static function f();
+    endclass
+
+    function C::f();
+    endfunction
+endmodule
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Property declarations") {
     auto& text = R"(
 property p3;
