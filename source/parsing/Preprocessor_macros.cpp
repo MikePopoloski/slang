@@ -510,8 +510,10 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
     bool inDefineDirective = false;
 
     auto handleToken = [&](Token token) {
-        if (inDefineDirective && !token.isOnSameLine())
+        if (inDefineDirective &&
+            (!token.isOnSameLine() || token.kind == TokenKind::LineContinuation)) {
             inDefineDirective = false;
+        }
 
         if (token.kind != TokenKind::Identifier && !LF::isKeyword(token.kind) &&
             token.kind != TokenKind::Directive) {

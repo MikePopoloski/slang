@@ -748,6 +748,26 @@ TEST_CASE("Nested macro with different body locations") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Nested macro with multiline arg") {
+    auto& text = R"(
+`define MACRO_PARENT(code) \
+  `define MACRO_FOOBAR 1 \
+  code
+
+`define MACRO_CHILD reg r;
+
+module top;
+`MACRO_PARENT(
+  logic foobar;
+  `MACRO_CHILD
+);
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Macro arg location bug") {
     auto& text = R"(
 `define FOO(name) name \
