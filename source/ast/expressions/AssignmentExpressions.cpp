@@ -133,7 +133,7 @@ Expression& Expression::buildPackedSelectTree(const TypeProvider& typeProvider, 
             auto& rightExpr = ElementSelectExpression::fromConstant(typeProvider, expr,
                                                                     getIndex(rightElem), context);
             parts.push_back(&buildPackedSelectTree(typeProvider, rightExpr,
-                                                   {elemWidth - 1, elemWidth - localLsb}, context));
+                                                   {elemWidth - 1, localLsb}, context));
         }
 
         return createConcat(parts);

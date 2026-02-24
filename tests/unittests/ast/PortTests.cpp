@@ -5,7 +5,9 @@
 
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/LSPUtilities.h"
+#include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
+#include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -450,6 +452,41 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Instance array packed port slicing") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(output logic [1:0][2:0] d6);
+    sub sub6 [2:0] (.d(d6));
+endmodule
+module sub (output logic [1:0] d);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& arr = compilation.getRoot().lookupName<InstanceArraySymbol>("top.sub6");
+    REQUIRE(arr.elements.size() == 3);
+
+    // sub6[1] maps to flat bit range {3,2}, spanning d6[0][2] and d6[1][0].
+    // the port connection expression for the middle instance should be 2 bits,
+    // not 3 (which was the bug: the right-partial element was over-selected).
+    auto& midInst = arr.elements[1]->as<InstanceSymbol>();
+    auto* connExpr = midInst.getPortConnections()[0]->getExpression();
+    REQUIRE(connExpr);
+    // for an output port, the expression is an assignment; the LHS is the
+    // sliced destination in the parent scope (the concatenation of d6 slices).
+    auto& assign = connExpr->as<AssignmentExpression>();
+    auto& lhs = assign.left();
+    CHECK(lhs.kind == ExpressionKind::Concatenation);
+    CHECK(lhs.type->getBitWidth() == 2);
+    auto& concat = lhs.as<ConcatenationExpression>();
+    bitwidth_t totalWidth = 0;
+    for (auto op : concat.operands())
+        totalWidth += op->type->getBitWidth();
+    CHECK(totalWidth == 2);
 }
 
 TEST_CASE("Instance array port connection errors") {
