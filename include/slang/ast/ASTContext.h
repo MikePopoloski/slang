@@ -183,8 +183,13 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
 
     /// AST binding is for a wildcard port connection.
     WildcardPortConn = 1ull << 42,
+
+    /// AST binding is directly inside a fork-join_any or fork-join_none body,
+    /// with no intervening new scope. Used to detect loop variable references
+    /// that cross a fork boundary.
+    ForkJoinVarScope = 1ull << 43,
 };
-SLANG_BITMASK(ASTFlags, WildcardPortConn)
+SLANG_BITMASK(ASTFlags, ForkJoinVarScope)
 
 // clang-format off
 #define DK(x) \

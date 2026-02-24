@@ -1976,6 +1976,90 @@ endfunction
     CHECK(diags[0].code == diag::RefArgForkJoin);
 }
 
+TEST_CASE("Loop var in fork-join_none") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    task automatic do_something(int x); endtask
+    initial begin
+        for (int i = 0; i < 4; i++) begin
+            fork
+                do_something(i);
+            join_none
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::LoopVarForkJoin);
+}
+
+TEST_CASE("Loop var in fork-join_none with local copy") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    task automatic do_something(int x); endtask
+    initial begin
+        for (int i = 0; i < 4; i++) begin
+            fork
+                automatic int local_i = i;
+                do_something(local_i);
+            join_none
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Loop var in fork-join all") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    task automatic do_something(int x); endtask
+    initial begin
+        for (int i = 0; i < 4; i++) begin
+            fork
+                do_something(i);
+            join
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Foreach var in fork-join_none") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    task automatic do_something(int x); endtask
+    initial begin
+        int arr[4];
+        foreach (arr[i]) begin
+            fork
+                do_something(i);
+            join_none
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::LoopVarForkJoin);
+}
+
 TEST_CASE("Pattern variable lookup from nested initializers") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

@@ -724,6 +724,7 @@ error GateUDNTConn "gate cannot connect to net '{}' with user-defined net type"
 error UserDefPartialDriver "net '{}' with user-defined nettype cannot be partially driven"
 error LocalVarEventExpr "local variable '{}' cannot be referenced in an event expression"
 error RefArgForkJoin "cannot refer to 'ref' argument '{}' inside fork-join_any or fork-join_none block"
+warning loop-var-fork LoopVarForkJoin "loop variable '{}' is referenced inside a fork-join_any or fork-join_none block and may not have the expected value at the time the forked process executes"
 error PatternTaggedType "expected pattern type {} is not a tagged union"
 error PatternStructType "structure pattern type {} is not a struct"
 error PatternStructTooFew "structure pattern has too few members for target type {}"
@@ -1266,7 +1267,8 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 float-narrow bitwise-rel-precedence arith-in-shift logical-not-parentheses
                 consecutive-comparison case-outside-range case-enum case-dup case-overlap
                 case-unreachable incomplete-return missing-return case-redundant-default case-incomplete
-                case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow shadow }
+                case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow shadow
+                loop-var-fork }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }

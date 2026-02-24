@@ -49,6 +49,7 @@ const Statement& StatementBlockSymbol::getStatement(const ASTContext& parentCont
             ASTContext context = parentContext;
             context.scope = this;
             context.lookupIndex = SymbolIndex(UINT32_MAX);
+            context.flags &= ~ASTFlags::ForkJoinVarScope;
 
             auto oldBlocks = std::exchange(stmtCtx.blocks, blocks);
             auto guard = ScopeGuard([&] { stmtCtx.blocks = oldBlocks; });

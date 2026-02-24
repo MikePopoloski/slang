@@ -731,7 +731,7 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
         bindScopeInitializers(context, buffer);
 
     if (blockKind == StatementBlockKind::JoinAny || blockKind == StatementBlockKind::JoinNone)
-        context.flags |= ASTFlags::ForkJoinAnyNone;
+        context.flags |= ASTFlags::ForkJoinAnyNone | ASTFlags::ForkJoinVarScope;
 
     for (auto item : syntax.items) {
         if (StatementSyntax::isKind(item->kind)) {

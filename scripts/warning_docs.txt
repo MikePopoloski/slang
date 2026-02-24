@@ -1128,6 +1128,24 @@ module m;
 endmodule
 ```
 
+-Wloop-var-fork
+A loop variable is referenced directly inside a fork-join_any or fork-join_none block.
+Because the forked processes execute concurrently after the loop advances, all threads
+will see the final value of the loop variable rather than the value at the time of the
+fork. Save the loop variable to a local automatic variable to capture the correct value.
+```
+module m;
+    task automatic do_something(int x); endtask
+    initial begin
+        for (int i = 0; i < 4; i++) begin
+            fork
+                do_something(i);  // Warning: i will be 4 for all threads
+            join_none
+        end
+    end
+endmodule
+```
+
 -Wrandomize-var-shadow
 An identifier used inside a `randomize()` 'with' constraint block resolves to a member of
 the class being randomized, but a variable with the same name also exists in an enclosing
