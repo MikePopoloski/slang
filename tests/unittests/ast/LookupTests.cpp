@@ -2635,3 +2635,45 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Pick correct variable with use before declaration over local var") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam K = 4;
+
+    function automatic int f;
+        bit [K:0] width; // Should use localparam K
+        int K;
+        f = 12;
+    endfunction
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowUseBeforeDeclare;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Pick correct variable with use before declaration over param") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam K = 4;
+
+    function automatic bit[K:0] f;
+        input bit [K:0] width; // Should use localparam K
+        input int K;
+        f = 12;
+    endfunction
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowUseBeforeDeclare;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
