@@ -1725,6 +1725,20 @@ wording in prior versions so this is implemented as a pedantic warning only.
 localparam p = $isunbounded(1 + 1);
 ```
 
+-Wqualifiers-on-out-of-block
+The definition of a class method is not found.
+```
+module memMod();
+    class C;
+        extern static function int f();
+    endclass
+
+    static function int C::f();
+      f = 10;
+    endfunction
+endmodule
+```
+
 @category Unused Items
 
 -Wunused-def
