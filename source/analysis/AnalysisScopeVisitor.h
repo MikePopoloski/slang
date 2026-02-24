@@ -10,6 +10,7 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/diagnostics/AnalysisDiags.h"
+#include "slang/diagnostics/GeneralDiags.h"
 #include "slang/util/TypeTraits.h"
 
 namespace slang::analysis {
@@ -41,6 +42,7 @@ struct AnalysisScopeVisitor {
             return;
 
         manager.analyzeSymbolAsync(symbol);
+        checkShadow(symbol);
         visitExprs(symbol);
 
         for (auto conn : symbol.getPortConnections())
@@ -53,6 +55,7 @@ struct AnalysisScopeVisitor {
             return;
 
         manager.analyzeSymbolAsync(symbol);
+        checkShadow(symbol);
         visitExprs(symbol);
 
         for (auto& conn : symbol.getPortConnections()) {
@@ -64,6 +67,7 @@ struct AnalysisScopeVisitor {
     }
 
     void visit(const PrimitiveInstanceSymbol& symbol) {
+        checkShadow(symbol);
         visitExprs(symbol);
 
         for (auto expr : symbol.getPortConnections()) {
@@ -88,6 +92,7 @@ struct AnalysisScopeVisitor {
 
         // For our purposes we can just flatten the content of generate
         // blocks into their parents.
+        checkShadow(symbol);
         visitMembers(symbol);
     }
 
@@ -95,6 +100,7 @@ struct AnalysisScopeVisitor {
         if (!symbol.valid)
             return;
 
+        checkShadow(symbol);
         visitMembers(symbol);
     }
 
@@ -135,6 +141,7 @@ struct AnalysisScopeVisitor {
 
         manager.analyzeSubroutine(context, symbol, parentProcedure);
 
+        checkShadow(symbol);
         visitMembers(symbol);
 
         auto& parentSym = symbol.getParentScope()->asSymbol();
@@ -160,19 +167,27 @@ struct AnalysisScopeVisitor {
             sub->visit(*this);
     }
 
-    void visit(const ClassType& symbol) { manager.analyzeSymbolAsync(symbol); }
+    void visit(const ClassType& symbol) {
+        if (!symbol.genericClass)
+            checkShadow(symbol);
+
+        manager.analyzeSymbolAsync(symbol);
+    }
 
     void visit(const CovergroupType& symbol) {
         manager.analyzeSymbolAsync(symbol);
+        checkShadow(symbol);
         visitExprs(symbol);
     }
 
     void visit(const GenericClassDefSymbol& symbol) {
+        checkShadow(symbol);
         for (auto& spec : symbol.specializations())
             spec.visit(*this);
     }
 
     void visit(const NetType& symbol) {
+        checkShadow(symbol);
         visitExprs(symbol);
 
         // Check that there are no drivers for the argument to the resolution function.
@@ -193,6 +208,7 @@ struct AnalysisScopeVisitor {
     }
 
     void visit(const NetSymbol& symbol) {
+        checkShadow(symbol);
         visitExprs(symbol);
 
         if (symbol.isImplicit) {
@@ -209,6 +225,8 @@ struct AnalysisScopeVisitor {
 
         if (symbol.flags.has(VariableFlags::CompilerGenerated))
             return;
+
+        checkShadow(symbol);
 
         if (symbol.kind == SymbolKind::Variable) {
             // Class handles and covergroups are considered used if they are
@@ -253,14 +271,18 @@ struct AnalysisScopeVisitor {
     }
 
     void visit(const ParameterSymbol& symbol) {
+        checkShadow(symbol);
         checkUnused(symbol, diag::UnusedParameter, diag::UnusedPackageParameter);
     }
 
     void visit(const TypeParameterSymbol& symbol) {
+        checkShadow(symbol);
         checkUnused(symbol, diag::UnusedTypeParameter, diag::UnusedPackageTypeParameter);
     }
 
     void visit(const TypeAliasType& symbol) {
+        checkShadow(symbol);
+
         if (!manager.hasFlag(AnalysisFlags::CheckUnused))
             return;
 
@@ -294,13 +316,14 @@ struct AnalysisScopeVisitor {
     }
 
     void visit(const GenvarSymbol& symbol) {
+        checkShadow(symbol);
         checkUnused(symbol, diag::UnusedGenvar, diag::UnusedGenvar);
     }
 
-    void visit(const SequenceSymbol& symbol) { checkAssertionDeclUnused(symbol, "sequence"sv); }
-    void visit(const PropertySymbol& symbol) { checkAssertionDeclUnused(symbol, "property"sv); }
-    void visit(const LetDeclSymbol& symbol) { checkAssertionDeclUnused(symbol, "let"sv); }
-    void visit(const CheckerSymbol& symbol) { checkAssertionDeclUnused(symbol, "checker"sv); }
+    void visit(const SequenceSymbol& symbol) { checkAssertionDecl(symbol, "sequence"sv); }
+    void visit(const PropertySymbol& symbol) { checkAssertionDecl(symbol, "property"sv); }
+    void visit(const LetDeclSymbol& symbol) { checkAssertionDecl(symbol, "let"sv); }
+    void visit(const CheckerSymbol& symbol) { checkAssertionDecl(symbol, "checker"sv); }
 
     void visit(const ExplicitImportSymbol& symbol) {
         checkUnused(symbol, diag::UnusedImport, diag::UnusedImport);
@@ -322,6 +345,7 @@ struct AnalysisScopeVisitor {
     }
 
     void visit(const PortSymbol& symbol) {
+        checkShadow(symbol);
         visitExprs(symbol);
         manager.driverTracker.add(state.context, state.driverAlloc, symbol);
     }
@@ -336,26 +360,34 @@ struct AnalysisScopeVisitor {
                          SpecifyBlockSymbol, CovergroupBodySymbol, CoverCrossSymbol,
                          CoverCrossBodySymbol, StatementBlockSymbol, RandSeqProductionSymbol>)
     void visit(const T& symbol) {
-        visitExprs(symbol);
-
         // For these symbol types we just descend into their members
         // and flatten them into their parent scope.
+        checkShadow(symbol);
+        visitExprs(symbol);
         visitMembers(symbol);
     }
 
-    // Everything else doesn't need to be analyzed (except visiting expressions, if necessary).
     template<typename T>
         requires(
-            IsAnyOf<T, InvalidSymbol, RootSymbol, CompilationUnitSymbol, DefinitionSymbol,
-                    AttributeSymbol, TransparentMemberSymbol, EmptyMemberSymbol, EnumValueSymbol,
-                    ForwardingTypedefSymbol, InterfacePortSymbol, InstanceBodySymbol, ModportSymbol,
-                    ModportPortSymbol, ModportClockingSymbol, ElabSystemTaskSymbol,
-                    UninstantiatedDefSymbol, ConstraintBlockSymbol, DefParamSymbol, SpecparamSymbol,
-                    PrimitiveSymbol, PrimitivePortSymbol, AssertionPortSymbol, CoverpointSymbol,
-                    CoverageBinSymbol, TimingPathSymbol, PulseStyleSymbol, SystemTimingCheckSymbol,
-                    NetAliasSymbol, ConfigBlockSymbol, CheckerInstanceBodySymbol> ||
-            std::is_base_of_v<Type, T>)
+            IsAnyOf<T, EnumValueSymbol, InterfacePortSymbol, ModportSymbol, ConstraintBlockSymbol,
+                    SpecparamSymbol, PrimitiveSymbol, AssertionPortSymbol, CoverpointSymbol>)
     void visit(const T& symbol) {
+        // These just check for shadowing.
+        checkShadow(symbol);
+        visitExprs(symbol);
+    }
+
+    template<typename T>
+        requires(IsAnyOf<T, InvalidSymbol, RootSymbol, CompilationUnitSymbol, DefinitionSymbol,
+                         AttributeSymbol, TransparentMemberSymbol, EmptyMemberSymbol,
+                         ForwardingTypedefSymbol, InstanceBodySymbol, ModportPortSymbol,
+                         ModportClockingSymbol, ElabSystemTaskSymbol, UninstantiatedDefSymbol,
+                         DefParamSymbol, PrimitivePortSymbol, CoverageBinSymbol, TimingPathSymbol,
+                         PulseStyleSymbol, SystemTimingCheckSymbol, NetAliasSymbol,
+                         ConfigBlockSymbol, CheckerInstanceBodySymbol> ||
+                 std::is_base_of_v<Type, T>)
+    void visit(const T& symbol) {
+        // Everything else doesn't need to be analyzed (except visiting expressions, if necessary).
         visitExprs(symbol);
     }
 
@@ -454,7 +486,8 @@ private:
         }
     }
 
-    void checkAssertionDeclUnused(const Symbol& symbol, std::string_view kind) {
+    void checkAssertionDecl(const Symbol& symbol, std::string_view kind) {
+        checkShadow(symbol);
         checkUnused(symbol, diag::UnusedAssertionDecl, diag::UnusedPackageAssertionDecl,
                     [&]() { return kind; });
     }
@@ -469,6 +502,28 @@ private:
     void addUnusedDiag(const Symbol& symbol, DiagCode code) {
         if (shouldWarnUnused(symbol))
             context.addDiag(symbol, code, symbol.location) << symbol.name;
+    }
+
+    void checkShadow(const Symbol& symbol) {
+        if (!manager.hasFlag(AnalysisFlags::CheckShadow))
+            return;
+
+        if (symbol.name.empty() || symbol.name == "_"sv)
+            return;
+
+        auto scope = symbol.getParentScope();
+        while (scope) {
+            scope = scope->asSymbol().getParentScope();
+            if (!scope || scope->asSymbol().kind == SymbolKind::Root)
+                break;
+
+            if (auto found = scope->find(symbol.name)) {
+                auto& diag = context.addDiag(symbol, diag::ShadowDecl, symbol.location);
+                diag << symbol.name;
+                diag.addNote(diag::NoteDeclarationHere, found->location);
+                return;
+            }
+        }
     }
 
     bool isInPackage(const Symbol& symbol) {

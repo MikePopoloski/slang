@@ -844,3 +844,46 @@ endclass
     CHECK(diags[4].code == diag::UnusedButSetLocalProperty);
     CHECK(diags[5].code == diag::UnassignedLocalProperty);
 }
+
+// Helper that runs analysis with only the CheckShadow flag enabled.
+static Diagnostics analyzeShadow(const std::string& text, Compilation& compilation) {
+    AnalysisOptions options;
+    options.flags = AnalysisFlags::CheckShadow;
+
+    AnalysisManager manager(options);
+    return analyze(text, compilation, manager);
+}
+
+TEST_CASE("Shadowing warnings") {
+    auto& text = R"(
+class C;
+endclass
+
+typedef int Foo;
+
+module m;
+    int x;
+    initial begin
+        int x;  // shadows outer x
+        x = 1;
+    end
+
+    initial begin
+        int C;
+    end
+
+    function void Foo(real x);
+    endfunction
+
+    int m;
+endmodule
+)";
+
+    Compilation compilation;
+    auto diags = analyzeShadow(text, compilation);
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ShadowDecl);
+    CHECK(diags[1].code == diag::ShadowDecl);
+    CHECK(diags[2].code == diag::ShadowDecl);
+    CHECK(diags[3].code == diag::ShadowDecl);
+}

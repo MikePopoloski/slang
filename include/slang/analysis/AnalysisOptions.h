@@ -33,8 +33,12 @@ enum class SLANG_EXPORT AnalysisFlags {
     /// by any other process. This flag allows initial blocks to
     /// also drive such signals.
     AllowDupInitialDrivers = 1 << 4,
+
+    /// Analysis should check for and report on declarations that shadow
+    /// declarations in outer scopes.
+    CheckShadow = 1 << 5,
 };
-SLANG_BITMASK(AnalysisFlags, AllowDupInitialDrivers)
+SLANG_BITMASK(AnalysisFlags, CheckShadow)
 
 /// Contains various options that can control analysis behavior.
 struct SLANG_EXPORT AnalysisOptions {

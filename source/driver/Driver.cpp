@@ -1130,7 +1130,7 @@ analysis::AnalysisOptions Driver::getAnalysisOptions() const {
 
     AnalysisOptions ao;
     ao.numThreads = options.numThreads.value_or(0);
-    ao.flags |= AnalysisFlags::CheckUnused;
+    ao.flags |= AnalysisFlags::CheckUnused | AnalysisFlags::CheckShadow;
     if (options.maxCaseAnalysisSteps)
         ao.maxCaseAnalysisSteps = *options.maxCaseAnalysisSteps;
     if (options.maxLoopAnalysisSteps)

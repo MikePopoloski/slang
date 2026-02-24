@@ -1108,6 +1108,26 @@ module m;
 endmodule
 ```
 
+-Wshadow
+A declaration shadows another declaration with the same name in an outer scope.
+This can lead to subtle bugs where the programmer intends to reference the outer
+declaration but unintentionally references the inner (shadowing) one instead.
+```
+int unitVar;
+
+module m;
+    int x;
+    function automatic void f(int x);  // shadows m::x
+        return x;
+    endfunction
+
+    initial begin
+        int unitVar;  // shadows $unit::unitVar
+        unitVar = 1;
+    end
+endmodule
+```
+
 -Wrandomize-var-shadow
 An identifier used inside a `randomize()` 'with' constraint block resolves to a member of
 the class being randomized, but a variable with the same name also exists in an enclosing

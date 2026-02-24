@@ -173,6 +173,7 @@ void registerAnalysis(py::module_& m, py::module_& ast) {
         .value("FullCaseFourState", AnalysisFlags::FullCaseFourState)
         .value("AllowMultiDrivenLocals", AnalysisFlags::AllowMultiDrivenLocals)
         .value("AllowDupInitialDrivers", AnalysisFlags::AllowDupInitialDrivers)
+        .value("CheckShadow", AnalysisFlags::CheckShadow)
         .finalize();
 
     py::classh<AnalysisOptions>(m, "AnalysisOptions")
