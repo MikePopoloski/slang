@@ -104,14 +104,12 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
             return badExpr(comp, nullptr);
         }
         else if (flags.has(ASTFlags::ForkJoinVarScope) &&
-                 (symbol.kind == SymbolKind::Variable ||
-                  symbol.kind == SymbolKind::Iterator)) {
+                 (symbol.kind == SymbolKind::Variable || symbol.kind == SymbolKind::Iterator)) {
             auto parentScope = symbol.getParentScope();
             if (parentScope) {
                 auto parentSyntax = parentScope->asSymbol().getSyntax();
-                if (parentSyntax &&
-                    (parentSyntax->kind == SyntaxKind::ForLoopStatement ||
-                     parentSyntax->kind == SyntaxKind::ForeachLoopStatement)) {
+                if (parentSyntax && (parentSyntax->kind == SyntaxKind::ForLoopStatement ||
+                                     parentSyntax->kind == SyntaxKind::ForeachLoopStatement)) {
                     context.addDiag(diag::LoopVarForkJoin, sourceRange) << symbol.name;
                 }
             }
