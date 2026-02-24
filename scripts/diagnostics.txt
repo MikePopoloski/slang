@@ -1257,7 +1257,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   dup-config-rule unused-config-cell unused-config-instance specify-condition-expr
                   seq-no-match case-too-complex nested-solve-before dynamic-non-procedural
                   nonstandard-string-concat nested-comment multi-write read-write mixed-var-assigns
-                  multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator }
+                  multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
+                  qualifiers-on-out-of-block }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

@@ -1449,6 +1449,21 @@ module m(input a, output b,);
 endmodule
 ```
 
+-Wqualifiers-on-out-of-block
+Out-of-block method definitions are not allowed to include qualifiers (such as the `static` keyword).
+This is an error by default but can be downgraded to a warning for compatibility with tools.
+```
+module memMod();
+    class C;
+        extern static function int f();
+    endclass
+
+    static function int C::f();
+      f = 10;
+    endfunction
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste
@@ -1723,20 +1738,6 @@ function be a parameter name. This seems needlessly restrictive and conflicts wi
 wording in prior versions so this is implemented as a pedantic warning only.
 ```
 localparam p = $isunbounded(1 + 1);
-```
-
--Wqualifiers-on-out-of-block
-The definition of a class method is not found.
-```
-module memMod();
-    class C;
-        extern static function int f();
-    endclass
-
-    static function int C::f();
-      f = 10;
-    endfunction
-endmodule
 ```
 
 @category Unused Items

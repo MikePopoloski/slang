@@ -1414,9 +1414,11 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass, bool hasBaseClass) {
 
         // Pure or extern functions don't have bodies.
         if (isPureOrExtern) {
-            funcOptions |= FunctionOptions::AllowImplicitReturn;
+            // Note: the grammar in the LRM does not allow an implicit return type
+            // here but all other tools do so we do as well for compatibility.
             auto& proto = parseFunctionPrototype(SyntaxKind::ClassDeclaration,
-                                                 funcOptions | FunctionOptions::IsPrototype);
+                                                 funcOptions | FunctionOptions::IsPrototype |
+                                                     FunctionOptions::AllowImplicitReturn);
             checkProto(proto, false);
 
             // Final specifier is illegal on pure virtual methods.
