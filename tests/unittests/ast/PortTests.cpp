@@ -5,8 +5,8 @@
 
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/LSPUtilities.h"
-#include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
+#include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
