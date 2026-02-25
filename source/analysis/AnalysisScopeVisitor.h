@@ -120,7 +120,7 @@ struct AnalysisScopeVisitor {
             // If this is a virtual method that overrides a base class method
             // it counts as used, since a call to the concrete base method may
             // actually be a call to this one at runtime.
-            if (!symbol.getOverride()) {
+            if (!symbol.getOverride() && !symbol.flags.has(MethodFlags::PrePostRandomize)) {
                 if (symbol.visibility == Visibility::Local)
                     checkUnused(symbol, diag::UnusedLocalClassMethod, diag::UnusedLocalClassMethod);
                 else

@@ -279,13 +279,20 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
 
         if (sym->kind == SymbolKind::Subroutine) {
             auto& s = sym->as<SubroutineSymbol>();
-            if (s.flags.has(MethodFlags::BuiltIn) || checkOverride(s))
+            if (s.flags.has(MethodFlags::BuiltIn))
                 return;
+
+            if (checkOverride(s)) {
+                const_cast<SubroutineSymbol&>(s).flags |= MethodFlags::PrePostRandomize;
+                return;
+            }
         }
         else if (sym->kind == SymbolKind::MethodPrototype) {
             auto& s = sym->as<MethodPrototypeSymbol>();
-            if (checkOverride(s))
+            if (checkOverride(s)) {
+                const_cast<MethodPrototypeSymbol&>(s).flags |= MethodFlags::PrePostRandomize;
                 return;
+            }
         }
 
         addDiag(diag::InvalidRandomizeOverride, sym->location) << funcName;

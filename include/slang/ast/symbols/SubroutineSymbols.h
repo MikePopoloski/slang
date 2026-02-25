@@ -20,7 +20,7 @@ class StatementBlockSymbol;
 class VariableSymbol;
 
 /// Specifies various flags that can apply to subroutines.
-enum class SLANG_EXPORT MethodFlags : uint16_t {
+enum class SLANG_EXPORT MethodFlags {
     /// No specific flags specified.
     None = 0,
 
@@ -82,9 +82,12 @@ enum class SLANG_EXPORT MethodFlags : uint16_t {
 
     /// The method is marked 'final', which means it cannot be
     /// overridden in a derived class.
-    Final = 1 << 15
+    Final = 1 << 15,
+
+    /// The method is a special pre_randomize or post_randomize function.
+    PrePostRandomize = 1 << 16
 };
-SLANG_BITMASK(MethodFlags, Final)
+SLANG_BITMASK(MethodFlags, PrePostRandomize)
 
 class MethodPrototypeSymbol;
 

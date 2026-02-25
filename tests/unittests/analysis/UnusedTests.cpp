@@ -831,6 +831,12 @@ class E;
         void'(d.randomize());
         d.body();
     endtask
+
+    function void pre_randomize();
+    endfunction
+
+    function void post_randomize();
+    endfunction
 endclass
 )";
 
