@@ -887,3 +887,28 @@ endmodule
     CHECK(diags[2].code == diag::ShadowDecl);
     CHECK(diags[3].code == diag::ShadowDecl);
 }
+
+TEST_CASE("Shadowing false positives") {
+    auto& text = R"(
+interface intf;
+    logic clk;
+    logic a;
+
+    clocking cb @(posedge clk);
+        default input #1step;
+        input a;
+    endclocking
+endinterface
+
+module top;
+    for (genvar i = 0; i < 4; i++) begin: gen_1
+    end
+
+    intf inst();
+endmodule
+)";
+
+    Compilation compilation;
+    auto diags = analyzeShadow(text, compilation);
+    CHECK_DIAGS_EMPTY;
+}

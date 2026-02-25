@@ -223,10 +223,14 @@ struct AnalysisScopeVisitor {
     void visit(const VariableSymbol& symbol) {
         visitExprs(symbol);
 
-        if (symbol.flags.has(VariableFlags::CompilerGenerated))
+        if (symbol.flags.has(VariableFlags::CompilerGenerated |
+                             VariableFlags::ImmutableCoverageOption |
+                             VariableFlags::CheckerFreeVariable)) {
             return;
+        }
 
-        checkShadow(symbol);
+        if (symbol.kind != SymbolKind::ClockVar)
+            checkShadow(symbol);
 
         if (symbol.kind == SymbolKind::Variable) {
             // Class handles and covergroups are considered used if they are
@@ -271,7 +275,8 @@ struct AnalysisScopeVisitor {
     }
 
     void visit(const ParameterSymbol& symbol) {
-        checkShadow(symbol);
+        if (!symbol.isFromGenvar())
+            checkShadow(symbol);
         checkUnused(symbol, diag::UnusedParameter, diag::UnusedPackageParameter);
     }
 
