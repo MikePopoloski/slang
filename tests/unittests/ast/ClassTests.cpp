@@ -2058,7 +2058,7 @@ endclass
     REQUIRE(diags.size() == 11);
     CHECK(diags[0].code == diag::MemberDefinitionBeforeClass);
     CHECK(diags[1].code == diag::NoConstraintBody);
-    CHECK(diags[2].code == diag::NoMemberImplFound);
+    CHECK(diags[2].code == diag::MemberImplNotFound);
     CHECK(diags[3].code == diag::PureConstraintInAbstract);
     CHECK(diags[4].code == diag::ConstraintQualOutOfBlock);
     CHECK(diags[5].code == diag::Redefinition);

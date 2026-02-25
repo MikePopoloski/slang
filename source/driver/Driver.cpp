@@ -716,6 +716,7 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::SolveBeforeDisallowed, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::DynamicNotProcedural, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::QualifiersOnOutOfBlock, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::MemberImplNotFound, DiagnosticSeverity::Error);
     }
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);

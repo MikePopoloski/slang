@@ -1179,7 +1179,7 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
 
     // Otherwise, there must be a body for any declared prototype.
     if (!syntax) {
-        outerScope.addDiag(diag::NoMemberImplFound, location) << name;
+        outerScope.addDiag(diag::MemberImplNotFound, location) << name;
         return nullptr;
     }
 

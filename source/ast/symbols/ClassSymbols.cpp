@@ -1317,7 +1317,7 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
         if (!declSyntax || declSyntax->kind != SyntaxKind::ConstraintDeclaration || name.empty()) {
             if (!flags.has(ConstraintBlockFlags::Pure) && !name.empty()) {
                 DiagCode code = flags.has(ConstraintBlockFlags::ExplicitExtern)
-                                    ? diag::NoMemberImplFound
+                                    ? diag::MemberImplNotFound
                                     : diag::NoConstraintBody;
                 outerScope.addDiag(code, location) << name;
             }
