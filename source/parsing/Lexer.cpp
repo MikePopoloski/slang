@@ -923,12 +923,8 @@ Token Lexer::lexEscapeSequence(bool isMacroName) {
     char c = peek();
     if (isWhitespace(c) || c == '\0') {
         // Check for a line continuation sequence.
-        if (isNewline(c)) {
-            advance();
-            if (c == '\r' && peek() == '\n')
-                advance();
+        if (isNewline(c))
             return create(TokenKind::LineContinuation);
-        }
 
         // Error issued in the Preprocessor
         return create(TokenKind::Unknown);

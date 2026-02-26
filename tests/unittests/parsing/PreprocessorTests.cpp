@@ -798,7 +798,8 @@ bar
 )";
     auto& expected = R"(
 asdfllkj
-foobar
+foo
+bar
 )";
 
     std::string result = preprocess(text);
@@ -3100,6 +3101,35 @@ module m;
         a = b;
 
     end
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Nested macro with multiline arg") {
+    auto& text = R"(
+`define MACRO_PARENT(code) \
+  `define MACRO_FOOBAR 1 \
+  code
+
+`define MACRO_CHILD reg r;
+
+module top;
+`MACRO_PARENT(
+  logic foobar;
+  `MACRO_CHILD
+);
+endmodule
+)";
+
+    auto& expected = R"(
+module top;
+
+  logic foobar;
+  reg r;;
 endmodule
 )";
 

@@ -672,7 +672,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
         if (t.kind == TokenKind::EndOfFile)
             break;
         if (t.kind == TokenKind::LineContinuation) {
-            hasContinuation = false;
+            hasContinuation = true;
             scratchTokenBuffer.push_back(consume());
             continue;
         }
