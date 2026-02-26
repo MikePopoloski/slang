@@ -1547,7 +1547,7 @@ task:
 )";
 
     parseCompilationUnit(text, LanguageVersion::v1800_2023);
-    REQUIRE(diagnostics.size() == 3);
+    REQUIRE(diagnostics.size() == 1);
 }
 
 TEST_CASE("Nested attributes are not allowed") {
@@ -1641,4 +1641,13 @@ TEST_CASE("No trailing comma in ANSI port list still works") {
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
     CHECK(module.header->ports->kind == SyntaxKind::AnsiPortList);
     CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Regress for malformed diag with empty duplicate function specifiers") {
+    auto& text = R"(
+function:o:
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+    REQUIRE(diagnostics.size() == 2);
 }

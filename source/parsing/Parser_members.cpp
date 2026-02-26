@@ -1027,7 +1027,7 @@ std::span<syntax::ClassSpecifierSyntax*> Parser::parseClassSpecifierList(bool al
         auto specifier = parseClassSpecifier();
         SLANG_ASSERT(specifier);
 
-        if (!specifier->keyword.isMissing()) {
+        if (specifier->keyword && !specifier->keyword.isMissing()) {
             if (specifiers.empty() && !allowSpecifiers)
                 addDiag(diag::SpecifiersNotAllowed, specifier->sourceRange());
 
@@ -1047,7 +1047,7 @@ std::span<syntax::ClassSpecifierSyntax*> Parser::parseClassSpecifierList(bool al
                     break;
                 }
 
-                if (!ok.isMissing() && ok.kind != TokenKind::FinalKeyword &&
+                if (ok && !ok.isMissing() && ok.kind != TokenKind::FinalKeyword &&
                     sk.kind != TokenKind::FinalKeyword) {
                     addDiag(diag::ClassSpecifierConflict, sk.range())
                         << sk.valueText() << ok.range() << ok.valueText();
