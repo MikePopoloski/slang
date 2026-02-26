@@ -681,3 +681,15 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Function unknown arg direction regress") {
+    auto tree = SyntaxTree::fromText(R"(
+function,(*;*)output
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Just check no crash.
+    compilation.getAllDiagnostics();
+}

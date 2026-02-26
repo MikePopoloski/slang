@@ -294,8 +294,9 @@ void FormalArgumentSymbol::fromSyntax(const Scope& scope, const PortDeclarationS
 
     auto& comp = scope.getCompilation();
     auto& header = syntax.header->as<VariablePortHeaderSyntax>();
-    ArgumentDirection direction = SemanticFacts::getDirection(header.direction.kind);
-    VariableLifetime lifetime = getDefaultLifetime(scope);
+    auto direction = header.direction ? SemanticFacts::getDirection(header.direction.kind)
+                                      : ArgumentDirection::In;
+    auto lifetime = getDefaultLifetime(scope);
 
     bool isConst = false;
     if (header.constKeyword) {
