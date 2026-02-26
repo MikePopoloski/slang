@@ -1551,3 +1551,24 @@ I I I d(
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("$info with defparam modified args") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    defparam n.p = '{1, 2};
+endmodule
+
+module n;
+    parameter int p[2] = '{0, 0};
+
+    $info("%p", p);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfoTask);
+}

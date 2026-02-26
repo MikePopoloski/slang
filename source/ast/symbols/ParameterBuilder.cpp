@@ -280,7 +280,8 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
                 // If there is an expression tree here use that as the initializer syntax.
                 // Otherwise we expect the value to override is already evaluated.
                 if (!it->second.expr) {
-                    param->setValue(comp, it->second.cv, /* needsCoercion */ true);
+                    param->setValue(comp, it->second.cv,
+                                    /* needsCoercion */ it->second.defparam == nullptr);
                     return *param;
                 }
 
