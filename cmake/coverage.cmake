@@ -18,8 +18,7 @@ set(COVERAGE_TRACE_COMMAND
 
 set(COVERAGE_HTML_COMMAND
     genhtml "${PROJECT_BINARY_DIR}/coverage.info" -p "${PROJECT_SOURCE_DIR}" -o
-    "${PROJECT_BINARY_DIR}/coverage_html" --ignore-errors inconsistent
-    --ignore-errors corrupt
+    "${PROJECT_BINARY_DIR}/coverage_html"
     CACHE
       STRING
       "; separated command to generate an HTML report for the 'coverage' target"
