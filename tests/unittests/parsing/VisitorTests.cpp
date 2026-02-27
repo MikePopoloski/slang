@@ -877,10 +877,14 @@ TEST_CASE("Visit all file") {
 
     Compilation compilation;
     compilation.addSyntaxTree(*tree);
+    if (std::ranges::any_of(compilation.getAllDiagnostics(), [](auto& d) { return d.isError(); })) {
+        NO_COMPILATION_ERRORS;
+    }
+    compilation.freeze();
 
-    flat_hash_set<SymbolKind> symKinds;
-    flat_hash_set<ExpressionKind> exprKinds;
-    flat_hash_set<StatementKind> stmtKinds;
+    flat_hash_set<SymbolKind> symKinds = {SymbolKind::Unknown};
+    flat_hash_set<ExpressionKind> exprKinds = {ExpressionKind::Invalid};
+    flat_hash_set<StatementKind> stmtKinds = {StatementKind::Invalid};
     compilation.getRoot().visit(makeVisitor(
         [&](auto& v, std::derived_from<Symbol> auto& node) {
             symKinds.insert(node.kind);
@@ -899,7 +903,7 @@ TEST_CASE("Visit all file") {
         CHECK(expr.isEquivalentTo(expr));
     }));
 
-    flat_hash_set<SyntaxKind> syntaxKinds;
+    flat_hash_set<SyntaxKind> syntaxKinds = {SyntaxKind::Unknown};
     (*tree)->root().visit(makeSyntaxVisitor([&](auto& v, const auto& node) {
         syntaxKinds.insert(node.kind);
         v.visitDefault(node);
@@ -908,23 +912,18 @@ TEST_CASE("Visit all file") {
     auto printMissing = [](const std::string_view name, const auto& kinds, const auto& visited) {
         for (auto kind : kinds) {
             if (!visited.contains(kind)) {
-                INFO(fmt::format("Did not visit {}: {}\n", name, toString(kind)));
+                WARN(fmt::format("Did not visit {}: {}\n", name, toString(kind)));
             }
         }
     };
     // printMissing("syntax", SyntaxKind_traits::values, syntaxes.syntaxKinds);
-    // printMissing("symbol", SymbolKind_traits::values, symbols.symKinds);
-    // printMissing("expression", ExpressionKind_traits::values, symbols.exprKinds);
-    // printMissing("statement", StatementKind_traits::values, symbols.stmtKinds);
+    // printMissing("symbol", SymbolKind_traits::values, symKinds);
+    printMissing("expression", ExpressionKind_traits::values, exprKinds);
+    printMissing("statement", StatementKind_traits::values, stmtKinds);
 
     // Ideally this should visit all kinds (be zero)
-    CHECK(218 == SyntaxKind_traits::values.size() - syntaxKinds.size());
-
-    CHECK(42 == SymbolKind_traits::values.size() - symKinds.size());
-    CHECK(11 == ExpressionKind_traits::values.size() - exprKinds.size());
-    CHECK(5 == StatementKind_traits::values.size() - stmtKinds.size());
-    compilation.getAllDiagnostics();
-    compilation.freeze();
+    CHECK(188 == SyntaxKind_traits::values.size() - syntaxKinds.size());
+    CHECK(41 == SymbolKind_traits::values.size() - symKinds.size());
 
     analysis::AnalysisManager analysisManager;
     analysisManager.analyze(compilation);

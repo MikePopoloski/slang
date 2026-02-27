@@ -55,6 +55,8 @@ macromodule m3;
     logic f, z;
     event ev;
     initial begin
+        byte q, r, x;
+
         repeat (3) @(negedge b) f = #2 1;
         wait (f) ++f;
         wait fork;
@@ -79,6 +81,13 @@ macromodule m3;
 
         case (w) inside
             [0: 3]: ;
+        endcase
+
+        randcase
+            q + r : x = 1;
+            q - r : x = 2;
+            q ^ ~r : x = 3;
+            12'h800 : x = 4;
         endcase
     end
 
@@ -114,7 +123,7 @@ macromodule m3;
         } Instr;
 
         VInt v;
-        Instr instr;
+        Instr instr = tagged Add '{reg1:0, reg2:1, regd:3};
         automatic int rf[] = new [3];
         static longint pc = 'x;
 
@@ -145,6 +154,7 @@ macromodule m3;
     end
 
     always_latch begin
+        do -> ev; while (~b);
     end
 
     genvar j;
@@ -181,7 +191,21 @@ macromodule m3;
                 else
                     f;
         endproperty
-        cover property (p2 and p2);
+
+        property p3(s);
+            int r;
+            @(posedge clk) strong((a, r = 1) intersect first_match(b, r = 2))
+                and not sync_accept_on(c)
+                    case (e)
+                        2'd0 : a && b;
+                        2'd1 : a ##2 b;
+                        2'd2 : a ##4 b;
+                        2'd3 : a ##8 b;
+                        default: 1;
+                    endcase;
+        endproperty
+
+        cover property (disable iff (~clk) p3(d) and p2);
     end
 
     prim prim_inst(q, r);
@@ -356,7 +380,7 @@ module m5;
 endmodule
 
 class C;
-    int i;
+    int i = 5ns;
     static int j;
     extern function int foo(int bar, int baz = 1);
 endclass
@@ -368,7 +392,7 @@ endclass
 localparam int k = 5;
 
 function int C::foo(int bar, int baz = 1);
-    i = j + k + bar + baz;
+    i = j + longint'(k) + bar + baz;
 endfunction
 
 function real D::foo;
@@ -441,7 +465,7 @@ module m6;
     A a = new;
     A b1 = B::new;
     B b2 = new;
-    C2 c = new;
+    C2 c = null;
     int depth;
     integer i = b1.f();
     initial begin
@@ -498,6 +522,10 @@ class C3;
         }
         b: cross y, x;
     endgroup
+
+    function new;
+        g2 = new("SDF");
+    endfunction
 endclass
 
 module m9;
@@ -518,7 +546,21 @@ module m10;
     initial begin
         byte q[$];
         automatic Packet p = new;
+        automatic Packet p2 = new p;
         {<< byte{ p.header, p.len, p.payload with [0 +: p.len], p.crc }} = stream;
         stream = stream[ $bits(p) / 8 : $ ];
+    end
+endmodule
+
+module m11(input clk);
+    int a[4] = '{default: 1};
+    int b[] = '{3 {1}};
+    int c = $bits(int);
+    localparam type T = type(b);
+
+    initial begin
+        if (type(b) == type(a) && $rose(c, @(posedge clk))) begin
+            $display("SDF");
+        end
     end
 endmodule

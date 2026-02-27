@@ -155,9 +155,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (!handleDefault(symbol))
             return;
 
-        if (auto sub = symbol.getSubroutine())
-            handle(*sub);
-
         if (symbol.flags.has(MethodFlags::InterfaceExtern)) {
             externIfaceProtos.push_back(&symbol);
 

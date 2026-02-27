@@ -128,6 +128,11 @@ public:
             t.body.visit(DERIVED);
         }
 
+        if constexpr (std::is_same_v<MethodPrototypeSymbol, T>) {
+            if (auto sub = t.getSubroutine())
+                sub->visit(DERIVED);
+        }
+
         static_assert((std::is_final_v<T> || std::is_same_v<VariableSymbol, T>),
                       "Non-leaf class was passed to visitDefault() - use "
                       "`std::derived_from<SymbolT> auto& node` to visit non-leaf classes.");
