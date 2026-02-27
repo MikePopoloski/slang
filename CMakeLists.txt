@@ -100,6 +100,17 @@ else()
   find_package(Python REQUIRED COMPONENTS Interpreter)
 endif()
 
+# Set up ccache if available.
+if(SLANG_MASTER_PROJECT AND CMAKE_GENERATOR MATCHES "Ninja|Makefiles")
+  find_program(CCACHE_EXECUTABLE ccache)
+  if(CCACHE_EXECUTABLE)
+    foreach(lang IN ITEMS C CXX)
+      set(CMAKE_${lang}_COMPILER_LAUNCHER ${CCACHE_EXECUTABLE})
+    endforeach()
+    message(STATUS "Using ccache: ${CCACHE_EXECUTABLE}")
+  endif()
+endif()
+
 # Set saner / consistent build directories on all platforms
 foreach(
   var
