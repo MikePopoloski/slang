@@ -8,7 +8,9 @@
 #include "slang/parsing/ParserBase.h"
 
 #include "slang/diagnostics/ParserDiags.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/parsing/Preprocessor.h"
+#include "slang/util/String.h"
 
 namespace slang::parsing {
 
@@ -95,6 +97,24 @@ Token ParserBase::expect(TokenKind kind) {
     if (peek(kind))
         return consume();
 
+    // If we expect a keyword but found an identifier, check if it looks like a typo
+    // for the expected keyword. If so, consume the identifier and issue a diagnostic
+    // rather than leaving it in the stream and fabricating a new token.
+    if (peek(TokenKind::Identifier) && LexerFacts::isKeyword(kind)) {
+        auto kwText = LexerFacts::getTokenKindText(kind);
+        auto identText = peek().valueText();
+        int dist = editDistance(identText, kwText, /* maxDistance */ 3);
+        if (dist > 0 && identText.length() / size_t(dist) >= 3) {
+            auto ident = peek();
+            addDiag(diag::TypoKeyword, ident.range()) << identText << kwText;
+            skipToken({});
+
+            auto result = Token::createMissing(alloc, kind, ident.location());
+            prependSkippedTokens(result);
+            return result;
+        }
+    }
+
     // If this needs to be an end delimiter, see if we know the
     // corresponding open delimiter and if so use that to produce
     // a better error.
@@ -176,6 +196,11 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
 
 void ParserBase::pushTokens(std::span<const Token> tokens) {
     window.insertHead(tokens);
+}
+
+void ParserBase::replaceCurrentToken(Token token) {
+    SLANG_ASSERT(window.currentOffset > 0);
+    window.buffer[--window.currentOffset] = token;
 }
 
 Token ParserBase::missingToken(TokenKind kind, SourceLocation location) {

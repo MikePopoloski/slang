@@ -2379,8 +2379,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
                     if (member.name.empty() || !isViable(member))
                         continue;
 
-                    int dist = editDistance(member.name, name, /* allowReplacements */ true,
-                                            bestDistance);
+                    int dist = editDistance(member.name, name, bestDistance);
                     if (dist < bestDistance) {
                         closestSym = &member;
                         bestDistance = dist;

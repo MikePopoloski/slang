@@ -247,6 +247,7 @@ private:
     AttrList parseAttributes();
     syntax::AttributeSpecSyntax& parseAttributeSpec();
     syntax::MemberSyntax* parseMember(syntax::SyntaxKind parentKind, bool& anyLocalModules);
+    syntax::MemberSyntax* parseMemberImpl(AttrList attributes, syntax::SyntaxKind parentKind, bool& anyLocalModules);
     syntax::ModuleHeaderSyntax& parseModuleHeader();
     syntax::ParameterPortListSyntax* parseParameterPortList();
     syntax::MemberSyntax& parseModule(AttrList attributes, syntax::SyntaxKind parentKind, bool& anyLocalModules);

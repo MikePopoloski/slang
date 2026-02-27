@@ -72,13 +72,10 @@ inline char charToLower(char c) {
 
 /// Determines the number of edits to the left string that are required to
 /// change it into the right string.
-/// If @a allowReplacements is true, characters can be substituted as needed.
-/// Otherwise, only swaps are allowed.
 ///
 /// If @a maxDistance is >0 and the computed distance is at least that much, give
 /// up and return maxDistance + 1.
-int editDistance(std::string_view left, std::string_view right, bool allowReplacements = true,
-                 int maxDistance = 0);
+int editDistance(std::string_view left, std::string_view right, int maxDistance = 0);
 
 #if defined(_WIN32)
 

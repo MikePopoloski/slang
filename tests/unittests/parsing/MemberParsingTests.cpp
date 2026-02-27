@@ -1651,3 +1651,31 @@ function:o:
     parseCompilationUnit(text, LanguageVersion::v1800_2023);
     REQUIRE(diagnostics.size() == 2);
 }
+
+TEST_CASE("Typo keyword in parseMember - 'alwasy' close to 'always'") {
+    // 'alwasy' should trigger TypoKeyword in parseMember
+    auto& text = R"(
+module m;
+    alwasy @(posedge clk) begin end
+endmodule
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::TypoKeyword);
+}
+
+TEST_CASE("Typo keyword in expected location") {
+    // 'alwasy' should trigger TypoKeyword in parseMember
+    auto& text = R"(
+module m;
+    property p;
+        1;
+    endpropety
+endmodule
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::TypoKeyword);
+}

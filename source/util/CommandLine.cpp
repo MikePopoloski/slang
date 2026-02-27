@@ -645,7 +645,7 @@ std::string CommandLine::findNearestMatch(std::string_view arg) const {
         if (key[0] == '+')
             continue;
 
-        int dist = editDistance(key, arg, /* allowReplacements */ true, bestDistance);
+        int dist = editDistance(key, arg, bestDistance);
         if (dist < bestDistance) {
             bestName = key;
             bestDistance = dist;

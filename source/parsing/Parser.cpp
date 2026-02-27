@@ -1406,7 +1406,7 @@ bool Parser::isHierarchyInstantiation(bool requireName) {
     if (peek(index++).kind != TokenKind::Identifier)
         return false;
 
-    // skip over std::optional parameter value assignment
+    // skip over optional parameter value assignment
     if (peek(index).kind == TokenKind::Hash) {
         if (peek(++index).kind != TokenKind::OpenParenthesis)
             return false;

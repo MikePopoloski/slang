@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/ParserDiags.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/util/String.h"
@@ -129,9 +130,37 @@ ClassDeclarationSyntax& Parser::parseClass() {
     return parseClassDeclaration(attributes, virtualOrInterface);
 }
 
-MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) {
-    auto attributes = parseAttributes();
+// Keywords that are candidates for typo correction.
+static constexpr std::array MemberTypoKeywords = {
+    TokenKind::GenerateKeyword,   TokenKind::ModuleKeyword,     TokenKind::AssignKeyword,
+    TokenKind::PackageKeyword,    TokenKind::ProgramKeyword,    TokenKind::CheckerKeyword,
+    TokenKind::InterfaceKeyword,  TokenKind::ModPortKeyword,    TokenKind::CoverGroupKeyword,
+    TokenKind::SpecifyKeyword,    TokenKind::AssertKeyword,     TokenKind::AssumeKeyword,
+    TokenKind::CoverKeyword,      TokenKind::RestrictKeyword,   TokenKind::FinalKeyword,
+    TokenKind::InitialKeyword,    TokenKind::ClassKeyword,      TokenKind::AlwaysKeyword,
+    TokenKind::AlwaysCombKeyword, TokenKind::AlwaysFFKeyword,   TokenKind::AlwaysLatchKeyword,
+    TokenKind::FunctionKeyword,   TokenKind::TaskKeyword,       TokenKind::ClockingKeyword,
+    TokenKind::ExportKeyword,     TokenKind::ImportKeyword,     TokenKind::PropertyKeyword,
+    TokenKind::SequenceKeyword,   TokenKind::ForKeyword,        TokenKind::CaseKeyword,
+    TokenKind::GenVarKeyword,     TokenKind::ConstraintKeyword, TokenKind::RandKeyword,
+    TokenKind::PrimitiveKeyword,  TokenKind::WireKeyword,       TokenKind::InterconnectKeyword,
+    TokenKind::VarKeyword,        TokenKind::AutomaticKeyword,  TokenKind::CHandleKeyword,
+    TokenKind::EventKeyword,      TokenKind::StructKeyword,     TokenKind::UnionKeyword,
+    TokenKind::EnumKeyword,       TokenKind::TypedefKeyword,    TokenKind::NetTypeKeyword,
+    TokenKind::LocalParamKeyword, TokenKind::ParameterKeyword,  TokenKind::LetKeyword,
+    TokenKind::VirtualKeyword,    TokenKind::StringKeyword,     TokenKind::ConstKeyword,
+    TokenKind::BitKeyword,        TokenKind::LogicKeyword,      TokenKind::RegKeyword,
+    TokenKind::ByteKeyword,       TokenKind::ShortIntKeyword,   TokenKind::IntKeyword,
+    TokenKind::LongIntKeyword,    TokenKind::IntegerKeyword,    TokenKind::TimeKeyword,
+    TokenKind::ShortRealKeyword,  TokenKind::RealKeyword,
+};
 
+MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) {
+    return parseMemberImpl(parseAttributes(), parentKind, anyLocalModules);
+}
+
+MemberSyntax* Parser::parseMemberImpl(AttrList attributes, SyntaxKind parentKind,
+                                      bool& anyLocalModules) {
     if (isHierarchyInstantiation(/* requireName */ false))
         return &parseHierarchyInstantiation(attributes);
     if (isPortDeclaration(/* inStatement */ false))
@@ -196,7 +225,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
         case TokenKind::SpecifyKeyword:
             errorIfAttributes(attributes);
             return &parseSpecifyBlock(attributes);
-        case TokenKind::Identifier:
+        case TokenKind::Identifier: {
             if (peek(1).kind == TokenKind::Colon) {
                 // Declarations and instantiations have already been handled, so if we reach this
                 // point we either have a labeled assertion, or this is some kind of error.
@@ -231,8 +260,34 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
                 return &parseCheckerInstantiation(attributes);
             }
 
+            // Check whether this identifier looks like a typo for a member-starting keyword.
+            // If so issue a diagnostic and then replace the current token with one using the
+            // corrected keyword type.
+            TokenKind bestKw = TokenKind::Unknown;
+            int bestDist = INT_MAX;
+            const auto identText = token.valueText();
+            for (auto kw : MemberTypoKeywords) {
+                int dist = editDistance(identText, LexerFacts::getTokenKindText(kw), bestDist);
+                if (dist < bestDist) {
+                    bestKw = kw;
+                    bestDist = dist;
+                }
+            }
+
+            if (bestDist > 0 && identText.length() / size_t(bestDist) >= 3) {
+                addDiag(diag::TypoKeyword, token.range())
+                    << identText << LexerFacts::getTokenKindText(bestKw);
+                skipToken({});
+
+                auto newTok = Token::createMissing(alloc, bestKw, token.location());
+                replaceCurrentToken(newTok);
+
+                return parseMemberImpl(attributes, parentKind, anyLocalModules);
+            }
+
             // Otherwise, assume it's an (erroneous) attempt at a variable declaration.
             return &parseVariableDeclaration(attributes);
+        }
         case TokenKind::UnitSystemName: {
             // The only valid thing this can be is a checker instantiation, since
             // variable declarations would have been handled previously. Because these

@@ -194,6 +194,7 @@ error InvalidQualifierForIfaceMember "invalid qualifier for interface class memb
 error InvalidQualifierForConstructor "invalid qualifier for constructor"
 error MethodStaticLifetime "class methods cannot have static lifetime"
 error TypeRefDeclVar "a type reference cannot be used in a variable declaration without a preceeding 'var' keyword"
+error TypoKeyword "unexpected identifier '{}'; did you mean '{}'?"
 error ScopedClassCopy "typed constructor calls are not allowed for a shallow copy"
 error NotAllowedInCU "member not allowed at compilation unit scope"
 error NotAllowedInGenerate "member not allowed in generate block"

@@ -94,8 +94,7 @@ std::vector<std::string_view> splitString(std::string_view str, char delimiter) 
     return result;
 }
 
-int editDistance(std::string_view left, std::string_view right, bool allowReplacements,
-                 int maxDistance) {
+int editDistance(std::string_view left, std::string_view right, int maxDistance) {
     // See: http://en.wikipedia.org/wiki/Levenshtein_distance
     size_t m = left.size();
     size_t n = right.size();
@@ -111,16 +110,8 @@ int editDistance(std::string_view left, std::string_view right, bool allowReplac
         int prev = int(y - 1);
         for (size_t x = 1; x <= n; x++) {
             int old = row[x];
-            if (allowReplacements) {
-                row[x] = std::min(prev + (left[y - 1] == right[x - 1] ? 0 : 1),
-                                  std::min(row[x - 1], row[x]) + 1);
-            }
-            else {
-                if (left[y - 1] == right[x - 1])
-                    row[x] = prev;
-                else
-                    row[x] = std::min(row[x - 1], row[x]) + 1;
-            }
+            row[x] = std::min(prev + (left[y - 1] == right[x - 1] ? 0 : 1),
+                              std::min(row[x - 1], row[x]) + 1);
 
             prev = old;
             best = std::min(best, row[x]);

@@ -37,6 +37,7 @@ protected:
     Token expect(TokenKind kind);
     void skipToken(std::optional<DiagCode> diagCode);
     void pushTokens(std::span<const Token> tokens);
+    void replaceCurrentToken(Token token);
 
     Token missingToken(TokenKind kind, SourceLocation location);
     Token placeholderToken();
