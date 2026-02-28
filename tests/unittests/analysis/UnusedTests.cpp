@@ -913,6 +913,19 @@ module top;
     intf inst();
 endmodule
 
+module top2;
+    localparam bit A = 1'b1;
+    localparam bit B = 1'b1;
+
+    if (A) begin
+        if (B) begin
+            always_comb begin
+            end
+        end
+    end
+
+endmodule
+
 class C;
     rand int a;
     rand int b;

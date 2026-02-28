@@ -92,16 +92,20 @@ struct AnalysisScopeVisitor {
 
         // For our purposes we can just flatten the content of generate
         // blocks into their parents.
-        checkShadow(symbol);
         visitMembers(symbol);
+
+        if (!symbol.isUnnamed)
+            checkShadow(symbol);
     }
 
     void visit(const GenerateBlockArraySymbol& symbol) {
         if (!symbol.valid)
             return;
 
-        checkShadow(symbol);
         visitMembers(symbol);
+
+        if (!symbol.isUnnamed)
+            checkShadow(symbol);
     }
 
     // We treat continuous assignments as procedures even though they
