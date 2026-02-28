@@ -407,6 +407,23 @@ const ExpressionSyntax* ASTContext::requireSimpleExpr(const PropertyExprSyntax& 
     return nullptr;
 }
 
+void ASTContext::noteReference(const ValueSymbol& symbol, bool isDottedAccess) const {
+    if (auto syntax = symbol.getSyntax(); syntax && !flags.has(ASTFlags::NoReference)) {
+        bool isLValue = flags.has(ASTFlags::LValue);
+        if (isDottedAccess) {
+            auto& type = symbol.getType();
+            if (type.isClass() || type.isCovergroup())
+                isLValue = false;
+        }
+
+        auto& comp = getCompilation();
+        comp.noteReference(*syntax, isLValue);
+
+        if (isLValue && flags.has(ASTFlags::LAndRValue))
+            comp.noteReference(*syntax, /* isLValue */ false);
+    }
+}
+
 RandMode ASTContext::getRandMode(const Symbol& symbol) const {
     RandMode mode = symbol.getRandMode();
     if (mode != RandMode::None)

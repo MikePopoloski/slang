@@ -838,6 +838,30 @@ class E;
     function void post_randomize();
     endfunction
 endclass
+
+class C1;
+    int a;
+
+    (*unused*) function void f();
+        if (a == 3) begin
+        end
+    endfunction
+endclass
+
+class C2;
+    C1 c1;
+endclass
+
+module top;
+    C1 c1;
+    C2 c2;
+    initial begin
+        c1 = new();
+        c2 = new();
+        c2.c1 = c1;
+        c2.c1.a = 3;
+    end
+endmodule
 )";
 
     Compilation compilation;

@@ -174,19 +174,7 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         return badExpr(comp, nullptr);
     }
 
-    if (auto syntax = symbol.getSyntax(); syntax && !flags.has(ASTFlags::NoReference)) {
-        bool isLValue = flags.has(ASTFlags::LValue);
-        if (isDottedAccess) {
-            auto& type = value.getType();
-            if (type.isClass() || type.isCovergroup())
-                isLValue = false;
-        }
-
-        comp.noteReference(*syntax, isLValue);
-
-        if (isLValue && flags.has(ASTFlags::LAndRValue))
-            comp.noteReference(*syntax, /* isLValue */ false);
-    }
+    context.noteReference(value, isDottedAccess);
 
     Expression* result;
     if (hierRef && hierRef->target) {

@@ -1217,7 +1217,8 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
             if (i == result.selectors.size() - 1) {
                 expr = &MemberAccessExpression::fromSelector(comp, *expr, *memberSelect, invocation,
                                                              withClause, context,
-                                                             /* isFromLookupChain */ true);
+                                                             /* isFromLookupChain */ true,
+                                                             /* isDottedAccess */ false);
 
                 if (expr->kind == ExpressionKind::Call) {
                     invocation = nullptr;
@@ -1225,9 +1226,14 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
                 }
             }
             else {
+                const bool isDottedAccess = context.flags.has(ASTFlags::LValue) &&
+                                            std::get_if<LookupResult::MemberSelector>(
+                                                &result.selectors[i + 1]) != nullptr;
+
                 expr = &MemberAccessExpression::fromSelector(comp, *expr, *memberSelect, nullptr,
                                                              nullptr, context,
-                                                             /* isFromLookupChain */ true);
+                                                             /* isFromLookupChain */ true,
+                                                             isDottedAccess);
             }
         }
         else {

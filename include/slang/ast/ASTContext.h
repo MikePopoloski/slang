@@ -534,6 +534,10 @@ public:
     const syntax::ExpressionSyntax* requireSimpleExpr(const syntax::PropertyExprSyntax& expr,
                                                       DiagCode code) const;
 
+    /// Notes that the given value symbol has been referenced, taking into account
+    /// active AST flags to determine whether it's used as an lvalue or rvalue.
+    void noteReference(const ValueSymbol& symbol, bool isDottedAccess) const;
+
     /// Gets the rand mode for the given symbol, taking into account any randomize
     /// scope that may be active in this context.
     RandMode getRandMode(const Symbol& symbol) const;

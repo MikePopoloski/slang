@@ -158,7 +158,7 @@ public:
         Compilation& compilation, Expression& expr, const LookupResult::MemberSelector& selector,
         const syntax::InvocationExpressionSyntax* invocation,
         const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context,
-        bool isFromLookupChain);
+        bool isFromLookupChain, bool isDottedAccess);
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const syntax::MemberAccessExpressionSyntax& syntax,
