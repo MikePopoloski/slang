@@ -14,11 +14,11 @@ using namespace slang::ast;
 
 namespace unused_sensitive_signal {
 
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true, false, true> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::AllCanonical> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     struct CollectAllIdentifiers
-        : public slang::ast::ASTVisitor<CollectAllIdentifiers, true, true, false, true> {
+        : public slang::ast::ASTVisitor<CollectAllIdentifiers, VisitFlags::AllCanonical> {
         void handle(const slang::ast::NamedValueExpression& expression) {
             if (auto* symbol = expression.getSymbolReference(); symbol && expression.syntax) {
                 identifiers.push_back(

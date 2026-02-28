@@ -11,7 +11,7 @@ using namespace slang;
 using namespace slang::ast;
 
 namespace enforce_module_instantiation_prefix {
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false, false, true> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::StatementsCanonical> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const InstanceSymbol& instance) {

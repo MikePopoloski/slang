@@ -47,7 +47,7 @@ struct PyVisitorBase : public BaseVisitor<TDerived, baseArgs...> {
     }
 };
 
-struct PyASTVisitor : PyVisitorBase<PyASTVisitor, ASTVisitor, true, true> {
+struct PyASTVisitor : PyVisitorBase<PyASTVisitor, ASTVisitor, VisitFlags::AllGood> {
     using PyVisitorBase::PyVisitorBase;
 };
 

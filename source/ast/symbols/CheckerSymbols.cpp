@@ -608,7 +608,7 @@ const Expression* CheckerInstanceSymbol::Connection::getOutputInitialExpr() cons
     return *outputInitialExpr;
 }
 
-class CheckerMemberVisitor : public ASTVisitor<CheckerMemberVisitor, true, true> {
+class CheckerMemberVisitor : public ASTVisitor<CheckerMemberVisitor, VisitFlags::AllGood> {
 public:
     CheckerMemberVisitor(const CheckerInstanceBodySymbol& body) : body(body) {}
 

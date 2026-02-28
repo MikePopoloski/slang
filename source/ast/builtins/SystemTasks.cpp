@@ -68,7 +68,7 @@ public:
     }
 };
 
-struct MonitorVisitor : public ASTVisitor<MonitorVisitor, true, true> {
+struct MonitorVisitor : public ASTVisitor<MonitorVisitor, VisitFlags::AllGood> {
     const ASTContext& context;
 
     MonitorVisitor(const ASTContext& context) : context(context) {}

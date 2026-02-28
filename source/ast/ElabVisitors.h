@@ -19,7 +19,7 @@ using namespace syntax;
 
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
-struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
+struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
     DiagnosticVisitor(Compilation& compilation, const size_t& numErrors, uint32_t errorLimit) :
         compilation(compilation), numErrors(numErrors), errorLimit(errorLimit) {}
 
@@ -635,7 +635,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 // This visitor also implicitly serves to discover bind directives. They are registered
 // with the compilation by Scope::addMembers and then get processed after we finish
 // visiting the tree.
-struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
+struct DefParamVisitor : public ASTVisitor<DefParamVisitor> {
     DefParamVisitor(size_t maxInstanceDepth, size_t maxBlocks, size_t generateLevel) :
         maxInstanceDepth(maxInstanceDepth), generateLevel(generateLevel), maxBlocks(maxBlocks) {}
 

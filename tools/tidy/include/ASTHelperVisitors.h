@@ -47,7 +47,8 @@ protected:
 };
 
 /// ASTVisitor that will collect all identifiers under a node
-struct CollectIdentifiers : public slang::ast::ASTVisitor<CollectIdentifiers, false, true> {
+struct CollectIdentifiers
+    : public slang::ast::ASTVisitor<CollectIdentifiers, slang::ast::VisitFlags::AllGood> {
     void handle(const slang::ast::NamedValueExpression& expression) {
         if (auto* symbol = expression.getSymbolReference(); symbol) {
             identifiers.push_back(symbol->name);
@@ -57,7 +58,8 @@ struct CollectIdentifiers : public slang::ast::ASTVisitor<CollectIdentifiers, fa
 };
 
 /// ASTVisitor that will try to find the provided name in the identifiers under a node
-struct LookupIdentifier : public slang::ast::ASTVisitor<LookupIdentifier, true, true> {
+struct LookupIdentifier
+    : public slang::ast::ASTVisitor<LookupIdentifier, slang::ast::VisitFlags::AllGood> {
     explicit LookupIdentifier(const std::string_view& name, const bool exactMatching = true) :
         name(name), exactMatching(exactMatching) {}
 
@@ -97,7 +99,8 @@ private:
 };
 
 /// ASTVisitor that will collect all LHS assignment symbols under a node
-struct CollectLHSSymbols : public slang::ast::ASTVisitor<CollectLHSSymbols, true, true> {
+struct CollectLHSSymbols
+    : public slang::ast::ASTVisitor<CollectLHSSymbols, slang::ast::VisitFlags::AllGood> {
     void handle(const slang::ast::AssignmentExpression& expression) {
         if (const auto symbol = expression.left().getSymbolReference(); symbol)
             symbols.push_back(symbol);
@@ -107,7 +110,8 @@ struct CollectLHSSymbols : public slang::ast::ASTVisitor<CollectLHSSymbols, true
 };
 
 /// ASTVisitor that will try to find the provided name in the LHS of an assignment
-struct LookupLhsIdentifier : public slang::ast::ASTVisitor<LookupLhsIdentifier, true, true> {
+struct LookupLhsIdentifier
+    : public slang::ast::ASTVisitor<LookupLhsIdentifier, slang::ast::VisitFlags::AllGood> {
     explicit LookupLhsIdentifier(const std::string_view& name) : name(name) {}
 
     void handle(const slang::ast::AssignmentExpression& expression) {

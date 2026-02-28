@@ -24,7 +24,7 @@ public:
     bool found{false};
 };
 
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true, false, true> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::AllCanonical> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const InstanceBodySymbol& symbol) {

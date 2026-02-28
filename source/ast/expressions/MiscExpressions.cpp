@@ -1144,7 +1144,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     return *result;
 }
 
-struct CheckerArgVisitor : public ASTVisitor<CheckerArgVisitor, true, true> {
+struct CheckerArgVisitor : public ASTVisitor<CheckerArgVisitor, VisitFlags::AllGood> {
     const ASTContext& context;
     SourceRange argRange;
 

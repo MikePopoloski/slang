@@ -11,7 +11,7 @@ using namespace slang;
 using namespace slang::ast;
 
 namespace cast_signed_index {
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true, false, true> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::AllCanonical> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const ElementSelectExpression& expr) {

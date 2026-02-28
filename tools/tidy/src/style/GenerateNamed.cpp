@@ -12,7 +12,7 @@ using namespace slang;
 using namespace slang::ast;
 
 namespace generate_named {
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false, false, true> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::StatementsCanonical> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const GenerateBlockSymbol& symbol) {

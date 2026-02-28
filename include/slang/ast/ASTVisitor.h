@@ -52,6 +52,38 @@ struct SLANG_EXPORT InvalidSymbol final : public Symbol {
 template<typename T, typename TVisitor>
 concept HasVisitExprs = requires(const T& t, TVisitor&& visitor) { t.visitExprs(visitor); };
 
+/// Flags that control what kinds of things ASTVisitor will visit.
+enum class VisitFlags {
+    /// Visit symbols (this is always on by default).
+    Symbols = 0,
+
+    /// Visit statements.
+    Statements = 1 << 0,
+
+    /// Visit expressions.
+    Expressions = 1 << 1,
+
+    /// Visit AST nodes that are marked "bad" and would otherwise be skipped.
+    Bad = 1 << 2,
+
+    /// Only visit canonical instance bodies. If a non-canonical instance is
+    /// found the visitor will follow the link to its canonical body instead.
+    Canonical = 1 << 3,
+
+    /// Visit all good symbols, statements, and expressions.
+    AllGood = Symbols | Statements | Expressions,
+
+    /// Visit all good AST nodes but only in canonical instances.
+    AllCanonical = AllGood | Canonical,
+
+    /// Visit all good symbols and statements in canonical instances.
+    StatementsCanonical = Symbols | Statements | Canonical
+};
+
+constexpr VisitFlags operator|(VisitFlags l, VisitFlags r) {
+    return VisitFlags(int(l) | int(r));
+}
+
 /// @brief A base class for AST visitors
 ///
 /// This class provides default visitors that can visit each child
@@ -65,15 +97,16 @@ concept HasVisitExprs = requires(const T& t, TVisitor&& visitor) { t.visitExprs(
 /// visited -- you can include that behavior by invoking @a visitDefault
 /// in your handler.
 ///
-template<typename TDerived, bool VisitStatements, bool VisitExpressions, bool VisitBad = false,
-         bool VisitCanonical = false>
+template<typename TDerived, VisitFlags Flags = VisitFlags::Symbols>
 class ASTVisitor {
 #define DERIVED *static_cast<TDerived*>(this)
 public:
+    static constexpr bool HasFlag(VisitFlags flag) { return (int(Flags) & int(flag)) != 0; }
+
     /// The visit() entry point for visiting AST nodes.
     template<typename T>
     void visit(const T& t) {
-        if constexpr (!VisitBad && requires { t.bad(); }) {
+        if constexpr (!HasFlag(VisitFlags::Bad) && requires { t.bad(); }) {
             if (t.bad())
                 return;
         }
@@ -90,17 +123,17 @@ public:
     /// You can invoke this from custom node handlers to get the default behavior.
     template<typename T>
     void visitDefault(const T& t) {
-        if constexpr (VisitExpressions && HasVisitExprs<T, TDerived>) {
+        if constexpr (HasFlag(VisitFlags::Expressions) && HasVisitExprs<T, TDerived>) {
             t.visitExprs(DERIVED);
         }
-        else if constexpr (VisitExpressions && std::is_base_of_v<Symbol, T>) {
+        else if constexpr (HasFlag(VisitFlags::Expressions) && std::is_base_of_v<Symbol, T>) {
             if (auto declaredType = t.getDeclaredType()) {
                 if (auto init = declaredType->getInitializer())
                     init->visit(DERIVED);
             }
         }
 
-        if constexpr (VisitStatements && requires { t.visitStmts(DERIVED); }) {
+        if constexpr (HasFlag(VisitFlags::Statements) && requires { t.visitStmts(DERIVED); }) {
             t.visitStmts(DERIVED);
         }
 
@@ -115,7 +148,7 @@ public:
         }
 
         if constexpr (std::is_same_v<InstanceSymbol, T>) {
-            if constexpr (VisitCanonical) {
+            if constexpr (HasFlag(VisitFlags::Canonical)) {
                 const auto& body = t.getCanonicalBody() ? *t.getCanonicalBody() : t.body;
                 body.visit(DERIVED);
             }
@@ -160,7 +193,7 @@ public:
 ///
 template<typename... Functions>
 auto makeVisitor(Functions... funcs) {
-    struct Result : public Functions..., public ASTVisitor<Result, true, true> {
+    struct Result : public Functions..., public ASTVisitor<Result, VisitFlags::AllGood> {
         Result(Functions... funcs) : Functions(std::move(funcs))... {}
         using Functions::operator()...;
     };

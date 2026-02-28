@@ -552,7 +552,7 @@ endmodule
     CHECK(count == 3);
 }
 
-struct Visitor : public ASTVisitor<Visitor, true, true> {
+struct Visitor : public ASTVisitor<Visitor, VisitFlags::AllGood> {
     int count = 0;
     template<typename T>
     void handle(const T& t) {

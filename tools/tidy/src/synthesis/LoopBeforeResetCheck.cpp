@@ -14,7 +14,7 @@ using namespace slang::ast;
 using namespace slang::analysis;
 
 namespace loop_before_reset_check {
-struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true, false, true> {
+struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, VisitFlags::AllCanonical> {
     explicit AlwaysFFVisitor(const std::string_view resetName, const bool resetIsActiveHigh) :
         resetName(resetName), resetIsActiveHigh(resetIsActiveHigh) {};
 
@@ -75,7 +75,7 @@ struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true, false, t
 
 private:
     // Helper visitor to check if a loop body contains a reset check
-    struct ResetInLoopVisitor : public ASTVisitor<ResetInLoopVisitor, true, true, false, true> {
+    struct ResetInLoopVisitor : public ASTVisitor<ResetInLoopVisitor, VisitFlags::AllCanonical> {
         explicit ResetInLoopVisitor(const std::string_view resetName) : resetName(resetName) {}
 
         void handle(const ConditionalStatement& statement) {
@@ -104,7 +104,7 @@ private:
     std::optional<SourceLocation> errorLocation;
 };
 
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true, false, true> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::AllCanonical> {
     const AnalysisManager& analysisManager;
 
     MainVisitor(Diagnostics& diagnostics, const AnalysisManager& analysisManager) :

@@ -14,11 +14,7 @@ using namespace slang::analysis;
 
 namespace undriven_range {
 struct UndrivenRangeVisitor : public TidyVisitor,
-                              ASTVisitor<UndrivenRangeVisitor,
-                                         /*visitStatements=*/true,
-                                         /*visitExprerssions=*/true,
-                                         /*visitBad=*/false,
-                                         /*visitCanonical=*/true> {
+                              ASTVisitor<UndrivenRangeVisitor, VisitFlags::AllCanonical> {
     const AnalysisManager& analysisManager;
 
     UndrivenRangeVisitor(Diagnostics& diagnostics, const AnalysisManager& analysisManager) :
