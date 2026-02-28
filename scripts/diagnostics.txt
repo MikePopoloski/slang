@@ -1246,7 +1246,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   unconnected-unnamed-port redef-macro unknown-pragma unknown-warning-option
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
-                  unknown-escape-code missing-top warning-task unsized-concat finish-num implicit-conv
+                  unknown-escape-code missing-top warning-task unsized-concat finish-num
                   nonblocking-final constraint-missing missing-format dpi-spec enum-range udp-port-empty
                   lifetime-prototype net-inconsistent port-coercion empty-body reversed-range
                   invalid-source-encoding index-oob range-oob range-width-oob expected-protect-arg
@@ -1270,7 +1270,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 consecutive-comparison case-outside-range case-enum case-dup case-overlap
                 case-unreachable incomplete-return missing-return case-redundant-default case-incomplete
                 case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow shadow-value
-                shadow-hierarchy }
+                shadow-hierarchy implicit-conv }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }
