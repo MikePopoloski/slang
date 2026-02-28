@@ -9,7 +9,7 @@ timeprecision 1ps;
     export *::*;
 endpackage
 
-module automatic m1 import p::*; #(int i = 1)
+module automatic m1 import p::*, p::x; #(int i = 1)
     (a, b, , .c({a, b[0]}));
     input a;
     output [1:0] b;
@@ -89,6 +89,9 @@ macromodule m3;
             q ^ ~r : x = 3;
             12'h800 : x = 4;
         endcase
+
+        f <= #1step 1;
+        f <= repeat(3) @(ev) 1;
     end
 
     always_ff @(posedge b iff f == 1) begin
@@ -222,6 +225,11 @@ macromodule m3;
 
     default clocking cb;
     default disable iff 1 dist { [1:2] :/ 3, 2 };
+
+    int zz;
+    initial begin
+        ##(5 + 2) zz <= 1;
+    end
 
 endmodule : m3
 
@@ -446,7 +454,7 @@ class C2 extends B;
     endfunction
 
     rand bit [63:0] value;
-    rand logic q;
+    rand logic q, r;
     constraint value_c {
         value[63] dist {0 :/ 70, 1 :/ 30};
         value[0] == 1'b0;
@@ -454,6 +462,7 @@ class C2 extends B;
             8'h0,
             8'hF
         };
+        unique { q, r };
         solve value before q;
         soft value[3:1] > 1;
         q -> { value[4] == 0; }
@@ -515,9 +524,10 @@ class C3;
             bins sc = (12 => 3 [-> 1]);
             bins sd = (12 => 3 [= 1:2]);
         }
-        cross e, y {
+        X: cross e, y {
             option.weight = c;
             bins one = '{ '{1,2}, '{3,4}, '{5,6} };
+            bins two = X with (e < 257) matches 127;
             ignore_bins others = (!binsof(e.a) || !binsof(y) intersect {1}) with (e > 10);
         }
         b: cross y, x;
@@ -526,6 +536,13 @@ class C3;
     function new;
         g2 = new("SDF");
     endfunction
+
+    function foo;
+        return 0;
+    endfunction
+
+    covergroup g3 @@(begin foo or end foo);
+    endgroup
 endclass
 
 module m9;
@@ -563,4 +580,178 @@ module m11(input clk);
             $display("SDF");
         end
     end
+endmodule
+
+module m12;
+    int i, j, k;
+    final begin
+        i = j + k;
+        i = j - k;
+        i = j * k;
+        i = j / k;
+        i = j % k;
+        i = j | k;
+        i = j & k;
+        i = j ^ k;
+        i = j ** k;
+        i = j ^~ k;
+        i = j << k;
+        i = j <<< k;
+        i = j >> k;
+        i = j >>> k;
+        i = j -> k;
+        i = j <-> k;
+        i += j;
+        i -= j;
+        i *= j;
+        i /= j;
+        i %= k;
+        i &= k;
+        i |= k;
+        i ^= k;
+        i <<= j;
+        i <<<= j;
+        i >>= j;
+        i >>>= j;
+        i = j === k;
+        i = j !== k;
+        i = j ==? k;
+        i = j !=? k;
+        i = j > k;
+        i = j >= k;
+        i = j < k;
+        i = j <= k;
+        i = +j;
+        i = -j;
+        i = !j;
+        i = ~j;
+        i = &j;
+        i = ~&j;
+        i = |j;
+        i = ~|j;
+        i = ^j;
+        i = ~^j;
+        i = ^~j;
+        ++i;
+        i++;
+        --i;
+        i--;
+    end
+endmodule
+
+module m13;
+    struct packed {
+        int a;
+        logic b;
+    } x;
+
+    union packed {
+        logic a;
+        bit b;
+    } y;
+
+    chandle z;
+
+    realtime w[*];
+
+    typedef real TR[5];
+    nettype TR wTR;
+
+    typedef class Base;
+
+    class Base #(parameter p = 1);
+        typedef struct {
+            real r;
+            bit[p-1:0] data;
+        } T;
+
+        static function T Tsum (input T driver[]);
+            Tsum.r = 0.0;
+            Tsum.data = 0;
+            foreach (driver[i])
+                Tsum.data += driver[i].data;
+            Tsum.r = $itor(Tsum.data);
+        endfunction
+    endclass
+
+    typedef Base#(32) MyBaseT;
+    nettype MyBaseT::T narrowTsum with MyBaseT::Tsum;
+
+    typedef Base#(64) MyBaseType;
+    nettype MyBaseType::T wideTsum with MyBaseType::Tsum;
+
+    narrowTsum net1; // data is 32 bits wide
+    wideTsum net2; // data is 64 bits wide
+endmodule
+
+module m14(input a, output b);
+    specify
+        pulsestyle_onevent b, b;
+        pulsestyle_ondetect b;
+        showcancelled b;
+        noshowcancelled b, b;
+    endspecify
+
+    m13 instArr[3:1][2:5]();
+
+    (* maybe_unknown *) unknowninst ui(1, 2);
+
+    let eq(x, y = b) = x == y;
+endmodule
+
+module m15(input a, clk, data, output b);
+    reg notify;
+    wire bar;
+    wire [1:0] w;
+
+    specify
+        specparam tSU = 1, tHLD = 3:4:5;
+        $setup(posedge clk, data, 42);
+        $hold(posedge clk, data, 42, );
+        $setuphold(posedge clk, data, tSU, tHLD, notify, 0:1:0, bar, dclk, ddata);
+        $recovery(posedge clk, data, 42);
+        $removal(posedge clk, data, 42, );
+        $recrem(posedge clk, data, tSU, tHLD, notify, 0:1:0, bar, dclk);
+        $recrem(posedge clk, data, tSU, tHLD, notify, 0:1:0, bar, w[0], ddata);
+        $skew(posedge clk, data, 42);
+        $timeskew(posedge clk, negedge data, 42, , 1, 0:1:0);
+        $fullskew(posedge clk, negedge data, 42, 32, , 1, 0:1:0);
+        $period(edge [01, x1, 1Z] clk, 42, notify);
+        $width(posedge clk, 42, 52);
+        $nochange(posedge clk, negedge data, -1, -2);
+    endspecify
+
+    wire x = dclk;
+    wire y = ~ddata;
+endmodule
+
+`default_nettype none
+module m16(input wire clk, data, output reg b);
+    logic dclk, ddata;
+    specify
+        $recrem(posedge clk, data, 1, 2, , , , dclk, );
+    endspecify
+endmodule
+
+import "DPI-C" context \begin = function void dpi_f1(input, output logic[]);
+
+interface J(wire clk);
+    interface I(input int q);
+        clocking cb @(posedge clk);
+        endclocking
+
+        int a, b;
+        modport m(input .i({a, q, b}));
+        modport n(input b, clocking cb);
+
+        struct { int i; } s;
+        modport o(input .q(s.i));
+    endinterface
+
+    I i(3);
+endinterface
+
+module m17;
+    wire clk;
+    J j(clk);
 endmodule
