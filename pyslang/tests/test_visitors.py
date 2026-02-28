@@ -148,7 +148,11 @@ endmodule
 
     # Baseline: old API with isinstance filter
     old_matches = []
-    c.getRoot().visit(lambda n: old_matches.append(n) if isinstance(n, ProceduralBlockSymbol) else None)
+    c.getRoot().visit(
+        lambda n: (
+            old_matches.append(n) if isinstance(n, ProceduralBlockSymbol) else None
+        )
+    )
 
     # New API: C++-side kind filter
     new_matches = []
@@ -174,14 +178,21 @@ endmodule
 
     # Baseline: old API with kind check
     old_matches = []
+
     def count_old(node):
-        if isinstance(node, Statement) and node.kind == StatementKind.ExpressionStatement:
+        if (
+            isinstance(node, Statement)
+            and node.kind == StatementKind.ExpressionStatement
+        ):
             old_matches.append(node)
+
     c.getRoot().visit(count_old)
 
     # New API
     new_matches = []
-    c.getRoot().visit(lookup_table={StatementKind.ExpressionStatement: new_matches.append})
+    c.getRoot().visit(
+        lookup_table={StatementKind.ExpressionStatement: new_matches.append}
+    )
 
     assert len(new_matches) == len(old_matches)
     assert len(new_matches) == 2
@@ -207,9 +218,11 @@ endmodule
 
     # Baseline: old API with kind check
     old_matches = []
+
     def count_old(node):
         if hasattr(node, "kind") and node.kind == ExpressionKind.NamedValue:
             old_matches.append(node)
+
     c.getRoot().visit(count_old)
 
     # New API
@@ -246,11 +259,14 @@ def test_timing_control_visit_lookup_table():
     timing_control = always_block.body.timing
 
     sensitivity_vars = []
+
     def handle_signal_event(node):
         assert isinstance(node.expr, NamedValueExpression)
         sensitivity_vars.append(node.expr.getSymbolReference())
 
-    timing_control.visit(lookup_table={TimingControlKind.SignalEvent: handle_signal_event})
+    timing_control.visit(
+        lookup_table={TimingControlKind.SignalEvent: handle_signal_event}
+    )
 
     assert [v.name for v in sensitivity_vars] == ["clk", "rstn"]
 
@@ -292,15 +308,19 @@ endmodule
 
     # Without skip: ExpressionStatement inside always block is visited
     no_skip_matches = []
-    c.getRoot().visit(lookup_table={StatementKind.ExpressionStatement: no_skip_matches.append})
+    c.getRoot().visit(
+        lookup_table={StatementKind.ExpressionStatement: no_skip_matches.append}
+    )
     assert len(no_skip_matches) == 1
 
     # With skip on ProceduralBlock: children (including the ExpressionStatement) are not visited
     skip_matches = []
-    c.getRoot().visit(lookup_table={
-        SymbolKind.ProceduralBlock: lambda n: VisitAction.Skip,
-        StatementKind.ExpressionStatement: skip_matches.append,
-    })
+    c.getRoot().visit(
+        lookup_table={
+            SymbolKind.ProceduralBlock: lambda n: VisitAction.Skip,
+            StatementKind.ExpressionStatement: skip_matches.append,
+        }
+    )
     assert len(skip_matches) == 0
 
 
@@ -316,6 +336,7 @@ endmodule
     c.addSyntaxTree(tree)
 
     matches = []
+
     def interrupt_on_first(node):
         matches.append(node)
         return VisitAction.Interrupt
@@ -349,15 +370,19 @@ endmodule
 
     # Without skip: both expression statements are visited
     no_skip_matches = []
-    c.getRoot().visit(lookup_table={StatementKind.ExpressionStatement: no_skip_matches.append})
+    c.getRoot().visit(
+        lookup_table={StatementKind.ExpressionStatement: no_skip_matches.append}
+    )
     assert len(no_skip_matches) == 2
 
     # Skipping the Conditional prevents the nested ExpressionStatement from being visited
     skip_matches = []
-    c.getRoot().visit(lookup_table={
-        StatementKind.Conditional: lambda n: VisitAction.Skip,
-        StatementKind.ExpressionStatement: skip_matches.append,
-    })
+    c.getRoot().visit(
+        lookup_table={
+            StatementKind.Conditional: lambda n: VisitAction.Skip,
+            StatementKind.ExpressionStatement: skip_matches.append,
+        }
+    )
     assert len(skip_matches) == 1
 
 
@@ -372,10 +397,12 @@ def test_lookup_table_skip_in_syntax_visitor():
 
     # Skipping ModuleDeclaration prevents traversal into its children
     skip_matches = []
-    tree.root.visit(lookup_table={
-        SyntaxKind.ModuleDeclaration: lambda n: VisitAction.Skip,
-        SyntaxKind.DataDeclaration: skip_matches.append,
-    })
+    tree.root.visit(
+        lookup_table={
+            SyntaxKind.ModuleDeclaration: lambda n: VisitAction.Skip,
+            SyntaxKind.DataDeclaration: skip_matches.append,
+        }
+    )
     assert len(skip_matches) == 0
 
 
@@ -395,16 +422,21 @@ endmodule
 
     # Without interrupt: both expression statements are visited
     no_interrupt_matches = []
-    c.getRoot().visit(lookup_table={StatementKind.ExpressionStatement: no_interrupt_matches.append})
+    c.getRoot().visit(
+        lookup_table={StatementKind.ExpressionStatement: no_interrupt_matches.append}
+    )
     assert len(no_interrupt_matches) == 2
 
     # Interrupt on the first ExpressionStatement: second never reached
     interrupt_matches = []
+
     def interrupt_on_first_stmt(node):
         interrupt_matches.append(node)
         return VisitAction.Interrupt
 
-    c.getRoot().visit(lookup_table={StatementKind.ExpressionStatement: interrupt_on_first_stmt})
+    c.getRoot().visit(
+        lookup_table={StatementKind.ExpressionStatement: interrupt_on_first_stmt}
+    )
     assert len(interrupt_matches) == 1
 
 
@@ -414,30 +446,35 @@ def test_lookup_table_interrupt_in_syntax_visitor():
 
     # Without interrupt: all tokens are visited
     all_tokens = []
-    tree.root.visit(lookup_table={
-        TokenKind.AlwaysKeyword: all_tokens.append,
-        TokenKind.At: all_tokens.append,
-        TokenKind.OpenParenthesis: all_tokens.append,
-        TokenKind.Star: all_tokens.append,
-        TokenKind.CloseParenthesis: all_tokens.append,
-        TokenKind.Semicolon: all_tokens.append,
-    })
+    tree.root.visit(
+        lookup_table={
+            TokenKind.AlwaysKeyword: all_tokens.append,
+            TokenKind.At: all_tokens.append,
+            TokenKind.OpenParenthesis: all_tokens.append,
+            TokenKind.Star: all_tokens.append,
+            TokenKind.CloseParenthesis: all_tokens.append,
+            TokenKind.Semicolon: all_tokens.append,
+        }
+    )
     assert len(all_tokens) == 6
 
     # Interrupt on AlwaysKeyword: remaining tokens never visited
     interrupted_tokens = []
+
     def interrupt_on_always(token):
         interrupted_tokens.append(token)
         return VisitAction.Interrupt
 
-    tree.root.visit(lookup_table={
-        TokenKind.AlwaysKeyword: interrupt_on_always,
-        TokenKind.At: interrupted_tokens.append,
-        TokenKind.OpenParenthesis: interrupted_tokens.append,
-        TokenKind.Star: interrupted_tokens.append,
-        TokenKind.CloseParenthesis: interrupted_tokens.append,
-        TokenKind.Semicolon: interrupted_tokens.append,
-    })
+    tree.root.visit(
+        lookup_table={
+            TokenKind.AlwaysKeyword: interrupt_on_always,
+            TokenKind.At: interrupted_tokens.append,
+            TokenKind.OpenParenthesis: interrupted_tokens.append,
+            TokenKind.Star: interrupted_tokens.append,
+            TokenKind.CloseParenthesis: interrupted_tokens.append,
+            TokenKind.Semicolon: interrupted_tokens.append,
+        }
+    )
     assert len(interrupted_tokens) == 1
     assert interrupted_tokens[0].kind == TokenKind.AlwaysKeyword
 
@@ -456,10 +493,12 @@ endmodule
 
     proc_matches = []
     var_matches = []
-    c.getRoot().visit(lookup_table={
-        SymbolKind.ProceduralBlock: proc_matches.append,
-        SymbolKind.Variable: var_matches.append,
-    })
+    c.getRoot().visit(
+        lookup_table={
+            SymbolKind.ProceduralBlock: proc_matches.append,
+            SymbolKind.Variable: var_matches.append,
+        }
+    )
 
     assert len(proc_matches) == 1
     assert len(var_matches) == 2
@@ -484,10 +523,12 @@ endmodule
 
     proc_matches = []
     stmt_matches = []
-    c.getRoot().visit(lookup_table={
-        SymbolKind.ProceduralBlock: proc_matches.append,
-        StatementKind.ExpressionStatement: stmt_matches.append,
-    })
+    c.getRoot().visit(
+        lookup_table={
+            SymbolKind.ProceduralBlock: proc_matches.append,
+            StatementKind.ExpressionStatement: stmt_matches.append,
+        }
+    )
 
     assert len(proc_matches) == 1
     assert len(stmt_matches) == 1

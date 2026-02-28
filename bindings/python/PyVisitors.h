@@ -35,8 +35,8 @@ struct PyVisitorBase : public BaseVisitor<TDerived, baseArgs...> {
         "Python boundary, calling only the matching handler. Nodes not in the table are "
         "traversed without invoking Python. `f` is not called in this mode.";
 
-    explicit PyVisitorBase(py::object f, std::optional<py::dict> lt = std::nullopt)
-        : f{f}, lookup_table{std::move(lt)} {}
+    explicit PyVisitorBase(py::object f, std::optional<py::dict> lt = std::nullopt) :
+        f{f}, lookup_table{std::move(lt)} {}
 
     template<typename T>
     void handle(const T& t) {
@@ -45,20 +45,22 @@ struct PyVisitorBase : public BaseVisitor<TDerived, baseArgs...> {
 
         py::object result;
         if (this->lookup_table) {
-            // Lookup table filtering 
+            // Lookup table filtering
             if constexpr (requires { t.kind; }) {
                 auto kind_py = py::cast(t.kind);
                 if (!this->lookup_table->contains(kind_py)) {
-                    this->visitDefault(t); 
+                    this->visitDefault(t);
                     return;
                 }
                 py::object handler{(*this->lookup_table)[kind_py]};
                 result = handler(&t);
-            } else {
+            }
+            else {
                 this->visitDefault(t);
                 return;
             }
-        } else {
+        }
+        else {
             result = this->f(&t);
         }
 

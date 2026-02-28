@@ -82,7 +82,8 @@ struct PySyntaxVisitor : public PyVisitorBase<PySyntaxVisitor, SyntaxVisitor> {
     }
 };
 
-void pySyntaxVisit(const SyntaxNode& sn, py::object f = py::none(), py::object lookup_table = py::none()) {
+void pySyntaxVisit(const SyntaxNode& sn, py::object f = py::none(),
+                   py::object lookup_table = py::none()) {
     if (f.is_none() && lookup_table.is_none())
         throw py::type_error("visit() requires 'f' or 'lookup_table' (both are None)");
     std::optional<py::dict> lt;
@@ -363,7 +364,8 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
         .def("getFirstToken", &SyntaxNode::getFirstToken)
         .def("getLastToken", &SyntaxNode::getLastToken)
         .def("isEquivalentTo", &SyntaxNode::isEquivalentTo, "other"_a)
-        .def("visit", &pySyntaxVisit, "f"_a = py::none(), "lookup_table"_a = py::none(), PySyntaxVisitor::doc)
+        .def("visit", &pySyntaxVisit, "f"_a = py::none(), "lookup_table"_a = py::none(),
+             PySyntaxVisitor::doc)
         .def_property_readonly("sourceRange", &SyntaxNode::sourceRange)
         .def("__getitem__",
              [](const SyntaxNode& self, size_t i) -> py::object {
