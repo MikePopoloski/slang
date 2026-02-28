@@ -121,6 +121,7 @@ static void addProperty(Scope& scope, std::string_view name, VariableLifetime li
     auto& prop = *comp.emplace<ClassPropertySymbol>(name, SourceLocation::NoLocation, lifetime,
                                                     Visibility::Public);
     prop.setType(structBuilder.type);
+    prop.flags |= VariableFlags::CompilerGenerated;
     scope.addMember(prop);
 }
 

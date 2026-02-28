@@ -912,6 +912,17 @@ module top;
 
     intf inst();
 endmodule
+
+class C;
+    rand int a;
+    rand int b;
+
+    covergroup CG;
+        cp_a: coverpoint a;
+        cp_b: coverpoint b;
+        cx_ab: cross cp_a, cp_b;
+    endgroup
+endclass
 )";
 
     Compilation compilation;
