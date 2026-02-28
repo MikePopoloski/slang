@@ -527,7 +527,10 @@ private:
                 break;
 
             if (auto found = scope->find(symbol.name)) {
-                auto& diag = context.addDiag(symbol, diag::ShadowDecl, symbol.location);
+                auto code = (found->isValue() && symbol.isValue()) ? diag::ShadowValue
+                                                                   : diag::ShadowHierarchy;
+
+                auto& diag = context.addDiag(symbol, code, symbol.location);
                 diag << symbol.name;
                 diag.addNote(diag::NoteDeclarationHere, found->location);
                 return;

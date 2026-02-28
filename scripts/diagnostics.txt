@@ -1208,7 +1208,8 @@ warning unused-local-class-method UnusedLocalClassMethod "unused 'local' class m
 warning unused-local-class-property UnusedLocalClassProperty "unused 'local' class property '{}'"
 warning unused-but-set-local-property UnusedButSetLocalProperty "'local' class property '{}' is assigned but its value is never used"
 warning unassigned-local-property UnassignedLocalProperty "'local' class property '{}' is never assigned a value"
-warning shadow ShadowDecl "'{}' shadows a declaration in an outer scope"
+warning shadow-value ShadowValue "'{}' shadows a declaration in an outer scope"
+warning shadow-hierarchy ShadowHierarchy "'{}' shadows a declaration in an outer scope"
 warning inferred-latch InferredLatch "latch inferred for '{}' because it is not assigned on all control paths"
 warning inferred-comb InferredComb "combinational logic inferred for '{}' because it is assigned on all control paths"
 warning incomplete-return IncompleteReturn "non-void function '{}' does not return a value on all control paths"
@@ -1268,7 +1269,8 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 float-narrow bitwise-rel-precedence arith-in-shift logical-not-parentheses
                 consecutive-comparison case-outside-range case-enum case-dup case-overlap
                 case-unreachable incomplete-return missing-return case-redundant-default case-incomplete
-                case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow shadow }
+                case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow shadow-value
+                shadow-hierarchy }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }

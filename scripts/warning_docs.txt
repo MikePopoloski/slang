@@ -1108,22 +1108,41 @@ module m;
 endmodule
 ```
 
--Wshadow
-A declaration shadows another declaration with the same name in an outer scope.
-This can lead to subtle bugs where the programmer intends to reference the outer
-declaration but unintentionally references the inner (shadowing) one instead.
+-Wshadow-value
+A declaration of a value (net, variable, etc) shadows another value declaration with
+the same name in an outer scope. This can lead to subtle bugs where the programmer
+intends to reference the outer declaration but unintentionally references the
+inner (shadowing) one instead.
 ```
 int unitVar;
 
 module m;
     int x;
-    function automatic void f(int x);  // shadows m::x
+    function automatic void f(int x);  // shadows m.x
         return x;
     endfunction
 
     initial begin
         int unitVar;  // shadows $unit::unitVar
         unitVar = 1;
+    end
+endmodule
+```
+
+-Wshadow-hierarchy
+A declaration shadows another declaration with the same name in an outer scope, where either
+declaration is a named element of the hierarchy (generate block, task, function, etc).
+This can lead to subtle bugs where the programmer intends to reference the outer declaration
+but unintentionally references the inner (shadowing) one instead.
+```
+module m;
+    if (1) begin : gen
+        initial begin : gen  // shadows m.gen
+        end
+
+        initial begin
+            int gen;  // shadows m.gen.gen
+        end
     end
 endmodule
 ```

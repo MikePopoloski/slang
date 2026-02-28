@@ -912,10 +912,10 @@ endmodule
     Compilation compilation;
     auto diags = analyzeShadow(text, compilation);
     REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::ShadowDecl);
-    CHECK(diags[1].code == diag::ShadowDecl);
-    CHECK(diags[2].code == diag::ShadowDecl);
-    CHECK(diags[3].code == diag::ShadowDecl);
+    CHECK(diags[0].code == diag::ShadowValue);
+    CHECK(diags[1].code == diag::ShadowHierarchy);
+    CHECK(diags[2].code == diag::ShadowHierarchy);
+    CHECK(diags[3].code == diag::ShadowValue);
 }
 
 TEST_CASE("Shadowing false positives") {
