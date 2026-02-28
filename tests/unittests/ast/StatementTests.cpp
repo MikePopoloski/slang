@@ -2200,3 +2200,34 @@ endfunction
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::RecursiveDefinition);
 }
+
+TEST_CASE("Dangling else warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic a;
+    initial begin
+        // Dangling else: then-branch is bare if-else.
+        if (a)
+            if (a)
+                $display("A");
+            else
+                $display("B");
+
+        // No warning: inner if wrapped in begin/end.
+        if (a) begin
+            if (a)
+                $display("A");
+            else
+                $display("B");
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DanglingElse);
+}

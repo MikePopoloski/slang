@@ -735,6 +735,22 @@ module m;
 endmodule
 ```
 
+-Wdangling-else
+A confusingly nested if/else statement lacks begin/end delimiters. The `else` clause
+could be misread as belonging to a different `if` statement than it actually does.
+Add begin/end blocks around the inner `if` statement to make the association clear.
+```
+module m(input a, b);
+    initial begin
+        if (a)
+            if (b)
+                $display("A");
+            else
+                $display("B");
+    end
+endmodule
+```
+
 -Wdup-attr
 A design element has more than one attribute of the same name.
 Only the last one will apply.

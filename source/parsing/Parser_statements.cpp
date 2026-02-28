@@ -196,6 +196,16 @@ ConditionalStatementSyntax& Parser::parseConditionalStatement(NamedLabelSyntax* 
     else
         checkEmptyBody(statement, closeParen, "if statement"sv);
 
+    // Warn about dangling else: if outer if has no else and its then-branch is a bare
+    // if-else (not wrapped in begin/end), the structure is potentially confusing.
+    if (!elseClause && statement.kind == SyntaxKind::ConditionalStatement) {
+        auto& innerIf = statement.as<ConditionalStatementSyntax>();
+        if (innerIf.elseClause) {
+            auto& diag = addDiag(diag::DanglingElse, innerIf.elseClause->elseKeyword.range());
+            diag.addNote(diag::NoteMatchingIf, innerIf.ifKeyword.range());
+        }
+    }
+
     return factory.conditionalStatement(label, attributes, uniqueOrPriority, ifKeyword, openParen,
                                         predicate, closeParen, statement, elseClause);
 }
