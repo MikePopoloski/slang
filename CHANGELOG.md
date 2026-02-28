@@ -9,10 +9,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added a `--allow-virtual-iface-with-override` flag to allow interface instances that are bind/defparam targets to be assigned to virtual interfaces, for compatibility with other tools (thanks to @thomasnormal)
 * The error for invalid arguments to std::randomize has been made downgradeable via `-Wnonstandard-randomize`, for compatibility with other tools (thanks to @AndrewNolte)
 * Added support for conatenating strings with operator '+' (which will now issue `-Wnonstandard-string-concat`), for compatibility with other tools (thanks to @AndrewNolte)
-* The error for nested block comments is now a warning by default (`-Wnested-comment`)
+* The error for nested block comments is now a warning by default (`-Wnested-comment`), and turned off by default in VCS compat mode
+* `extern` and `pure` method prototypes are now allowed to have an implicit return type, for compatibility with other tools (thanks to @mampcs)
+* The error for qualifiers on out-of-block method definitions is now downgradeable via `-Wqualifiers-on-out-of-block`, for compatibility with other tools (thanks to @mampcs)
+* The error for missing implementations of `extern` methods is now downgradeable via `-Wmember-impl-not-found`, for compatibility with other tools (thanks to @mampcs)
+* Unqualified task and function calls will now perform upward name resolution up the hierarchy if there is no declaration visible locally. The LRM is not entirely clear here but all major tools allow this and now slang does as well. (thanks to @mampcs)
 
 ### Notable Breaking Changes
 * pyslang bindings are now separated into submodules matching the C++ API namespaces, which will require adding imports to your existing scripts to make them continue to run
+* The ASTVisitor template now takes a [VisitFlags](https://sv-lang.com/namespaceslang_1_1ast.html#a05ed6af040f87ae0471344a55009ca99) enum instead of a bunch of bool parameters
+* `-Wimplicit-conv` has been moved from the default warning set to the `-Wextra` group due to being a little too noisy for a default. If you want it on and aren't using -Wextra you'll need to readd it to your command line.
 
 ### New Features
 * Instantiations of unknown modules can now be ignored by putting a `(* maybe_unknown *)` attribute on the instantiation itself (thanks to @AndrewNolte)
@@ -20,6 +26,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added `-Wunused-subroutine`, `-Wunused-dpi-import`, `-Wunused-class-method`, `-Wunused-local-class-method`, and `-Wunused-constructor` for detecting various kinds of unused tasks and functions
 * Added `-Wunused-class-property`, `-Wunused-but-set-property`, `-Wunassigned-property`, `-Wunused-local-class-property`, `-Wunused-but-set-local-property`, and `-Wunassigned-local-property` for detecting various forms of unused class properties
 * Added `-Wunused-package-var`, `-Wunused-package-typedef`, `-Wunused-package-parameter`, `-Wunused-package-type-parameter`, `-Wunused-package-assertion-decl`, and `-Wunused-package-subroutine` for detecting unused items declared inside packages
+* Added a `--dir-prefix` option to specify directory prefixes to try when resolving relative source file paths
+* Added a `--max-enum-values` option that limits the maximum number of enum elements in a single declaration, to prevent typos in enum range members from causing the compiler to run out of memory
+* `-Wunconnected-port` has been split into three separate warnings: `-Wunconnected-input-port`, `-Wunconnected-output-port`, and `-Wunconnected-inout-port`, for more precise control over which warnings you want to see. The original `-Wunconnected-port` is now a group that controls all three at once, so existing command lines should continue to function the same way.
+* Added [-Wrandomize-var-shadow](https://sv-lang.com/warning-ref.html#randomize-var-shadow) which detects inline randomize constraint blocks that use class members which shadow local variable declarations
+* Added [-Wshadow-value](https://sv-lang.com/warning-ref.html#shadow-value) and [-Wshadow-hierarchy](https://sv-lang.com/warning-ref.html#shadow-hierarchy) which detect declarations that shadow others with the same name from outer scopes
 
 ### Improvements
 * Made several minor improvements to data flow modeling in the analysis pass to better represent SystemVerilog control flow
@@ -28,6 +39,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The error issued for incorrect range select endianness is now suppressed inside conditional blocks that are statically known to be untaken
 * The string formatting functions now allow passing class handles, chandles, and null literals as arguments to integer format specifiers, for compatibility with other tools (thanks to @thomasnormal)
 * Misplaced trailing separator errors are now downgradeable to a warning, for compatibility with other tools (via the new warning [-Wmisplaced-trailing-separator](https://sv-lang.com/warning-ref.html#misplaced-trailing-separator)) (thanks to @thomasnormal)
+* `--relax-string-conversions` now also allows implicit conversions from integers to strings, for compatibility with other tools (thanks to @mampcs)
+* Tweaked the behavior of how `--allow-use-before-declare` works when there are matching declarations in outer scopes, to better match other tools (thanks to @mampcs)
+* The parser will now perform typo correction when looking for a keyword and finding a closely named identifier instead
 
 ### Fixes
 * Fixed an issue where comments immediately preceeding a disabled `` `endif `` directive could erroneously show up in preprocessed output
@@ -41,6 +55,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed data flow analysis to work correctly with locally declared static variables in procedural blocks
 * Fixed string format diagnostic locations when the format string contains escape characters
 * Fixed constant evaluated string formatting when the format string is triple quoted or contains escape characters
+* Fixed a preprocessor bug where nested macros containing ifdef directives could be expanded improperly
+* Fixed the handling of command line provided parameter overrides involving assignment patterns and unpacked array concatenations
+* Fixed constant evaluation of unpacked array parameters set via defparam
+* Fixed a bug in how packed arrays are split across instance array port connections (thanks to @CheeksTheGeek)
+* Fixed ICE from formal argument declarations that have a missing direction due to invalid syntax
+* Fixed a malformed diagnostic when parsing duplicate empty function specifiers
+* Fixed a preprocessor bug during macro expansion when a macro argument immediately follows a line continuation character on a separate line
+* Fixed ASTVisitor to visit out-of-block method definitions
 
 ### Tools & Bindings
 #### pyslang
