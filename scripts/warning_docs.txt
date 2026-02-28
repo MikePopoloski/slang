@@ -286,7 +286,7 @@ While allowed, this is easily confused with a misplaced comma and is likely
 not what you want.
 ```
 primitive p1 (output a, input b);
-    table 00:0; endtable
+    table 0:0; endtable
 endprimitive
 
 module m;
@@ -1027,8 +1027,8 @@ endmodule
 -Wseq-no-match
 Warns about a sequence expression that can never be matched.
 ```
-module top;
-    assert property ((1'b1 ##1 1'b0) intersect (1'b1[*0] ##2 1'b1));
+module top(input clk);
+    assert property (@(posedge clk) (1'b1 ##1 1'b0) intersect (1'b1[*0] ##2 1'b1));
 endmodule
 ```
 
@@ -1118,7 +1118,7 @@ int unitVar;
 
 module m;
     int x;
-    function automatic void f(int x);  // shadows m.x
+    function automatic int f(int x);  // shadows m.x
         return x;
     endfunction
 
@@ -2160,6 +2160,9 @@ config cfg;
     design d;
     default liblist foo;
 endconfig
+
+module d;
+endmodule
 ```
 
 -Wdup-config-rule
