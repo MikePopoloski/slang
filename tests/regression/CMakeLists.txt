@@ -9,7 +9,7 @@ add_test(NAME regression_wire_module
          COMMAND slang::driver "${CMAKE_CURRENT_LIST_DIR}/wire_module.v")
 add_test(NAME regression_all_file
          COMMAND slang::driver "${CMAKE_CURRENT_LIST_DIR}/all.sv"
-                 "--ast-json=-" "--ast-json-detailed-types")
+                 "--ast-json=-" "--ast-json-detailed-types" "--std=1800-2023")
 
 # CST JSON round trip test
 add_test(
@@ -23,7 +23,7 @@ add_test(
 add_test(
   NAME regression_cst_json_gen
   COMMAND slang::driver --cst-json ${CMAKE_CURRENT_BINARY_DIR}/all_cst.json
-          ${CMAKE_CURRENT_LIST_DIR}/all.sv)
+          ${CMAKE_CURRENT_LIST_DIR}/all.sv "--std=1800-2023")
 
 set_tests_properties(regression_cst_json_roundtrip
                      PROPERTIES DEPENDS regression_cst_json_gen)
