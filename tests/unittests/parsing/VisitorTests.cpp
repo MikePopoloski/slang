@@ -873,6 +873,7 @@ TEST_CASE("SyntaxTree/Compilation Invariant Checking") {
 // nodes can only exist when parsing library map files, etc.
 static constexpr auto IgnoredSyntaxKinds = {
     SyntaxKind::Unknown,
+    SyntaxKind::BadExpression,
     SyntaxKind::CellDefineDirective,
     SyntaxKind::NoUnconnectedDriveDirective,
     SyntaxKind::EndCellDefineDirective,
@@ -936,10 +937,12 @@ TEST_CASE("Visit all file") {
     // just to get coverage of all the visitor methods.
     fs::path path = findTestDir();
     path /= "../../regression/all.sv";
-    auto tree = SyntaxTree::fromFile(path.string());
+
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromFile(path.string(), SyntaxTree::getDefaultSourceManager(), options);
     REQUIRE(tree);
 
-    Compilation compilation;
+    Compilation compilation(options);
     compilation.addSyntaxTree(*tree);
     if (std::ranges::any_of(compilation.getAllDiagnostics(), [](auto& d) { return d.isError(); })) {
         NO_COMPILATION_ERRORS;
@@ -993,6 +996,12 @@ TEST_CASE("Visit all file") {
         [&](auto& v, std::derived_from<Statement> auto& node) {
             stmtKinds.insert(node.kind);
             v.visitDefault(node);
+        },
+        [&](auto& v, const TransparentMemberSymbol& node) {
+            // AST visitation doesn't unwrap transparent members
+            // but we'd like to see e.g. enum values so do it here.
+            symKinds.insert(node.kind);
+            node.wrapped.visit(v);
         }));
 
     flat_hash_set<SyntaxKind> syntaxKinds = IgnoredSyntaxKinds;
@@ -1008,8 +1017,8 @@ TEST_CASE("Visit all file") {
             }
         }
     };
-    // printMissing("syntax", SyntaxKind_traits::values, syntaxKinds);
-    // printMissing("symbol", SymbolKind_traits::values, symKinds);
+    printMissing("syntax", SyntaxKind_traits::values, syntaxKinds);
+    printMissing("symbol", SymbolKind_traits::values, symKinds);
     printMissing("expression", ExpressionKind_traits::values, exprKinds);
     printMissing("assertion expr", AssertionExprKind_traits::values, assertionExprKinds);
     printMissing("timing control", TimingControlKind_traits::values, timingControlKinds);
@@ -1017,10 +1026,6 @@ TEST_CASE("Visit all file") {
     printMissing("pattern", PatternKind_traits::values, patternKinds);
     printMissing("bins select", BinsSelectExprKind_traits::values, binsSelectKinds);
     printMissing("statement", StatementKind_traits::values, stmtKinds);
-
-    // Ideally this should visit all kinds (be zero)
-    CHECK(74 == SyntaxKind_traits::values.size() - syntaxKinds.size());
-    CHECK(1 == SymbolKind_traits::values.size() - symKinds.size());
 
     analysis::AnalysisManager analysisManager;
     compilation.freeze();

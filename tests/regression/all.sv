@@ -9,6 +9,11 @@ timeprecision 1ps;
     export *::*;
 endpackage
 
+package pack2;
+    import p::x;
+    export p::x;
+endpackage
+
 module automatic m1 import p::*, p::x; #(int i = 1)
     (a, b, , .c({a, b[0]}));
     input a;
@@ -31,6 +36,12 @@ interface I(.*);
 endinterface
 
 extern macromodule m3;
+
+extern primitive EP(output a, input b);
+
+primitive EP(.*);
+    table 0 : 1; endtable
+endprimitive
 
 macromodule m3;
     wire b;
@@ -72,6 +83,9 @@ macromodule m3;
         assign z = 1;
         deassign z;
 
+        force z = 1;
+        release z;
+
         if (1) begin end else begin end
 
         unique0 casex (w)
@@ -94,6 +108,8 @@ macromodule m3;
         f <= repeat(3) @(ev) 1;
     end
 
+    logic ww[3][2];
+
     always_ff @(posedge b iff f == 1) begin
         forever break;
         repeat (f + 2) continue;
@@ -101,6 +117,7 @@ macromodule m3;
             ;
         for (int i = 0, j = i; i < 10; i += 2, j += i) begin end
         foreach (w[q]) begin end
+        foreach (ww[,]) begin end
     end
 
     always @* begin : foo
@@ -177,6 +194,7 @@ macromodule m3;
 
     assertion0: assert #0 (1 == 1) else $display("Hello!");
     assertion1: assume final (2 != 1) else $display("Hello!");
+    cover (2 != 1);
 
     if (1) begin
         logic a,b,c,d,e,f;
@@ -205,10 +223,20 @@ macromodule m3;
                         2'd2 : a ##4 b;
                         2'd3 : a ##8 b;
                         default: 1;
-                    endcase;
+                    endcase
+                or (a throughout b or c) implies (a iff always[1:2] b
+                until a s_until b s_until_with a until_with b);
+
         endproperty
 
+        property p4(property parg, sequence sarg);
+            parg and sarg;
+        endproperty
+
+        assume property (p3(d));
+        assume property (p2);
         cover property (disable iff (~clk) p3(d) and p2);
+        cover sequence (a within b);
     end
 
     prim prim_inst(q, r);
@@ -224,11 +252,18 @@ macromodule m3;
     global clocking cb2 @t; endclocking
 
     default clocking cb;
-    default disable iff 1 dist { [1:2] :/ 3, 2 };
+    default disable iff 1 dist { [1:2] :/ 3, 2, default :/ 4 };
 
     int zz;
+    wire clk2;
+    event ev3;
     initial begin
         ##(5 + 2) zz <= 1;
+
+        ->> ev3;
+
+        expect (@(posedge clk2) f #-# zz);
+        restrict property (@(posedge clk2) f #-# zz);
     end
 
 endmodule : m3
@@ -248,13 +283,24 @@ primitive prim(output reg a, input b);
     endtable
 endprimitive
 
+primitive srff (q, s, r);
+    output q; reg q;
+    input s, r;
+    initial q = 1'b1;
+    table
+        (10) 0 : ? : 1 ;
+    endtable
+endprimitive
+
 (* attr = 3.14 *) bind m3.m m1 #(1) bound('x, , , );
+bind m2 :m3.m m1 #(2) bound2('x, , , );
 
 config cfg;
     localparam i = 1;
     design work.m3;
     default liblist a b;
     cell m3 use work.m3;
+    instance m17.j liblist a;
 endconfig
 
 module ALU (o1, i1, i2, opcode);
@@ -268,6 +314,7 @@ module ALU (o1, i1, i2, opcode);
         if (opcode == 2'b01) (i1 => o1) = (5.6, 8.0);
         if (opcode == s1) (i2 => o1) = (5.6, 8.0);
         (opcode *> o1) = (6.1, 6.5);
+        (posedge i2 => (o1 +: i1)) = (10, 8);
     endspecify
 endmodule
 
@@ -502,6 +549,7 @@ class C3;
     enum {red, green, blue} color;
     bit [3:0] pixel_adr, pixel_offset, pixel_hue;
     logic clk, x, y, c;
+    logic arr[3];
 
     covergroup g2 (string instComment) @(posedge clk);
         Offset: coverpoint pixel_offset;
@@ -523,6 +571,9 @@ class C3;
             bins sb[] = (12 => 3 [* 1]);
             bins sc = (12 => 3 [-> 1]);
             bins sd = (12 => 3 [= 1:2]);
+
+            bins se = e with (item % 3 == 0);
+            bins sf = arr;
         }
         X: cross e, y {
             option.weight = c;
@@ -542,6 +593,9 @@ class C3;
     endfunction
 
     covergroup g3 @@(begin foo or end foo);
+    endgroup
+
+    covergroup g4 with function sample();
     endgroup
 endclass
 
@@ -582,8 +636,15 @@ module m11(input clk);
     end
 endmodule
 
+int unitVar;
+
 module m12;
     int i, j, k;
+    int a[];
+    time t;
+    shortreal sr;
+    shortint si;
+    int qq[$:3];
     final begin
         i = j + k;
         i = j - k;
@@ -636,6 +697,18 @@ module m12;
         i++;
         --i;
         i--;
+        i = signed'(j);
+        i = a.or;
+        i = a.and;
+        i = a.xor;
+        i = a.unique()[0];
+        i = j[0];
+        i = j[3:2];
+        i = j[3-:1];
+        i = $unit::unitVar;
+        i = $root.m12.j;
+        a = {};
+        void'(a.find(x) with (x > 5).unique);
     end
 endmodule
 
@@ -656,6 +729,8 @@ module m13;
 
     typedef real TR[5];
     nettype TR wTR;
+
+    wTR #1 udfntwd;
 
     typedef class Base;
 
@@ -690,6 +765,7 @@ module m14(input a, output b);
         pulsestyle_ondetect b;
         showcancelled b;
         noshowcancelled b, b;
+        ifnone (a => b) = (1, 0);
     endspecify
 
     m13 instArr[3:1][2:5]();
@@ -706,7 +782,7 @@ module m15(input a, clk, data, output b);
 
     specify
         specparam tSU = 1, tHLD = 3:4:5;
-        $setup(posedge clk, data, 42);
+        $setup(posedge clk &&& a, data, 42);
         $hold(posedge clk, data, 42, );
         $setuphold(posedge clk, data, tSU, tHLD, notify, 0:1:0, bar, dclk, ddata);
         $recovery(posedge clk, data, 42);
@@ -725,15 +801,25 @@ module m15(input a, clk, data, output b);
     wire y = ~ddata;
 endmodule
 
-`default_nettype none
 module m16(input wire clk, data, output reg b);
     logic dclk, ddata;
     specify
         $recrem(posedge clk, data, 1, 2, , , , dclk, );
     endspecify
+
+    function void func(int a = 1, b = 2);
+    endfunction
+
+    initial begin
+        func(,);
+        func(.a(1), .b(2));
+    end
 endmodule
 
 import "DPI-C" context \begin = function void dpi_f1(input, output logic[]);
+
+function dpi_e1; endfunction
+export "DPI-C" function dpi_e1;
 
 interface J(wire clk);
     interface I(input int q);
@@ -753,5 +839,43 @@ endinterface
 
 module m17;
     wire clk;
-    J j(clk);
+    J j(.*);
+
+    virtual interface J jvi = j;
+
+    trireg (large) logic #(0,0,0) cap1;
+    pullup (strong1) p1 (neta), p2 (netb);
+
+    class C;
+        rand integer x;
+    endclass
+    function int F(C obj, integer x);
+        F = obj.randomize() with { x < local::x; };
+    endfunction
 endmodule
+
+class Base;
+    string name;
+    local int m_id;
+    function new(string name, output int id);
+        this.name = name;
+        id = m_id++;
+    endfunction : new
+endclass : Base
+
+interface class IfaceClass;
+endclass
+
+class B2 extends Base implements IfaceClass;
+    int size;
+    function new(int size, default);
+        super.new(default); // Optional explicit use of super.new
+        this.size = size;
+    endfunction : new
+endclass : B2
+
+class B3 extends Base(default);
+    function :final foo(); endfunction
+
+    constraint co;
+endclass : B3
