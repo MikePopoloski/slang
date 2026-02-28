@@ -718,7 +718,7 @@ module m;
         restrict property (@(posedge clk) i);
         expect (@(posedge clk) i);
 
-        restrict property (@(posedge clk) i) i++;
+        restrict property (@(posedge clk) i) i = 0;
     end
 endmodule
 )");

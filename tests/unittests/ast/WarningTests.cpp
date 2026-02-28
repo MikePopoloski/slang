@@ -734,3 +734,33 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Increment/decrement of 1-bit operand") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    bit b;
+    logic l;
+    logic [3:0] v;
+    int i;
+
+    initial begin
+        b++;   // warn
+        ++b;   // warn
+        l--;   // warn
+        --l;   // warn
+        v++;   // ok
+        i++;   // ok
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::IncDecBit);
+    CHECK(diags[1].code == diag::IncDecBit);
+    CHECK(diags[2].code == diag::IncDecBit);
+    CHECK(diags[3].code == diag::IncDecBit);
+}

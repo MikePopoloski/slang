@@ -280,6 +280,9 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
                 return badExpr(compilation, result);
             }
 
+            if (good && type->isIntegral() && type->getBitWidth() == 1)
+                context.addDiag(diag::IncDecBit, syntax.operatorToken.range());
+
             break;
         default:
             SLANG_UNREACHABLE;
@@ -323,6 +326,9 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
         diag << operand.sourceRange;
         return badExpr(compilation, result);
     }
+
+    if (type->isIntegral() && type->getBitWidth() == 1)
+        context.addDiag(diag::IncDecBit, syntax.operatorToken.range());
 
     context.setAttributes(*result, syntax.attributes);
     return *result;

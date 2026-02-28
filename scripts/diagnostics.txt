@@ -790,6 +790,7 @@ warning consecutive-comparison ConsecutiveComparison "comparisons like 'x < y < 
 note NoteForPortConn "for connection to port '{}'"
 warning dynamic-non-procedural DynamicNotProcedural "cannot refer to an element or member of a dynamic type outside of a procedural context"
 warning nonstandard-string-concat NonstandardStringConcat "string concatenation using '+' operator is non-standard"
+warning inc-dec-bit IncDecBit "increment/decrement of a 1-bit operand"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -1270,7 +1271,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 consecutive-comparison case-outside-range case-enum case-dup case-overlap
                 case-unreachable incomplete-return missing-return case-redundant-default case-incomplete
                 case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow shadow-value
-                shadow-hierarchy implicit-conv }
+                shadow-hierarchy implicit-conv inc-dec-bit }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }
