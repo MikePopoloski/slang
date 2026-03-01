@@ -278,6 +278,82 @@ endfunction
     CHECK(diags[0].code == diag::SignedLogicalShift);
 }
 
+TEST_CASE("Shift count overflow warning") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [2:0] v;
+    int i;
+    logic [3:0] r;
+
+    initial begin
+        r = v << 4;     // warn: shift by 4 == width (4 bits)
+        r = v << 5;     // warn: shift by 5 > width
+        r = v << 3;     // ok: shift by 3 < width
+        r = v << i;     // ok: non-constant shift amount
+        r = v >> 4;     // warn: shift by 4 == width
+        r = v >> 0;     // ok: shift by 0
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ShiftCountOverflow);
+    CHECK(diags[1].code == diag::ShiftCountOverflow);
+    CHECK(diags[2].code == diag::ShiftCountOverflow);
+}
+
+TEST_CASE("Shift count overflow warning - arithmetic shifts") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int v;          // signed 32-bit
+    int r;
+
+    initial begin
+        r = v >>> 32;   // warn: shift by 32 == width
+        r = v >>> 31;   // ok: shift by 31 < width
+        r = v <<< 32;   // warn: shift by 32 == width
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ShiftCountOverflow);
+    CHECK(diags[1].code == diag::ShiftCountOverflow);
+}
+
+TEST_CASE("Shift count negative warning") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [7:0] v;
+    logic [7:0] r;
+    int i;
+
+    initial begin
+        r = v << -1;    // warn: negative shift amount
+        r = v >> -2;    // warn: negative shift amount
+        r = v << i;     // ok: non-constant shift amount
+        r = v << 0;     // ok: zero is valid
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ShiftCountNegative);
+    CHECK(diags[1].code == diag::ShiftCountNegative);
+}
+
 TEST_CASE("Indeterminate variable initialization order") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
@@ -418,12 +494,13 @@ module m;
     int unsigned flags;
     logic a, b, c;
     int unsigned d, e;
+    logic [3:0] f;
     initial begin
         if (flags & 'h1 == 'h1) begin end
         if (a & b | c) begin end
         if (a | b ^ c) begin end
         if (a || b && c) begin end
-        if (a << 1 + 1) begin end
+        if ((f << 1 + 1) == 2) begin end
         if (!d < e) begin end
         if (!d & e) begin end
         if ((a + b ? 1 : 2) == 2) begin end

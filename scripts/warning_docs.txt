@@ -940,6 +940,31 @@ function automatic int f1(int i);
 endfunction
 ```
 
+-Wshift-count-overflow
+The shift count is a constant that is greater than or equal to the bit width of the
+left-hand operand. Shifting by this amount always produces zero (for left shifts or logical
+right shifts) or all ones (for arithmetic right shifts of negative values), which is almost
+certainly not the intended behavior.
+```
+module m;
+    logic [3:0] v;
+    logic [7:0] result;
+    initial result = v << 4;
+endmodule
+```
+
+-Wshift-count-negative
+The shift count is a constant negative value. In SystemVerilog the shift amount is always
+treated as an unsigned number, so a negative shift amount is interpreted as a very large
+positive number, which will shift out all bits of the operand.
+```
+module m;
+    int v;
+    int result;
+    initial result = v << -1;
+endmodule
+```
+
 -Winc-dec-bit
 An increment or decrement operator is applied to a 1-bit operand. The result always wraps around
 and is likely not what was intended (e.g. incrementing a `bit` from 0 gives 1, but incrementing
