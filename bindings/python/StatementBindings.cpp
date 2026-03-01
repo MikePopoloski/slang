@@ -22,7 +22,8 @@ void registerStatements(py::module_& m) {
         .def_readonly("sourceRange", &Statement::sourceRange)
         .def_property_readonly("bad", &Statement::bad)
         .def("eval", &Statement::eval, "context"_a)
-        .def("visit", &pyASTVisit<Statement>, "f"_a, PyASTVisitor::doc)
+        .def("visit", &pyASTVisit<Statement>, "f"_a = py::none(), "lookup_table"_a = py::none(),
+             PyASTVisitor::doc)
         .def("__repr__", [](const Statement& self) {
             return fmt::format("Statement(StatementKind.{})", toString(self.kind));
         });
