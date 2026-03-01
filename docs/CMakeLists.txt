@@ -5,8 +5,8 @@
 
 FetchContent_Declare(
   mcss
-  URL https://github.com/MikePopoloski/m.css/releases/download/release-11/mcss.zip
-  URL_HASH MD5=980711d428517ab9d0e5a7bfc15b208f
+  URL https://github.com/MikePopoloski/m.css/releases/download/release-12/mcss.zip
+  URL_HASH MD5=6af2b951464c89f72172b06e39c2fd66
   SOURCE_DIR "${PROJECT_BINARY_DIR}/mcss"
   UPDATE_DISCONNECTED YES)
 FetchContent_MakeAvailable(mcss)

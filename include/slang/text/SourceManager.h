@@ -68,11 +68,11 @@ public:
     std::string_view getFileName(SourceLocation location) const;
 
     /// Gets the source file name for a given source buffer, not taking
-    /// into account any `line directives that may be in the file.
+    /// into account any line directives that may be in the file.
     std::string_view getRawFileName(BufferID buffer) const;
 
     /// Gets the full path to the given source buffer. This does not take
-    /// into account any `line directives. If the buffer is not a file buffer,
+    /// into account any line directives. If the buffer is not a file buffer,
     /// returns an empty string.
     const std::filesystem::path& getFullPath(BufferID buffer) const;
 
@@ -198,7 +198,7 @@ public:
     void addDiagnosticDirective(SourceLocation location, std::string_view name,
                                 DiagnosticSeverity severity);
 
-    /// Stores information specified in a `pragma diagnostic directive, which alters the
+    /// Stores information specified in a pragma diagnostic directive, which alters the
     /// currently active set of diagnostic mappings.
     struct DiagnosticDirectiveInfo {
         /// The name of the diagnostic being controlled.

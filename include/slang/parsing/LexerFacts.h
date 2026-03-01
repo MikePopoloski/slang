@@ -21,7 +21,7 @@ namespace slang::parsing {
 enum class TokenKind : uint16_t;
 
 /// Different restricted sets of keywords that can be set using the
-/// `begin_keywords directive.
+/// begin_keywords directive.
 enum class SLANG_EXPORT KeywordVersion : uint8_t {
     // Note: The values of the enum correspond to indexes to
     // allKeywords[] in LexerFacts.cpp

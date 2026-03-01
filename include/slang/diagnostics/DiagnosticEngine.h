@@ -213,12 +213,12 @@ public:
     /// the options are returned via the diagnostics set.
     Diagnostics setWarningOptions(std::span<const std::string> options);
 
-    /// Sets diagnostic options from the `pragma diagnostic entries in all of the various
+    /// Sets diagnostic options from the pragma diagnostic entries in all of the various
     /// source files tracked by the engine's source manager. Any errors encountered
     /// while applying options are returned via the diagnostics set.
     Diagnostics setMappingsFromPragmas();
 
-    /// Sets diagnostic options from the `pragma diagnostic entries in the given
+    /// Sets diagnostic options from the pragma diagnostic entries in the given
     /// source file tracked by the engine's source manager. Any errors encountered
     /// while applying options are returned via the diagnostics set.
     Diagnostics setMappingsFromPragmas(BufferID buffer);
