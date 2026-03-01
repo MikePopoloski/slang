@@ -805,6 +805,16 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             else
                 result->type = lt;
             selfDetermined(context, result->right_);
+
+            if (good && op == BinaryOperator::LogicalShiftRight && lt->isSigned()) {
+                // Warn when a logical right shift is applied to a signed operand, since
+                // it shifts in zeros rather than the sign bit. Suppress the warning when
+                // the operand is a known non-negative constant, because in that case
+                // logical and arithmetic shifts produce the same result.
+                auto cv = context.tryEval(*result->left_);
+                if (!cv || !cv.isInteger() || cv.integer().isNegative())
+                    context.addDiag(diag::SignedLogicalShift, result->left_->sourceRange) << *lt;
+            }
             break;
         case BinaryOperator::Power:
             good = bothNumeric;

@@ -153,7 +153,7 @@ module m;
     initial if (i || r) begin end
 
     // These don't warn
-    initial if (i >> 2) begin end
+    initial if (i >>> 2) begin end
     initial if (i & 2) begin end
     initial if (i ^ 2) begin end
 endmodule
@@ -250,6 +250,32 @@ endfunction
     CHECK(diags[2].code == diag::ArithOpMismatch);
     CHECK(diags[3].code == diag::SignConversion);
     CHECK(diags[4].code == diag::SignConversion);
+}
+
+TEST_CASE("Signed logical shift warning") {
+    auto tree = SyntaxTree::fromText(R"(
+// Should warn: logical shift of signed variable
+function automatic int f1(int i);
+    return i >> 5;
+endfunction
+
+// Should NOT warn: signed but known non-negative constant
+function automatic int f2();
+    return 42 >> 1;
+endfunction
+
+// Should NOT warn: unsigned variable
+function automatic int unsigned f3(int unsigned i);
+    return i >> 5;
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SignedLogicalShift);
 }
 
 TEST_CASE("Indeterminate variable initialization order") {
