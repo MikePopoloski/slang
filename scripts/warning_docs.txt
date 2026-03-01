@@ -947,8 +947,8 @@ right shifts) or all ones (for arithmetic right shifts of negative values), whic
 certainly not the intended behavior.
 ```
 module m;
-    logic [3:0] v;
-    logic [7:0] result;
+    logic [2:0] v;
+    logic [3:0] result;
     initial result = v << 4;
 endmodule
 ```
