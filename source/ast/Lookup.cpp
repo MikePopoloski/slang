@@ -1438,6 +1438,7 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
         }
     }
 
+    result.nameRange = range;
     result.found = getVirtualInterfaceTarget(virtualInterface, context, range);
     lookupDownward(nameParts, unused, context, LookupFlags::None, result);
 }
