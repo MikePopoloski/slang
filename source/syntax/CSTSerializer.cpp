@@ -188,9 +188,20 @@ struct CSTJsonVisitor {
                     writer.endArray();
                     break;
                 case CSTJsonMode::NoWhitespace: {
+                    // Write trivia array, but skip whitespace and end-of-line trivia.
                     auto filtered = token.trivia() | std::views::filter([](auto& t) {
-                                        return t.kind != parsing::TriviaKind::Whitespace &&
-                                               t.kind != parsing::TriviaKind::EndOfLine;
+                                        if (t.kind == parsing::TriviaKind::Whitespace ||
+                                            t.kind == parsing::TriviaKind::EndOfLine)
+                                            return false;
+                                        // Also skip DisabledText entries that contain only
+                                        // whitespace, since the preprocessor rewrites
+                                        // Whitespace/EndOfLine trivia to DisabledText on directive
+                                        // tokens in untaken branches.
+                                        if (t.kind == parsing::TriviaKind::DisabledText) {
+                                            return !std::ranges::all_of(t.getRawText(),
+                                                                        isWhitespace);
+                                        }
+                                        return true;
                                     });
                     if (!std::ranges::empty(filtered)) {
                         writer.writeProperty("trivia");
