@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/syntax/CSTSerializer.h"
 
+#include <ranges>
 #include <string_view>
 #include <type_traits>
 
@@ -65,8 +66,13 @@ struct CSTJsonVisitor {
     }
 
     void writeToken(std::string_view name, parsing::Token token) {
-        if (token.valueText().empty())
-            return;
+        if (token.rawText().empty()) {
+            if (mode == CSTJsonMode::SimpleTokens || mode == CSTJsonMode::NoTrivia)
+                return;
+            // The EOF token may have no text, but trivia we want to capture.
+            if (token.trivia().empty())
+                return;
+        }
 
         writer.writeProperty(name);
         writeTokenValue(token);
@@ -172,23 +178,40 @@ struct CSTJsonVisitor {
         writer.writeValue(token.rawText());
 
         // Handle trivia based on mode
-        if (mode != CSTJsonMode::NoTrivia && !token.trivia().empty()) {
-            writer.writeProperty("trivia");
-            if (mode == CSTJsonMode::SimpleTrivia) {
-                // Just write the concatenated trivia text
-                std::string triviaText;
-                for (auto trivia : token.trivia())
-                    triviaText += trivia.getRawText();
-
-                writer.writeValue(triviaText);
-            }
-            else {
-                // Write trivia kind and value
-                writer.startArray();
-                for (auto trivia : token.trivia()) {
-                    writeTrivia(trivia);
+        if (!token.trivia().empty()) {
+            switch (mode) {
+                case CSTJsonMode::Full:
+                    writer.writeProperty("trivia");
+                    writer.startArray();
+                    for (auto& t : token.trivia())
+                        writeTrivia(t);
+                    writer.endArray();
+                    break;
+                case CSTJsonMode::NoWhitespace: {
+                    auto filtered = token.trivia() | std::views::filter([](auto& t) {
+                                        return t.kind != parsing::TriviaKind::Whitespace &&
+                                               t.kind != parsing::TriviaKind::EndOfLine;
+                                    });
+                    if (!std::ranges::empty(filtered)) {
+                        writer.writeProperty("trivia");
+                        writer.startArray();
+                        for (auto& t : filtered)
+                            writeTrivia(t);
+                        writer.endArray();
+                    }
+                    break;
                 }
-                writer.endArray();
+                case CSTJsonMode::SimpleTrivia: {
+                    writer.writeProperty("trivia");
+                    std::string triviaText;
+                    for (auto trivia : token.trivia())
+                        triviaText += trivia.getRawText();
+                    writer.writeValue(triviaText);
+                    break;
+                }
+                case CSTJsonMode::NoTrivia:
+                case CSTJsonMode::SimpleTokens:
+                    break;
             }
         }
 

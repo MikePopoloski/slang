@@ -14,7 +14,7 @@ namespace slang::syntax {
 
 class SyntaxTree;
 
-#define MODE(x) x(Full) x(SimpleTrivia) x(NoTrivia) x(SimpleTokens)
+#define MODE(x) x(Full) x(NoWhitespace) x(SimpleTrivia) x(NoTrivia) x(SimpleTokens)
 SLANG_ENUM(CSTJsonMode, MODE)
 #undef MODE
 
@@ -30,9 +30,6 @@ public:
     void serialize(const SyntaxNode& node);
 
 private:
-    void visitToken(parsing::Token token);
-    void writeTokenTrivia(parsing::Token token);
-
     JsonWriter& writer;
     CSTJsonMode mode;
 };
