@@ -3845,17 +3845,15 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto aDecl = compilation.getRoot()
-        .lookupName("m.a");
+    auto aDecl = compilation.getRoot().lookupName("m.a");
     REQUIRE(aDecl);
     auto declarator = aDecl->getSyntax()
-        ->as_if<DeclaratorSyntax>()
-        ->initializer->as_if<EqualsValueClauseSyntax>()
-        ->expr;
+                          ->as_if<DeclaratorSyntax>()
+                          ->initializer->as_if<EqualsValueClauseSyntax>()
+                          ->expr;
 
     auto& expr = Expression::bind(*declarator,
-        ASTContext(*aDecl->getParentScope(),
-        LookupLocation::max));
+                                  ASTContext(*aDecl->getParentScope(), LookupLocation::max));
 
-    REQUIRE(expr.as<HierarchicalValueExpression>().sourceRange.start().valid());    
+    REQUIRE(expr.as<HierarchicalValueExpression>().sourceRange.start().valid());
 }
