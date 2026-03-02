@@ -50,7 +50,7 @@ repos:
 
 # Sort your python imports in a standard form
 - repo: https://github.com/PyCQA/isort
-  rev: 8.0.0
+  rev: 8.0.1
   hooks:
   - id: isort
 
@@ -65,7 +65,7 @@ repos:
 
 # clang-format
 - repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v21.1.8
+  rev: v22.1.0
   hooks:
   - id: clang-format
     exclude: ^external/.*
