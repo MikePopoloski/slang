@@ -3831,8 +3831,6 @@ endinterface
 
 class C;
     virtual intf vex;
-    function new();
-    endfunction
 endclass
 
 module m (
