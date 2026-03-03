@@ -25,9 +25,6 @@ CMakeUserPresets.json
 
 # Editor ignores.
 .vscode/
-!.vscode/settings.json
-!.vscode/extensions.json
-
 .idea/
 .vs/
 *.code-workspace
