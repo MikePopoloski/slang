@@ -365,6 +365,8 @@ void TypePrinter::visit(const PropertyType& type, std::string_view) {
 
 void TypePrinter::visit(const ClassType& type, std::string_view) {
     buffer->append(type.name);
+    if (type.genericClass)
+        appendParameters(type.genericParameters, false);
 }
 
 void TypePrinter::visit(const CovergroupType& type, std::string_view) {
@@ -385,18 +387,11 @@ void TypePrinter::visit(const VirtualInterfaceType& type, std::string_view) {
 
     auto params = type.iface.body.getParameters();
     if (!params.empty()) {
-        buffer->append("#(");
-        for (auto param : params) {
-            buffer->format("{}=", param->symbol.name);
-            if (param->symbol.kind == SymbolKind::TypeParameter)
-                append(param->symbol.as<TypeParameterSymbol>().targetType.getType());
-            else
-                buffer->append(param->symbol.as<ParameterSymbol>().getValue().toString());
-            buffer->append(",");
-        }
+        SmallVector<const Symbol*> paramSymbols(params.size(), UninitializedTag{});
+        for (auto param : params)
+            paramSymbols.push_back(&param->symbol);
 
-        buffer->pop_back();
-        buffer->append(")");
+        appendParameters(paramSymbols, true);
     }
 
     if (type.modport)
@@ -440,6 +435,32 @@ void TypePrinter::appendMembers(const Scope& scope) {
         buffer->format(" {};", var.name);
     }
     buffer->append("}");
+}
+
+void TypePrinter::appendParameters(std::span<const Symbol* const> parameters, bool includeNames) {
+    buffer->append("#(");
+    if (parameters.empty()) {
+        buffer->append(")");
+        return;
+    }
+
+    auto guard = ScopeGuard([savedFlag = std::exchange(options.addSingleQuotes, false), this] {
+        options.addSingleQuotes = savedFlag;
+    });
+
+    for (auto param : parameters) {
+        if (includeNames)
+            buffer->format("{}=", param->name);
+
+        if (param->kind == SymbolKind::TypeParameter)
+            append(param->as<TypeParameterSymbol>().targetType.getType());
+        else
+            buffer->append(param->as<ParameterSymbol>().getValue().toString());
+        buffer->append(",");
+    }
+
+    buffer->pop_back();
+    buffer->append(")");
 }
 
 void TypePrinter::printUnpackedArray(const Type& type) {

@@ -69,6 +69,8 @@ public:
     /// @returns the printer's string buffer as a copy.
     std::string toString() const;
 
+    void appendParameters(std::span<const Symbol* const> parameters, bool includeNames);
+
     void visit(const ScalarType& type, std::string_view overrideName);
     void visit(const PredefinedIntegerType& type, std::string_view overrideName);
     void visit(const FloatingType& type, std::string_view overrideName);

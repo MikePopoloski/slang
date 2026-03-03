@@ -11,6 +11,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/types/Type.h"
+#include "slang/ast/types/TypePrinter.h"
 #include "slang/text/CharInfo.h"
 #include "slang/text/FormatBuffer.h"
 #include "slang/util/SmallMap.h"
@@ -185,19 +186,10 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer,
     }
     else if (current->kind == SymbolKind::ClassType) {
         auto& classType = current->as<ClassType>();
-        if (!classType.genericParameters.empty()) {
-            buffer.append("#(");
-            for (size_t i = 0; i < classType.genericParameters.size(); i++) {
-                if (i > 0)
-                    buffer.append(",");
-
-                auto& param = *classType.genericParameters[i];
-                if (param.kind == SymbolKind::TypeParameter)
-                    buffer.append(param.as<TypeParameterSymbol>().targetType.getType().toString());
-                else
-                    buffer.append(param.as<ParameterSymbol>().getValue().toString());
-            }
-            buffer.append(")");
+        if (classType.genericClass) {
+            TypePrinter printer;
+            printer.appendParameters(classType.genericParameters, false);
+            buffer.append(printer.toString());
         }
     }
 }
