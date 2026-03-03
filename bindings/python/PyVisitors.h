@@ -18,7 +18,7 @@ enum class VisitAction {
 template<typename TDerived, template<class, auto...> class BaseVisitor, auto... baseArgs>
 struct PyVisitorBase : public BaseVisitor<TDerived, baseArgs...> {
     py::object f;
-    std::optional<py::dict> lookup_table;
+    std::optional<py::dict> lookupTable;
     bool interrupted = false;
 
     static inline constexpr auto doc =
@@ -36,39 +36,30 @@ struct PyVisitorBase : public BaseVisitor<TDerived, baseArgs...> {
         "traversed without invoking Python. `f` is not called in this mode.";
 
     explicit PyVisitorBase(py::object f, std::optional<py::dict> lt = std::nullopt) :
-        f{f}, lookup_table{std::move(lt)} {}
+        f{f}, lookupTable{std::move(lt)} {}
 
     template<typename T>
     void handle(const T& t) {
         if (this->interrupted)
             return;
 
-        py::object result;
-        if (this->lookup_table) {
-            // Lookup table filtering
+        py::object result = py::none();
+        if (this->lookupTable) {
             if constexpr (requires { t.kind; }) {
-                auto kind_py = py::cast(t.kind);
-                if (!this->lookup_table->contains(kind_py)) {
-                    this->visitDefault(t);
-                    return;
+                auto pyKind = py::cast(t.kind);
+                if (this->lookupTable->contains(pyKind)) {
+                    py::object handler{(*this->lookupTable)[pyKind]};
+                    result = handler(&t);
                 }
-                py::object handler{(*this->lookup_table)[kind_py]};
-                result = handler(&t);
-            }
-            else {
-                this->visitDefault(t);
-                return;
             }
         }
         else {
             result = this->f(&t);
         }
 
-        if (result.equal(py::cast(VisitAction::Interrupt))) {
+        if (result.equal(py::cast(VisitAction::Interrupt)))
             this->interrupted = true;
-            return;
-        }
-        if (result.not_equal(py::cast(VisitAction::Skip)))
+        else if (result.not_equal(py::cast(VisitAction::Skip)))
             this->visitDefault(t);
     }
 };
@@ -81,9 +72,11 @@ template<typename T>
 void pyASTVisit(const T& t, py::object f = py::none(), py::object lookup_table = py::none()) {
     if (f.is_none() && lookup_table.is_none())
         throw py::type_error("visit() requires 'f' or 'lookup_table' (both are None)");
+
     std::optional<py::dict> lt;
     if (!lookup_table.is_none())
         lt = py::cast<py::dict>(lookup_table);
+
     PyASTVisitor visitor{f, std::move(lt)};
     t.visit(visitor);
 }

@@ -35,50 +35,44 @@ struct PySyntaxVisitor : public PyVisitorBase<PySyntaxVisitor, SyntaxVisitor> {
         // It means that the object Python sees is of type SyntaxNode,
         // forcing them to go through the polymorphic downcaster to get
         // at the actual type.
-        if (this->lookup_table) {
-            auto kind_py = py::cast(t.kind); // SyntaxKind
-            if (!this->lookup_table->contains(kind_py)) {
-                this->visitDefault(t);
-                return;
+        auto node = static_cast<const SyntaxNode*>(&t);
+
+        py::object result = py::none();
+        if (this->lookupTable) {
+            auto pyKind = py::cast(t.kind);
+            if (this->lookupTable->contains(pyKind)) {
+                py::object handler{(*this->lookupTable)[pyKind]};
+                result = handler(node);
             }
-            py::object handler{(*this->lookup_table)[kind_py]};
-            py::object result = handler(static_cast<const SyntaxNode*>(&t));
-            if (result.equal(py::cast(VisitAction::Interrupt))) {
-                this->interrupted = true;
-                return;
-            }
-            if (result.not_equal(py::cast(VisitAction::Skip)))
-                this->visitDefault(t);
-            return;
+        }
+        else {
+            result = this->f(node);
         }
 
-        py::object result = this->f(static_cast<const SyntaxNode*>(&t));
-        if (result.equal(py::cast(VisitAction::Interrupt))) {
+        if (result.equal(py::cast(VisitAction::Interrupt)))
             this->interrupted = true;
-            return;
-        }
-        if (result.not_equal(py::cast(VisitAction::Skip)))
+        else if (result.not_equal(py::cast(VisitAction::Skip)))
             this->visitDefault(t);
     }
 
     void visitToken(parsing::Token t) {
-        if (this->interrupted)
+        if (interrupted)
             return;
-        if (this->lookup_table) {
-            auto kind_py = py::cast(t.kind); // TokenKind
-            if (!this->lookup_table->contains(kind_py))
-                return; // not in table, skip (tokens have no children)
-            py::object handler{(*this->lookup_table)[kind_py]};
-            py::object result = handler(t);
-            if (result.equal(py::cast(VisitAction::Interrupt)))
-                this->interrupted = true;
-            // Skip/Advance both just continue (tokens have no children)
-            return;
+
+        py::object result = py::none();
+        if (lookupTable) {
+            auto pyKind = py::cast(t.kind);
+            if (lookupTable->contains(pyKind)) {
+                py::object handler{(*lookupTable)[pyKind]};
+                result = handler(t);
+            }
         }
-        py::object result = this->f(t);
-        if (result.equal(py::cast(VisitAction::Interrupt))) {
-            this->interrupted = true;
+        else {
+            result = f(t);
         }
+
+        if (result.equal(py::cast(VisitAction::Interrupt)))
+            interrupted = true;
     }
 };
 
@@ -86,9 +80,11 @@ void pySyntaxVisit(const SyntaxNode& sn, py::object f = py::none(),
                    py::object lookup_table = py::none()) {
     if (f.is_none() && lookup_table.is_none())
         throw py::type_error("visit() requires 'f' or 'lookup_table' (both are None)");
+
     std::optional<py::dict> lt;
     if (!lookup_table.is_none())
         lt = py::cast<py::dict>(lookup_table);
+
     PySyntaxVisitor visitor{f, std::move(lt)};
     sn.visit(visitor);
 }
