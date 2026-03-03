@@ -56,8 +56,6 @@ def reconstruct_source(json_file):
         # Direct CST node
         extract_tokens(data, tokens)
 
-    tokens.append("\n")
-
     # Join all tokens to reconstruct source
     reconstructed = "".join(tokens)
 

@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/syntax/CSTSerializer.h"
 
+#include <ranges>
 #include <string_view>
 #include <type_traits>
 
@@ -65,8 +66,13 @@ struct CSTJsonVisitor {
     }
 
     void writeToken(std::string_view name, parsing::Token token) {
-        if (token.valueText().empty())
-            return;
+        if (token.rawText().empty()) {
+            if (mode == CSTJsonMode::SimpleTokens || mode == CSTJsonMode::NoTrivia)
+                return;
+            // The EOF token may have no text, but trivia we want to capture.
+            if (token.trivia().empty())
+                return;
+        }
 
         writer.writeProperty(name);
         writeTokenValue(token);
@@ -172,23 +178,51 @@ struct CSTJsonVisitor {
         writer.writeValue(token.rawText());
 
         // Handle trivia based on mode
-        if (mode != CSTJsonMode::NoTrivia && !token.trivia().empty()) {
-            writer.writeProperty("trivia");
-            if (mode == CSTJsonMode::SimpleTrivia) {
-                // Just write the concatenated trivia text
-                std::string triviaText;
-                for (auto trivia : token.trivia())
-                    triviaText += trivia.getRawText();
-
-                writer.writeValue(triviaText);
-            }
-            else {
-                // Write trivia kind and value
-                writer.startArray();
-                for (auto trivia : token.trivia()) {
-                    writeTrivia(trivia);
+        if (!token.trivia().empty()) {
+            switch (mode) {
+                case CSTJsonMode::Full:
+                    writer.writeProperty("trivia");
+                    writer.startArray();
+                    for (auto& t : token.trivia())
+                        writeTrivia(t);
+                    writer.endArray();
+                    break;
+                case CSTJsonMode::NoWhitespace: {
+                    // Write trivia array, but skip whitespace and end-of-line trivia.
+                    auto filtered = token.trivia() | std::views::filter([](auto& t) {
+                                        if (t.kind == parsing::TriviaKind::Whitespace ||
+                                            t.kind == parsing::TriviaKind::EndOfLine)
+                                            return false;
+                                        // Also skip DisabledText entries that contain only
+                                        // whitespace, since the preprocessor rewrites
+                                        // Whitespace/EndOfLine trivia to DisabledText on directive
+                                        // tokens in untaken branches.
+                                        if (t.kind == parsing::TriviaKind::DisabledText) {
+                                            return !std::ranges::all_of(t.getRawText(),
+                                                                        isWhitespace);
+                                        }
+                                        return true;
+                                    });
+                    if (!std::ranges::empty(filtered)) {
+                        writer.writeProperty("trivia");
+                        writer.startArray();
+                        for (auto& t : filtered)
+                            writeTrivia(t);
+                        writer.endArray();
+                    }
+                    break;
                 }
-                writer.endArray();
+                case CSTJsonMode::SimpleTrivia: {
+                    writer.writeProperty("trivia");
+                    std::string triviaText;
+                    for (auto trivia : token.trivia())
+                        triviaText += trivia.getRawText();
+                    writer.writeValue(triviaText);
+                    break;
+                }
+                case CSTJsonMode::NoTrivia:
+                case CSTJsonMode::SimpleTokens:
+                    break;
             }
         }
 

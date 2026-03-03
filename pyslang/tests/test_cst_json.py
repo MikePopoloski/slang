@@ -152,11 +152,12 @@ class CSTValidator:
                 )
             return
 
-        # Full mode: trivia should be a list of trivia objects
-        if self.mode == CSTJsonMode.Full:
+        # Full and NoWhitespace modes: trivia should be a list of trivia objects
+        if self.mode in (CSTJsonMode.Full, CSTJsonMode.NoWhitespace):
             if not isinstance(trivia, list):
                 self._error(
-                    f"Trivia should be list in Full mode, got {type(trivia)}", path
+                    f"Trivia should be list in {self.mode} mode, got {type(trivia)}",
+                    path,
                 )
                 return
 
@@ -175,6 +176,14 @@ class CSTValidator:
                 kind = trivia_item["kind"]
                 if kind not in TRIVIA_KINDS:
                     self._error(f"Unknown trivia kind '{kind}'", f"{path}[{i}]")
+
+                # NoWhitespace mode must not contain Whitespace or EndOfLine trivia
+                if self.mode == CSTJsonMode.NoWhitespace:
+                    if kind in ("Whitespace", "EndOfLine"):
+                        self._error(
+                            f"Trivia kind '{kind}' should not appear in NoWhitespace mode",
+                            f"{path}[{i}]",
+                        )
 
                 if "text" not in trivia_item:
                     self._error("Trivia item missing 'text'", f"{path}[{i}]")
@@ -212,6 +221,7 @@ def test_cst_json():
         for mode in [
             CSTJsonMode.Full,
             CSTJsonMode.SimpleTrivia,
+            CSTJsonMode.NoWhitespace,
             CSTJsonMode.NoTrivia,
             CSTJsonMode.SimpleTokens,
         ]:
@@ -237,3 +247,77 @@ def test_cst_json():
             assert json_data["root"] == to_dict(
                 tree.root, mode
             ), f"Tree root does not match node serialization for {test_code} in {mode}"
+
+
+def _collect_trivia_kinds(node: Any) -> set:
+    """Recursively collect all trivia kind strings from a CST JSON tree."""
+    kinds = set()
+    if isinstance(node, dict):
+        if "trivia" in node and isinstance(node["trivia"], list):
+            for item in node["trivia"]:
+                if isinstance(item, dict) and "kind" in item:
+                    kinds.add(item["kind"])
+        for value in node.values():
+            kinds |= _collect_trivia_kinds(value)
+    elif isinstance(node, list):
+        for item in node:
+            kinds |= _collect_trivia_kinds(item)
+    return kinds
+
+
+def test_no_whitespace_filters_whitespace():
+    """Verify NoWhitespace mode filters Whitespace and EndOfLine trivia but keeps others."""
+    # Use code with a line comment so there's non-whitespace trivia to preserve
+    code = "module m; // a comment\nendmodule"
+    tree = SyntaxTree.fromText(code)
+
+    full_data = to_dict(tree, CSTJsonMode.Full)
+    nows_data = to_dict(tree, CSTJsonMode.NoWhitespace)
+
+    full_kinds = _collect_trivia_kinds(full_data)
+    nows_kinds = _collect_trivia_kinds(nows_data)
+
+    # Full mode should contain whitespace and EOL trivia
+    assert "Whitespace" in full_kinds, "Full mode should have Whitespace trivia"
+    assert "EndOfLine" in full_kinds, "Full mode should have EndOfLine trivia"
+
+    # NoWhitespace mode must not contain Whitespace or EndOfLine
+    assert (
+        "Whitespace" not in nows_kinds
+    ), "NoWhitespace mode should not have Whitespace trivia"
+    assert (
+        "EndOfLine" not in nows_kinds
+    ), "NoWhitespace mode should not have EndOfLine trivia"
+
+    # Comment trivia should be preserved in NoWhitespace mode
+    assert "LineComment" in full_kinds, "Full mode should have LineComment trivia"
+    assert (
+        "LineComment" in nows_kinds
+    ), "NoWhitespace mode should preserve LineComment trivia"
+
+
+def test_no_whitespace_vs_full_structure():
+    """NoWhitespace output should match Full output with whitespace trivia removed."""
+    code = "module m;\n  /* block */ wire w;\nendmodule"
+    tree = SyntaxTree.fromText(code)
+
+    full_data = to_dict(tree, CSTJsonMode.Full)
+    nows_data = to_dict(tree, CSTJsonMode.NoWhitespace)
+
+    # Both should have the same top-level structure
+    assert full_data["kind"] == nows_data["kind"]
+    assert full_data["root"]["kind"] == nows_data["root"]["kind"]
+
+    # NoWhitespace should have fewer or equal trivia entries everywhere
+    full_kinds = _collect_trivia_kinds(full_data)
+    nows_kinds = _collect_trivia_kinds(nows_data)
+
+    # All trivia kinds in NoWhitespace should also appear in Full
+    assert (
+        nows_kinds <= full_kinds
+    ), f"NoWhitespace has unexpected trivia kinds: {nows_kinds - full_kinds}"
+
+    # Block comment should be preserved
+    assert (
+        "BlockComment" in nows_kinds
+    ), "NoWhitespace mode should preserve BlockComment trivia"

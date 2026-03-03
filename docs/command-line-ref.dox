@@ -307,7 +307,8 @@ Controls the level of detail included in the CST JSON output. The available mode
 
 | Mode | Description |
 |------|-------------|
-| `full` | Full token objects with complete trivia information including whitespace, comments, and formatting details |
+| `full` | Full token objects with complete trivia information including whitespace, comments, directives, and skipped tokens from ifdef branches |
+| `no-whitespace` | Full token objects with trivia information, but whitespace and end-of-line trivia filtered out, retaining only comments and directives |
 | `simple-trivia` | Full token objects with trivia simplified to concatenated strings instead of detailed arrays and kinds |
 | `no-trivia` | Full token objects but with all trivia objects excluded from the output |
 | `simple-tokens` | Tokens represented as simple strings with no trivia or token kind information |
