@@ -3807,3 +3807,25 @@ endclass
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MemberImplNotFound);
 }
+
+TEST_CASE("Generic class specializations are not assignment compatible") {
+    auto tree = SyntaxTree::fromText(R"(
+class C #(int i);
+endclass
+
+module m;
+    C #(1) c1;
+    C #(2) c2;
+    initial begin
+        c1 = c2;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadAssignment);
+}

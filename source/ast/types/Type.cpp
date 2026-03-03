@@ -426,8 +426,11 @@ bool Type::isMatching(const Type& rhs) const {
         return true;
 
     if (l->getSyntax() && l->getSyntax() == r->getSyntax() && l->getParentScope() &&
-        l->getParentScope() == r->getParentScope())
-        return true;
+        l->getParentScope() == r->getParentScope()) {
+        // Types declared with the same syntax in the same scope are identical,
+        // unless they are instances of a generic class.
+        return !l->isClass() || l->as<ClassType>().genericClass == nullptr;
+    }
 
     // Special casing for type synonyms: real/realtime
     if (l->isFloating() && r->isFloating()) {
