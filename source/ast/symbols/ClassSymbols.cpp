@@ -274,8 +274,13 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
     };
 
     auto checkPrePost = [&](std::string_view funcName) {
+        // We normally expect to find the symbol here since pre/post
+        // are added to every class automatically, but if the user
+        // overrides with an extern prototype but doesn't provide a
+        // body we won't get anything back from find().
         auto sym = find(funcName);
-        SLANG_ASSERT(sym);
+        if (!sym)
+            return;
 
         if (sym->kind == SymbolKind::Subroutine) {
             auto& s = sym->as<SubroutineSymbol>();

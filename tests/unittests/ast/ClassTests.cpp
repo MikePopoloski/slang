@@ -3792,3 +3792,18 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Missing extern pre_randomize doesn't crash") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    extern function void pre_randomize();
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MemberImplNotFound);
+}
