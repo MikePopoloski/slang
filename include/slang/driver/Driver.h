@@ -143,6 +143,10 @@ public:
         /// relative to the file containing the directive first.
         std::optional<bool> disableLocalIncludes;
 
+        /// If true, the preprocessor will allow trailing spaces after the continuation character
+        /// in macro definitions.
+        std::optional<bool> allowMacroTrailingSpace;
+
         /// @}
         /// @name Parsing
         /// @{

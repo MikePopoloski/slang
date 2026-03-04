@@ -138,6 +138,9 @@ void Driver::addStandardArgs() {
         "be parsed using the provided language keywords version, as if they contained a "
         "`begin_keywords directive. For example '1364-2005+*.v,*.vh'",
         "<keyword-version>+<file-pattern>[,...]. ");
+    cmdLine.add("--allow-macro-trailing-space", options.allowMacroTrailingSpace,
+                "If true, the preprocessor will allow trailing whitespaces after the continuation "
+                "character in a macro definition");
 
     // Legacy vendor commands support
     cmdLine.add(
@@ -1066,6 +1069,10 @@ void Driver::addParseOptions(Bag& bag) const {
 
     if (loptions.enableLegacyProtect)
         loptions.commentHandlers["pragma"]["protect"] = {CommentHandler::Protect};
+
+    if (options.allowMacroTrailingSpace.has_value() || options.compat == CompatMode::Vcs) {
+        loptions.allowMacroTrailingSpace = true;
+    }
 
     for (auto& [common, start, end] : translateOffFormats)
         loptions.commentHandlers[common][start] = {CommentHandler::TranslateOff, end};

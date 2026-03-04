@@ -3308,3 +3308,38 @@ TEST_CASE("Header guard -- directive after endif cancels") {
     preprocess(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Macro with trailing space after line continuation") {
+    // We concatenate 2 raw strings to avoid the C++ compiler warning about trailing space
+    std::string text1 = R"(
+module top;
+`define TOP_MACRO \
+  bit a, b;\ )";
+    std::string text2 = R"(
+  initial begin\
+     a = b + 1;\
+     $finish;\
+  end
+`TOP_MACRO
+endmodule
+)";
+
+    auto& expected = R"(
+module top;
+  bit a, b;
+  initial begin
+     a = b + 1;
+     $finish;
+  end
+endmodule
+)";
+
+    LexerOptions lo;
+    lo.allowMacroTrailingSpace = true;
+
+    CHECK(text1[text1.size() - 2] == '\\');
+    CHECK(text1[text1.size() - 1] == ' ');
+    std::string result = preprocess(text1 + text2, lo);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

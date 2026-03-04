@@ -63,6 +63,10 @@ struct SLANG_EXPORT PreprocessorOptions {
 
     /// A list of mappings from file patterns to language keyword versions.
     std::vector<std::pair<std::string, KeywordVersion>> keywordMapping;
+
+    /// If true, the preprocessor will allow trailing spaces after the continuation character
+    /// in macro definitions.
+    bool allowMacroTrailingSpace = false;
 };
 
 /// Metadata about an include directive that was invoked.
