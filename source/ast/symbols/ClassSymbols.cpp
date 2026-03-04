@@ -1078,8 +1078,8 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
         }
     }
 
+    classType->genericParameters = paramSymbols.copy(comp);
     if (!forceInvalidParams) {
-        classType->genericParameters = paramSymbols.copy(comp);
         detail::ClassSpecializationKey key(paramValues.copy(comp), typeParams.copy(comp));
         if (classType->isUninstantiated) {
             // If we're in an uninstantiated scope we save this specialization
