@@ -1139,32 +1139,8 @@ bool InstanceBodySymbol::hasSameType(const InstanceBodySymbol& other) const {
     if (&definition != &other.definition)
         return false;
 
-    if (parameters.size() != other.parameters.size())
-        return false;
-
-    for (auto li = parameters.begin(), ri = other.parameters.begin(); li != parameters.end();
-         li++, ri++) {
-
-        auto& lp = (*li)->symbol;
-        auto& rp = (*ri)->symbol;
-        if (lp.kind != rp.kind)
-            return false;
-
-        if (lp.kind == SymbolKind::Parameter) {
-            auto& lv = lp.as<ParameterSymbol>().getValue();
-            auto& rv = rp.as<ParameterSymbol>().getValue();
-            if (lv != rv)
-                return false;
-        }
-        else {
-            auto& lt = lp.as<TypeParameterSymbol>().targetType.getType();
-            auto& rt = rp.as<TypeParameterSymbol>().targetType.getType();
-            if (!lt.isMatching(rt))
-                return false;
-        }
-    }
-
-    return true;
+    auto getSym = std::views::transform([](auto& paramBase) { return &paramBase->symbol; });
+    return ParameterSymbolBase::allMatching(parameters | getSym, other.parameters | getSym);
 }
 
 void InstanceBodySymbol::serializeTo(ASTSerializer& serializer) const {

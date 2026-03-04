@@ -429,7 +429,9 @@ bool Type::isMatching(const Type& rhs) const {
         l->getParentScope() == r->getParentScope()) {
         // Types declared with the same syntax in the same scope are identical,
         // unless they are instances of a generic class.
-        return !l->isClass() || l->as<ClassType>().genericClass == nullptr;
+        return !l->isClass() || l->as<ClassType>().genericClass == nullptr ||
+               ParameterSymbolBase::allMatching(l->as<ClassType>().genericParameters,
+                                                r->as<ClassType>().genericParameters);
     }
 
     // Special casing for type synonyms: real/realtime
