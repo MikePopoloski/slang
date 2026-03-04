@@ -339,8 +339,6 @@ module m;
     initial begin
         r = v << -1;    // warn: negative shift amount
         r = v >> -2;    // warn: negative shift amount
-        r = v << i;     // ok: non-constant shift amount
-        r = v << 0;     // ok: zero is valid
     end
 endmodule
 )");
@@ -352,6 +350,26 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ShiftCountNegative);
     CHECK(diags[1].code == diag::ShiftCountNegative);
+}
+
+TEST_CASE("Shift count negative warning -- valid cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [7:0] v;
+    logic [7:0] r;
+    initial begin
+        r = v << i;     // ok: non-constant shift amount
+        r = v << 0;     // ok: zero is valid
+    end
+    if (0) begin
+        assign r = v << -1;  // ok: unevaluated branch
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Indeterminate variable initialization order") {

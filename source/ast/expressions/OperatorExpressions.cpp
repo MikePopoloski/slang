@@ -1202,8 +1202,9 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
             if (auto cv = context.tryEval(*right_); cv && cv.isInteger()) {
                 const auto& shiftAmt = cv.integer();
                 if (!shiftAmt.hasUnknown()) {
-                    if (shiftAmt.isSigned() && shiftAmt.isNegative()) {
-                        context.addDiag(diag::ShiftCountNegative, right_->sourceRange);
+                    if (shiftAmt.isSigned() && shiftAmt.isNegative() &&
+                        !context.inUnevaluatedBranch()) {
+                        context.addDiag(diag::ShiftCountNegative, right_->sourceRange) << cv;
                     }
                     else {
                         bitwidth_t lhsWidth = type->getBitWidth();
