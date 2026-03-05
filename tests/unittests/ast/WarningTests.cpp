@@ -288,10 +288,7 @@ module m;
     initial begin
         r = v << 4;     // warn: shift by 4 == width (4 bits)
         r = v << 5;     // warn: shift by 5 > width
-        r = v << 3;     // ok: shift by 3 < width
-        r = v << i;     // ok: non-constant shift amount
         r = v >> 4;     // warn: shift by 4 == width
-        r = v >> 0;     // ok: shift by 0
     end
 endmodule
 )");
@@ -304,6 +301,29 @@ endmodule
     CHECK(diags[0].code == diag::ShiftCountOverflow);
     CHECK(diags[1].code == diag::ShiftCountOverflow);
     CHECK(diags[2].code == diag::ShiftCountOverflow);
+}
+
+TEST_CASE("Shift count overflow - valid cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [2:0] v;
+    int i;
+    logic [3:0] r;
+
+    initial begin
+        r = v << 3;     // ok: shift by 3 < width
+        r = v << i;     // ok: non-constant shift amount
+        r = v >> 0;     // ok: shift by 0
+    end
+    if (0) begin
+        assign r = v << 4;  // ok: unevaluated branch
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Shift count overflow warning - arithmetic shifts") {
@@ -357,6 +377,8 @@ TEST_CASE("Shift count negative warning -- valid cases") {
 module m;
     logic [7:0] v;
     logic [7:0] r;
+    int i;
+
     initial begin
         r = v << i;     // ok: non-constant shift amount
         r = v << 0;     // ok: zero is valid

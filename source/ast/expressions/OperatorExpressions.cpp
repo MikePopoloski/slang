@@ -1199,19 +1199,20 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
 
             // Warn when the shift amount is a known constant that is negative or
             // overflows the width of the left-hand operand.
-            if (auto cv = context.tryEval(*right_); cv && cv.isInteger()) {
-                const auto& shiftAmt = cv.integer();
-                if (!shiftAmt.hasUnknown()) {
-                    if (shiftAmt.isSigned() && shiftAmt.isNegative() &&
-                        !context.inUnevaluatedBranch()) {
-                        context.addDiag(diag::ShiftCountNegative, right_->sourceRange) << cv;
-                    }
-                    else {
-                        bitwidth_t lhsWidth = type->getBitWidth();
-                        auto shiftVal = shiftAmt.as<uint64_t>();
-                        if (!shiftVal || *shiftVal >= lhsWidth) {
-                            context.addDiag(diag::ShiftCountOverflow, right_->sourceRange)
-                                << cv << lhsWidth;
+            if (!context.inUnevaluatedBranch()) {
+                if (auto cv = context.tryEval(*right_); cv && cv.isInteger()) {
+                    const auto& shiftAmt = cv.integer();
+                    if (!shiftAmt.hasUnknown()) {
+                        if (shiftAmt.isSigned() && shiftAmt.isNegative()) {
+                            context.addDiag(diag::ShiftCountNegative, right_->sourceRange) << cv;
+                        }
+                        else {
+                            bitwidth_t lhsWidth = type->getBitWidth();
+                            auto shiftVal = shiftAmt.as<uint64_t>();
+                            if (!shiftVal || *shiftVal >= lhsWidth) {
+                                context.addDiag(diag::ShiftCountOverflow, right_->sourceRange)
+                                    << cv << lhsWidth;
+                            }
                         }
                     }
                 }
