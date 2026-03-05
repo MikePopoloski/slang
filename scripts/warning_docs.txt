@@ -751,6 +751,22 @@ module m(input a, b);
 endmodule
 ```
 
+-Wmisleading-indentation
+A statement follows a loop or conditional statement that does not use `begin`/`end`, and that
+statement is at the same indentation level as the body of the preceding construct. This is
+misleading because it appears as if both statements are guarded by the loop or conditional,
+when in fact only the first statement is.
+```
+module m;
+    initial begin
+        int x;
+        if (x)
+            x = 1;
+            x = 2; // misleading: this is not guarded by the if
+    end
+endmodule
+```
+
 -Wdup-attr
 A design element has more than one attribute of the same name.
 Only the last one will apply.

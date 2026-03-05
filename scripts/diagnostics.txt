@@ -312,6 +312,7 @@ warning nonstandard-dist NonstandardDist "use of parentheses around 'dist' expre
 warning empty-body EmptyBody "{} has empty body (put the semicolon on a separate line to silence this warning)"
 warning dangling-else DanglingElse "ambiguous dangling 'else'; add begin/end to clarify which 'if' the 'else' belongs to"
 note NoteMatchingIf "'if' statement here"
+warning misleading-indentation MisleadingIndentation "this statement is misleadingly indented as if it is part of the preceding {}"
 warning split-distweight-op SplitDistWeightOp "split dist weight operator is not allowed; SystemVerilog requires that they be joined together"
 warning nested-solve-before SolveBeforeDisallowed "constraint ordering directive is not allowed within a nested constraint block"
 warning misplaced-trailing-separator MisplacedTrailingSeparator "misplaced trailing '{}'"
@@ -1280,7 +1281,8 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 consecutive-comparison case-outside-range case-enum case-dup case-overlap
                 case-unreachable incomplete-return missing-return case-redundant-default case-incomplete
                 case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow shadow-value
-                shadow-hierarchy implicit-conv inc-dec-bit dangling-else constraint-func-cycle }
+                shadow-hierarchy implicit-conv inc-dec-bit dangling-else constraint-func-cycle
+                misleading-indentation }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }

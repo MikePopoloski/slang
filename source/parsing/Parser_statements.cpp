@@ -693,6 +693,13 @@ std::span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bo
 
         if (newNode) {
             newNode->previewNode = std::exchange(previewNode, nullptr);
+
+            // Check for misleading indentation: if the last statement in the buffer
+            // is a single-statement loop/conditional, and the new statement is at the
+            // same column as that body, issue a warning.
+            if (isStmt && !buffer.empty())
+                checkMisleadingIndentation(*buffer.back(), newNode->getFirstToken());
+
             buffer.push_back(newNode);
             errored = false;
 
@@ -1045,6 +1052,132 @@ void Parser::checkEmptyBody(const SyntaxNode& syntax, Token prevToken,
     }
 
     addDiag(diag::EmptyBody, ess.semicolon.location()) << syntaxName;
+}
+
+// Returns the single non-block body statement for a loop/conditional, if it has one.
+// For if-else chains, follows else-if down to find the last body.
+// Returns nullptr if the body uses begin/end, is missing, or the statement is not
+// a loop/conditional.
+static const StatementSyntax* getSingleBodyForIndentCheck(const SyntaxNode& stmt,
+                                                          std::string_view& ctrlName) {
+    const StatementSyntax* body = nullptr;
+    switch (stmt.kind) {
+        case SyntaxKind::ConditionalStatement: {
+            auto& cs = stmt.as<ConditionalStatementSyntax>();
+            if (cs.elseClause) {
+                // Follow else-if chains recursively
+                auto& elseBody = cs.elseClause->clause->as<StatementSyntax>();
+                if (elseBody.kind == SyntaxKind::ConditionalStatement)
+                    return getSingleBodyForIndentCheck(elseBody, ctrlName);
+
+                body = &elseBody;
+                ctrlName = "else clause"sv;
+            }
+            else {
+                body = cs.statement;
+                ctrlName = "if statement"sv;
+            }
+            break;
+        }
+        case SyntaxKind::ForeverStatement:
+            body = stmt.as<ForeverStatementSyntax>().statement;
+            ctrlName = "forever statement"sv;
+            break;
+        case SyntaxKind::LoopStatement: {
+            auto& ls = stmt.as<LoopStatementSyntax>();
+            body = ls.statement;
+            ctrlName = ls.repeatOrWhile.kind == TokenKind::RepeatKeyword ? "repeat loop"sv
+                                                                         : "while loop"sv;
+            break;
+        }
+        case SyntaxKind::ForLoopStatement:
+            body = stmt.as<ForLoopStatementSyntax>().statement;
+            ctrlName = "for loop"sv;
+            break;
+        case SyntaxKind::ForeachLoopStatement:
+            body = stmt.as<ForeachLoopStatementSyntax>().statement;
+            ctrlName = "foreach loop"sv;
+            break;
+        default:
+            return nullptr;
+    }
+
+    // If the body is a block statement (begin/end or fork/join), indentation is explicit.
+    SLANG_ASSERT(body);
+    if (body->kind == SyntaxKind::SequentialBlockStatement ||
+        body->kind == SyntaxKind::ParallelBlockStatement) {
+        return nullptr;
+    }
+
+    return body;
+}
+
+// Returns the leading whitespace text of a token — the run of whitespace
+// characters that appear after the last newline in the token's trivia.
+// Returns an empty string_view if the token has no newline in its trivia
+// (i.e. it is on the same line as the previous token) or if no whitespace
+// follows the last newline (i.e. the token starts at column 1 with no indent).
+static size_t getLeadingWhitespace(Token token) {
+    size_t result = 0;
+    bool seenNewline = false;
+    for (auto& t : token.trivia()) {
+        switch (t.kind) {
+            case TriviaKind::EndOfLine:
+            case TriviaKind::LineComment:
+                result = 0;
+                seenNewline = true;
+                break;
+            case TriviaKind::BlockComment: {
+                auto text = t.getRawText();
+                if (auto pos = text.find_last_of("\r\n"); pos != std::string_view::npos) {
+                    // Whitespace after the last newline in the block comment becomes
+                    // the indentation of the next thing on that line.
+                    result = text.substr(pos + 1).length();
+                    seenNewline = true;
+                }
+                break;
+            }
+            case TriviaKind::Whitespace:
+                if (seenNewline)
+                    result += t.getRawText().length();
+                break;
+            default:
+                return 0;
+        }
+    }
+    return result;
+}
+
+void Parser::checkMisleadingIndentation(const SyntaxNode& prevStmt, Token nextToken) {
+    std::string_view ctrlName;
+    auto body = getSingleBodyForIndentCheck(prevStmt, ctrlName);
+    if (!body)
+        return;
+
+    // The body must be on a different line from the preceding control keyword;
+    // if everything is on the same line (one-liner style), there's no indentation issue.
+    Token bodyToken = body->getFirstToken();
+    if (nextToken.isMissing() || bodyToken.isMissing() || bodyToken.isOnSameLine())
+        return;
+
+    // Two cases that are misleading:
+    //   1. The next statement is on the same line as the body:
+    //        if (a)
+    //          b = 1; b = 2;   // b = 2 looks guarded but isn't
+    //   2. The next statement is on a new line but at the same indentation as the body:
+    //        if (a)
+    //          b = 1;
+    //          b = 2;          // same indent as the body
+    // In case 1 we fire unconditionally (body is already on its own line).
+    // In case 2 we compare leading-whitespace trivia to avoid SourceManager column lookups.
+    if (!nextToken.isOnSameLine()) {
+        auto bodyWS = getLeadingWhitespace(bodyToken);
+        auto nextWS = getLeadingWhitespace(nextToken);
+        if (bodyWS == 0 || nextWS == 0 || bodyWS != nextWS)
+            return;
+    }
+
+    addDiag(diag::MisleadingIndentation, nextToken.location()) << ctrlName;
 }
 
 } // namespace slang::parsing

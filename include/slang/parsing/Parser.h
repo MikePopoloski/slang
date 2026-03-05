@@ -467,6 +467,10 @@ private:
     void checkEmptyBody(const syntax::SyntaxNode& syntax, Token prevToken,
                         std::string_view syntaxName);
 
+    // Report warnings when a statement following a single-statement loop/conditional
+    // is indented at the same level as the body, making it look like it's part of the construct.
+    void checkMisleadingIndentation(const syntax::SyntaxNode& prevStmt, Token nextToken);
+
     // ---- Member variables ----
 
     // The factory used to create new syntax nodes.

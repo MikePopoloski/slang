@@ -1676,6 +1676,98 @@ endmodule
     CHECK(diags[5].code == diag::EmptyBody);
 }
 
+TEST_CASE("Misleading indentation warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    bit x;
+    int y;
+    initial begin
+        // if: warn when next stmt is at same column as body
+        if (x)
+            y = 1;
+            y = 2;
+
+        // if+else: warn when next stmt is at same column as else body
+        if (x)
+            y = 1;
+        else
+            y = 2;
+            y = 3;
+
+        // while: warn
+        while (x)
+            y = 1;
+            y = 2;
+
+        // for: warn
+        for (int i = 0; i < 10; i++)
+            y = i;
+            y = 0;
+
+        // No warning: next statement at different column
+        if (x)
+            y = 1;
+         y = 2;
+
+        // No warning: body uses begin/end
+        if (x) begin
+            y = 1;
+        end
+        y = 2;
+
+        // Warn: body and next stmt on same line (but body is on a new line from keyword)
+        if (x)
+            y = 1; y = 2;
+
+        // No warning: body and next stmt are on the same line as keyword
+        if (x) y = 1; y = 2;
+
+        // Warn with block comment + whitespace
+        if (x)
+            y = 1; /* foo
+        */  y = 2;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::MisleadingIndentation);
+    CHECK(diags[1].code == diag::MisleadingIndentation);
+    CHECK(diags[2].code == diag::MisleadingIndentation);
+    CHECK(diags[3].code == diag::MisleadingIndentation);
+    CHECK(diags[4].code == diag::MisleadingIndentation);
+    CHECK(diags[5].code == diag::MisleadingIndentation);
+}
+
+TEST_CASE("Misleading indentation -- foreach and forever") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int x;
+    int arr[] = {};
+    initial begin
+        foreach (arr[i])
+            x = 1;
+            x = 2;
+
+        forever
+            x = 1; x = 2;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MisleadingIndentation);
+    CHECK(diags[1].code == diag::MisleadingIndentation);
+}
+
 TEST_CASE("Conditional statement / expression pattern matching") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
