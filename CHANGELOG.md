@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The error for qualifiers on out-of-block method definitions is now downgradeable via `-Wqualifiers-on-out-of-block`, for compatibility with other tools (thanks to @mampcs)
 * The error for missing implementations of `extern` methods is now downgradeable via `-Wmember-impl-not-found`, for compatibility with other tools (thanks to @mampcs)
 * Unqualified task and function calls will now perform upward name resolution up the hierarchy if there is no declaration visible locally. The LRM is not entirely clear here but all major tools allow this and now slang does as well. (thanks to @mampcs)
+* Made the diagnostics for multiple overlapping assignments downgradeable to warnings, for compatibility with other tools (via the new warnings [-Wmixed-var-assigns](https://sv-lang.com/warning-ref.html#mixed-var-assigns), [-Wmultiple-cont-assigns](https://sv-lang.com/warning-ref.html#multiple-cont-assigns), and [-Wmultiple-always-assigns](https://sv-lang.com/warning-ref.html#multiple-always-assigns))
+* The string formatting functions now allow passing class handles, chandles, and null literals as arguments to integer format specifiers, for compatibility with other tools (thanks to @thomasnormal)
+* Misplaced trailing separator errors are now downgradeable to a warning, for compatibility with other tools (via the new warning [-Wmisplaced-trailing-separator](https://sv-lang.com/warning-ref.html#misplaced-trailing-separator)) (thanks to @thomasnormal)
 
 ### Notable Breaking Changes
 * pyslang bindings are now separated into submodules matching the C++ API namespaces, which will require adding imports to your existing scripts to make them continue to run
@@ -22,23 +25,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### New Features
 * Instantiations of unknown modules can now be ignored by putting a `(* maybe_unknown *)` attribute on the instantiation itself (thanks to @AndrewNolte)
-* Added [-Wmulti-read](https://sv-lang.com/warning-ref.html#read-write) and [-Wmulti-write](https://sv-lang.com/warning-ref.html#multi-write) for detecting undefined sequencing of operations involving a single variable (both on by default)
+* Added [-Wread-write](https://sv-lang.com/warning-ref.html#read-write) and [-Wmulti-write](https://sv-lang.com/warning-ref.html#multi-write) for detecting undefined sequencing of operations involving a single variable (both on by default)
 * Added `-Wunused-subroutine`, `-Wunused-dpi-import`, `-Wunused-class-method`, `-Wunused-local-class-method`, and `-Wunused-constructor` for detecting various kinds of unused tasks and functions
 * Added `-Wunused-class-property`, `-Wunused-but-set-property`, `-Wunassigned-property`, `-Wunused-local-class-property`, `-Wunused-but-set-local-property`, and `-Wunassigned-local-property` for detecting various forms of unused class properties
 * Added `-Wunused-package-var`, `-Wunused-package-typedef`, `-Wunused-package-parameter`, `-Wunused-package-type-parameter`, `-Wunused-package-assertion-decl`, and `-Wunused-package-subroutine` for detecting unused items declared inside packages
-* Added a `--dir-prefix` option to specify directory prefixes to try when resolving relative source file paths
-* Added a `--max-enum-values` option that limits the maximum number of enum elements in a single declaration, to prevent typos in enum range members from causing the compiler to run out of memory
 * `-Wunconnected-port` has been split into three separate warnings: `-Wunconnected-input-port`, `-Wunconnected-output-port`, and `-Wunconnected-inout-port`, for more precise control over which warnings you want to see. The original `-Wunconnected-port` is now a group that controls all three at once, so existing command lines should continue to function the same way.
 * Added [-Wrandomize-var-shadow](https://sv-lang.com/warning-ref.html#randomize-var-shadow) which detects inline randomize constraint blocks that use class members which shadow local variable declarations
 * Added [-Wshadow-value](https://sv-lang.com/warning-ref.html#shadow-value) and [-Wshadow-hierarchy](https://sv-lang.com/warning-ref.html#shadow-hierarchy) which detect declarations that shadow others with the same name from outer scopes
+* Added [-Winc-dec-bit](https://sv-lang.com/warning-ref.html#inc-dec-bit) which detects increment and decrement of single-bit operands
+* Added [-Wdangling-else](https://sv-lang.com/warning-ref.html#dangling-else) which detects confusingly nested if/else blocks that are missing begin/end delimiters
+* Added [-Wshift-count-overflow](https://sv-lang.com/warning-ref.html#shift-count-overflow) and [-Wshift-count-negative](https://sv-lang.com/warning-ref.html#shift-count-negative) which warn about potentially invalid constant shift values
+* Added a `--dir-prefix` option to specify directory prefixes to try when resolving relative source file paths
+* Added a `--max-enum-values` option that limits the maximum number of enum elements in a single declaration, to prevent typos in enum range members from causing the compiler to run out of memory
+* The `--cst-json-mode` flag takes a new option `no-whitespace` which includes trivia but filters out whitespace and newlines (thanks to @AndrewNolte)
 
 ### Improvements
 * Made several minor improvements to data flow modeling in the analysis pass to better represent SystemVerilog control flow
 * Added AST serialization for default disable directives and default / global clocking block modifiers
-* Made the diagnostics for multiple overlapping assignments downgradeable to warnings, for compatibility with other tools (via the new warnings [-Wmixed-var-assigns](https://sv-lang.com/warning-ref.html#mixed-var-assigns), [-Wmultiple-cont-assigns](https://sv-lang.com/warning-ref.html#multiple-cont-assigns), and [-Wmultiple-always-assigns](https://sv-lang.com/warning-ref.html#multiple-always-assigns))
 * The error issued for incorrect range select endianness is now suppressed inside conditional blocks that are statically known to be untaken
-* The string formatting functions now allow passing class handles, chandles, and null literals as arguments to integer format specifiers, for compatibility with other tools (thanks to @thomasnormal)
-* Misplaced trailing separator errors are now downgradeable to a warning, for compatibility with other tools (via the new warning [-Wmisplaced-trailing-separator](https://sv-lang.com/warning-ref.html#misplaced-trailing-separator)) (thanks to @thomasnormal)
 * `--relax-string-conversions` now also allows implicit conversions from integers to strings, for compatibility with other tools (thanks to @mampcs)
 * Tweaked the behavior of how `--allow-use-before-declare` works when there are matching declarations in outer scopes, to better match other tools (thanks to @mampcs)
 * The parser will now perform typo correction when looking for a keyword and finding a closely named identifier instead
@@ -46,23 +50,27 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixes
 * Fixed an issue where comments immediately preceeding a disabled `` `endif `` directive could erroneously show up in preprocessed output
 * Fixed a preprocessor crash with invalid macro usage syntax when the macro contains a stringify operator
+* Fixed a preprocessor bug where nested macros containing ifdef directives could be expanded improperly
+* Fixed a preprocessor bug during macro expansion when a macro argument immediately follows a line continuation character on a separate line
+* Fixed a bug in macro token concatenation where the second token needs to be split and re-lexed to function properly
 * Unary increment and decrement operators now properly count as a driver for their operand, for purposes of multi-driver checking
 * Fixed miscompilation when a generic class with a virtual interface type parameter declared within a package triggers an import lookup within that package
+* Fixed a crash when a class declares an `extern` pre/post_randomize method but doesn't provide a body
+* Fixed a bug where instances of the same generic class were always considered matching even if they had different parameter values
+* Fixed a bug where type parameters of generic base classes could fail to resolve in certain rare cases
 * Fixed a bug where various operations on class types (such as computing their bitstream width) would not take into account base class properties
-* Fixed a bug in macro token concatenation where the second token needs to be split and re-lexed to function properly
 * Fixed a bug with looking up the return type of implicit function return value variables when `--allow-use-before-declare` is used
 * Fixed `-Wcomparison-mismatch` to not warn when comparing unpacked array types with the same width but differing range indices
 * Fixed data flow analysis to work correctly with locally declared static variables in procedural blocks
 * Fixed string format diagnostic locations when the format string contains escape characters
 * Fixed constant evaluated string formatting when the format string is triple quoted or contains escape characters
-* Fixed a preprocessor bug where nested macros containing ifdef directives could be expanded improperly
 * Fixed the handling of command line provided parameter overrides involving assignment patterns and unpacked array concatenations
 * Fixed constant evaluation of unpacked array parameters set via defparam
 * Fixed a bug in how packed arrays are split across instance array port connections (thanks to @CheeksTheGeek)
 * Fixed ICE from formal argument declarations that have a missing direction due to invalid syntax
 * Fixed a malformed diagnostic when parsing duplicate empty function specifiers
-* Fixed a preprocessor bug during macro expansion when a macro argument immediately follows a line continuation character on a separate line
 * Fixed ASTVisitor to visit out-of-block method definitions
+* Fixed a bug where HierarchicalValueExpressions representing virtual interface accesses did not have a valid source range (thanks to @Lauriethefish)
 
 ### Tools & Bindings
 #### pyslang
@@ -70,6 +78,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added SyntaxFactory bindings (thanks to @CheeksTheGeek)
 * Organized pyslang bindings into submodules (thanks to @CheeksTheGeek)
 * Fixed stub generation for the pyslang bindings (thanks to @ilthraim)
+* Added a new `lookup_table` parameter to AST and syntax node visitors that allow providing a dict of handlers for much faster visitation callbacks (thanks to @jacbro2021)
 
 #### slang-tidy
 * Added a new LoopBeforeReset check (thanks to @spomata)
