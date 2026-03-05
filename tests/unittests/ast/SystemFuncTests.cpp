@@ -207,6 +207,159 @@ endmodule
     CHECK(i.getValue().integer() == 2);
 }
 
+TEST_CASE("Enum method argument errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef enum { A, B } e_t;
+    e_t e;
+    initial begin
+        e = e.first(1);
+        e = e.last(1);
+        e = e.next(1, 2);
+        e = e.prev(1, 2);
+    end
+    int k;
+    initial k = e.num(1);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    for (auto& d : diags)
+        CHECK(d.code == diag::TooManyArguments);
+}
+
+TEST_CASE("Enum method hierarchical reference errors") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef enum { A, B } e_t;
+module m;
+    localparam e_t f = n_ev.ev.first;
+    localparam int cnt = n_ev.ev.num;
+endmodule
+module n_ev;
+    e_t ev;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    for (auto& d : diags)
+        CHECK(d.code == diag::SysFuncHierarchicalNotAllowed);
+}
+
+TEST_CASE("Enum method eval with non-const args") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef enum { A, B } e_t;
+    e_t e;
+    localparam e_t nxt = e.next;
+    localparam string nm = e.name;
+    localparam e_t ce = A;
+    int n;
+    localparam e_t nxt2 = ce.next(n);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    int count = 0;
+    for (auto& d : compilation.getAllDiagnostics()) {
+        if (d.code == diag::ConstEvalNonConstVariable)
+            count++;
+    }
+    CHECK(count == 3);
+}
+
+TEST_CASE("String method eval with non-const args") {
+    // Covers the null-return eval paths for non-void string methods
+    // when their string argument cannot be constant-evaluated.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    string s;
+    localparam int a = s.len;
+    localparam byte b = s.getc(0);
+    localparam string c = s.toupper;
+    localparam int d = s.compare("abc");
+    localparam string e = s.substr(0, 2);
+    localparam int f = s.atoi;
+    localparam real g = s.atoreal;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    int count = 0;
+    for (auto& d : compilation.getAllDiagnostics()) {
+        if (d.code == diag::ConstEvalNonConstVariable)
+            count++;
+    }
+    CHECK(count == 7);
+}
+
+TEST_CASE("Math system function argument errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        void'($clog2());
+        void'($clog2(3.14));
+        void'($countbits());
+        void'($countbits(3.14, 1));
+        void'($countbits(4, 3.14));
+        void'($countones());
+        void'($countones(3.14));
+        void'($onehot(3.14));
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 8);
+    CHECK(diags[0].code == diag::TooFewArguments);
+    CHECK(diags[1].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[2].code == diag::TooFewArguments);
+    CHECK(diags[3].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[4].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[5].code == diag::TooFewArguments);
+    CHECK(diags[6].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[7].code == diag::BadSystemSubroutineArg);
+}
+
+TEST_CASE("Math system function eval with non-const args") {
+    // Covers null-return eval paths when args cannot be constant-evaluated.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int iv;
+    int bv;
+    real r;
+    localparam int a = $countbits(iv, 0);
+    localparam int b = $countbits(4, bv);
+    localparam real c = $ln(r);
+    localparam real d = $pow(r, 2.0);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    int count = 0;
+    for (auto& d : compilation.getAllDiagnostics()) {
+        if (d.code == diag::ConstEvalNonConstVariable)
+            count++;
+    }
+    CHECK(count == 4);
+}
+
 TEST_CASE("Utility system functions") {
     Compilation compilation;
     auto& scope = compilation.createScriptScope();
@@ -280,6 +433,56 @@ TEST_CASE("Conversion system functions") {
     CHECK(typeof("$unsigned(3'sd4)") == "bit[2:0]");
 
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Conversion system function argument errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        void'($signed());
+        void'($unsigned(3.14));
+        void'($itor());
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::TooFewArguments);
+    CHECK(diags[1].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[2].code == diag::TooFewArguments);
+}
+
+TEST_CASE("Conversion system function eval with non-const args") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    real r;
+    int n;
+    longint unsigned lu;
+    shortreal sr;
+    int unsigned ui;
+    localparam int a = $rtoi(r);
+    localparam real b = $itor(n);
+    localparam longint unsigned c = $realtobits(r);
+    localparam real d = $bitstoreal(lu);
+    localparam int e = $shortrealtobits(sr);
+    localparam shortreal f = $bitstoshortreal(ui);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    int count = 0;
+    for (auto& d : diags) {
+        if (d.code == diag::ConstEvalNonConstVariable)
+            count++;
+    }
+    CHECK(count == 6);
 }
 
 TEST_CASE("Constant system functions with non-const arguments") {
@@ -1073,6 +1276,44 @@ endmodule
     CHECK(diags[6].code == diag::NoImplicitConversion);
 }
 
+TEST_CASE("Coverage function non-string value argument error") {
+    // An identifier that resolves to a non-string value symbol triggers
+    // the BadSystemSubroutineArg path in CoverageNameOrHierFunc::checkArguments.
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    int bad;
+    initial begin
+        int result;
+        result = $coverage_control(0, 0, 0, bad);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadSystemSubroutineArg);
+}
+
+TEST_CASE("Coverage function in constant context") {
+    // Calling a coverage function in a constant context triggers the
+    // notConst eval path.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int k = $coverage_get_max(0, 0, "top");
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SysFuncNotConst);
+}
+
 TEST_CASE("PLA system tasks") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -1414,6 +1655,124 @@ localparam p = $isunbounded(1 + 1);
     CHECK(diags[0].code == diag::IsUnboundedParamArg);
 }
 
+TEST_CASE("$typename argument errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        string s;
+        s = $typename();
+        s = $typename(int, int);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::TooFewArguments);
+    CHECK(diags[1].code == diag::TooManyArguments);
+}
+
+TEST_CASE("$typename hierarchical reference") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam string p = $typename(n.foo);
+endmodule
+
+module n;
+    int foo;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SysFuncHierarchicalNotAllowed);
+}
+
+TEST_CASE("$isunbounded argument errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        bit b;
+        b = $isunbounded();
+        b = $isunbounded(1, 2);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::TooFewArguments);
+    CHECK(diags[1].code == diag::TooManyArguments);
+}
+
+TEST_CASE("$isunbounded hierarchical reference") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam p = $isunbounded(n.foo);
+endmodule
+
+module n;
+    int foo;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK(std::count_if(diags.begin(), diags.end(), [](auto& d) {
+              return d.code == diag::SysFuncHierarchicalNotAllowed;
+          }) == 1);
+}
+
+TEST_CASE("$isunbounded with unbounded literal") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam p = $isunbounded($);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::IsUnboundedParamArg);
+
+    auto& p = compilation.getRoot().lookupName<ParameterSymbol>("m.p");
+    CHECK(p.getValue().integer() == 1);
+}
+
+TEST_CASE("Array query function hierarchical reference") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int p1 = $left(n.foo);
+    localparam int p2 = $dimensions(n.foo);
+endmodule
+
+module n;
+    int foo[3];
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK(std::count_if(diags.begin(), diags.end(), [](auto& d) {
+              return d.code == diag::SysFuncHierarchicalNotAllowed;
+          }) == 2);
+}
+
 TEST_CASE("$stacktrace function") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -1548,6 +1907,307 @@ endmodule
     CHECK(diags[5].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[6].code == diag::UnknownFormatSpecifier);
     CHECK(diags[7].code == diag::FormatTooManyArgs);
+}
+
+TEST_CASE("Array reduction method errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    real r[];
+    initial begin
+        void'(r.sum() with (item)); // iterExpr type (real) not integral
+        void'(r.sum());             // element type (real) not integral
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ArrayMethodIntegral);
+    CHECK(diags[1].code == diag::ArrayMethodIntegral);
+}
+
+TEST_CASE("Array reduction method eval corner cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    // Empty array with with-clause: returns zero of iterExpr type
+    localparam int empty[] = '{};
+    localparam int p1 = empty.sum() with (item * 2);
+
+    // Non-const var used in iterExpr: eval returns null
+    int x;
+    localparam int arr[] = '{1, 2, 3};
+    localparam int p2 = arr.sum() with (item + x);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK(std::count_if(diags.begin(), diags.end(),
+                        [](auto& d) { return d.code == diag::ConstEvalNonConstVariable; }) >= 1);
+
+    auto& p1 = compilation.getRoot().lookupName<ParameterSymbol>("m.p1");
+    CHECK(p1.getValue().integer() == 0);
+}
+
+TEST_CASE("Array sort/reverse method errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct { int a; string b; } s_t;
+    int a[];
+    s_t s[];
+    initial begin
+        s.sort() with (item);  // iterExpr type (struct) not comparable
+        s.sort();              // element type (struct) not comparable
+        a.reverse(1);         // too many args for reverse
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ArrayMethodComparable);
+    CHECK(diags[1].code == diag::ArrayMethodComparable);
+    CHECK(diags[2].code == diag::TooManyArguments);
+}
+
+TEST_CASE("Array locator/minmax/unique method errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct { int a; } s_t;
+    s_t s[];
+    int a[];
+    int wa[*];
+    initial begin
+        a.find();                          // missing with clause
+        wa.find_index() with (item > 0);   // wildcard assoc + indexed
+        s.min() with (item);               // iterExpr (struct) not comparable
+        s.min();                           // element (struct) not comparable
+        wa.unique_index() with (item > 0); // wildcard assoc + indexed unique
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::ArrayLocatorWithClause);
+    CHECK(diags[1].code == diag::AssociativeWildcardNotAllowed);
+    CHECK(diags[2].code == diag::ArrayMethodComparable);
+    CHECK(diags[3].code == diag::ArrayMethodComparable);
+    CHECK(diags[4].code == diag::AssociativeWildcardNotAllowed);
+}
+
+TEST_CASE("Array method eval null paths") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int arr[];
+    int aa[string];
+
+    localparam int q1[$] = arr.find() with (item > 0);    // null arr in find eval
+    localparam int q2[$] = arr.min();                     // null arr in min eval
+    localparam int q3[$] = arr.unique();                  // null arr in unique eval
+    localparam int p4 = aa.num();                     // null val in size eval
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK(std::count_if(diags.begin(), diags.end(),
+                        [](auto& d) { return d.code == diag::ConstEvalNonConstVariable; }) >= 4);
+}
+
+TEST_CASE("Associative array method errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int aa[string];
+    int wild[*];
+    string key;
+    initial begin
+        // AssocArrayDelete
+        wild.delete(1, 2);   // too many args
+        wild.delete(3.5);    // non-integral arg for wildcard
+        aa.delete(key);      // valid delete with key (triggers bindArgument fallback for arr)
+        aa.delete();         // valid delete all
+
+        // AssocArrayExists
+        aa.exists();         // too few args
+        aa.exists("a", "b"); // too many args
+        wild.exists(3.5);    // non-integral arg for wildcard
+
+        // AssocArrayTraversal
+        aa.first();          // too few args
+        aa.first(key, 1);    // too many args
+        wild.first(key);     // wildcard - AssociativeWildcardNotAllowed
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 8);
+    CHECK(diags[0].code == diag::TooManyArguments);              // wild.delete(1, 2)
+    CHECK(diags[1].code == diag::BadSystemSubroutineArg);        // wild.delete(3.5)
+    CHECK(diags[2].code == diag::TooFewArguments);               // aa.exists()
+    CHECK(diags[3].code == diag::TooManyArguments);              // aa.exists("a", "b")
+    CHECK(diags[4].code == diag::BadSystemSubroutineArg);        // wild.exists(3.5)
+    CHECK(diags[5].code == diag::TooFewArguments);               // aa.first()
+    CHECK(diags[6].code == diag::TooManyArguments);              // aa.first(key, 1)
+    CHECK(diags[7].code == diag::AssociativeWildcardNotAllowed); // wild.first(key)
+}
+
+TEST_CASE("Associative array traversal non-const eval") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int aa[string];
+    string k;
+    localparam int p = aa.first(k);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK(std::count_if(diags.begin(), diags.end(),
+                        [](auto& d) { return d.code == diag::SysFuncNotConst; }) >= 1);
+}
+
+TEST_CASE("Queue method errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int q[$];
+    initial begin
+        q.pop_front(1);    // too many args
+        q.push_back();     // too few args
+        q.insert();        // too few args (needs 2)
+        q.insert(3.5, 1);  // non-integral index
+        q.delete(1, 2);    // too many args
+        q.delete(3.5);     // non-integral arg
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::TooManyArguments);
+    CHECK(diags[1].code == diag::TooFewArguments);
+    CHECK(diags[2].code == diag::TooFewArguments);
+    CHECK(diags[3].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[4].code == diag::TooManyArguments);
+    CHECK(diags[5].code == diag::BadSystemSubroutineArg);
+}
+
+TEST_CASE("Queue method out-of-bounds eval") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function automatic int f_insert();
+        automatic int q[$] = '{1, 2, 3};
+        q.insert(5, 42);  // index 5 out of bounds (size 3, max insert is 3)
+        return 0;
+    endfunction
+
+    function automatic int f_delete();
+        automatic int q[$] = '{1, 2, 3};
+        q.delete(5);  // index 5 out of bounds (size 3)
+        return 0;
+    endfunction
+
+    localparam int p1 = f_insert();
+    localparam int p2 = f_delete();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK(std::count_if(diags.begin(), diags.end(),
+                        [](auto& d) { return d.code == diag::ConstEvalDynamicArrayIndex; }) == 2);
+}
+
+TEST_CASE("Iterator index method errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a[];
+    int wa[*];
+    initial begin
+        a.find() with (item.index(1, 2) > 0);  // too many args for index
+        a.find() with (item.index(3.5) > 0);   // non-integral arg for index
+        wa.find_index() with (item > 0);        // wildcard assoc + indexed
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::TooManyArguments);
+    CHECK(diags[1].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[2].code == diag::AssociativeWildcardNotAllowed);
+}
+
+TEST_CASE("Iterator index non-const eval") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int arr[] = '{10, 20, 30};
+    localparam int q[$] = arr.find_index() with (item.index() > 0);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK(std::count_if(diags.begin(), diags.end(),
+                        [](auto& d) { return d.code == diag::SysFuncNotConst; }) >= 1);
+}
+
+TEST_CASE("Array map method errors and null eval") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a[];
+    int x;
+    initial begin
+        a.map(1);   // too many args
+        a.map();    // missing with clause
+    end
+
+    // null arr in map eval
+    localparam int res1[] = a.map() with (item * 2);
+
+    // null cv in map eval (arr is const, but iterExpr uses non-const x)
+    localparam int arr[] = '{1, 2, 3};
+    localparam int res2[] = arr.map() with (item + x);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK(std::count_if(diags.begin(), diags.end(),
+                        [](auto& d) { return d.code == diag::ArrayLocatorWithClause; }) == 1);
+    CHECK(std::count_if(diags.begin(), diags.end(),
+                        [](auto& d) { return d.code == diag::ConstEvalNonConstVariable; }) >= 1);
 }
 
 TEST_CASE("$sformat diag locs with escape codes") {
