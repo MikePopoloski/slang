@@ -1200,7 +1200,8 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
             // Warn when the shift amount is a known constant that is negative or
             // overflows the width of the left-hand operand.
             if (!context.inUnevaluatedBranch()) {
-                if (auto cv = context.tryEval(*right_); cv && cv.isInteger()) {
+                auto cv = context.tryEval(*right_);
+                if (cv && cv.isInteger()) {
                     const auto& shiftAmt = cv.integer();
                     if (!shiftAmt.hasUnknown()) {
                         if (shiftAmt.isSigned() && shiftAmt.isNegative()) {
