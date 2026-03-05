@@ -3829,3 +3829,49 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadAssignment);
 }
+
+TEST_CASE("Complex base classes with generic param regress -- GH #1666") {
+    auto tree = SyntaxTree::fromText(R"(
+package P;
+    class txn;
+    endclass
+
+    virtual class uvm_port_base #(type IF) extends IF;
+        typedef uvm_port_base #(IF) this_type;
+
+        virtual function void connect(this_type provider);
+        endfunction
+    endclass
+
+    virtual class uvm_tlm_if_base #(type T1=int, type T2=int);
+    endclass
+
+    class uvm_analysis_imp #(type T=int, type IMP=int) extends uvm_port_base #(uvm_tlm_if_base #(T,T));
+        local IMP m_imp;
+    endclass
+
+    class uvm_analysis_export #(type T=int) extends uvm_port_base #(uvm_tlm_if_base #(T,T));
+    endclass
+
+    class uvm_tlm_analysis_fifo #(type T = int);
+        uvm_analysis_imp #(T, uvm_tlm_analysis_fifo #(T)) analysis_export;
+    endclass
+
+    class uvm_sequencer #(type REQ, type RSP = REQ);
+        uvm_analysis_export #(RSP) rsp_export;
+    endclass
+
+    class my_sequencer extends uvm_sequencer#(P::txn);
+        uvm_tlm_analysis_fifo #(P::txn) fifo;
+
+        function void connect_phase();
+            rsp_export.connect(fifo.analysis_export);
+        endfunction
+    endclass
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
