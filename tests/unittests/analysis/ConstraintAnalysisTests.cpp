@@ -168,3 +168,80 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstraintFuncArgCycle);
 }
+
+TEST_CASE("Simple solve-before cycle") {
+    // solve x before y and solve y before x creates a cycle.
+    auto& code = R"(
+class A;
+    rand int x, y;
+    constraint C1 { solve x before y; }
+    constraint C2 { solve y before x; }
+endclass
+
+module m;
+endmodule
+)";
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstraintSolveCycle);
+}
+
+TEST_CASE("Three-variable solve-before cycle") {
+    // x before y, y before z, z before x forms a cycle.
+    auto& code = R"(
+class B;
+    rand int x, y, z;
+    constraint C { solve x before y; solve y before z; solve z before x; }
+endclass
+
+module m;
+endmodule
+)";
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstraintSolveCycle);
+}
+
+TEST_CASE("Solve-before DAG -- no cycle") {
+    // x before y, x before z, y before z is a valid DAG.
+    auto& code = R"(
+class C;
+    rand int x, y, z;
+    constraint C { solve x before y; solve x before z; solve y before z; }
+endclass
+
+module m;
+endmodule
+)";
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Solve-before cycle across multiple constraint blocks") {
+    // The cycle spans two separate constraint blocks.
+    auto& code = R"(
+class D;
+    rand int x, y;
+    constraint C1 { solve x before y; }
+    constraint C2 { solve y before x; }
+endclass
+
+module m;
+endmodule
+)";
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstraintSolveCycle);
+}

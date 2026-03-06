@@ -73,21 +73,20 @@ struct ConstraintGraph {
     void add(const Constraint& c) {
         switch (c.kind) {
             case ConstraintKind::List:
-                for (auto* item : c.as<ConstraintList>().list)
+                for (auto item : c.as<ConstraintList>().list)
                     add(*item);
                 return;
             case ConstraintKind::Expression: {
                 FuncArgVarCollector collector;
                 c.as<ExpressionConstraint>().expr.visit(collector);
 
-                // For each (arg_var, non_arg_var) pair from the same expression,
-                // arg_var must be solved before non_arg_var.
+                // For each (arg_var, non_arg_var) pair, arg_var must be solved first.
                 for (auto& [argSym, argRange] : collector.argVars) {
-                    for (auto* nonArgSym : collector.nonArgVars) {
+                    for (auto nonArgSym : collector.nonArgVars) {
                         if (argSym != nonArgSym) {
-                            edges[argSym].emplace_back(nonArgSym, argRange);
-                            allNodes.insert(argSym);
-                            allNodes.insert(nonArgSym);
+                            funcArgEdges[argSym].emplace_back(nonArgSym, argRange);
+                            funcArgNodes.insert(argSym);
+                            funcArgNodes.insert(nonArgSym);
                         }
                     }
                 }
@@ -106,26 +105,59 @@ struct ConstraintGraph {
             case ConstraintKind::Foreach:
                 add(c.as<ForeachConstraint>().body);
                 return;
+            case ConstraintKind::SolveBefore: {
+                auto& sb = c.as<SolveBeforeConstraint>();
+                for (auto solveExpr : sb.solve) {
+                    auto solveSym = solveExpr->getSymbolReference();
+                    if (!solveSym)
+                        continue;
+
+                    for (auto afterExpr : sb.after) {
+                        auto afterSym = afterExpr->getSymbolReference();
+                        if (!afterSym || afterSym == solveSym)
+                            continue;
+
+                        solveBeforeEdges[solveSym].emplace_back(afterSym, solveExpr->sourceRange);
+                        solveBeforeNodes.insert(solveSym);
+                        solveBeforeNodes.insert(afterSym);
+                    }
+                }
+                return;
+            }
             case ConstraintKind::Invalid:
             case ConstraintKind::Uniqueness:
             case ConstraintKind::DisableSoft:
-            case ConstraintKind::SolveBefore:
                 return;
         }
         SLANG_UNREACHABLE;
     }
 
-    void findCycles() {
-        for (auto node : allNodes) {
+    // Runs cycle detection for both edge sets in sequence.
+    void findAllCycles() {
+        findCycles(funcArgEdges, funcArgNodes, diag::ConstraintFuncArgCycle,
+                   diag::NoteConstraintFuncArgOrder);
+        visited.clear();
+        onStack.clear();
+        path.clear();
+        findCycles(solveBeforeEdges, solveBeforeNodes, diag::ConstraintSolveCycle,
+                   diag::NoteConstraintSolveBeforeEdge);
+    }
+
+private:
+    using EdgeMap =
+        flat_hash_map<const Symbol*, SmallVector<std::pair<const Symbol*, SourceRange>>>;
+
+    void findCycles(const EdgeMap& edges, const flat_hash_set<const Symbol*>& nodes,
+                    DiagCode cycleDiag, DiagCode edgeDiag) {
+        for (auto node : nodes) {
             if (!visited.count(node)) {
-                if (!dfs(node))
+                if (!dfs(node, edges, cycleDiag, edgeDiag))
                     return;
             }
         }
     }
 
-private:
-    bool dfs(const Symbol* v) {
+    bool dfs(const Symbol* v, const EdgeMap& edges, DiagCode cycleDiag, DiagCode edgeDiag) {
         visited.insert(v);
         onStack.insert(v);
         path.push_back({v, {}});
@@ -136,12 +168,12 @@ private:
                 path.back().second = srcRange;
 
                 if (onStack.count(neighbor)) {
-                    reportCycle(neighbor);
+                    reportCycle(neighbor, cycleDiag, edgeDiag);
                     return false;
                 }
 
                 if (!visited.count(neighbor)) {
-                    if (!dfs(neighbor))
+                    if (!dfs(neighbor, edges, cycleDiag, edgeDiag))
                         return false;
                 }
             }
@@ -152,7 +184,7 @@ private:
         return true;
     }
 
-    void reportCycle(const Symbol* neighbor) {
+    void reportCycle(const Symbol* neighbor, DiagCode cycleDiag, DiagCode edgeDiag) {
         // Found a back edge: extract the cycle from the current path.
         SmallVector<std::pair<const Symbol*, SourceRange>> cycle;
         bool inCycle = false;
@@ -165,29 +197,36 @@ private:
         // cycle[i].second is the edge range from cycle[i].first to
         // cycle[(i+1) % N].first.
 
-        auto& diag = context.addDiag(rootSym, diag::ConstraintFuncArgCycle,
-                                     cycle[0].first->location);
+        auto& diag = context.addDiag(rootSym, cycleDiag, cycle[0].first->location);
         diag << cycle[0].first->name;
 
         for (size_t i = 0; i < cycle.size(); i++) {
             auto nextVar = cycle[(i + 1) % cycle.size()].first;
-            diag.addNote(diag::NoteConstraintFuncArgOrder, cycle[i].second)
-                << cycle[i].first->name << nextVar->name;
+            diag.addNote(edgeDiag, cycle[i].second) << cycle[i].first->name << nextVar->name;
         }
     }
 
-    flat_hash_map<const Symbol*, SmallVector<std::pair<const Symbol*, SourceRange>>> edges;
-    flat_hash_set<const Symbol*> allNodes;
+    EdgeMap funcArgEdges;
+    flat_hash_set<const Symbol*> funcArgNodes;
+    EdgeMap solveBeforeEdges;
+    flat_hash_set<const Symbol*> solveBeforeNodes;
+
     flat_hash_set<const Symbol*> visited;
     flat_hash_set<const Symbol*> onStack;
     SmallVector<std::pair<const Symbol*, SourceRange>> path;
+
     AnalysisContext& context;
     const Symbol& rootSym;
 };
 
 } // namespace
 
-void checkConstraintFuncArgCycle(AnalysisContext& context, const Scope& scope) {
+// Checks all constraint blocks directly declared in the given scope for:
+//   - circular dependencies in the implicit variable ordering created by
+//     function call arguments (LRM 18.5.11)
+//   - circular dependencies created by explicit 'solve...before' directives
+//     (LRM 18.5.9)
+void analyzeConstraints(AnalysisContext& context, const Scope& scope) {
     ConstraintGraph graph(context, scope.asSymbol());
     for (auto& member : scope.members()) {
         const Symbol* sym = &member;
@@ -201,7 +240,7 @@ void checkConstraintFuncArgCycle(AnalysisContext& context, const Scope& scope) {
         }
     }
 
-    graph.findCycles();
+    graph.findAllCycles();
 }
 
 } // namespace slang::analysis

@@ -1234,11 +1234,11 @@ endclass
 ```
 
 -Wconstraint-func-cycle
-Per LRM section 18.5.11, when a `rand` (or `randc`) variable appears as an argument to a
-user-defined function call inside a constraint expression, it gains a higher implicit solve
-priority than any `rand` variable that appears as a non-argument in the same expression.
-A diagnostic is issued when this implicit ordering produces a cycle across the constraint
-blocks of a class, since the solver cannot satisfy a circular solve-before relationship.
+When a `rand` (or `randc`) variable appears as an argument to a user-defined function call
+inside a constraint expression, it gains a higher implicit solve priority than any `rand`
+variable that appears as a non-argument in the same expression. A diagnostic is issued when
+this implicit ordering produces a cycle across the constraint blocks of a class, since the
+solver cannot satisfy a circular solve-before relationship.
 \n\n
 If possible, break the cycle by restructuring the constraints to avoid passing a `rand`
 variable as a function argument while another variable in the same expression also contributes
@@ -1255,6 +1255,22 @@ class C;
     // These two orderings form a cycle.
     constraint C1 { x <= F(y); }
     constraint C2 { y <= G(x); }
+endclass
+```
+
+-Wconstraint-solve-cycle
+An explicit `solve...before` directive, or a combination of such directives, creates a
+circular solve ordering.
+\n\n
+Restructure the constraints to remove the circular ordering. Note that there may not
+actually be a cycle at runtime if some of the constraints are disabled dynamically via a
+call to `constraint_mode` or `rand_mode`.
+```
+class C;
+    rand int x, y;
+    // x must be solved before y, and y must be solved before x -- a cycle.
+    constraint C1 { solve x before y; }
+    constraint C2 { solve y before x; }
 endclass
 ```
 

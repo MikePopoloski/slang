@@ -295,10 +295,10 @@ const AnalyzedScope& AnalysisManager::analyzeScopeBlocking(
     for (auto& member : scope.members())
         member.visit(visitor);
 
-    // Check for circular dependencies in implicit constraint variable ordering
-    // created by function call arguments (LRM 18.5.11).
+    // Check for constraint ordering cycles (func-arg implicit ordering and
+    // explicit solve...before directives, LRM 18.5.11).
     if (visitor.hasConstraints)
-        checkConstraintFuncArgCycle(state.context, scope);
+        analyzeConstraints(state.context, scope);
 
     return result;
 }
