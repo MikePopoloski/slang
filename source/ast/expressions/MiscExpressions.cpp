@@ -290,7 +290,7 @@ bool ValueExpressionBase::checkVariableAssignment(const ASTContext& context,
         return reportErr(diag::BlockingAssignToFreeVar);
 
     if (flags.has(AssignFlags::NonBlocking) && var.lifetime == VariableLifetime::Automatic &&
-        var.kind != SymbolKind::ClassProperty) {
+        var.kind != SymbolKind::ClassProperty && !var.flags.has(VariableFlags::RefStatic)) {
         return reportErr(diag::NonblockingAssignmentToAuto);
     }
 
