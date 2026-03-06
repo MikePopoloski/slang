@@ -3855,3 +3855,17 @@ endmodule
 
     REQUIRE(expr.as<HierarchicalValueExpression>().sourceRange.start().valid());
 }
+
+TEST_CASE("v1800-2023: nonblocking assignment to ref static") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+function automatic f(ref static r);
+    r <= 1'b0;
+endfunction
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
