@@ -1178,6 +1178,8 @@ note NoteRequiredHere "required here"
 note NoteClockHere "clock here"
 note NotePortConnHere "from port connection here"
 note NoteCalledHere "called here"
+warning constraint-func-cycle ConstraintFuncArgCycle "potentially circular dependency in constraint ordering for random variable '{}'"
+note NoteConstraintFuncArgOrder "use of '{}' as a function argument here requires it to be solved before '{}'"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning unused-net UnusedNet "unused net '{}'"
 warning unused-implicit-net UnusedImplicitNet "implicit net '{}' is unused elsewhere"
@@ -1276,7 +1278,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 consecutive-comparison case-outside-range case-enum case-dup case-overlap
                 case-unreachable incomplete-return missing-return case-redundant-default case-incomplete
                 case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow shadow-value
-                shadow-hierarchy implicit-conv inc-dec-bit dangling-else }
+                shadow-hierarchy implicit-conv inc-dec-bit dangling-else constraint-func-cycle }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }

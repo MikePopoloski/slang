@@ -31,6 +31,7 @@ struct AnalysisScopeVisitor {
     AnalysisManager& manager;
     AnalyzedScope& result;
     const AnalyzedProcedure* parentProcedure;
+    bool hasConstraints = false;
 
     AnalysisScopeVisitor(AnalysisManager::WorkerState& state, AnalyzedScope& scope,
                          const AnalyzedProcedure* parentProcedure) :
@@ -364,6 +365,12 @@ struct AnalysisScopeVisitor {
             port->visit(*this);
     }
 
+    void visit(const ConstraintBlockSymbol& symbol) {
+        checkShadow(symbol);
+        visitExprs(symbol);
+        hasConstraints = true;
+    }
+
     template<typename T>
         requires(IsAnyOf<T, InstanceArraySymbol, ClockingBlockSymbol, AnonymousProgramSymbol,
                          SpecifyBlockSymbol, CovergroupBodySymbol, CoverCrossSymbol,
@@ -377,9 +384,8 @@ struct AnalysisScopeVisitor {
     }
 
     template<typename T>
-        requires(
-            IsAnyOf<T, EnumValueSymbol, InterfacePortSymbol, ModportSymbol, ConstraintBlockSymbol,
-                    SpecparamSymbol, PrimitiveSymbol, AssertionPortSymbol, CoverpointSymbol>)
+        requires(IsAnyOf<T, EnumValueSymbol, InterfacePortSymbol, ModportSymbol, SpecparamSymbol,
+                         PrimitiveSymbol, AssertionPortSymbol, CoverpointSymbol>)
     void visit(const T& symbol) {
         // These just check for shadowing.
         checkShadow(symbol);
