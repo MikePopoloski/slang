@@ -189,7 +189,7 @@ private:
     Trivia handleResetAllDirective(Token directive);
     Trivia handleDefineDirective(Token directive);
     std::pair<Trivia, Trivia> handleMacroUsage(Token directive);
-    Trivia handleIfDefDirective(Token directive, bool inverted);
+    Trivia handleIfDefDirective(Token directive, bool inverted, Token savedLastSeen);
     Trivia handleElsIfDirective(Token directive);
     Trivia handleElseDirective(Token directive);
     Trivia handleEndIfDirective(Token directive);
@@ -402,6 +402,48 @@ private:
         uint32_t currentIndex = 0;
     };
 
+    // Per-file state machine used to detect the header guard idiom.
+    // A header guard is only detected when the file looks exactly like:
+    //   [optional whitespace/comments]
+    //   `ifndef GUARD
+    //   `define GUARD
+    //   < file body >
+    //   `endif
+    //   [optional whitespace/comments]
+    //   <EOF>
+    struct HeaderGuardInfo {
+        // The macro name token from the candidate `ifndef.
+        Token ifndefToken;
+
+        // The macro name token from the immediately-following `define.
+        Token defineToken;
+
+        // The branchStack depth when this file was pushed; the candidate
+        // `ifndef must occur at exactly this depth.
+        size_t branchDepthAtPush = 0;
+
+        enum class State : uint8_t {
+            // Waiting for the opening `ifndef. Any real token or any
+            // directive other than `ifndef cancels detection for this file.
+            LookingForIfndef,
+
+            // Saw the outermost `ifndef. The very next directive must be
+            // `define; anything else cancels.
+            LookingForDefine,
+
+            // Saw `ifndef + immediately-following `define. Waiting for the
+            // matching `endif to close the outermost block.
+            LookingForEndif,
+
+            // The matching `endif was seen. Any further real token or
+            // directive before EOF cancels.
+            LookingForEof,
+
+            // Not a header guard pattern in this file.
+            Cancelled,
+        } state = State::LookingForIfndef;
+    };
+
     // a pointer into expandedTokens if we're currently expanding a macro
     Token* currentMacroToken = nullptr;
 
@@ -430,6 +472,9 @@ private:
 
     // keep track of nested processor branches (ifdef, ifndef, else, elsif, endif)
     SmallVector<BranchEntry, 2> branchStack;
+
+    // Per-file header guard detection state; one entry per active lexer.
+    SmallVector<HeaderGuardInfo, 2> headerGuardStack;
 
     // map from macro name to macro definition
     flat_hash_map<std::string_view, MacroDef> macros;

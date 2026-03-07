@@ -1633,6 +1633,17 @@ Issued for redefining a macro name with a different body.
 `define FOO 2
 ```
 
+-Wheader-guard
+Issued when a source file starts with an `ifndef that looks like a header guard
+but the immediately following `define uses a different macro name, possibly due
+to a typo or copy-paste error.
+```
+`ifndef MY_HEADER_H
+`define MY_OTHER_HEADER_H
+// ...
+`endif
+```
+
 @category Pragmas
 
 -Wunknown-pragma

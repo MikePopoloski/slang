@@ -3137,3 +3137,129 @@ endmodule
     CHECK(result == expected);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Header guard -- matching macro names (no warning)") {
+    auto& text = R"(
+`ifndef MY_HEADER_H
+`define MY_HEADER_H
+
+module m;
+endmodule
+
+`endif
+)";
+    preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Header guard -- mismatched macro names") {
+    auto& text = R"(
+`ifndef MY_HEADER_H
+`define MY_OTHER_HEADER_H
+
+module m;
+endmodule
+
+`endif
+)";
+    preprocess(text);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::HeaderGuardMismatch);
+}
+
+TEST_CASE("Header guard -- mismatched in included file") {
+    getSourceManager().assignText("hdr.svh", "`ifndef HDR_SVH\n"
+                                             "`define HDR_SVH_TYPO\n"
+                                             "`endif\n");
+    auto& text = R"(`include "hdr.svh")";
+    preprocess(text);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::HeaderGuardMismatch);
+}
+
+TEST_CASE("Header guard -- ifdef does not trigger check") {
+    // `ifdef (not `ifndef) should not activate the header guard check.
+    auto& text = R"(
+`ifdef MY_HEADER_H
+`define MY_OTHER_HEADER_H
+`endif
+)";
+    preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Header guard -- inner ifndef mismatch does not warn") {
+    // Only the outermost `ifndef is checked. Inner mismatches are not reported.
+    auto& text = R"(
+`ifndef OUTER_H
+`define OUTER_H
+
+`ifndef INNER_H
+`define INNER_WRONG_H
+`endif
+
+`endif
+)";
+    preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Header guard -- outer mismatch with nested content warns") {
+    auto& text = R"(
+`ifndef OUTER_H
+`define OUTER_WRONG_H
+
+`ifndef INNER_H
+`define INNER_H
+`endif
+
+`endif
+)";
+    preprocess(text);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::HeaderGuardMismatch);
+}
+
+TEST_CASE("Header guard -- other directive between ifndef and define cancels") {
+    auto& text = R"(
+`ifndef FOO_H
+`timescale 1ns/1ps
+`define BAR_H
+`endif
+)";
+    preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Header guard -- real token before ifndef cancels") {
+    auto& text = R"(
+module m; endmodule
+`ifndef FOO_H
+`define BAR_H
+`endif
+)";
+    preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Header guard -- trailing content after endif cancels") {
+    auto& text = R"(
+`ifndef FOO_H
+`define BAR_H
+`endif
+module m; endmodule
+)";
+    preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Header guard -- directive after endif cancels") {
+    auto& text = R"(
+`ifndef FOO_H
+`define BAR_H
+`endif
+`timescale 1ns/1ps
+)";
+    preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

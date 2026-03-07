@@ -129,6 +129,8 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
     lexerStack.emplace_back(
         std::make_unique<Lexer>(buffer, alloc, diagnostics, sourceManager, lexerOptions));
 
+    headerGuardStack.push_back({.branchDepthAtPush = branchStack.size()});
+
     // If we have an active macro expansion we need to pause it while
     // we process this new buffer.
     if (currentMacroToken) {
@@ -149,6 +151,28 @@ bool Preprocessor::popSource() {
         keywordVersionStack.back().source != KeywordVersionState::Source::Directive) {
         keywordVersionStack.pop_back();
     }
+
+    // Check if this file was guarded by a valid header guard. If it was, remember
+    // it as an include-once header. If not, and it looks like the user messed up
+    // the idiom, issue a diagnostic.
+    auto& hg = headerGuardStack.back();
+    if (hg.state == HeaderGuardInfo::State::LookingForEof) {
+        auto defText = hg.defineToken.valueText();
+        auto ifndefText = hg.ifndefToken.valueText();
+        if (!defText.empty() && !ifndefText.empty()) {
+            if (defText == ifndefText) {
+                auto text = sourceManager.getSourceText(hg.ifndefToken.location().buffer());
+                if (!text.empty())
+                    includeOnceHeaders.emplace(text.data());
+            }
+            else {
+                auto& d = addDiag(diag::HeaderGuardMismatch, hg.defineToken.range());
+                d << defText << ifndefText;
+                d.addNote(diag::NoteDeclarationHere, hg.ifndefToken.range());
+            }
+        }
+    }
+    headerGuardStack.pop_back();
 
     lexerStack.pop_back();
 
@@ -361,6 +385,24 @@ Token Preprocessor::handleDirectives(Token token) {
                 return token.withTrivia(alloc, trivia.copy(alloc));
             }
             case TokenKind::Directive: {
+                // Cancel header guard detection when the directive isn't the one
+                // we're expecting at this stage of the pattern.
+                if (!headerGuardStack.empty()) {
+                    using HGS = HeaderGuardInfo::State;
+                    auto& hg = headerGuardStack.back();
+                    if (hg.state == HGS::LookingForIfndef &&
+                        token.directiveKind() != SyntaxKind::IfNDefDirective) {
+                        hg.state = HGS::Cancelled;
+                    }
+                    else if (hg.state == HGS::LookingForDefine &&
+                             token.directiveKind() != SyntaxKind::DefineDirective) {
+                        hg.state = HGS::Cancelled;
+                    }
+                    else if (hg.state == HGS::LookingForEof) {
+                        hg.state = HGS::Cancelled;
+                    }
+                }
+
                 auto savedLast = std::exchange(lastConsumed, token);
                 switch (token.directiveKind()) {
                     case SyntaxKind::IncludeDirective:
@@ -380,10 +422,10 @@ Token Preprocessor::handleDirectives(Token token) {
                         break;
                     }
                     case SyntaxKind::IfDefDirective:
-                        trivia.push_back(handleIfDefDirective(token, false));
+                        trivia.push_back(handleIfDefDirective(token, false, savedLast));
                         break;
                     case SyntaxKind::IfNDefDirective:
-                        trivia.push_back(handleIfDefDirective(token, true));
+                        trivia.push_back(handleIfDefDirective(token, true, savedLast));
                         break;
                     case SyntaxKind::ElsIfDirective:
                         trivia.push_back(handleElsIfDirective(token));
@@ -464,6 +506,16 @@ Token Preprocessor::handleDirectives(Token token) {
                 break;
             }
             default:
+                // Any real (non-directive) token cancels header guard detection
+                // for states that require the file to have no intervening content.
+                if (!headerGuardStack.empty()) {
+                    using HGS = HeaderGuardInfo::State;
+                    auto& hgs = headerGuardStack.back().state;
+                    if (hgs == HGS::LookingForIfndef || hgs == HGS::LookingForDefine ||
+                        hgs == HGS::LookingForEof) {
+                        hgs = HGS::Cancelled;
+                    }
+                }
                 trivia.append_range(token.trivia());
                 return token.withTrivia(alloc, trivia.copy(alloc));
         }
@@ -638,6 +690,18 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
     else
         name = expect(TokenKind::Identifier);
 
+    // Record the define name for the header guard candidate. The state transition
+    // from LookingForDefine was already validated in handleDirectives; here we just
+    // capture the token and advance the state.
+    if (!headerGuardStack.empty() && !name.isMissing()) {
+        auto& hg = headerGuardStack.back();
+        if (hg.state == HeaderGuardInfo::State::LookingForDefine &&
+            branchStack.size() == hg.branchDepthAtPush + 1) {
+            hg.defineToken = name;
+            hg.state = HeaderGuardInfo::State::LookingForEndif;
+        }
+    }
+
     inMacroBody = true;
     if (name.isMissing())
         bad = true;
@@ -755,7 +819,7 @@ std::pair<Trivia, Trivia> Preprocessor::handleMacroUsage(Token directive) {
     return std::make_pair(Trivia(TriviaKind::Directive, syntax), extraTrivia);
 }
 
-Trivia Preprocessor::handleIfDefDirective(Token directive, bool inverted) {
+Trivia Preprocessor::handleIfDefDirective(Token directive, bool inverted, Token savedLastSeen) {
     auto& expr = parseConditionalExprTop();
     bool take = false;
     if (branchStack.empty() || branchStack.back().currentActive) {
@@ -763,6 +827,21 @@ Trivia Preprocessor::handleIfDefDirective(Token directive, bool inverted) {
         take = evalConditionalExpr(expr);
         if (inverted)
             take = !take;
+    }
+
+    // Check for a potential header guard: an `ifndef at the outermost level
+    // of this file's lexer, with a simple macro name operand.
+    if (inverted && !headerGuardStack.empty() &&
+        expr.kind == SyntaxKind::NamedConditionalDirectiveExpression &&
+        (!savedLastSeen || savedLastSeen.location().buffer() != directive.location().buffer())) {
+
+        auto& hg = headerGuardStack.back();
+        auto& named = expr.as<NamedConditionalDirectiveExpressionSyntax>();
+        if (hg.state == HeaderGuardInfo::State::LookingForIfndef &&
+            branchStack.size() == hg.branchDepthAtPush && !named.name.isMissing()) {
+            hg.ifndefToken = named.name;
+            hg.state = HeaderGuardInfo::State::LookingForDefine;
+        }
     }
 
     branchStack.emplace_back(BranchEntry(directive, take));
@@ -887,6 +966,16 @@ Trivia Preprocessor::handleEndIfDirective(Token directive) {
         branchStack.pop_back();
         if (!branchStack.empty() && !branchStack.back().currentActive)
             taken = false;
+
+        // If this endif closes the outermost `ifndef of the file, advance
+        // the header guard state: we now only need a clean EOF.
+        if (!headerGuardStack.empty()) {
+            auto& hg = headerGuardStack.back();
+            if (hg.state == HeaderGuardInfo::State::LookingForEndif &&
+                branchStack.size() == hg.branchDepthAtPush) {
+                hg.state = HeaderGuardInfo::State::LookingForEof;
+            }
+        }
     }
     return parseBranchDirective(directive, nullptr, taken);
 }

@@ -94,6 +94,7 @@ error MacroTokensAfterPragmaProtect "unexpected macro expansion after pragma pro
 note NoteDirectiveHere "after protect directive here"
 warning ignored-macro-paste IgnoredMacroPaste "paste token is pointless because it is adjacent to whitespace"
 warning redef-macro RedefiningMacro "macro '{}' redefined"
+warning header-guard HeaderGuardMismatch "header guard `define of '{}' does not match `ifndef condition '{}'"
 warning unknown-pragma UnknownPragma "unknown pragma '{}'"
 warning extra-pragma-args ExtraPragmaArgs "too many arguments provided for pragma '{}'"
 warning expected-diag-arg ExpectedDiagPragmaArg "expected diagnostic pragma argument"
@@ -1282,7 +1283,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 case-unreachable incomplete-return missing-return case-redundant-default case-incomplete
                 case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow shadow-value
                 shadow-hierarchy implicit-conv inc-dec-bit dangling-else constraint-func-cycle
-                misleading-indentation constraint-solve-cycle }
+                misleading-indentation constraint-solve-cycle header-guard }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }
