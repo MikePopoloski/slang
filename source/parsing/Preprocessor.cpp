@@ -1317,17 +1317,24 @@ Trivia Preprocessor::handleDefaultTriregStrengthDirective(Token directive) {
     return Trivia(TriviaKind::Directive, result);
 }
 
-ConditionalDirectiveExpressionSyntax* Preprocessor::parseConditionalExpr() {
-    auto isBinaryOp = [](TokenKind kind) {
+ConditionalDirectiveExpressionSyntax* Preprocessor::parseConditionalExpr(int minPrec) {
+    // Operator precedence (higher binds tighter)
+    auto getPrec = [](TokenKind kind) {
         switch (kind) {
             case TokenKind::DoubleAnd:
+                return 3;
             case TokenKind::DoubleOr:
+                return 2;
             case TokenKind::MinusArrow:
             case TokenKind::LessThanMinusArrow:
-                return true;
+                return 1;
             default:
-                return false;
+                return -1;
         }
+    };
+
+    auto isRightAssoc = [](TokenKind kind) {
+        return kind == TokenKind::MinusArrow || kind == TokenKind::LessThanMinusArrow;
     };
 
     auto parsePrimary = [&]() -> ConditionalDirectiveExpressionSyntax* {
@@ -1357,11 +1364,13 @@ ConditionalDirectiveExpressionSyntax* Preprocessor::parseConditionalExpr() {
     }
 
     while (true) {
-        if (!isBinaryOp(peek().kind))
+        auto nextKind = peek().kind;
+        int prec = getPrec(nextKind);
+        if (prec < minPrec || (prec == minPrec && !isRightAssoc(nextKind)))
             break;
 
         auto op = consume();
-        auto right = parseConditionalExpr();
+        auto right = parseConditionalExpr(prec);
         left = alloc.emplace<BinaryConditionalDirectiveExpressionSyntax>(*left, op, *right);
     }
 

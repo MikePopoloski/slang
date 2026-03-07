@@ -211,7 +211,7 @@ private:
     std::pair<Trivia, Trivia> handleProtectedDirective(Token directive);
 
     // Handle parsing a branch of a conditional directive
-    syntax::ConditionalDirectiveExpressionSyntax* parseConditionalExpr();
+    syntax::ConditionalDirectiveExpressionSyntax* parseConditionalExpr(int minPrec = 0);
     syntax::ConditionalDirectiveExpressionSyntax& parseConditionalExprTop();
     bool evalConditionalExpr(const syntax::ConditionalDirectiveExpressionSyntax& expr) const;
     bool shouldTakeElseBranch(SourceLocation location,

@@ -2589,6 +2589,51 @@ TEST9
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Conditional ifdef expression precedence") {
+    auto& text = R"(
+`define A
+`define B
+
+`ifdef (C && A || B)
+PREC1
+`endif
+`ifdef (A || C && B)
+PREC2
+`endif
+`ifdef (A && B || C && B)
+PREC3
+`endif
+)";
+
+    auto& expected = R"(
+PREC1
+PREC2
+PREC3
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Conditional ifdef expression right-associativity") {
+    auto& text = R"(
+`define A
+
+`ifdef (!A -> A -> B)
+RIGHTASSOC1
+`endif
+)";
+
+    auto& expected = R"(
+RIGHTASSOC1
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Conditional ifdef expression errors") {
     auto& text = R"(
 `define A 0
