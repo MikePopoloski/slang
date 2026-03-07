@@ -202,7 +202,8 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
              "separateUnit"_a)
         .def("processOptions", &Driver::processOptions)
         .def("runPreprocessor", &Driver::runPreprocessor, "includeComments"_a,
-             "includeDirectives"_a, "obfuscateIds"_a, "useFixedObfuscationSeed"_a = false)
+             "includeDirectives"_a, "obfuscateIds"_a, "useFixedObfuscationSeed"_a = false,
+             "showSource"_a = false)
         .def("reportMacros", &Driver::reportMacros)
         .def("optionallyWriteDepFiles", &Driver::optionallyWriteDepFiles)
         .def("parseAllSources", &Driver::parseAllSources)

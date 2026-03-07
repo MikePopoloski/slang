@@ -1254,3 +1254,22 @@ TEST_CASE("Driver dir prefix multiple, first wins") {
     CHECK(driver.runFullCompilation());
     CHECK(stdoutContains("Build succeeded"));
 }
+
+TEST_CASE("Driver file preprocess with source info") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format("testfoo \"{0}test.sv\" -DFOOBAR -I{0}libtest", findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.runPreprocessor(false, false, false, false, true));
+
+    auto output = OS::capturedStdout;
+    output = std::regex_replace(output, std::regex("\r\n"), "\n");
+
+    CHECK(contains(output, "test.sv:4\nmodule m;"));
+    CHECK(contains(output, "mod1.sv:1\nmodule mod1"));
+    CHECK(contains(output, "test.sv:15\n"));
+}

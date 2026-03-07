@@ -113,12 +113,15 @@ int driverMain(int argc, TArgs argv) {
         std::optional<bool> includeComments;
         std::optional<bool> includeDirectives;
         std::optional<bool> obfuscateIds;
+        std::optional<bool> includeSource;
         driver.cmdLine.add("--comments", includeComments,
                            "Include comments in preprocessed output (with -E)");
         driver.cmdLine.add("--directives", includeDirectives,
                            "Include compiler directives in preprocessed output (with -E)");
         driver.cmdLine.add("--obfuscate-ids", obfuscateIds,
                            "Randomize all identifiers in preprocessed output (with -E)");
+        driver.cmdLine.add("--preprocess-source", includeSource,
+                           "Show source line information with preprocessor output");
 
         std::optional<std::string> astJsonFile;
         driver.cmdLine.add(
@@ -198,7 +201,7 @@ int driverMain(int argc, TArgs argv) {
             bool ok = true;
             if (onlyPreprocess == true) {
                 return driver.runPreprocessor(includeComments == true, includeDirectives == true,
-                                              obfuscateIds == true);
+                                              obfuscateIds == true, false, includeSource == true);
             }
 
             if (onlyMacros == true) {

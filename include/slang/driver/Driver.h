@@ -376,9 +376,11 @@ public:
     /// @param useFixedObfuscationSeed If true, obfuscated identifiers will be generated with
     ///                                a fixed randomization seed, meaning they will be the
     ///                                same every time the program is run. Used for testing.
+    /// @param showSource If true, preprocessor output will contain source line information.
     /// @returns true on success and false if errors were encountered.
     [[nodiscard]] bool runPreprocessor(bool includeComments, bool includeDirectives,
-                                       bool obfuscateIds, bool useFixedObfuscationSeed = false);
+                                       bool obfuscateIds, bool useFixedObfuscationSeed = false,
+                                       bool showSource = false);
 
     /// Prints all macros from all loaded buffers to stdout.
     void reportMacros();
