@@ -777,6 +777,7 @@ warning unsigned-arith-shift UnsignedArithShift "arithmetic right shift of unsig
 warning signed-logical-shift SignedLogicalShift "logical right shift of signed type {} may have been intended to be an arithmetic shift"
 warning shift-count-overflow ShiftCountOverflow "shift count of '{}' overflows {}-bit operand"
 warning shift-count-negative ShiftCountNegative "shift count of '{}' is negative"
+warning divide-by-zero DivisionByZero "division by constant zero"
 warning specify-condition-expr SpecifyPathConditionExpr "expression is not valid in a state-dependent path condition"
 warning arith-op-mismatch ArithOpMismatch "arithmetic between operands of different types ({} and {})"
 warning bitwise-op-mismatch BitwiseOpMismatch "bitwise operation between operands of different types ({} and {})"
@@ -1292,7 +1293,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow shadow-value
                 shadow-hierarchy implicit-conv inc-dec-bit dangling-else constraint-func-cycle
                 misleading-indentation constraint-solve-cycle header-guard dynamic-cast-const
-                fork-loop-var loop-var-modify loop-cond-not-modified }
+                fork-loop-var loop-var-modify loop-cond-not-modified divide-by-zero }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }

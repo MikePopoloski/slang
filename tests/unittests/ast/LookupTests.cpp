@@ -1677,7 +1677,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter({diag::DivisionByZero});
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ValueMustNotBeUnknown);
     CHECK(diags[1].code == diag::GenvarUnknownBits);

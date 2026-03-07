@@ -955,6 +955,19 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
 
     analyzePrecedence(context, lhs, rhs, op, opRange);
 
+    // Warn when a divisor is a compile-time constant zero.
+    if ((op == BinaryOperator::Divide || op == BinaryOperator::Mod) &&
+        !context.inUnevaluatedBranch()) {
+        auto cv = context.tryEval(*result->right_);
+        if (cv.isInteger() && !cv.integer().hasUnknown() && bool(cv.integer() == 0)) {
+            context.addDiag(diag::DivisionByZero, result->right_->sourceRange);
+        }
+        else if ((cv.isReal() && cv.real() == 0.0) ||
+                 (cv.isShortReal() && cv.shortReal() == 0.0f)) {
+            context.addDiag(diag::DivisionByZero, result->right_->sourceRange);
+        }
+    }
+
     auto& clt = lt->getCanonicalType();
     auto& crt = rt->getCanonicalType();
     if (!clt.isMatching(crt)) {

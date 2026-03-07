@@ -394,6 +394,51 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Division by zero warning") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int r;
+    real fr;
+
+    initial begin
+        r = 10 / 0;         // warn: integer divide by zero
+        r = 10 % 0;         // warn: modulo by zero
+        fr = 1.0 / 0.0;     // warn: real divide by zero
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::DivisionByZero);
+    CHECK(diags[1].code == diag::DivisionByZero);
+    CHECK(diags[2].code == diag::DivisionByZero);
+}
+
+TEST_CASE("Division by zero warning -- valid cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int r;
+    int v;
+
+    initial begin
+        r = 10 / 1;         // ok: divisor is not zero
+        r = 10 / v;         // ok: divisor is not a compile-time constant
+    end
+    if (0) begin
+        assign r = 10 / 0;  // ok: unevaluated branch
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Indeterminate variable initialization order") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
