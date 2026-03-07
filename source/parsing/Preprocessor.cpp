@@ -129,7 +129,7 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
     lexerStack.emplace_back(
         std::make_unique<Lexer>(buffer, alloc, diagnostics, sourceManager, lexerOptions));
 
-    headerGuardStack.push_back({.branchDepthAtPush = branchStack.size()});
+    headerGuardStack.emplace_back(branchStack.size());
 
     // If we have an active macro expansion we need to pause it while
     // we process this new buffer.

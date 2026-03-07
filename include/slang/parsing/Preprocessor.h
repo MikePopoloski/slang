@@ -442,6 +442,8 @@ private:
             // Not a header guard pattern in this file.
             Cancelled,
         } state = State::LookingForIfndef;
+
+        HeaderGuardInfo(size_t branchDepthAtPush) : branchDepthAtPush(branchDepthAtPush) {}
     };
 
     // a pointer into expandedTokens if we're currently expanding a macro
