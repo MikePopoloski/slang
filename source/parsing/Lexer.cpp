@@ -329,6 +329,18 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
             }
 
             // otherwise, end of file
+            // Warn if a user source file does not end with a newline.
+            // Skip synthetic buffers (those whose names start with '<') which
+            // are generated internally for things like macro expansion, command
+            // line text, and unnamed scratch buffers.
+            if (bufferId != BufferID::getPlaceholder() && sourceBuffer > originalBegin) {
+                char lastChar = *(sourceBuffer - 1);
+                if (lastChar != '\n' && lastChar != '\r') {
+                    auto rawName = sourceManager.getRawFileName(bufferId);
+                    if (!rawName.empty() && rawName.front() != '<')
+                        addDiag(diag::NewlineEOF, currentOffset());
+                }
+            }
             return create(TokenKind::EndOfFile);
         case '!':
             if (consume('=')) {

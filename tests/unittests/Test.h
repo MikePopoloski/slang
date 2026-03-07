@@ -57,7 +57,8 @@ using namespace slang::ast;
     } while (0)
 
 // These are warnings that are annoying to see in tests so we filter them out by default.
-static constexpr std::initializer_list<DiagCode> DefaultIgnoreWarnings = {diag::UnnamedGenerate};
+static constexpr std::initializer_list<DiagCode> DefaultIgnoreWarnings = {diag::UnnamedGenerate,
+                                                                          diag::NewlineEOF};
 
 #define NO_COMPILATION_ERRORS                                                       \
     do {                                                                            \

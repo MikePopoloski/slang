@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/parsing/Lexer.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxPrinter.h"
@@ -285,6 +286,40 @@ TEST_CASE("Newlines (LF)") {
     CHECK(token.trivia()[0].kind == TriviaKind::EndOfLine);
     CHECK(token.trivia()[0].syntax() == nullptr);
     CHECK_DIAGNOSTICS_EMPTY;
+}
+
+static void lexAllTokensNamed(std::string_view text) {
+    // Lex all tokens using a named buffer so that file-level warnings
+    // (e.g. newline-eof) are triggered, mimicking a real source file.
+    // Uses a unique path per call to avoid source manager conflicts.
+    diagnostics.clear();
+    static int counter = 0;
+    auto& sm = getSourceManager();
+    auto path = "newline-test-" + std::to_string(counter++) + ".sv";
+    auto buffer = sm.assignText(path, text);
+    Lexer lexer(buffer, alloc, diagnostics, sm);
+    Token token;
+    do {
+        token = lexer.lex();
+    } while (token.kind != TokenKind::EndOfFile);
+}
+
+TEST_CASE("Newline at EOF (present)") {
+    // Named buffers ending with LF, CR/LF, or CR should not warn.
+    lexAllTokensNamed("module m;\n");
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    lexAllTokensNamed("module m;\r\n");
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    lexAllTokensNamed("module m;\r");
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Newline at EOF (missing)") {
+    lexAllTokensNamed("module m;");
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::NewlineEOF);
 }
 
 TEST_CASE("Simple Identifiers") {

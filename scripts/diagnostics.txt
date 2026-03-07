@@ -43,6 +43,7 @@ warning protect-encoding-bytes ProtectEncodingBytes "{} bytes decoded in protect
 warning invalid-encoding-byte InvalidEncodingByte "invalid {} byte '{}' -- attempting to skip remaining encoded text"
 warning raw-protect-eof RawProtectEOF "reached end of file while processing 'raw' encoded protected envelope"
 warning nested-comment NestedBlockComment "nested block comments are disallowed by SystemVerilog"
+warning newline-eof NewlineEOF "no newline at end of file"
 
 subsystem Numeric
 error LiteralSizeIsZero "size of vector literal cannot be zero"
