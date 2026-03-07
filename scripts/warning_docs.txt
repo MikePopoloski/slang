@@ -2406,7 +2406,8 @@ A source file does not end with a newline character. Many coding standards and
 editors require files to end with a newline, and some tools may behave
 unexpectedly when processing files that do not.
 ```
-module m; endmodule```
+module m; endmodule
+```
 
 -Wunknown-warning-option
 <ignored>
