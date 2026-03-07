@@ -1248,6 +1248,10 @@ warning read-write ReadWriteExpr "'{}' is both read and modified in the same exp
 warning mixed-var-assigns MixedVarAssigns "cannot mix continuous and procedural assignments to variable '{}'"
 warning multiple-cont-assigns MultipleContAssigns "cannot have multiple continuous assignments to variable '{}'"
 warning multiple-always-assigns MultipleAlwaysAssigns "variable '{}' driven by {} procedure cannot be written to by any other process"
+warning fork-loop-var ForkLoopVar "loop variable '{}' is used inside a {} block; all loop iterations will see the same stale value (use an automatic local variable inside the fork to capture the current value)"
+warning loop-var-modify LoopVarModify "loop variable '{}' is modified in both the `for` loop step and the loop body"
+note NoteLoopVarStep "loop step expression here"
+warning loop-cond-not-modified LoopCondNotModified "none of the variables in `for` loop condition are modified in the loop step expressions or body statements"
 
 subsystem Meta
 fatal TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
@@ -1286,7 +1290,8 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 case-unreachable incomplete-return missing-return case-redundant-default case-incomplete
                 case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow shadow-value
                 shadow-hierarchy implicit-conv inc-dec-bit dangling-else constraint-func-cycle
-                misleading-indentation constraint-solve-cycle header-guard dynamic-cast-const }
+                misleading-indentation constraint-solve-cycle header-guard dynamic-cast-const
+                fork-loop-var loop-var-modify loop-cond-not-modified }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }

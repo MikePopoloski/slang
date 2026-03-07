@@ -55,9 +55,24 @@ protected:
     /// Set to true if we're currently walking through an unrolled for loop.
     bool inUnrolledForLoop = false;
 
+    /// Set to true while the main flow pass is visiting the body of a for/foreach
+    /// loop. Prevents nested loops encountered during that traversal from
+    /// re-triggering checkLoopVars; checkLoopVars already handles nested loops
+    /// internally via its own visitor.
+    bool inCheckLoopVars = false;
+
     /// An optional diagnostics collection. If provided, warnings encountered during
     /// analysis will be added to it.
     Diagnostics* diagnostics;
+
+    /// Perform loop variable checks in a single pass over the loop body:
+    ///   - Warn when a loop variable (for loops) is both stepped in the header
+    ///     and incremented/decremented inside the body (double-step).
+    ///   - Warn when none of the variables in the stop condition are ever
+    ///     modified by the step expressions or the body (for loops only).
+    ///   - Warn when a loop variable is referenced inside a fork-join_any or
+    ///     fork-join_none block in the body (captures stale value).
+    void checkLoopVars(const Statement& loopStmt);
 
     /// An EvalContext that can be used for constant evaluation during analysis.
     mutable EvalContext evalContext;
@@ -440,6 +455,10 @@ protected:
         breakStates.clear();
         setState(std::move(bodyState));
 
+        auto savedCheckLoopVars = std::exchange(inCheckLoopVars, true);
+        if (!savedCheckLoopVars)
+            checkLoopVars(stmt);
+
         if (iterValues.empty()) {
             if (bodyWillExecute == WillExecute::No)
                 setUnreachable();
@@ -469,6 +488,7 @@ protected:
         }
 
         forLoopSteps = oldForLoopSteps;
+        inCheckLoopVars = savedCheckLoopVars;
 
         if (bodyWillExecute == WillExecute::Yes)
             (DERIVED).meetState(exitState, state);
@@ -500,7 +520,13 @@ protected:
         auto currState = (DERIVED).copyState(state);
         auto oldBreakStates = std::move(breakStates);
         breakStates.clear();
+
+        auto savedCheckLoopVars = std::exchange(inCheckLoopVars, true);
         visit(stmt.body);
+
+        if (!savedCheckLoopVars)
+            checkLoopVars(stmt);
+        inCheckLoopVars = savedCheckLoopVars;
 
         // If all loop dims are fixed size then the loop is guaranteed to execute.
         bool allFixed = !stmt.loopDims.empty();

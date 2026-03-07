@@ -1153,6 +1153,77 @@ function int foo(input a);
 endfunction
 ```
 
+-Wfork-loop-var
+A variable declared as a `for` or `foreach` loop variable is referenced inside a
+fork-join_none or fork-join_any block. Since those block types allow the parent
+thread to continue running before all spawned threads finish, the loop variable
+may have advanced to a new value by the time a spawned thread reads it. All
+iterations of the loop will typically end up sharing the final value of the
+variable instead of the value at the time the thread was spawned.
+\n\n
+The fix is to capture the loop variable's value into a local automatic variable
+declared at the start of the fork block, so that each spawned thread gets its
+own copy of the value.
+```
+module m;
+    task automatic do_something(int x); endtask
+
+    initial begin
+        // BAD: all threads will see the same final value of i
+        for (int i = 0; i < 4; i++) begin
+            fork
+                do_something(i);
+            join_none
+        end
+
+        // GOOD: capture current value into an automatic variable
+        for (int i = 0; i < 4; i++) begin
+            fork
+                automatic int inst = i;
+                do_something(inst);
+            join_none
+        end
+    end
+endmodule
+```
+
+-Wloop-var-modify
+A `for` loop has a step expression that increments or decrements a variable, and
+that same variable is also modified inside the loop body. This usually indicates
+an unintentional double-step of the loop variable, which could cause incorrect
+iteration counts, skipped values, or infinite loops.
+```
+module m;
+    initial begin
+        for (int i = 0; i < 10; i++) begin
+            i++;
+        end
+    end
+endmodule
+```
+
+-Wloop-cond-not-modified
+None of the variables that appear in the condition (stop expression) of a `for`
+loop are modified by either the loop's step expressions or its body. When no
+condition variable can change, the loop will either run forever or never execute
+at all (depending on the initial value of the variables).
+\n\n
+Note: the warning is suppressed when at least one condition variable is modified
+elsewhere in the loop, because the condition can still change in that case (for
+example, `i < j` where `i` is the counter and `j` is a fixed bound).
+```
+module m;
+    int flag;
+
+    initial begin
+        // Neither 'i' nor 'flag' is changed by the step or body,
+        // so this loop may run forever.
+        for (int i = 0; i < flag; ) begin
+        end
+    end
+endmodule
+```
+
 -Wvacuous-cover
 A property used in a `cover` statement allows vacuous success,
 which can cause confusing coverage results.

@@ -903,3 +903,259 @@ endmodule
     auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Fork loop var: basic for loop with join_none") {
+    auto& code = R"(
+module m;
+    task automatic do_something(int x); endtask
+    initial begin
+        for (int i = 0; i < 4; i++) begin
+            fork
+                do_something(i);
+            join_none
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ForkLoopVar);
+}
+
+TEST_CASE("Fork loop var: no warning for fork-join (join_all)") {
+    auto& code = R"(
+module m;
+    task automatic do_something(int x); endtask
+    initial begin
+        for (int i = 0; i < 4; i++) begin
+            fork
+                do_something(i);
+            join
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Fork loop var using automatic local") {
+    auto& code = R"(
+module m;
+    task automatic do_something(int x); endtask
+    initial begin
+        for (int i = 0; i < 4; i++) begin
+            fork
+                automatic int inst = i;
+                do_something(inst);
+            join_none
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Fork loop var: foreach loop variable") {
+    auto& code = R"(
+module m;
+    task automatic do_something(int x); endtask
+    initial begin
+        int arr[4];
+        foreach (arr[i]) begin
+            fork
+                do_something(i);
+            join_none
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ForkLoopVar);
+}
+
+TEST_CASE("Fork loop var: nested loops, only outer loop var referenced") {
+    auto& code = R"(
+module m;
+    task automatic do_something(int x, int y); endtask
+    initial begin
+        for (int i = 0; i < 4; i++) begin
+            for (int j = 0; j < 4; j++) begin
+                fork
+                    do_something(i, j);
+                join_none
+            end
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ForkLoopVar);
+    CHECK(diags[1].code == diag::ForkLoopVar);
+}
+
+TEST_CASE("Loop var double step: prefix increment in step and body") {
+    auto& code = R"(
+module m;
+    initial begin
+        for (int i = 0; i < 10; i++) begin
+            i++;
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::LoopVarModify);
+}
+
+TEST_CASE("Loop var double step: compound add assignment in body") {
+    auto& code = R"(
+module m;
+    initial begin
+        for (int i = 0; i < 10; i++) begin
+            i += 2;
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::LoopVarModify);
+}
+
+TEST_CASE("Loop var double step: no warning when only body modifies") {
+    auto& code = R"(
+module m;
+    initial begin
+        // No step expression that increments i; only body does it.
+        for (int i = 0; i < 10; ) begin
+            i++;
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Loop cond not modified: variable updated in body") {
+    auto& code = R"(
+module m;
+    int limit;
+    initial begin
+        limit = 10;
+        for (int i = 0; i < limit; ) begin
+            i++;
+            limit--;
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Loop cond not modified: all condition variables unmodified") {
+    auto& code = R"(
+module m;
+    int lo, hi;
+    initial begin
+        lo = 0;
+        hi = 10;
+        for (int i = lo; i < hi; ) begin
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::LoopCondNotModified);
+}
+
+TEST_CASE("Nested loop: double-step detected in nested loop body") {
+    auto& code = R"(
+module m;
+    initial begin
+        for (int i = 0; i < 4; i++) begin
+            for (int j = 0; j < 4; j++) begin
+                i++;
+            end
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::LoopVarModify);
+}
+
+TEST_CASE("Fork loop var: loop nested inside fork body does not warn") {
+    auto& code = R"(
+module m;
+    task automatic do_something(int x); endtask
+    initial begin
+        for (int i = 0; i < 4; i++) begin
+            fork
+                for (int j = 0; j < 4; j++) begin
+                    do_something(j);
+                end
+            join_none
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
