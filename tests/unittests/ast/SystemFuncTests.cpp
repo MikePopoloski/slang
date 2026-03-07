@@ -802,15 +802,12 @@ endclass
 
 module m;
     int i;
-    real r;
     int da[];
     A a;
     B b;
 
     initial begin
-        $cast(a, b);
-        if ($cast(i, r)) begin end
-        $cast(i, da);
+        $cast(b, a);
     end
 endmodule
 )");
@@ -818,6 +815,66 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("$cast constant-result warning") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+endclass
+
+class B extends A;
+endclass
+
+class C;
+endclass
+
+module m;
+    int i;
+    real r;
+    int d[];
+    A a;
+    B b;
+    C c;
+    enum { Q, R } e;
+
+    initial begin
+        // These should warn: always succeeds (B is a subtype of A)
+        $cast(a, b);
+        $cast(a, null);
+
+        // This should warn: always fails (A and C are unrelated)
+        $cast(a, c);
+        $cast(c, a);
+
+        // Non-class dest with cast-compatible src: always succeeds
+        if ($cast(i, r)) begin end
+
+        // These should NOT warn: result depends on the runtime type of 'a'
+        $cast(b, a);
+
+        // Aggregate types require assignment compatibility
+        $cast(i, d);
+
+        // Enum dests with a constant source can be checked at compile time
+        $cast(e, 1);
+        $cast(e, 2);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 8);
+    CHECK(diags[0].code == diag::DynamicCastConst);
+    CHECK(diags[1].code == diag::DynamicCastConst);
+    CHECK(diags[2].code == diag::DynamicCastConst);
+    CHECK(diags[3].code == diag::DynamicCastConst);
+    CHECK(diags[4].code == diag::DynamicCastConst);
+    CHECK(diags[5].code == diag::DynamicCastConst);
+    CHECK(diags[6].code == diag::DynamicCastConst);
+    CHECK(diags[7].code == diag::DynamicCastConst);
 }
 
 TEST_CASE("Associative array non-const methods") {

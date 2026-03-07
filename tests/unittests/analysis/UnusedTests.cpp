@@ -447,11 +447,11 @@ class C;
 endclass
 
 module m;
-    int i;
     string a = "foo", s = "a 3";
     int b = 0;
+    enum { A, B } e;
     initial begin
-        $cast(i, i);
+        $cast(e, e);
         void'($sscanf(s, "%s %d", a, b));
     end
 

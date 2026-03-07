@@ -586,6 +586,52 @@ public:
         if (!checkArgCount(context, false, args, range, 2, 2))
             return comp.getErrorType();
 
+        // Warn when the result of $cast is statically deterministic.
+        auto& destType = *args[0]->type;
+        auto& srcType = *args[1]->type;
+
+        auto reportWarning = [&](bool succeed) {
+            auto& diag = context.addDiag(diag::DynamicCastConst, range) << srcType << destType;
+            diag << (succeed ? "succeed"sv : "fail"sv);
+        };
+
+        if (!destType.isError() && !srcType.isError()) {
+            if (!destType.isClass()) {
+                // For non-class types the LRM says:
+                // The assignment is invalid if the arguments are singular and not cast compatible
+                // or the arguments are not singular and not assignment compatible.
+                //
+                // There's also an exeptional case for enums -- integer to enum casts check whether
+                // the value is actually one of the enum members.
+                if (destType.isEnum() && srcType.isIntegral()) {
+                    if (auto cv = context.tryEval(*args[1]); cv && cv.isInteger()) {
+                        auto&& values = destType.getCanonicalType()
+                                            .as<EnumType>()
+                                            .membersOfType<EnumValueSymbol>();
+                        reportWarning(std::ranges::any_of(values, [&cv](const EnumValueSymbol& ev) {
+                            return ev.getValue() == cv;
+                        }));
+                    }
+                }
+                else if (destType.isSingular() && srcType.isSingular()) {
+                    reportWarning(destType.isCastCompatible(srcType));
+                }
+                else {
+                    reportWarning(destType.isAssignmentCompatible(srcType));
+                }
+            }
+            else if (destType.isAssignmentCompatible(srcType)) {
+                // Source is already statically a subtype of (or equal to) the destination,
+                // so the cast always succeeds.
+                reportWarning(true);
+            }
+            else if (srcType.isClass() && !srcType.isAssignmentCompatible(destType)) {
+                // Both types are class types and neither is in the other's hierarchy, so no
+                // object whose static type is srcType can ever satisfy the cast to destType.
+                reportWarning(false);
+            }
+        }
+
         return comp.getIntType();
     }
 };
