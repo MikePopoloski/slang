@@ -535,6 +535,8 @@ SelectorSyntax* Parser::parseElementSelector() {
     switch (peek().kind) {
         case TokenKind::Colon: {
             auto range = consume();
+            if (peek().kind == TokenKind::Plus && peek().trivia().empty())
+                addDiag(diag::ColonPlusRange, SourceRange{range.location(), peek().range().end()});
             return &factory.rangeSelect(SyntaxKind::SimpleRangeSelect, expr, range,
                                         parseExpression());
         }

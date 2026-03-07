@@ -778,6 +778,19 @@ module m;
 endmodule
 ```
 
+-Wcolon-plus
+A range select contains `':+'` which is parsed as a simple range `[a : +b]` where the right
+operand has unary plus applied. This is almost always a typo for the ascending part-select
+operator `'+:'`, as in `[a +: b]`. Check whether the intent was an ascending range select and
+rewrite accordingly.
+```
+module m;
+    logic [7:0] v;
+    logic [3:0] x;
+    initial x = v[4:+4]; // probably meant v[4+:4]
+endmodule
+```
+
 -Wdup-attr
 A design element has more than one attribute of the same name.
 Only the last one will apply.
