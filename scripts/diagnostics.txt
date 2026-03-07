@@ -560,6 +560,7 @@ warning case-gen-none CaseGenerateNoBlock "no case generate expression matches t
 warning unconnected-input-port UnconnectedInputPort "input port '{}' has no connection"
 warning unconnected-output-port UnconnectedOutputPort "output port '{}' has no connection"
 warning unconnected-inout-port UnconnectedInOutPort "inout port '{}' has no connection"
+warning null-port NullPort "port has no name and no connection; this may be an unintentional extra comma in the port list"
 warning unconnected-unnamed-port UnconnectedUnnamedPort "instance does not provide a connection for an unnamed port"
 warning implicit-net-port ImplicitNetPortNoDefault "implicit net port disallowed because `default_nettype is set to 'none'"
 warning dup-attr DuplicateAttribute "duplicate attribute definition '{}'; taking last value"
@@ -1261,7 +1262,7 @@ warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'
 // The default group is the set of warnings that are enabled by default.
 
 group default = { real-underflow real-overflow vector-overflow int-overflow unconnected-input-port
-                  unconnected-output-port unconnected-inout-port
+                  unconnected-output-port unconnected-inout-port null-port
                   unconnected-unnamed-port redef-macro unknown-pragma unknown-warning-option
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue

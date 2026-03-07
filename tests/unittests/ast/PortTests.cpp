@@ -753,9 +753,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::UnconnectedUnnamedPort);
-    CHECK(diags[1].code == diag::NullPortExpression);
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::NullPort);
+    CHECK(diags[1].code == diag::NullPort);
+    CHECK(diags[2].code == diag::UnconnectedUnnamedPort);
+    CHECK(diags[3].code == diag::NullPortExpression);
 }
 
 TEST_CASE("Clocking blocks in modports") {

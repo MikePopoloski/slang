@@ -467,11 +467,12 @@ public:
     }
 
     Symbol* createPort(const EmptyNonAnsiPortSyntax& syntax) {
-        auto port = comp.emplace<PortSymbol>("", syntax.placeholder.location(),
-                                             /* isAnsiPort */ false);
+        auto loc = syntax.placeholder.location();
+        auto port = comp.emplace<PortSymbol>("", loc, /* isAnsiPort */ false);
         port->direction = ArgumentDirection::In;
         port->setSyntax(syntax);
         port->isNullPort = true;
+        scope.addDiag(diag::NullPort, loc);
         return port;
     }
 

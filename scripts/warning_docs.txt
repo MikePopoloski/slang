@@ -341,6 +341,17 @@ module m(a);
 endmodule
 ```
 
+-Wnull-port
+A non-ANSI module port list contains a port with no name and no connection.
+This is almost always caused by an accidental extra comma in the port list
+rather than an intentional empty port.
+```
+module m(a, , b);
+    input a;
+    input b;
+endmodule
+```
+
 @category Case Statements
 
 -Wcase-gen-dup
