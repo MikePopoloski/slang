@@ -1173,6 +1173,7 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             LookupResult originalResult = result;
             if (!lookupUpward({}, name, context, flags, result))
                 return;
+
             if (!result.found)
                 result = originalResult;
         }
@@ -1199,6 +1200,9 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
     applySelectors(name, context, result);
     if (flags.has(LookupFlags::NoSelectors))
         result.errorIfSelectors(context);
+
+    if (result.found && result.upwardCount > 0)
+        result.addDiag(scope, diag::UpwardHierarchicalName, name.range) << name.text;
 }
 
 const Symbol* Lookup::unqualified(const Scope& scope, std::string_view name,
@@ -2271,8 +2275,11 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
     if (!lookupUpward(nameParts, first, context, flags, result))
         return;
 
-    if (result.found)
+    if (result.found) {
+        if (result.upwardCount > 0)
+            result.addDiag(scope, diag::UpwardHierarchicalName, first.range) << first.text;
         return;
+    }
 
     // We couldn't find anything. originalResult has any diagnostics issued by the first
     // downward lookup (if any), so it's fine to just return it as is. If we never found any

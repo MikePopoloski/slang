@@ -401,7 +401,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstEvalHierarchicalName);
 }
@@ -1007,7 +1007,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::StaticInitOrder);
 }
@@ -1128,8 +1128,8 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diagnostics = compilation.getAllDiagnostics();
-    std::string result = "\n" + report(diagnostics);
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    std::string result = "\n" + report(diags);
     CHECK(result == R"(
 source:64:33: error: reference to 'gen3' by hierarchical name is not allowed in a constant expression
     localparam int blah2 = int'(m_inst.gen3.a[0]);
@@ -1813,7 +1813,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::StaticInitValue);
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
@@ -2150,7 +2150,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::CompilationUnitFromPackage);
     CHECK(diags[1].code == diag::CompilationUnitFromPackage);
@@ -2708,4 +2708,30 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Upward hierarchical name warning") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    logic flag;
+    child ch();
+
+    function int foo;
+        return 1;
+    endfunction
+endmodule
+
+module child;
+    wire w = top.flag;
+    int i = foo();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UpwardHierarchicalName);
+    CHECK(diags[1].code == diag::UpwardHierarchicalName);
 }

@@ -1008,6 +1008,7 @@ warning unknown-sys-name UnknownSystemName "unknown system name '{}'"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 warning duplicate-definition DuplicateDefinition "duplicate definition of '{}'"
 warning randomize-var-shadow RandomizeConstraintShadow "'{}' in randomize constraint block refers to class member of '{}', but a variable with the same name exists in an enclosing scope; disambiguate with 'local::{}' to reference the enclosing scope variable or 'this.{}' for the class member"
+warning upward-name UpwardHierarchicalName "'{}' is an upward hierarchical name reference"
 
 subsystem SysFuncs
 error BadSystemSubroutineArg "invalid argument type {} to system {}"

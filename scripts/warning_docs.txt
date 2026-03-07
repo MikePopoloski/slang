@@ -2409,6 +2409,23 @@ unexpectedly when processing files that do not.
 module m; endmodule
 ```
 
+-Wupward-name
+An upward hierarchical name reference was found. Upward name references traverse upward
+through the instance hierarchy to find the starting scope for the path, which can make
+code harder to understand and port since the name can resolve to different things depending
+on where its containing module is instantiated in the hierarchy.
+```
+module child;
+    // 'parent' is resolved by walking upward from child's scope
+    int x = parent.value;
+endmodule
+
+module parent;
+    int value = 42;
+    child c1();
+endmodule
+```
+
 -Wunknown-warning-option
 <ignored>
 

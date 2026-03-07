@@ -775,7 +775,7 @@ endinterface:sliceIfc
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::VirtualIfaceIfacePort);
     CHECK(diags[1].code == diag::VirtualIfaceHierRef);
