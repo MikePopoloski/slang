@@ -799,3 +799,27 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Cover cross of crosses") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+
+class c;
+   bit [1:0] m1;
+   bit [1:0] m2;
+   bit [1:0] m3;
+
+  covergroup cg;
+    cp1 : coverpoint m1;
+    cx1 : cross cp1, m2;
+    cx2 : cross m3, cx1;
+  endgroup
+endclass
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
