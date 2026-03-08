@@ -21,6 +21,9 @@ public:
     EnumFirstLastMethod(KnownSystemName knownNameId, bool first) :
         SystemSubroutine(knownNameId, SubroutineKind::Function), first(first) {}
 
+    // The receiver's value is never read; only its type matters.
+    bool isArgUnevaluated(size_t index) const final { return index == 0; }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
@@ -154,6 +157,9 @@ private:
 class EnumNumMethod : public SystemSubroutine {
 public:
     EnumNumMethod() : SystemSubroutine(KnownSystemName::Num, SubroutineKind::Function) {}
+
+    // The receiver's value is never read; only its type matters.
+    bool isArgUnevaluated(size_t index) const final { return index == 0; }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {

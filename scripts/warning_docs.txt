@@ -1037,6 +1037,17 @@ module m(input i);
 endmodule
 ```
 
+-Winit-self
+A variable's initializer expression refers to the variable itself, which is uninitialized at
+that point and will always read as the default value (i.e. `x` or zero). References in unevaluated
+contexts (such as the argument to `$bits`) are not flagged.
+```
+module m;
+    int i = i;
+    int j = j + 1;
+endmodule
+```
+
 -Wstatic-init-order
 A static variable's initializer refers to another variable that does not have a defined order
 of initialization relative to the first. This means that the initialization may or may not work

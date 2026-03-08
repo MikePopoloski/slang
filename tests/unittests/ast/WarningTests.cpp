@@ -467,6 +467,43 @@ endmodule
     CHECK(diags[2].code == diag::StaticInitValue);
 }
 
+TEST_CASE("Init-self warning") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i = i;
+    int j = j + 1;
+    int k = $bits(k);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InitSelf);
+    CHECK(diags[1].code == diag::InitSelf);
+}
+
+TEST_CASE("Init-self warning -- no false positives") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a = 1;
+    int b = a;
+    int c = $bits(c);
+    int d = $size(d);
+    typedef enum { P, Q, R } my_e;
+    my_e e0 = e0.first();
+    my_e e1 = e1.last();
+    my_e e2 = e2.num() > 0 ? P : Q;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Float conversion warnings") {
     auto tree = SyntaxTree::fromText(R"(
 function automatic f(real r);
