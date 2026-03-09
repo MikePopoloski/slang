@@ -8,8 +8,10 @@
 #pragma once
 
 #include <functional>
+#include <utility>
 #include <vector>
 
+#include "slang/parsing/Token.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -113,9 +115,19 @@ struct SLANG_EXPORT SyntaxChange {
 struct SLANG_EXPORT RemoveChange : SyntaxChange {};
 struct SLANG_EXPORT ReplaceChange : SyntaxChange {};
 
+struct SLANG_EXPORT TokenRemoveChange {
+    bool preserveTrivia = false;
+};
+
+struct SLANG_EXPORT TokenReplaceChange {
+    parsing::Token newToken = {};
+};
+
 using InsertChangeMap = flat_hash_map<const SyntaxNode*, std::vector<SyntaxChange>>;
 using ModifyChangeMap = flat_hash_map<const SyntaxNode*, std::variant<RemoveChange, ReplaceChange>>;
 using ListChangeMap = flat_hash_map<const SyntaxNode*, std::vector<SyntaxChange>>;
+using TokenModifyChangeMap = flat_hash_map<std::pair<const SyntaxNode*, size_t>,
+                                           std::variant<TokenRemoveChange, TokenReplaceChange>>;
 
 struct SLANG_EXPORT ChangeCollection {
     InsertChangeMap insertBefore;
@@ -123,6 +135,7 @@ struct SLANG_EXPORT ChangeCollection {
     ModifyChangeMap removeOrReplace;
     ListChangeMap listInsertAtFront;
     ListChangeMap listInsertAtBack;
+    TokenModifyChangeMap tokenRemoveOrReplace;
 
     void clear() {
         insertBefore.clear();
@@ -130,11 +143,13 @@ struct SLANG_EXPORT ChangeCollection {
         removeOrReplace.clear();
         listInsertAtFront.clear();
         listInsertAtBack.clear();
+        tokenRemoveOrReplace.clear();
     }
 
     bool empty() const {
         return insertBefore.empty() && insertAfter.empty() && removeOrReplace.empty() &&
-               listInsertAtFront.empty() && listInsertAtBack.empty();
+               listInsertAtFront.empty() && listInsertAtBack.empty() &&
+               tokenRemoveOrReplace.empty();
     }
 };
 
@@ -193,6 +208,15 @@ protected:
         }
     }
 
+    /// Remove a token at the given index within the specified node.
+    void removeToken(const SyntaxNode& node, size_t index, bool preserveTrivia = false) {
+        if (auto [_, ok] = commits.tokenRemoveOrReplace.emplace(
+                std::make_pair(&node, index), detail::TokenRemoveChange{preserveTrivia});
+            !ok) {
+            SLANG_THROW(std::logic_error("Token only permit one remove/replace operation"));
+        }
+    }
+
     /// Replace the given @a oldNode with @a newNode in the rewritten tree.
     void replace(const SyntaxNode& oldNode, SyntaxNode& newNode, bool preserveTrivia = false) {
         if (preserveTrivia) {
@@ -206,6 +230,23 @@ protected:
                 &oldNode, detail::ReplaceChange{&oldNode, &newNode});
             !ok) {
             SLANG_THROW(std::logic_error("Node only permit one remove/replace operation"));
+        }
+    }
+
+    /// Replace a token at the given index within the specified node with @a newToken.
+    void replaceToken(const SyntaxNode& node, size_t index, Token newToken,
+                      bool preserveTrivia = false) {
+        if (preserveTrivia) {
+            if (auto oldTok = node.childToken(index)) {
+                if (!oldTok.trivia().empty())
+                    newToken = newToken.withTrivia(alloc, oldTok.trivia());
+            }
+        }
+
+        if (auto [_, ok] = commits.tokenRemoveOrReplace.emplace(
+                std::make_pair(&node, index), detail::TokenReplaceChange{newToken});
+            !ok) {
+            SLANG_THROW(std::logic_error("Token only permit one remove/replace operation"));
         }
     }
 
