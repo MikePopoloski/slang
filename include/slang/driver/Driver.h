@@ -11,6 +11,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
+#include "slang/driver/CompatSettings.h"
 #include "slang/driver/SourceLoader.h"
 #include "slang/parsing/LexerFacts.h"
 #include "slang/text/SourceManager.h"
@@ -49,10 +50,6 @@ enum class AnalysisFlags;
 } // namespace slang::analysis
 
 namespace slang::driver {
-
-#define COMPAT(x) x(Vcs) x(All)
-SLANG_ENUM(CompatMode, COMPAT)
-#undef COMPAT
 
 /// @brief A top-level class that handles argument parsing, option preparation,
 /// and invoking various parts of the slang compilation process.

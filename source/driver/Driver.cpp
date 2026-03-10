@@ -14,15 +14,7 @@
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
-#include "slang/diagnostics/AnalysisDiags.h"
-#include "slang/diagnostics/DeclarationsDiags.h"
-#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
-#include "slang/diagnostics/LexerDiags.h"
-#include "slang/diagnostics/LookupDiags.h"
-#include "slang/diagnostics/ParserDiags.h"
-#include "slang/diagnostics/StatementsDiags.h"
-#include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/SourceLoader.h"
 #include "slang/parsing/Parser.h"
@@ -42,35 +34,6 @@ using namespace ast;
 using namespace parsing;
 using namespace syntax;
 using namespace analysis;
-
-// clang-format off
-#define VCS_COMP_FLAGS \
-    CompilationFlags::AllowHierarchicalConst, \
-    CompilationFlags::RelaxEnumConversions, \
-    CompilationFlags::AllowUseBeforeDeclare, \
-    CompilationFlags::RelaxStringConversions, \
-    CompilationFlags::AllowRecursiveImplicitCall, \
-    CompilationFlags::AllowBareValParamAssignment, \
-    CompilationFlags::AllowSelfDeterminedStreamConcat, \
-    CompilationFlags::AllowMergingAnsiPorts
-
-static constexpr auto vcsCompFlags = {VCS_COMP_FLAGS};
-static constexpr auto allCompFlags = {
-    VCS_COMP_FLAGS,
-    CompilationFlags::AllowTopLevelIfacePorts,
-    CompilationFlags::AllowUnnamedGenerate,
-    CompilationFlags::AllowVirtualIfaceWithOverride
-};
-
-#define VCS_ANALYSIS_FLAGS \
-    AnalysisFlags::AllowMultiDrivenLocals
-
-static constexpr auto vcsAnalysisFlags = {VCS_ANALYSIS_FLAGS};
-static constexpr auto allAnalysisFlags = {
-    VCS_ANALYSIS_FLAGS,
-    AnalysisFlags::AllowDupInitialDrivers
-};
-// clang-format on
 
 Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
     textDiagClient = std::make_shared<TextDiagnosticClient>();
@@ -574,29 +537,20 @@ bool Driver::processOptions() {
         }
     }
 
-    if (options.compat.has_value()) {
-        std::initializer_list<CompilationFlags> compFlags;
-        std::initializer_list<AnalysisFlags> analysisFlags;
-        if (options.compat == CompatMode::Vcs) {
-            compFlags = vcsCompFlags;
-            analysisFlags = vcsAnalysisFlags;
-        }
-        else {
-            compFlags = allCompFlags;
-            analysisFlags = allAnalysisFlags;
-        }
+    CompatSettings compatSettings;
+    if (options.compat.has_value())
+        compatSettings.setMode(*options.compat);
 
-        for (auto flag : compFlags) {
-            auto& option = options.compilationFlags.at(flag);
-            if (!option.has_value())
-                option = true;
-        }
+    for (auto flag : compatSettings.getCompilationFlags()) {
+        auto& option = options.compilationFlags.at(flag);
+        if (!option.has_value())
+            option = true;
+    }
 
-        for (auto flag : analysisFlags) {
-            auto& option = options.analysisFlags.at(flag);
-            if (!option.has_value())
-                option = true;
-        }
+    for (auto flag : compatSettings.getAnalysisFlags()) {
+        auto& option = options.analysisFlags.at(flag);
+        if (!option.has_value())
+            option = true;
     }
 
     if (options.librariesInheritMacros == true && !options.singleUnit.value_or(false)) {
@@ -681,50 +635,10 @@ bool Driver::processOptions() {
 
     diagEngine.setErrorLimit((int)options.errorLimit.value_or(20));
 
-    // Some tools violate the standard in various ways, but in order to allow
-    // compatibility with these tools we change the respective errors into a
-    // suppressible warning that we promote to an error by default. This allows
-    // the user to turn this back into a warning, or turn it off altogether.
-
-    if (options.compat != CompatMode::All) {
-        diagEngine.setSeverity(diag::DuplicateDefinition, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::BadProceduralForce, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::NonstandardStringConcat, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::MixedVarAssigns, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::MultipleContAssigns, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::MultipleAlwaysAssigns, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::MisplacedTrailingSeparator, DiagnosticSeverity::Error);
-    }
-
-    if (options.compat == CompatMode::Vcs || options.compat == CompatMode::All) {
-        diagEngine.setSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);
-        diagEngine.setSeverity(diag::ImplicitConvert, DiagnosticSeverity::Ignored);
-        diagEngine.setSeverity(diag::BadFinishNum, DiagnosticSeverity::Ignored);
-        diagEngine.setSeverity(diag::NonstandardSysFunc, DiagnosticSeverity::Ignored);
-        diagEngine.setSeverity(diag::NonstandardForeach, DiagnosticSeverity::Ignored);
-        diagEngine.setSeverity(diag::NonstandardDist, DiagnosticSeverity::Ignored);
-        diagEngine.setSeverity(diag::NestedBlockComment, DiagnosticSeverity::Ignored);
-    }
-    else {
-        // These warnings are set to Error severity by default, unless we're in vcs compat mode.
-        // The user can always downgrade via warning options, which get set after this.
-        diagEngine.setSeverity(diag::IndexOOB, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::RangeOOB, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::RangeWidthOOB, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::ImplicitNamedPortTypeMismatch, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::SplitDistWeightOp, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::DPIPureTask, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::SpecifyPathConditionExpr, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::SolveBeforeDisallowed, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::DynamicNotProcedural, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::QualifiersOnOutOfBlock, DiagnosticSeverity::Error);
-        diagEngine.setSeverity(diag::MemberImplNotFound, DiagnosticSeverity::Error);
-    }
+    compatSettings.configureDiagnostics(diagEngine);
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
-    for (auto& diag : optionDiags)
-        diagEngine.issue(diag);
+    diagEngine.issue(optionDiags);
 
     return true;
 }
@@ -1024,8 +938,11 @@ bool Driver::parseAllSources() {
         return false;
 
     Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
-    for (auto& diag : pragmaDiags)
-        diagEngine.issue(diag);
+    diagEngine.issue(pragmaDiags);
+
+    Diagnostics bufferDiags = diagEngine.setBufferWarningOptions(
+        sourceLoader.getBufferWarningOptions());
+    diagEngine.issue(bufferDiags);
 
     return true;
 }
@@ -1180,8 +1097,7 @@ bool Driver::reportParseDiags() {
         diags.append_range(tree->diagnostics());
 
     diags.sort(sourceManager);
-    for (auto& diag : diags)
-        diagEngine.issue(diag);
+    diagEngine.issue(diags);
 
     OS::printE(fmt::format("{}", textDiagClient->getString()));
     return diagEngine.getNumErrors() == 0;
@@ -1198,8 +1114,7 @@ void Driver::reportCompilation(Compilation& compilation, bool quiet) {
         }
     }
 
-    for (auto& diag : compilation.getAllDiagnostics())
-        diagEngine.issue(diag);
+    diagEngine.issue(compilation.getAllDiagnostics());
 }
 
 std::unique_ptr<AnalysisManager> Driver::runAnalysis(ast::Compilation& compilation) {
@@ -1213,9 +1128,7 @@ std::unique_ptr<AnalysisManager> Driver::runAnalysis(ast::Compilation& compilati
     // We'll just return an empty analysis manager in that case.
     if (!options.lintMode()) {
         analysisManager->analyze(compilation);
-
-        for (auto& diag : analysisManager->getDiagnostics())
-            diagEngine.issue(diag);
+        diagEngine.issue(analysisManager->getDiagnostics());
     }
 
     compilation.unfreeze();
@@ -1282,6 +1195,9 @@ bool Driver::parseUnitListing(std::string_view text) {
     std::optional<std::string> libraryName;
     unitCmdLine.add("--library", libraryName, "");
 
+    std::vector<std::string> warningOptions;
+    unitCmdLine.add("-W", warningOptions, "Control the specified warning", "<warning>");
+
     unitCmdLine.add(
         "-C",
         [this](std::string_view value) {
@@ -1318,7 +1234,8 @@ bool Driver::parseUnitListing(std::string_view text) {
     }
 
     sourceLoader.addSeparateUnit(files, includes, std::move(defines),
-                                 std::move(libraryName).value_or(std::string()));
+                                 std::move(libraryName).value_or(std::string()),
+                                 std::move(warningOptions));
 
     return true;
 }

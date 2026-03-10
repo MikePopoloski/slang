@@ -69,6 +69,9 @@ public:
     /// be filtered or remapped based on current settings.
     void issue(const Diagnostic& diagnostic);
 
+    /// Issues all of the diagnostics in the provided collection.
+    void issue(const Diagnostics& diagnostics);
+
     /// Gets the source manager associated with the engine.
     const SourceManager& getSourceManager() const { return sourceManager; }
 
@@ -118,6 +121,15 @@ public:
     /// be used to define a new user-specified diagnostic.
     void setSeverity(DiagCode code, DiagnosticSeverity severity);
 
+    /// Sets the baseline severity for the given diagnostic.
+    ///
+    /// Baseline severities are populated from compat settings and error-by-default
+    /// diagnostics, and are consulted after any user-specified severity overrides.
+    ///
+    /// Baseline severities can be explicitly overridden by the user but are *not* affected
+    /// by the user specifying Wnone.
+    void setBaselineSeverity(DiagCode code, DiagnosticSeverity severity);
+
     /// Gets the severity currently mapped for the given diagnostic, at the given
     /// location in the source code.
     DiagnosticSeverity getSeverity(DiagCode code, SourceLocation location) const;
@@ -143,10 +155,11 @@ public:
 
     /// Clears out all custom mappings for diagnostics, reverting built-ins back to
     /// their defaults and removing all user-specified diagnostics.
+    /// This clears both user-specified and baseline severity tables.
     void clearMappings();
 
     /// Clears out all custom mappings for diagnostics that are set to the specific
-    /// severity type.
+    /// severity type. This clears matching entries from both user-specified and baseline tables.
     void clearMappings(DiagnosticSeverity severity);
 
     /// Adds paths for which all warnings will be supressed. This applies to
@@ -223,6 +236,11 @@ public:
     /// while applying options are returned via the diagnostics set.
     Diagnostics setMappingsFromPragmas(BufferID buffer);
 
+    /// Sets per-buffer specific warning options that override the global ones.
+    /// Any errors encountered are returned via the diagnostics set.
+    Diagnostics setBufferWarningOptions(
+        const flat_hash_map<BufferID, std::vector<std::string>>& options);
+
     /// A helper function that takes a set of source ranges and translates them
     /// to be relevant to the given context location. For normal file ranges
     /// this doesn't do anything, but ranges within macro expansions get adjusted
@@ -255,8 +273,23 @@ private:
             offset(offset), severity(severity) {}
     };
 
+    struct ParsedOptions {
+        flat_hash_map<DiagCode, DiagnosticSeverity> overrides;
+        bool ignoreAll = false;
+        bool enableAll = false;
+        bool warningsAsErrors = false;
+    };
+
+    // Parses the given -W option strings and applies them to the target severity map.
+    // If includeDefault is true, the "default" warning group is applied first.
+    void parseWarningOptions(std::span<const std::string> options, Diagnostics& diags,
+                             bool includeDefault, ParsedOptions& results);
+
     std::optional<DiagnosticSeverity> findMappedSeverity(DiagCode code,
                                                          SourceLocation location) const;
+    std::optional<DiagnosticSeverity> findPerBufferSeverity(DiagCode code, SourceLocation location,
+                                                            bool& overrideWarnAsError) const;
+
     bool issueImpl(const Diagnostic& diagnostic, DiagnosticSeverity severity);
 
     template<typename TDirective>
@@ -283,7 +316,13 @@ private:
     bool issuedOverLimitErr = false;
 
     // A global mapping from diagnostic to a configured severity it should have.
+    // Populated by user-specified options and direct setSeverity() calls.
     flat_hash_map<DiagCode, DiagnosticSeverity> severityTable;
+
+    // Baseline severity overrides populated by compat settings and error-by-default
+    // diagnostics. These are always applied and cannot be overridden by -Wnone,
+    // but they can be overridden by explicit user options.
+    flat_hash_map<DiagCode, DiagnosticSeverity> baselineSeverityTable;
 
     // A global mapping from diagnostic to the message it should display.
     flat_hash_map<DiagCode, std::string> messageTable;
@@ -295,6 +334,10 @@ private:
     // A map from diagnostic -> source file -> list of in-source diagnostic mappings.
     // These correspond to `pragma diagnostic entries in the source code.
     flat_hash_map<DiagCode, flat_hash_map<BufferID, std::vector<DiagnosticMapping>>> diagMappings;
+
+    // Per-buffer warning state derived from compilation unit listing -W options.
+    // Checked in getSeverity after pragma-based mappings but before global settings.
+    flat_hash_map<BufferID, ParsedOptions> perBufferSeverity;
 
     // A list of path patterns in which to suppress warnings.
     std::vector<std::filesystem::path> ignoreWarnPatterns;

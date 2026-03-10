@@ -92,8 +92,8 @@ void SourceLoader::addLibraryMaps(std::string_view pattern, const fs::path& base
 
 void SourceLoader::addSeparateUnit(std::span<const std::string> filePatterns,
                                    const std::vector<std::string>& includePaths,
-                                   std::vector<std::string> defines,
-                                   const std::string& libraryName) {
+                                   std::vector<std::string> defines, const std::string& libraryName,
+                                   std::vector<std::string> warningOptions) {
     std::error_code ec;
     SmallVector<fs::path> includeDirs;
     for (auto& str : includePaths)
@@ -101,6 +101,7 @@ void SourceLoader::addSeparateUnit(std::span<const std::string> filePatterns,
 
     auto& unit = unitEntries.emplace_back();
     unit.defines = std::move(defines);
+    unit.warningOptions = std::move(warningOptions);
     unit.library = getOrAddLibrary(libraryName);
 
     for (auto&& path : includeDirs)
@@ -359,6 +360,15 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         loadTrees(
             syntaxTrees, [this](std::string_view name) { return findBuffer(name); }, sourceManager,
             optionBag, inheritedMacros);
+    }
+
+    // Collect per-buffer warning options from all separate compilation units.
+    bufferWarningOptions.clear();
+    for (auto& [unit, buffers] : unitToBufferMap) {
+        if (!unit->warningOptions.empty()) {
+            for (const auto& buf : buffers)
+                bufferWarningOptions.emplace(buf.id, unit->warningOptions);
+        }
     }
 
     return syntaxTrees;

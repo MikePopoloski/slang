@@ -137,7 +137,8 @@ public:
     /// default library and be considered a non-library unit.
     void addSeparateUnit(std::span<const std::string> filePatterns,
                          const std::vector<std::string>& includePaths,
-                         std::vector<std::string> defines, const std::string& libraryName);
+                         std::vector<std::string> defines, const std::string& libraryName,
+                         std::vector<std::string> warningOptions);
 
     /// Returns a list of all library map syntax trees that have been loaded and parsed.
     const SyntaxTreeList& getLibraryMaps() const { return libraryMapTrees; }
@@ -155,6 +156,13 @@ public:
 
     /// Loads and parses all of the source files that have been added to the loader.
     SyntaxTreeList loadAndParseSources(const Bag& optionBag);
+
+    /// Returns the per-buffer warning option strings collected during the last call to
+    /// loadAndParseSources. Each entry maps a buffer to the -W option strings (without
+    /// the leading "-W") that were specified for the compilation unit containing that buffer.
+    const flat_hash_map<BufferID, std::vector<std::string>>& getBufferWarningOptions() const {
+        return bufferWarningOptions;
+    }
 
     /// Gets the list of errors that have occurred while loading files.
     std::span<const std::string> getErrors() const { return errors; }
@@ -179,6 +187,7 @@ private:
     struct UnitEntry {
         std::vector<std::filesystem::path> includePaths;
         std::vector<std::string> defines;
+        std::vector<std::string> warningOptions;
         const SourceLibrary* library = nullptr;
     };
 
@@ -257,6 +266,7 @@ private:
     std::vector<std::filesystem::path> searchDirectories;
     std::vector<std::filesystem::path> searchExtensions;
     flat_hash_set<std::string_view> uniqueExtensions;
+    flat_hash_map<BufferID, std::vector<std::string>> bufferWarningOptions;
     std::vector<std::string> errors;
     SyntaxTreeList libraryMapTrees;
 

@@ -724,6 +724,158 @@ TEST_CASE("Driver separate unit listing") {
     CHECK(it != defs.end());
 }
 
+TEST_CASE("Driver unit listing warning options -- suppress") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    // test5.sv produces a -Wwidth-trunc warning. The unit listing file
+    // specifies -Wno-width-trunc, which should suppress the warning for
+    // files in that unit even when the warning is globally enabled.
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo -Wwidth-trunc -C \"{0}unit_warnings.f\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stdoutContains("0 errors, 0 warnings"));
+}
+
+TEST_CASE("Driver unit listing warning options -- enable") {
+    auto guard = OS::captureOutput();
+
+    // unit_warn_enable.f specifies -Wwidth-trunc, so test5.sv (which has a
+    // width-trunc condition) should produce a warning even though the flag
+    // is not set globally.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo -C \"{0}unit_warn_enable.f\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("width-trunc"));
+}
+
+TEST_CASE("Driver unit listing warning options -- Weverything") {
+    auto guard = OS::captureOutput();
+
+    // unit_warn_everything.f uses -Weverything. Even when run without any global
+    // -W flags (which normally means the default warning set only), the per-unit
+    // -Weverything should surface warnings like width-trunc from test5.sv.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo -C \"{0}unit_warn_everything.f\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("width-trunc"));
+}
+
+TEST_CASE("Driver unit listing warning options -- Werror") {
+    auto guard = OS::captureOutput();
+
+    // unit_warn_error.f uses -Werror. The width-trunc condition in test5.sv
+    // should be promoted to an error for that unit.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo -Wwidth-trunc -C \"{0}unit_warn_error.f\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+
+    // -Werror in the unit listing should make the build fail due to width-trunc
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("width-trunc"));
+}
+
+TEST_CASE("Driver unit listing warning options -- Wnone") {
+    auto guard = OS::captureOutput();
+
+    // Combine a global -Wwidth-trunc with a per-unit -Wnone; the warning should
+    // be suppressed for the files in the unit listing.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo -Wwidth-trunc -C \"{0}unit_warnings.f\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stdoutContains("0 errors, 0 warnings"));
+}
+
+TEST_CASE("Driver unit listing warning options -- Wnone respects baseline errors") {
+    auto guard = OS::captureOutput();
+
+    // unit_warn_none.f specifies -Wnone for test7.sv, which contains an unknown
+    // system task ($foo). In the default (non-compat) mode this is promoted to an
+    // error by the baseline settings. Per-unit -Wnone must NOT suppress baseline
+    // errors; it only prevents inheriting mainline -W flags.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo -C \"{0}unit_warn_none.f\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("unknown-sys-name"));
+}
+
+TEST_CASE("Driver unit listing warning options -- Wnone with compat all suppresses baseline") {
+    auto guard = OS::captureOutput();
+
+    // With --compat=all, unknown-sys-name is not in the baseline (it uses its default
+    // Warning severity). Per-unit -Wnone should then successfully suppress it.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo --compat=all -C \"{0}unit_warn_none.f\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stdoutContains("0 errors, 0 warnings"));
+}
+
+TEST_CASE("Driver unit listing warning options -- mainline overrides baseline") {
+    auto guard = OS::captureOutput();
+
+    // Mainline explicit -Wno-X settings should be able to override baseline errors.
+    // unit_basic.f lists test7.sv (which has an unknown system task $foo) with no
+    // per-unit -W flags, so it uses the non-per-unit path. The baseline makes
+    // unknown-sys-name an error, but mainline -Wno-unknown-sys-name must override it.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo -Wno-unknown-sys-name -C \"{0}unit_basic.f\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+}
+
 TEST_CASE("Driver customize default lib name") {
     auto guard = OS::captureOutput();
 

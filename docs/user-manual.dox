@@ -216,6 +216,25 @@ Specifies the name of the library in which the compilation unit should be includ
 has already been specified elsewhere this appends the compilation unit to that library. If this flag
 is not provided, the compilation unit is assumed to be in the default library.
 
+```
+-W<warning>
+```
+
+Controls warning diagnostics for the files that make up this compilation unit. The flag uses the
+same syntax as the top-level `-W` flag (see @ref clr-warnings "Warning Control"), but applies only
+to the source files listed in this unit listing file. Per-unit warning flags take precedence over
+any matching global `-W` flags supplied on the command line.
+
+The following forms are supported:
+
+- `-W<name>` — enable the named warning or warning group
+- `-Wno-<name>` — disable the named warning or warning group
+- `-Werror=<name>` — promote the named warning or warning group to an error
+- `-Wno-error=<name>` — demote the named warning or warning group from an error back to a warning
+- `-Weverything` — enable all warnings for this unit
+- `-Wnone` — disable all warnings for this unit
+- `-Werror` — promote all active warnings to errors for this unit
+
 
 @section built-in-macros Built-in Macros
 

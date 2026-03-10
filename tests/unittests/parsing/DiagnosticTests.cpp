@@ -780,3 +780,56 @@ TEST_CASE("Diagnostic warning option corner cases") {
         CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Ignored);
     }
 }
+
+TEST_CASE("DiagnosticEngine::setBaselineSeverity -- global path") {
+    SourceManager sm;
+    DiagnosticEngine engine(sm);
+
+    engine.setBaselineSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
+    CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Error);
+
+    // Mainline explicit -Wno- overrides the baseline.
+    auto diags = engine.setWarningOptions(std::vector{"no-unknown-sys-name"s});
+    CHECK(diags.empty());
+    CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Ignored);
+
+    // Mainline -Wno-error= downgrades an error-by-baseline from Error to Warning.
+    DiagnosticEngine engine2(sm);
+    engine2.setBaselineSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
+    auto diags2 = engine2.setWarningOptions(std::vector{"no-error=unknown-sys-name"s});
+    CHECK(diags2.empty());
+    CHECK(engine2.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Warning);
+}
+
+TEST_CASE("DiagnosticEngine::setBaselineSeverity -- per-unit path") {
+    SourceManager sm;
+    auto buf = sm.assignText("dummy.sv", "");
+
+    DiagnosticEngine engine(sm);
+    engine.setBaselineSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
+    engine.setBaselineSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);
+
+    // Apply per-unit -Wnone for this buffer.
+    flat_hash_map<BufferID, std::vector<std::string>> bufOpts;
+    bufOpts[buf.id] = {"none"s};
+    auto diags = engine.setBufferWarningOptions(bufOpts);
+    CHECK(diags.empty());
+
+    // Baseline Error must survive per-unit -Wnone.
+    SourceLocation loc(buf.id, 0);
+    CHECK(engine.getSeverity(diag::UnknownSystemName, loc) == DiagnosticSeverity::Error);
+    CHECK(engine.getSeverity(diag::StaticInitializerMustBeExplicit, loc) ==
+          DiagnosticSeverity::Ignored);
+
+    // A default warning that is not in the baseline is suppressed by per-unit -Wnone.
+    CHECK(engine.getSeverity(diag::ConstantConversion, loc) == DiagnosticSeverity::Ignored);
+
+    // An explicit per-unit code-level override can still suppress a baseline error.
+    bufOpts[buf.id] = {"none"s, "no-unknown-sys-name"s};
+    DiagnosticEngine engine2(sm);
+    engine2.setBaselineSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
+
+    auto diags2 = engine2.setBufferWarningOptions(bufOpts);
+    CHECK(diags2.empty());
+    CHECK(engine2.getSeverity(diag::UnknownSystemName, loc) == DiagnosticSeverity::Ignored);
+}

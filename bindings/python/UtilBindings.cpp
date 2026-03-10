@@ -252,7 +252,10 @@ void registerDiagnostics(py::module_& m) {
         .def(py::init<const SourceManager&>(), py::keep_alive<1, 2>(), "sourceManager"_a)
         .def("addClient", &DiagnosticEngine::addClient, "client"_a)
         .def("clearClients", &DiagnosticEngine::clearClients)
-        .def("issue", &DiagnosticEngine::issue, "diagnostic"_a)
+        .def("issue", py::overload_cast<const Diagnostic&>(&DiagnosticEngine::issue),
+             "diagnostic"_a)
+        .def("issue", py::overload_cast<const Diagnostics&>(&DiagnosticEngine::issue),
+             "diagnostics"_a)
         .def_property_readonly("sourceManager", &DiagnosticEngine::getSourceManager)
         .def_property_readonly("numErrors", &DiagnosticEngine::getNumErrors)
         .def_property_readonly("numWarnings", &DiagnosticEngine::getNumWarnings)
@@ -264,6 +267,7 @@ void registerDiagnostics(py::module_& m) {
         .def("setErrorsAsFatal", &DiagnosticEngine::setErrorsAsFatal, "set"_a)
         .def("setFatalsAsErrors", &DiagnosticEngine::setFatalsAsErrors, "set"_a)
         .def("setSeverity", &DiagnosticEngine::setSeverity, "code"_a, "severity"_a)
+        .def("setBaselineSeverity", &DiagnosticEngine::setBaselineSeverity, "code"_a, "severity"_a)
         .def("getSeverity", &DiagnosticEngine::getSeverity, "code"_a, "location"_a)
         .def("setMessage", &DiagnosticEngine::setMessage, "code"_a, "message"_a)
         .def("getMessage", &DiagnosticEngine::getMessage, "code"_a)

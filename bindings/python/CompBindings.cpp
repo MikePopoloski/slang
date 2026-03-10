@@ -230,7 +230,7 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def("addLibraryMaps", &SourceLoader::addLibraryMaps, "pattern"_a, "basePath"_a,
              "optionBag"_a)
         .def("addSeparateUnit", &SourceLoader::addSeparateUnit, "filePatterns"_a, "includePaths"_a,
-             "defines"_a, "libraryName"_a)
+             "defines"_a, "libraryName"_a, "warningOptions"_a)
         .def("loadSources", &SourceLoader::loadSources)
         .def("loadAndParseSources", &SourceLoader::loadAndParseSources, "optionBag"_a)
         .def_property_readonly("hasFiles", &SourceLoader::hasFiles)
