@@ -402,9 +402,6 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
     }
 
     if (iffCondition) {
-        if (isClocking)
-            context.addDiag(diag::ClockingBlockEventIff, iffCondition->sourceRange);
-
         if (!context.requireBooleanConvertible(*iffCondition))
             return badCtrl(compilation, result);
     }
