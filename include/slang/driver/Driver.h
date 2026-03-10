@@ -257,6 +257,9 @@ public:
         /// Can be '-' to indicate that the JSON should be written to stdout.
         std::optional<std::string> diagJson;
 
+        /// If true, print out the token stream.
+        std::optional<bool> diagTokenStream;
+
         /// The maximum number of errors to print before giving up.
         std::optional<uint32_t> errorLimit;
 

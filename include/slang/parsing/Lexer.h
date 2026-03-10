@@ -77,6 +77,9 @@ struct SLANG_EXPORT LexerOptions {
     /// If true, the preprocessor will support legacy protected envelope directives,
     /// for compatibility with old Verilog tools.
     bool enableLegacyProtect = false;
+
+    /// If true, print out the token stream.
+    bool diagTokenStream = false;
 };
 
 /// Possible encodings for encrypted text used in a pragma protect region.

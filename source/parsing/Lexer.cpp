@@ -17,6 +17,7 @@
 #include "slang/text/CharInfo.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
+#include "slang/util/OS.h"
 #include "slang/util/ScopeGuard.h"
 #include "slang/util/String.h"
 
@@ -1686,8 +1687,17 @@ void Lexer::scanDisabledRegion(std::string_view firstWord, std::string_view seco
 template<typename... Args>
 Token Lexer::create(TokenKind kind, Args&&... args) {
     SourceLocation location(bufferId, size_t(marker - originalBegin));
-    return Token(alloc, kind, triviaBuffer.copy(alloc), lexeme(), location,
-                 std::forward<Args>(args)...);
+    Token token = Token(alloc, kind, triviaBuffer.copy(alloc), lexeme(), location,
+                        std::forward<Args>(args)...);
+    if (options.diagTokenStream) {
+        OS::print(toString(token.kind));
+        auto triviaList = token.trivia();
+        for (const Trivia& trivia : triviaList) {
+            OS::print(fmt::format(" {}", toString(trivia.kind)));
+        }
+        OS::print(fmt::format(" [{}]\n", token.toString()));
+    }
+    return token;
 }
 
 void Lexer::addTrivia(TriviaKind kind) {

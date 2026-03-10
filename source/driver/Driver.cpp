@@ -294,6 +294,8 @@ void Driver::addStandardArgs() {
                 "Show macro expansion backtraces in diagnostic output");
     cmdLine.add("--diag-abs-paths", options.diagAbsPaths,
                 "Display absolute paths to files in diagnostic output");
+    cmdLine.add("--diag-token-stream", options.diagTokenStream,
+                "Display the token stream created by the lexer");
     cmdLine.addEnum<ShowHierarchyPathOption, ShowHierarchyPathOption_traits>(
         "--diag-hierarchy", options.diagHierarchy, "Show hierarchy locations in diagnostic output",
         "always|never|auto");
@@ -1061,6 +1063,7 @@ void Driver::addParseOptions(Bag& bag) const {
     LexerOptions loptions;
     loptions.languageVersion = languageVersion;
     loptions.enableLegacyProtect = options.enableLegacyProtect == true;
+    loptions.diagTokenStream = options.diagTokenStream == true;
     if (options.maxLexerErrors.has_value())
         loptions.maxErrors = *options.maxLexerErrors;
 
