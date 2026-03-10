@@ -762,7 +762,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
                     // Also, the trailing space is not allowed for the first line of the macro
                     // definition.
                     if (!lexerOptions.allowMacroTrailingSpace || numContinuations == 1)
-                         hasContinuation = false;
+                        hasContinuation = false;
                     break;
                 default:
                     hasContinuation = false;
