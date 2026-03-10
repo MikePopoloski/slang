@@ -1070,9 +1070,8 @@ void Driver::addParseOptions(Bag& bag) const {
     if (loptions.enableLegacyProtect)
         loptions.commentHandlers["pragma"]["protect"] = {CommentHandler::Protect};
 
-    if (options.allowMacroTrailingSpace.has_value() || options.compat == CompatMode::Vcs) {
-        loptions.allowMacroTrailingSpace = true;
-    }
+    loptions.allowMacroTrailingSpace = options.allowMacroTrailingSpace.value_or(options.compat ==
+                                                                                CompatMode::Vcs);
 
     for (auto& [common, start, end] : translateOffFormats)
         loptions.commentHandlers[common][start] = {CommentHandler::TranslateOff, end};
