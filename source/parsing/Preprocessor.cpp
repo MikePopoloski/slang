@@ -728,6 +728,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
     // consume all remaining tokens as macro text
     scratchTokenBuffer.clear();
     bool hasContinuation = false;
+    int numContinuations = 0;
     while (true) {
         // Figure out when to stop consuming macro text. This involves looking for new lines in the
         // trivia of each token as we grab it. If there's a new line without a preceeding line
@@ -737,6 +738,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
             break;
         if (t.kind == TokenKind::LineContinuation) {
             hasContinuation = true;
+            numContinuations++;
             scratchTokenBuffer.push_back(consume());
             continue;
         }
@@ -754,6 +756,13 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
                 case TriviaKind::LineComment:
                     // A line comment can have a trailing line continuation.
                     hasContinuation = (trivia.getRawText().back() == '\\');
+                    break;
+                case TriviaKind::Whitespace:
+                    // Only allow trailing spaces after the continuation if the option is enabled.
+                    // Also, the trailing space is not allowed for the first line of the macro
+                    // definition.
+                    if (!lexerOptions.allowMacroTrailingSpace || numContinuations == 1)
+                        hasContinuation = false;
                     break;
                 default:
                     hasContinuation = false;

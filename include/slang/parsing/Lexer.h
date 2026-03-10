@@ -77,6 +77,10 @@ struct SLANG_EXPORT LexerOptions {
     /// If true, the preprocessor will support legacy protected envelope directives,
     /// for compatibility with old Verilog tools.
     bool enableLegacyProtect = false;
+
+    /// If true, the preprocessor will allow trailing spaces after the continuation character
+    /// in macro definitions.
+    bool allowMacroTrailingSpace = false;
 };
 
 /// Possible encodings for encrypted text used in a pragma protect region.

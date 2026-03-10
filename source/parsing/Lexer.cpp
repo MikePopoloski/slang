@@ -934,6 +934,12 @@ size_t Lexer::getLocForStringChar(std::string_view rawStr, size_t targetIndex, s
 Token Lexer::lexEscapeSequence(bool isMacroName) {
     char c = peek();
     if (isWhitespace(c) || c == '\0') {
+        if (options.allowMacroTrailingSpace) {
+            int offset = 0;
+            while (isTabOrSpace(c)) {
+                c = peek(++offset);
+            }
+        }
         // Check for a line continuation sequence.
         if (isNewline(c))
             return create(TokenKind::LineContinuation);
