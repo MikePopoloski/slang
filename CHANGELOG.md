@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Made the diagnostics for multiple overlapping assignments downgradeable to warnings, for compatibility with other tools (via the new warnings [-Wmixed-var-assigns](https://sv-lang.com/warning-ref.html#mixed-var-assigns), [-Wmultiple-cont-assigns](https://sv-lang.com/warning-ref.html#multiple-cont-assigns), and [-Wmultiple-always-assigns](https://sv-lang.com/warning-ref.html#multiple-always-assigns))
 * The string formatting functions now allow passing class handles, chandles, and null literals as arguments to integer format specifiers, for compatibility with other tools (thanks to @thomasnormal)
 * Misplaced trailing separator errors are now downgradeable to a warning, for compatibility with other tools (via the new warning [-Wmisplaced-trailing-separator](https://sv-lang.com/warning-ref.html#misplaced-trailing-separator)) (thanks to @thomasnormal)
+* Coverage cross items can now specify another cross as a target, for compatibility with other tools (thanks to @mampcs)
 
 ### Notable Breaking Changes
 * pyslang bindings are now separated into submodules matching the C++ API namespaces, which will require adding imports to your existing scripts to make them continue to run
@@ -35,9 +36,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added [-Winc-dec-bit](https://sv-lang.com/warning-ref.html#inc-dec-bit) which detects increment and decrement of single-bit operands
 * Added [-Wdangling-else](https://sv-lang.com/warning-ref.html#dangling-else) which detects confusingly nested if/else blocks that are missing begin/end delimiters
 * Added [-Wshift-count-overflow](https://sv-lang.com/warning-ref.html#shift-count-overflow) and [-Wshift-count-negative](https://sv-lang.com/warning-ref.html#shift-count-negative) which warn about potentially invalid constant shift values
+* Added [-Wconstraint-func-cycle](https://sv-lang.com/warning-ref.html#constraint-func-cycle) and [-Wonstraint-solve-cycle](https://sv-lang.com/warning-ref.html#constraint-solve-cycle) which warn about potential cycles in constraint function calls and solve-before directives
+* Added [-misleading-indentation](https://sv-lang.com/warning-ref.html#misleading-indentation) which warns about statements that are indented in a way that makes them look like they belong to a preceding loop or condition when they actually don't
+* Added [-Wnewline-eof](https://sv-lang.com/warning-ref.html#newline-eof) which warns for files that do not end in a newline character
+* Added [-Wdynamic-cast-const](https://sv-lang.com/warning-ref.html#dynamic-cast-const) which warns for uses of `$cast` that are statically known to always succeed or always fail
+* Added [-Wupward-name](https://sv-lang.com/warning-ref.html#upward-name) which warns for uses of upward hierarchical names
+* Added [-Wfork-loop-var](https://sv-lang.com/warning-ref.html#fork-loop-var) which warns for suspicious uses of `for` or `foreach` loop variables inside nested fork-join blocks
+* Added [-Wloop-var-modify](https://sv-lang.com/warning-ref.html#loop-var-modify) which warns for suspicious modifications of `for` loop variables inside the loop body
+* Added [-Wloop-cond-not-modified](https://sv-lang.com/warning-ref.html#loop-cond-not-modified) which warns when none of the variables in a `for` loop condition are modified by the loop itself
+* Added [-Wnull-port](https://sv-lang.com/warning-ref.html#null-port) which warns for declarations of non-ANSI "null" ports
+* Added [-Wdivide-by-zero](https://sv-lang.com/warning-ref.html#divide-by-zero) which warns when the right hand side of a division or modulo operator is a constant zero
+* Added [-Wcolon-plus](https://sv-lang.com/warning-ref.html#colon-plus) which warns about the sequence `:+` inside a range select expression, where probably the intent was to use `+:` for ascending selection
+* Added [-Winit-self](https://sv-lang.com/warning-ref.html#init-self) when a variable's initializer refers to itself
 * Added a `--dir-prefix` option to specify directory prefixes to try when resolving relative source file paths
 * Added a `--max-enum-values` option that limits the maximum number of enum elements in a single declaration, to prevent typos in enum range members from causing the compiler to run out of memory
 * The `--cst-json-mode` flag takes a new option `no-whitespace` which includes trivia but filters out whitespace and newlines (thanks to @AndrewNolte)
+* The preprocessor now detects the common `` `ifndef / `define `` header guard pattern and avoids opening the include file entirely if it sees an include directive for it again. Also added [-Wheader-guard](https://sv-lang.com/warning-ref.html#header-guard) which detects potential mistakes in the header guard names.
+* Added a new flag `--allow-macro-trailing-space` which allows trailing whitespace after line continuations in macro definitions (thanks to @mampcs)
+* [Compilation unit listings](https://sv-lang.com/user-manual.html#unit-listing) now accept local `-W` settings to control warnings issued for just that compilation unit
 
 ### Improvements
 * Made several minor improvements to data flow modeling in the analysis pass to better represent SystemVerilog control flow
@@ -53,6 +69,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a preprocessor bug where nested macros containing ifdef directives could be expanded improperly
 * Fixed a preprocessor bug during macro expansion when a macro argument immediately follows a line continuation character on a separate line
 * Fixed a bug in macro token concatenation where the second token needs to be split and re-lexed to function properly
+* Fixed parsing of 1800-2023 preprocessor conditional expressions; precedence and associativity of operators was not handled correctly
 * Unary increment and decrement operators now properly count as a driver for their operand, for purposes of multi-driver checking
 * Fixed miscompilation when a generic class with a virtual interface type parameter declared within a package triggers an import lookup within that package
 * Fixed a crash when a class declares an `extern` pre/post_randomize method but doesn't provide a body
@@ -71,6 +88,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a malformed diagnostic when parsing duplicate empty function specifiers
 * Fixed ASTVisitor to visit out-of-block method definitions
 * Fixed a bug where HierarchicalValueExpressions representing virtual interface accesses did not have a valid source range (thanks to @Lauriethefish)
+* Fixed a bug that disallowed non-blocking assignments to `ref static` variables (thanks to @x-Aksara-x)
+* Fixed a spurious error issued when waiting on a clocking block event and using the `iff` operator
 
 ### Tools & Bindings
 #### pyslang
