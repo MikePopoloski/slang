@@ -291,9 +291,9 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt, const Statement
 
 namespace {
 
-// A visitor over a for/foreach loop statement that simultaneously checks for:
-//   1. Double-step violations (body inc/dec of a header step symbol).
-//   2. Unmodified condition variables (for the cond-not-modified warning).
+// A visitor over a for/foreach loop statement that checks for:
+//   1. Multiple modifications of loop variables.
+//   2. Unmodified condition variables.
 //   3. Loop variable capture inside fork-join_any/none blocks.
 struct LoopVarsVisitor : public ASTVisitor<LoopVarsVisitor, VisitFlags::AllGood> {
     const Symbol& rootSymbol;
@@ -317,18 +317,14 @@ struct LoopVarsVisitor : public ASTVisitor<LoopVarsVisitor, VisitFlags::AllGood>
     LoopVarsVisitor(const Symbol& rootSymbol, Diagnostics& diagnostics) :
         rootSymbol(rootSymbol), diagnostics(diagnostics) {}
 
-    const ValueSymbol* noteWrite(const Expression& expr) {
-        auto target = getWriteTarget(expr);
-        conditionVars.erase(target);
-        return target;
-    }
-
     void onWriteExpr(const Expression& expr) {
-        auto sym = noteWrite(expr);
-        if (auto it = stepSymbols.find(sym); it != stepSymbols.end()) {
-            auto& diag = diagnostics.add(rootSymbol, diag::LoopVarModify, expr.sourceRange);
-            diag << sym->name;
-            diag.addNote(diag::NoteLoopVarStep, it->second);
+        if (auto sym = getWriteTarget(expr)) {
+            conditionVars.erase(sym);
+            if (auto it = stepSymbols.find(sym); it != stepSymbols.end()) {
+                auto& diag = diagnostics.add(rootSymbol, diag::LoopVarModify, expr.sourceRange);
+                diag << sym->name;
+                diag.addNote(diag::NoteLoopVarStep, it->second);
+            }
         }
     }
 
@@ -369,18 +365,13 @@ struct LoopVarsVisitor : public ASTVisitor<LoopVarsVisitor, VisitFlags::AllGood>
     }
 
     void handle(const ForLoopStatement& loop) {
-        for (auto step : loop.steps) {
-            if (auto target = getWriteTarget(*step))
-                stepSymbols.emplace(target, step->sourceRange);
-        }
-
         SmallVector<const ValueSymbol*> condSymbols;
         if (loop.stopExpr) {
             auto condVisitor = makeVisitor([&](auto& vis, const NamedValueExpression& expr) {
                 auto& sym = expr.symbol;
                 if (VariableSymbol::isKind(sym.kind)) {
-                    conditionVars.insert(&sym);
-                    condSymbols.push_back(&sym);
+                    if (conditionVars.insert(&sym).second)
+                        condSymbols.push_back(&sym);
                 }
                 vis.visitDefault(expr);
             });
@@ -388,18 +379,24 @@ struct LoopVarsVisitor : public ASTVisitor<LoopVarsVisitor, VisitFlags::AllGood>
         }
 
         // Count the step expressions as writes.
-        for (auto step : loop.steps)
-            noteWrite(*step);
+        for (auto step : loop.steps) {
+            if (auto target = getWriteTarget(*step)) {
+                stepSymbols.emplace(target, step->sourceRange);
+                conditionVars.erase(target);
+            }
+        }
 
         loop.body.visit(*this);
 
         // Emit cond-not-modified diagnostics if none of the condition variables
         // were modified inside this loop's body.
         if (!condSymbols.empty()) {
-            if (std::ranges::all_of(condSymbols,
-                                    [&](auto sym) { return conditionVars.contains(sym); })) {
+            size_t count = 0;
+            for (auto sym : condSymbols)
+                count += conditionVars.erase(sym);
+
+            if (count == condSymbols.size())
                 diagnostics.add(rootSymbol, diag::LoopCondNotModified, loop.stopExpr->sourceRange);
-            }
         }
     }
 
@@ -421,7 +418,7 @@ private:
         }
         else if (expr.kind == ExpressionKind::Assignment) {
             auto& assign = expr.as<AssignmentExpression>();
-            if (assign.op && assign.left().kind == ExpressionKind::NamedValue)
+            if (assign.left().kind == ExpressionKind::NamedValue)
                 return &assign.left().as<NamedValueExpression>().symbol;
         }
         return nullptr;

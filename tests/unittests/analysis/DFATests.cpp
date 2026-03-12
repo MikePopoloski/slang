@@ -1116,6 +1116,34 @@ endmodule
     CHECK(diags[0].code == diag::LoopCondNotModified);
 }
 
+TEST_CASE("Loop cond not modified: nested loop regress") {
+    auto& code = R"(
+class C;
+    function void f();
+        logic [7:0][3:0] a;
+
+        for (int i = 0; i < 8; i++) begin
+            for (int unsigned j = 0; j < a[i]; j++) begin
+            end
+        end
+    endfunction
+endclass
+
+module m;
+    initial begin
+        for (int i = 0; i < 10; i = i + 1) begin
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
 TEST_CASE("Nested loop: double-step detected in nested loop body") {
     auto& code = R"(
 module m;
