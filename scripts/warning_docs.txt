@@ -2063,6 +2063,24 @@ wording in prior versions so this is implemented as a pedantic warning only.
 localparam p = $isunbounded(1 + 1);
 ```
 
+-Wnon-standard-hierarchical-cross
+Hierarchical (dotted) references in cover cross items are not part of the
+SystemVerilog standard but are supported by some commercial tools like Xcelium.
+The implicit coverpoint created from the reference will be named by replacing
+dots with underscores (e.g. `status.mpp` becomes `status_mpp`).
+```
+module m;
+    struct packed {
+        logic [1:0] mpp;
+        logic [1:0] mode;
+    } status;
+
+    covergroup cg;
+        cross status.mpp, status.mode;
+    endgroup
+endmodule
+```
+
 @category Unused Items
 
 -Wunused-def

@@ -833,7 +833,7 @@ CoverpointSymbol& CoverpointSymbol::fromImplicit(const Scope& scope, const NameS
         name = syntax.as<IdentifierNameSyntax>().identifier.valueText();
     }
     else {
-        // For implicit coverpoints via struct accesses, names '.' is typically replace with '_'
+        // '.' is typically replaced with '_' when naming
         auto str = syntax.toString();
         std::ranges::replace(str, '.', '_');
         auto span = comp.copyFrom(std::span<const char>(str.data(), str.size()));
