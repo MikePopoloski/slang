@@ -57,6 +57,8 @@ jobs:
         xcode-version: 'latest'
     - uses: konsumer/install-wasi-sdk@v1
       if: ${{ startsWith(matrix.preset, 'wasi-') }}
+      with:
+        version: "32"
     - uses: bytecodealliance/actions/wasmtime/setup@v1
       if: ${{ startsWith(matrix.preset, 'wasi-') }}
     - name: Configure
