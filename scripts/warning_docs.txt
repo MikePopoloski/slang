@@ -1750,6 +1750,19 @@ module memMod();
 endmodule
 ```
 
+-Winitializer-required
+A variable declared in a for loop initializer does not have an initializer expression. SystemVerilog
+requires that such variables be initialized at the point of declaration.
+This is an error by default but can be downgraded to a warning for compatibility with tools.
+```
+module m;
+    initial begin
+        for (int i; i < 4; i++) begin
+        end
+    end
+endmodule
+```
+
 -Wmember-impl-not-found
 A class has the declaration for a member method, but the implementation of that member method is not
 found either in the class or as an out of body definition.
