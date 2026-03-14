@@ -195,6 +195,7 @@ private:
     syntax::SelectorSyntax* parseElementSelector();
     syntax::NameSyntax& parseName(bitmask<NameOptions> options);
     syntax::NameSyntax& parseNamePart(bitmask<NameOptions> options);
+    syntax::ExpressionSyntax& parseForeachArrayExpression();
     syntax::ParameterValueAssignmentSyntax* parseParameterValueAssignment();
     syntax::ArgumentListSyntax& parseArgumentList();
     syntax::ParamAssignmentSyntax& parseParamValue();

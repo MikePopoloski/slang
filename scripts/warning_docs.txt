@@ -1969,6 +1969,21 @@ SystemVerilog but are supported by some tools.
 int foo[] = '{};
 ```
 
+-Wforeach-call-expr
+The array expression in a foreach loop must be a hierarchical name, not a
+function call or other arbitrary expression. This is not allowed by the
+SystemVerilog LRM but is supported by some tools. In VCS compatibility mode
+this is ignored; otherwise it is an error that can be downgraded to a warning.
+```
+module top;
+    int arr[4];
+    function automatic int get_arr(); endfunction
+    initial begin
+        foreach (get_arr()[i]) begin end
+    end
+endmodule
+```
+
 -Wnonstandard-foreach
 foreach loops are not allowed to have multidimensional brackets when declaring
 loop variables, but most tools allow it as an extension.
