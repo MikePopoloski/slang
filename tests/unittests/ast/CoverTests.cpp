@@ -823,3 +823,27 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Cover cross with dotted name as target") {
+    auto tree = SyntaxTree::fromText(R"(
+package pkg;
+
+class port_cfg_t;
+    rand bit m_lane_pol_inv;
+    bit [2:0] m_cbp_id;
+endclass
+
+class port_cov_t;
+    covergroup cg with function sample(port_cfg_t port_cfg);
+        cp_cbp_id : coverpoint port_cfg.m_cbp_id;
+        cx : cross port_cfg.m_lane_pol_inv, cp_cbp_id;
+    endgroup
+endclass
+
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
