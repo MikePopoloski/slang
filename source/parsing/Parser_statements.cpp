@@ -438,10 +438,12 @@ NameSyntax& Parser::parseForeachLoopVariable() {
 
 ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
     auto openParen = expect(TokenKind::OpenParenthesis);
-    auto& arrayName = parseName(NameOptions::ForeachName);
+    auto& arrayName = parseForeachArrayExpression();
 
     if (arrayName.kind == SyntaxKind::IdentifierSelectName)
         addDiag(diag::NonstandardForeach, arrayName.sourceRange());
+    else if (!NameSyntax::isKind(arrayName.kind))
+        addDiag(diag::ForeachCallExpr, arrayName.sourceRange());
 
     std::span<TokenOrSyntax> list;
     Token openBracket;

@@ -310,6 +310,7 @@ warning nonstandard-generate NonStandardGenBlock "standalone generate block with
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
 warning non-standard-hierarchical-cross NonstandardHierarchicalCross "non-standard hierarchical reference in cover cross item"
+warning foreach-call-expr ForeachCallExpr "foreach array expression is not a name"
 warning lifetime-prototype LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
 warning nonstandard-dist NonstandardDist "use of parentheses around 'dist' expression is non-standard"
 warning empty-body EmptyBody "{} has empty body (put the semicolon on a separate line to silence this warning)"
@@ -1287,7 +1288,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   nonstandard-string-concat nested-comment multi-write read-write mixed-var-assigns
                   multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
-                  initializer-required package-import-in-class }
+                  initializer-required package-import-in-class foreach-call-expr }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
