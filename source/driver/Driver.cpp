@@ -655,7 +655,7 @@ static std::string generateRandomAlphaString(TGenerator& gen, size_t len) {
 }
 
 bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool obfuscateIds,
-                             bool useFixedObfuscationSeed) {
+                             bool useFixedObfuscationSeed, bool includeSource) {
     BumpAllocator alloc;
     Diagnostics diagnostics;
     Preprocessor preprocessor(sourceManager, alloc, diagnostics, createParseOptionBag());
@@ -664,9 +664,11 @@ bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool 
     for (auto it = buffers.rbegin(); it != buffers.rend(); it++)
         preprocessor.pushSource(*it);
 
-    SyntaxPrinter output;
+    SyntaxPrinter output(sourceManager);
     output.setIncludeComments(includeComments);
     output.setIncludeDirectives(includeDirectives);
+    output.setIncludeSource(includeSource);
+    output.setIncludeAllLocations(true);
 
     std::optional<std::mt19937> rng;
     flat_hash_map<std::string, std::string> obfuscationMap;

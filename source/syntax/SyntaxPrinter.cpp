@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/syntax/SyntaxPrinter.h"
 
+#include "fmt/format.h"
+
 #include "slang/parsing/ParserMetadata.h"
 #include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxNode.h"
@@ -62,10 +64,20 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
 }
 
 SyntaxPrinter& SyntaxPrinter::print(Token token) {
-    bool excluded = !shouldPrint(token.location());
+    auto location = token.location();
+    bool excluded = !shouldPrint(location);
+
+    if (!excluded && sourceManager && includeSource) {
+        std::string_view fileName = sourceManager->getFileName(location);
+        if (fileName != currentFileName) {
+            auto lineNumber = sourceManager->getLineNumber(location);
+            append(fmt::format("\n// {}:{}\n", fileName, lineNumber));
+            currentFileName = fileName;
+        }
+    }
 
     if (includeTrivia) {
-        if (!sourceManager) {
+        if (includeAllLocations || !sourceManager) {
             for (const auto& t : token.trivia())
                 print(t);
         }
@@ -237,6 +249,8 @@ SyntaxPrinter& SyntaxPrinter::append(std::string_view text) {
         for (; i < text.length(); i++) {
             if (text[i] == '\r' || text[i] == '\n')
                 i++;
+            else
+                break;
         }
 
         text = text.substr(i);
@@ -254,7 +268,7 @@ SyntaxPrinter& SyntaxPrinter::append(std::string_view text) {
 }
 
 bool SyntaxPrinter::shouldPrint(SourceLocation loc) const {
-    if (!sourceManager)
+    if (includeAllLocations || !sourceManager)
         return true;
 
     if (sourceManager->isMacroLoc(loc)) {
@@ -277,7 +291,7 @@ bool SyntaxPrinter::shouldPrint(SourceLocation loc) const {
 }
 
 bool SyntaxPrinter::shouldPrint(const SyntaxNode& syntax) const {
-    if (!sourceManager)
+    if (includeAllLocations || !sourceManager)
         return includeDirectives;
 
     if (syntax.kind == SyntaxKind::MacroUsage) {

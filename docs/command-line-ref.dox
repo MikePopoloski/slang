@@ -234,6 +234,11 @@ Available keyword versions are:
 Causes all identifiers in the preprocessed output to be replaced with obfuscated
 alphanumeric strings.
 
+`--preprocess-source`
+
+Prints the source filename and linenumber in the preprocessor output stream with --process.
+Only prints the source filename and linenumber when there is a change in source filename.
+
 @section clr-parsing Parsing
 
 `--max-parse-depth <depth>`
