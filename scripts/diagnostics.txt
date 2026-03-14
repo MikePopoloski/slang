@@ -221,7 +221,6 @@ error IfaceMethodPure "method in interface class must be marked 'pure'"
 error NestedIface "interface classes cannot be nested"
 error RegAfterNettype "net type keyword cannot be followed by the 'reg' keyword"
 error ChargeWithTriReg "charge strength can only be specified for 'trireg' nets"
-error InitializerRequired "initializer expression required"
 error DriveStrengthInvalid "combination of drive strengths is invalid; need one for value '0' and one for '1'"
 error DriveStrengthHighZ "combination of drive strengths is invalid; cannot combine 'highz0' and 'highz1'"
 error PullStrengthHighZ "pullup and pulldown strengths cannot be 'highz0' or 'highz1'"
@@ -320,6 +319,7 @@ warning split-distweight-op SplitDistWeightOp "split dist weight operator is not
 warning nested-solve-before SolveBeforeDisallowed "constraint ordering directive is not allowed within a nested constraint block"
 warning misplaced-trailing-separator MisplacedTrailingSeparator "misplaced trailing '{}'"
 warning qualifiers-on-out-of-block QualifiersOnOutOfBlock "qualifiers are not allowed on out-of-block method definitions"
+warning initializer-required InitializerRequired "initializer expression required"
 note NoteToMatchThis "to match this '{}'"
 note NoteLastBlockStarted "last complete block started here"
 note NoteLastBlockEnded "and ended here"
@@ -1282,7 +1282,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   seq-no-match case-too-complex nested-solve-before dynamic-non-procedural
                   nonstandard-string-concat nested-comment multi-write read-write mixed-var-assigns
                   multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
-                  qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative }
+                  qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
+                  initializer-required }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

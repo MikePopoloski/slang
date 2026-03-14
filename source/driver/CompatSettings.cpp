@@ -93,6 +93,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::MultipleContAssigns,
                  diag::MultipleAlwaysAssigns,
                  diag::MisplacedTrailingSeparator,
+                 diag::InitializerRequired,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }
@@ -127,6 +128,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::DynamicNotProcedural,
                  diag::QualifiersOnOutOfBlock,
                  diag::MemberImplNotFound,
+                 diag::InitializerRequired,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }
