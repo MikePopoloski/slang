@@ -1904,8 +1904,7 @@ CoverCrossSyntax* Parser::parseCoverCross(AttrList attributes, NamedLabelSyntax*
 
     SmallVector<TokenOrSyntax, 8> buffer;
     while (true) {
-        auto name = expect(TokenKind::Identifier);
-        buffer.push_back(&factory.identifierName(name));
+        buffer.push_back(&parseName());
         if (!peek(TokenKind::Comma))
             break;
 

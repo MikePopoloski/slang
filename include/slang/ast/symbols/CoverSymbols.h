@@ -195,6 +195,7 @@ public:
     static CoverpointSymbol& fromSyntax(const Scope& scope, const syntax::CoverpointSyntax& syntax);
     static CoverpointSymbol& fromImplicit(const Scope& scope,
                                           const syntax::IdentifierNameSyntax& syntax);
+    static CoverpointSymbol& fromImplicit(const Scope& scope, const syntax::NameSyntax& syntax);
 
     const Type& getType() const { return declaredType.getType(); }
 
