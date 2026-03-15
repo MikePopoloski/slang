@@ -861,7 +861,7 @@ Statement statement
 
 ForeachLoopList
 token openParen
-Name arrayName
+Expression arrayName
 token openBracket
 separated_list<Name> loopVariables
 token closeBracket

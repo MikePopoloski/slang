@@ -787,6 +787,51 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
     return *name;
 }
 
+ExpressionSyntax& Parser::parseForeachArrayExpression() {
+    // Parse the base name portion (handles ::, ., and intermediate [..] selectors).
+    // ForeachName stops before the final [loop_variables] bracket and before any
+    // function call argument list '('.
+    ExpressionSyntax* expr = &parseName(NameOptions::ForeachName);
+
+    // After the initial name, handle any trailing postfix operators that parseName
+    // cannot represent: invocation '()', member access '.', and intermediate selectors
+    // '[..]' that are followed by more of the expression (not the loop-variable bracket).
+    while (true) {
+        switch (peek().kind) {
+            case TokenKind::OpenParenthesis: {
+                auto& args = parseArgumentList();
+                expr = &factory.invocationExpression(*expr, nullptr, &args);
+                break;
+            }
+            case TokenKind::Dot: {
+                auto dot = consume();
+                auto name = expect(TokenKind::Identifier);
+                expr = &factory.memberAccessExpression(*expr, dot, name);
+                break;
+            }
+            case TokenKind::OpenBracket: {
+                // Scan past the [..] to see what follows. If what follows is
+                // another '[', '(', or '.', this bracket is an intermediate array
+                // selector (not the foreach loop-variable list) and should be consumed.
+                uint32_t index = 1;
+                scanTypePart<isSemicolon>(index, TokenKind::OpenBracket, TokenKind::CloseBracket);
+                auto next = peek(index).kind;
+                if (next == TokenKind::OpenBracket || next == TokenKind::Dot ||
+                    next == TokenKind::OpenParenthesis) {
+                    expr = &factory.elementSelectExpression(*expr, parseElementSelect());
+                }
+                else {
+                    // This is the loop-variable bracket — leave it for parseForeachLoopVariables.
+                    return *expr;
+                }
+                break;
+            }
+            default:
+                return *expr;
+        }
+    }
+}
+
 NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
     auto kind = getKeywordNameExpression(peek().kind);
     if (kind != SyntaxKind::Unknown) {

@@ -107,6 +107,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::BadFinishNum,
                  diag::NonstandardSysFunc,
                  diag::NonstandardForeach,
+                 diag::ForeachCallExpr,
                  diag::NonstandardDist,
                  diag::NestedBlockComment,
              }) {
@@ -125,6 +126,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::DPIPureTask,
                  diag::SpecifyPathConditionExpr,
                  diag::SolveBeforeDisallowed,
+                 diag::ForeachCallExpr,
                  diag::DynamicNotProcedural,
                  diag::QualifiersOnOutOfBlock,
                  diag::MemberImplNotFound,
