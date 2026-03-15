@@ -236,8 +236,8 @@ alphanumeric strings.
 
 `--preprocess-source`
 
-Prints the source filename and linenumber in the preprocessor output stream with --process.
-Only prints the source filename and linenumber when there is a change in source filename.
+Prints the source file name and line number in the preprocessor output stream with --preprocess.
+Only prints the source file name and line number when there is a change in source file name.
 
 @section clr-parsing Parsing
 

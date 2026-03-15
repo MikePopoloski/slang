@@ -938,9 +938,12 @@ public:
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         if (argIndex == 0)
             return Expression::bindLValue(syntax, context);
-        if (argIndex == 1 && !args.empty())
+
+        if (argIndex == 1 && !args.empty()) {
             return Expression::bindArgument(*args[0]->type, ArgumentDirection::In, {}, syntax,
                                             context);
+        }
+
         return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
     }
 
@@ -949,13 +952,6 @@ public:
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 2))
             return comp.getErrorType();
-
-        auto& destType = *args[0]->type;
-        auto& srcType = *args[1]->type;
-        if (!destType.isError() && !srcType.isError() &&
-            !destType.isAssignmentCompatible(srcType)) {
-            return badArg(context, *args[1]);
-        }
 
         return comp.getVoidType();
     }
@@ -1042,6 +1038,7 @@ void Builtins::registerSystemTasks() {
     addSystemSubroutine(std::make_shared<FatalTask>());
     addSystemSubroutine(std::make_shared<ScopeTask>(KnownSystemName::List, true));
     addSystemSubroutine(std::make_shared<ScopeTask>(KnownSystemName::Scope, false));
+    addSystemSubroutine(std::make_shared<DepositTask>());
 
 #define TASK(name, required, ...)                                                    \
     addSystemSubroutine(std::make_shared<SimpleSystemTask>(name, voidType, required, \
@@ -1054,7 +1051,6 @@ void Builtins::registerSystemTasks() {
     TASK(KnownSystemName::MonitorOn, 0, );
     TASK(KnownSystemName::MonitorOff, 0, );
 
-    addSystemSubroutine(std::make_shared<DepositTask>());
     TASK(KnownSystemName::DumpFile, 0, &stringType);
     TASK(KnownSystemName::DumpOn, 0, );
     TASK(KnownSystemName::DumpOff, 0, );

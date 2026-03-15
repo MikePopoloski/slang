@@ -140,7 +140,7 @@ TEST_CASE("Driver file preprocess") {
     const char* argv[] = {"testfoo", filePath.c_str()};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(driver.processOptions());
-    CHECK(driver.runPreprocessor(true, false, false));
+    CHECK(driver.runPreprocessor(PreprocessOutputFlags::IncludeComments));
 
     auto output = OS::capturedStdout;
     output = std::regex_replace(output, std::regex("\r\n"), "\n");
@@ -166,7 +166,9 @@ TEST_CASE("Driver file preprocess -- obfuscation") {
     const char* argv[] = {"testfoo", filePath.c_str()};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(driver.processOptions());
-    CHECK(driver.runPreprocessor(true, false, true, true));
+    CHECK(driver.runPreprocessor(PreprocessOutputFlags::IncludeComments |
+                                 PreprocessOutputFlags::ObfuscateIds |
+                                 PreprocessOutputFlags::UseFixedObfuscationSeed));
 
     auto output = OS::capturedStdout;
     output = std::regex_replace(output, std::regex("\r\n"), "\n");
@@ -192,7 +194,7 @@ TEST_CASE("Driver file preprocess with error") {
     const char* argv[] = {"testfoo", filePath.c_str()};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(driver.processOptions());
-    CHECK(!driver.runPreprocessor(true, false, false));
+    CHECK(!driver.runPreprocessor(PreprocessOutputFlags::IncludeComments));
     CHECK(stderrContains("unknown macro"));
 }
 
@@ -1264,7 +1266,7 @@ TEST_CASE("Driver file preprocess with source info") {
     auto args = fmt::format("testfoo \"{0}test.sv\" -DFOOBAR -I{0}libtest", findTestDir());
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
-    CHECK(driver.runPreprocessor(false, false, false, false, true));
+    CHECK(driver.runPreprocessor(PreprocessOutputFlags::IncludeSourceInfo));
 
     auto output = OS::capturedStdout;
     output = std::regex_replace(output, std::regex("\r\n"), "\n");

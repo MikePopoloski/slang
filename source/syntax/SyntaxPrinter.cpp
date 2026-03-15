@@ -233,28 +233,17 @@ SyntaxPrinter& SyntaxPrinter::append(std::string_view text) {
 
     bool carriage = false;
     bool newline = false;
-
-    if (!text.empty() && (text[0] == '\r' || text[0] == '\n')) {
-        size_t i = 0;
-        if (text[i] == '\r') {
+    size_t i = 0;
+    for (; i < text.length(); i++) {
+        if (text[i] == '\r')
             carriage = true;
-            i++;
-        }
-
-        if (i < text.length() && text[i] == '\n') {
+        else if (text[i] == '\n')
             newline = true;
-            i++;
-        }
-
-        for (; i < text.length(); i++) {
-            if (text[i] == '\r' || text[i] == '\n')
-                i++;
-            else
-                break;
-        }
-
-        text = text.substr(i);
+        else
+            break;
     }
+
+    text = text.substr(i);
 
     if (buffer.empty() || buffer.back() != '\n') {
         if (carriage)

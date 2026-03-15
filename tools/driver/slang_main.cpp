@@ -200,8 +200,17 @@ int driverMain(int argc, TArgs argv) {
         auto runStages = [&]() {
             bool ok = true;
             if (onlyPreprocess == true) {
-                return driver.runPreprocessor(includeComments == true, includeDirectives == true,
-                                              obfuscateIds == true, false, includeSource == true);
+                bitmask<PreprocessOutputFlags> flags;
+                if (includeComments == true)
+                    flags |= PreprocessOutputFlags::IncludeComments;
+                if (includeDirectives == true)
+                    flags |= PreprocessOutputFlags::IncludeDirectives;
+                if (obfuscateIds == true)
+                    flags |= PreprocessOutputFlags::ObfuscateIds;
+                if (includeSource == true)
+                    flags |= PreprocessOutputFlags::IncludeSourceInfo;
+
+                return driver.runPreprocessor(flags);
             }
 
             if (onlyMacros == true) {

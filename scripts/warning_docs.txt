@@ -1737,7 +1737,7 @@ endmodule
 
 -Wqualifiers-on-out-of-block
 Out-of-block method definitions are not allowed to include qualifiers (such as the `static` keyword).
-This is an error by default but can be downgraded to a warning for compatibility with tools.
+This is an error by default but can be downgraded to a warning for compatibility with other tools.
 ```
 module memMod();
     class C;
@@ -1751,9 +1751,9 @@ endmodule
 ```
 
 -Winitializer-required
-A variable declared in a for loop initializer does not have an initializer expression. SystemVerilog
+A variable declared in a `for` loop initializer does not have an initializer expression. SystemVerilog
 requires that such variables be initialized at the point of declaration.
-This is an error by default but can be downgraded to a warning for compatibility with tools.
+This is an error by default but can be downgraded to a warning for compatibility with other tools.
 ```
 module m;
     initial begin
@@ -1766,7 +1766,7 @@ endmodule
 -Wmember-impl-not-found
 A class has the declaration for a member method, but the implementation of that member method is not
 found either in the class or as an out of body definition.
-This is an error by default but can be downgraded to a warning for compatibility with tools.
+This is an error by default but can be downgraded to a warning for compatibility with other tools.
 ```
 module m;
 class c;

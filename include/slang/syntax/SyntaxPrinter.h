@@ -66,7 +66,7 @@ public:
 
     /// If no source manager is provided or if this flag is set, print tokens from any location.
     /// Otherwise, filter out tokens based on other flags that control inclusion or exclusion of
-    /// preprocesses macros, includes, etc.
+    /// preprocesser macros, includes, etc.
     /// @return a reference to this object, to allow chaining additional method calls.
     SyntaxPrinter& setIncludeAllLocations(bool include) {
         includeAllLocations = include;

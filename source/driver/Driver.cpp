@@ -654,8 +654,7 @@ static std::string generateRandomAlphaString(TGenerator& gen, size_t len) {
     return result;
 }
 
-bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool obfuscateIds,
-                             bool useFixedObfuscationSeed, bool includeSource) {
+bool Driver::runPreprocessor(bitmask<PreprocessOutputFlags> flags) {
     BumpAllocator alloc;
     Diagnostics diagnostics;
     Preprocessor preprocessor(sourceManager, alloc, diagnostics, createParseOptionBag());
@@ -665,16 +664,16 @@ bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool 
         preprocessor.pushSource(*it);
 
     SyntaxPrinter output(sourceManager);
-    output.setIncludeComments(includeComments);
-    output.setIncludeDirectives(includeDirectives);
-    output.setIncludeSource(includeSource);
+    output.setIncludeComments(flags.has(PreprocessOutputFlags::IncludeComments));
+    output.setIncludeDirectives(flags.has(PreprocessOutputFlags::IncludeDirectives));
+    output.setIncludeSource(flags.has(PreprocessOutputFlags::IncludeSourceInfo));
     output.setIncludeAllLocations(true);
 
     std::optional<std::mt19937> rng;
     flat_hash_map<std::string, std::string> obfuscationMap;
 
-    if (obfuscateIds) {
-        if (useFixedObfuscationSeed)
+    if (flags.has(PreprocessOutputFlags::ObfuscateIds)) {
+        if (flags.has(PreprocessOutputFlags::UseFixedObfuscationSeed))
             rng.emplace();
         else
             rng = createRandomGenerator<std::mt19937>();
@@ -693,7 +692,7 @@ bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool 
             } while (SyntaxFacts::isPossibleVectorDigit(token.kind));
         }
 
-        if (obfuscateIds && token.kind == TokenKind::Identifier) {
+        if (flags.has(PreprocessOutputFlags::ObfuscateIds) && token.kind == TokenKind::Identifier) {
             auto name = std::string(token.valueText());
             auto translation = obfuscationMap.find(name);
             if (translation == obfuscationMap.end()) {

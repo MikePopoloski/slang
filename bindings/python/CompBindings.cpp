@@ -35,6 +35,15 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
     EXPOSE_ENUM(ast, RandMode);
     EXPOSE_ENUM(ast, PrimitivePortDirection);
 
+    py::native_enum<PreprocessOutputFlags>(m, "PreprocessOutputFlags", "enum.Flag")
+        .value("None_", PreprocessOutputFlags::None)
+        .value("IncludeComments", PreprocessOutputFlags::IncludeComments)
+        .value("IncludeDirectives", PreprocessOutputFlags::IncludeDirectives)
+        .value("ObfuscateIds", PreprocessOutputFlags::ObfuscateIds)
+        .value("UseFixedObfuscationSeed", PreprocessOutputFlags::UseFixedObfuscationSeed)
+        .value("IncludeSourceInfo", PreprocessOutputFlags::IncludeSourceInfo)
+        .finalize();
+
     py::native_enum<MinTypMax>(ast, "MinTypMax", "enum.Enum")
         .value("Min", MinTypMax::Min)
         .value("Typ", MinTypMax::Typ)
@@ -201,9 +210,7 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def("processCommandFiles", &Driver::processCommandFiles, "fileName"_a, "makeRelative"_a,
              "separateUnit"_a)
         .def("processOptions", &Driver::processOptions)
-        .def("runPreprocessor", &Driver::runPreprocessor, "includeComments"_a,
-             "includeDirectives"_a, "obfuscateIds"_a, "useFixedObfuscationSeed"_a = false,
-             "showSource"_a = false)
+        .def("runPreprocessor", &Driver::runPreprocessor, "flags"_a)
         .def("reportMacros", &Driver::reportMacros)
         .def("optionallyWriteDepFiles", &Driver::optionallyWriteDepFiles)
         .def("parseAllSources", &Driver::parseAllSources)

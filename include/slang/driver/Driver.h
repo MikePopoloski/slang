@@ -51,6 +51,33 @@ enum class AnalysisFlags;
 
 namespace slang::driver {
 
+/// Flags that control output behavior when running the preprocessor directly.
+enum class SLANG_EXPORT PreprocessOutputFlags {
+    /// No flags specified.
+    None = 0,
+
+    /// Include comments in the output. If not set, comments are
+    /// stripped.
+    IncludeComments = 1 << 0,
+
+    /// Include preprocessor directives in the output. If not set,
+    /// directives are stripped.
+    IncludeDirectives = 1 << 1,
+
+    /// Obfuscate identifiers in the output by replacing them with
+    /// randomized alphanumeric strings.
+    ObfuscateIds = 1 << 2,
+
+    /// Obfuscated identifiers will be generated with a fixed
+    /// randomization seed, meaning they will be the same every
+    /// time the program is run. Used for testing.
+    UseFixedObfuscationSeed = 1 << 3,
+
+    /// Include source line information in the output.
+    IncludeSourceInfo = 1 << 4
+};
+SLANG_BITMASK(PreprocessOutputFlags, IncludeSourceInfo)
+
 /// @brief A top-level class that handles argument parsing, option preparation,
 /// and invoking various parts of the slang compilation process.
 ///
@@ -369,18 +396,7 @@ public:
     /// @brief Runs the preprocessor on all loaded buffers and outputs the result to stdout.
     ///
     /// Any errors encountered will be printed to stderr.
-    /// @param includeComments If true, comments will be included in the output.
-    /// @param includeDirectives If true, preprocessor directives will be included in the output.
-    /// @param obfuscateIds If true, identifiers will be obfuscated by replacing them with
-    ///                     randomized alphanumeric strings.
-    /// @param useFixedObfuscationSeed If true, obfuscated identifiers will be generated with
-    ///                                a fixed randomization seed, meaning they will be the
-    ///                                same every time the program is run. Used for testing.
-    /// @param showSource If true, preprocessor output will contain source line information.
-    /// @returns true on success and false if errors were encountered.
-    [[nodiscard]] bool runPreprocessor(bool includeComments, bool includeDirectives,
-                                       bool obfuscateIds, bool useFixedObfuscationSeed = false,
-                                       bool showSource = false);
+    [[nodiscard]] bool runPreprocessor(bitmask<PreprocessOutputFlags> flags);
 
     /// Prints all macros from all loaded buffers to stdout.
     void reportMacros();
