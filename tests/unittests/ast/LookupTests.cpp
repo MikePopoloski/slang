@@ -1158,9 +1158,15 @@ source:68:16: error: no member named 'bar' in package 'p1'
 source:69:18: error: could not resolve hierarchical path name 'bar'
     wire d = gen1.bar;          // no member
                  ^~~~
+source:47:15: note: did you mean 'baz'?
+        logic baz;
+              ^
 source:71:18: error: could not resolve hierarchical path name 'baz'
     wire f = func.baz;          // no upward lookup because of import
                  ^~~~
+source:8:26: note: did you mean 'bar'?
+    function func; logic bar; return 1; endfunction
+                         ^
 source:72:20: error: cannot use dot operator on a type name
     wire g = type_t.a;          // can't dot into a typedef
              ~~~~~~^~
@@ -2734,4 +2740,108 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::UpwardHierarchicalName);
     CHECK(diags[1].code == diag::UpwardHierarchicalName);
+}
+
+TEST_CASE("Did-you-mean for struct member") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct packed { logic foo; logic bar; } s;
+    initial begin
+        s.foi = 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownMember);
+    REQUIRE(diags[0].notes.size() == 1);
+    CHECK(diags[0].notes[0].code == diag::NoteDidYouMean);
+}
+
+TEST_CASE("Did-you-mean for class member") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int foobar;
+    function void test();
+        int x = this.fobar;
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownMember);
+    REQUIRE(diags[0].notes.size() == 1);
+    CHECK(diags[0].notes[0].code == diag::NoteDidYouMean);
+}
+
+TEST_CASE("Did-you-mean for package member") {
+    auto tree = SyntaxTree::fromText(R"(
+package pkg;
+    int myValue = 42;
+endpackage
+
+module m;
+    int x = pkg::myValu;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownPackageMember);
+    REQUIRE(diags[0].notes.size() == 1);
+    CHECK(diags[0].notes[0].code == diag::NoteDidYouMean);
+}
+
+TEST_CASE("Did-you-mean for hierarchical path member") {
+    auto tree = SyntaxTree::fromText(R"(
+module child;
+    logic mySignal;
+endmodule
+
+module top;
+    child c();
+    initial begin
+        c.mySignal_ = 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CouldNotResolveHierarchicalPath);
+    REQUIRE(diags[0].notes.size() == 1);
+    CHECK(diags[0].notes[0].code == diag::NoteDidYouMean);
+}
+
+TEST_CASE("No did-you-mean for completely wrong member name") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct packed { logic foo; } s;
+    initial begin
+        s.xyz = 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownMember);
+    CHECK(diags[0].notes.size() == 0);
 }

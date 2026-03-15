@@ -331,6 +331,11 @@ public:
     static bool findAssertionLocalVar(const ASTContext& context, const syntax::NameSyntax& name,
                                       LookupResult& result);
 
+    /// Searches @a scope for a member whose name is similar to @a name (typo correction).
+    /// If a close enough match is found, a NoteDidYouMean note is appended to @a diag and
+    /// the typo-correction count in the compilation is incremented.
+    static void addTypoCorrectionNote(Diagnostic& diag, std::string_view name, const Scope& scope);
+
 private:
     Lookup() = default;
 

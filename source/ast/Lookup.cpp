@@ -277,6 +277,28 @@ void applySelectors(const NameComponents& name, const ASTContext& context, Looku
     }
 }
 
+// Searches the given scope for a symbol whose name is close to @a name.
+// Returns the closest match if within the typo-correction threshold, or nullptr.
+const Symbol* findCloseMatch(std::string_view name, const Scope& scope) {
+    const Symbol* closest = nullptr;
+    int bestDistance = INT_MAX;
+    for (auto& member : scope.members()) {
+        if (member.name.empty())
+            continue;
+
+        int dist = editDistance(member.name, name, bestDistance);
+        if (dist < bestDistance) {
+            closest = &member;
+            bestDistance = dist;
+        }
+    }
+
+    if (closest && bestDistance > 0 && name.length() / size_t(bestDistance) >= 3)
+        return closest;
+
+    return nullptr;
+}
+
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
@@ -533,6 +555,7 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
                                                 it->dotLocation);
                     diag << name.text;
                     diag << name.range;
+                    Lookup::addTypoCorrectionNote(diag, name.text, scope);
                 }
                 return true;
             }
@@ -875,15 +898,24 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
 
         if (!symbol) {
             DiagCode code = diag::UnknownClassMember;
-            if (savedSymbol->kind == SymbolKind::Package)
+            const Scope* searchScope;
+            if (savedSymbol->kind == SymbolKind::Package) {
                 code = diag::UnknownPackageMember;
-            else if (savedSymbol->kind == SymbolKind::CovergroupType)
+                searchScope = &savedSymbol->as<Scope>();
+            }
+            else if (savedSymbol->kind == SymbolKind::CovergroupType) {
                 code = diag::UnknownCovergroupMember;
+                searchScope = &savedSymbol->as<CovergroupType>().getBody();
+            }
+            else {
+                searchScope = &savedSymbol->as<Scope>();
+            }
 
             auto& diag = result.addDiag(*context.scope, code, part.dotLocation);
             diag << name.text;
             diag << name.range;
             diag << savedSymbol->name;
+            Lookup::addTypoCorrectionNote(diag, name.text, *searchScope);
             return false;
         }
 
@@ -2459,6 +2491,15 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
 
     // We couldn't make any sense of this, just report a simple error about a missing identifier.
     result.addDiag(initialScope, diag::UndeclaredIdentifier, range) << name;
+}
+
+void Lookup::addTypoCorrectionNote(Diagnostic& diag, std::string_view name, const Scope& scope) {
+    auto& comp = scope.getCompilation();
+    if (comp.doTypoCorrection()) {
+        comp.didTypoCorrection();
+        if (auto closest = findCloseMatch(name, scope))
+            diag.addNote(diag::NoteDidYouMean, closest->location) << closest->name;
+    }
 }
 
 } // namespace slang::ast

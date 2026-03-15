@@ -10,6 +10,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/ast/Lookup.h"
 #include "slang/ast/TypeProvider.h"
 #include "slang/ast/expressions/CallExpression.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
@@ -982,6 +983,7 @@ Expression& MemberAccessExpression::fromSelector(
         diag << expr.sourceRange;
         diag << selector.name;
         diag << *expr.type;
+        Lookup::addTypoCorrectionNote(diag, selector.name, *scope);
         return badExpr(comp, &expr);
     }
 
