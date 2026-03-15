@@ -836,6 +836,30 @@ CoverpointSymbol& CoverpointSymbol::fromImplicit(const Scope& scope,
     return *result;
 }
 
+CoverpointSymbol& CoverpointSymbol::fromImplicit(const Scope& scope, const NameSyntax& syntax) {
+    // For a dotted name like "port_cfg.m_lane_pol_inv", use the rightmost identifier
+    // as the coverpoint name. For a simple identifier name, delegate to the other overload.
+    if (syntax.kind == SyntaxKind::IdentifierName)
+        return fromImplicit(scope, syntax.as<IdentifierNameSyntax>());
+
+    // Extract the rightmost name token from a scoped/hierarchical name
+    const NameSyntax* cur = &syntax;
+    while (cur->kind == SyntaxKind::ScopedName)
+        cur = cur->as<ScopedNameSyntax>().right.get();
+
+    SourceLocation loc = syntax.getFirstToken().location();
+    std::string_view name;
+    if (cur->kind == SyntaxKind::IdentifierName)
+        name = cur->as<IdentifierNameSyntax>().identifier.valueText();
+
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<CoverpointSymbol>(comp, name, loc);
+    result->isImplicit = true;
+    result->declaredType.setTypeSyntax(comp.createEmptyTypeSyntax(loc));
+    result->declaredType.setInitializerSyntax(syntax, loc);
+    return *result;
+}
+
 const Expression* CoverpointSymbol::getIffExpr() const {
     if (!iffExpr) {
         auto scope = getParentScope();
@@ -925,23 +949,29 @@ CoverCrossSymbol& CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCr
 
     SmallVector<const CoverpointSymbol*> targets;
     for (auto item : syntax.items) {
-        auto symbol = scope.find(item->identifier.valueText());
-        if (symbol && symbol->kind == SymbolKind::Coverpoint) {
-            targets.push_back(&symbol->as<CoverpointSymbol>());
+        // For simple identifiers, try to look up an existing coverpoint or cross.
+        // For dotted names (e.g. port_cfg.m_lane_pol_inv), fall through to implicit.
+        if (item->kind == SyntaxKind::IdentifierName) {
+            auto& idName = item->as<IdentifierNameSyntax>();
+            auto symbol = scope.find(idName.identifier.valueText());
+            if (symbol && symbol->kind == SymbolKind::Coverpoint) {
+                targets.push_back(&symbol->as<CoverpointSymbol>());
+                continue;
+            }
+            else if (symbol && symbol->kind == SymbolKind::CoverCross) {
+                // If it's a cross, then we'll add all the targets of the cross.
+                auto& cross = symbol->as<CoverCrossSymbol>();
+                for (auto cp : cross.targets)
+                    targets.push_back(cp);
+                continue;
+            }
         }
-        else if (symbol && symbol->kind == SymbolKind::CoverCross) {
-            // If it's a cross, then we'll add all the targets of the cross.
-            auto& cross = symbol->as<CoverCrossSymbol>();
-            for (auto cp : cross.targets)
-                targets.push_back(cp);
-        }
-        else {
-            // If we didn't find a coverpoint, create one implicitly
-            // that will be initialized with this expression.
-            auto& newPoint = CoverpointSymbol::fromImplicit(scope, *item);
-            targets.push_back(&newPoint);
-            implicitMembers.push_back(&newPoint);
-        }
+
+        // If we didn't find a coverpoint (or this is a hierarchical/dotted name),
+        // create one implicitly that will be initialized with this expression.
+        auto& newPoint = CoverpointSymbol::fromImplicit(scope, *item);
+        targets.push_back(&newPoint);
+        implicitMembers.push_back(&newPoint);
     }
 
     auto& comp = scope.getCompilation();
