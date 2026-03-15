@@ -177,7 +177,7 @@ public:
         // equivalently, a task, nothing will inspect the result, but we only want it to not
         // abort further evaluation for errors / fatals.
         if (taskKind == ElabSystemTaskKind::Info || taskKind == ElabSystemTaskKind::Warning)
-            return ConstantValue::NullPlaceholder{};
+            return NullConstant;
         return nullptr;
     }
 

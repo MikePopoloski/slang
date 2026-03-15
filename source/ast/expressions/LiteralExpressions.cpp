@@ -239,7 +239,7 @@ Expression& NullLiteral::fromSyntax(Compilation& compilation,
 }
 
 ConstantValue NullLiteral::evalImpl(EvalContext&) const {
-    return ConstantValue::NullPlaceholder{};
+    return NullConstant;
 }
 
 Expression& UnboundedLiteral::fromSyntax(const ASTContext& context,

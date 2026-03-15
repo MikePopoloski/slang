@@ -203,7 +203,7 @@ public:
             }
         }
 
-        return nullptr;
+        return NullConstant;
     }
 
 private:
@@ -238,7 +238,7 @@ public:
         else
             std::ranges::reverse(std::get<ConstantValue::Elements>(target->getVariant()));
 
-        return nullptr;
+        return NullConstant;
     }
 };
 
@@ -557,7 +557,7 @@ public:
             return nullptr;
 
         lval.store(args[0]->type->getDefaultValue());
-        return nullptr;
+        return NullConstant;
     }
 };
 
@@ -617,7 +617,7 @@ public:
             // No argument means we should empty the array.
             lval.store(args[0]->type->getDefaultValue());
         }
-        return nullptr;
+        return NullConstant;
     }
 };
 
@@ -810,7 +810,7 @@ public:
             q.push_back(std::move(cv));
 
         q.resizeToBound();
-        return nullptr;
+        return NullConstant;
     }
 
 private:
@@ -865,12 +865,12 @@ public:
         if (!index || *index < 0 || size_t(*index) >= q.size() + 1) {
             context.addDiag(diag::ConstEvalDynamicArrayIndex, args[1]->sourceRange)
                 << ci << *args[0]->type << q.size() + 1;
-            return nullptr;
+            return NullConstant;
         }
 
         q.insert(q.begin() + *index, std::move(cv));
         q.resizeToBound();
-        return nullptr;
+        return NullConstant;
     }
 };
 
@@ -905,7 +905,7 @@ public:
         // If no arguments, clear the queue.
         if (args.size() == 1) {
             q.clear();
-            return nullptr;
+            return NullConstant;
         }
 
         auto ci = args[1]->eval(context);
@@ -913,11 +913,11 @@ public:
         if (!index || *index < 0 || size_t(*index) >= q.size()) {
             context.addDiag(diag::ConstEvalDynamicArrayIndex, args[1]->sourceRange)
                 << ci << *args[0]->type << q.size();
-            return nullptr;
+            return NullConstant;
         }
 
         q.erase(q.begin() + *index);
-        return nullptr;
+        return NullConstant;
     }
 };
 

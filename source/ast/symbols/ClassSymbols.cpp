@@ -143,7 +143,7 @@ ClassType::ClassType(Compilation& compilation, std::string_view name, SourceLoca
 }
 
 ConstantValue ClassType::getDefaultValueImpl() const {
-    return ConstantValue::NullPlaceholder{};
+    return NullConstant;
 }
 
 const ClassPropertySymbol& ClassType::property_iterator::dereference() const {

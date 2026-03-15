@@ -49,11 +49,11 @@ public:
         uint8_t c = charCv.integer().as<uint8_t>().value();
 
         if (c == 0 || index < 0 || size_t(index) >= str.length())
-            return nullptr;
+            return NullConstant;
 
         strCv.addIndex(index, nullptr);
         strCv.store(SVInt(8, c, false));
-        return nullptr;
+        return NullConstant;
     }
 };
 
@@ -230,7 +230,7 @@ public:
             return nullptr;
 
         strCv.store(valCv.integer().toString(base, false));
-        return nullptr;
+        return NullConstant;
     }
 
 private:
@@ -252,7 +252,7 @@ public:
             return nullptr;
 
         strCv.store(std::to_string(valCv.real()));
-        return nullptr;
+        return NullConstant;
     }
 };
 

@@ -1190,11 +1190,11 @@ void UnpackedUnionType::serializeTo(ASTSerializer& serializer) const {
 }
 
 ConstantValue NullType::getDefaultValueImpl() const {
-    return ConstantValue::NullPlaceholder{};
+    return NullConstant;
 }
 
 ConstantValue CHandleType::getDefaultValueImpl() const {
-    return ConstantValue::NullPlaceholder{};
+    return NullConstant;
 }
 
 ConstantValue StringType::getDefaultValueImpl() const {
@@ -1202,7 +1202,7 @@ ConstantValue StringType::getDefaultValueImpl() const {
 }
 
 ConstantValue EventType::getDefaultValueImpl() const {
-    return ConstantValue::NullPlaceholder{};
+    return NullConstant;
 }
 
 const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
@@ -1249,7 +1249,7 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
 }
 
 ConstantValue VirtualInterfaceType::getDefaultValueImpl() const {
-    return ConstantValue::NullPlaceholder{};
+    return NullConstant;
 }
 
 void VirtualInterfaceType::serializeTo(ASTSerializer& serializer) const {

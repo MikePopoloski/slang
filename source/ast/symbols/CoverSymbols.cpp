@@ -399,7 +399,7 @@ const TimingControl* CovergroupType::getCoverageEvent() const {
 }
 
 ConstantValue CovergroupType::getDefaultValueImpl() const {
-    return ConstantValue::NullPlaceholder{};
+    return NullConstant;
 }
 
 void CovergroupType::serializeTo(ASTSerializer& serializer) const {

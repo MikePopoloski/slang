@@ -65,16 +65,16 @@ public:
     using Variant = std::variant<std::monostate, SVInt, real_t, shortreal_t, NullPlaceholder,
                                  Elements, std::string, Map, Queue, Union, UnboundedPlaceholder>;
 
-    ConstantValue() = default;
-    ConstantValue(nullptr_t) {}
+    constexpr ConstantValue() = default;
+    constexpr ConstantValue(nullptr_t) {}
 
     ConstantValue(const SVInt& integer) : value(integer) {}
     ConstantValue(SVInt&& integer) : value(std::move(integer)) {}
     ConstantValue(real_t real) : value(real) {}
     ConstantValue(shortreal_t real) : value(real) {}
 
-    ConstantValue(NullPlaceholder nul) : value(nul) {}
-    ConstantValue(UnboundedPlaceholder unbounded) : value(unbounded) {}
+    constexpr ConstantValue(NullPlaceholder nul) : value(nul) {}
+    constexpr ConstantValue(UnboundedPlaceholder unbounded) : value(unbounded) {}
     ConstantValue(const Elements& elements) : value(elements) {}
     ConstantValue(Elements&& elements) : value(std::move(elements)) {}
     ConstantValue(const std::string& str) : value(str) {}
@@ -95,21 +95,23 @@ public:
     ConstantValue(const SVUnion& unionVal) : value(Union(unionVal)) {}
     ConstantValue(SVUnion&& unionVal) : value(Union(std::move(unionVal))) {}
 
-    bool bad() const { return std::holds_alternative<std::monostate>(value); }
-    explicit operator bool() const { return !bad(); }
+    constexpr bool bad() const { return std::holds_alternative<std::monostate>(value); }
+    constexpr explicit operator bool() const { return !bad(); }
 
-    bool isInteger() const { return std::holds_alternative<SVInt>(value); }
-    bool isReal() const { return std::holds_alternative<real_t>(value); }
-    bool isShortReal() const { return std::holds_alternative<shortreal_t>(value); }
-    bool isNullHandle() const { return std::holds_alternative<NullPlaceholder>(value); }
-    bool isUnbounded() const { return std::holds_alternative<UnboundedPlaceholder>(value); }
-    bool isUnpacked() const { return std::holds_alternative<Elements>(value); }
-    bool isString() const { return std::holds_alternative<std::string>(value); }
-    bool isMap() const { return std::holds_alternative<Map>(value); }
-    bool isQueue() const { return std::holds_alternative<Queue>(value); }
-    bool isUnion() const { return std::holds_alternative<Union>(value); }
+    constexpr bool isInteger() const { return std::holds_alternative<SVInt>(value); }
+    constexpr bool isReal() const { return std::holds_alternative<real_t>(value); }
+    constexpr bool isShortReal() const { return std::holds_alternative<shortreal_t>(value); }
+    constexpr bool isNullHandle() const { return std::holds_alternative<NullPlaceholder>(value); }
+    constexpr bool isUnbounded() const {
+        return std::holds_alternative<UnboundedPlaceholder>(value);
+    }
+    constexpr bool isUnpacked() const { return std::holds_alternative<Elements>(value); }
+    constexpr bool isString() const { return std::holds_alternative<std::string>(value); }
+    constexpr bool isMap() const { return std::holds_alternative<Map>(value); }
+    constexpr bool isQueue() const { return std::holds_alternative<Queue>(value); }
+    constexpr bool isUnion() const { return std::holds_alternative<Union>(value); }
 
-    bool isContainer() const { return isUnpacked() || isQueue() || isMap(); }
+    constexpr bool isContainer() const { return isUnpacked() || isQueue() || isMap(); }
 
     SVInt& integer() & { return std::get<SVInt>(value); }
     const SVInt& integer() const& { return std::get<SVInt>(value); }
@@ -144,8 +146,8 @@ public:
 
     ConstantValue getSlice(int32_t upper, int32_t lower, const ConstantValue& defaultValue) const;
 
-    Variant& getVariant() { return value; }
-    const Variant& getVariant() const { return value; }
+    constexpr Variant& getVariant() { return value; }
+    constexpr const Variant& getVariant() const { return value; }
 
     std::string toString(
         bitwidth_t abbreviateThresholdBits = SVInt::DefaultStringAbbreviationThresholdBits,
@@ -185,6 +187,8 @@ public:
 private:
     Variant value;
 };
+
+static inline constexpr ConstantValue NullConstant{ConstantValue::NullPlaceholder{}};
 
 /// Represents a SystemVerilog associative array, for use during constant evaluation.
 struct SLANG_EXPORT AssociativeArray : public std::map<ConstantValue, ConstantValue> {
