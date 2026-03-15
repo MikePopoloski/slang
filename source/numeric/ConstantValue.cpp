@@ -19,6 +19,7 @@ template<typename T>
 struct always_false : std::false_type {};
 
 const ConstantValue ConstantValue::Invalid;
+const ConstantValue NullConstant{ConstantValue::NullPlaceholder{}};
 
 std::string ConstantValue::toString(bitwidth_t abbreviateThresholdBits, bool exactUnknowns,
                                     bool useAssignmentPatterns) const {
