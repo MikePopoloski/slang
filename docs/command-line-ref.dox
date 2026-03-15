@@ -104,6 +104,13 @@ If errors occur during preprocessing, they will be printed instead of the prepro
 Run the preprocessor on all input files, print out any macros that are discovered, and exit.
 No diagnostics will be printed.
 
+`--group-macros-by-file`
+
+When used together with `--macros-only`, groups the macro output by source file instead of
+printing all macros in a single flat sorted list. Each group is preceded by a comment header
+of the form `//<filename>:` so the originating file is clearly visible. Has no effect when
+used without `--macros-only`.
+
 `--parse-only`
 
 Perform parsing of all input files but don't perform type checking and elaboration.

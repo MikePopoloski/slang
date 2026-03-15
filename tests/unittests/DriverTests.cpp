@@ -236,6 +236,22 @@ __slang__ 1
     CHECK(stdoutContains("__slang_minor__"));
 }
 
+TEST_CASE("Driver report macros grouped by file") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto filePath = findTestDir() + "test.sv";
+    const char* argv[] = {"testfoo", filePath.c_str()};
+    CHECK(driver.parseCommandLine(2, argv));
+    CHECK(driver.processOptions());
+    driver.reportMacros(/* groupByFile */ true);
+
+    // Macros defined in test.sv (ID) should be present.
+    CHECK(stdoutContains("test.sv:\nID(x) x"));
+}
+
 TEST_CASE("Driver includes depfile") {
     for (auto target : {"--depfile-target target"sv, ""sv}) {
         auto guard = OS::captureOutput();
