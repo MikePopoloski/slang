@@ -355,9 +355,11 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                     if (def.definitionKind == DefinitionKind::Module ||
                         def.definitionKind == DefinitionKind::Program) {
                         if (isValidTop(def)) {
-                            // This definition can be automatically instantiated.
+                            // This definition can be automatically instantiated. Break out
+                            // of the inner loop since there may be duplicate definitions
+                            // with the same name; we only want to instantiate one of them.
                             topDefs.push_back({{&def}, {}});
-                            continue;
+                            break;
                         }
                     }
                 }
