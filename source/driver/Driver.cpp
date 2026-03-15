@@ -719,7 +719,7 @@ bool Driver::runPreprocessor(bitmask<PreprocessOutputFlags> flags) {
     return true;
 }
 
-void Driver::reportMacros() {
+void Driver::reportMacros(bool groupByFile) {
     Bag optionBag;
     addParseOptions(optionBag);
 
@@ -737,7 +737,7 @@ void Driver::reportMacros() {
             break;
     }
 
-    for (auto macro : preprocessor.getDefinedMacros()) {
+    auto printMacro = [](const syntax::DefineDirectiveSyntax* macro) {
         SyntaxPrinter printer;
         printer.setIncludeComments(false);
         printer.setIncludeTrivia(false);
@@ -753,6 +753,24 @@ void Driver::reportMacros() {
         printer.print(macro->body);
 
         OS::print(fmt::format("{}\n", printer.str()));
+    };
+
+    if (groupByFile) {
+        std::map<std::string_view, std::vector<const syntax::DefineDirectiveSyntax*>> byFile;
+        for (auto macro : preprocessor.getDefinedMacros()) {
+            auto fileName = sourceManager.getFileName(macro->directive.location());
+            byFile[fileName].push_back(macro);
+        }
+
+        for (auto& [fileName, macros] : byFile) {
+            OS::print(fmt::format("//{}:\n", fileName));
+            for (auto macro : macros)
+                printMacro(macro);
+        }
+    }
+    else {
+        for (auto macro : preprocessor.getDefinedMacros())
+            printMacro(macro);
     }
 }
 
