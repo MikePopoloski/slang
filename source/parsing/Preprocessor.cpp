@@ -137,6 +137,10 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
         auto& frame = pendingMacroFrames.emplace_back();
         frame.index = currentMacroToken - expandedTokens.begin();
         frame.tokens = std::move(expandedTokens);
+        // Record the lexer depth we should return to before restoring this frame.
+        // That is the depth after the new buffer's lexer has been popped, i.e.
+        // lexerStack.size() - 1 (we already pushed the new lexer above).
+        frame.lexerDepth = lexerStack.size() - 1;
 
         currentMacroToken = nullptr;
         expandedTokens.clear();
@@ -176,7 +180,7 @@ bool Preprocessor::popSource() {
 
     lexerStack.pop_back();
 
-    if (!pendingMacroFrames.empty()) {
+    if (!pendingMacroFrames.empty() && lexerStack.size() == pendingMacroFrames.back().lexerDepth) {
         auto& frame = pendingMacroFrames.back();
         expandedTokens = std::move(frame.tokens);
         currentMacroToken = expandedTokens.begin() + frame.index;
