@@ -9,6 +9,7 @@
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/parsing/ParserMetadata.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -805,6 +806,243 @@ end
 `endif
 assign t = 2;
 
+endmodule
+)");
+}
+
+TEST_CASE("Remove token from tree without preserving trivia") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void foo;
+        int x = 1;
+        logic     signed y;
+    endfunction
+endmodule
+)");
+
+    struct Rewriter : public SyntaxRewriter<Rewriter> {
+        void handle(const IntegerTypeSyntax& node) {
+            removeToken(node, 1, false); // remove signing token - don't preserve extra whitespace
+        }
+    };
+
+    tree = Rewriter().transform(tree);
+    CHECK(tree->validate());
+
+    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+module m;
+    function void foo;
+        int x = 1;
+        logic y;
+    endfunction
+endmodule
+)");
+}
+
+TEST_CASE("Remove token from tree with preserving trivia") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void foo;
+        int x = 1;
+        logic     signed y;
+    endfunction
+endmodule
+)");
+
+    struct Rewriter : public SyntaxRewriter<Rewriter> {
+        void handle(const IntegerTypeSyntax& node) { removeToken(node, 1, true); }
+    };
+
+    tree = Rewriter().transform(tree);
+    CHECK(tree->validate());
+
+    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+module m;
+    function void foo;
+        int x = 1;
+        logic     y;
+    endfunction
+endmodule
+)");
+}
+
+TEST_CASE("Remove token from TokenList without preserving trivia") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void foo;
+        static int x = 1;
+        automatic logic y;
+    endfunction
+endmodule
+)");
+
+    struct Rewriter : public SyntaxRewriter<Rewriter> {
+        void handle(const DataDeclarationSyntax& decl) {
+            // Remove the first modifier token (e.g. 'static' or 'automatic').
+            if (!decl.modifiers.empty())
+                removeToken(decl.modifiers, 0, false);
+        }
+    };
+
+    tree = Rewriter().transform(tree);
+    CHECK(tree->validate());
+
+    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+module m;
+    function void foo; int x = 1; logic y;
+    endfunction
+endmodule
+)");
+}
+
+TEST_CASE("Remove token from TokenList while preserving trivia") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void foo;
+        static int x = 1;
+        automatic logic y;
+    endfunction
+endmodule
+)");
+
+    struct Rewriter : public SyntaxRewriter<Rewriter> {
+        void handle(const DataDeclarationSyntax& decl) {
+            // Remove the first modifier token (e.g. 'static' or 'automatic').
+            if (!decl.modifiers.empty())
+                removeToken(decl.modifiers, 0, true);
+        }
+    };
+
+    tree = Rewriter().transform(tree);
+    CHECK(tree->validate());
+
+    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+module m;
+    function void foo;
+        int x = 1;
+        logic y;
+    endfunction
+endmodule
+)");
+}
+
+TEST_CASE("Replace token in tree without preserving trivia") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void foo;
+        logic   x;
+    endfunction
+endmodule
+)");
+
+    struct Rewriter : public SyntaxRewriter<Rewriter> {
+        void handle(const DeclaratorSyntax& node) {
+            // Replace the logic name with "y" and add a space to keep the tree parsable
+            replaceToken(node, 0,
+                         makeToken(TokenKind::Identifier, "y",
+                                   std::span(&this->SingleSpace, size_t(1))),
+                         false);
+        }
+    };
+
+    tree = Rewriter().transform(tree);
+    // Can't check validation here because it will reparse the parent syntax nodes to
+    // SyntaxKind::LogicType
+
+    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+module m;
+    function void foo;
+        logic y;
+    endfunction
+endmodule
+)");
+}
+
+TEST_CASE("Replace token in tree while preserving trivia") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void foo;
+        logic x;
+    endfunction
+endmodule
+)");
+
+    struct Rewriter : public SyntaxRewriter<Rewriter> {
+        void handle(const DeclaratorSyntax& node) {
+            // Replace the logic name with "y"
+            replaceToken(node, 0, makeToken(TokenKind::Identifier, "y"), true);
+        }
+    };
+
+    tree = Rewriter().transform(tree);
+    CHECK(tree->validate());
+
+    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+module m;
+    function void foo;
+        logic y;
+    endfunction
+endmodule
+)");
+}
+
+TEST_CASE("Replace token in TokenList without trivia preservation") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void foo;
+        static int x = 1;
+    endfunction
+endmodule
+)");
+
+    struct Rewriter : public SyntaxRewriter<Rewriter> {
+        void handle(const DataDeclarationSyntax& decl) {
+            // Replace 'static' modifier with 'automatic'.
+            if (!decl.modifiers.empty() && decl.modifiers[0].kind == TokenKind::StaticKeyword) {
+                replaceToken(decl.modifiers, 0, makeToken(TokenKind::AutomaticKeyword, "automatic"),
+                             false);
+            }
+        }
+    };
+
+    tree = Rewriter().transform(tree);
+    CHECK(tree->validate());
+
+    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+module m;
+    function void foo;automatic int x = 1;
+    endfunction
+endmodule
+)");
+}
+
+TEST_CASE("Replace token in TokenList with trivia preservation") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void foo;
+        static int x = 1;
+    endfunction
+endmodule
+)");
+
+    struct Rewriter : public SyntaxRewriter<Rewriter> {
+        void handle(const DataDeclarationSyntax& decl) {
+            // Replace 'static' modifier with 'automatic'.
+            if (!decl.modifiers.empty() && decl.modifiers[0].kind == TokenKind::StaticKeyword) {
+                replaceToken(decl.modifiers, 0, makeToken(TokenKind::AutomaticKeyword, "automatic"),
+                             true);
+            }
+        }
+    };
+
+    tree = Rewriter().transform(tree);
+    CHECK(tree->validate());
+
+    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+module m;
+    function void foo;
+        automatic int x = 1;
+    endfunction
 endmodule
 )");
 }

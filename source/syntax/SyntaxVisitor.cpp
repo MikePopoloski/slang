@@ -7,6 +7,10 @@
 //------------------------------------------------------------------------------
 #include "slang/syntax/SyntaxVisitor.h"
 
+#include <variant>
+
+#include "slang/parsing/Token.h"
+
 namespace {
 
 using namespace slang;
@@ -16,6 +20,7 @@ using namespace slang::syntax::detail;
 struct CloneVisitor {
     BumpAllocator& alloc;
     const ChangeCollection& commits;
+    std::span<const parsing::Trivia> previousTrivia;
 
     CloneVisitor(BumpAllocator& alloc, const ChangeCollection& commits) :
         alloc(alloc), commits(commits) {}
@@ -53,13 +58,54 @@ struct CloneVisitor {
             auto child = node.childNode(i);
             if (!child) {
                 if constexpr (IsList) {
-                    if (!skipSeparator)
-                        listBuffer.push_back(node.childToken(i).deepClone(alloc));
+                    if (auto it = commits.tokenRemoveOrReplace.find(std::make_pair(&node, i));
+                        it != commits.tokenRemoveOrReplace.end()) {
+                        if (auto replaceChange = std::get_if<TokenReplaceChange>(&it->second))
+                            listBuffer.push_back(replaceChange->newToken);
+                        else {
+                            auto* removeChange = std::get_if<TokenRemoveChange>(&it->second);
+                            if (removeChange && removeChange->preserveTrivia) {
+                                this->previousTrivia = node.childToken(i).trivia();
+                            }
+                        }
+                    }
+                    else if (!skipSeparator) {
+                        if (this->previousTrivia.empty()) {
+                            listBuffer.push_back(node.childToken(i).deepClone(alloc));
+                        }
+                        else {
+                            listBuffer.push_back(node.childToken(i).deepClone(alloc).withTrivia(
+                                alloc, this->previousTrivia));
+                            this->previousTrivia = {};
+                        }
+                    }
                     skipSeparator = false;
                 }
                 else {
                     if (node.getChild(i).isToken()) { // check since it might be null node
-                        cloned->setChild(i, node.childToken(i).deepClone(alloc));
+                        if (auto it = commits.tokenRemoveOrReplace.find(std::make_pair(&node, i));
+                            it != commits.tokenRemoveOrReplace.end()) {
+                            if (auto replaceChange = std::get_if<TokenReplaceChange>(&it->second)) {
+                                cloned->setChild(i, replaceChange->newToken);
+                            }
+                            else { // TokenRemoveChange
+                                auto* removeChange = std::get_if<TokenRemoveChange>(&it->second);
+                                if (removeChange && removeChange->preserveTrivia) {
+                                    this->previousTrivia = node.childToken(i).trivia();
+                                }
+                                cloned->setChild(i, parsing::Token());
+                            }
+                        }
+                        else {
+                            if (this->previousTrivia.empty()) {
+                                cloned->setChild(i, node.childToken(i).deepClone(alloc));
+                            }
+                            else {
+                                cloned->setChild(i, node.childToken(i).deepClone(alloc).withTrivia(
+                                                        alloc, this->previousTrivia));
+                                this->previousTrivia = {};
+                            }
+                        }
                     }
                 }
                 continue;
