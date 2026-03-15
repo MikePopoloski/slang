@@ -1899,13 +1899,27 @@ BlockEventExpressionSyntax& Parser::parseBlockEventExpression() {
     return left;
 }
 
+static bool nameHasSelects(const NameSyntax& name) {
+    if (name.kind == SyntaxKind::IdentifierSelectName)
+        return true;
+    if (name.kind == SyntaxKind::ScopedName) {
+        auto& scoped = name.as<ScopedNameSyntax>();
+        return nameHasSelects(*scoped.left) || nameHasSelects(*scoped.right);
+    }
+    return false;
+}
+
 CoverCrossSyntax* Parser::parseCoverCross(AttrList attributes, NamedLabelSyntax* label) {
     auto keyword = expect(TokenKind::CrossKeyword);
 
     SmallVector<TokenOrSyntax, 8> buffer;
     while (true) {
-        auto name = expect(TokenKind::Identifier);
-        buffer.push_back(&factory.identifierName(name));
+        auto& name = parseName();
+        if (nameHasSelects(name))
+            addDiag(diag::CoverCrossSelectNotAllowed, name.sourceRange());
+        else if (name.kind != SyntaxKind::IdentifierName)
+            addDiag(diag::NonstandardHierarchicalCross, name.sourceRange());
+        buffer.push_back(&name);
         if (!peek(TokenKind::Comma))
             break;
 
