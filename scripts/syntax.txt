@@ -1932,7 +1932,7 @@ token semi
 CoverCross base=Member
 NamedLabel? label
 token cross
-separated_list<IdentifierName> items
+separated_list<Name> items
 CoverageIffClause? iff
 token openBrace
 list<Member> members
