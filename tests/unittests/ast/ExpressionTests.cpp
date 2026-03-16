@@ -2482,6 +2482,24 @@ endfunction
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Inside expression without braces") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int x;
+    int arr[3];
+    logic result;
+    assign result = x inside arr;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NonstandardInside);
+}
+
 TEST_CASE("Assignment assertion regress GH #456") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

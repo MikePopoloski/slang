@@ -333,7 +333,22 @@ void Parser::handleExponentSplit(Token token, size_t offset) {
 
 ExpressionSyntax& Parser::parseInsideExpression(ExpressionSyntax& expr) {
     auto inside = expect(TokenKind::InsideKeyword);
-    auto& list = parseRangeList();
+    if (peek(TokenKind::OpenBrace)) {
+        auto& list = parseRangeList();
+        return factory.insideExpression(expr, inside, list);
+    }
+
+    // Non-standard: inside without braces
+    addDiag(diag::NonstandardInside, peek().location());
+    auto& rhs = parseSubExpression(ExpressionOptions::None, 0);
+
+    auto openBrace = Token::createMissing(alloc, TokenKind::OpenBrace,
+                                          rhs.getFirstToken().location());
+    auto closeBrace = Token::createMissing(alloc, TokenKind::CloseBrace,
+                                           rhs.getLastToken().location());
+    SmallVector<TokenOrSyntax, 2> items;
+    items.push_back(&rhs);
+    auto& list = factory.rangeList(openBrace, items.copy(alloc), closeBrace);
     return factory.insideExpression(expr, inside, list);
 }
 
