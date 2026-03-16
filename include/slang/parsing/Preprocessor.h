@@ -16,6 +16,7 @@
 #include "slang/text/SourceLocation.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
+#include "slang/util/Function.h"
 #include "slang/util/SmallMap.h"
 #include "slang/util/SmallVector.h"
 
@@ -63,6 +64,12 @@ struct SLANG_EXPORT PreprocessorOptions {
 
     /// A list of mappings from file patterns to language keyword versions.
     std::vector<std::pair<std::string, KeywordVersion>> keywordMapping;
+
+    /// Optional callback invoked whenever the preprocessor pushes or pops a source
+    /// file (including include files and skipped headers). The arguments are the
+    /// BufferID of the affected file, whether we are returning to a file (isBack),
+    /// and whether the file is being skipped as an already-included header (isSkip).
+    function_ref<void(BufferID, bool, bool)> bufferChangeCB;
 };
 
 /// Metadata about an include directive that was invoked.

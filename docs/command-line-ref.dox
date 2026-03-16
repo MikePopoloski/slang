@@ -111,6 +111,13 @@ printing all macros in a single flat sorted list. Each group is preceded by a co
 of the form `//<filename>:` so the originating file is clearly visible. Has no effect when
 used without `--macros-only`.
 
+`--show-parsed-files`
+
+Print the name and kind of each file as it is parsed. For each file, the output includes
+whether it is a design, library, library map, or include file, and indicates when the preprocessor
+returns to a previously active file after finishing an include. This is useful for tracing which
+files are parsed and in what order.
+
 `--parse-only`
 
 Perform parsing of all input files but don't perform type checking and elaboration.

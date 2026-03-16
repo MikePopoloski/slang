@@ -9,6 +9,7 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/driver/Driver.h"
+#include "slang/text/SourceManager.h"
 
 using namespace slang::driver;
 
@@ -660,6 +661,57 @@ TEST_CASE("Driver load library maps") {
     }
 
     CHECK(driver.sourceLoader.getLibraryMaps().size() == 2);
+}
+
+TEST_CASE("Driver file kind tracking") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo \"{0}test6.sv\" --libmap \"{0}/library/lib.map\" -v "
+                            "\"{0}test5.sv\" \"{0}test6.sv\"",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto& sm = driver.sourceManager;
+    for (auto buf : sm.getAllBuffers()) {
+        if (sm.isMacroLoc(SourceLocation(buf, 0)) || sm.getIncludedFrom(buf))
+            continue;
+
+        auto name = sm.getRawFileName(buf);
+        auto kind = sm.getBufferKind(buf);
+        if (contains(name, ".map"))
+            CHECK(kind == SourceManager::BufferKind::LibraryMap);
+        else if (contains(name, "test5.sv"))
+            CHECK(kind == SourceManager::BufferKind::LibraryFile);
+        else if (contains(name, "test6.sv"))
+            CHECK(kind == SourceManager::BufferKind::DesignFile);
+        else if (contains(name, "macro.svh"))
+            CHECK(kind == SourceManager::BufferKind::IncludeFile);
+    }
+}
+
+TEST_CASE("Driver show parsed files output") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format(
+        "testfoo \"{0}test5.sv\" \"{0}test6.sv\" --single-unit --show-parsed-files", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    CHECK(stdoutContains("Parsing design file"));
+    CHECK(stdoutContains("test5.sv"));
+    CHECK(stdoutContains("test6.sv"));
+    CHECK(stdoutContains("macro.svh"));
 }
 
 TEST_CASE("Driver library map in compilation") {

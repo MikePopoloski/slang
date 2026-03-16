@@ -118,6 +118,9 @@ public:
     /// Returns the library with which the lexer's source buffer is associated.
     const SourceLibrary* getLibrary() const { return library; }
 
+    /// Returns the BufferID of the source buffer being lexed.
+    BufferID getBufferId() const { return bufferId; }
+
     /// Concatenates two tokens together. This may result in more than one output token
     /// if the right hand token being concatenated ends up splitting and being re-lexed.
     /// Returns true if the concatenation succeeded and false otherwise.
