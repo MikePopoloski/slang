@@ -238,8 +238,13 @@ protected:
                       bool preserveTrivia = false) {
         if (preserveTrivia) {
             if (auto oldTok = node.childToken(index)) {
-                if (!oldTok.trivia().empty())
-                    newToken = newToken.withTrivia(alloc, oldTok.trivia());
+                if (!oldTok.trivia().empty()) {
+                    SmallVector<parsing::Trivia, 8> triviaBuffer(oldTok.trivia().size(),
+                                                                 UninitializedTag());
+                    for (const auto& t : oldTok.trivia())
+                        triviaBuffer.push_back(t.clone(alloc, true));
+                    newToken = newToken.withTrivia(alloc, triviaBuffer.copy(alloc));
+                }
             }
         }
 

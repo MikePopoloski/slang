@@ -25,6 +25,16 @@ struct CloneVisitor {
     CloneVisitor(BumpAllocator& alloc, const ChangeCollection& commits) :
         alloc(alloc), commits(commits) {}
 
+    std::span<const parsing::Trivia> copyTrivia(std::span<const parsing::Trivia> trivia) {
+        if (trivia.empty())
+            return {};
+
+        SmallVector<parsing::Trivia, 8> triviaBuffer(trivia.size(), UninitializedTag());
+        for (const auto& t : trivia)
+            triviaBuffer.push_back(t.clone(alloc, true));
+        return triviaBuffer.copy(alloc);
+    }
+
 #ifdef _MSC_VER
 #    pragma warning(push)
 #    pragma warning(disable : 4127) // conditional expression is constant
@@ -65,7 +75,7 @@ struct CloneVisitor {
                         else {
                             auto* removeChange = std::get_if<TokenRemoveChange>(&it->second);
                             if (removeChange && removeChange->preserveTrivia) {
-                                this->previousTrivia = node.childToken(i).trivia();
+                                this->previousTrivia = copyTrivia(node.childToken(i).trivia());
                             }
                         }
                     }
@@ -91,7 +101,7 @@ struct CloneVisitor {
                             else { // TokenRemoveChange
                                 auto* removeChange = std::get_if<TokenRemoveChange>(&it->second);
                                 if (removeChange && removeChange->preserveTrivia) {
-                                    this->previousTrivia = node.childToken(i).trivia();
+                                    this->previousTrivia = copyTrivia(node.childToken(i).trivia());
                                 }
                                 cloned->setChild(i, parsing::Token());
                             }
