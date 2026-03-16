@@ -1367,10 +1367,14 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass, bool hasBaseClass) {
 
             errorIfIface(decl);
         }
-        else if (decl.kind == SyntaxKind::PackageImportDeclaration ||
-                 decl.kind == SyntaxKind::NetTypeDeclaration ||
+        else if (decl.kind == SyntaxKind::PackageImportDeclaration) {
+            // Package imports are not allowed in classes per the LRM but are supported
+            // by some tools (e.g. VCS); emit a separate downgradable diagnostic.
+            addDiag(diag::PackageImportInClass, decl.sourceRange());
+        }
+        else if (decl.kind == SyntaxKind::NetTypeDeclaration ||
                  decl.kind == SyntaxKind::LetDeclaration) {
-            // Nettypes and package imports are disallowed in classes.
+            // Nettypes and let declarations are disallowed in classes.
             addDiag(diag::NotAllowedInClass, decl.sourceRange());
         }
         else {
@@ -1899,13 +1903,27 @@ BlockEventExpressionSyntax& Parser::parseBlockEventExpression() {
     return left;
 }
 
+static bool nameHasSelects(const NameSyntax& name) {
+    if (name.kind == SyntaxKind::IdentifierSelectName)
+        return true;
+    if (name.kind == SyntaxKind::ScopedName) {
+        auto& scoped = name.as<ScopedNameSyntax>();
+        return nameHasSelects(*scoped.left) || nameHasSelects(*scoped.right);
+    }
+    return false;
+}
+
 CoverCrossSyntax* Parser::parseCoverCross(AttrList attributes, NamedLabelSyntax* label) {
     auto keyword = expect(TokenKind::CrossKeyword);
 
     SmallVector<TokenOrSyntax, 8> buffer;
     while (true) {
-        auto name = expect(TokenKind::Identifier);
-        buffer.push_back(&factory.identifierName(name));
+        auto& name = parseName();
+        if (nameHasSelects(name))
+            addDiag(diag::CoverCrossSelectNotAllowed, name.sourceRange());
+        else if (name.kind != SyntaxKind::IdentifierName)
+            addDiag(diag::NonstandardHierarchicalCross, name.sourceRange());
+        buffer.push_back(&name);
         if (!peek(TokenKind::Comma))
             break;
 

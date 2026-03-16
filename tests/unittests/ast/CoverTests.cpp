@@ -823,3 +823,35 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Cover cross with dotted member access") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+
+struct packed {
+    logic [1:0] mpp;
+    logic [1:0] mode;
+} status;
+
+logic [3:0] a, b;
+
+covergroup cg @(posedge status.mpp[0]);
+    cross status.mpp, status.mode;
+    cross a[1:0], b[1:0];
+endgroup
+
+cg cg_inst = new;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::NonstandardHierarchicalCross);
+    CHECK(diags[1].code == diag::NonstandardHierarchicalCross);
+    CHECK(diags[2].code == diag::CoverCrossSelectNotAllowed);
+    CHECK(diags[3].code == diag::CoverCrossSelectNotAllowed);
+}

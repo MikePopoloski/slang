@@ -250,6 +250,7 @@ error RandJoinNotEnough "rand join list must contain at least two productions"
 error InvalidDistExpression "cannot use a 'dist' expression in this context"
 error InvalidForInitializer "for loop initializer must be an assignment expression"
 error CoverCrossItems "cover cross declaration requires at least two coverage items"
+error CoverCrossSelectNotAllowed "element selects are not allowed in implicit coverpoints; extract expression to a coverpoint"
 error InvalidCoverageOption "invalid coverage option assignment"
 error CoverageBinDefaultWildcard "default coverage bins cannot be marked 'wildcard'"
 error CoverageBinDefSeqSize "default sequence bin cannot be declared as an array"
@@ -308,6 +309,7 @@ warning dpi-pure-task DPIPureTask "DPI tasks cannot be marked 'pure'"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
+warning non-standard-hierarchical-cross NonstandardHierarchicalCross "non-standard hierarchical reference in cover cross item"
 warning lifetime-prototype LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
 warning nonstandard-dist NonstandardDist "use of parentheses around 'dist' expression is non-standard"
 warning empty-body EmptyBody "{} has empty body (put the semicolon on a separate line to silence this warning)"
@@ -320,6 +322,7 @@ warning nested-solve-before SolveBeforeDisallowed "constraint ordering directive
 warning misplaced-trailing-separator MisplacedTrailingSeparator "misplaced trailing '{}'"
 warning qualifiers-on-out-of-block QualifiersOnOutOfBlock "qualifiers are not allowed on out-of-block method definitions"
 warning initializer-required InitializerRequired "initializer expression required"
+warning package-import-in-class PackageImportInClass "package import not allowed in class declaration"
 note NoteToMatchThis "to match this '{}'"
 note NoteLastBlockStarted "last complete block started here"
 note NoteLastBlockEnded "and ended here"
@@ -1284,7 +1287,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   nonstandard-string-concat nested-comment multi-write read-write mixed-var-assigns
                   multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
-                  initializer-required }
+                  initializer-required package-import-in-class }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

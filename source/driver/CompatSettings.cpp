@@ -88,6 +88,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::DuplicateDefinition,
                  diag::BadProceduralForce,
                  diag::UnknownSystemName,
+                 diag::NonstandardHierarchicalCross,
                  diag::NonstandardStringConcat,
                  diag::MixedVarAssigns,
                  diag::MultipleContAssigns,
@@ -128,6 +129,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::DynamicNotProcedural,
                  diag::QualifiersOnOutOfBlock,
                  diag::MemberImplNotFound,
+                 diag::PackageImportInClass,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }

@@ -2999,6 +2999,89 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Preprocessor: Include inside macro with nested include in included file") {
+    // Regression test: when a macro body contains `include "X", and X itself
+    // contains another `include "Y", the paused macro expansion must not resume
+    // until X is fully processed — not when Y (a nested include inside X) finishes.
+    //
+    // Buggy behaviour: the macro remainder ("module test; ...") was inserted into
+    // the token stream as soon as Y finished, before X's closing tokens
+    // ("endfunction / endclass / endpackage") were emitted.
+    getSourceManager().assignText("macro_nested_body.svh", R"(
+`ifndef _macro_nested_body_svh
+`define _macro_nested_body_svh
+
+`endif
+)");
+
+    getSourceManager().assignText("macro_nested_pkg.sv", R"(
+`ifndef _macro_nested_pkg_sv
+`define _macro_nested_pkg_sv
+
+package pkg;
+    timeunit 1ps; timeprecision 1ps;
+    class c;
+        virtual function void f1();
+            `include "macro_nested_body.svh"
+        endfunction
+    endclass
+endpackage
+
+`endif
+)");
+
+    getSourceManager().assignText("macro_nested_defines.svh", R"(
+`ifndef _macro_nested_defines_svh
+`define _macro_nested_defines_svh
+
+`define TEST_HEADER(TEST_NAME) \
+`include "macro_nested_pkg.sv" \
+module TEST_NAME; \
+timeunit 1ps; timeprecision 1ps; \
+    class mytest;
+
+`endif
+)");
+
+    auto& text = R"(
+`include "macro_nested_defines.svh"
+`TEST_HEADER(mytest)
+        virtual task test_body();
+        endtask
+    endclass
+endmodule
+)";
+
+    auto& expected = R"(
+package pkg;
+    timeunit 1ps; timeprecision 1ps;
+    class c;
+        virtual function void f1();
+
+        endfunction
+    endclass
+endpackage
+
+module mytest;
+timeunit 1ps; timeprecision 1ps;
+    class mytest;
+        virtual task test_body();
+        endtask
+    endclass
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    result.erase(std::remove(result.begin(), result.end(), '\r'), result.end());
+    CHECK(result == expected);
+
+    // The design should also compile cleanly.
+    auto tree = SyntaxTree::fromText(text, getSourceManager());
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Preprocessor: non-trivial restore of begin_keywords vs mapped option") {
     getSourceManager().assignText("inc2.svh", R"(
 config cfg;
