@@ -167,7 +167,7 @@ endfunction
     CHECK(diags[11].code == diag::InvalidMethodQualifier);
     CHECK(diags[12].code == diag::MethodStaticLifetime);
     CHECK(diags[13].code == diag::InvalidQualifierForMember);
-    CHECK(diags[14].code == diag::NotAllowedInClass);
+    CHECK(diags[14].code == diag::PackageImportInClass);
     CHECK(diags[15].code == diag::InvalidQualifierForConstructor);
     CHECK(diags[16].code == diag::InvalidQualifierForConstructor);
     CHECK(diags[17].code == diag::QualifiersOnOutOfBlock);
@@ -3874,4 +3874,29 @@ endpackage
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Package import inside class") {
+    auto tree = SyntaxTree::fromText(R"(
+package p1;
+  bit b;
+endpackage
+
+package p2;
+  class c;
+    import p1::*;
+    int i;
+    function void f;
+      i = b ? 1 : 0;
+    endfunction
+  endclass
+endpackage
+)");
+
+    // Package imports in classes are non-standard but allowed with a warning.
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::PackageImportInClass);
 }

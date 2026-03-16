@@ -1763,6 +1763,19 @@ module m;
 endmodule
 ```
 
+-Wpackage-import-in-class
+A package import declaration was found inside a class body. This is not allowed by the SystemVerilog
+LRM but is supported by some tools. In VCS compatibility mode this is a warning; otherwise it is an
+error that can be downgraded to a warning.
+```
+package p;
+  int x;
+endpackage
+class c;
+  import p::*;
+endclass
+```
+
 -Wmember-impl-not-found
 A class has the declaration for a member method, but the implementation of that member method is not
 found either in the class or as an out of body definition.

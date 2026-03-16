@@ -320,6 +320,7 @@ warning nested-solve-before SolveBeforeDisallowed "constraint ordering directive
 warning misplaced-trailing-separator MisplacedTrailingSeparator "misplaced trailing '{}'"
 warning qualifiers-on-out-of-block QualifiersOnOutOfBlock "qualifiers are not allowed on out-of-block method definitions"
 warning initializer-required InitializerRequired "initializer expression required"
+warning package-import-in-class PackageImportInClass "package import not allowed in class declaration"
 note NoteToMatchThis "to match this '{}'"
 note NoteLastBlockStarted "last complete block started here"
 note NoteLastBlockEnded "and ended here"
@@ -1284,7 +1285,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   nonstandard-string-concat nested-comment multi-write read-write mixed-var-assigns
                   multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
-                  initializer-required }
+                  initializer-required package-import-in-class }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

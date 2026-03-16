@@ -1367,10 +1367,14 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass, bool hasBaseClass) {
 
             errorIfIface(decl);
         }
-        else if (decl.kind == SyntaxKind::PackageImportDeclaration ||
-                 decl.kind == SyntaxKind::NetTypeDeclaration ||
+        else if (decl.kind == SyntaxKind::PackageImportDeclaration) {
+            // Package imports are not allowed in classes per the LRM but are supported
+            // by some tools (e.g. VCS); emit a separate downgradable diagnostic.
+            addDiag(diag::PackageImportInClass, decl.sourceRange());
+        }
+        else if (decl.kind == SyntaxKind::NetTypeDeclaration ||
                  decl.kind == SyntaxKind::LetDeclaration) {
-            // Nettypes and package imports are disallowed in classes.
+            // Nettypes and let declarations are disallowed in classes.
             addDiag(diag::NotAllowedInClass, decl.sourceRange());
         }
         else {

@@ -128,6 +128,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::DynamicNotProcedural,
                  diag::QualifiersOnOutOfBlock,
                  diag::MemberImplNotFound,
+                 diag::PackageImportInClass,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }
