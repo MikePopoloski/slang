@@ -95,7 +95,7 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
             return parseDisableStatement(label, attributes);
         case TokenKind::BeginKeyword:
             return parseBlock(SyntaxKind::SequentialBlockStatement, TokenKind::EndKeyword, label,
-                              attributes);
+                              attributes, allowSuperNew);
         case TokenKind::ForkKeyword:
             return parseBlock(SyntaxKind::ParallelBlockStatement, TokenKind::JoinKeyword, label,
                               attributes);
@@ -734,12 +734,13 @@ std::span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bo
 }
 
 BlockStatementSyntax& Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind,
-                                         NamedLabelSyntax* label, AttrList attributes) {
+                                         NamedLabelSyntax* label, AttrList attributes,
+                                         bool inConstructor) {
     auto begin = consume();
     auto name = parseNamedBlockClause();
 
     Token end;
-    auto items = parseBlockItems(endKind, end, /* inConstructor */ false);
+    auto items = parseBlockItems(endKind, end, inConstructor);
     auto endName = parseNamedBlockClause();
 
     checkBlockNames(name, endName, label);
