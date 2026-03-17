@@ -159,6 +159,9 @@ public:
     /// Gets the allocator used by the preprocessor.
     BumpAllocator& getAllocator() const { return alloc; }
 
+    /// Gets the lexer options in effect.
+    const LexerOptions& getLexerOptions() const { return lexerOptions; }
+
     /// Gets the diagnostic bag passed to the Preprocessor's constructor.
     Diagnostics& getDiagnostics() const { return diagnostics; }
 

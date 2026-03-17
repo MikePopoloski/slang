@@ -81,6 +81,10 @@ struct SLANG_EXPORT LexerOptions {
     /// If true, the preprocessor will allow trailing spaces after the continuation character
     /// in macro definitions.
     bool allowMacroTrailingSpace = false;
+
+    /// A list of keywords that will be treated as plain identifiers, allowing them to be
+    /// used as variable or port names for compatibility with legacy code.
+    std::vector<std::string> keywordsAsIdentifiers;
 };
 
 /// Possible encodings for encrypted text used in a pragma protect region.

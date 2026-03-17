@@ -104,6 +104,11 @@ void Driver::addStandardArgs() {
     cmdLine.add("--allow-macro-trailing-space", options.allowMacroTrailingSpace,
                 "If true, the preprocessor will allow trailing whitespaces after the continuation "
                 "character in a macro definition");
+    cmdLine.add("--allow-keyword-as-identifier", options.allowKeywordsAsIdentifiers,
+                "Treat the named keyword as a plain identifier for compatibility with legacy code. "
+                "May be specified multiple times or as a comma-separated list (e.g. "
+                "'context,config'). Only supports context and config currently.",
+                "<keyword>", CommandLineFlags::CommaList);
 
     // Legacy vendor commands support
     cmdLine.add(
@@ -990,6 +995,7 @@ void Driver::addParseOptions(Bag& bag) const {
 
     loptions.allowMacroTrailingSpace = options.allowMacroTrailingSpace.value_or(options.compat ==
                                                                                 CompatMode::Vcs);
+    loptions.keywordsAsIdentifiers = options.allowKeywordsAsIdentifiers;
 
     for (auto& [common, start, end] : translateOffFormats)
         loptions.commentHandlers[common][start] = {CommentHandler::TranslateOff, end};

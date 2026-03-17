@@ -161,6 +161,20 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
 
 MemberSyntax* Parser::parseMemberImpl(AttrList attributes, SyntaxKind parentKind,
                                       bool& anyLocalModules) {
+    // If 'config' is being lexed as an identifier via --allow-keyword-as-identifier,
+    // a config block at member level must be recognised before the hierarchy-instantiation
+    // heuristic fires, because "config cfg;" is indistinguishable from a type instantiation
+    // when 'config' is an ordinary identifier.  Only do this when keywordsAsIdentifiers
+    // actually contains "config"; when config is non-keyword due to a keyword-version mapping
+    // (e.g. 1364-2001-noconfig) we must NOT intercept here — let isHierarchyInstantiation
+    // handle it as a normal instantiation so that exactly one diagnostic is produced.
+    if (peek().kind == TokenKind::Identifier && peek().rawText() == "config" &&
+        peek(1).kind == TokenKind::Identifier) {
+        auto& kwList = getPP().getLexerOptions().keywordsAsIdentifiers;
+        if (std::find(kwList.begin(), kwList.end(), "config") != kwList.end())
+            return &parseConfigDeclaration(attributes);
+    }
+
     if (isHierarchyInstantiation(/* requireName */ false))
         return &parseHierarchyInstantiation(attributes);
     if (isPortDeclaration(/* inStatement */ false))
@@ -226,6 +240,10 @@ MemberSyntax* Parser::parseMemberImpl(AttrList attributes, SyntaxKind parentKind
             errorIfAttributes(attributes);
             return &parseSpecifyBlock(attributes);
         case TokenKind::Identifier: {
+            if (token.rawText() == "config") {
+                errorIfAttributes(attributes);
+                return &parseConfigDeclaration(attributes);
+            }
             if (peek(1).kind == TokenKind::Colon) {
                 // Declarations and instantiations have already been handled, so if we reach this
                 // point we either have a labeled assertion, or this is some kind of error.
@@ -2452,6 +2470,8 @@ DPIImportSyntax& Parser::parseDPIImport(AttrList attributes) {
     Token property;
     if (peek(TokenKind::ContextKeyword) || peek(TokenKind::PureKeyword))
         property = consume();
+    else if (peek(TokenKind::Identifier) && peek().rawText() == "context")
+        property = consume();
 
     Token c_identifier, equals;
     if (peek(TokenKind::Identifier)) {
@@ -3791,7 +3811,10 @@ ConfigUseClauseSyntax& Parser::parseConfigUseClause() {
     Token colon, config;
     if (peek(TokenKind::Colon)) {
         colon = consume();
-        config = expect(TokenKind::ConfigKeyword);
+        if (peek(TokenKind::Identifier) && peek().rawText() == "config")
+            config = consume();
+        else
+            config = expect(TokenKind::ConfigKeyword);
 
         if (!name && !config.isMissing())
             addDiag(diag::ConfigMissingName, config.range());
@@ -3924,6 +3947,10 @@ MemberSyntax* Parser::parseLibraryMember() {
     switch (token.kind) {
         case TokenKind::ConfigKeyword:
             return &parseConfigDeclaration({});
+        case TokenKind::Identifier:
+            if (token.rawText() == "config")
+                return &parseConfigDeclaration({});
+            return nullptr;
         case TokenKind::Semicolon:
             return &factory.emptyMember(nullptr, nullptr, consume());
         case TokenKind::IncludeKeyword: {

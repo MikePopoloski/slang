@@ -610,8 +610,14 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
             // might be a keyword
             auto table = LF::getKeywordTable(keywordVersion);
             SLANG_ASSERT(table);
-            if (auto it = table->find(lexeme()); it != table->end())
-                return create(it->second);
+            if (auto it = table->find(lexeme()); it != table->end()) {
+                auto kind = it->second;
+                for (const auto& kw : options.keywordsAsIdentifiers) {
+                    if (kw == lexeme())
+                        return create(TokenKind::Identifier);
+                }
+                return create(kind);
+            }
 
             return create(TokenKind::Identifier);
         }

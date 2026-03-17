@@ -171,6 +171,9 @@ public:
         /// in macro definitions.
         std::optional<bool> allowMacroTrailingSpace;
 
+        /// A list of keywords to treat as plain identifiers for compatibility with legacy code.
+        std::vector<std::string> allowKeywordsAsIdentifiers;
+
         /// @}
         /// @name Parsing
         /// @{

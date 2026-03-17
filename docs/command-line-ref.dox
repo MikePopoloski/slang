@@ -187,6 +187,12 @@ If true, the preprocessor will allow trailing whitespaces after the continuation
 in a macro definition. The trailing whitespaces are only allowed after the first line of the
 macro definition.
 
+`--allow-keyword-as-identifier`
+
+If true, treat the named keyword as a plain identifier for compatibility with legacy code.
+May be specified multiple times or as a comma-separated list (e.g. 'context,config').
+Only supports context and config currently.
+
 `--translate-off-format <common>,<start>,<end>`
 
 Specify the format of a "translate off" directive in a comment that denotes a span

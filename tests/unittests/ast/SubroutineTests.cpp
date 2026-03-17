@@ -4,6 +4,7 @@
 #include "Test.h"
 
 #include "slang/ast/statements/LoopStatements.h"
+#include "slang/parsing/Lexer.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -692,4 +693,72 @@ function,(*;*)output
 
     // Just check no crash.
     compilation.getAllDiagnostics();
+}
+
+TEST_CASE("keyword used as identifier -- default (not allowed)") {
+    // By default, reserved keywords cannot be used as identifiers.
+    for (auto* src : {"module m;\n    logic context;\nendmodule\n",
+                      "module m;\n    logic config;\nendmodule\n"}) {
+        diagnostics.clear();
+        auto tree = SyntaxTree::fromText(src);
+
+        Compilation compilation;
+        compilation.addSyntaxTree(tree);
+
+        auto& diags = compilation.getAllDiagnostics();
+        CHECK(!diags.empty());
+    }
+}
+
+TEST_CASE("keyword used as identifier -- option enabled") {
+    // With keywords listed in keywordsAsIdentifiers they are treated as plain
+    // identifiers and can be used as variable or task names.
+    LexerOptions lo;
+    lo.keywordsAsIdentifiers = {"context", "config"};
+
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic context;
+    initial context = 1'b1;
+endmodule
+
+module n;
+    bit [1:0] config;
+    initial config = 2'b0;
+endmodule
+
+module bot;
+    task config;
+    endtask : config
+endmodule
+
+config cfg;
+    design m;
+endconfig
+)", Bag{lo});
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("DPI import with context keyword -- option enabled") {
+    LexerOptions lo;
+    lo.keywordsAsIdentifiers = {"context"};
+
+    // Even with the option on, 'context' in a DPI import position should still work.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    import "DPI-C" context function void f();
+endmodule
+)", Bag{lo});
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    // Verify the DPIContext flag was set.
+    auto& sym = compilation.getRoot().lookupName<InstanceSymbol>("m")
+                    .body.lookupName<SubroutineSymbol>("f");
+    CHECK(sym.flags.has(MethodFlags::DPIContext));
 }

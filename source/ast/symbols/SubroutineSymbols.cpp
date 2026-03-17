@@ -294,6 +294,12 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
         case TokenKind::ContextKeyword:
             result->flags |= MethodFlags::DPIContext;
             break;
+        case TokenKind::Identifier:
+            // 'context' may be lexed as an identifier when
+            // allowContextKeywordAsIdentifier is enabled.
+            if (syntax.property.valueText() == "context")
+                result->flags |= MethodFlags::DPIContext;
+            break;
         default:
             break;
     }
