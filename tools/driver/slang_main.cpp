@@ -61,23 +61,46 @@ void printASTJson(Compilation& compilation, const std::string& fileName,
 
 void printCSTJson(Driver& driver, const std::string& fileName,
                   CSTJsonMode mode = CSTJsonMode::Full) {
-    JsonWriter writer;
-    writer.setPrettyPrint(true);
+    // Stream output directly to the destination instead of accumulating the
+    // entire JSON tree in memory first.  Each syntax tree is serialized into
+    // its own temporary JsonWriter buffer, written out immediately, and then
+    // discarded, keeping memory proportional to the largest single tree.
 
-    CSTSerializer converter(writer, mode);
+    std::ofstream fileStream;
+    std::function<void(std::string_view)> write;
 
-    writer.startObject();
-    writer.writeProperty("syntaxTrees");
-    writer.startArray();
+    if (fileName == "-") {
+        write = [](std::string_view s) { OS::print(s); };
+    }
+    else {
+        fileStream.open(fileName);
+        fileStream.exceptions(std::ios::failbit | std::ios::badbit);
+        write = [&fileStream](std::string_view s) {
+            fileStream.write(s.data(), (std::streamsize)s.size());
+        };
+    }
 
-    for (auto& tree : driver.syntaxTrees)
+    // Write the outer envelope header.
+    write("{\n  \"syntaxTrees\": [");
+
+    // Serialize each tree into a fresh writer and flush it immediately.
+    // setInitialIndent(4) makes each tree object open at the 4-space level
+    // so its contents are indented at 6 spaces, matching the original output.
+    bool first = true;
+    for (auto& tree : driver.syntaxTrees) {
+        JsonWriter treeWriter;
+        treeWriter.setPrettyPrint(true);
+        treeWriter.setInitialIndent(4);
+
+        CSTSerializer converter(treeWriter, mode);
         converter.serialize(*tree);
 
-    writer.endArray();
-    writer.endObject();
+        write(first ? "\n    " : ",\n    ");
+        first = false;
+        write(treeWriter.view());
+    }
 
-    writer.writeNewLine();
-    OS::writeFile(fileName, writer.view());
+    write("\n  ]\n}\n");
 }
 
 template<typename TArgs>
