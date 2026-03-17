@@ -34,6 +34,11 @@ public:
     /// and indentation are added to make the output more human friendly.
     void setPrettyPrint(bool enabled) { pretty = enabled; }
 
+    /// Sets the initial indentation level (in spaces, not levels).
+    /// Use this when the writer is being used for a sub-tree that will be
+    /// embedded inside an already-indented context.
+    void setInitialIndent(int indent) { currentIndent = indent; }
+
     /// @return a view of the emitted JSON text so far.
     /// @note the returned view is not guaranteed to remain valid once
     /// additional writes are performed.
