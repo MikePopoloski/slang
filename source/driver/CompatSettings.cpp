@@ -90,6 +90,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::UnknownSystemName,
                  diag::NonstandardHierarchicalCross,
                  diag::NonstandardStringConcat,
+                 diag::NonstandardInside,
                  diag::MixedVarAssigns,
                  diag::MultipleContAssigns,
                  diag::MultipleAlwaysAssigns,
