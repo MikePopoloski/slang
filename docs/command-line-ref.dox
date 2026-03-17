@@ -615,6 +615,12 @@ Allow interface instances that are bind/defparam targets to be assigned to virtu
 SystemVerilog doesn't permit this, but some tools allow it anyway so this flag can be used
 for compatibility purposes.
 
+`--allow-bare-associative-pattern`
+
+Allow associative array literals to be written without the apostrophe prefix, i.e. as
+`{key:value, ...}` instead of the LRM-required `'{key:value, ...}`. A warning is always
+emitted when this non-standard syntax is encountered. This option is implied by `--compat vcs`.
+
 `--cmd-ignore <vendor_cmd>,<N>`
 
 Define rule to ignore vendor command &lt;vendor_cmd> with its following &lt;N> parameters.

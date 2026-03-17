@@ -2159,6 +2159,22 @@ module m;
 endmodule
 ```
 
+-Wnonstandard-bare-assoc-pattern
+The LRM (section 7.9.11) requires associative array literals to use the apostrophe prefix:
+'{"key":value, ...}. Section 10.10.2 prohibits assignment patterns as elements of unpacked
+array concatenations. Some tools accept both non-standard forms without the apostrophe.
+```
+module m;
+   string s[][int];
+   function f();
+       s = {
+          {0: "sv1", 1: "sv2"},
+          {1: "sv2",  2: "sv4"}
+       };
+   endfunction
+endmodule
+```
+
 @category Unused Items
 
 -Wunused-def

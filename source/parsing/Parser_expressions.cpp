@@ -251,6 +251,8 @@ ExpressionSyntax& Parser::parsePrimaryExpression(bitmask<ExpressionOptions> opti
                     return parseStreamConcatenation(openBrace);
                 default: {
                     auto& first = parseExpression();
+                    if (peek(TokenKind::Colon))
+                        return parseAssignmentPatternFromBrace(openBrace, &first, nullptr);
                     if (!peek(TokenKind::OpenBrace))
                         return parseConcatenation(openBrace, &first);
                     else {
@@ -533,6 +535,32 @@ AssignmentPatternItemSyntax& Parser::parseAssignmentPatternItem(ExpressionSyntax
 
     auto colon = expect(TokenKind::Colon);
     return factory.assignmentPatternItem(*key, colon, parseExpression());
+}
+
+// Parse a structured assignment pattern whose opening brace has already been consumed as a plain
+// '{' token (no apostrophe).  The LRM requires the '{ prefix; this non-standard form is accepted
+// by some tools (e.g. VCS).  A diagnostic is always emitted; its severity is controlled by the
+// AllowBareAssociativePattern compilation flag / --compat vcs.
+AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternFromBrace(
+    Token openBrace, ExpressionSyntax* firstExpr, DataTypeSyntax* type) {
+    addDiag(diag::BareAssociativePattern, openBrace.location());
+
+    SmallVector<TokenOrSyntax, 8> buffer;
+    Token closeBrace;
+
+    buffer.push_back(&parseAssignmentPatternItem(firstExpr));
+    if (peek(TokenKind::Comma)) {
+        buffer.push_back(consume());
+        parseList<isPossibleExpressionOrCommaOrDefault, isEndOfBracedList>(
+            buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::False,
+            diag::ExpectedAssignmentKey, [this] { return &parseAssignmentPatternItem(nullptr); });
+    }
+    else {
+        closeBrace = expect(TokenKind::CloseBrace);
+    }
+
+    auto& pattern = factory.structuredAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
+    return factory.assignmentPatternExpression(type, pattern);
 }
 
 ElementSelectSyntax& Parser::parseElementSelect() {
