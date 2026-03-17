@@ -4,7 +4,6 @@
 #include "Test.h"
 
 #include "slang/ast/statements/LoopStatements.h"
-#include "slang/parsing/Lexer.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -12,6 +11,7 @@
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
+#include "slang/parsing/Lexer.h"
 
 TEST_CASE("Functions -- mixed param types") {
     auto tree = SyntaxTree::fromText(R"(
@@ -735,7 +735,8 @@ endmodule
 config cfg;
     design m;
 endconfig
-)", Bag{lo});
+)",
+                                     Bag{lo});
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -751,14 +752,16 @@ TEST_CASE("DPI import with context keyword -- option enabled") {
 module m;
     import "DPI-C" context function void f();
 endmodule
-)", Bag{lo});
+)",
+                                     Bag{lo});
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
     // Verify the DPIContext flag was set.
-    auto& sym = compilation.getRoot().lookupName<InstanceSymbol>("m")
-                    .body.lookupName<SubroutineSymbol>("f");
+    auto& sym =
+        compilation.getRoot().lookupName<InstanceSymbol>("m").body.lookupName<SubroutineSymbol>(
+            "f");
     CHECK(sym.flags.has(MethodFlags::DPIContext));
 }
