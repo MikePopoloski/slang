@@ -100,9 +100,12 @@ int driverMain(int argc, TArgs argv) {
         std::optional<bool> onlyParse;
         std::optional<bool> onlyMacros;
         std::optional<bool> disableAnalysis;
+        std::optional<bool> groupMacrosByFile;
         driver.cmdLine.add("-E,--preprocess", onlyPreprocess,
                            "Only run the preprocessor (and print preprocessed files to stdout)");
         driver.cmdLine.add("--macros-only", onlyMacros, "Print a list of found macros and exit");
+        driver.cmdLine.add("--group-macros-by-file", groupMacrosByFile,
+                           "Group macro output by source file (used with --macros-only)");
         driver.cmdLine.add(
             "--parse-only", onlyParse,
             "Stop after parsing input files, don't perform elaboration or type checking");
@@ -214,7 +217,7 @@ int driverMain(int argc, TArgs argv) {
             }
 
             if (onlyMacros == true) {
-                driver.reportMacros();
+                driver.reportMacros(groupMacrosByFile == true);
                 return true;
             }
 

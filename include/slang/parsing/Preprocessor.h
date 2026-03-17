@@ -490,9 +490,12 @@ private:
     // A buffer used to hold tokens while we're busy consuming them for directives.
     SmallVector<Token> scratchTokenBuffer;
 
-    // A set of files (identified by a pointer to the start of their text buffer) that
-    // have been marked pragma once so that we avoid trying to include them more than once.
-    flat_hash_set<const char*> includeOnceHeaders;
+    // A map of files (identified by a pointer to the start of their text buffer) that
+    // should be included at most once. The value is the name of the header guard macro
+    // that gates the include-once behavior (empty for `pragma once` files). At include
+    // time the file is skipped only when the guard macro is still defined (or when
+    // there is no guard macro, i.e. pragma once).
+    flat_hash_map<const char*, std::string_view> includeOnceHeaders;
 
     // If we encounter an include directive while expanding a macro
     // we will use this stack to pause playing out the macro tokens

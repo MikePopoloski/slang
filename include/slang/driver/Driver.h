@@ -402,7 +402,8 @@ public:
     [[nodiscard]] bool runPreprocessor(bitmask<PreprocessOutputFlags> flags);
 
     /// Prints all macros from all loaded buffers to stdout.
-    void reportMacros();
+    /// If @a groupByFile is true, macros are grouped and labelled by source file.
+    void reportMacros(bool groupByFile = false);
 
     /// Writes any dependency files that have been requested via command line options.
     /// (if such options have not been specified this method does nothing).

@@ -3392,6 +3392,30 @@ TEST_CASE("Header guard -- directive after endif cancels") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Header guard -- undef guard macro allows re-include") {
+    // After `undef-ing the header guard macro the file should be re-included
+    // on the next `include, and macros defined inside it should be visible again.
+    getSourceManager().assignText("defines.svh", "`ifndef _DEFINES_H\n"
+                                                 "`define _DEFINES_H\n"
+                                                 "`define FOOBAR 1\n"
+                                                 "`endif\n");
+    auto& text = R"(
+`include "defines.svh"
+`undef FOOBAR
+`undef _DEFINES_H
+`include "defines.svh"
+`FOOBAR
+)";
+    auto& expected = R"(
+1
+)";
+
+    std::string result = preprocess(text);
+    result.erase(std::remove(result.begin(), result.end(), '\r'), result.end());
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Macro with trailing space after line continuation") {
     // We concatenate 2 raw strings to avoid the C++ compiler warning about trailing space
     std::string text1 = R"(
