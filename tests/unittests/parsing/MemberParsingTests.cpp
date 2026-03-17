@@ -517,6 +517,49 @@ endclass
     CHECK(diagnostics[1].code == diag::InvalidSuperNew);
 }
 
+TEST_CASE("super.new inside begin/end block -- valid") {
+    auto& text = R"(
+class A;
+    function new;
+    endfunction
+endclass
+
+class B extends A;
+    function new;
+        begin
+            super.new();
+        end
+    endfunction
+endclass
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("super.new inside begin/end block -- not first statement") {
+    auto& text = R"(
+class A;
+    function new;
+    endfunction
+endclass
+
+class B extends A;
+    function new;
+        begin
+            $display("Test");
+            super.new();
+        end
+    endfunction
+endclass
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::InvalidSuperNew);
+}
+
 TEST_CASE("Bind directive parsing") {
     auto& text = R"(
 module m1 #(parameter int i)(input logic f);
