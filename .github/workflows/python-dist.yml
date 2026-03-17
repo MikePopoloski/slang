@@ -12,18 +12,18 @@ jobs:
     name: Build SDist
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: "3.x"
     - name: Build SDist
       run: pipx run build --sdist
     - name: Check metadata
       run: pipx run twine check dist/*
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v6
       with:
         path: dist/*.tar.gz
         name: artifact-sdist
@@ -36,18 +36,18 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: "3.x"
     - uses: maxim-lobanov/setup-xcode@v1
       if: matrix.os == 'macos-latest'
       with:
         xcode-version: 'latest'
-    - uses: pypa/cibuildwheel@v2.22.0
+    - uses: pypa/cibuildwheel@v3.4.0
       env:
         CIBW_ARCHS_MACOS: auto universal2
         MACOSX_DEPLOYMENT_TARGET: "11.0"
@@ -67,10 +67,10 @@ jobs:
     permissions:
       id-token: write
     steps:
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6
       with:
         python-version: "3.x"
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v6
       with:
         pattern: artifact-*
         path: dist
@@ -90,10 +90,10 @@ jobs:
       id-token: write
     if: github.event_name == 'workflow_dispatch'
     steps:
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6
       with:
         python-version: "3.x"
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v6
       with:
         pattern: artifact-*
         path: dist
