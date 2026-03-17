@@ -167,7 +167,7 @@ bool Preprocessor::popSource() {
             if (defText == ifndefText) {
                 auto text = sourceManager.getSourceText(hg.ifndefToken.location().buffer());
                 if (!text.empty())
-                    includeOnceHeaders.emplace(text.data());
+                    includeOnceHeaders.emplace(text.data(), defText);
             }
             else {
                 auto& d = addDiag(diag::HeaderGuardMismatch, hg.defineToken.range());
@@ -660,7 +660,9 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         else if (includeDepth >= options.maxIncludeDepth) {
             addDiag(diag::ExceededMaxIncludeDepth, fileName.range());
         }
-        else if (includeOnceHeaders.find(buffer->data.data()) == includeOnceHeaders.end()) {
+        else if (auto onceIt = includeOnceHeaders.find(buffer->data.data());
+                 onceIt == includeOnceHeaders.end() ||
+                 (!onceIt->second.empty() && !isDefined(onceIt->second))) {
             includeDepth++;
             pushSource(*buffer);
 

@@ -238,7 +238,7 @@ void Preprocessor::applyOncePragma(const PragmaDirectiveSyntax& pragma) {
 
     auto text = sourceManager.getSourceText(pragma.directive.location().buffer());
     if (!text.empty())
-        includeOnceHeaders.emplace(text.data());
+        includeOnceHeaders.emplace(text.data(), std::string_view{});
 }
 
 void Preprocessor::applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma) {
