@@ -27,29 +27,58 @@ ConstantValue FlowAnalysisBase::tryEvalBool(const Expression& expr) const {
 }
 
 FlowAnalysisBase::WillExecute FlowAnalysisBase::tryGetLoopIterValues(
-    const ForLoopStatement& stmt, SmallVector<ConstantValue>& values,
-    SmallVector<ConstantValue*>& localPtrs) {
+    const ForLoopStatement& stmt, SmallVector<ConstantValue>& values, ForLoopVars& iterVars) {
 
-    if (stmt.loopVars.empty() || !stmt.stopExpr || stmt.steps.empty())
+    if (!stmt.stopExpr || (stmt.loopVars.empty() && stmt.initializers.empty()))
         return WillExecute::Maybe;
 
     auto cleanupLocals = ScopeGuard([&] {
         values.clear();
-        localPtrs.clear();
-        for (auto var : stmt.loopVars)
+        for (auto& [_, var] : iterVars)
             evalContext.deleteLocal(var);
+        iterVars.clear();
     });
 
     for (auto var : stmt.loopVars) {
-        auto init = var->getInitializer();
-        if (!init)
-            return WillExecute::Maybe;
+        // Variables declared in the loop header (the common case).
+        // If no initializer we'll use the default value for the var's type.
+        ConstantValue cv;
+        if (auto init = var->getInitializer()) {
+            cv = init->eval(evalContext);
+            if (!cv)
+                return WillExecute::Maybe;
+        }
 
-        auto cv = init->eval(evalContext);
+        iterVars.push_back({evalContext.createLocal(var, std::move(cv)), var});
+    }
+
+    for (auto init : stmt.initializers) {
+        // Variables declared outside the loop, initialized by the for header's
+        // initializer expressions. We can only unroll if all of them are automatic
+        // variables with constant initial values (static vars may be modified
+        // hierarchically elsewhere in the design).
+        if (auto assign = init->as_if<AssignmentExpression>(); assign && !assign->isCompound()) {
+            if (auto nve = assign->left().as_if<NamedValueExpression>()) {
+                if (auto var = nve->symbol.as_if<VariableSymbol>();
+                    var && var->lifetime == VariableLifetime::Automatic) {
+                    if (auto cv = assign->right().eval(evalContext)) {
+                        iterVars.push_back({evalContext.createLocal(var, std::move(cv)), var});
+                        continue;
+                    }
+                }
+            }
+        }
+        return WillExecute::Maybe;
+    }
+
+    // If there are no steps in the loop header we cannot unroll. However, we
+    // can still determine whether the body executes at all by evaluating the
+    // initial stop condition with the initializer values just set up.
+    if (stmt.steps.empty()) {
+        auto cv = stmt.stopExpr->eval(evalContext);
         if (!cv)
             return WillExecute::Maybe;
-
-        localPtrs.push_back(evalContext.createLocal(var, std::move(cv)));
+        return cv.isTrue() ? WillExecute::Yes : WillExecute::No;
     }
 
     // Each iteration of this loop will consume the given increment steps,
@@ -67,7 +96,7 @@ FlowAnalysisBase::WillExecute FlowAnalysisBase::tryGetLoopIterValues(
 
         willExec = WillExecute::Yes;
 
-        for (auto local : localPtrs)
+        for (auto& [local, _] : iterVars)
             values.emplace_back(*local);
 
         for (auto step : stmt.steps) {

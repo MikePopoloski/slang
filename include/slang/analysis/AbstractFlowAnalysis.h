@@ -42,9 +42,11 @@ protected:
     ConstantValue tryEvalBool(const Expression& expr) const;
 
     enum class WillExecute { Yes, No, Maybe };
+
+    using ForLoopVars = SmallVector<std::pair<ConstantValue*, const VariableSymbol*>>;
+
     WillExecute tryGetLoopIterValues(const ForLoopStatement& stmt,
-                                     SmallVector<ConstantValue>& values,
-                                     SmallVector<ConstantValue*>& localPtrs);
+                                     SmallVector<ConstantValue>& values, ForLoopVars& iterVars);
 
     bool isFullyCovered(const CaseStatement& stmt, const Statement* knownBranch,
                         bool isKnown) const;
@@ -422,13 +424,8 @@ protected:
         for (auto init : stmt.initializers)
             visit(*init);
 
-        for (auto var : stmt.loopVars) {
-            if (auto init = var->getInitializer())
-                visit(*init);
-        }
-
         SmallVector<ConstantValue> iterValues;
-        SmallVector<ConstantValue*> localPtrs;
+        ForLoopVars iterVars;
         auto oldForLoopSteps = forLoopSteps;
         auto bodyWillExecute = WillExecute::Maybe;
         TState bodyState, exitState;
@@ -443,10 +440,14 @@ protected:
             // If we have a deterministic set of iteration values we can "unroll" the
             // loop and get finer grained tracking of data flow within it.
             if (!cv)
-                bodyWillExecute = tryGetLoopIterValues(stmt, iterValues, localPtrs);
+                bodyWillExecute = tryGetLoopIterValues(stmt, iterValues, iterVars);
+            else
+                bodyWillExecute = cv.isTrue() ? WillExecute::Yes : WillExecute::No;
         }
         else {
-            // If there's no stop expression, the loop is infinite.
+            // If there's no stop expression, the loop is infinite, so the
+            // body always executes at least once.
+            bodyWillExecute = WillExecute::Yes;
             bodyState = std::move(state);
             exitState = (DERIVED).unreachableState();
         }
@@ -471,7 +472,7 @@ protected:
             // We have a set of iteration values that we can use to unroll the loop.
             auto savedUnrollFlag = std::exchange(inUnrolledForLoop, true);
             for (size_t i = 0; i < iterValues.size();) {
-                for (auto local : localPtrs)
+                for (auto& [local, _] : iterVars)
                     *local = std::move(iterValues[i++]);
 
                 visit(stmt.body);
@@ -482,10 +483,8 @@ protected:
         }
 
         // Clean up any locals we may have created.
-        if (!localPtrs.empty()) {
-            for (auto var : stmt.loopVars)
-                evalContext.deleteLocal(var);
-        }
+        for (auto& [_, var] : iterVars)
+            evalContext.deleteLocal(var);
 
         forLoopSteps = oldForLoopSteps;
         inCheckLoopVars = savedCheckLoopVars;
