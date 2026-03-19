@@ -280,6 +280,45 @@ module n;
 endmodule
 ```
 
+-Wempty-input-connection
+An instance input port was explicitly connected to nothing via `.port_name()` syntax.
+This causes the port to receive the default value of its *type* (e.g. `'x` for `logic`),
+not the default value expression declared on the port, if any.
+If the intent is to use the port's default value expression, omit the connection entirely
+or use a named connection with the default value explicitly.
+```
+module m(input logic a = 1, input logic b);
+endmodule
+
+module n;
+    m m1(.a(), .b());   // a defaults to 'x, not 1; b also defaults to 'x
+endmodule
+```
+
+-Wempty-output-connection
+An instance output port was explicitly connected to nothing via `.port_name()` syntax.
+The driven value from the module is silently discarded.
+```
+module m(output logic o);
+    assign o = 1;
+endmodule
+
+module n;
+    m m1(.o());   // driven value is discarded
+endmodule
+```
+
+-Wempty-inout-connection
+An instance inout port was explicitly connected to nothing via `.port_name()` syntax.
+```
+module m(inout wire w);
+endmodule
+
+module n;
+    m m1(.w());   // inout left disconnected
+endmodule
+```
+
 -Wudp-port-empty
 A connection to a user-defined primitive instance is an empty expression.
 While allowed, this is easily confused with a misplaced comma and is likely

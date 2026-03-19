@@ -568,6 +568,10 @@ warning unconnected-output-port UnconnectedOutputPort "output port '{}' has no c
 warning unconnected-inout-port UnconnectedInOutPort "inout port '{}' has no connection"
 warning null-port NullPort "port has no name and no connection; this may be an unintentional extra comma in the port list"
 warning unconnected-unnamed-port UnconnectedUnnamedPort "instance does not provide a connection for an unnamed port"
+warning empty-input-connection EmptyInputPortConn "input port '{}' is explicitly connected to nothing"
+warning empty-output-connection EmptyOutputPortConn "output port '{}' is explicitly connected to nothing"
+warning empty-inout-connection EmptyInOutPortConn "inout port '{}' is explicitly connected to nothing"
+note EmptyInputPortConnDefault "port has a default value expression here that will not be used"
 warning implicit-net-port ImplicitNetPortNoDefault "implicit net port disallowed because `default_nettype is set to 'none'"
 warning dup-attr DuplicateAttribute "duplicate attribute definition '{}'; taking last value"
 warning empty-member EmptyMember "extra ';' has no effect"
@@ -1302,7 +1306,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow shadow-value
                 shadow-hierarchy implicit-conv inc-dec-bit dangling-else constraint-func-cycle
                 misleading-indentation constraint-solve-cycle header-guard dynamic-cast-const
-                fork-loop-var loop-var-modify loop-cond-not-modified divide-by-zero colon-plus }
+                fork-loop-var loop-var-modify loop-cond-not-modified divide-by-zero colon-plus empty-input-connection }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }
@@ -1325,3 +1329,4 @@ group parentheses = { bitwise-rel-precedence arith-in-shift logical-not-parenthe
                       logical-op-parentheses conditional-precedence consecutive-comparison }
 
 group unconnected-port = { unconnected-input-port unconnected-output-port unconnected-inout-port }
+group empty-connection = { empty-input-connection empty-output-connection empty-inout-connection }

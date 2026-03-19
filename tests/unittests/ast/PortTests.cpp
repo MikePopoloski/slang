@@ -397,6 +397,7 @@ endmodule
     CHECK((it++)->code == diag::MixingOrderedAndNamedPorts);
     CHECK((it++)->code == diag::DuplicateWildcardPortConnection);
     CHECK((it++)->code == diag::UnconnectedInputPort);
+    CHECK((it++)->code == diag::EmptyInputPortConn);
     CHECK((it++)->code == diag::UnconnectedInputPort);
     CHECK((it++)->code == diag::UnconnectedInputPort);
     CHECK((it++)->code == diag::DuplicatePortConnection);
@@ -1153,11 +1154,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::ExpressionNotAssignable);
     CHECK(diags[1].code == diag::ExpressionNotAssignable);
     CHECK(diags[2].code == diag::InvalidRefArg);
     CHECK(diags[3].code == diag::NullPortExpression);
+    CHECK(diags[4].code == diag::EmptyInputPortConn);
 }
 
 TEST_CASE("Ansi port initializers") {
@@ -1843,4 +1845,55 @@ source:3:30: note: for connection to port 'sig'
     output logic [5:0][31:0] sig
                              ^
 )");
+}
+
+TEST_CASE("Explicit empty port connection warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module n(input logic a, input logic b = 1, output logic c, inout logic d);
+endmodule
+
+module m;
+    // .a() warns: input, no default
+    // .b() warns with note: input, has default
+    // .c() warns: output
+    // .d() warns: inout
+    n n1(.a(), .b(), .c(), .d());
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::EmptyInputPortConn);
+    CHECK(diags[1].code == diag::EmptyInputPortConn);
+    // diags[1] should have a note about the default value expression
+    REQUIRE(diags[1].notes.size() == 1);
+    CHECK(diags[1].notes[0].code == diag::EmptyInputPortConnDefault);
+    CHECK(diags[2].code == diag::EmptyOutputPortConn);
+    CHECK(diags[3].code == diag::EmptyInOutPortConn);
+}
+
+TEST_CASE("Explicit empty port connection vs truly unconnected") {
+    // Truly-unconnected ports fire UnconnectedInputPort, not an empty-connection warning.
+    auto tree = SyntaxTree::fromText(R"(
+module n(input logic a, output logic b, inout logic c);
+endmodule
+
+module m;
+    // a omitted: UnconnectedInputPort
+    // .b() and .c() explicitly connected to nothing: output/inout warnings
+    n n1(.b(), .c());
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UnconnectedInputPort);
+    CHECK(diags[1].code == diag::EmptyOutputPortConn);
+    CHECK(diags[2].code == diag::EmptyInOutPortConn);
 }

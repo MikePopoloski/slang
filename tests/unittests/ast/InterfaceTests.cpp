@@ -747,7 +747,7 @@ interface automatic sliceIfc#(I=0)();
   wire reset = ii.reset;
 
   I i();
-  allIfc allInst(.clk(), .rst(), .i(i), .i1(i.ii));
+  allIfc allInst(.clk(0), .rst(0), .i(i), .i1(i.ii));
 
   var requestType request;
   var responseType response;
