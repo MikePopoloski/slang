@@ -836,7 +836,7 @@ ExpressionSyntax& Parser::parseForeachArrayExpression() {
                     expr = &factory.elementSelectExpression(*expr, parseElementSelect());
                 }
                 else {
-                    // This is the loop-variable bracket — leave it for parseForeachLoopVariables.
+                    // This is the loop-variable bracket - leave it for parseForeachLoopVariables.
                     return *expr;
                 }
                 break;

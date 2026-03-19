@@ -946,8 +946,7 @@ endmodule
     };
 
     tree = Rewriter().transform(tree);
-    // Can't check validation here because it will reparse the parent syntax nodes to
-    // SyntaxKind::LogicType
+    CHECK(tree->validate());
 
     CHECK(SyntaxPrinter::printFile(*tree) == R"(
 module m;

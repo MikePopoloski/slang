@@ -1115,7 +1115,7 @@ static const StatementSyntax* getSingleBodyForIndentCheck(const SyntaxNode& stmt
     return body;
 }
 
-// Returns the leading whitespace text of a token — the run of whitespace
+// Returns the leading whitespace text of a token - the run of whitespace
 // characters that appear after the last newline in the token's trivia.
 // Returns an empty string_view if the token has no newline in its trivia
 // (i.e. it is on the same line as the previous token) or if no whitespace

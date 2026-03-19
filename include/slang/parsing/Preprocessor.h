@@ -500,6 +500,7 @@ private:
     struct MacroBufferFrame {
         SmallVector<Token> tokens;
         ptrdiff_t index = 0;
+
         // The lexer stack depth (after popping the include that triggered the pause)
         // at which this frame should be restored.
         size_t lexerDepth = 0;

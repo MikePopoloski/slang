@@ -19,6 +19,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/util/String.h"
 
 namespace {
 
@@ -833,14 +834,13 @@ CoverpointSymbol& CoverpointSymbol::fromImplicit(const Scope& scope, const NameS
         name = syntax.as<IdentifierNameSyntax>().identifier.valueText();
     }
     else {
-        // '.' is typically replaced with '_' when naming
+        // '.' is replaced with '_' when naming the implicit coverpoint
         auto str = syntax.toString();
         std::ranges::replace(str, '.', '_');
-        auto span = comp.copyFrom(std::span<const char>(str.data(), str.size()));
-        name = std::string_view(span.data(), span.size());
+        name = toStringView(comp.copyFrom(std::span<const char>(str.data(), str.size())));
     }
-    auto result = comp.emplace<CoverpointSymbol>(comp, name, loc);
 
+    auto result = comp.emplace<CoverpointSymbol>(comp, name, loc);
     result->isImplicit = true;
     result->declaredType.setTypeSyntax(comp.createEmptyTypeSyntax(loc));
     result->declaredType.setInitializerSyntax(syntax, loc);

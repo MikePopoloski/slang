@@ -250,7 +250,7 @@ error RandJoinNotEnough "rand join list must contain at least two productions"
 error InvalidDistExpression "cannot use a 'dist' expression in this context"
 error InvalidForInitializer "for loop initializer must be an assignment expression"
 error CoverCrossItems "cover cross declaration requires at least two coverage items"
-error CoverCrossSelectNotAllowed "element selects are not allowed in implicit coverpoints; extract expression to a coverpoint"
+error CoverCrossSelectNotAllowed "element selects are not allowed in implicit coverpoints; extract expression to a named coverpoint"
 error InvalidCoverageOption "invalid coverage option assignment"
 error CoverageBinDefaultWildcard "default coverage bins cannot be marked 'wildcard'"
 error CoverageBinDefSeqSize "default sequence bin cannot be declared as an array"
@@ -309,7 +309,7 @@ warning dpi-pure-task DPIPureTask "DPI tasks cannot be marked 'pure'"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
-warning non-standard-hierarchical-cross NonstandardHierarchicalCross "non-standard hierarchical reference in cover cross item"
+warning nonstandard-hierarchical-cross NonstandardHierarchicalCross "non-standard hierarchical reference in cover cross item"
 warning foreach-call-expr ForeachCallExpr "foreach array expression is not a name"
 warning lifetime-prototype LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
 warning nonstandard-dist NonstandardDist "use of parentheses around 'dist' expression is non-standard"
@@ -820,7 +820,7 @@ error StatementNotInLoop "statement can only be used inside a loop"
 error ExprNotStatement "expression is not allowed as a statement"
 error ExprNotConstraint "expression is not allowed in a constraint"
 error VoidCastFuncCall "void casting is only allowed for function calls"
-error NotAnArray "name must refer to an iterable array"
+error NotAnArray "expression has type {} which is not an iterable array"
 error TooManyForeachVars "too many loop variables for array of type {}"
 error ForeachDynamicDimAfterSkipped "foreach index '{}' can't iterate over a dynamically sized dimension since a previous dimension was omitted"
 error LoopVarShadowsArray "loop variable '{}' shadows foreach array target"
@@ -1289,7 +1289,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   nonstandard-string-concat nested-comment multi-write read-write mixed-var-assigns
                   multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
-                  initializer-required package-import-in-class foreach-call-expr }
+                  initializer-required package-import-in-class foreach-call-expr nonstandard-hierarchical-cross
+                  nonstandard-inside }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

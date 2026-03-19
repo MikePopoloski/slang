@@ -1959,8 +1959,8 @@ module top2;
     initial begin
         v16 = p16;
         v32 = p32;
-        v16 = p32; // illegal – parameter values don't match
-        v16 = v32; // illegal – parameter values don't match
+        v16 = p32; // illegal - parameter values don't match
+        v16 = v32; // illegal - parameter values don't match
         v16_phy = v16;
         v16 = v16_phy; // illegal assignment from selected modport to
                        // no selected modport

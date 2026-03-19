@@ -24,9 +24,9 @@ endmodule
 }
 
 TEST_CASE("Simple two-variable constraint ordering cycle") {
-    // x <= F(y) → y before x
-    // y <= G(x) → x before y
-    // Cycle: y → x → y
+    // x <= F(y) -> y before x
+    // y <= G(x) -> x before y
+    // Cycle: y -> x -> y
     auto& code = R"(
 class B;
     rand int x, y;

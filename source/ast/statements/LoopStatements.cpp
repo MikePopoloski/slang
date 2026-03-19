@@ -318,8 +318,8 @@ const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSynta
 
     const Type* type = arrayRef.type;
     auto arraySym = arrayRef.getSymbolReference();
-    if (!arraySym || !type->isIterable()) {
-        context.addDiag(diag::NotAnArray, arrayRef.sourceRange);
+    if (!type->isIterable()) {
+        context.addDiag(diag::NotAnArray, arrayRef.sourceRange) << *type;
         return nullptr;
     }
 
@@ -358,7 +358,7 @@ const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSynta
             return nullptr;
         }
 
-        if (name == arraySym->name) {
+        if (arraySym && name == arraySym->name) {
             context.addDiag(diag::LoopVarShadowsArray, loopVar->sourceRange()) << name;
             return nullptr;
         }

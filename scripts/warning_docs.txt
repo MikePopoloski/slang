@@ -2104,7 +2104,7 @@ localparam p = $isunbounded(1 + 1);
 
 -Wnon-standard-hierarchical-cross
 Hierarchical (dotted) references in cover cross items are not part of the
-SystemVerilog standard but are supported by some commercial tools like Xcelium.
+SystemVerilog standard but are supported by some commercial tools.
 The implicit coverpoint created from the reference will be named by replacing
 dots with underscores (e.g. `status.mpp` becomes `status_mpp`).
 ```
