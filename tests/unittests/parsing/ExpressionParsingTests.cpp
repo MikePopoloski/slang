@@ -348,6 +348,15 @@ TEST_CASE("Inside expression") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Inside expression -- no braces") {
+    auto& text = "x inside arr";
+    auto& expr = parseExpression(text);
+
+    REQUIRE(expr.kind == SyntaxKind::InsideExpression);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::NonstandardInside);
+}
+
 TEST_CASE("Tagged union expression") {
     auto& text = "tagged foo";
     auto& expr = parseExpression(text);

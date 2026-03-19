@@ -313,6 +313,7 @@ warning non-standard-hierarchical-cross NonstandardHierarchicalCross "non-standa
 warning foreach-call-expr ForeachCallExpr "foreach array expression is not a name"
 warning lifetime-prototype LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
 warning nonstandard-dist NonstandardDist "use of parentheses around 'dist' expression is non-standard"
+warning nonstandard-inside NonstandardInside "use of 'inside' without braces is non-standard"
 warning empty-body EmptyBody "{} has empty body (put the semicolon on a separate line to silence this warning)"
 warning dangling-else DanglingElse "ambiguous dangling 'else'; add begin/end to clarify which 'if' the 'else' belongs to"
 note NoteMatchingIf "'if' statement here"

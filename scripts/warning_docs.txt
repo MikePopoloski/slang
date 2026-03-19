@@ -2026,6 +2026,17 @@ class C;
 endclass
 ```
 
+-Wnonstandard-inside
+Using 'inside' without braces around the value list is non-standard, but some tools
+allow it as an extension. Standard syntax requires braces around the range list.
+```
+module m;
+    int x;
+    int arr[3];
+    int result = x inside arr;
+endmodule
+```
+
 -Wimplicit-net-port
 A net port that elides its net type occurs in a context where `default_nettype is set to 'none'.
 This technically should be an error but it makes the use of 'none' as a default nettype very
