@@ -5,19 +5,26 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
-### Language Support
-* Added a `--allow-virtual-iface-with-override` flag to allow interface instances that are bind/defparam targets to be assigned to virtual interfaces, for compatibility with other tools (thanks to @thomasnormal)
-* The error for invalid arguments to std::randomize has been made downgradeable via `-Wnonstandard-randomize`, for compatibility with other tools (thanks to @AndrewNolte)
-* Added support for conatenating strings with operator '+' (which will now issue `-Wnonstandard-string-concat`), for compatibility with other tools (thanks to @AndrewNolte)
+### Language Compatibility
+* Added a `--allow-virtual-iface-with-override` flag to allow interface instances that are bind/defparam targets to be assigned to virtual interfaces (thanks to @thomasnormal)
+* The error for invalid arguments to std::randomize has been made downgradeable via `-Wnonstandard-randomize` (thanks to @AndrewNolte)
+* Added support for conatenating strings with operator '+' (which will now issue `-Wnonstandard-string-concat`) (thanks to @AndrewNolte)
 * The error for nested block comments is now a warning by default (`-Wnested-comment`), and turned off by default in VCS compat mode
-* `extern` and `pure` method prototypes are now allowed to have an implicit return type, for compatibility with other tools (thanks to @mampcs)
-* The error for qualifiers on out-of-block method definitions is now downgradeable via `-Wqualifiers-on-out-of-block`, for compatibility with other tools (thanks to @mampcs)
-* The error for missing implementations of `extern` methods is now downgradeable via `-Wmember-impl-not-found`, for compatibility with other tools (thanks to @mampcs)
+* `extern` and `pure` method prototypes are now allowed to have an implicit return type (thanks to @mampcs)
+* The error for qualifiers on out-of-block method definitions is now downgradeable via `-Wqualifiers-on-out-of-block` (thanks to @mampcs)
+* The error for missing implementations of `extern` methods is now downgradeable via `-Wmember-impl-not-found` (thanks to @mampcs)
 * Unqualified task and function calls will now perform upward name resolution up the hierarchy if there is no declaration visible locally. The LRM is not entirely clear here but all major tools allow this and now slang does as well. (thanks to @mampcs)
-* Made the diagnostics for multiple overlapping assignments downgradeable to warnings, for compatibility with other tools (via the new warnings [-Wmixed-var-assigns](https://sv-lang.com/warning-ref.html#mixed-var-assigns), [-Wmultiple-cont-assigns](https://sv-lang.com/warning-ref.html#multiple-cont-assigns), and [-Wmultiple-always-assigns](https://sv-lang.com/warning-ref.html#multiple-always-assigns))
-* The string formatting functions now allow passing class handles, chandles, and null literals as arguments to integer format specifiers, for compatibility with other tools (thanks to @thomasnormal)
-* Misplaced trailing separator errors are now downgradeable to a warning, for compatibility with other tools (via the new warning [-Wmisplaced-trailing-separator](https://sv-lang.com/warning-ref.html#misplaced-trailing-separator)) (thanks to @thomasnormal)
-* Coverage cross items can now specify another cross as a target, for compatibility with other tools (thanks to @mampcs)
+* The error for missing `for` loop variable initializers is now downgradeable via `-Winitializer-required` (thanks to @mampcs)
+* The error for use of package imports within class scopes is now downgradeable via `-Wpackage-import-in-class` (thanks to @mampcs)
+* Made the diagnostics for multiple overlapping assignments downgradeable to warnings (via the new warnings [-Wmixed-var-assigns](https://sv-lang.com/warning-ref.html#mixed-var-assigns), [-Wmultiple-cont-assigns](https://sv-lang.com/warning-ref.html#multiple-cont-assigns), and [-Wmultiple-always-assigns](https://sv-lang.com/warning-ref.html#multiple-always-assigns))
+* The string formatting functions now allow passing class handles, chandles, and null literals as arguments to integer format specifiers (thanks to @thomasnormal)
+* Misplaced trailing separator errors are now downgradeable to a warning (via the new warning [-Wmisplaced-trailing-separator](https://sv-lang.com/warning-ref.html#misplaced-trailing-separator)) (thanks to @thomasnormal)
+* Coverage cross items can now specify another cross as a target (thanks to @mampcs)
+* Coverage cross items can now contain dotted / hierarchical names, flagged via `-Wnonstandard-hierarchical-cross` (thanks to @AndrewNolte)
+* `inside` expressions can now specify a single element without the usually required braces, flagged via `-Wnonstandard-inside` (thanks to @AndrewNolte)
+* `foreach` array references can now contain function call expressions, flagged via `-Wforeach-call-expr` (thanks to @mampcs)
+* Added support for the `$deposit` system task, which is non-standard but very common in older codebases (thanks to @mampcs)
+* `--relax-string-conversions` now also allows implicit conversions from integers to strings (thanks to @mampcs)
 
 ### Notable Breaking Changes
 * pyslang bindings are now separated into submodules matching the C++ API namespaces, which will require adding imports to your existing scripts to make them continue to run
@@ -31,6 +38,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added `-Wunused-class-property`, `-Wunused-but-set-property`, `-Wunassigned-property`, `-Wunused-local-class-property`, `-Wunused-but-set-local-property`, and `-Wunassigned-local-property` for detecting various forms of unused class properties
 * Added `-Wunused-package-var`, `-Wunused-package-typedef`, `-Wunused-package-parameter`, `-Wunused-package-type-parameter`, `-Wunused-package-assertion-decl`, and `-Wunused-package-subroutine` for detecting unused items declared inside packages
 * `-Wunconnected-port` has been split into three separate warnings: `-Wunconnected-input-port`, `-Wunconnected-output-port`, and `-Wunconnected-inout-port`, for more precise control over which warnings you want to see. The original `-Wunconnected-port` is now a group that controls all three at once, so existing command lines should continue to function the same way.
+* Added `-Wempty-input-connection`, `-Wempty-output-connection`, and `-Wempty-inout-connection` (grouped under `-Wempty-connection`) which warn about port connections that are explicitly connected to nothing
 * Added [-Wrandomize-var-shadow](https://sv-lang.com/warning-ref.html#randomize-var-shadow) which detects inline randomize constraint blocks that use class members which shadow local variable declarations
 * Added [-Wshadow-value](https://sv-lang.com/warning-ref.html#shadow-value) and [-Wshadow-hierarchy](https://sv-lang.com/warning-ref.html#shadow-hierarchy) which detect declarations that shadow others with the same name from outer scopes
 * Added [-Winc-dec-bit](https://sv-lang.com/warning-ref.html#inc-dec-bit) which detects increment and decrement of single-bit operands
@@ -54,14 +62,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The preprocessor now detects the common `` `ifndef / `define `` header guard pattern and avoids opening the include file entirely if it sees an include directive for it again. Also added [-Wheader-guard](https://sv-lang.com/warning-ref.html#header-guard) which detects potential mistakes in the header guard names.
 * Added a new flag `--allow-macro-trailing-space` which allows trailing whitespace after line continuations in macro definitions (thanks to @mampcs)
 * [Compilation unit listings](https://sv-lang.com/user-manual.html#unit-listing) now accept local `-W` settings to control warnings issued for just that compilation unit
+* Added `--preprocess-source` which includes source file and line info in the output when running the preprocessor standalone, with e.g. `--preprocess` (thanks to @mampcs)
+* Added `--group-macros-by-file` which groups macros by file when outputting them via `--macros-only` (thanks to @mampcs)
 
 ### Improvements
-* Made several minor improvements to data flow modeling in the analysis pass to better represent SystemVerilog control flow
+* Made several improvements to data flow modeling in the analysis pass to better represent SystemVerilog control flow
+  * Loop unrolling works in more cases; `for` loops that did not declare their loop variable but refer to an automatic local variable now work as expected
+  * Improved determination of whether a `for` loop is guaranteed to execute at least once, in cases where step or stop condition expressions are omitted
+  * Conditional expressions that have a known ambiguous `x` condition are now modeled correctly
 * Added AST serialization for default disable directives and default / global clocking block modifiers
 * The error issued for incorrect range select endianness is now suppressed inside conditional blocks that are statically known to be untaken
-* `--relax-string-conversions` now also allows implicit conversions from integers to strings, for compatibility with other tools (thanks to @mampcs)
 * Tweaked the behavior of how `--allow-use-before-declare` works when there are matching declarations in outer scopes, to better match other tools (thanks to @mampcs)
 * The parser will now perform typo correction when looking for a keyword and finding a closely named identifier instead
+* Dotted lookups will now perform typo correction and provide a note when a closely named member is found
+* The SyntaxRewriter API has gained support for rewriting individual tokens (thanks to @ilthraim)
 
 ### Fixes
 * Fixed an issue where comments immediately preceeding a disabled `` `endif `` directive could erroneously show up in preprocessed output
@@ -69,6 +83,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a preprocessor bug where nested macros containing ifdef directives could be expanded improperly
 * Fixed a preprocessor bug during macro expansion when a macro argument immediately follows a line continuation character on a separate line
 * Fixed a bug in macro token concatenation where the second token needs to be split and re-lexed to function properly
+* Fixed a bug where multiple layers of include files originating from within a macro expansion would not expand in the correct order (thanks to @mampcs)
 * Fixed parsing of 1800-2023 preprocessor conditional expressions; precedence and associativity of operators was not handled correctly
 * Unary increment and decrement operators now properly count as a driver for their operand, for purposes of multi-driver checking
 * Fixed miscompilation when a generic class with a virtual interface type parameter declared within a package triggers an import lookup within that package
@@ -90,6 +105,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a bug where HierarchicalValueExpressions representing virtual interface accesses did not have a valid source range (thanks to @Lauriethefish)
 * Fixed a bug that disallowed non-blocking assignments to `ref static` variables (thanks to @x-Aksara-x)
 * Fixed a spurious error issued when waiting on a clocking block event and using the `iff` operator
+* Fixed a bug where calling void-returning system functions during constant evaluation would skip further constant evaluation in that function
+* Fixed a spurious error when ignoring duplicate definitions (with -Wno-duplicate-definition) that are detected and instantiated as valid top modules
+* Fixed a bug where `super.new()` calls were not allowed as the first item in a sequential block within a class constructor (thanks to @mampcs)
+* Fixed a bug where lvalue concatenation assignments would lose their signedness flag in constant evaluation
 
 ### Tools & Bindings
 #### pyslang
