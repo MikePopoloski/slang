@@ -856,8 +856,9 @@ bool Type::isValidForDPIReturn() const {
         case SymbolKind::CHandleType:
         case SymbolKind::StringType:
         case SymbolKind::ScalarType:
-        case SymbolKind::PredefinedIntegerType:
             return true;
+        case SymbolKind::PredefinedIntegerType:
+            return !isFourState();
         default:
             return false;
     }

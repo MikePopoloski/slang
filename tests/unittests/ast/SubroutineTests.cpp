@@ -229,6 +229,23 @@ endmodule
     CHECK(diags[6].code == diag::InvalidDPIArgType);
 }
 
+TEST_CASE("DPI integer/time return type invalid") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    import "DPI-C" function integer f1();
+    import "DPI-C" function time f2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidDPIReturnType);
+    CHECK(diags[1].code == diag::InvalidDPIReturnType);
+}
+
 TEST_CASE("DPI Exports") {
     auto tree = SyntaxTree::fromText(R"(
 function bar; endfunction
