@@ -2028,8 +2028,8 @@ SystemVerilog LRM but is supported by some tools. In VCS compatibility mode
 this is ignored; otherwise it is an error that can be downgraded to a warning.
 ```
 module top;
-    int arr[4];
-    function automatic int get_arr(); endfunction
+    typedef int Arr[4];
+    function automatic Arr get_arr(); endfunction
     initial begin
         foreach (get_arr()[i]) begin end
     end
@@ -2141,7 +2141,7 @@ wording in prior versions so this is implemented as a pedantic warning only.
 localparam p = $isunbounded(1 + 1);
 ```
 
--Wnon-standard-hierarchical-cross
+-Wnonstandard-hierarchical-cross
 Hierarchical (dotted) references in cover cross items are not part of the
 SystemVerilog standard but are supported by some commercial tools.
 The implicit coverpoint created from the reference will be named by replacing
