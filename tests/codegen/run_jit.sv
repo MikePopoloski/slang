@@ -17,7 +17,16 @@
 // CHECK: 55
 
 // RUN: %slang --run logic_x %s
-// CHECK: 8'bxxxxxxxx
+// CHECK: 1'bx
+
+// RUN: %slang "--run=add_ints(3, 4)" %s
+// CHECK: 7
+
+// RUN: %slang "--run=negate(99)" %s
+// CHECK: -99
+
+// RUN: %slang "--run=negate(-5)" %s
+// CHECK: 5
 
 function automatic int forty_two();
     return 42;
@@ -42,6 +51,14 @@ function automatic int loops_sum();
     return s;
 endfunction
 
-function automatic logic [7:0] logic_x();
+function automatic logic logic_x();
     return 'x;
+endfunction
+
+function automatic int add_ints(int a, int b);
+    return a + b;
+endfunction
+
+function automatic int negate(int x);
+    return -x;
 endfunction

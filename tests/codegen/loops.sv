@@ -2,7 +2,7 @@
 // REQUIRES: llvm
 // RUN: %slang --emit-ir - %s
 
-// CHECK-LABEL: define private i32 @sum
+// CHECK-LABEL: define private i32 @_SV0NvU3sum
 // CHECK: for.cond:
 // CHECK: icmp slt i32
 // CHECK: for.body:
@@ -10,7 +10,7 @@
 // CHECK: for.step:
 // CHECK: for.exit:
 
-// CHECK-LABEL: define private i32 @countdown
+// CHECK-LABEL: define private i32 @_SV0NvU9countdown
 // CHECK: while.cond:
 // CHECK: icmp sgt i32
 // CHECK: while.body:

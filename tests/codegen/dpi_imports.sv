@@ -11,7 +11,7 @@
 // ============================================================
 
 // CHECK-LABEL: declare i32 @puts(ptr)
-// CHECK-LABEL: define private i32 @call_puts
+// CHECK-LABEL: define private i32 @_SV0NvU9call_puts
 // CHECK: call i32 @puts(ptr @
 // CHECK: ret i32
 import "DPI-C" function int puts(string s);
@@ -24,7 +24,7 @@ endfunction
 // ============================================================
 
 // CHECK-LABEL: declare i32 @add_ints(i32, i32)
-// CHECK-LABEL: define private i32 @test_add_ints
+// CHECK-LABEL: define private i32 @_SV0NvU13test_add_ints
 // CHECK: call i32 @add_ints(i32 3, i32 4)
 // CHECK: ret i32
 import "DPI-C" function int add_ints(int a, int b);
@@ -47,7 +47,7 @@ import "DPI-C" function longint get_long(longint x);
 // ============================================================
 
 // CHECK-LABEL: declare double @fabs(double)
-// CHECK-LABEL: define private double @test_fabs
+// CHECK-LABEL: define private double @_SV0NvU9test_fabs
 // CHECK: call double @fabs(double
 // CHECK: ret double
 import "DPI-C" fabs = function real c_fabs(real x);
@@ -176,7 +176,7 @@ import "DPI-C" function void chandle_func(chandle h);
 // bit (i1 internal) -> i8 at call site via zext
 // ============================================================
 // CHECK-LABEL: declare i8 @dpi_bit_identity(i8)
-// CHECK-LABEL: define private i1 @call_bit_identity
+// CHECK-LABEL: define private i1 @_SV0NvU17call_bit_identity
 // CHECK: zext i1
 // CHECK: call i8 @dpi_bit_identity(i8
 // CHECK: trunc i8
@@ -190,7 +190,7 @@ endfunction
 // logic (i2 internal) -> i8 at call site via zext
 // ============================================================
 // CHECK-LABEL: declare i8 @dpi_logic_identity(i8)
-// CHECK-LABEL: define private i2 @call_logic_identity
+// CHECK-LABEL: define private i2 @_SV0NvU19call_logic_identity
 // CHECK: zext i2
 // CHECK: call i8 @dpi_logic_identity(i8
 // CHECK: trunc i8

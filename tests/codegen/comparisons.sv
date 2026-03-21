@@ -2,24 +2,24 @@
 // REQUIRES: llvm
 // RUN: %slang --emit-ir - %s
 
-// CHECK-LABEL: define private i1 @bit_lt
+// CHECK-LABEL: define private i1 @_SV0NvU6bit_lt
 // CHECK: icmp ult i1
 // CHECK: ret i1
 
-// CHECK-LABEL: define private i1 @bit_eq
+// CHECK-LABEL: define private i1 @_SV0NvU6bit_eq
 // CHECK: icmp eq i1
 // CHECK: ret i1
 
-// CHECK-LABEL: define private i1 @real_lt
+// CHECK-LABEL: define private i1 @_SV0NvU7real_lt
 // CHECK: fcmp olt double
 // CHECK: ret i1
 
-// CHECK-LABEL: define private i1 @real_eq
+// CHECK-LABEL: define private i1 @_SV0NvU7real_eq
 // CHECK: fcmp oeq double
 // CHECK: ret i1
 
 // Comparison of int used as a condition (not a return value).
-// CHECK-LABEL: define private i32 @max_int
+// CHECK-LABEL: define private i32 @_SV0NvU7max_int
 // CHECK: icmp sgt i32
 // CHECK: br i1
 

@@ -55,6 +55,9 @@ public:
     /// Emits IR for every subroutine that is a direct member of @a scope.
     void emitScope(const ast::Scope& scope);
 
+    /// Emits IR for all DPI exports in the compilation.
+    void emitExports();
+
     /// Returns the generated IR as a human-readable string.
     [[nodiscard]] std::string getTextualIR() const;
 

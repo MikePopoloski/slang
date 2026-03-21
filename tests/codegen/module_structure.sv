@@ -6,9 +6,9 @@
 // CHECK: ModuleID = 'slang'
 
 // Each function must appear with internal linkage.
-// CHECK-DAG: define private i32 @fn_a
-// CHECK-DAG: define private i32 @fn_b
-// CHECK-DAG: define private i32 @fn_c
+// CHECK-DAG: define private i32 @_SV0NvU4fn_a
+// CHECK-DAG: define private i32 @_SV0NvU4fn_b
+// CHECK-DAG: define private i32 @_SV0NvU4fn_c
 
 // CHECK-NOT: declare
 

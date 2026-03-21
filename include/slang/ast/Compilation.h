@@ -369,6 +369,10 @@ public:
     /// script scope won't affect which modules are determined to be top-level instances.
     CompilationUnitSymbol& createScriptScope();
 
+    /// Adds a DPI export entry for the given subroutine, with the specified C identifier.
+    /// This can be called after elaboration to inject synthetic exports.
+    void addDPIExport(const SubroutineSymbol& sub, std::string_view cIdent);
+
     /// @}
     /// @name Lookup and query methods
     /// @{
@@ -462,6 +466,12 @@ public:
 
     /// Gets the built-in gate type with the given name, or nullptr if there is no such gate.
     const PrimitiveSymbol* getGateType(std::string_view name) const;
+
+    /// Gets the list of resolved DPI exports registered during elaboration.
+    /// Each entry holds the subroutine symbol and its C identifier.
+    std::span<const std::pair<const SubroutineSymbol*, std::string>> getDPIExports() const {
+        return resolvedDPIExports;
+    }
 
     /// @}
     /// @name System function management
@@ -989,8 +999,13 @@ private:
     // modified after elaboration begins.
     HierarchyOverrideNode hierarchyOverrides;
 
-    // A list of DPI export directives we've encountered during elaboration.
+    // A list of DPI export directives we've encountered during elaboration (raw, for
+    // checkDPIMethods).
     std::vector<std::pair<const syntax::DPIExportSyntax*, const Scope*>> dpiExports;
+
+    // Resolved DPI exports: (subroutine, C identifier) pairs, populated by checkDPIMethods
+    // and by addDPIExport() for synthetic entries.
+    std::vector<std::pair<const SubroutineSymbol*, std::string>> resolvedDPIExports;
 
     // A list of bind directives we've encountered during elaboration.
     std::vector<std::pair<const syntax::BindDirectiveSyntax*, const Scope*>> bindDirectives;

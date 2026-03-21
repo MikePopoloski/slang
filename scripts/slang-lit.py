@@ -39,6 +39,7 @@ Substitutions in RUN lines
   %t      Path to a per-test temporary file (cleaned up after each test).
   %T      Temporary directory shared for the test run.
   %slang  Path to the slang binary (configurable via --slang).
+  %KEY    User-defined substitution introduced via --define KEY=VALUE.
 
 Usage
 -----
@@ -46,12 +47,14 @@ Usage
 
 Options
 -------
-  --slang <path>    Path to the slang binary (default: searches PATH, then
-                    common build directories relative to the script location).
-  --verbose, -v     Print each test command as it runs.
-  --jobs, -j <N>    Run N tests in parallel (default: 1).
-  --filter <regex>  Run only tests whose paths match <regex>.
-  --no-color        Disable ANSI colour output.
+  --slang <path>        Path to the slang binary (default: searches PATH, then
+                        common build directories relative to the script location).
+  --define KEY=VALUE    Define a custom substitution; %KEY in RUN lines is
+                        replaced with VALUE. Can be specified multiple times.
+  --verbose, -v         Print each test command as it runs.
+  --jobs, -j <N>        Run N tests in parallel (default: 1).
+  --filter <regex>      Run only tests whose paths match <regex>.
+  --no-color            Disable ANSI colour output.
 """
 
 from __future__ import annotations
@@ -154,8 +157,14 @@ def expand_substitutions(
     tmp_file: Path,
     tmp_dir: Path,
     slang_path: str,
+    user_defines: dict[str, str] | None = None,
 ) -> str:
-    """Replace %s, %t, %T, %slang in a RUN-line command string."""
+    """Replace %s, %t, %T, %slang, and user-defined %KEY substitutions in a RUN-line command."""
+    # Apply user-defined substitutions before the built-in ones so that user
+    # values cannot accidentally match built-in tokens like %s or %t.
+    if user_defines:
+        for key, value in user_defines.items():
+            command = command.replace(f"%{key}", shlex.quote(value))
     command = command.replace("%slang", shlex.quote(slang_path))
     command = command.replace("%s", shlex.quote(str(source_path)))
     command = command.replace("%t", shlex.quote(str(tmp_file)))
@@ -440,6 +449,7 @@ def run_test(
     verbose: bool,
     available_features: set[str],
     output_limit: int | None = 30,
+    user_defines: dict[str, str] | None = None,
 ) -> TestResult:
     start = time.monotonic()
 
@@ -473,6 +483,7 @@ def run_test(
             tmp_file=tmp_file,
             tmp_dir=tmp_dir,
             slang_path=slang_path,
+            user_defines=user_defines,
         )
         if verbose:
             print(f"  $ {cmd}")
@@ -660,6 +671,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--filter", metavar="REGEX", help="Only run tests whose path matches REGEX"
     )
     p.add_argument("--no-color", action="store_true", help="Disable ANSI colour output")
+    p.add_argument(
+        "--define",
+        metavar="KEY=VALUE",
+        action="append",
+        default=[],
+        help="Define a custom %%KEY substitution for use in RUN lines (repeatable)",
+    )
     return p.parse_args(argv)
 
 
@@ -672,6 +690,17 @@ def main(argv: list[str] | None = None) -> int:
         _USE_COLOR = False
 
     slang_bin = find_slang(args.slang)
+
+    # Parse --define KEY=VALUE arguments into a substitution dict.
+    user_defines: dict[str, str] = {}
+    for defn in args.define:
+        if "=" not in defn:
+            print(
+                f"error: --define {defn!r}: expected KEY=VALUE format", file=sys.stderr
+            )
+            return 1
+        k, _, v = defn.partition("=")
+        user_defines[k.strip()] = v
 
     filter_re: re.Pattern | None = None
     if args.filter:
@@ -704,6 +733,11 @@ def main(argv: list[str] | None = None) -> int:
     except Exception:
         pass
 
+    # Each --define KEY=VALUE also registers KEY as an available feature so
+    # that tests can guard themselves with `// REQUIRES: KEY` and be skipped
+    # gracefully when the define is absent (e.g. when running outside ctest).
+    available_features.update(user_defines.keys())
+
     results: list[TestResult] = []
     total = len(parsed_tests)
     width = len(str(total))
@@ -721,6 +755,7 @@ def main(argv: list[str] | None = None) -> int:
                 verbose=args.verbose,
                 available_features=available_features,
                 output_limit=None if total == 1 else 30,
+                user_defines=user_defines or None,
             )
 
         if args.jobs > 1:
@@ -732,7 +767,15 @@ def main(argv: list[str] | None = None) -> int:
                     _print_result(r, total, len(results), width)
         else:
             for pt in parsed_tests:
-                r = _run(pt)
+                r = run_test(
+                    pt,
+                    slang_path=slang_bin,
+                    tmp_dir=tmp_dir,
+                    verbose=args.verbose,
+                    available_features=available_features,
+                    output_limit=None if total == 1 else 30,
+                    user_defines=user_defines or None,
+                )
                 results.append(r)
                 _print_result(r, total, len(results), width)
 

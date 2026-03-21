@@ -2,12 +2,12 @@
 // REQUIRES: llvm
 // RUN: %slang --emit-ir - %s
 
-// CHECK-LABEL: define private i32 @choose
+// CHECK-LABEL: define private i32 @_SV0NvU6choose
 // CHECK: br i1
 // CHECK: if.then:
 // CHECK: if.else:
 
-// CHECK-LABEL: define private i32 @clamp
+// CHECK-LABEL: define private i32 @_SV0NvU5clamp
 // CHECK: icmp slt i32
 // CHECK: if.then
 // CHECK: if.else

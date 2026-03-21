@@ -2,16 +2,16 @@
 // REQUIRES: llvm
 // RUN: %slang --emit-ir - %s
 
-// CHECK-LABEL: define private double @int_to_real
+// CHECK-LABEL: define private double @_SV0NvU11int_to_real
 // CHECK: sitofp i32 {{.*}} to double
 // CHECK: ret double
 
-// CHECK-LABEL: define private i32 @real_to_int
+// CHECK-LABEL: define private i32 @_SV0NvU11real_to_int
 // CHECK: call double @llvm.round.f64
 // CHECK: llvm.fptosi.sat.i32.f64
 // CHECK: ret i32
 
-// CHECK-LABEL: define private float @real_to_shortreal
+// CHECK-LABEL: define private float @_SV0NvU17real_to_shortreal
 // CHECK: fptrunc double {{.*}} to float
 // CHECK: ret float
 
@@ -31,14 +31,14 @@ endfunction
 // Integer-to-integer: 2-state resize
 // ---------------------------------------------------------------------------
 
-// CHECK-LABEL: define private i8 @int_to_byte_trunc
+// CHECK-LABEL: define private i8 @_SV0NvU17int_to_byte_trunc
 // CHECK: trunc i32 {{.*}} to i8
 // CHECK: ret i8
 function automatic byte int_to_byte_trunc(int x);
     return byte'(x);
 endfunction
 
-// CHECK-LABEL: define private i64 @int_to_longint_sext
+// CHECK-LABEL: define private i64 @_SV0NvU19int_to_longint_sext
 // Signed int extended to signed longint -- sign extend.
 // CHECK: sext i32 {{.*}} to i64
 // CHECK: ret i64
@@ -46,7 +46,7 @@ function automatic longint int_to_longint_sext(int x);
     return longint'(x);
 endfunction
 
-// CHECK-LABEL: define private i64 @uint_to_longint_zext
+// CHECK-LABEL: define private i64 @_SV0NvU20uint_to_longint_zext
 // Unsigned int extended to longint -- zero extend (source is unsigned).
 // CHECK: zext i32 {{.*}} to i64
 // CHECK: ret i64
@@ -54,7 +54,7 @@ function automatic longint uint_to_longint_zext(int unsigned x);
     return longint'(x);
 endfunction
 
-// CHECK-LABEL: define private i32 @byte_to_int_sext
+// CHECK-LABEL: define private i32 @_SV0NvU16byte_to_int_sext
 // Signed byte extended to signed int -- sign extend.
 // CHECK: sext i8 {{.*}} to i32
 // CHECK: ret i32
@@ -62,7 +62,7 @@ function automatic int byte_to_int_sext(byte x);
     return int'(x);
 endfunction
 
-// CHECK-LABEL: define private i32 @ubyte_to_int_zext
+// CHECK-LABEL: define private i32 @_SV0NvU17ubyte_to_int_zext
 // Unsigned byte to int -- zero extend.
 // CHECK: zext i8 {{.*}} to i32
 // CHECK: ret i32
@@ -74,7 +74,7 @@ endfunction
 // Integer-to-integer: 4-state to 2-state (flatten unknowns)
 // ---------------------------------------------------------------------------
 
-// CHECK-LABEL: define private i32 @logic_to_int
+// CHECK-LABEL: define private i32 @_SV0NvU12logic_to_int
 // CHECK: lshr i64
 // CHECK: trunc i64 {{.*}} to i32
 // CHECK: and i32
@@ -83,7 +83,7 @@ function automatic int logic_to_int(logic [31:0] x);
     return int'(x);
 endfunction
 
-// CHECK-LABEL: define private i8 @logic8_to_byte
+// CHECK-LABEL: define private i8 @_SV0NvU14logic8_to_byte
 // 4-state -> 2-state with truncation.
 // CHECK: ret i8
 function automatic byte logic8_to_byte(logic [7:0] x);
@@ -94,7 +94,7 @@ endfunction
 // Integer-to-integer: 2-state to 4-state
 // ---------------------------------------------------------------------------
 
-// CHECK-LABEL: define private i64 @int_to_logic32
+// CHECK-LABEL: define private i64 @_SV0NvU14int_to_logic32
 // CHECK: zext i32 {{.*}} to i64
 // CHECK: ret i64
 function automatic logic [31:0] int_to_logic32(int x);
@@ -105,7 +105,7 @@ endfunction
 // Integer-to-integer: Propagated sign extension
 // ---------------------------------------------------------------------------
 
-// CHECK-LABEL: define private i64 @propagated_sext
+// CHECK-LABEL: define private i64 @_SV0NvU15propagated_sext
 // CHECK: sext i32 {{.*}} to i64
 // CHECK: ret i64
 function automatic longint propagated_sext(int a);
@@ -117,28 +117,28 @@ endfunction
 // Integer-to-float
 // ---------------------------------------------------------------------------
 
-// CHECK-LABEL: define private double @byte_to_real
+// CHECK-LABEL: define private double @_SV0NvU12byte_to_real
 // CHECK: sitofp i8 {{.*}} to double
 // CHECK: ret double
 function automatic real byte_to_real(byte x);
     return real'(x);
 endfunction
 
-// CHECK-LABEL: define private float @int_to_shortreal
+// CHECK-LABEL: define private float @_SV0NvU16int_to_shortreal
 // CHECK: sitofp i32 {{.*}} to float
 // CHECK: ret float
 function automatic shortreal int_to_shortreal(int x);
     return shortreal'(x);
 endfunction
 
-// CHECK-LABEL: define private double @uint_to_real
+// CHECK-LABEL: define private double @_SV0NvU12uint_to_real
 // CHECK: uitofp i32 {{.*}} to double
 // CHECK: ret double
 function automatic real uint_to_real(int unsigned x);
     return real'(x);
 endfunction
 
-// CHECK-LABEL: define private double @logic_to_real
+// CHECK-LABEL: define private double @_SV0NvU13logic_to_real
 // CHECK: lshr
 // CHECK: and i32
 // CHECK: {{s|u}}itofp i32 {{.*}} to double
@@ -151,7 +151,7 @@ endfunction
 // Float-to-integer: rounding
 // ---------------------------------------------------------------------------
 
-// CHECK-LABEL: define private i64 @real_to_longint
+// CHECK-LABEL: define private i64 @_SV0NvU15real_to_longint
 // CHECK: call double @llvm.round.f64
 // CHECK: llvm.fptosi.sat.i64.f64
 // CHECK: ret i64
@@ -159,7 +159,7 @@ function automatic longint real_to_longint(real x);
     return longint'(x);
 endfunction
 
-// CHECK-LABEL: define private i8 @real_to_byte
+// CHECK-LABEL: define private i8 @_SV0NvU12real_to_byte
 // CHECK: call double @llvm.round.f64
 // CHECK: llvm.fptosi.sat.i8.f64
 // CHECK: ret i8
@@ -167,7 +167,7 @@ function automatic byte real_to_byte(real x);
     return byte'(x);
 endfunction
 
-// CHECK-LABEL: define private i32 @shortreal_to_int
+// CHECK-LABEL: define private i32 @_SV0NvU16shortreal_to_int
 // CHECK: call float @llvm.round.f32
 // CHECK: llvm.fptosi.sat.i32.f32
 // CHECK: ret i32

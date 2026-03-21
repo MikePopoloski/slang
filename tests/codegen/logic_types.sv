@@ -4,16 +4,16 @@
 // REQUIRES: llvm
 // RUN: %slang --emit-ir - %s
 
-// CHECK-LABEL: define private i2 @logic1_and
+// CHECK-LABEL: define private i2 @_SV0NvU10logic1_and
 // CHECK: ret i2
 
-// CHECK-LABEL: define private i16 @logic8_and
+// CHECK-LABEL: define private i16 @_SV0NvU10logic8_and
 // CHECK: ret i16
 
-// CHECK-LABEL: define private i16 @logic8_or
+// CHECK-LABEL: define private i16 @_SV0NvU9logic8_or
 // CHECK: ret i16
 
-// CHECK-LABEL: define private i16 @logic8_xor
+// CHECK-LABEL: define private i16 @_SV0NvU10logic8_xor
 // CHECK: ret i16
 
 function automatic logic logic1_and(logic a, logic b);

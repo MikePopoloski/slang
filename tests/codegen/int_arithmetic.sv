@@ -2,21 +2,21 @@
 // REQUIRES: llvm
 // RUN: %slang --emit-ir - %s
 
-// CHECK-LABEL: define private i32 @add
+// CHECK-LABEL: define private i32 @_SV0NvU3add
 // CHECK: %a = alloca i32
 // CHECK: %b = alloca i32
 // CHECK: add i32
 // CHECK: ret i32
 
-// CHECK-LABEL: define private i32 @sub
+// CHECK-LABEL: define private i32 @_SV0NvU3sub
 // CHECK: sub i32
 // CHECK: ret i32
 
-// CHECK-LABEL: define private i32 @mul
+// CHECK-LABEL: define private i32 @_SV0NvU3mul
 // CHECK: mul i32
 // CHECK: ret i32
 
-// CHECK-LABEL: define private i32 @negate
+// CHECK-LABEL: define private i32 @_SV0NvU6negate
 // CHECK: sub i32 0,
 // CHECK: ret i32
 

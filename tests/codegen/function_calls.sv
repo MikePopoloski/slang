@@ -2,16 +2,16 @@
 // REQUIRES: llvm
 // RUN: %slang --emit-ir - %s
 
-// CHECK-LABEL: define private i32 @double_it
+// CHECK-LABEL: define private i32 @_SV0NvU9double_it
 // CHECK: mul i32
 // CHECK: ret i32
 
-// CHECK-LABEL: define private i32 @quad
-// CHECK: call i32 @double_it
-// CHECK: call i32 @double_it
+// CHECK-LABEL: define private i32 @_SV0NvU4quad
+// CHECK: call i32 @_SV0NvU9double_it
+// CHECK: call i32 @_SV0NvU9double_it
 // CHECK: ret i32
 
-// CHECK-LABEL: define private i32 @accumulate
+// CHECK-LABEL: define private i32 @_SV0NvU10accumulate
 // CHECK: %a = alloca i32
 // CHECK: %b = alloca i32
 // CHECK: %c = alloca i32

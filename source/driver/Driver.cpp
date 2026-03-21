@@ -28,8 +28,11 @@
 #include "slang/util/ThreadPool.h"
 
 #ifdef SLANG_INCLUDE_LLVM
+#    include "slang/ast/ScriptSession.h"
+#    include "slang/ast/symbols/SubroutineSymbols.h"
 #    include "slang/codegen/CodeGenerator.h"
 #    include "slang/codegen/JIT.h"
+#    include "slang/numeric/ConstantValue.h"
 #endif
 
 namespace fs = std::filesystem;
@@ -452,9 +455,11 @@ void Driver::addStandardArgs() {
         "Emit LLVM bitcode (.bc) to the specified file after compilation, or '-' for stdout",
         "<file>", CommandLineFlags::FilePath);
     cmdLine.add("--run", options.runFunction,
-                "JIT-compile all input files and run the named zero-argument function, "
-                "printing its return value to stdout",
-                "<function>");
+                "JIT-compile all input files and run the named function, printing its return "
+                "value to stdout. An optional parenthesized argument list may be appended "
+                "(e.g. 'func(1, 2)'); arguments are evaluated as SystemVerilog constant "
+                "expressions.",
+                "<function>[(args)]");
     cmdLine.add("--target", options.target,
                 "Target triple for code generation (e.g. 'x86_64-unknown-linux-gnu'). "
                 "Defaults to the host triple.",
@@ -465,6 +470,12 @@ void Driver::addStandardArgs() {
                 "Target feature flag for code generation (e.g. '+avx2', '-bmi'). "
                 "Can be specified multiple times.",
                 "<feature>", CommandLineFlags::CommaList);
+    cmdLine.add("--sv_lib", options.nativeLibs,
+                "One or more native library files to link into the JIT. "
+                "Accepted formats: compiled object files (.o), LLVM bitcode (.bc), "
+                "static archives (.a, .lib), and shared/dynamic libraries (.so, .dll, .dylib). "
+                "Glob patterns are supported.",
+                "<file-pattern>[,...]", CommandLineFlags::FilePath);
 #endif
 }
 
@@ -1244,6 +1255,41 @@ bool Driver::runCodegen(Compilation& compilation) {
     if (options.emitIR || options.emitBitcode || options.runFunction) {
         using namespace codegen;
 
+        // If --run is supplied, parse the function name and an optional parenthesized
+        // argument list, then auto-inject a DPI export entry so callers don't need
+        // to write `export "DPI-C"` in the source.
+        std::string_view runFuncName;
+        std::string_view runArgSpec; // text between the parentheses, if any
+
+        if (options.runFunction) {
+            runFuncName = *options.runFunction;
+
+            // Split off any "(arg, ...)" suffix.
+            if (auto parenPos = runFuncName.find('('); parenPos != std::string_view::npos) {
+                auto closePos = runFuncName.rfind(')');
+                if (closePos != std::string_view::npos && closePos > parenPos)
+                    runArgSpec = runFuncName.substr(parenPos + 1, closePos - parenPos - 1);
+                runFuncName = runFuncName.substr(0, parenPos);
+            }
+
+            // Inject a DPI export entry for this function unless one already exists.
+            runFuncName = trimString(runFuncName);
+            const bool alreadyExported = std::ranges::any_of(compilation.getDPIExports(),
+                                                             [&](auto& entry) {
+                                                                 return entry.second == runFuncName;
+                                                             });
+            if (!alreadyExported) {
+                // Search compilation units for a subroutine with the requested name.
+                for (auto unit : compilation.getCompilationUnits()) {
+                    if (auto sym = unit->find(runFuncName);
+                        sym && sym->kind == SymbolKind::Subroutine) {
+                        compilation.addDPIExport(sym->as<SubroutineSymbol>(), runFuncName);
+                        break;
+                    }
+                }
+            }
+        }
+
         CodegenOptions codegenOpts;
         if (options.target)
             codegenOpts.targetTriple = *options.target;
@@ -1262,6 +1308,7 @@ bool Driver::runCodegen(Compilation& compilation) {
         CodeGenerator codeGen(compilation, codegenOpts);
         for (auto unit : compilation.getCompilationUnits())
             codeGen.emitScope(*unit);
+        codeGen.emitExports();
 
         if (options.emitIR) {
             if (auto err = codeGen.writeIRToFile(*options.emitIR); !err.empty()) {
@@ -1280,19 +1327,62 @@ bool Driver::runCodegen(Compilation& compilation) {
         }
 
         if (options.runFunction) {
+            // Parse the argument list (if any) into ConstantValue objects by evaluating
+            // each argument as a SystemVerilog constant expression.
+            SmallVector<ConstantValue> runArgs;
+            if (!runArgSpec.empty()) {
+                ScriptSession session;
+                for (auto argStr : splitString(runArgSpec, ',')) {
+                    argStr = trimString(argStr);
+                    if (argStr.empty()) {
+                        OS::printE(fmt::format("error: empty argument in --run argument list\n"));
+                        return false;
+                    }
+
+                    auto val = session.eval(argStr);
+                    if (val.bad()) {
+                        OS::printE(fmt::format("error: could not evaluate argument '{}' in --run\n",
+                                               argStr));
+                        return false;
+                    }
+                    runArgs.push_back(std::move(val));
+                }
+            }
+
             auto jitOrErr = JIT::create(std::move(codeGen));
             if (!jitOrErr) {
                 OS::printE(fmt::format("error: JIT construction failed: {}\n", jitOrErr.error()));
                 return false;
             }
 
-            auto resultOrErr = jitOrErr->runFunction(*options.runFunction);
+            // Expand --sv_lib glob patterns and link each resolved file into the JIT.
+            for (auto& pattern : options.nativeLibs) {
+                SmallVector<fs::path> libFiles;
+                std::error_code globEc;
+                svGlob({}, pattern, GlobMode::Files, libFiles, /* expandEnvVars */ false, globEc);
+                if (globEc) {
+                    OS::printE(
+                        fmt::format("error: --sv_lib '{}': {}\n", pattern, globEc.message()));
+                    return false;
+                }
+
+                for (auto& libPath : libFiles) {
+                    if (auto err = jitOrErr->linkLibrary(libPath); !err.empty()) {
+                        OS::printE(
+                            fmt::format("error: --sv_lib '{}': {}\n", getU8Str(libPath), err));
+                        return false;
+                    }
+                }
+            }
+
+            auto resultOrErr = jitOrErr->runFunction(runFuncName, runArgs);
             if (!resultOrErr) {
                 OS::printE(fmt::format("error: failed to run function: {}\n", resultOrErr.error()));
                 return false;
             }
 
-            OS::print(*resultOrErr);
+            if (!resultOrErr->bad())
+                OS::print(resultOrErr->toString());
         }
     }
 #endif

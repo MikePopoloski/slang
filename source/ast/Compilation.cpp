@@ -1464,6 +1464,10 @@ CompilationUnitSymbol& Compilation::createScriptScope() {
     return *unit;
 }
 
+void Compilation::addDPIExport(const SubroutineSymbol& sub, std::string_view cIdent) {
+    resolvedDPIExports.emplace_back(&sub, std::string(cIdent));
+}
+
 void Compilation::elaborate() {
     SLANG_ASSERT(!isFrozen());
 
@@ -2000,6 +2004,10 @@ void Compilation::checkDPIMethods(std::span<const SubroutineSymbol* const> dpiIm
                     auto& diag = scope->addDiag(diag::DPIExportDuplicateCId, syntax->name.range());
                     diag << cId;
                     diag.addNote(diag::NotePreviousDefinition, it->second->name.location());
+                }
+                else {
+                    // All checks passed — record the resolved export.
+                    resolvedDPIExports.emplace_back(&sub, std::string(cId));
                 }
             }
         }

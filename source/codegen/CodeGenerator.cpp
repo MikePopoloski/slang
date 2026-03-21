@@ -42,6 +42,10 @@ void CodeGenerator::emitScope(const Scope& scope) {
     impl->emitScope(scope);
 }
 
+void CodeGenerator::emitExports() {
+    impl->emitExports();
+}
+
 std::string CodeGenerator::getTextualIR() const {
     return impl->getTextualIR();
 }
@@ -70,6 +74,13 @@ void CodeGenerator::Impl::emitScope(const Scope& scope) {
         if (member.kind == SymbolKind::Subroutine)
             emitter.lower(member.as<SubroutineSymbol>());
     }
+}
+
+void CodeGenerator::Impl::emitExports() {
+    // Emit DPI export thunks for all exports.
+    FunctionEmitter emitter(context);
+    for (auto& [sub, cIdent] : context.compilation.getDPIExports())
+        emitter.lowerDPIExport(*sub, cIdent);
 }
 
 std::string CodeGenerator::Impl::getTextualIR() const {
@@ -220,33 +231,34 @@ TypeEmitter::TypeEmitter(CodegenContext& context) : context(context) {
     typeCache[&comp.getShortRealType()] = FloatTy;
 }
 
-llvm::Type* TypeEmitter::lowerForDPIArg(const Type& type) {
+llvm::Type* TypeEmitter::lowerForDPIArg(llvm::LLVMContext& vmCtx, const Type& type) {
     auto& ct = type.getCanonicalType();
     switch (ct.kind) {
         case SymbolKind::VoidType:
-            return VoidTy;
+            return llvm::Type::getVoidTy(vmCtx);
         case SymbolKind::FloatingType:
-            return ct.getBitWidth() == 32 ? FloatTy : DoubleTy;
+            return ct.getBitWidth() == 32 ? llvm::Type::getFloatTy(vmCtx)
+                                          : llvm::Type::getDoubleTy(vmCtx);
         case SymbolKind::ScalarType:
-            return Int8Ty;
+            return llvm::IntegerType::get(vmCtx, 8);
         case SymbolKind::PredefinedIntegerType:
             switch (ct.as<PredefinedIntegerType>().integerKind) {
                 case PredefinedIntegerType::ShortInt:
-                    return Int16Ty;
+                    return llvm::IntegerType::get(vmCtx, 16);
                 case PredefinedIntegerType::Int:
-                    return Int32Ty;
+                    return llvm::IntegerType::get(vmCtx, 32);
                 case PredefinedIntegerType::LongInt:
-                    return Int64Ty;
+                    return llvm::IntegerType::get(vmCtx, 64);
                 case PredefinedIntegerType::Byte:
-                    return Int8Ty;
+                    return llvm::IntegerType::get(vmCtx, 8);
                 case PredefinedIntegerType::Integer:
                 case PredefinedIntegerType::Time:
                     // 4-state types are passed by pointer to svLogicVecVal array.
-                    return PtrTy;
+                    return llvm::PointerType::get(vmCtx, 0);
             }
             SLANG_UNREACHABLE;
         case SymbolKind::EnumType:
-            return lowerForDPIArg(ct.as<EnumType>().baseType);
+            return lowerForDPIArg(vmCtx, ct.as<EnumType>().baseType);
         case SymbolKind::CHandleType:
         case SymbolKind::PackedArrayType:
         case SymbolKind::PackedStructType:
@@ -255,10 +267,14 @@ llvm::Type* TypeEmitter::lowerForDPIArg(const Type& type) {
         case SymbolKind::DPIOpenArrayType:
         case SymbolKind::StringType:
             // Everything else is passed by reference.
-            return PtrTy;
+            return llvm::PointerType::get(vmCtx, 0);
         default:
             SLANG_UNREACHABLE;
     }
+}
+
+llvm::Type* TypeEmitter::lowerForDPIArg(const Type& type) {
+    return lowerForDPIArg(*context.ctx, type);
 }
 
 llvm::Type* TypeEmitter::lowerForDPILayout(const Type& type) {
@@ -348,6 +364,67 @@ llvm::IntegerType* TypeEmitter::fourStateFor(bitwidth_t bits) {
     return llvm::IntegerType::get(*context.ctx, bits * 2);
 }
 
+// Computes a mangled LLVM symbol name for an internal SV subroutine.
+// TODO: this is not fully sufficient but good enough for now
+//
+// Format:  _SV0 <path>
+// <path>   =  "U"                           (compilation-unit root)
+//           | "N" <ns> <path> <identifier>  (nested item)
+// <ns>     =  "v" (function/task)
+//           | "p" (package)
+//           | "m" (module / instance-body / class / other scope)
+// <identifier> = <decimal-length> <name>
+//
+// Examples:
+//   function automatic int add(...) in package math
+//       -> _SV0NvNpU4math3add
+//   top-level function calc
+//       -> _SV0NvU4calc
+static std::string mangleSubroutineName(const SubroutineSymbol& sub) {
+    // Collect path components from the subroutine up to (but not including)
+    // the compilation-unit / root boundary.
+    SmallVector<const Symbol*, 8> components;
+    const Symbol* sym = &sub;
+    while (sym) {
+        if (!sym->name.empty())
+            components.push_back(sym);
+
+        auto parent = sym->getParentScope();
+        if (!parent)
+            break;
+
+        auto& parentSym = parent->asSymbol();
+        if (parentSym.kind == SymbolKind::Root || parentSym.kind == SymbolKind::CompilationUnit)
+            break;
+
+        sym = &parentSym;
+    }
+
+    // Build the path string from innermost to outermost, wrapping each level
+    // in an "N<ns><parent><identifier>" node.
+    std::string path = "U";
+    for (auto s : std::views::reverse(components)) {
+        char ns;
+        if (s->kind == SymbolKind::Package)
+            ns = 'p';
+        else if (s->kind == SymbolKind::Subroutine)
+            ns = 'v';
+        else
+            ns = 'm'; // module, InstanceBody, ClassType, etc.
+
+        std::string next;
+        next.reserve(2 + path.size() + 10 + s->name.size());
+        next += 'N';
+        next += ns;
+        next += path;
+        next += std::to_string(s->name.size());
+        next += s->name;
+        path = std::move(next);
+    }
+
+    return "_SV0" + path;
+}
+
 FunctionEmitter::FunctionEmitter(CodegenContext& context) : context(context), builder(context) {
 }
 
@@ -409,6 +486,17 @@ static constexpr bitmask<MethodFlags> UnimplementedFlags =
     MethodFlags::BuiltIn | MethodFlags::Randomize | MethodFlags::ForkJoin |
     MethodFlags::DefaultedSuperArg | MethodFlags::PrePostRandomize;
 
+llvm::FunctionType* FunctionEmitter::createFunctionType(const SubroutineSymbol& sub) {
+    SmallVector<llvm::Type*, 8> paramTypes;
+    for (auto arg : sub.getArguments()) {
+        if (arg->direction != ArgumentDirection::In)
+            SLANG_UNIMPLEMENTED;
+        paramTypes.push_back(context.types.lower(arg->getType()));
+    }
+    auto retTy = context.types.lower(sub.getReturnType());
+    return llvm::FunctionType::get(retTy, paramTypes, /* isVarArg */ false);
+}
+
 llvm::Function* FunctionEmitter::lower(const SubroutineSymbol& sub) {
     // If we already emitted this subroutine (e.g. because it was called from another
     // subroutine first), return the existing function.
@@ -424,19 +512,10 @@ llvm::Function* FunctionEmitter::lower(const SubroutineSymbol& sub) {
     if (sub.flags.has(MethodFlags::DPIImport))
         return lowerDPIImport(sub);
 
-    // Build parameter types.
-    SmallVector<llvm::Type*, 8> paramTypes;
-    for (auto arg : sub.getArguments()) {
-        if (arg->direction != ArgumentDirection::In)
-            SLANG_UNIMPLEMENTED;
-
-        paramTypes.push_back(context.types.lower(arg->getType()));
-    }
-
-    // Create the function object.
-    auto retTy = context.types.lower(sub.getReturnType());
-    auto fnTy = llvm::FunctionType::get(retTy, paramTypes, /* isVarArg */ false);
-    auto fn = llvm::Function::Create(fnTy, llvm::Function::PrivateLinkage, sub.name,
+    // Create the function.
+    auto mangledName = mangleSubroutineName(sub);
+    auto fnTy = createFunctionType(sub);
+    auto fn = llvm::Function::Create(fnTy, llvm::Function::PrivateLinkage, mangledName,
                                      context.module.get());
 
     context.funcMap.emplace(&sub, fn);
@@ -522,7 +601,7 @@ llvm::Function* FunctionEmitter::lower(const SubroutineSymbol& sub) {
     if (!returnVal)
         builder.CreateRetVoid();
     else
-        builder.CreateRet(builder.CreateLoad(retTy, returnVal));
+        builder.CreateRet(builder.CreateLoad(fn->getReturnType(), returnVal));
 
     // Remove the AllocaInsertPt instruction, which is just a convenience for us.
     llvm::Instruction* ptr = localInsertPt;
@@ -563,6 +642,136 @@ llvm::Function* FunctionEmitter::lowerDPIImport(const SubroutineSymbol& sub) {
 
     context.funcMap.emplace(&sub, fn);
     return fn;
+}
+
+llvm::Function* FunctionEmitter::lowerDPIExport(const SubroutineSymbol& sub,
+                                                std::string_view cIdent) {
+    // Compute the mangled name for the internal SV function and resolve it.
+    llvm::Function* svFn = nullptr;
+    auto mangledName = mangleSubroutineName(sub);
+    if (auto it = context.funcMap.find(&sub); it != context.funcMap.end()) {
+        svFn = it->second;
+    }
+    else {
+        svFn = context.module->getFunction(mangledName);
+        if (!svFn) {
+            // The SV function hasn't been emitted yet. Create a forward-declaration so
+            // the thunk can reference it; lower() will fill in the body later.
+            auto fnTy = createFunctionType(sub);
+            svFn = llvm::Function::Create(fnTy, llvm::Function::PrivateLinkage, mangledName,
+                                          context.module.get());
+        }
+    }
+
+    // Build the DPI (C ABI) function type for the thunk.
+    SmallVector<llvm::Type*, 8> dpiParamTypes;
+    for (auto arg : sub.getArguments()) {
+        if (arg->direction == ArgumentDirection::Out ||
+            arg->direction == ArgumentDirection::InOut) {
+            dpiParamTypes.push_back(context.types.PtrTy);
+        }
+        else {
+            SLANG_ASSERT(arg->direction == ArgumentDirection::In);
+            dpiParamTypes.push_back(context.types.lowerForDPIArg(arg->getType()));
+        }
+    }
+
+    // Create the thunk with external linkage and the C identifier as name.
+    auto dpiRetTy = context.types.lowerForDPIArg(sub.getReturnType());
+    auto thunkFnTy = llvm::FunctionType::get(dpiRetTy, dpiParamTypes, /* isVarArg */ false);
+    auto thunk = llvm::Function::Create(thunkFnTy, llvm::Function::ExternalLinkage, cIdent,
+                                        context.module.get());
+
+    // Build the thunk body: convert DPI args -> SV internal types, call svFn, convert return.
+    auto entryBB = llvm::BasicBlock::Create(*context.ctx, "entry", thunk);
+    builder.SetInsertPoint(entryBB);
+
+    // TODO: review argument conversion
+    SmallVector<llvm::Value*, 8> svArgs;
+    auto argIt = thunk->arg_begin();
+    for (auto portArg : sub.getArguments()) {
+        llvm::Value* dpiVal = &*argIt++;
+        const auto& argType = portArg->getType();
+
+        if (portArg->direction == ArgumentDirection::Out ||
+            portArg->direction == ArgumentDirection::InOut) {
+            // Out/inout args are already pointers; forward them directly.
+            svArgs.push_back(dpiVal);
+            continue;
+        }
+
+        auto dpiTy = context.types.lowerForDPIArg(argType);
+        auto svTy = context.types.lower(argType);
+        if (dpiTy == context.types.PtrTy) {
+            // Packed array argument: load from the DPI pointer and reconstruct the
+            // SV internal integer representation.
+            auto& ct = argType.getCanonicalType();
+            const bool isFourState = ct.isFourState();
+            const bitwidth_t N = ct.getBitWidth();
+            if (N > 32)
+                SLANG_UNIMPLEMENTED;
+
+            if (isFourState) {
+                // Layout is [1 x {i32 aval, i32 bval}] (svLogicVecVal).
+                // Load the first struct from the pointer.
+                auto svlvvTy = context.types.SVLogicVecValTy;
+                auto svlvv = builder.CreateLoad(svlvvTy, dpiVal);
+                auto aval32 = builder.CreateExtractValue(svlvv, {0});
+                auto bval32 = builder.CreateExtractValue(svlvv, {1});
+                // Truncate to N bits.
+                auto iNTy = context.types.twoStateFor(N);
+                auto valN = builder.CreateTrunc(aval32, iNTy);
+                auto unkN = builder.CreateTrunc(bval32, iNTy);
+                // Pack into i(2N): val in [N-1:0], unk in [2N-1:N].
+                svArgs.push_back(builder.createSVInt(valN, unkN, svTy));
+            }
+            else {
+                // Layout is [1 x i32] (svBitVecVal). Load the first word.
+                auto word = builder.CreateLoad(context.types.Int32Ty, dpiVal);
+                auto iNTy = context.types.twoStateFor(N);
+                svArgs.push_back(builder.CreateTrunc(word, iNTy));
+            }
+        }
+        else {
+            // Scalar / predefined integer / float: may need width conversion.
+            llvm::Value* val = dpiVal;
+            if (svTy != dpiTy && svTy->isIntegerTy() && dpiTy->isIntegerTy()) {
+                auto svBits = llvm::cast<llvm::IntegerType>(svTy)->getBitWidth();
+                auto dpiBits = llvm::cast<llvm::IntegerType>(dpiTy)->getBitWidth();
+                if (dpiBits > svBits)
+                    val = builder.CreateTrunc(dpiVal, svTy);
+                else
+                    val = builder.CreateZExt(dpiVal, svTy);
+            }
+            svArgs.push_back(val);
+        }
+    }
+
+    // Call the internal SV function.
+    auto svResult = builder.CreateCall(svFn, svArgs);
+
+    // Convert the SV return value to the DPI type and return.
+    if (dpiRetTy->isVoidTy()) {
+        builder.CreateRetVoid();
+    }
+    else {
+        if (dpiRetTy == context.types.PtrTy)
+            SLANG_UNIMPLEMENTED;
+
+        auto svRetTy = context.types.lower(sub.getReturnType());
+        llvm::Value* retVal = svResult;
+        if (svRetTy != dpiRetTy && svRetTy->isIntegerTy() && dpiRetTy->isIntegerTy()) {
+            auto svBits = llvm::cast<llvm::IntegerType>(svRetTy)->getBitWidth();
+            auto dpiBits = llvm::cast<llvm::IntegerType>(dpiRetTy)->getBitWidth();
+            if (dpiBits > svBits)
+                retVal = builder.CreateZExt(svResult, dpiRetTy);
+            else
+                retVal = builder.CreateTrunc(svResult, dpiRetTy);
+        }
+        builder.CreateRet(retVal);
+    }
+
+    return thunk;
 }
 
 } // namespace slang::codegen

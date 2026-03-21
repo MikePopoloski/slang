@@ -60,6 +60,9 @@ void strToLower(std::string& str);
 /// Splits the provided string into substrings based on the provided delimiter.
 std::vector<std::string_view> splitString(std::string_view str, char delimiter);
 
+/// Trims whitespace from either end of the string.
+std::string_view trimString(std::string_view str);
+
 /// Converts a character to uppercase (assuming ASCII).
 inline char charToUpper(char c) {
     return (char)::toupper(c);

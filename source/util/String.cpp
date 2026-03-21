@@ -94,6 +94,17 @@ std::vector<std::string_view> splitString(std::string_view str, char delimiter) 
     return result;
 }
 
+static constexpr std::string_view WhitespaceChars = " \n\r\t\f\v"sv;
+
+std::string_view trimString(std::string_view s) {
+    size_t start = s.find_first_not_of(WhitespaceChars);
+    if (start == std::string::npos)
+        return "";
+
+    size_t end = s.find_last_not_of(WhitespaceChars);
+    return s.substr(start, end - start + 1);
+}
+
 int editDistance(std::string_view left, std::string_view right, int maxDistance) {
     // See: http://en.wikipedia.org/wiki/Levenshtein_distance
     size_t m = left.size();

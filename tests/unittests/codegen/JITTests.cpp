@@ -12,17 +12,20 @@ using namespace slang::codegen;
 
 static CodeGenerator buildCodegen(Compilation& comp, std::string_view sv) {
     comp.addSyntaxTree(SyntaxTree::fromText(sv));
+    comp.getAllDiagnostics();
+
     CodeGenerator gen(comp);
-    for (auto& member : comp.getRoot().members()) {
-        if (member.kind == SymbolKind::CompilationUnit)
-            gen.emitScope(member.as<CompilationUnitSymbol>());
-    }
+    for (auto unit : comp.getCompilationUnits())
+        gen.emitScope(*unit);
+    gen.emitExports();
+
     return gen;
 }
 
 TEST_CASE("jit: integer add", "[jit]") {
     Compilation comp;
     auto gen = buildCodegen(comp, R"(
+        export "DPI-C" function add;
         function automatic int add(int a, int b);
             return a + b;
         endfunction
@@ -43,6 +46,7 @@ TEST_CASE("jit: integer add", "[jit]") {
 TEST_CASE("jit: integer multiply", "[jit]") {
     Compilation comp;
     auto gen = buildCodegen(comp, R"(
+        export "DPI-C" function mul;
         function automatic int mul(int a, int b);
             return a * b;
         endfunction
@@ -62,6 +66,7 @@ TEST_CASE("jit: integer multiply", "[jit]") {
 TEST_CASE("jit: return literal", "[jit]") {
     Compilation comp;
     auto gen = buildCodegen(comp, R"(
+        export "DPI-C" function forty_two;
         function automatic int forty_two();
             return 42;
         endfunction
@@ -80,6 +85,8 @@ TEST_CASE("jit: return literal", "[jit]") {
 TEST_CASE("jit: cross-function call", "[jit]") {
     Compilation comp;
     auto gen = buildCodegen(comp, R"(
+        export "DPI-C" function double_it;
+        export "DPI-C" function quad;
         function automatic int double_it(int x);
             return x * 2;
         endfunction
@@ -102,6 +109,7 @@ TEST_CASE("jit: cross-function call", "[jit]") {
 TEST_CASE("jit: if-else conditional", "[jit]") {
     Compilation comp;
     auto gen = buildCodegen(comp, R"(
+        export "DPI-C" function abs_val;
         function automatic int abs_val(int x);
             if (x < 0)
                 return -x;
@@ -125,6 +133,7 @@ TEST_CASE("jit: if-else conditional", "[jit]") {
 TEST_CASE("jit: real arithmetic", "[jit]") {
     Compilation comp;
     auto gen = buildCodegen(comp, R"(
+        export "DPI-C" function fadd;
         function automatic real fadd(real a, real b);
             return a + b;
         endfunction
@@ -143,6 +152,7 @@ TEST_CASE("jit: real arithmetic", "[jit]") {
 TEST_CASE("jit: run function helper", "[jit]") {
     Compilation comp;
     auto gen = buildCodegen(comp, R"(
+        export "DPI-C" function fadd;
         function automatic real fadd();
             return 1.5 + 2.6;
         endfunction
@@ -151,9 +161,9 @@ TEST_CASE("jit: run function helper", "[jit]") {
     auto jitOrErr = JIT::create(std::move(gen));
     REQUIRE(jitOrErr);
 
-    auto result = jitOrErr->runFunction("fadd");
+    auto result = jitOrErr->runFunction("fadd", {});
     REQUIRE(result);
-    CHECK(*result == "4.1");
+    CHECK(result->toString() == "4.1");
 }
 
 TEST_CASE("jit: lookup unknown symbol returns error", "[jit]") {
@@ -175,6 +185,10 @@ TEST_CASE("jit: lookup unknown symbol returns error", "[jit]") {
 TEST_CASE("jit: unary plus minus bitnot two-state", "[jit]") {
     Compilation comp;
     auto gen = buildCodegen(comp, R"(
+        export "DPI-C" function int_plus;
+        export "DPI-C" function int_minus;
+        export "DPI-C" function int_bitnot;
+        export "DPI-C" function bit8_lognot;
         function automatic int int_plus(int a); return +a; endfunction
         function automatic int int_minus(int a); return -a; endfunction
         function automatic int int_bitnot(int a); return ~a; endfunction
@@ -211,15 +225,16 @@ TEST_CASE("jit: unary plus minus bitnot two-state", "[jit]") {
     {
         auto fnOrErr = jitOrErr->lookup("bit8_lognot");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint8_t)>(*fnOrErr);
-        CHECK(fn(0x00) == 1); // !0 = 1
-        CHECK(fn(0xFF) == 0); // !nonzero = 0
-        CHECK(fn(0x01) == 0);
+        // DPI calling convention: bit [7:0] arg is passed as svBitVecVal* (uint32_t*)
+        auto fn = reinterpret_cast<uint8_t (*)(uint32_t*)>(*fnOrErr);
+        uint32_t v;
+        v = 0x00u;
+        CHECK(fn(&v) == 1); // !0 = 1
+        v = 0xFFu;
+        CHECK(fn(&v) == 0); // !nonzero = 0
+        v = 0x01u;
+        CHECK(fn(&v) == 0);
     }
-}
-
-static uint16_t make_v8(uint8_t val, uint8_t unk) {
-    return static_cast<uint16_t>((uint16_t(unk) << 8) | val);
 }
 
 static uint8_t make_v1(uint8_t val, uint8_t unk) {
@@ -227,60 +242,54 @@ static uint8_t make_v1(uint8_t val, uint8_t unk) {
 }
 
 TEST_CASE("jit: unary plus minus bitnot four-state", "[jit]") {
-    // For logic [7:0]: i16 encoding — lower byte = val bits, upper byte = unk bits.
+    // logic [7:0] cannot be a DPI return type, so the core functions are wrapped
+    // in DPI-exported helpers that test specific cases and return bit (pass/fail).
     Compilation comp;
     auto gen = buildCodegen(comp, R"(
         function automatic logic [7:0] logic8_minus(logic [7:0] a); return -a; endfunction
         function automatic logic [7:0] logic8_bitnot(logic [7:0] a); return ~a; endfunction
+        export "DPI-C" function test_logic8_minus;
+        export "DPI-C" function test_logic8_bitnot;
+        function automatic bit test_logic8_minus();
+            if (logic8_minus(8'h00) !== 8'h00) return '0; // -0 = 0
+            if (logic8_minus(8'h05) !== 8'hFB) return '0; // -5 mod 256 = 0xFB
+            logic [7:0] xval = 8'bxxxxxxxx;
+            if (logic8_minus(xval) !== 8'bxxxxxxxx) return '0; // all-X in -> all-X out
+            return '1;
+        endfunction
+        function automatic bit test_logic8_bitnot();
+            if (logic8_bitnot(8'h00) !== 8'hFF) return '0;
+            if (logic8_bitnot(8'hFF) !== 8'h00) return '0;
+            logic [7:0] mix = 8'bxxxx_1111; // upper nibble X, lower nibble 1s
+            if (logic8_bitnot(mix) !== 8'bxxxx_0000) return '0; // upper stays X, lower flips
+            return '1;
+        endfunction
     )");
 
     auto jitOrErr = JIT::create(std::move(gen));
     REQUIRE(jitOrErr);
 
-    auto get_val = [](uint16_t v) -> uint8_t { return v & 0xFF; };
-    auto get_unk = [](uint16_t v) -> uint8_t { return v >> 8; };
-
     {
-        auto fnOrErr = jitOrErr->lookup("logic8_minus");
+        auto fnOrErr = jitOrErr->lookup("test_logic8_minus");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint16_t (*)(uint16_t)>(*fnOrErr);
-
-        auto r0 = fn(make_v8(0x00, 0x00)); // -0 = 0
-        CHECK(get_val(r0) == 0x00);
-        CHECK(get_unk(r0) == 0x00);
-
-        auto r5 = fn(make_v8(0x05, 0x00)); // -5 = 251 = 0xFB
-        CHECK(get_val(r5) == 0xFB);
-        CHECK(get_unk(r5) == 0x00);
-
-        // Any unknown makes result all-X
-        auto rx = fn(make_v8(0x01, 0x01));
-        CHECK(get_unk(rx) == 0xFF);
+        auto fn = reinterpret_cast<uint8_t (*)()>(*fnOrErr);
+        CHECK(fn() == 1);
     }
     {
-        auto fnOrErr = jitOrErr->lookup("logic8_bitnot");
+        auto fnOrErr = jitOrErr->lookup("test_logic8_bitnot");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint16_t (*)(uint16_t)>(*fnOrErr);
-
-        auto r0 = fn(make_v8(0x00, 0x00)); // ~0x00 = 0xFF
-        CHECK(get_val(r0) == 0xFF);
-        CHECK(get_unk(r0) == 0x00);
-
-        auto rff = fn(make_v8(0xFF, 0x00)); // ~0xFF = 0x00
-        CHECK(get_val(rff) == 0x00);
-        CHECK(get_unk(rff) == 0x00);
-
-        // Unknown bits stay unknown; val bits for unknown positions become 0
-        auto rx = fn(make_v8(0xF0, 0x0F));
-        CHECK(get_val(rx) == 0x00);
-        CHECK(get_unk(rx) == 0x0F);
+        auto fn = reinterpret_cast<uint8_t (*)()>(*fnOrErr);
+        CHECK(fn() == 1);
     }
 }
 
 TEST_CASE("jit: unary logical not four-state", "[jit]") {
-    // For logic [7:0] input: i16. Result is logic (i2): 0=def0, 1=def1, 2=X.
+    // DPI calling convention: logic [7:0] arg is passed as svLogicVecVal* {aval, bval}.
+    // logic (scalar) arg/return is uint8_t (svLogic: 0=0, 1=1, 2=X, 3=Z).
     Compilation comp;
     auto gen = buildCodegen(comp, R"(
+        export "DPI-C" function logic8_lognot;
+        export "DPI-C" function logic1_lognot;
         function automatic logic logic8_lognot(logic [7:0] a); return !a; endfunction
         function automatic logic logic1_lognot(logic a); return !a; endfunction
     )");
@@ -290,18 +299,29 @@ TEST_CASE("jit: unary logical not four-state", "[jit]") {
 
     constexpr uint8_t kZero = 0, kOne = 1, kX = 2;
 
+    struct SVLogicVecVal {
+        uint32_t aval, bval;
+    };
+
     {
         auto fnOrErr = jitOrErr->lookup("logic8_lognot");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint16_t)>(*fnOrErr);
+        auto fn = reinterpret_cast<uint8_t (*)(SVLogicVecVal*)>(*fnOrErr);
 
-        CHECK(fn(make_v8(0x00, 0x00)) == kOne);  // !0 = 1
-        CHECK(fn(make_v8(0xFF, 0x00)) == kZero); // !nonzero = 0
-        CHECK(fn(make_v8(0x01, 0x00)) == kZero); // !1 = 0
+        SVLogicVecVal v;
+        v = {0x00u, 0x00u};
+        CHECK(fn(&v) == kOne); // !0 = 1
+        v = {0xFFu, 0x00u};
+        CHECK(fn(&v) == kZero); // !nonzero = 0
+        v = {0x01u, 0x00u};
+        CHECK(fn(&v) == kZero); // !1 = 0
         // Any unknown bit -> result is X
-        CHECK(fn(make_v8(0x00, 0xFF)) == kX); // all X
-        CHECK(fn(make_v8(0xFF, 0xFF)) == kX); // all Z
-        CHECK(fn(make_v8(0x00, 0x01)) == kX); // one unknown bit
+        v = {0x00u, 0xFFu};
+        CHECK(fn(&v) == kX); // all X
+        v = {0xFFu, 0xFFu};
+        CHECK(fn(&v) == kX); // all Z
+        v = {0x00u, 0x01u};
+        CHECK(fn(&v) == kX); // one unknown bit
     }
     {
         auto fnOrErr = jitOrErr->lookup("logic1_lognot");
@@ -318,6 +338,12 @@ TEST_CASE("jit: unary logical not four-state", "[jit]") {
 TEST_CASE("jit: unary reduction operators two-state", "[jit]") {
     Compilation comp;
     auto gen = buildCodegen(comp, R"(
+        export "DPI-C" function reduce_and;
+        export "DPI-C" function reduce_nand;
+        export "DPI-C" function reduce_or;
+        export "DPI-C" function reduce_nor;
+        export "DPI-C" function reduce_xor;
+        export "DPI-C" function reduce_xnor;
         function automatic bit reduce_and(bit [7:0] v); return &v; endfunction
         function automatic bit reduce_nand(bit [7:0] v); return ~&v; endfunction
         function automatic bit reduce_or(bit [7:0] v); return |v; endfunction
@@ -332,58 +358,90 @@ TEST_CASE("jit: unary reduction operators two-state", "[jit]") {
     {
         auto fnOrErr = jitOrErr->lookup("reduce_and");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint8_t)>(*fnOrErr);
-        CHECK(fn(0xFF) == 1);
-        CHECK(fn(0x00) == 0);
-        CHECK(fn(0xFE) == 0);
+        auto fn = reinterpret_cast<uint8_t (*)(uint32_t*)>(*fnOrErr);
+        uint32_t v;
+        v = 0xFFu;
+        CHECK(fn(&v) == 1);
+        v = 0x00u;
+        CHECK(fn(&v) == 0);
+        v = 0xFEu;
+        CHECK(fn(&v) == 0);
     }
     {
         auto fnOrErr = jitOrErr->lookup("reduce_nand");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint8_t)>(*fnOrErr);
-        CHECK(fn(0xFF) == 0);
-        CHECK(fn(0x00) == 1);
-        CHECK(fn(0xFE) == 1);
+        auto fn = reinterpret_cast<uint8_t (*)(uint32_t*)>(*fnOrErr);
+        uint32_t v;
+        v = 0xFFu;
+        CHECK(fn(&v) == 0);
+        v = 0x00u;
+        CHECK(fn(&v) == 1);
+        v = 0xFEu;
+        CHECK(fn(&v) == 1);
     }
     {
         auto fnOrErr = jitOrErr->lookup("reduce_or");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint8_t)>(*fnOrErr);
-        CHECK(fn(0x00) == 0);
-        CHECK(fn(0xFF) == 1);
-        CHECK(fn(0x01) == 1);
+        auto fn = reinterpret_cast<uint8_t (*)(uint32_t*)>(*fnOrErr);
+        uint32_t v;
+        v = 0x00u;
+        CHECK(fn(&v) == 0);
+        v = 0xFFu;
+        CHECK(fn(&v) == 1);
+        v = 0x01u;
+        CHECK(fn(&v) == 1);
     }
     {
         auto fnOrErr = jitOrErr->lookup("reduce_nor");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint8_t)>(*fnOrErr);
-        CHECK(fn(0x00) == 1);
-        CHECK(fn(0xFF) == 0);
-        CHECK(fn(0x01) == 0);
+        auto fn = reinterpret_cast<uint8_t (*)(uint32_t*)>(*fnOrErr);
+        uint32_t v;
+        v = 0x00u;
+        CHECK(fn(&v) == 1);
+        v = 0xFFu;
+        CHECK(fn(&v) == 0);
+        v = 0x01u;
+        CHECK(fn(&v) == 0);
     }
     {
         auto fnOrErr = jitOrErr->lookup("reduce_xor");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint8_t)>(*fnOrErr);
-        CHECK(fn(0x00) == 0); // even parity
-        CHECK(fn(0xFF) == 0); // 8 ones = even parity
-        CHECK(fn(0x01) == 1); // 1 one = odd parity
-        CHECK(fn(0x03) == 0); // 2 ones = even parity
+        auto fn = reinterpret_cast<uint8_t (*)(uint32_t*)>(*fnOrErr);
+        uint32_t v;
+        v = 0x00u;
+        CHECK(fn(&v) == 0); // even parity
+        v = 0xFFu;
+        CHECK(fn(&v) == 0); // 8 ones = even parity
+        v = 0x01u;
+        CHECK(fn(&v) == 1); // 1 one = odd parity
+        v = 0x03u;
+        CHECK(fn(&v) == 0); // 2 ones = even parity
     }
     {
         auto fnOrErr = jitOrErr->lookup("reduce_xnor");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint8_t)>(*fnOrErr);
-        CHECK(fn(0x00) == 1); // ~^0 = 1
-        CHECK(fn(0xFF) == 1); // 8 ones: even parity -> ~0 = 1
-        CHECK(fn(0x01) == 0); // odd parity -> ~1 = 0
-        CHECK(fn(0x03) == 1); // even parity -> ~0 = 1
+        auto fn = reinterpret_cast<uint8_t (*)(uint32_t*)>(*fnOrErr);
+        uint32_t v;
+        v = 0x00u;
+        CHECK(fn(&v) == 1); // ~^0 = 1
+        v = 0xFFu;
+        CHECK(fn(&v) == 1); // 8 ones: even parity -> ~0 = 1
+        v = 0x01u;
+        CHECK(fn(&v) == 0); // odd parity -> ~1 = 0
+        v = 0x03u;
+        CHECK(fn(&v) == 1); // even parity -> ~0 = 1
     }
 }
 
 TEST_CASE("jit: unary reduction operators four-state", "[jit]") {
     Compilation comp;
     auto gen = buildCodegen(comp, R"(
+        export "DPI-C" function reduce_and;
+        export "DPI-C" function reduce_nand;
+        export "DPI-C" function reduce_or;
+        export "DPI-C" function reduce_nor;
+        export "DPI-C" function reduce_xor;
+        export "DPI-C" function reduce_xnor;
         function automatic logic reduce_and(logic [7:0] v); return &v; endfunction
         function automatic logic reduce_nand(logic [7:0] v); return ~&v; endfunction
         function automatic logic reduce_or(logic [7:0] v); return |v; endfunction
@@ -395,14 +453,19 @@ TEST_CASE("jit: unary reduction operators four-state", "[jit]") {
     auto jitOrErr = JIT::create(std::move(gen));
     REQUIRE(jitOrErr);
 
-    const uint16_t all_zeros = make_v8(0x00, 0x00);
-    const uint16_t all_ones = make_v8(0xFF, 0x00);
-    const uint16_t all_x = make_v8(0x00, 0xFF);
-    const uint16_t all_z = make_v8(0xFF, 0xFF);
-    const uint16_t zeros_x = make_v8(0x00, 0x0F);
-    const uint16_t ones_x = make_v8(0xF0, 0x0F);
-    const uint16_t one_bit = make_v8(0x01, 0x00);
-    const uint16_t two_bits = make_v8(0x03, 0x00);
+    // DPI calling convention: logic [7:0] arg is passed as svLogicVecVal* {aval, bval}.
+    // logic return is uint8_t (svLogic: 0=0, 1=1, 2=X, 3=Z).
+    struct SVLogicVecVal {
+        uint32_t aval, bval;
+    };
+    SVLogicVecVal all_zeros = {0x00u, 0x00u};
+    SVLogicVecVal all_ones = {0xFFu, 0x00u};
+    SVLogicVecVal all_x = {0x00u, 0xFFu};
+    SVLogicVecVal all_z = {0xFFu, 0xFFu};
+    SVLogicVecVal zeros_x = {0x00u, 0x0Fu}; // lower nibble unknown, upper nibble 0
+    SVLogicVecVal ones_x = {0xF0u, 0x0Fu};  // upper nibble 1s, lower nibble unknown
+    SVLogicVecVal one_bit = {0x01u, 0x00u};
+    SVLogicVecVal two_bits = {0x03u, 0x00u};
 
     constexpr uint8_t kZero = 0, kOne = 1, kX = 2;
 
@@ -410,76 +473,76 @@ TEST_CASE("jit: unary reduction operators four-state", "[jit]") {
     {
         auto fnOrErr = jitOrErr->lookup("reduce_and");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint16_t)>(*fnOrErr);
-        CHECK(fn(all_zeros) == kZero);
-        CHECK(fn(all_ones) == kOne);
-        CHECK(fn(all_x) == kX);
-        CHECK(fn(all_z) == kX);      // val=1 but all unknown; not all definitely 1
-        CHECK(fn(zeros_x) == kZero); // definite zero bits dominate
-        CHECK(fn(ones_x) == kX);     // no definite zeros, has unknowns
+        auto fn = reinterpret_cast<uint8_t (*)(SVLogicVecVal*)>(*fnOrErr);
+        CHECK(fn(&all_zeros) == kZero);
+        CHECK(fn(&all_ones) == kOne);
+        CHECK(fn(&all_x) == kX);
+        CHECK(fn(&all_z) == kX);      // val=1 but all unknown; not all definitely 1
+        CHECK(fn(&zeros_x) == kZero); // definite zero bits dominate
+        CHECK(fn(&ones_x) == kX);     // no definite zeros, has unknowns
     }
     // ~&
     {
         auto fnOrErr = jitOrErr->lookup("reduce_nand");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint16_t)>(*fnOrErr);
-        CHECK(fn(all_zeros) == kOne);
-        CHECK(fn(all_ones) == kZero);
-        CHECK(fn(all_x) == kX);
-        CHECK(fn(all_z) == kX);
-        CHECK(fn(zeros_x) == kOne); // AND=0 -> NAND=1
-        CHECK(fn(ones_x) == kX);    // AND=X -> NAND=X
+        auto fn = reinterpret_cast<uint8_t (*)(SVLogicVecVal*)>(*fnOrErr);
+        CHECK(fn(&all_zeros) == kOne);
+        CHECK(fn(&all_ones) == kZero);
+        CHECK(fn(&all_x) == kX);
+        CHECK(fn(&all_z) == kX);
+        CHECK(fn(&zeros_x) == kOne); // AND=0 -> NAND=1
+        CHECK(fn(&ones_x) == kX);    // AND=X -> NAND=X
     }
     // |: 1 if any definite-one; X if no definite-one but some unknowns; 0 if all definitely 0.
     {
         auto fnOrErr = jitOrErr->lookup("reduce_or");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint16_t)>(*fnOrErr);
-        CHECK(fn(all_zeros) == kZero);
-        CHECK(fn(all_ones) == kOne);
-        CHECK(fn(all_x) == kX);
-        CHECK(fn(all_z) == kX);    // val=1 but all unknown; no definite ones
-        CHECK(fn(ones_x) == kOne); // definite one bits dominate
-        CHECK(fn(zeros_x) == kX);  // no definite ones, has unknowns
+        auto fn = reinterpret_cast<uint8_t (*)(SVLogicVecVal*)>(*fnOrErr);
+        CHECK(fn(&all_zeros) == kZero);
+        CHECK(fn(&all_ones) == kOne);
+        CHECK(fn(&all_x) == kX);
+        CHECK(fn(&all_z) == kX);    // val=1 but all unknown; no definite ones
+        CHECK(fn(&ones_x) == kOne); // definite one bits dominate
+        CHECK(fn(&zeros_x) == kX);  // no definite ones, has unknowns
     }
     // ~|
     {
         auto fnOrErr = jitOrErr->lookup("reduce_nor");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint16_t)>(*fnOrErr);
-        CHECK(fn(all_zeros) == kOne);
-        CHECK(fn(all_ones) == kZero);
-        CHECK(fn(all_x) == kX);
-        CHECK(fn(all_z) == kX);
-        CHECK(fn(ones_x) == kZero); // OR=1 -> NOR=0
-        CHECK(fn(zeros_x) == kX);   // OR=X -> NOR=X
+        auto fn = reinterpret_cast<uint8_t (*)(SVLogicVecVal*)>(*fnOrErr);
+        CHECK(fn(&all_zeros) == kOne);
+        CHECK(fn(&all_ones) == kZero);
+        CHECK(fn(&all_x) == kX);
+        CHECK(fn(&all_z) == kX);
+        CHECK(fn(&ones_x) == kZero); // OR=1 -> NOR=0
+        CHECK(fn(&zeros_x) == kX);   // OR=X -> NOR=X
     }
     // ^: X if any unknown; otherwise parity of val bits.
     {
         auto fnOrErr = jitOrErr->lookup("reduce_xor");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint16_t)>(*fnOrErr);
-        CHECK(fn(all_zeros) == kZero); // even parity
-        CHECK(fn(all_ones) == kZero);  // 8 ones = even parity
-        CHECK(fn(all_x) == kX);
-        CHECK(fn(all_z) == kX);
-        CHECK(fn(zeros_x) == kX);
-        CHECK(fn(ones_x) == kX);
-        CHECK(fn(one_bit) == kOne);   // odd parity
-        CHECK(fn(two_bits) == kZero); // even parity
+        auto fn = reinterpret_cast<uint8_t (*)(SVLogicVecVal*)>(*fnOrErr);
+        CHECK(fn(&all_zeros) == kZero); // even parity
+        CHECK(fn(&all_ones) == kZero);  // 8 ones = even parity
+        CHECK(fn(&all_x) == kX);
+        CHECK(fn(&all_z) == kX);
+        CHECK(fn(&zeros_x) == kX);
+        CHECK(fn(&ones_x) == kX);
+        CHECK(fn(&one_bit) == kOne);   // odd parity
+        CHECK(fn(&two_bits) == kZero); // even parity
     }
     // ~^
     {
         auto fnOrErr = jitOrErr->lookup("reduce_xnor");
         REQUIRE(fnOrErr);
-        auto fn = reinterpret_cast<uint8_t (*)(uint16_t)>(*fnOrErr);
-        CHECK(fn(all_zeros) == kOne); // ~^0 = 1
-        CHECK(fn(all_ones) == kOne);  // 8 ones: even parity -> ~0 = 1
-        CHECK(fn(all_x) == kX);
-        CHECK(fn(all_z) == kX);
-        CHECK(fn(zeros_x) == kX);
-        CHECK(fn(ones_x) == kX);
-        CHECK(fn(one_bit) == kZero); // odd parity -> ~1 = 0
-        CHECK(fn(two_bits) == kOne); // even parity -> ~0 = 1
+        auto fn = reinterpret_cast<uint8_t (*)(SVLogicVecVal*)>(*fnOrErr);
+        CHECK(fn(&all_zeros) == kOne); // ~^0 = 1
+        CHECK(fn(&all_ones) == kOne);  // 8 ones: even parity -> ~0 = 1
+        CHECK(fn(&all_x) == kX);
+        CHECK(fn(&all_z) == kX);
+        CHECK(fn(&zeros_x) == kX);
+        CHECK(fn(&ones_x) == kX);
+        CHECK(fn(&one_bit) == kZero); // odd parity -> ~1 = 0
+        CHECK(fn(&two_bits) == kOne); // even parity -> ~0 = 1
     }
 }

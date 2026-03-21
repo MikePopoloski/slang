@@ -369,6 +369,12 @@ public:
         /// Accumulated target feature flags (e.g. "+avx2", "-bmi").
         std::vector<std::string> features;
 
+        /// Paths (or glob patterns) to native libraries to link into the JIT.
+        /// Accepted formats: object files (.o on Unix, .obj on Windows), LLVM
+        /// bitcode (.bc), static archives (.a, .lib), and shared/dynamic libraries
+        /// (.so, .dll, .dylib).
+        std::vector<std::string> nativeLibs;
+
         /// @}
 #endif
 

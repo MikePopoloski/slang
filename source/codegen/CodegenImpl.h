@@ -69,6 +69,9 @@ public:
     // for use as a function argument or return type.
     llvm::Type* lowerForDPIArg(const Type& type);
 
+    // Context-free static overload: usable outside a full CodegenContext (e.g. JIT trampolines).
+    static llvm::Type* lowerForDPIArg(llvm::LLVMContext& vmCtx, const Type& type);
+
     // Returns the in-memory LLVM type for a DPI value stored inside a struct.
     llvm::Type* lowerForDPILayout(const Type& type);
 
@@ -130,6 +133,7 @@ public:
     explicit FunctionEmitter(CodegenContext& context);
 
     llvm::Function* lower(const SubroutineSymbol& subroutine);
+    llvm::Function* lowerDPIExport(const SubroutineSymbol& sub, std::string_view cIdent);
 
     void emitStmt(const Statement& stmt);
     void emitBlock(llvm::BasicBlock* bb, bool isFinished = false);
@@ -161,6 +165,9 @@ public:
     llvm::Function* currentFunc = nullptr;
 
 private:
+    // Builds the LLVM function type for an internal SV function.
+    llvm::FunctionType* createFunctionType(const SubroutineSymbol& sub);
+
     // Creates an external function declaration for a DPI-imported function.
     llvm::Function* lowerDPIImport(const SubroutineSymbol& sub);
 };
@@ -173,6 +180,7 @@ public:
 
     void emitSubroutine(const SubroutineSymbol& subroutine);
     void emitScope(const Scope& scope);
+    void emitExports();
 
     std::string getTextualIR() const;
     std::string writeIRToFile(std::string_view path) const;

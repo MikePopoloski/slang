@@ -3,19 +3,19 @@
 // REQUIRES: llvm
 // RUN: %slang --emit-ir - %s
 
-// CHECK-LABEL: define private i1 @bit_and
+// CHECK-LABEL: define private i1 @_SV0NvU7bit_and
 // CHECK: and i1
 // CHECK: ret i1
 
-// CHECK-LABEL: define private i1 @bit_or
+// CHECK-LABEL: define private i1 @_SV0NvU6bit_or
 // CHECK: or i1
 // CHECK: ret i1
 
-// CHECK-LABEL: define private i1 @bit_xor
+// CHECK-LABEL: define private i1 @_SV0NvU7bit_xor
 // CHECK: xor i1
 // CHECK: ret i1
 
-// CHECK-LABEL: define private i8 @byte_add
+// CHECK-LABEL: define private i8 @_SV0NvU8byte_add
 // CHECK: add i8
 // CHECK: ret i8
 
