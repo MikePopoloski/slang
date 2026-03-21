@@ -27,7 +27,7 @@ Directives in test files
                               CHECK-DAG directives is not enforced).
 
   // CHECK-LABEL: <pattern>   Resets the current scan position to the matching
-                              line.  Useful for separating sections.
+                              line. Useful for separating sections.
 
   // XFAIL: *                 Mark the test as expected to fail.
 
@@ -204,13 +204,34 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
     """
     lines = output.splitlines()
 
-    # Partition directives into sequential groups.  A CHECK-DAG block is a
+    # Partition directives into sequential groups. A CHECK-DAG block is a
     # maximal run of consecutive CHECK-DAG directives.
     # CHECK-NOT directives are accumulated and validated against the window
     # between the surrounding positive checks.
 
     pos = 0  # current scan position in *lines*
     i = 0  # index into directives
+
+    # region_end caps all forward scans (CHECK, CHECK-DAG, CHECK-NOT) to the
+    # current CHECK-LABEL region. This prevents a pattern from matching in a
+    # later labelled section.
+    region_end = len(lines)
+
+    def _next_label_bound(from_pos: int, from_directive: int) -> int:
+        """Return the line index where the next CHECK-LABEL after *from_directive*
+        first matches, searching from *from_pos*. Returns len(lines) when there
+        is no further CHECK-LABEL or its pattern doesn't match."""
+        for j in range(from_directive, len(directives)):
+            if directives[j].kind == "CHECK-LABEL":
+                try:
+                    pat = _compile_pattern(directives[j].pattern)
+                except re.error:
+                    break
+                for lno in range(from_pos, len(lines)):
+                    if pat.search(lines[lno]):
+                        return lno
+                break
+        return len(lines)
 
     # Collect pending CHECK-NOT patterns that must not match until the next
     # positive check (or end-of-directives).
@@ -255,7 +276,7 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
                 dag_group.append(directives[i])
                 i += 1
 
-            # Each pattern in the group must match at least once in lines[pos:].
+            # Each pattern in the group must match at least once in lines[pos:region_end].
             matched_lines: set[int] = set()
             for dd in dag_group:
                 try:
@@ -265,7 +286,7 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
                         dd, f"bad regex in CHECK-DAG {{{{...}}}}: {exc}"
                     ) from exc
                 found = False
-                for lno, ln in enumerate(lines[pos:], start=pos):
+                for lno, ln in enumerate(lines[pos:region_end], start=pos):
                     if pat.search(ln):
                         matched_lines.add(lno)
                         found = True
@@ -301,6 +322,8 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
                     context=f"  pattern: {d.pattern!r}",
                 )
             i += 1
+            # Cap subsequent scans to before the next label's match position.
+            region_end = _next_label_bound(pos, i)
             continue
 
         if d.kind == "CHECK-NEXT":
@@ -335,7 +358,7 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
         except re.error as exc:
             raise CheckError(d, f"bad regex in CHECK {{{{...}}}}: {exc}") from exc
         found = False
-        for lno in range(pos, len(lines)):
+        for lno in range(pos, region_end):
             if pat.search(lines[lno]):
                 pos = lno + 1
                 found = True
@@ -348,8 +371,8 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
             )
         i += 1
 
-    # Final NOT check for the tail of the output.
-    _assert_not_in_window(not_window_start, len(lines))
+    # Final NOT check for the tail of the current region.
+    _assert_not_in_window(not_window_start, region_end)
 
 
 # ---------------------------------------------------------------------------
@@ -549,7 +572,7 @@ def find_slang(hint: str | None = None) -> str:
         return str(best[1])
 
     print(
-        "error: slang binary not found.  Use --slang to specify its path.",
+        "error: slang binary not found. Use --slang to specify its path.",
         file=sys.stderr,
     )
     sys.exit(1)
