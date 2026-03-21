@@ -53,7 +53,8 @@ add_executable(
   Test.cpp)
 
 if(SLANG_INCLUDE_LLVM)
-  target_sources(unittests PRIVATE codegen/CodegenTests.cpp)
+  target_sources(unittests PRIVATE codegen/CodegenTests.cpp
+                                   codegen/JITTests.cpp)
   target_compile_definitions(unittests PRIVATE SLANG_INCLUDE_LLVM)
 endif()
 

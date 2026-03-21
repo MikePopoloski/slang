@@ -228,7 +228,9 @@ if(SLANG_INCLUDE_LLVM)
     target
     mc
     analysis
-    transformutils)
+    transformutils
+    orcjit
+    native)
 endif()
 
 # --- install rules ---

@@ -67,7 +67,7 @@ private:
 
 class CodegenContext {
 public:
-    llvm::LLVMContext ctx;
+    std::unique_ptr<llvm::LLVMContext> ctx;
     std::unique_ptr<llvm::Module> module;
     Compilation& compilation;
     CodegenOptions options;

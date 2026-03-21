@@ -266,7 +266,7 @@ struct LValueVisitor {
         if (!e.value().type->isFixedSize() || e.value().type->isIntegral())
             return nullptr;
         auto idxVal = fe.emitExpr(e.selector());
-        auto zero = llvm::ConstantInt::get(llvm::Type::getInt64Ty(fe.context.ctx), 0);
+        auto zero = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*fe.context.ctx), 0);
         return fe.builder.CreateGEP(fe.context.types.lower(*e.value().type), base, {zero, idxVal});
     }
 
@@ -539,8 +539,8 @@ llvm::Value* ExprEmitter::visit(const BinaryExpression& e) {
 
     if (op == BinaryOperator::LogicalAnd || op == BinaryOperator::LogicalOr) {
         auto condL = fe.emitCond(e.left());
-        auto rhsBB = llvm::BasicBlock::Create(fe.context.ctx, "logic.rhs", fe.currentFunc);
-        auto mergeBB = llvm::BasicBlock::Create(fe.context.ctx, "logic.merge", fe.currentFunc);
+        auto rhsBB = llvm::BasicBlock::Create(*fe.context.ctx, "logic.rhs", fe.currentFunc);
+        auto mergeBB = llvm::BasicBlock::Create(*fe.context.ctx, "logic.merge", fe.currentFunc);
 
         if (op == BinaryOperator::LogicalAnd)
             builder.CreateCondBr(condL, rhsBB, mergeBB);
@@ -555,13 +555,13 @@ llvm::Value* ExprEmitter::visit(const BinaryExpression& e) {
         builder.CreateBr(mergeBB);
 
         builder.SetInsertPoint(mergeBB);
-        auto phi = builder.CreatePHI(llvm::Type::getInt1Ty(fe.context.ctx), 2);
+        auto phi = builder.CreatePHI(llvm::Type::getInt1Ty(*fe.context.ctx), 2);
         if (op == BinaryOperator::LogicalAnd) {
-            phi->addIncoming(llvm::ConstantInt::getFalse(fe.context.ctx), lhsBB);
+            phi->addIncoming(llvm::ConstantInt::getFalse(*fe.context.ctx), lhsBB);
             phi->addIncoming(condR, rhsEndBB);
         }
         else {
-            phi->addIncoming(llvm::ConstantInt::getTrue(fe.context.ctx), lhsBB);
+            phi->addIncoming(llvm::ConstantInt::getTrue(*fe.context.ctx), lhsBB);
             phi->addIncoming(condR, rhsEndBB);
         }
 
@@ -652,7 +652,7 @@ llvm::Value* ExprEmitter::visit(const BinaryExpression& e) {
             llvm::Value* hasUnk = builder.CreateOr(builder.CreateICmpNE(ul, zero),
                                                    builder.CreateICmpNE(ur, zero));
             auto cmpResult = twoStateICmp(builder, op, vl, vr, isSigned);
-            auto i1False = llvm::ConstantInt::getFalse(fe.context.ctx);
+            auto i1False = llvm::ConstantInt::getFalse(*fe.context.ctx);
             auto outVal = builder.CreateSelect(hasUnk, i1False, cmpResult);
             auto outUnk = hasUnk;
             if (e.type->isFourState())
@@ -671,7 +671,7 @@ llvm::Value* ExprEmitter::visit(const BinaryExpression& e) {
     }
 
     if (op == BinaryOperator::Power) {
-        auto doubleTy = llvm::Type::getDoubleTy(fe.context.ctx);
+        auto doubleTy = llvm::Type::getDoubleTy(*fe.context.ctx);
         auto lhsF = isSigned ? builder.CreateSIToFP(lhs, doubleTy)
                              : builder.CreateUIToFP(lhs, doubleTy);
         auto rhsF = isSigned ? builder.CreateSIToFP(rhs, doubleTy)
@@ -692,7 +692,7 @@ llvm::Value* ExprEmitter::visit(const ConditionalExpression& e) {
         condVal = condVal ? builder.CreateAnd(condVal, cv) : cv;
     }
     if (!condVal)
-        condVal = llvm::ConstantInt::getTrue(fe.context.ctx);
+        condVal = llvm::ConstantInt::getTrue(*fe.context.ctx);
     auto lhsV = fe.emitExpr(e.left());
     auto rhsV = fe.emitExpr(e.right());
     return builder.CreateSelect(condVal, lhsV, rhsV);
@@ -702,7 +702,7 @@ llvm::Value* ExprEmitter::visit(const InsideExpression& e) {
     auto ty = builder.types.lower(*e.type);
     auto lhs = fe.emitExpr(e.left());
 
-    llvm::Value* result = llvm::ConstantInt::getFalse(fe.context.ctx);
+    llvm::Value* result = llvm::ConstantInt::getFalse(*fe.context.ctx);
     for (auto rangeExpr : e.rangeList()) {
         if (auto vr = rangeExpr->as_if<ValueRangeExpression>()) {
             // Range comparison: lo <= lhs <= hi

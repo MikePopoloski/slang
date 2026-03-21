@@ -794,4 +794,14 @@ After a successful compilation, generate LLVM IR in text (`.ll`) format and writ
 After a successful compilation, generate LLVM bitcode (`.bc`) in binary format and write it
 to `<file>`. Pass `-` as the file name to write to stdout instead.
 
+`--run <function>`
+
+After a successful compilation, JIT-compile all input files and execute the named
+zero-argument function, printing its return value to stdout.
+
+The function must take no arguments and must return a type that can be printed:
+`void`, any integral type (e.g. `int`, `bit`, `logic`), or a floating-point type
+(`real` or `shortreal`). The function name corresponds to the bare identifier
+(e.g. `my_func` for `function automatic int my_func();`).
+
 */

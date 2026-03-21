@@ -29,6 +29,7 @@
 
 #ifdef SLANG_INCLUDE_LLVM
 #    include "slang/codegen/CodeGenerator.h"
+#    include "slang/codegen/JIT.h"
 #endif
 
 namespace fs = std::filesystem;
@@ -450,6 +451,10 @@ void Driver::addStandardArgs() {
         "--emit-bc", options.emitBitcode,
         "Emit LLVM bitcode (.bc) to the specified file after compilation, or '-' for stdout",
         "<file>", CommandLineFlags::FilePath);
+    cmdLine.add("--run", options.runFunction,
+                "JIT-compile all input files and run the named zero-argument function, "
+                "printing its return value to stdout",
+                "<function>");
 #endif
 }
 
@@ -585,8 +590,8 @@ bool Driver::processOptions() {
             opt = true;
 
 #ifdef SLANG_INCLUDE_LLVM
-        if (options.emitIR || options.emitBitcode) {
-            printError("--emit-ir and --emit-bc are not compatible with --lint-only");
+        if (options.emitIR || options.emitBitcode || options.runFunction) {
+            printError("--emit-ir, --emit-bc, and --run are not compatible with --lint-only");
             return false;
         }
 #endif
@@ -1226,7 +1231,7 @@ bool Driver::reportDiagnostics(bool quiet) {
 
 bool Driver::runCodegen(Compilation& compilation) {
 #ifdef SLANG_INCLUDE_LLVM
-    if (!options.lintMode() && (options.emitIR || options.emitBitcode)) {
+    if (!options.lintMode() && (options.emitIR || options.emitBitcode || options.runFunction)) {
         using namespace codegen;
 
         CodeGenerator codeGen(compilation);
@@ -1247,6 +1252,22 @@ bool Driver::runCodegen(Compilation& compilation) {
                                        *options.emitBitcode, err));
                 return false;
             }
+        }
+
+        if (options.runFunction) {
+            auto jitOrErr = JIT::create(std::move(codeGen));
+            if (!jitOrErr) {
+                OS::printE(fmt::format("error: JIT construction failed: {}\n", jitOrErr.error()));
+                return false;
+            }
+
+            auto resultOrErr = jitOrErr->runFunction(*options.runFunction);
+            if (!resultOrErr) {
+                OS::printE(fmt::format("error: failed to run function: {}\n", resultOrErr.error()));
+                return false;
+            }
+
+            OS::print(*resultOrErr);
         }
     }
 #endif

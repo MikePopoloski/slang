@@ -354,6 +354,10 @@ public:
         /// If set, emit LLVM bitcode to this file path after compilation.
         std::optional<std::string> emitBitcode;
 
+        /// If set, JIT-compile all input files and run the named zero-argument
+        /// function, printing its return value to stdout.
+        std::optional<std::string> runFunction;
+
         /// @}
 #endif
 

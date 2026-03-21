@@ -40,6 +40,9 @@ public:
     explicit CodeGenerator(ast::Compilation& compilation, CodegenOptions options = {});
     ~CodeGenerator();
 
+    CodeGenerator(CodeGenerator&&) noexcept;
+    CodeGenerator& operator=(CodeGenerator&&) noexcept;
+
     /// Emits IR for a single subroutine.
     void emitSubroutine(const ast::SubroutineSymbol& subroutine);
 
@@ -58,6 +61,8 @@ public:
     [[nodiscard]] std::string writeBitcodeToFile(std::string_view path) const;
 
 private:
+    friend class JIT;
+
     class Impl;
     std::unique_ptr<Impl> impl;
 };

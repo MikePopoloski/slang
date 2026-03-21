@@ -27,6 +27,8 @@ CodeGenerator::CodeGenerator(Compilation& compilation, CodegenOptions options) :
 }
 
 CodeGenerator::~CodeGenerator() = default;
+CodeGenerator::CodeGenerator(CodeGenerator&&) noexcept = default;
+CodeGenerator& CodeGenerator::operator=(CodeGenerator&&) noexcept = default;
 
 void CodeGenerator::emitSubroutine(const SubroutineSymbol& subroutine) {
     impl->emitSubroutine(subroutine);
@@ -104,12 +106,13 @@ std::string CodeGenerator::Impl::writeBitcodeToFile(std::string_view path) const
 
 CodegenContext::CodegenContext(Compilation& compilation, std::string_view moduleName,
                                CodegenOptions opts) :
-    module(std::make_unique<llvm::Module>(moduleName, ctx)), compilation(compilation),
+    ctx(std::make_unique<llvm::LLVMContext>()),
+    module(std::make_unique<llvm::Module>(moduleName, *ctx)), compilation(compilation),
     options(std::move(opts)), types(*this) {
 }
 
 IRBuilder::IRBuilder(CodegenContext& context) :
-    llvm::IRBuilder<>(context.ctx), types(context.types) {
+    llvm::IRBuilder<>(*context.ctx), types(context.types) {
 }
 
 // Convert an SVInt value (or its unknown half) to an LLVM APInt.
@@ -156,7 +159,7 @@ llvm::Value* IRBuilder::toFourState(llvm::Value* v, llvm::Type* fourStateTy) {
 }
 
 TypeEmitter::TypeEmitter(CodegenContext& context) : context(context) {
-    auto& vmCtx = context.ctx;
+    auto& vmCtx = *context.ctx;
     VoidTy = llvm::Type::getVoidTy(vmCtx);
     Int8Ty = llvm::Type::getInt8Ty(vmCtx);
     Int16Ty = llvm::Type::getInt16Ty(vmCtx);
@@ -195,12 +198,12 @@ llvm::Type* TypeEmitter::lower(const Type& type) {
 }
 
 llvm::IntegerType* TypeEmitter::twoStateFor(bitwidth_t bits) {
-    return llvm::IntegerType::get(context.ctx, bits);
+    return llvm::IntegerType::get(*context.ctx, bits);
 }
 
 llvm::IntegerType* TypeEmitter::fourStateFor(bitwidth_t bits) {
     // i(2N): val in [N-1:0], unk in [2N-1:N].
-    return llvm::IntegerType::get(context.ctx, bits * 2);
+    return llvm::IntegerType::get(*context.ctx, bits * 2);
 }
 
 FunctionEmitter::FunctionEmitter(CodegenContext& context) : context(context), builder(context) {
@@ -246,7 +249,7 @@ void FunctionEmitter::emitBranch(llvm::BasicBlock* target) {
 
 llvm::BasicBlock* FunctionEmitter::createBasicBlock(const llvm::Twine& name,
                                                     llvm::Function* parent) {
-    return llvm::BasicBlock::Create(context.ctx, name, parent);
+    return llvm::BasicBlock::Create(*context.ctx, name, parent);
 }
 
 llvm::AllocaInst* FunctionEmitter::createLocal(const VariableSymbol& var) {
