@@ -163,6 +163,14 @@ if(SLANG_USE_CPPTRACE)
   target_compile_definitions(slang_slang PUBLIC SLANG_USE_CPPTRACE)
 endif()
 
+if(SLANG_INCLUDE_LLVM)
+  separate_arguments(SLANG_LLVM_DEFS NATIVE_COMMAND "${LLVM_DEFINITIONS}")
+  target_include_directories(slang_slang SYSTEM PUBLIC ${LLVM_INCLUDE_DIRS})
+  target_compile_options(slang_slang PUBLIC ${SLANG_LLVM_DEFS})
+  target_compile_definitions(slang_slang PUBLIC SLANG_INCLUDE_LLVM)
+  target_link_libraries(slang_slang PUBLIC ${SLANG_LLVM_LIBS})
+endif()
+
 # If building the Python library we'll end up with a shared lib no matter what,
 # so make sure we always build with PIC.
 if(SLANG_INCLUDE_PYLIB)

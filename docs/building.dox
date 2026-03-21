@@ -62,6 +62,7 @@ BUILD_SHARED_LIBS | Build a shared library instead of static | OFF
 SLANG_USE_THREADS | Enable use of threads | ON
 SLANG_USE_MIMALLOC | Enable use of the mimalloc library. Can be turned off, the resulting library will be slightly slower. | ON
 SLANG_USE_CPPTRACE | Enable use of the cpptrace library | OFF
+SLANG_INCLUDE_LLVM | Find and link LLVM (minimum 22.1) for code generation support. Unlike other dependencies, LLVM is not fetched automatically — it must be installed on the system and locatable via `find_package`. | OFF
 SLANG_FUZZ_TARGET | Turn on to enable some changes to make binaries easier to fuzz test | OFF
 SLANG_CI_BUILD | Enable additional longer-running tests for automated builds | OFF
 SLANG_CLANG_TIDY | The path to a clang-tidy binary to run against the slang sources | ""

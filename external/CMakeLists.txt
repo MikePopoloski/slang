@@ -8,6 +8,7 @@ set(fmt_min_version "12.1")
 set(mimalloc_min_version "2.2")
 set(cpptrace_min_version "1.0")
 set(catch2_min_version "3.13")
+set(llvm_min_version "22.1")
 
 # --- fmt lib ---
 set(find_pkg_args "")
@@ -211,6 +212,23 @@ if(SLANG_INCLUDE_TESTS)
   else()
     message(STATUS "Using remote Catch2 library")
   endif()
+endif()
+
+# --- LLVM ---
+if(SLANG_INCLUDE_LLVM)
+  find_package(LLVM ${llvm_min_version} REQUIRED CONFIG)
+  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+  message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
+  llvm_map_components_to_libnames(
+    SLANG_LLVM_LIBS
+    core
+    support
+    codegen
+    target
+    mc
+    analysis
+    transformutils)
 endif()
 
 # --- install rules ---
