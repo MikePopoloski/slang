@@ -101,6 +101,10 @@ public:
         unsigned n = llvm::cast<llvm::IntegerType>(v->getType())->getBitWidth() / 2;
         return CreateTrunc(CreateLShr(v, n), getIntNTy(n));
     }
+
+    std::pair<llvm::Value*, llvm::Value*> getIntParts(llvm::Value* v) {
+        return {getValPart(v), getUnkPart(v)};
+    }
 };
 
 // Emits LLVM IR for a single subroutine.
@@ -116,7 +120,7 @@ public:
 
     llvm::Value* emitExpr(const Expression& expr);
     llvm::Value* emitLValue(const Expression& expr);
-    llvm::Value* emitCond(const Expression& expr, bool keepFourState = false);
+    llvm::Value* emitCond(const Expression& expr);
 
     ConstantValue tryEval(const Expression& expr);
 

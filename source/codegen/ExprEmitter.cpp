@@ -242,6 +242,85 @@ static llvm::Value* twoStateICmp(llvm::IRBuilder<>& B, BinaryOperator op, llvm::
     }
 }
 
+static llvm::Value* emitBitwiseReduction(IRBuilder& B, UnaryOperator op, llvm::Value* operand,
+                                         llvm::Type* resultType, bool fourState) {
+    if (fourState) {
+        auto [val, unk] = B.getIntParts(operand);
+        auto iN = val->getType();
+        auto zero = llvm::ConstantInt::get(iN, 0);
+        auto hasUnk = B.CreateICmpNE(unk, zero);
+
+        bool negate = false;
+        switch (op) {
+            case UnaryOperator::BitwiseAnd:
+            case UnaryOperator::BitwiseNand: {
+                // "no definite zero" iff every bit position is either 1 or unknown: (val | unk)
+                auto allOnes = llvm::ConstantInt::getAllOnesValue(iN);
+                auto noDefZero = B.CreateICmpEQ(B.CreateOr(val, unk), allOnes);
+                val = B.CreateAnd(noDefZero, B.CreateNot(hasUnk));
+                unk = B.CreateAnd(noDefZero, hasUnk);
+                negate = op == UnaryOperator::BitwiseNand;
+                break;
+            }
+            case UnaryOperator::BitwiseOr:
+            case UnaryOperator::BitwiseNor: {
+                // definite ones: bits that are set in val but not flagged as unknown
+                auto defOnes = B.CreateAnd(val, B.CreateNot(unk));
+                auto hasDefOne = B.CreateICmpNE(defOnes, zero);
+                val = hasDefOne;
+                unk = B.CreateAnd(B.CreateNot(hasDefOne), hasUnk);
+                negate = op == UnaryOperator::BitwiseNor;
+                break;
+            }
+            case UnaryOperator::BitwiseXor:
+            case UnaryOperator::BitwiseXnor: {
+                auto one = llvm::ConstantInt::get(iN, 1);
+                auto popcount = B.CreateUnaryIntrinsic(llvm::Intrinsic::ctpop, val);
+                auto parity = B.CreateICmpNE(B.CreateAnd(popcount, one), zero);
+                // val bit is the parity only when no unknowns; masked to 0 when result is X
+                val = B.CreateAnd(parity, B.CreateNot(hasUnk));
+                unk = hasUnk;
+                negate = op == UnaryOperator::BitwiseXnor;
+                break;
+            }
+            default:
+                SLANG_UNREACHABLE;
+        }
+
+        if (negate) {
+            // new_val = ~val & ~unk;  new_unk = unk (unchanged).
+            val = B.CreateAnd(B.CreateNot(val), B.CreateNot(unk));
+        }
+        return B.createSVInt(val, unk, resultType);
+    }
+    else {
+        switch (op) {
+            case UnaryOperator::BitwiseAnd:
+            case UnaryOperator::BitwiseNand: {
+                auto allOnes = llvm::ConstantInt::getAllOnesValue(operand->getType());
+                return op == UnaryOperator::BitwiseAnd ? B.CreateICmpEQ(operand, allOnes)
+                                                       : B.CreateICmpNE(operand, allOnes);
+            }
+            case UnaryOperator::BitwiseOr:
+            case UnaryOperator::BitwiseNor: {
+                auto zero = llvm::ConstantInt::get(operand->getType(), 0);
+                return op == UnaryOperator::BitwiseOr ? B.CreateICmpNE(operand, zero)
+                                                      : B.CreateICmpEQ(operand, zero);
+            }
+            case UnaryOperator::BitwiseXor:
+            case UnaryOperator::BitwiseXnor: {
+                auto vTy = operand->getType();
+                auto popcount = B.CreateUnaryIntrinsic(llvm::Intrinsic::ctpop, operand);
+                auto parity = B.CreateAnd(popcount, llvm::ConstantInt::get(vTy, 1));
+                auto i1 = B.CreateICmpNE(parity, llvm::ConstantInt::get(vTy, 0));
+                return op == UnaryOperator::BitwiseXnor ? B.CreateNot(i1) : i1;
+            }
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
+}
+
 namespace {
 
 struct LValueVisitor {
@@ -250,21 +329,19 @@ struct LValueVisitor {
     llvm::Value* visit(const NamedValueExpression& e) {
         if (auto it = fe.locals.find(&e.symbol); it != fe.locals.end())
             return it->second;
-        return nullptr;
+        SLANG_UNIMPLEMENTED;
     }
 
     llvm::Value* visit(const HierarchicalValueExpression& e) {
         if (auto it = fe.locals.find(&e.symbol); it != fe.locals.end())
             return it->second;
-        return nullptr;
+        SLANG_UNIMPLEMENTED;
     }
 
     llvm::Value* visit(const ElementSelectExpression& e) {
         auto base = fe.emitLValue(e.value());
-        if (!base)
-            return nullptr;
         if (!e.value().type->isFixedSize() || e.value().type->isIntegral())
-            return nullptr;
+            SLANG_UNIMPLEMENTED;
         auto idxVal = fe.emitExpr(e.selector());
         auto zero = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*fe.context.ctx), 0);
         return fe.builder.CreateGEP(fe.context.types.lower(*e.value().type), base, {zero, idxVal});
@@ -272,7 +349,7 @@ struct LValueVisitor {
 
     template<typename T>
     llvm::Value* visit(const T&) {
-        return nullptr;
+        SLANG_UNIMPLEMENTED;
     }
 };
 
@@ -363,9 +440,8 @@ llvm::Value* ExprEmitter::visit(const StringLiteral&) {
 
 llvm::Value* ExprEmitter::visit(const NamedValueExpression& e) {
     auto ptr = fe.emitLValue(e);
-    SLANG_ASSERT(ptr);
-
-    return builder.CreateLoad(builder.types.lower(e.symbol.getType()), ptr);
+    auto ty = builder.types.lower(e.symbol.getType());
+    return builder.CreateLoad(ty, ptr);
 }
 
 llvm::Value* ExprEmitter::visit(const HierarchicalValueExpression&) {
@@ -373,155 +449,109 @@ llvm::Value* ExprEmitter::visit(const HierarchicalValueExpression&) {
 }
 
 llvm::Value* ExprEmitter::visit(const UnaryExpression& e) {
-    auto ty = builder.types.lower(*e.type);
+    auto resultType = builder.types.lower(*e.type);
     const bool fourState = e.type->isFourState();
     const bool isFloat = e.type->isFloating();
 
-    auto isIncDec = [](UnaryOperator o) {
-        return o == UnaryOperator::Preincrement || o == UnaryOperator::Predecrement ||
-               o == UnaryOperator::Postincrement || o == UnaryOperator::Postdecrement;
-    };
+    if (OpInfo::isLValue(e.op)) {
+        // Handle pre/post inc/dec operators here.
+        const bool isInc = e.op == UnaryOperator::Preincrement ||
+                           e.op == UnaryOperator::Postincrement;
+        const bool isPre = e.op == UnaryOperator::Preincrement ||
+                           e.op == UnaryOperator::Predecrement;
+        const int amount = (isInc ? 1 : -1);
 
-    if (isIncDec(e.op)) {
         auto ptr = fe.emitLValue(e.operand());
-        if (!ptr)
-            return llvm::Constant::getNullValue(ty);
         auto opTy = builder.types.lower(*e.operand().type);
         auto oldVal = builder.CreateLoad(opTy, ptr);
 
-        llvm::Value* newVal = nullptr;
-        bool isInc = e.op == UnaryOperator::Preincrement || e.op == UnaryOperator::Postincrement;
-
+        llvm::Value* newVal;
         if (isFloat) {
-            auto one = llvm::ConstantFP::get(opTy, 1.0);
-            newVal = isInc ? builder.CreateFAdd(oldVal, one) : builder.CreateFSub(oldVal, one);
+            auto one = oldVal->getType()->isFloatTy()
+                           ? llvm::ConstantFP::get(opTy, static_cast<float>(amount))
+                           : llvm::ConstantFP::get(opTy, static_cast<double>(amount));
+            newVal = builder.CreateFAdd(oldVal, one, isInc ? "inc" : "dec");
         }
         else if (!fourState) {
-            auto one = llvm::ConstantInt::get(opTy, 1);
-            newVal = isInc ? builder.CreateAdd(oldVal, one) : builder.CreateSub(oldVal, one);
+            auto one = llvm::ConstantInt::getSigned(opTy, amount);
+            newVal = builder.CreateAdd(oldVal, one, isInc ? "inc" : "dec");
         }
         else {
-            auto vl = builder.getValPart(oldVal);
-            auto ul = builder.getUnkPart(oldVal);
+            auto [vl, ul] = builder.getIntParts(oldVal);
             auto iN = vl->getType();
+            auto one = llvm::ConstantInt::getSigned(iN, amount);
+            auto nv = builder.CreateAdd(vl, one, isInc ? "inc" : "dec");
+
             auto zero = llvm::ConstantInt::get(iN, 0);
-            auto allOnes = llvm::ConstantInt::getAllOnesValue(iN);
-            auto one = llvm::ConstantInt::get(iN, 1);
             auto hasUnk = builder.CreateICmpNE(ul, zero);
-            auto nv = isInc ? builder.CreateAdd(vl, one) : builder.CreateSub(vl, one);
+
+            // The final result is all X's if any unknowns.
             auto outVal = builder.CreateSelect(hasUnk, zero, nv);
-            auto outUnk = builder.CreateSelect(hasUnk, allOnes, zero);
+            auto outUnk = builder.CreateSelect(hasUnk, llvm::ConstantInt::getAllOnesValue(iN),
+                                               zero);
             newVal = builder.createSVInt(outVal, outUnk, opTy);
         }
 
         builder.CreateStore(newVal, ptr);
-        bool isPre = e.op == UnaryOperator::Preincrement || e.op == UnaryOperator::Predecrement;
         return isPre ? newVal : oldVal;
     }
 
     auto operand = visitExpr(e.operand());
     switch (e.op) {
         case UnaryOperator::Plus:
+            // Plus does nothing. Note: some simulators will convert four state operands
+            // that contain any unknown bits into all Xs, while others leave them alone.
+            // We might want a flag for that behavior at some point.
             return operand;
-
         case UnaryOperator::Minus:
             if (isFloat)
                 return builder.CreateFNeg(operand);
 
             if (fourState) {
-                auto vl = builder.getValPart(operand);
-                auto ul = builder.getUnkPart(operand);
+                auto [vl, ul] = builder.getIntParts(operand);
                 auto iN = vl->getType();
                 auto zero = llvm::ConstantInt::get(iN, 0);
                 auto allOnes = llvm::ConstantInt::getAllOnesValue(iN);
                 auto hasUnk = builder.CreateICmpNE(ul, zero);
-                auto nv = builder.CreateNeg(vl);
-                auto outVal = builder.CreateSelect(hasUnk, zero, nv);
+                auto outVal = builder.CreateSelect(hasUnk, zero, builder.CreateNeg(vl));
                 auto outUnk = builder.CreateSelect(hasUnk, allOnes, zero);
-                return builder.createSVInt(outVal, outUnk, ty);
+                return builder.createSVInt(outVal, outUnk, resultType);
             }
             return builder.CreateNeg(operand);
-
         case UnaryOperator::BitwiseNot:
             if (fourState) {
-                auto vl = builder.getValPart(operand);
-                auto ul = builder.getUnkPart(operand);
-
                 // Any unknown bits are still unknown, but we need to make sure
                 // any high impedance values become X's
+                auto [vl, ul] = builder.getIntParts(operand);
                 auto nv = builder.CreateAnd(builder.CreateNot(vl), builder.CreateNot(ul));
-                return builder.createSVInt(nv, ul, ty);
+                return builder.createSVInt(nv, ul, resultType);
             }
             return builder.CreateNot(operand);
-
         case UnaryOperator::LogicalNot: {
-            // Operand can be any boolean convertible type.
-            // Result is always a single bit, either four state or not
-            // depending on the operand.
-            auto cond = fe.emitCond(e.operand(), /* keepFourState */ true);
+            // Result is always a single bit (four-state when operand is four-state).
+            if (fourState) {
+                SLANG_ASSERT(e.operand().type->isFourState());
+                auto [val, unk] = builder.getIntParts(operand);
+                auto zero = llvm::ConstantInt::get(val->getType(), 0);
+                // !X=X, !nonzero=0, !zero=1 => val = (val==0) & (unk==0), unk = (unk!=0)
+                auto hasUnk = builder.CreateICmpNE(unk, zero);
+                auto isZero = builder.CreateICmpEQ(val, zero);
+                auto i1_val = builder.CreateAnd(isZero, builder.CreateNot(hasUnk));
+                return builder.createSVInt(i1_val, hasUnk, resultType);
+            }
+
+            // Non-four-state: use emitCond to handle any boolean-convertible operand type.
+            auto cond = fe.emitCond(e.operand());
             auto notCond = builder.CreateNot(cond);
-            if (cond->getType()->isIntegerTy(1))
-                return notCond;
-
-            // TODO: wrong for four state case
-            SLANG_ASSERT(fourState && e.operand().type->isFourState());
-            if (fourState)
-                return builder.toFourState(notCond, ty);
-            return builder.CreateZExt(notCond, ty);
+            return resultType->isIntegerTy(1) ? notCond : builder.CreateZExt(notCond, resultType);
         }
-
-        case UnaryOperator::BitwiseAnd: {
-            llvm::Value* v = fourState ? builder.getValPart(operand) : operand;
-            auto iN = v->getType();
-            auto allOnes = llvm::ConstantInt::getAllOnesValue(iN);
-            auto i1 = builder.CreateICmpEQ(v, allOnes);
-            if (e.type->isFourState())
-                return builder.toFourState(i1, ty);
-            return ty->isIntegerTy(1) ? i1 : builder.CreateZExt(i1, ty);
-        }
-
-        case UnaryOperator::BitwiseNand: {
-            llvm::Value* v = fourState ? builder.getValPart(operand) : operand;
-            auto allOnes = llvm::ConstantInt::getAllOnesValue(v->getType());
-            auto i1 = builder.CreateICmpNE(v, allOnes);
-            if (e.type->isFourState())
-                return builder.toFourState(i1, ty);
-            return ty->isIntegerTy(1) ? i1 : builder.CreateZExt(i1, ty);
-        }
-
-        case UnaryOperator::BitwiseOr: {
-            llvm::Value* v = fourState ? builder.getValPart(operand) : operand;
-            auto zero = llvm::ConstantInt::get(v->getType(), 0);
-            auto i1 = builder.CreateICmpNE(v, zero);
-            if (e.type->isFourState())
-                return builder.toFourState(i1, ty);
-            return ty->isIntegerTy(1) ? i1 : builder.CreateZExt(i1, ty);
-        }
-
-        case UnaryOperator::BitwiseNor: {
-            llvm::Value* v = fourState ? builder.getValPart(operand) : operand;
-            auto zero = llvm::ConstantInt::get(v->getType(), 0);
-            auto i1 = builder.CreateICmpEQ(v, zero);
-            if (e.type->isFourState())
-                return builder.toFourState(i1, ty);
-            return ty->isIntegerTy(1) ? i1 : builder.CreateZExt(i1, ty);
-        }
-
+        case UnaryOperator::BitwiseAnd:
+        case UnaryOperator::BitwiseNand:
+        case UnaryOperator::BitwiseOr:
+        case UnaryOperator::BitwiseNor:
         case UnaryOperator::BitwiseXor:
-        case UnaryOperator::BitwiseXnor: {
-            llvm::Value* v = fourState ? builder.getValPart(operand) : operand;
-            auto vTy = v->getType();
-            auto popcount = builder.CreateUnaryIntrinsic(llvm::Intrinsic::ctpop, v);
-            auto one = llvm::ConstantInt::get(vTy, 1);
-            auto parity = builder.CreateAnd(popcount, one);
-            auto i1 = builder.CreateICmpNE(parity, llvm::ConstantInt::get(vTy, 0));
-            if (e.op == UnaryOperator::BitwiseXnor)
-                i1 = builder.CreateNot(i1);
-            if (e.type->isFourState())
-                return builder.toFourState(i1, ty);
-            return ty->isIntegerTy(1) ? i1 : builder.CreateZExt(i1, ty);
-        }
-
+        case UnaryOperator::BitwiseXnor:
+            return emitBitwiseReduction(builder, e.op, operand, resultType, fourState);
         default:
             SLANG_UNREACHABLE;
     }
@@ -737,7 +767,7 @@ llvm::Value* ExprEmitter::visit(const AssignmentExpression& e) {
     auto rhsV = fe.emitExpr(e.right());
     auto lhsPtr = fe.emitLValue(e.left());
 
-    if (e.isCompound() && lhsPtr) {
+    if (e.isCompound()) {
         auto lhsTy = builder.types.lower(*e.left().type);
         auto lhsV = builder.CreateLoad(lhsTy, lhsPtr);
         const bool isSigned = e.left().type->isSigned();
@@ -775,9 +805,7 @@ llvm::Value* ExprEmitter::visit(const AssignmentExpression& e) {
         }
     }
 
-    if (lhsPtr)
-        builder.CreateStore(rhsV, lhsPtr);
-
+    builder.CreateStore(rhsV, lhsPtr);
     return rhsV;
 }
 
@@ -974,8 +1002,6 @@ llvm::Value* ExprEmitter::visit(const ElementSelectExpression& e) {
     }
 
     auto ptr = fe.emitLValue(e);
-    if (!ptr)
-        return llvm::Constant::getNullValue(ty);
     return builder.CreateLoad(ty, ptr);
 }
 
@@ -1160,7 +1186,7 @@ llvm::Value* FunctionEmitter::emitLValue(const Expression& expr) {
     return expr.visit(LValueVisitor{*this});
 }
 
-llvm::Value* FunctionEmitter::emitCond(const Expression& expr, bool keepFourState) {
+llvm::Value* FunctionEmitter::emitCond(const Expression& expr) {
     auto v = emitExpr(expr);
     auto ty = v->getType();
 
@@ -1175,15 +1201,7 @@ llvm::Value* FunctionEmitter::emitCond(const Expression& expr, bool keepFourStat
         auto zero = llvm::ConstantInt::get(iN, 0);
         auto noUnk = builder.CreateICmpEQ(unk, zero);
         auto nonZero = builder.CreateICmpNE(val, zero);
-
-        if (keepFourState) {
-            auto xBit = builder.getSVInt(SVInt::createFillX(1, false),
-                                         /* isFourState */ true);
-            return builder.CreateSelect(noUnk, builder.toFourState(nonZero), xBit);
-        }
-        else {
-            return builder.CreateAnd(noUnk, nonZero);
-        }
+        return builder.CreateAnd(noUnk, nonZero);
     }
 
     if (ty->isIntegerTy()) {

@@ -135,10 +135,11 @@ nonstd::expected<std::string, std::string> JIT::runFunction(std::string_view fun
                 return SVInt(width, uint64_t(val), isSigned).toString();
 
             auto w = retType.getBitWidth();
-            if ((val >> w) == 0)
+            uint64_t unknownBits = uint64_t(val) >> w;
+            if (unknownBits == 0)
                 return SVInt(w, uint64_t(val), isSigned).toString();
 
-            uint64_t arr[] = {uint64_t(val) & ((1ull << w) - 1), uint64_t(val) >> w};
+            uint64_t arr[] = {uint64_t(val) & ((1ull << w) - 1), unknownBits};
             SVIntStorage storage(arr, w, isSigned, true);
             return SVInt(storage).toString();
         };
