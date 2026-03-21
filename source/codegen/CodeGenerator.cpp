@@ -118,18 +118,38 @@ CodegenContext::CodegenContext(Compilation& compilation, std::string_view module
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
 
-    // Detect the host triple and its DataLayout so all sizing and alignment
-    // decisions in the generated IR match the machine that will execute it.
-    llvm::Triple triple(llvm::sys::getProcessTriple());
+    // Determine the target triple.
+    llvm::Triple triple;
+    if (options.targetTriple.empty())
+        triple = llvm::Triple(llvm::sys::getProcessTriple());
+    else
+        triple = llvm::Triple(llvm::Triple::normalize(options.targetTriple));
+
+    // Determine CPU name.
+    std::string cpuName;
+    if (!options.cpu.empty()) {
+        cpuName = options.cpu;
+    }
+    else if (options.targetTriple.empty() ||
+             triple.getArch() == llvm::Triple(llvm::sys::getProcessTriple()).getArch()) {
+        cpuName = std::string(llvm::sys::getHostCPUName());
+    }
+    else {
+        cpuName = "generic";
+    }
+
+    // TODO: report the error here somehow
     std::string error;
     auto target = llvm::TargetRegistry::lookupTarget(triple, error);
     if (target) {
+        // TODO: set options?
+        // TODO: reloc, code model, opt level, etc
         llvm::TargetOptions targetOpts;
-        std::unique_ptr<llvm::TargetMachine> tm(target->createTargetMachine(
-            triple, llvm::sys::getHostCPUName(), "", targetOpts, std::nullopt));
-        if (tm) {
+        targetMachine.reset(target->createTargetMachine(triple, cpuName, options.features,
+                                                        targetOpts, std::nullopt));
+        if (targetMachine) {
             module->setTargetTriple(triple);
-            module->setDataLayout(tm->createDataLayout());
+            module->setDataLayout(targetMachine->createDataLayout());
         }
     }
 }
@@ -192,19 +212,19 @@ TypeEmitter::TypeEmitter(CodegenContext& context) : context(context) {
     DoubleTy = llvm::Type::getDoubleTy(vmCtx);
     PtrTy = llvm::PointerType::get(vmCtx, 0);
 
+    SVLogicVecValTy = llvm::StructType::get(vmCtx, {Int32Ty, Int32Ty});
+
     auto& comp = context.compilation;
     typeCache[&comp.getVoidType()] = VoidTy;
     typeCache[&comp.getRealType()] = DoubleTy;
     typeCache[&comp.getShortRealType()] = FloatTy;
 }
 
-llvm::Type* TypeEmitter::lowerForDPI(const Type& type) {
+llvm::Type* TypeEmitter::lowerForDPIArg(const Type& type) {
     auto& ct = type.getCanonicalType();
     switch (ct.kind) {
         case SymbolKind::VoidType:
             return VoidTy;
-        case SymbolKind::StringType:
-            return PtrTy;
         case SymbolKind::FloatingType:
             return ct.getBitWidth() == 32 ? FloatTy : DoubleTy;
         case SymbolKind::ScalarType:
@@ -221,17 +241,79 @@ llvm::Type* TypeEmitter::lowerForDPI(const Type& type) {
                     return Int8Ty;
                 case PredefinedIntegerType::Integer:
                 case PredefinedIntegerType::Time:
-                    // Not implemented yet, requires 4-state form.
-                    break;
+                    // 4-state types are passed by pointer to svLogicVecVal array.
+                    return PtrTy;
             }
-            SLANG_UNIMPLEMENTED;
+            SLANG_UNREACHABLE;
         case SymbolKind::EnumType:
-            return lowerForDPI(ct.as<EnumType>().baseType);
+            return lowerForDPIArg(ct.as<EnumType>().baseType);
         case SymbolKind::CHandleType:
+        case SymbolKind::PackedArrayType:
+        case SymbolKind::PackedStructType:
+        case SymbolKind::FixedSizeUnpackedArrayType:
+        case SymbolKind::UnpackedStructType:
+        case SymbolKind::DPIOpenArrayType:
+        case SymbolKind::StringType:
+            // Everything else is passed by reference.
             return PtrTy;
         default:
-            SLANG_UNIMPLEMENTED;
+            SLANG_UNREACHABLE;
     }
+}
+
+llvm::Type* TypeEmitter::lowerForDPILayout(const Type& type) {
+    auto& ct = type.getCanonicalType();
+    if (auto it = dpiLayoutCache.find(&ct); it != dpiLayoutCache.end())
+        return it->second;
+
+    llvm::Type* result = nullptr;
+    switch (ct.kind) {
+        case SymbolKind::PredefinedIntegerType:
+            switch (ct.as<PredefinedIntegerType>().integerKind) {
+                case PredefinedIntegerType::Integer:
+                    // 32-bit 4-state: 1 x svLogicVecVal
+                    result = llvm::ArrayType::get(SVLogicVecValTy, 1);
+                    break;
+                case PredefinedIntegerType::Time:
+                    // 64-bit 4-state: 2 x svLogicVecVal
+                    result = llvm::ArrayType::get(SVLogicVecValTy, 2);
+                    break;
+                default:
+                    result = lowerForDPIArg(ct);
+                    break;
+            }
+            break;
+        case SymbolKind::PackedArrayType:
+        case SymbolKind::PackedStructType: {
+            // Packed types use svBitVecVal (uint32_t) or svLogicVecVal chunks.
+            const auto bits = ct.getBitWidth();
+            const auto numChunks = (bits + 31) / 32;
+            if (ct.isFourState())
+                result = llvm::ArrayType::get(SVLogicVecValTy, numChunks);
+            else
+                result = llvm::ArrayType::get(Int32Ty, numChunks);
+            break;
+        }
+        case SymbolKind::FixedSizeUnpackedArrayType: {
+            auto& arrTy = ct.as<FixedSizeUnpackedArrayType>();
+            auto elemTy = lowerForDPILayout(arrTy.elementType);
+            result = llvm::ArrayType::get(elemTy, arrTy.range.width());
+            break;
+        }
+        case SymbolKind::UnpackedStructType: {
+            SmallVector<llvm::Type*, 4> fieldTypes;
+            for (auto field : ct.as<UnpackedStructType>().fields)
+                fieldTypes.push_back(lowerForDPILayout(field->getType()));
+            result = llvm::StructType::get(*context.ctx, fieldTypes);
+            break;
+        }
+        default:
+            result = lowerForDPIArg(ct);
+            break;
+    }
+
+    dpiLayoutCache.emplace(&ct, result);
+    return result;
 }
 
 llvm::Type* TypeEmitter::lower(const Type& type) {
@@ -460,13 +542,18 @@ llvm::Function* FunctionEmitter::lowerDPIImport(const SubroutineSymbol& sub) {
     // Build parameter types using the DPI (C ABI compatible) mapping.
     SmallVector<llvm::Type*, 8> paramTypes;
     for (auto arg : sub.getArguments()) {
-        if (arg->direction != ArgumentDirection::In)
-            SLANG_UNIMPLEMENTED;
-
-        paramTypes.push_back(context.types.lowerForDPI(arg->getType()));
+        if (arg->direction == ArgumentDirection::Out ||
+            arg->direction == ArgumentDirection::InOut) {
+            // Output and inout arguments are always passed by pointer.
+            paramTypes.push_back(context.types.PtrTy);
+        }
+        else {
+            SLANG_ASSERT(arg->direction == ArgumentDirection::In);
+            paramTypes.push_back(context.types.lowerForDPIArg(arg->getType()));
+        }
     }
 
-    auto retTy = context.types.lowerForDPI(sub.getReturnType());
+    auto retTy = context.types.lowerForDPIArg(sub.getReturnType());
     auto fnTy = llvm::FunctionType::get(retTy, paramTypes, /* isVarArg */ false);
 
     // Declare the function with external linkage and the C calling convention

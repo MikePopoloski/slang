@@ -358,6 +358,17 @@ public:
         /// function, printing its return value to stdout.
         std::optional<std::string> runFunction;
 
+        /// If set, specifies the target triple to generate code for
+        /// (e.g. "x86_64-unknown-linux-gnu"). Defaults to the host triple.
+        std::optional<std::string> target;
+
+        /// If set, specifies the target CPU name for LLVM code generation
+        /// (e.g. "apple-m1", "znver3").
+        std::optional<std::string> cpu;
+
+        /// Accumulated target feature flags (e.g. "+avx2", "-bmi").
+        std::vector<std::string> features;
+
         /// @}
 #endif
 

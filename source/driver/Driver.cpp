@@ -455,6 +455,16 @@ void Driver::addStandardArgs() {
                 "JIT-compile all input files and run the named zero-argument function, "
                 "printing its return value to stdout",
                 "<function>");
+    cmdLine.add("--target", options.target,
+                "Target triple for code generation (e.g. 'x86_64-unknown-linux-gnu'). "
+                "Defaults to the host triple.",
+                "<triple>");
+    cmdLine.add("--mcpu", options.cpu,
+                "Target CPU name for code generation (e.g. 'apple-m1', 'znver3')", "<cpu>");
+    cmdLine.add("--mfeature", options.features,
+                "Target feature flag for code generation (e.g. '+avx2', '-bmi'). "
+                "Can be specified multiple times.",
+                "<feature>", CommandLineFlags::CommaList);
 #endif
 }
 
@@ -1231,10 +1241,25 @@ bool Driver::reportDiagnostics(bool quiet) {
 
 bool Driver::runCodegen(Compilation& compilation) {
 #ifdef SLANG_INCLUDE_LLVM
-    if (!options.lintMode() && (options.emitIR || options.emitBitcode || options.runFunction)) {
+    if (options.emitIR || options.emitBitcode || options.runFunction) {
         using namespace codegen;
 
-        CodeGenerator codeGen(compilation);
+        CodegenOptions codegenOpts;
+        if (options.target)
+            codegenOpts.targetTriple = *options.target;
+        if (options.cpu)
+            codegenOpts.cpu = *options.cpu;
+        if (!options.features.empty()) {
+            std::string featStr;
+            for (auto& f : options.features) {
+                if (!featStr.empty())
+                    featStr += ',';
+                featStr += f;
+            }
+            codegenOpts.features = std::move(featStr);
+        }
+
+        CodeGenerator codeGen(compilation, codegenOpts);
         for (auto unit : compilation.getCompilationUnits())
             codeGen.emitScope(*unit);
 

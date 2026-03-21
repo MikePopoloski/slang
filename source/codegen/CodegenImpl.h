@@ -10,6 +10,7 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/Target/TargetMachine.h>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -57,12 +58,19 @@ public:
     llvm::Type *FloatTy, *DoubleTy;
     llvm::PointerType* PtrTy;
 
+    // LLVM struct type for svLogicVecVal: {i32 aval, i32 bval}.
+    llvm::StructType* SVLogicVecValTy;
+
     explicit TypeEmitter(CodegenContext& context);
 
     llvm::Type* lower(const Type& type);
 
-    // Maps a SystemVerilog DPI type to its C ABI compatible LLVM type.
-    llvm::Type* lowerForDPI(const Type& type);
+    // Maps a SystemVerilog DPI type to its C ABI compatible LLVM type
+    // for use as a function argument or return type.
+    llvm::Type* lowerForDPIArg(const Type& type);
+
+    // Returns the in-memory LLVM type for a DPI value stored inside a struct.
+    llvm::Type* lowerForDPILayout(const Type& type);
 
     llvm::IntegerType* twoStateFor(bitwidth_t bits);
     llvm::IntegerType* fourStateFor(bitwidth_t bits);
@@ -70,12 +78,14 @@ public:
 private:
     CodegenContext& context;
     flat_hash_map<const Type*, llvm::Type*> typeCache;
+    flat_hash_map<const Type*, llvm::Type*> dpiLayoutCache;
 };
 
 class CodegenContext {
 public:
     std::unique_ptr<llvm::LLVMContext> ctx;
     std::unique_ptr<llvm::Module> module;
+    std::unique_ptr<llvm::TargetMachine> targetMachine;
     Compilation& compilation;
     CodegenOptions options;
     TypeEmitter types;

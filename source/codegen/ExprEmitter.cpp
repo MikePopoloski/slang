@@ -1173,11 +1173,48 @@ llvm::Value* ExprEmitter::visit(const CallExpression& e) {
         callee = inner.lower(*sub);
     }
 
-    SmallVector<llvm::Value*, 8> args;
-    for (auto argExpr : e.arguments())
-        args.push_back(fe.emitExpr(*argExpr));
+    const bool isDPI = sub->flags.has(MethodFlags::DPIImport);
 
-    return builder.CreateCall(callee, args);
+    SmallVector<llvm::Value*, 8> args;
+    unsigned idx = 0;
+    for (auto argExpr : e.arguments()) {
+        auto val = fe.emitExpr(*argExpr);
+
+        // For DPI imports, convert between internal SV types and C ABI types.
+        if (isDPI) {
+            auto paramTy = callee->getFunctionType()->getParamType(idx);
+            auto valTy = val->getType();
+            if (valTy != paramTy && valTy->isIntegerTy() && paramTy->isIntegerTy()) {
+                auto valBits = llvm::cast<llvm::IntegerType>(valTy)->getBitWidth();
+                auto paramBits = llvm::cast<llvm::IntegerType>(paramTy)->getBitWidth();
+                if (valBits < paramBits)
+                    val = builder.CreateZExt(val, paramTy);
+                else if (valBits > paramBits)
+                    val = builder.CreateTrunc(val, paramTy);
+            }
+        }
+
+        args.push_back(val);
+        ++idx;
+    }
+
+    auto result = builder.CreateCall(callee, args);
+
+    // For DPI imports returning a scalar-sized value into a wider internal type,
+    // convert the return value.
+    if (isDPI && result->getType()->isIntegerTy()) {
+        auto expectedTy = fe.context.types.lower(sub->getReturnType());
+        if (expectedTy != result->getType() && expectedTy->isIntegerTy()) {
+            auto retBits = llvm::cast<llvm::IntegerType>(result->getType())->getBitWidth();
+            auto expBits = llvm::cast<llvm::IntegerType>(expectedTy)->getBitWidth();
+            if (retBits < expBits)
+                return builder.CreateZExt(result, expectedTy);
+            else if (retBits > expBits)
+                return builder.CreateTrunc(result, expectedTy);
+        }
+    }
+
+    return result;
 }
 
 llvm::Value* ExprEmitter::visit(const DataTypeExpression&) {

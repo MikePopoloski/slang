@@ -26,11 +26,17 @@ namespace slang::codegen {
 
 /// Options that control code generation.
 struct SLANG_EXPORT CodegenOptions {
-    /// If true, run optimization passes before emitting.
-    bool optimize = false;
+    /// The target triple to generate code for (e.g. "x86_64-unknown-linux-gnu").
+    /// If empty, defaults to the host process triple.
+    std::string targetTriple;
 
-    /// If true, attach debug information to the generated IR.
-    bool debugInfo = false;
+    /// The CPU name to target (e.g. "apple-m1", "znver3").
+    /// If empty, defaults to the host CPU when targeting the host
+    /// architecture, or "generic" otherwise.
+    std::string cpu;
+
+    /// LLVM target feature string (e.g. "+avx2,-bmi").
+    std::string features;
 };
 
 /// @brief Entry point for code generation.
