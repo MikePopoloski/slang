@@ -180,10 +180,17 @@ protected:
     void handle(const T& stmt) {
         if constexpr (std::is_same_v<T, TimedStatement>) {
             handleTiming(stmt.timing);
+            if (stmt.timing.kind == TimingControlKind::ImplicitEvent)
+                activeImplicitRegions.push_back(&stmt);
         }
 
         timedStatements.push_back(&stmt);
         this->visitStmt(stmt);
+
+        if constexpr (std::is_same_v<T, TimedStatement>) {
+            if (stmt.timing.kind == TimingControlKind::ImplicitEvent)
+                activeImplicitRegions.pop_back();
+        }
     }
 
     void handle(const ProceduralAssignStatement& stmt) {
@@ -398,6 +405,19 @@ protected:
 
     void finishExpr(const Expression&) { sequenceChecker.clear(); }
 
+    // Override the CRTP hooks from AbstractFlowAnalysis to suppress rvalue
+    // read tracking while inside an immediate assertion action block.
+    void enterAssertionActionBlock() { inAssertionActionBlock = true; }
+    void leaveAssertionActionBlock() { inAssertionActionBlock = false; }
+
+    // Override the CRTP hooks from AbstractFlowAnalysis to suppress rvalue
+    // read tracking while inside a timing-control expression (wait condition,
+    // wait_order event list). Per LRM 9.4.2.2, identifiers that only appear
+    // in timing-control expressions must not contribute to the implicit
+    // sensitivity list.
+    void enterTimingControlExpr() { inTimingControlExpr = true; }
+    void leaveTimingControlExpr() { inTimingControlExpr = false; }
+
     // **** State Management ****
 
     void joinState(TState& result, const TState& other) {
@@ -455,7 +475,19 @@ private:
     friend struct ast::LSPVisitor;
 
     LSPVisitor<TDerived> lspVisitor;
+
+    // Set to true while visiting an lvalue expression.
     bool isLValue = false;
+
+    // Set to true while visiting immediate assertion action blocks.
+    bool inAssertionActionBlock = false;
+
+    // Set to true while visiting timing-control expressions (wait condition,
+    // wait_order event list, etc.).
+    bool inTimingControlExpr = false;
+
+    // Stack of @* timed statements currently being analyzed.
+    SmallVector<const Statement*, 2> activeImplicitRegions;
 
     void visitLValue(const Expression& expr) {
         SLANG_ASSERT(!isLValue);
@@ -573,8 +605,10 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValueSymbol& symbol
         }
         lspMap.insert(*bounds, lsp, lspMapAllocator);
     }
-    else {
+    else if (!inAssertionActionBlock && !inTimingControlExpr) {
         rvalues[&symbol].unionWith(*bounds, {}, bitMapAllocator);
+        for (auto region : activeImplicitRegions)
+            implicitEventRVals[region][&symbol].unionWith(*bounds, {}, bitMapAllocator);
     }
 }
 

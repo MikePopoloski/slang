@@ -8,6 +8,7 @@
 #include "slang/analysis/AbstractFlowAnalysis.h"
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/AnalysisOptions.h"
+#include "slang/analysis/AnalyzedProcedure.h"
 #include "slang/analysis/ValueDriver.h"
 #include "slang/ast/LSPUtilities.h"
 #include "slang/ast/symbols/BlockSymbols.h"
@@ -174,12 +175,14 @@ void registerAnalysis(py::module_& m, py::module_& ast) {
         .value("AllowMultiDrivenLocals", AnalysisFlags::AllowMultiDrivenLocals)
         .value("AllowDupInitialDrivers", AnalysisFlags::AllowDupInitialDrivers)
         .value("CheckShadow", AnalysisFlags::CheckShadow)
+        .value("InlineContAssignFunctionReads", AnalysisFlags::InlineContAssignFunctionReads)
+        .value("AlwaysStarUsesLSPs", AnalysisFlags::AlwaysStarUsesLSPs)
+        .value("ContAssignUsesLSPs", AnalysisFlags::ContAssignUsesLSPs)
         .finalize();
 
     py::classh<AnalysisOptions>(m, "AnalysisOptions")
         .def(py::init<>())
         .def_readwrite("flags", &AnalysisOptions::flags)
-        .def_readwrite("numThreads", &AnalysisOptions::numThreads)
         .def_readwrite("maxCaseAnalysisSteps", &AnalysisOptions::maxCaseAnalysisSteps)
         .def_readwrite("maxLoopAnalysisSteps", &AnalysisOptions::maxLoopAnalysisSteps);
 
@@ -206,32 +209,73 @@ void registerAnalysis(py::module_& m, py::module_& ast) {
                  return std::make_unique<AnalysisManager>(std::move(options));
              }),
              "options"_a = AnalysisOptions())
-        .def("addProcListener",
-             py::overload_cast<std::function<void(const AnalyzedProcedure&)>>(
-                 &AnalysisManager::addListener),
-             "listener"_a)
-        .def("addScopeListener",
-             py::overload_cast<std::function<void(const AnalyzedScope&)>>(
-                 &AnalysisManager::addListener),
-             "listener"_a)
-        .def("addAssertionListener",
-             py::overload_cast<std::function<void(const AnalyzedAssertion&)>>(
-                 &AnalysisManager::addListener),
-             "listener"_a)
-        .def("analyze", &AnalysisManager::analyze, "compilation"_a)
+        .def(
+            "addProcListener",
+            [](AnalysisManager& self, py::function cb) {
+                self.addListener([&, cb = std::move(cb)](const AnalyzedProcedure& proc) {
+                    cb(py::cast(&proc, byrefint, py::cast(&self)));
+                });
+            },
+            py::keep_alive<1, 2>(), "listener"_a)
+        .def(
+            "addScopeListener",
+            [](AnalysisManager& self, py::function cb) {
+                self.addListener([&, cb = std::move(cb)](const AnalyzedScope& scope) {
+                    cb(py::cast(&scope, byrefint, py::cast(&self)));
+                });
+            },
+            py::keep_alive<1, 2>(), "listener"_a)
+        .def(
+            "addAssertionListener",
+            [](AnalysisManager& self, py::function cb) {
+                self.addListener([&, cb = std::move(cb)](const AnalyzedAssertion& aa) {
+                    cb(py::cast(&aa, byrefint, py::cast(&self)));
+                });
+            },
+            py::keep_alive<1, 2>(), "listener"_a)
+        .def("analyze", &AnalysisManager::analyze, "compilation"_a, py::keep_alive<1, 2>())
         .def("getDrivers", &AnalysisManager::getDrivers, "symbol"_a, byrefint)
-        .def("getDiagnostics", &AnalysisManager::getDiagnostics)
+        .def("getDiagnostics", &AnalysisManager::getDiagnostics, byrefint)
         .def("getAnalyzedScope", &AnalysisManager::getAnalyzedScope, "scope"_a, byrefint)
         .def("getAnalyzedSubroutine", &AnalysisManager::getAnalyzedSubroutine, "symbol"_a, byrefint)
         .def("getAnalyzedAssertions", &AnalysisManager::getAnalyzedAssertions, "symbol"_a, byrefint)
         .def_property_readonly("options", &AnalysisManager::getOptions);
+
+    py::classh<ReadRange>(m, "ReadRange")
+        .def_readonly("symbol", &ReadRange::symbol)
+        .def_readonly("bitRange", &ReadRange::bitRange);
+
+    py::native_enum<SensitivityList::Kind>(m, "SensitivityListKind", "enum.Enum")
+        .value("None_", SensitivityList::Kind::None)
+        .value("Explicit", SensitivityList::Kind::Explicit)
+        .value("Implicit", SensitivityList::Kind::Implicit)
+        .value("Dynamic", SensitivityList::Kind::Dynamic)
+        .finalize();
+
+    py::classh<SensitivityList>(m, "SensitivityList")
+        .def_readonly("kind", &SensitivityList::kind)
+        .def_readonly("timingControl", &SensitivityList::timingControl)
+        .def_property_readonly("reads", [](const SensitivityList& s) -> std::span<const ReadRange> {
+            return s.reads;
+        });
+
+    py::classh<AnalyzedProcedure::ImplicitEventReadSet>(m, "ImplicitEventReadSet")
+        .def_readonly("statement", &AnalyzedProcedure::ImplicitEventReadSet::statement)
+        .def_property_readonly("reads",
+                               [](const AnalyzedProcedure::ImplicitEventReadSet& s)
+                                   -> std::span<const ReadRange> { return s.reads; });
 
     py::classh<AnalyzedProcedure>(m, "AnalyzedProcedure")
         .def_readonly("analyzedSymbol", &AnalyzedProcedure::analyzedSymbol)
         .def_readonly("parentProcedure", &AnalyzedProcedure::parentProcedure)
         .def_property_readonly("inferredClock", &AnalyzedProcedure::getInferredClock)
         .def_property_readonly("drivers", &AnalyzedProcedure::getDrivers)
-        .def_property_readonly("callExpressions", &AnalyzedProcedure::getCallExpressions);
+        .def_property_readonly("callExpressions", &AnalyzedProcedure::getCallExpressions)
+        .def_property_readonly("timingControls", &AnalyzedProcedure::getTimingControls)
+        .def_property_readonly("readSet", &AnalyzedProcedure::getReadSet)
+        .def_property_readonly("implicitEventReadSets",
+                               &AnalyzedProcedure::getImplicitEventReadSets)
+        .def_property_readonly("sensitivityList", &AnalyzedProcedure::getSensitivityList);
 
     py::classh<AnalyzedAssertion>(m, "AnalyzedAssertion")
         .def_readonly("containingSymbol", &AnalyzedAssertion::containingSymbol)

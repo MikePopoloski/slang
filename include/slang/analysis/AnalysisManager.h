@@ -209,13 +209,14 @@ private:
                                                const ast::SubroutineSymbol& symbol,
                                                const AnalyzedProcedure* parentProcedure = nullptr);
 
-    void getFunctionDrivers(const ast::CallExpression& expr, const ast::Symbol& containingSymbol,
+    void getFunctionValUses(const ast::CallExpression& expr, const ast::Symbol& containingSymbol,
                             SmallSet<const ast::SubroutineSymbol*, 2>& visited,
-                            std::vector<SymbolDriverListPair>& drivers);
+                            SmallVectorBase<SymbolDriverListPair>& drivers,
+                            SmallVectorBase<ReadRange>* reads);
 
     void getTaskTimingControls(const ast::CallExpression& expr,
                                SmallSet<const ast::SubroutineSymbol*, 2>& visited,
-                               std::vector<const ast::Statement*>& controls);
+                               SmallVectorBase<const ast::Statement*>& controls);
 
     void addScopeResult(const ast::Scope& scope, const AnalyzedScope& result);
 

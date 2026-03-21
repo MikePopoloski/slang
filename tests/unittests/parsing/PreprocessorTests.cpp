@@ -3002,7 +3002,7 @@ endmodule
 TEST_CASE("Preprocessor: Include inside macro with nested include in included file") {
     // Regression test: when a macro body contains `include "X", and X itself
     // contains another `include "Y", the paused macro expansion must not resume
-    // until X is fully processed — not when Y (a nested include inside X) finishes.
+    // until X is fully processed - not when Y (a nested include inside X) finishes.
     getSourceManager().assignText("macro_nested_body.svh", R"(
 `ifndef _macro_nested_body_svh
 `define _macro_nested_body_svh

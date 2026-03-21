@@ -25,9 +25,12 @@ AnalyzedProcedure::AnalyzedProcedure(const Symbol& analyzedSymbol,
 }
 
 AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& analyzedSymbol,
-                                     const AnalyzedProcedure* parentProcedure,
-                                     const DFAResults& dfa) :
+                                     const AnalyzedProcedure* parentProcedure, DFAResults& dfa) :
     analyzedSymbol(&analyzedSymbol), parentProcedure(parentProcedure) {
+
+    std::optional<ProceduralBlockKind> procKind;
+    if (auto proc = analyzedSymbol.as_if<ProceduralBlockSymbol>())
+        procKind = proc->procedureKind;
 
     auto dfaCalls = dfa.getCallExpressions();
     callExpressions.reserve(dfaCalls.size());
@@ -49,11 +52,8 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
     auto& manager = *context.manager;
     if (parentProcedure || !dfa.getAssertions().empty() || hasSampledValueCalls) {
         // All flavors of always and initial blocks can infer a clock.
-        if (analyzedSymbol.kind == SymbolKind::ProceduralBlock &&
-            analyzedSymbol.as<ProceduralBlockSymbol>().procedureKind !=
-                ProceduralBlockKind::Final) {
+        if (procKind.has_value() && *procKind != ProceduralBlockKind::Final)
             inferredClock = dfa.inferClock(context, analyzedSymbol, evalContext, parentProcedure);
-        }
 
         // If no procedural inferred clock, check the scope for a default clocking block.
         if (!inferredClock) {
@@ -96,10 +96,10 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
 
     if (analyzedSymbol.kind == SymbolKind::ProceduralBlock) {
         auto getTaskTimingControls =
-            [&]() -> std::pair<const CallExpression*, std::vector<const Statement*>> {
+            [&]() -> std::pair<const CallExpression*, SmallVector<const Statement*>> {
             SmallSet<const SubroutineSymbol*, 2> visited;
             for (auto call : dfaCalls) {
-                std::vector<const Statement*> results;
+                SmallVector<const Statement*> results;
                 manager.getTaskTimingControls(*call, visited, results);
                 if (!results.empty())
                     return {call, results};
@@ -108,7 +108,6 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         };
 
         auto& procedure = analyzedSymbol.as<ProceduralBlockSymbol>();
-        const auto procKind = procedure.procedureKind;
         if (procKind == ProceduralBlockKind::Always) {
             // Generic always procedures must have timing controls
             if (!procedure.isFromAssertion && timingControls.empty() &&
@@ -123,7 +122,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
                 auto& diag = context.addDiag(procedure, diag::BlockingDelayInTask,
                                              timingStmts.front()->sourceRange);
                 diag << taskCall->getSubroutineName();
-                diag << SemanticFacts::getProcedureKindStr(procKind);
+                diag << SemanticFacts::getProcedureKindStr(*procKind);
                 diag.addNote(diag::NoteCalledHere, taskCall->sourceRange);
             }
 
@@ -199,12 +198,251 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
     }
 
     // Drivers from invoked functions also get added to the procedure,
-    // unless we're analyzing a subroutine.
+    // unless we're analyzing a subroutine. For procedures with implicit
+    // sensitivity (always_comb, always_latch, and optionally continuous assign),
+    // reads from called functions are also inlined in the same traversal.
+    //
+    // For continuous assignments the inlining is controlled by
+    // AnalysisFlags::InlineContAssignFunctionReads because the LRM does not
+    // specify the behavior; different simulators choose differently.
+    const auto funcDriversStart = drivers.size();
     if (analyzedSymbol.kind != SymbolKind::Subroutine) {
+        const bool needsReads = (analyzedSymbol.kind == SymbolKind::ContinuousAssign &&
+                                 manager.hasFlag(AnalysisFlags::InlineContAssignFunctionReads)) ||
+                                procKind == ProceduralBlockKind::AlwaysComb ||
+                                procKind == ProceduralBlockKind::AlwaysLatch;
+
         SmallSet<const SubroutineSymbol*, 2> visited;
-        for (auto call : dfaCalls)
-            manager.getFunctionDrivers(*call, analyzedSymbol, visited, drivers);
+        for (auto call : dfaCalls) {
+            manager.getFunctionValUses(*call, analyzedSymbol, visited, drivers,
+                                       needsReads ? &readSet : nullptr);
+        }
     }
+
+    // Collect all rvalue read ranges.
+    for (auto& [sym, bitMap] : dfa.getRValues()) {
+        for (auto it = bitMap.begin(); it != bitMap.end(); ++it)
+            readSet.push_back({sym, it.bounds()});
+    }
+
+    // Collect read sets for each @* region.
+    for (auto& [stmt, symMap] : dfa.getImplicitEventRValues()) {
+        ImplicitEventReadSet eventReads{stmt, {}};
+        for (auto& [sym, bitMap] : symMap) {
+            for (auto it = bitMap.begin(); it != bitMap.end(); ++it)
+                eventReads.reads.push_back({sym, it.bounds()});
+        }
+        implicitEventReadSets.push_back(std::move(eventReads));
+    }
+
+    buildSensitivityList(context, dfa, evalContext,
+                         {drivers.data() + funcDriversStart, drivers.size() - funcDriversStart});
+}
+
+void AnalyzedProcedure::buildSensitivityList(AnalysisContext& context, DFAResults& dfa,
+                                             EvalContext& evalContext,
+                                             std::span<const SymbolDriverListPair> funcDrivers) {
+    // Returns true if a symbol is declared within the procedure and
+    // should therefore be excluded from the sensitivity list.
+    auto isLocal = [&](const ValueSymbol& sym) {
+        if (auto var = sym.as_if<VariableSymbol>();
+            var && var->lifetime == VariableLifetime::Automatic) {
+            return true;
+        }
+
+        auto scope = sym.getParentScope();
+        const StatementBlockSymbol* rootBlock = nullptr;
+        while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock) {
+            rootBlock = &scope->asSymbol().as<StatementBlockSymbol>();
+            scope = rootBlock->getParentScope();
+        }
+
+        // ProceduralBlockSymbol is not a Scope, so its statement blocks are added
+        // to the enclosing parent scope rather than the procedural block itself.
+        // Check if the root statement block belongs to this procedure.
+        if (rootBlock && analyzedSymbol->kind == SymbolKind::ProceduralBlock) {
+            for (auto b : analyzedSymbol->as<ProceduralBlockSymbol>().getBlocks()) {
+                if (b == rootBlock)
+                    return true;
+            }
+        }
+        return false;
+    };
+
+    // Adds a read set to the sensitivity list. Local variables are excluded.
+    // If forceFullRange is set, variables will assume to be fully read,
+    // rather than relying on the provided bit ranges.
+    auto addReads = [&](std::span<const ReadRange> reads, bool forceFullRange) {
+        if (forceFullRange) {
+            SmallSet<const ValueSymbol*, 4> seen;
+            for (auto& rr : reads) {
+                if (!isLocal(*rr.symbol) && seen.insert(rr.symbol).second) {
+                    auto w = rr.symbol->getType().getSelectableWidth();
+                    sensitivityList.reads.push_back({rr.symbol, {0, w > 0 ? w - 1 : 0}});
+                }
+            }
+        }
+        else {
+            for (auto& rr : reads) {
+                if (!isLocal(*rr.symbol))
+                    sensitivityList.reads.push_back(rr);
+            }
+        }
+    };
+
+    auto& manager = *context.manager;
+    if (analyzedSymbol->kind == SymbolKind::ContinuousAssign) {
+        sensitivityList.kind = SensitivityList::Kind::Implicit;
+        addReads(readSet, !manager.hasFlag(AnalysisFlags::ContAssignUsesLSPs));
+        return;
+    }
+
+    if (analyzedSymbol->kind != SymbolKind::ProceduralBlock)
+        return;
+
+    auto& proc = analyzedSymbol->as<ProceduralBlockSymbol>();
+    const auto procKind = proc.procedureKind;
+    if (procKind == ProceduralBlockKind::AlwaysComb ||
+        procKind == ProceduralBlockKind::AlwaysLatch) {
+        // Build a map of bit ranges driven by called functions so that
+        // function-driven bits can be excluded from the sensitivity list
+        // just like locally-driven bits. dfa.getLValue() only tracks
+        // lvalues driven directly in the procedure body.
+        //
+        // It's a little inefficient to be rebuilding this map again
+        // after we linearized it, but function calls in always_**
+        // blocks should be rare anyway.
+        SmallMap<const ValueSymbol*, SymbolBitMap, 2> funcDrivenMap;
+        for (auto& [sym, driverList] : funcDrivers) {
+            auto& map = funcDrivenMap[sym];
+            for (auto& [driver, bounds] : driverList)
+                map.unionWith(bounds.first, bounds.second, {}, dfa.getBitMapAllocator());
+        }
+
+        // Merge in the local DFA ranges for each symbol that also has
+        // function drivers, so funcDrivenMap provides the full picture.
+        for (auto& [sym, bitMap] : funcDrivenMap) {
+            if (auto lvalue = dfa.getLValue(*sym)) {
+                for (auto oit = lvalue->assigned.begin(); oit.valid(); ++oit)
+                    bitMap.unionWith(oit.bounds(), {}, dfa.getBitMapAllocator());
+            }
+        }
+
+        // Emit only the bits in rr.bitRange not covered by drivenMap.
+        auto addReadGaps = [&](auto& drivenMap, const ReadRange& rr) {
+            auto [rlo, rhi] = rr.bitRange;
+            uint64_t cur = rlo;
+            for (auto oit = drivenMap.find(rlo, rhi); oit.valid(); ++oit) {
+                auto [dlo, dhi] = oit.bounds();
+                uint64_t effectiveDlo = std::max(dlo, rlo);
+                uint64_t effectiveDhi = std::min(dhi, rhi);
+                if (effectiveDlo > cur)
+                    sensitivityList.reads.push_back({rr.symbol, {cur, effectiveDlo - 1}});
+                if (effectiveDhi + 1 > cur)
+                    cur = effectiveDhi + 1;
+                if (cur > rhi)
+                    break;
+            }
+            if (cur <= rhi)
+                sensitivityList.reads.push_back({rr.symbol, {cur, rhi}});
+        };
+
+        for (auto& rr : readSet) {
+            if (isLocal(*rr.symbol))
+                continue;
+
+            // If this symbol has function-derived drivers, use the combined
+            // map (which already incorporates the local DFA ranges).
+            if (auto funcIt = funcDrivenMap.find(rr.symbol); funcIt != funcDrivenMap.end()) {
+                addReadGaps(funcIt->second, rr);
+                continue;
+            }
+
+            auto lvalue = dfa.getLValue(*rr.symbol);
+            if (!lvalue) {
+                // Symbol is not driven at all; include the full read range.
+                sensitivityList.reads.push_back(rr);
+                continue;
+            }
+
+            addReadGaps(lvalue->assigned, rr);
+        }
+
+        sensitivityList.kind = SensitivityList::Kind::Implicit;
+        return;
+    }
+
+    if (procKind == ProceduralBlockKind::Initial || procKind == ProceduralBlockKind::Final ||
+        timingControls.empty()) {
+        return;
+    }
+
+    // For always and always_ff: find the first event-based timing control.
+    // It should always be the first statement, or for always blocks we'll
+    // allow it to be the first statement inside a begin/end block.
+    auto stmt = &proc.getBody();
+    if (stmt->kind == StatementKind::Block) {
+        stmt = &stmt->as<BlockStatement>().body;
+        if (stmt->kind == StatementKind::List) {
+            auto& list = stmt->as<StatementList>().list;
+            if (!list.empty())
+                stmt = list[0];
+        }
+    }
+
+    if (stmt->kind != StatementKind::Timed || implicitEventReadSets.size() > 1) {
+        sensitivityList.kind = SensitivityList::Kind::Dynamic;
+        return;
+    }
+
+    auto& timing = stmt->as<TimedStatement>().timing;
+    if (timing.kind == TimingControlKind::ImplicitEvent) {
+        if (implicitEventReadSets.empty() || implicitEventReadSets[0].statement != stmt) {
+            // It's possible for this implicit event to not be sensitive to anything,
+            // if its statement is empty / doesn't read any rvalues.
+            sensitivityList.kind = SensitivityList::Kind::None;
+        }
+        else {
+            // @* sensitivity: derive reads from the matching implicit event region.
+            sensitivityList.kind = SensitivityList::Kind::Implicit;
+            addReads(implicitEventReadSets[0].reads,
+                     !manager.hasFlag(AnalysisFlags::AlwaysStarUsesLSPs));
+        }
+        return;
+    }
+
+    if (timing.kind == TimingControlKind::SignalEvent ||
+        timing.kind == TimingControlKind::EventList) {
+        // The timing explicitly lists the sensitivities.
+        sensitivityList.kind = SensitivityList::Kind::Explicit;
+        sensitivityList.timingControl = &timing;
+
+        SmallMap<const ValueSymbol*, SymbolBitMap, 2> signals;
+        auto handleEvent = [&](const SignalEventControl& sec) {
+            LSPUtilities::visitLSPs(
+                sec.expr, evalContext, [&](const ValueSymbol& symbol, const Expression& lsp, bool) {
+                    if (auto bounds = LSPUtilities::getBounds(lsp, evalContext, symbol.getType()))
+                        signals[&symbol].unionWith(*bounds, {}, dfa.getBitMapAllocator());
+                });
+        };
+
+        if (timing.kind == TimingControlKind::SignalEvent) {
+            handleEvent(timing.as<SignalEventControl>());
+        }
+        else {
+            for (auto ev : timing.as<EventListControl>().events)
+                handleEvent(ev->as<SignalEventControl>());
+        }
+
+        for (auto& [sym, bitMap] : signals) {
+            for (auto it = bitMap.begin(); it != bitMap.end(); ++it)
+                sensitivityList.reads.push_back({sym, it.bounds()});
+        }
+        return;
+    }
+
+    // Otherwise we have something complicated.
+    sensitivityList.kind = SensitivityList::Kind::Dynamic;
 }
 
 } // namespace slang::analysis

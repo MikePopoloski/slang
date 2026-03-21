@@ -7,6 +7,7 @@
 
 #include <fmt/core.h>
 #include <pybind11/cast.h>
+#include <pybind11/functional.h>
 #include <pybind11/native_enum.h>
 #include <pybind11/operators.h>
 #include <pybind11/pybind11.h>

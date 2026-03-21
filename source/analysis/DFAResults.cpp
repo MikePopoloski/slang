@@ -52,6 +52,12 @@ bool DFAResults::isDefinitelyAssigned(const ValueSymbol& symbol) const {
     return it->second < assigned.size() && !assigned[it->second].empty();
 }
 
+const DFAResults::LValueSymbol* DFAResults::getLValue(const ast::ValueSymbol& symbol) const {
+    if (auto it = symbolToSlot.find(&symbol); it != symbolToSlot.end())
+        return &lvalues[it->second];
+    return nullptr;
+}
+
 void DFAResults::visitPartiallyAssigned(bool skipAutomatic, AssignedSymbolCB cb) const {
     auto& currState = *stateRef;
     for (size_t index = 0; index < lvalues.size(); index++) {

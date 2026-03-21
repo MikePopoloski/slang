@@ -151,9 +151,10 @@ void AnalysisManager::analyzeCheckerInstance(const CheckerInstanceSymbol& inst,
     }
 }
 
-void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbol& containingSymbol,
+void AnalysisManager::getFunctionValUses(const CallExpression& expr, const Symbol& containingSymbol,
                                          SmallSet<const SubroutineSymbol*, 2>& visited,
-                                         std::vector<SymbolDriverListPair>& drivers) {
+                                         SmallVectorBase<SymbolDriverListPair>& drivers,
+                                         SmallVectorBase<ReadRange>* reads) {
     if (expr.isSystemCall() || expr.thisClass() ||
         expr.getSubroutineKind() != SubroutineKind::Function) {
         return;
@@ -189,16 +190,18 @@ void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbo
     auto funcDrivers = analysis.getDrivers();
     drivers.reserve(drivers.size() + funcDrivers.size());
 
+    auto isLocal = [&](const Symbol& symbol) {
+        auto scope = symbol.getParentScope();
+        while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
+            scope = scope->asSymbol().getParentScope();
+
+        return scope == &subroutine;
+    };
+
     for (auto& [valueSym, driverList] : funcDrivers) {
         // The user can disable this inlining of drivers for function locals via a flag.
-        if (hasFlag(AnalysisFlags::AllowMultiDrivenLocals)) {
-            auto scope = valueSym->getParentScope();
-            while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
-                scope = scope->asSymbol().getParentScope();
-
-            if (scope == &subroutine)
-                continue;
-        }
+        if (hasFlag(AnalysisFlags::AllowMultiDrivenLocals) && isLocal(*valueSym))
+            continue;
 
         DriverList perSymbol;
         for (auto& [driver, bounds] : driverList) {
@@ -211,15 +214,23 @@ void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbo
         drivers.emplace_back(valueSym, std::move(perSymbol));
     }
 
-    // If this function has any calls, we need to recursively add drivers
-    // from those calls as well.
+    // Optionally collect reads from the function body.
+    // Note: this excludes locally declared variables.
+    if (reads) {
+        for (auto& read : analysis.getReadSet()) {
+            if (!isLocal(*read.symbol))
+                reads->push_back(read);
+        }
+    }
+
+    // Recurse into functions called by this function.
     for (auto call : analysis.getCallExpressions())
-        getFunctionDrivers(*call, containingSymbol, visited, drivers);
+        getFunctionValUses(*call, containingSymbol, visited, drivers, reads);
 }
 
 void AnalysisManager::getTaskTimingControls(const CallExpression& expr,
                                             SmallSet<const SubroutineSymbol*, 2>& visited,
-                                            std::vector<const Statement*>& controls) {
+                                            SmallVectorBase<const Statement*>& controls) {
     if (expr.getSubroutineKind() != SubroutineKind::Task || expr.isSystemCall()) {
         return;
     }
@@ -435,8 +446,8 @@ void AnalysisManager::NonProceduralExprVisitor::visitCall(const CallExpression& 
             ClockInference::checkSampledValueFuncs(state.context, containingSymbol, expr);
     }
 
-    std::vector<SymbolDriverListPair> drivers;
-    manager.getFunctionDrivers(expr, containingSymbol, visitedSubroutines, drivers);
+    SmallVector<SymbolDriverListPair, 2> drivers;
+    manager.getFunctionValUses(expr, containingSymbol, visitedSubroutines, drivers, nullptr);
     if (!drivers.empty())
         manager.driverTracker.add(state.context, state.driverAlloc, drivers);
 }

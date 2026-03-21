@@ -12,6 +12,7 @@
 
 #include "slang/analysis/AnalyzedAssertion.h"
 #include "slang/analysis/ValueDriver.h"
+#include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
 namespace slang::ast {
@@ -28,6 +29,51 @@ namespace slang::analysis {
 
 class AnalysisContext;
 class DFAResults;
+
+/// A bit range read from a symbol within a procedure.
+struct ReadRange {
+    /// The symbol being read.
+    not_null<const ast::ValueSymbol*> symbol;
+
+    /// The bit range of the symbol being read.
+    DriverBitRange bitRange;
+};
+
+/// Describes the effective sensitivity list for a SystemVerilog procedure.
+///
+/// The sensitivity list represents the set of signals that, when they change,
+/// cause the procedure to re-evaluate.
+struct SensitivityList {
+    /// The kind of sensitivity list.
+    enum class Kind {
+        /// No event-based sensitivity: the procedure runs unconditionally
+        /// (e.g. @c initial, @c final) or has no event timing control.
+        None,
+
+        /// Explicit sensitivity list specified in source
+        /// (e.g. @c always_ff \@(posedge clk) or @c always \@(a or b)).
+        Explicit,
+
+        /// Implicit sensitivity list derived from the signals read by the
+        /// procedure (e.g. @c always_comb, @c always_latch, or @c always \@*).
+        /// Locally-declared symbols are excluded.
+        Implicit,
+
+        /// Procedures that contain multiple event controls, or event controls not
+        /// at the start of the block (such as inside complicated flow control,
+        /// fork join blocks, etc).
+        Dynamic
+    };
+
+    /// The kind of this sensitivity list.
+    Kind kind = Kind::None;
+
+    /// For Kind::Explicit: the timing control containing the explicit sensitivity.
+    const ast::TimingControl* timingControl = nullptr;
+
+    /// The set of (symbol, bitRange) entries forming the sensitivity list.
+    SmallVector<ReadRange, 2> reads;
+};
 
 /// Represents an analyzed procedure.
 ///
@@ -47,7 +93,7 @@ public:
 
     /// Constructs a new AnalyzedProcedure object.
     AnalyzedProcedure(AnalysisContext& context, const ast::Symbol& symbol,
-                      const AnalyzedProcedure* parentProcedure, const DFAResults& analysis);
+                      const AnalyzedProcedure* parentProcedure, DFAResults& analysis);
 
     /// Returns the inferred clocking block for the procedure, if available.
     ///
@@ -66,11 +112,38 @@ public:
     /// Gets all of the timing control statements directly in the procedure
     std::span<const ast::Statement* const> getTimingControls() const { return timingControls; }
 
+    /// The set of symbols read within a single @* timing region.
+    struct ImplicitEventReadSet {
+        /// The @* timed statement this read set belongs to.
+        not_null<const ast::Statement*> statement;
+
+        /// Symbols (and bit ranges) read in this @* region.
+        SmallVector<ReadRange> reads;
+    };
+
+    /// Gets all symbols (and bit ranges) read anywhere in the procedure.
+    std::span<const ReadRange> getReadSet() const { return readSet; }
+
+    /// Gets the per-region read sets for each @* timing control in the procedure.
+    std::span<const ImplicitEventReadSet> getImplicitEventReadSets() const {
+        return implicitEventReadSets;
+    }
+
+    /// Gets the effective sensitivity list for this procedure.
+    const SensitivityList& getSensitivityList() const { return sensitivityList; }
+
 private:
+    void buildSensitivityList(AnalysisContext& context, DFAResults& analysis,
+                              ast::EvalContext& evalContext,
+                              std::span<const SymbolDriverListPair> funcDrivers);
+
     const ast::TimingControl* inferredClock = nullptr;
-    std::vector<SymbolDriverListPair> drivers;
-    std::vector<const ast::CallExpression*> callExpressions;
-    std::vector<const ast::Statement*> timingControls;
+    SmallVector<SymbolDriverListPair, 2> drivers;
+    SensitivityList sensitivityList;
+    SmallVector<const ast::CallExpression*, 2> callExpressions;
+    SmallVector<const ast::Statement*, 2> timingControls;
+    SmallVector<ReadRange, 2> readSet;
+    SmallVector<ImplicitEventReadSet, 2> implicitEventReadSets;
 };
 
 } // namespace slang::analysis

@@ -1083,7 +1083,6 @@ analysis::AnalysisOptions Driver::getAnalysisOptions() const {
     using namespace slang::analysis;
 
     AnalysisOptions ao;
-    ao.numThreads = options.numThreads.value_or(0);
     ao.flags |= AnalysisFlags::CheckUnused | AnalysisFlags::CheckShadow;
     if (options.maxCaseAnalysisSteps)
         ao.maxCaseAnalysisSteps = *options.maxCaseAnalysisSteps;

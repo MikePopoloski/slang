@@ -9,6 +9,7 @@ add_executable(
   analysis/CaseAnalysisTests.cpp
   analysis/ConstraintAnalysisTests.cpp
   analysis/DFATests.cpp
+  analysis/SensitivityTests.cpp
   analysis/MultiAssignTests.cpp
   analysis/PortAnalysisTests.cpp
   analysis/UnusedTests.cpp

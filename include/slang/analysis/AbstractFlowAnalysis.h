@@ -109,6 +109,10 @@ public:
 protected:
     using FlowAnalysisBase::FlowAnalysisBase;
 
+    // ------------------------------------------------------------------------
+    // Current state management
+    // ------------------------------------------------------------------------
+
     /// Gets the current flow state.
     TState& getState() { return state; }
 
@@ -158,7 +162,28 @@ protected:
     /// Gets the set of states at various return points in a subroutine.
     std::span<const TState> getReturnStates() const { return returnStates; }
 
-    // **** Statement Visitors ****
+    // ------------------------------------------------------------------------
+    // Visitor hooks
+    // ------------------------------------------------------------------------
+
+    /// Called before entering a timing control expression (wait condition, event
+    /// references in wait_order, etc.). Derived classes can override to suppress
+    /// implicit sensitivity tracking inside timing expressions.
+    void enterTimingControlExpr() {}
+
+    /// Called after leaving a timing control expression.
+    void leaveTimingControlExpr() {}
+
+    /// Called before entering an assertion action block.
+    /// Derived classes can override to suppress implicit sensitivity tracking.
+    void enterAssertionActionBlock() {}
+
+    /// Called after leaving an assertion action block.
+    void leaveAssertionActionBlock() {}
+
+    // ------------------------------------------------------------------------
+    // Statement visitors
+    // ------------------------------------------------------------------------
 
     void visitStmt(const InvalidStatement&) { bad = true; }
 
@@ -576,7 +601,10 @@ protected:
     }
 
     void visitStmt(const WaitStatement& stmt) {
+        // The wait condition is a timing control expression.
+        (DERIVED).enterTimingControlExpr();
         visitCondition(stmt.cond);
+        (DERIVED).leaveTimingControlExpr();
 
         // The body is never executed until the condition is true.
         setState(std::move(stateWhenTrue));
@@ -584,8 +612,11 @@ protected:
     }
 
     void visitStmt(const WaitOrderStatement& stmt) {
+        // Event references in wait_order are timing control expressions.
+        (DERIVED).enterTimingControlExpr();
         for (auto expr : stmt.events)
             visit(*expr);
+        (DERIVED).leaveTimingControlExpr();
 
         auto initialState = (DERIVED).copyState(state);
         if (stmt.ifTrue) {
@@ -729,13 +760,20 @@ protected:
             auto trueState = std::move(stateWhenTrue), falseState = std::move(stateWhenFalse);
             if (stmt.ifTrue) {
                 setState(std::move(trueState));
+
+                (DERIVED).enterAssertionActionBlock();
                 visit(*stmt.ifTrue);
+                (DERIVED).leaveAssertionActionBlock();
+
                 trueState = std::move(state);
             }
 
             setState(std::move(falseState));
-            if (stmt.ifFalse)
+            if (stmt.ifFalse) {
+                (DERIVED).enterAssertionActionBlock();
                 visit(*stmt.ifFalse);
+                (DERIVED).leaveAssertionActionBlock();
+            }
 
             (DERIVED).joinState(state, trueState);
         }
@@ -760,7 +798,9 @@ protected:
     void visitStmt(const WaitForkStatement&) {}
     void visitStmt(const DisableForkStatement&) {}
 
-    // **** Expression Visitors ****
+    // ------------------------------------------------------------------------
+    // Expression visitors
+    // ------------------------------------------------------------------------
 
     void visitExpr(const InvalidExpression&) { bad = true; }
 

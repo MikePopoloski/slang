@@ -75,6 +75,7 @@ public:
                           bool isFromAssertion);
 
     const Statement& getBody() const;
+    std::span<const StatementBlockSymbol* const> getBlocks() const { return blocks; }
     void serializeTo(ASTSerializer& serializer) const;
 
     bool isSingleDriverBlock() const {
