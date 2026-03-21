@@ -29,6 +29,7 @@
 
 namespace slang::ast {
 
+class CallExpression;
 class Compilation;
 class Expression;
 class FormalArgumentSymbol;
@@ -38,6 +39,8 @@ class SubroutineSymbol;
 class Symbol;
 class Type;
 class VariableSymbol;
+
+enum class ConversionKind;
 
 } // namespace slang::ast
 
@@ -121,6 +124,10 @@ public:
     llvm::Value* emitExpr(const Expression& expr);
     llvm::Value* emitLValue(const Expression& expr);
     llvm::Value* emitCond(const Expression& expr);
+    llvm::Value* emitSysCall(const CallExpression& e);
+
+    llvm::Value* emitConversion(llvm::Value* val, const Type& fromType, const Type& toType,
+                                ConversionKind conversionKind, bool forceFloatTrunc = false);
 
     ConstantValue tryEval(const Expression& expr);
 

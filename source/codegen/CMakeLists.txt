@@ -4,4 +4,4 @@
 # ~~~
 
 target_sources(slang_slang PRIVATE CodeGenerator.cpp ExprEmitter.cpp
-                                   StmtEmitter.cpp JIT.cpp)
+                                   SysCallEmitter.cpp StmtEmitter.cpp JIT.cpp)

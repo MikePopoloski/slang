@@ -402,6 +402,9 @@ struct ExprEmitter {
     llvm::Value* visit(const ClockingEventExpression& e);
     llvm::Value* visit(const AssertionInstanceExpression& e);
     llvm::Value* visit(const TaggedUnionExpression& e);
+
+    llvm::Value* emitConversion(llvm::Value* val, const Type& fromType, const Type& toType,
+                                ConversionKind conversionKind, bool forceFloatTrunc);
 };
 
 llvm::Value* ExprEmitter::visit(const InvalidExpression& e) {
@@ -810,14 +813,18 @@ llvm::Value* ExprEmitter::visit(const AssignmentExpression& e) {
 }
 
 llvm::Value* ExprEmitter::visit(const ConversionExpression& e) {
-    if (e.conversionKind == ConversionKind::StreamingConcat ||
-        e.conversionKind == ConversionKind::BitstreamCast) {
+    return emitConversion(fe.emitExpr(e.operand()), e.operand().type->getCanonicalType(),
+                          e.type->getCanonicalType(), e.conversionKind,
+                          /* forceFloatTrunc */ false);
+}
+
+llvm::Value* ExprEmitter::emitConversion(llvm::Value* val, const Type& fromType, const Type& toType,
+                                         ConversionKind conversionKind, bool forceFloatTrunc) {
+    if (conversionKind == ConversionKind::StreamingConcat ||
+        conversionKind == ConversionKind::BitstreamCast) {
         SLANG_UNIMPLEMENTED;
     }
 
-    auto& fromType = e.operand().type->getCanonicalType();
-    auto& toType = e.type->getCanonicalType();
-    auto val = fe.emitExpr(e.operand());
     if (fromType.isMatching(toType))
         return val;
 
@@ -851,7 +858,7 @@ llvm::Value* ExprEmitter::visit(const ConversionExpression& e) {
             // For Propagated conversions the LRM says to sign-extend if the
             // *target* type is signed; for all other conversion kinds, sign-extend
             // if the *source* type is signed.
-            const bool signExtend = (e.conversionKind == ConversionKind::Propagated)
+            const bool signExtend = conversionKind == ConversionKind::Propagated
                                         ? toType.isSigned()
                                         : fromType.isSigned();
 
@@ -890,13 +897,15 @@ llvm::Value* ExprEmitter::visit(const ConversionExpression& e) {
                                               : llvm::Intrinsic::fptoui_sat;
             auto dstHalfTy = builder.types.twoStateFor(toType.getBitWidth());
 
-            // Use llvm.round to round to nearest (ties away from zero).
-            // Use saturating conversion intrinsics to avoid UB for out-of-range values.
-            auto rounded = builder.CreateUnaryIntrinsic(llvm::Intrinsic::round, val);
-            auto converted = builder.CreateIntrinsic(convIntr, {dstHalfTy, rounded->getType()},
-                                                     {rounded});
+            // Use llvm.round to round to nearest (ties away from zero), unless opted
+            // out via the parameter flag.
+            if (!forceFloatTrunc)
+                val = builder.CreateUnaryIntrinsic(llvm::Intrinsic::round, val);
 
-            return toType.isFourState() ? builder.toFourState(converted) : converted;
+            // Use saturating conversion intrinsics to avoid UB for out-of-range values.
+            val = builder.CreateIntrinsic(convIntr, {dstHalfTy, val->getType()}, {val});
+
+            return toType.isFourState() ? builder.toFourState(val) : val;
         }
     }
     else if (toType.isFloating()) {
@@ -1139,9 +1148,8 @@ llvm::Value* ExprEmitter::visit(const MemberAccessExpression&) {
 }
 
 llvm::Value* ExprEmitter::visit(const CallExpression& e) {
-    auto ty = builder.types.lower(*e.type);
     if (e.isSystemCall())
-        return llvm::Constant::getNullValue(ty);
+        return fe.emitSysCall(e);
 
     const auto sub = std::get<const SubroutineSymbol*>(e.subroutine);
 
@@ -1153,9 +1161,6 @@ llvm::Value* ExprEmitter::visit(const CallExpression& e) {
         FunctionEmitter inner(fe.context);
         callee = inner.lower(*sub);
     }
-
-    if (!callee)
-        return llvm::Constant::getNullValue(ty);
 
     SmallVector<llvm::Value*, 8> args;
     for (auto argExpr : e.arguments())
@@ -1275,6 +1280,13 @@ llvm::Value* FunctionEmitter::emitCond(const Expression& expr) {
 
 llvm::Value* FunctionEmitter::emitExpr(const Expression& expr) {
     return expr.visit(ExprEmitter{*this});
+}
+
+llvm::Value* FunctionEmitter::emitConversion(llvm::Value* val, const Type& fromType,
+                                             const Type& toType, ConversionKind conversionKind,
+                                             bool forceFloatTrunc) {
+    return ExprEmitter{*this}.emitConversion(val, fromType, toType, conversionKind,
+                                             forceFloatTrunc);
 }
 
 } // namespace slang::codegen
