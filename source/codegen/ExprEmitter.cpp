@@ -810,63 +810,119 @@ llvm::Value* ExprEmitter::visit(const AssignmentExpression& e) {
 }
 
 llvm::Value* ExprEmitter::visit(const ConversionExpression& e) {
-    auto ty = builder.types.lower(*e.type);
+    if (e.conversionKind == ConversionKind::StreamingConcat ||
+        e.conversionKind == ConversionKind::BitstreamCast) {
+        SLANG_UNIMPLEMENTED;
+    }
+
+    auto& fromType = e.operand().type->getCanonicalType();
+    auto& toType = e.type->getCanonicalType();
     auto val = fe.emitExpr(e.operand());
-    const Type& fromType = *e.operand().type;
-    const Type& toType = *e.type;
-
-    if (fromType.isIntegral() && toType.isIntegral()) {
-        if (fromType.isFourState())
-            val = builder.getValPart(val);
-
-        unsigned fromBits = fromType.getBitWidth();
-        unsigned toBits = toType.getBitWidth();
-
-        llvm::Value* intVal = nullptr;
-        if (toBits == fromBits) {
-            intVal = val;
-        }
-        else if (toBits < fromBits) {
-            intVal = builder.CreateTrunc(val, builder.types.twoStateFor(toBits));
-        }
-        else {
-            intVal = fromType.isSigned()
-                         ? builder.CreateSExt(val, builder.types.twoStateFor(toBits))
-                         : builder.CreateZExt(val, builder.types.twoStateFor(toBits));
-        }
-
-        if (toType.isFourState())
-            return builder.toFourState(intVal, ty);
-        return intVal;
-    }
-
-    if (fromType.isIntegral() && toType.isFloating()) {
-        if (fromType.isFourState())
-            val = builder.getValPart(val);
-        return fromType.isSigned() ? builder.CreateSIToFP(val, ty) : builder.CreateUIToFP(val, ty);
-    }
-
-    if (fromType.isFloating() && toType.isIntegral()) {
-        unsigned toBits = toType.getBitWidth();
-        auto intTy = builder.types.twoStateFor(toBits);
-        auto intVal = toType.isSigned() ? builder.CreateFPToSI(val, intTy)
-                                        : builder.CreateFPToUI(val, intTy);
-        if (toType.isFourState())
-            return builder.toFourState(intVal, ty);
-        return intVal;
-    }
-
-    if (fromType.isFloating() && toType.isFloating()) {
-        if (ty == val->getType())
-            return val;
-        if (ty->isDoubleTy())
-            return builder.CreateFPExt(val, ty);
-        return builder.CreateFPTrunc(val, ty);
-    }
-
-    if (val->getType() == ty)
+    if (fromType.isMatching(toType))
         return val;
-    return llvm::Constant::getNullValue(ty);
+
+    auto resultTy = builder.types.lower(toType);
+
+    if (toType.isIntegral()) {
+        if (fromType.isIntegral()) {
+            const bitwidth_t fromBits = fromType.getBitWidth();
+            const bitwidth_t toBits = toType.getBitWidth();
+            const bool fromFourState = fromType.isFourState();
+            const bool toFourState = toType.isFourState();
+
+            // Extract the value (and unknown) parts from the source.
+            llvm::Value* srcVal = nullptr;
+            llvm::Value* srcUnk = nullptr;
+            if (fromFourState) {
+                srcVal = builder.getValPart(val);
+                srcUnk = builder.getUnkPart(val);
+            }
+            else {
+                srcVal = val;
+                srcUnk = llvm::ConstantInt::get(val->getType(), 0);
+            }
+
+            // If going 4-state -> 2-state, clear unknown bits (X/Z become 0).
+            if (!toFourState && fromFourState) {
+                srcVal = builder.CreateAnd(srcVal, builder.CreateNot(srcUnk));
+                srcUnk = llvm::ConstantInt::get(srcVal->getType(), 0);
+            }
+
+            // For Propagated conversions the LRM says to sign-extend if the
+            // *target* type is signed; for all other conversion kinds, sign-extend
+            // if the *source* type is signed.
+            const bool signExtend = (e.conversionKind == ConversionKind::Propagated)
+                                        ? toType.isSigned()
+                                        : fromType.isSigned();
+
+            auto dstHalfTy = builder.types.twoStateFor(toBits);
+            llvm::Value* dstVal = nullptr;
+            llvm::Value* dstUnk = nullptr;
+
+            if (toBits == fromBits) {
+                // Same width - just reinterpret (possibly changing sign, no bit change).
+                dstVal = srcVal;
+                dstUnk = srcUnk;
+            }
+            else if (toBits < fromBits) {
+                // Truncate: take the low toBits of both parts.
+                dstVal = builder.CreateTrunc(srcVal, dstHalfTy);
+                dstUnk = builder.CreateTrunc(srcUnk, dstHalfTy);
+            }
+            else {
+                // Extend: either sign-extend or zero-extend.
+                // Unknown propagation: if the MSB of the source is unknown and we sign-extend,
+                // the extended bits should all be unknown too .
+                if (signExtend) {
+                    dstVal = builder.CreateSExt(srcVal, dstHalfTy);
+                    dstUnk = builder.CreateSExt(srcUnk, dstHalfTy);
+                }
+                else {
+                    dstVal = builder.CreateZExt(srcVal, dstHalfTy);
+                    dstUnk = builder.CreateZExt(srcUnk, dstHalfTy);
+                }
+            }
+
+            return toFourState ? builder.createSVInt(dstVal, dstUnk, resultTy) : dstVal;
+        }
+        else if (fromType.isFloating()) {
+            auto convIntr = toType.isSigned() ? llvm::Intrinsic::fptosi_sat
+                                              : llvm::Intrinsic::fptoui_sat;
+            auto dstHalfTy = builder.types.twoStateFor(toType.getBitWidth());
+
+            // Use llvm.round to round to nearest (ties away from zero).
+            // Use saturating conversion intrinsics to avoid UB for out-of-range values.
+            auto rounded = builder.CreateUnaryIntrinsic(llvm::Intrinsic::round, val);
+            auto converted = builder.CreateIntrinsic(convIntr, {dstHalfTy, rounded->getType()},
+                                                     {rounded});
+
+            return toType.isFourState() ? builder.toFourState(converted) : converted;
+        }
+    }
+    else if (toType.isFloating()) {
+        if (fromType.isIntegral()) {
+            // Integer-to-float: unknown bits become zero bits before conversion.
+            auto srcVal = val;
+            if (fromType.isFourState()) {
+                auto [v, u] = builder.getIntParts(val);
+                srcVal = builder.CreateAnd(v, builder.CreateNot(u));
+            }
+
+            if (fromType.isSigned())
+                return builder.CreateSIToFP(srcVal, resultTy);
+            else
+                return builder.CreateUIToFP(srcVal, resultTy);
+        }
+        else if (fromType.isFloating()) {
+            // Simple case, just extend or trunc.
+            if (resultTy->isDoubleTy())
+                return builder.CreateFPExt(val, resultTy);
+            else
+                return builder.CreateFPTrunc(val, resultTy);
+        }
+    }
+
+    SLANG_UNIMPLEMENTED;
 }
 
 llvm::Value* ExprEmitter::visit(const ConcatenationExpression& e) {
