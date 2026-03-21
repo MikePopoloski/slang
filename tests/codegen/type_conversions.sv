@@ -1,6 +1,6 @@
 // Tests for type conversion / cast codegen.
 // REQUIRES: llvm
-// RUN: %slang --emit-ir %t %s && cat %t
+// RUN: %slang --emit-ir - %s
 
 // CHECK-LABEL: define private double @int_to_real
 // CHECK: sitofp i32 {{.*}} to double

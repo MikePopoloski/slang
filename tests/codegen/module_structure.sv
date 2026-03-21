@@ -1,6 +1,6 @@
 // Tests that verify module-level IR structure: module ID, function names, etc.
 // REQUIRES: llvm
-// RUN: %slang --emit-ir %t %s && cat %t
+// RUN: %slang --emit-ir - %s
 
 // The IR must start with the module ID comment.
 // CHECK: ModuleID = 'slang'

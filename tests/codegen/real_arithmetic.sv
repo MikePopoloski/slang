@@ -1,6 +1,6 @@
 // Tests for floating-point codegen (real and shortreal types).
 // REQUIRES: llvm
-// RUN: %slang --emit-ir %t %s && cat %t
+// RUN: %slang --emit-ir - %s
 
 // CHECK-LABEL: define private double @fadd
 // CHECK: fadd double

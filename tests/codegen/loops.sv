@@ -1,6 +1,6 @@
 // Tests for loop codegen (for, while).
 // REQUIRES: llvm
-// RUN: %slang --emit-ir %t %s && cat %t
+// RUN: %slang --emit-ir - %s
 
 // CHECK-LABEL: define private i32 @sum
 // CHECK: for.cond:

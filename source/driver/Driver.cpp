@@ -442,12 +442,14 @@ void Driver::addStandardArgs() {
                 "<steps>");
 
 #ifdef SLANG_INCLUDE_LLVM
-    cmdLine.add("--emit-ir", options.emitIR,
-                "Emit LLVM IR text (.ll) to the specified file after compilation", "<file>",
-                CommandLineFlags::FilePath);
-    cmdLine.add("--emit-bc", options.emitBitcode,
-                "Emit LLVM bitcode (.bc) to the specified file after compilation", "<file>",
-                CommandLineFlags::FilePath);
+    cmdLine.add(
+        "--emit-ir", options.emitIR,
+        "Emit LLVM IR text (.ll) to the specified file after compilation, or '-' for stdout",
+        "<file>", CommandLineFlags::FilePath);
+    cmdLine.add(
+        "--emit-bc", options.emitBitcode,
+        "Emit LLVM bitcode (.bc) to the specified file after compilation, or '-' for stdout",
+        "<file>", CommandLineFlags::FilePath);
 #endif
 }
 

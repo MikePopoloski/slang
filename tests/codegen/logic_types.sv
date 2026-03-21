@@ -2,7 +2,7 @@
 // 4-state types are lowered to { iN, iN } structs where the first field
 // holds the value bits and the second holds the unknown ("X") mask.
 // REQUIRES: llvm
-// RUN: %slang --emit-ir %t %s && cat %t
+// RUN: %slang --emit-ir - %s
 
 // CHECK-LABEL: define private i2 @logic1_and
 // CHECK: ret i2

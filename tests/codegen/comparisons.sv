@@ -1,6 +1,6 @@
 // Tests for comparison operators and boolean expressions.
 // REQUIRES: llvm
-// RUN: %slang --emit-ir %t %s && cat %t
+// RUN: %slang --emit-ir - %s
 
 // CHECK-LABEL: define private i1 @bit_lt
 // CHECK: icmp ult i1

@@ -74,6 +74,11 @@ std::string CodeGenerator::Impl::getTextualIR() const {
 }
 
 std::string CodeGenerator::Impl::writeIRToFile(std::string_view path) const {
+    if (path == "-") {
+        context.module->print(llvm::outs(), nullptr);
+        return {};
+    }
+
     std::error_code ec;
     llvm::raw_fd_ostream out(llvm::StringRef(path.data(), path.size()), ec, llvm::sys::fs::OF_Text);
     if (ec)
@@ -83,6 +88,12 @@ std::string CodeGenerator::Impl::writeIRToFile(std::string_view path) const {
 }
 
 std::string CodeGenerator::Impl::writeBitcodeToFile(std::string_view path) const {
+    if (path == "-") {
+        llvm::raw_fd_ostream out(1, /* shouldClose */ false, /* unbuffered */ true);
+        llvm::WriteBitcodeToFile(*context.module, out);
+        return {};
+    }
+
     std::error_code ec;
     llvm::raw_fd_ostream out(llvm::StringRef(path.data(), path.size()), ec, llvm::sys::fs::OF_None);
     if (ec)

@@ -1,6 +1,6 @@
 // Tests for function call codegen (cross-function calls).
 // REQUIRES: llvm
-// RUN: %slang --emit-ir %t %s && cat %t
+// RUN: %slang --emit-ir - %s
 
 // CHECK-LABEL: define private i32 @double_it
 // CHECK: mul i32

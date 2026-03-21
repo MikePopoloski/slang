@@ -1,6 +1,6 @@
 // Tests for if/else control flow codegen.
 // REQUIRES: llvm
-// RUN: %slang --emit-ir %t %s && cat %t
+// RUN: %slang --emit-ir - %s
 
 // CHECK-LABEL: define private i32 @choose
 // CHECK: br i1

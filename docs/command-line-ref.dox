@@ -779,4 +779,19 @@ various parts of the compilation take. When the program exits it will write the
 trace results to the given file, which is JSON text containing events in
 the Chrome Trace Event format.
 
+@section clr-codegen Code Generation
+
+These options control LLVM-based code generation. They are only available when slang has been
+built with LLVM support (`SLANG_INCLUDE_LLVM=ON`).
+
+`--emit-ir <file>`
+
+After a successful compilation, generate LLVM IR in text (`.ll`) format and write it to
+`<file>`. Pass `-` as the file name to write to stdout instead.
+
+`--emit-bc <file>`
+
+After a successful compilation, generate LLVM bitcode (`.bc`) in binary format and write it
+to `<file>`. Pass `-` as the file name to write to stdout instead.
+
 */

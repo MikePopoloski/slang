@@ -1,6 +1,6 @@
 // Tests for constant / literal codegen.
 // REQUIRES: llvm
-// RUN: %slang --emit-ir %t %s && cat %t
+// RUN: %slang --emit-ir - %s
 
 // CHECK-LABEL: define private i32 @const_42
 // CHECK: store i32 42

@@ -1,7 +1,7 @@
 // Tests for 2-state bit type codegen.
 // The 'bit' type is a 2-state 1-bit value, lowered to plain i1.
 // REQUIRES: llvm
-// RUN: %slang --emit-ir %t %s && cat %t
+// RUN: %slang --emit-ir - %s
 
 // CHECK-LABEL: define private i1 @bit_and
 // CHECK: and i1
