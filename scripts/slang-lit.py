@@ -190,11 +190,20 @@ def _compile_pattern(pattern: str) -> re.Pattern:
 class CheckError(Exception):
     """Raised when a CHECK directive is violated."""
 
-    def __init__(self, directive: CheckDirective, message: str, context: str = ""):
+    def __init__(
+        self,
+        directive: CheckDirective,
+        message: str,
+        context: str = "",
+        region_start: int = 0,
+        region_end: int | None = None,
+    ):
         self.directive = directive
         self.message = message
         self.context = context
-        super().__init__(directive, message, context)
+        self.region_start = region_start
+        self.region_end = region_end
+        super().__init__(directive, message, context, region_start, region_end)
 
 
 def run_checks(output: str, directives: list[CheckDirective]) -> None:
@@ -216,6 +225,8 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
     # current CHECK-LABEL region. This prevents a pattern from matching in a
     # later labelled section.
     region_end = len(lines)
+    # region_start tracks the first line of the current label region (inclusive).
+    region_start = 0
 
     def _next_label_bound(from_pos: int, from_directive: int) -> int:
         """Return the line index where the next CHECK-LABEL after *from_directive*
@@ -244,7 +255,10 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
                 pat = _compile_pattern(nd.pattern)
             except re.error as exc:
                 raise CheckError(
-                    nd, f"bad regex in CHECK-NOT {{{{...}}}}: {exc}"
+                    nd,
+                    f"bad regex in CHECK-NOT {{{{...}}}}: {exc}",
+                    region_start=region_start,
+                    region_end=region_end,
                 ) from exc
             for ln in lines[start:end]:
                 if pat.search(ln):
@@ -252,6 +266,8 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
                         nd,
                         "CHECK-NOT pattern unexpectedly matched",
                         context=f"  matched line: {ln!r}\n  pattern:      {nd.pattern!r}",
+                        region_start=region_start,
+                        region_end=region_end,
                     )
 
     not_window_start = 0
@@ -283,7 +299,10 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
                     pat = _compile_pattern(dd.pattern)
                 except re.error as exc:
                     raise CheckError(
-                        dd, f"bad regex in CHECK-DAG {{{{...}}}}: {exc}"
+                        dd,
+                        f"bad regex in CHECK-DAG {{{{...}}}}: {exc}",
+                        region_start=region_start,
+                        region_end=region_end,
                     ) from exc
                 found = False
                 for lno, ln in enumerate(lines[pos:region_end], start=pos):
@@ -296,6 +315,8 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
                         dd,
                         "CHECK-DAG pattern not found in output",
                         context=f"  pattern: {dd.pattern!r}",
+                        region_start=region_start,
+                        region_end=region_end,
                     )
             # Advance pos past the last matched line.
             if matched_lines:
@@ -307,11 +328,17 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
                 pat = _compile_pattern(d.pattern)
             except re.error as exc:
                 raise CheckError(
-                    d, f"bad regex in CHECK-LABEL {{{{...}}}}: {exc}"
+                    d,
+                    f"bad regex in CHECK-LABEL {{{{...}}}}: {exc}",
+                    region_start=region_start,
+                    region_end=region_end,
                 ) from exc
             found = False
             for lno in range(pos, len(lines)):
                 if pat.search(lines[lno]):
+                    region_start = (
+                        lno  # include the matched label line in the new region
+                    )
                     pos = lno + 1
                     found = True
                     break
@@ -320,6 +347,8 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
                     d,
                     "CHECK-LABEL pattern not found in output",
                     context=f"  pattern: {d.pattern!r}",
+                    region_start=region_start,
+                    region_end=region_end,
                 )
             i += 1
             # Cap subsequent scans to before the next label's match position.
@@ -333,12 +362,17 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
                     d,
                     "CHECK-NEXT reached end of output",
                     context=f"  pattern: {d.pattern!r}",
+                    region_start=region_start,
+                    region_end=region_end,
                 )
             try:
                 pat = _compile_pattern(d.pattern)
             except re.error as exc:
                 raise CheckError(
-                    d, f"bad regex in CHECK-NEXT {{{{...}}}}: {exc}"
+                    d,
+                    f"bad regex in CHECK-NEXT {{{{...}}}}: {exc}",
+                    region_start=region_start,
+                    region_end=region_end,
                 ) from exc
             if not pat.search(lines[pos]):
                 raise CheckError(
@@ -347,6 +381,8 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
                     context=(
                         f"  pattern:    {d.pattern!r}\n  next line:  {lines[pos]!r}"
                     ),
+                    region_start=region_start,
+                    region_end=region_end,
                 )
             pos += 1
             i += 1
@@ -356,7 +392,12 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
         try:
             pat = _compile_pattern(d.pattern)
         except re.error as exc:
-            raise CheckError(d, f"bad regex in CHECK {{{{...}}}}: {exc}") from exc
+            raise CheckError(
+                d,
+                f"bad regex in CHECK {{{{...}}}}: {exc}",
+                region_start=region_start,
+                region_end=region_end,
+            ) from exc
         found = False
         for lno in range(pos, region_end):
             if pat.search(lines[lno]):
@@ -368,6 +409,8 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
                 d,
                 "CHECK pattern not found in output",
                 context=f"  pattern: {d.pattern!r}",
+                region_start=region_start,
+                region_end=region_end,
             )
         i += 1
 
@@ -483,13 +526,25 @@ def run_test(
             lines.append(exc.context)
         lines.append(f"  directive at: {parsed.path}:{exc.directive.lineno}")
         output_lines = combined_output.splitlines()
-        truncated = output_limit is not None and len(output_lines) > output_limit
+        r_start = exc.region_start
+        r_end = exc.region_end if exc.region_end is not None else len(output_lines)
+        region_lines = output_lines[r_start:r_end]
+        truncated = output_limit is not None and len(region_lines) > output_limit
         preview_lines = (
-            output_lines[:output_limit] if output_limit is not None else output_lines
+            region_lines[:output_limit] if output_limit is not None else region_lines
         )
         failing_output_preview = "\n".join(f"    {ln}" for ln in preview_lines)
-        if combined_output:
-            label = f"output (first {output_limit} lines)" if truncated else "output"
+        if region_lines:
+            if r_start > 0 or r_end < len(output_lines):
+                label = (
+                    f"output region [{r_start + 1}:{r_end}] (first {output_limit} lines)"
+                    if truncated
+                    else f"output region [{r_start + 1}:{r_end}]"
+                )
+            else:
+                label = (
+                    f"output (first {output_limit} lines)" if truncated else "output"
+                )
             lines.append(f"  {label}:\n{failing_output_preview}")
         msg = "\n".join(lines)
         status = "XFAIL" if parsed.xfail else "FAIL"
