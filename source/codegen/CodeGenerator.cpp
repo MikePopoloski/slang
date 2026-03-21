@@ -10,8 +10,12 @@
 #include "CodegenImpl.h"
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/MC/TargetRegistry.h>
 #include <llvm/Support/FileSystem.h>
+#include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/TargetParser/Host.h>
 
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Symbol.h"
@@ -109,6 +113,25 @@ CodegenContext::CodegenContext(Compilation& compilation, std::string_view module
     ctx(std::make_unique<llvm::LLVMContext>()),
     module(std::make_unique<llvm::Module>(moduleName, *ctx)), compilation(compilation),
     options(std::move(opts)), types(*this) {
+
+    // Initialize the native target (calls are idempotent).
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+
+    // Detect the host triple and its DataLayout so all sizing and alignment
+    // decisions in the generated IR match the machine that will execute it.
+    llvm::Triple triple(llvm::sys::getProcessTriple());
+    std::string error;
+    auto target = llvm::TargetRegistry::lookupTarget(triple, error);
+    if (target) {
+        llvm::TargetOptions targetOpts;
+        std::unique_ptr<llvm::TargetMachine> tm(target->createTargetMachine(
+            triple, llvm::sys::getHostCPUName(), "", targetOpts, std::nullopt));
+        if (tm) {
+            module->setTargetTriple(triple);
+            module->setDataLayout(tm->createDataLayout());
+        }
+    }
 }
 
 IRBuilder::IRBuilder(CodegenContext& context) :

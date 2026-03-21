@@ -39,10 +39,6 @@ JIT::JIT(JIT&&) noexcept = default;
 JIT& JIT::operator=(JIT&&) noexcept = default;
 
 nonstd::expected<JIT, std::string> JIT::create(CodeGenerator&& gen) {
-    // Ensure the native target is registered. These calls are idempotent.
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-
     // Build the LLJIT instance targeting the current process.
     auto jitOrErr = llvm::orc::LLJITBuilder().create();
     if (auto err = jitOrErr.takeError())
