@@ -9,9 +9,12 @@
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Intrinsics.h>
 
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/expressions/LiteralExpressions.h"
+#include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/numeric/SVInt.h"
 
 namespace slang::codegen {
@@ -437,8 +440,10 @@ llvm::Value* ExprEmitter::visit(const UnboundedLiteral&) {
     SLANG_UNIMPLEMENTED;
 }
 
-llvm::Value* ExprEmitter::visit(const StringLiteral&) {
-    SLANG_UNIMPLEMENTED;
+llvm::Value* ExprEmitter::visit(const StringLiteral& e) {
+    // When a string literal is used in an integer context its bit pattern is
+    // the ASCII bytes packed into the integer (already evaluated by the AST).
+    return builder.getSVInt(e.getIntValue().integer(), e.type->isFourState());
 }
 
 llvm::Value* ExprEmitter::visit(const NamedValueExpression& e) {
@@ -813,6 +818,12 @@ llvm::Value* ExprEmitter::visit(const AssignmentExpression& e) {
 }
 
 llvm::Value* ExprEmitter::visit(const ConversionExpression& e) {
+    // TODO: temporary handling of string conversions just for DPI imports
+    if (e.type->isString()) {
+        if (auto sl = e.operand().as_if<StringLiteral>())
+            return builder.CreateGlobalString(sl->getValue());
+        SLANG_UNIMPLEMENTED;
+    }
     return emitConversion(fe.emitExpr(e.operand()), e.operand().type->getCanonicalType(),
                           e.type->getCanonicalType(), e.conversionKind,
                           /* forceFloatTrunc */ false);

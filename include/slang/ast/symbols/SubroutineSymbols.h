@@ -138,6 +138,8 @@ public:
         return flags.has(MethodFlags::Virtual | MethodFlags::Extends) || overrides != nullptr;
     }
 
+    std::string_view getCIdentifier() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static std::pair<SubroutineSymbol*, bool> fromSyntax(

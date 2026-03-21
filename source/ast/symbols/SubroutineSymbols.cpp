@@ -882,6 +882,15 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
     }
 }
 
+std::string_view SubroutineSymbol::getCIdentifier() const {
+    if (auto syn = getSyntax(); syn && syn->kind == SyntaxKind::DPIImport) {
+        auto& dis = syn->as<DPIImportSyntax>();
+        if (dis.c_identifier)
+            return dis.c_identifier.valueText();
+    }
+    return name;
+}
+
 static std::string flagsToStr(bitmask<MethodFlags> flags) {
     std::string str;
     if (flags.has(MethodFlags::Virtual))

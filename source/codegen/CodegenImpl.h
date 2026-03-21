@@ -55,10 +55,14 @@ public:
     llvm::Type* VoidTy;
     llvm::IntegerType *Int8Ty, *Int16Ty, *Int32Ty, *Int64Ty;
     llvm::Type *FloatTy, *DoubleTy;
+    llvm::PointerType* PtrTy;
 
     explicit TypeEmitter(CodegenContext& context);
 
     llvm::Type* lower(const Type& type);
+
+    // Maps a SystemVerilog DPI type to its C ABI compatible LLVM type.
+    llvm::Type* lowerForDPI(const Type& type);
 
     llvm::IntegerType* twoStateFor(bitwidth_t bits);
     llvm::IntegerType* fourStateFor(bitwidth_t bits);
@@ -145,6 +149,10 @@ public:
     llvm::BasicBlock* returnBlock = nullptr;
     llvm::AllocaInst* returnVal = nullptr;
     llvm::Function* currentFunc = nullptr;
+
+private:
+    // Creates an external function declaration for a DPI-imported function.
+    llvm::Function* lowerDPIImport(const SubroutineSymbol& sub);
 };
 
 class CodeGenerator::Impl {

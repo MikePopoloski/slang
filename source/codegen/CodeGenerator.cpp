@@ -190,11 +190,48 @@ TypeEmitter::TypeEmitter(CodegenContext& context) : context(context) {
     Int64Ty = llvm::Type::getInt64Ty(vmCtx);
     FloatTy = llvm::Type::getFloatTy(vmCtx);
     DoubleTy = llvm::Type::getDoubleTy(vmCtx);
+    PtrTy = llvm::PointerType::get(vmCtx, 0);
 
     auto& comp = context.compilation;
     typeCache[&comp.getVoidType()] = VoidTy;
     typeCache[&comp.getRealType()] = DoubleTy;
     typeCache[&comp.getShortRealType()] = FloatTy;
+}
+
+llvm::Type* TypeEmitter::lowerForDPI(const Type& type) {
+    auto& ct = type.getCanonicalType();
+    switch (ct.kind) {
+        case SymbolKind::VoidType:
+            return VoidTy;
+        case SymbolKind::StringType:
+            return PtrTy;
+        case SymbolKind::FloatingType:
+            return ct.getBitWidth() == 32 ? FloatTy : DoubleTy;
+        case SymbolKind::ScalarType:
+            return Int8Ty;
+        case SymbolKind::PredefinedIntegerType:
+            switch (ct.as<PredefinedIntegerType>().integerKind) {
+                case PredefinedIntegerType::ShortInt:
+                    return Int16Ty;
+                case PredefinedIntegerType::Int:
+                    return Int32Ty;
+                case PredefinedIntegerType::LongInt:
+                    return Int64Ty;
+                case PredefinedIntegerType::Byte:
+                    return Int8Ty;
+                case PredefinedIntegerType::Integer:
+                case PredefinedIntegerType::Time:
+                    // Not implemented yet, requires 4-state form.
+                    break;
+            }
+            SLANG_UNIMPLEMENTED;
+        case SymbolKind::EnumType:
+            return lowerForDPI(ct.as<EnumType>().baseType);
+        case SymbolKind::CHandleType:
+            return PtrTy;
+        default:
+            SLANG_UNIMPLEMENTED;
+    }
 }
 
 llvm::Type* TypeEmitter::lower(const Type& type) {
@@ -286,9 +323,9 @@ llvm::AllocaInst* FunctionEmitter::createLocal(const VariableSymbol& var) {
 
 static constexpr bitmask<MethodFlags> UnimplementedFlags =
     MethodFlags::Pure | MethodFlags::Constructor | MethodFlags::InterfaceExtern |
-    MethodFlags::ModportImport | MethodFlags::ModportExport | MethodFlags::DPIImport |
-    MethodFlags::DPIContext | MethodFlags::BuiltIn | MethodFlags::Randomize |
-    MethodFlags::ForkJoin | MethodFlags::DefaultedSuperArg | MethodFlags::PrePostRandomize;
+    MethodFlags::ModportImport | MethodFlags::ModportExport | MethodFlags::DPIContext |
+    MethodFlags::BuiltIn | MethodFlags::Randomize | MethodFlags::ForkJoin |
+    MethodFlags::DefaultedSuperArg | MethodFlags::PrePostRandomize;
 
 llvm::Function* FunctionEmitter::lower(const SubroutineSymbol& sub) {
     // If we already emitted this subroutine (e.g. because it was called from another
@@ -300,6 +337,10 @@ llvm::Function* FunctionEmitter::lower(const SubroutineSymbol& sub) {
         sub.flags.has(UnimplementedFlags) || sub.isVirtual()) {
         SLANG_UNIMPLEMENTED;
     }
+
+    // DPI imports are lowered to external C function declarations.
+    if (sub.flags.has(MethodFlags::DPIImport))
+        return lowerDPIImport(sub);
 
     // Build parameter types.
     SmallVector<llvm::Type*, 8> paramTypes;
@@ -412,6 +453,28 @@ llvm::Function* FunctionEmitter::lower(const SubroutineSymbol& sub) {
     if (llvm::verifyFunction(*fn, &errOS))
         SLANG_THROW(std::logic_error(errStr));
 
+    return fn;
+}
+
+llvm::Function* FunctionEmitter::lowerDPIImport(const SubroutineSymbol& sub) {
+    // Build parameter types using the DPI (C ABI compatible) mapping.
+    SmallVector<llvm::Type*, 8> paramTypes;
+    for (auto arg : sub.getArguments()) {
+        if (arg->direction != ArgumentDirection::In)
+            SLANG_UNIMPLEMENTED;
+
+        paramTypes.push_back(context.types.lowerForDPI(arg->getType()));
+    }
+
+    auto retTy = context.types.lowerForDPI(sub.getReturnType());
+    auto fnTy = llvm::FunctionType::get(retTy, paramTypes, /* isVarArg */ false);
+
+    // Declare the function with external linkage and the C calling convention
+    // (which is the default) so LLVM will link it against the real C symbol at JIT time.
+    auto fn = llvm::Function::Create(fnTy, llvm::Function::ExternalLinkage, sub.getCIdentifier(),
+                                     context.module.get());
+
+    context.funcMap.emplace(&sub, fn);
     return fn;
 }
 
