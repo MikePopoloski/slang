@@ -344,6 +344,19 @@ public:
 
         /// @}
 
+#ifdef SLANG_INCLUDE_LLVM
+        /// @name Code generation
+        /// @{
+
+        /// If set, emit LLVM IR text to this file path after compilation.
+        std::optional<std::string> emitIR;
+
+        /// If set, emit LLVM bitcode to this file path after compilation.
+        std::optional<std::string> emitBitcode;
+
+        /// @}
+#endif
+
         /// Returns true if the lintMode option is provided.
         bool lintMode() const;
     } options;
@@ -446,10 +459,18 @@ public:
     /// @returns true if compilation succeeded and false if errors were encountered.
     [[nodiscard]] bool reportDiagnostics(bool quiet);
 
+    /// @brief Runs code generation.
+    ///
+    /// If not built with LLVM or if the emitIR or emitBitcode options are not
+    /// provided, this will do nothing.
+    ///
+    /// @note This should generally not be called if compilation failed.
+    [[nodiscard]] bool runCodegen(ast::Compilation& compilation);
+
     /// @brief Runs a full compilation pass and reports the results.
     ///
     /// This is a helper method that calls @a createCompilation, @a reportCompilation,
-    /// @a runAnalysis, and @a reportDiagnostics in sequence.
+    /// @a runAnalysis, @a reportDiagnostics, and @a runCodegen in sequence.
     ///
     /// @returns true if compilation succeeded and false if errors were encountered.
     [[nodiscard]] bool runFullCompilation(bool quiet = false);

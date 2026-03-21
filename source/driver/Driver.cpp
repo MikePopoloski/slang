@@ -27,6 +27,10 @@
 #include "slang/util/String.h"
 #include "slang/util/ThreadPool.h"
 
+#ifdef SLANG_INCLUDE_LLVM
+#    include "slang/codegen/CodeGenerator.h"
+#endif
+
 namespace fs = std::filesystem;
 
 namespace slang::driver {
@@ -436,6 +440,15 @@ void Driver::addStandardArgs() {
     cmdLine.add("--max-loop-analysis-steps", options.maxLoopAnalysisSteps,
                 "Maximum number of steps that can occur during loop analysis before giving up",
                 "<steps>");
+
+#ifdef SLANG_INCLUDE_LLVM
+    cmdLine.add("--emit-ir", options.emitIR,
+                "Emit LLVM IR text (.ll) to the specified file after compilation", "<file>",
+                CommandLineFlags::FilePath);
+    cmdLine.add("--emit-bc", options.emitBitcode,
+                "Emit LLVM bitcode (.bc) to the specified file after compilation", "<file>",
+                CommandLineFlags::FilePath);
+#endif
 }
 
 [[nodiscard]] bool Driver::parseCommandLine(std::string_view argList,
@@ -568,6 +581,13 @@ bool Driver::processOptions() {
         auto& opt = options.compilationFlags.at(CompilationFlags::IgnoreUnknownModules);
         if (!opt.has_value())
             opt = true;
+
+#ifdef SLANG_INCLUDE_LLVM
+        if (options.emitIR || options.emitBitcode) {
+            printError("--emit-ir and --emit-bc are not compatible with --lint-only");
+            return false;
+        }
+#endif
     }
 
     if (!options.translateOffOptions.empty()) {
@@ -1202,11 +1222,45 @@ bool Driver::reportDiagnostics(bool quiet) {
     return succeeded;
 }
 
+bool Driver::runCodegen(Compilation& compilation) {
+#ifdef SLANG_INCLUDE_LLVM
+    if (!options.lintMode() && (options.emitIR || options.emitBitcode)) {
+        using namespace codegen;
+
+        CodeGenerator codeGen(compilation);
+        for (auto unit : compilation.getCompilationUnits())
+            codeGen.emitScope(*unit);
+
+        if (options.emitIR) {
+            if (auto err = codeGen.writeIRToFile(*options.emitIR); !err.empty()) {
+                OS::printE(
+                    fmt::format("error: could not write IR to '{}': {}\n", *options.emitIR, err));
+                return false;
+            }
+        }
+
+        if (options.emitBitcode) {
+            if (auto err = codeGen.writeBitcodeToFile(*options.emitBitcode); !err.empty()) {
+                OS::printE(fmt::format("error: could not write bitcode to '{}': {}\n",
+                                       *options.emitBitcode, err));
+                return false;
+            }
+        }
+    }
+#endif
+    return true;
+}
+
 bool Driver::runFullCompilation(bool quiet) {
     auto compilation = createCompilation();
     reportCompilation(*compilation, quiet);
     runAnalysis(*compilation);
-    return reportDiagnostics(quiet);
+
+    bool success = reportDiagnostics(quiet);
+    if (success)
+        success = runCodegen(*compilation);
+
+    return success;
 }
 
 bool Driver::parseUnitListing(std::string_view text) {

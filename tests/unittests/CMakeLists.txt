@@ -52,6 +52,11 @@ add_executable(
   main.cpp
   Test.cpp)
 
+if(SLANG_INCLUDE_LLVM)
+  target_sources(unittests PRIVATE codegen/CodegenTests.cpp)
+  target_compile_definitions(unittests PRIVATE SLANG_INCLUDE_LLVM)
+endif()
+
 target_include_directories(unittests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(unittests PRIVATE slang::slang Catch2::Catch2)
 target_compile_definitions(unittests PRIVATE UNITTESTS)

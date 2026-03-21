@@ -220,6 +220,7 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def("reportCompilation", &Driver::reportCompilation, "compilation"_a, "quiet"_a)
         .def("runAnalysis", &Driver::runAnalysis, "compilation"_a)
         .def("reportDiagnostics", &Driver::reportDiagnostics, "quiet"_a)
+        .def("runCodegen", &Driver::runCodegen, "compilation"_a)
         .def("runFullCompilation", &Driver::runFullCompilation, "quiet"_a = false);
 
     py::classh<SourceOptions>(driver, "SourceOptions")

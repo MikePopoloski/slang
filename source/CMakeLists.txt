@@ -120,6 +120,10 @@ add_library(
 
 add_subdirectory(ast)
 
+if(SLANG_INCLUDE_LLVM)
+  add_subdirectory(codegen)
+endif()
+
 add_library(slang::slang ALIAS slang_slang)
 set_target_properties(
   slang_slang

@@ -13,6 +13,9 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
+#ifdef SLANG_INCLUDE_LLVM
+#    include "slang/codegen/CodeGenerator.h"
+#endif
 #include "slang/driver/Driver.h"
 #include "slang/syntax/CSTSerializer.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -24,6 +27,9 @@ using namespace slang;
 using namespace slang::ast;
 using namespace slang::syntax;
 using namespace slang::driver;
+#ifdef SLANG_INCLUDE_LLVM
+using namespace slang::codegen;
+#endif
 
 void printASTJson(Compilation& compilation, const std::string& fileName,
                   const std::vector<std::string>& scopes, bool includeSourceInfo,
@@ -249,6 +255,8 @@ int driverMain(int argc, TArgs argv) {
             }
 
             ok &= driver.reportDiagnostics(quiet == true);
+            if (ok)
+                ok &= driver.runCodegen(*compilation);
 
             if (astJsonFile) {
                 TimeTraceScope timeScope("astSerialization"sv, ""sv);
