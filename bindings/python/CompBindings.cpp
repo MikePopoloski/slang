@@ -240,7 +240,12 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def("addSeparateUnit", &SourceLoader::addSeparateUnit, "filePatterns"_a, "includePaths"_a,
              "defines"_a, "libraryName"_a, "warningOptions"_a)
         .def("loadSources", &SourceLoader::loadSources)
-        .def("loadAndParseSources", &SourceLoader::loadAndParseSources, "optionBag"_a)
+        .def(
+            "loadAndParseSources",
+            [](SourceLoader& self, const Bag& optionBag) {
+                return self.loadAndParseSources(optionBag);
+            },
+            "optionBag"_a)
         .def_property_readonly("hasFiles", &SourceLoader::hasFiles)
         .def_property_readonly("libraryMaps", &SourceLoader::getLibraryMaps)
         .def_property_readonly("errors", &SourceLoader::getErrors);

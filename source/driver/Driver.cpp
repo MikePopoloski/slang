@@ -25,6 +25,7 @@
 #include "slang/text/Json.h"
 #include "slang/util/Random.h"
 #include "slang/util/String.h"
+#include "slang/util/ThreadPool.h"
 
 namespace fs = std::filesystem;
 
@@ -953,7 +954,13 @@ void Driver::optionallyWriteDepFiles() {
 }
 
 bool Driver::parseAllSources() {
-    syntaxTrees = sourceLoader.loadAndParseSources(createParseOptionBag());
+    if (!threadPool) {
+        const auto numThreads = options.numThreads.value_or(0u);
+        if (numThreads != 1u)
+            threadPool = std::make_shared<ThreadPool>(numThreads);
+    }
+
+    syntaxTrees = sourceLoader.loadAndParseSources(createParseOptionBag(), threadPool.get());
     if (!reportLoadErrors())
         return false;
 
@@ -1138,11 +1145,11 @@ void Driver::reportCompilation(Compilation& compilation, bool quiet) {
 }
 
 std::unique_ptr<AnalysisManager> Driver::runAnalysis(ast::Compilation& compilation) {
-
     compilation.getAllDiagnostics();
     compilation.freeze();
 
-    auto analysisManager = std::make_unique<analysis::AnalysisManager>(getAnalysisOptions());
+    auto analysisManager = std::make_unique<analysis::AnalysisManager>(getAnalysisOptions(),
+                                                                       threadPool);
 
     // We can't / shouldn't run analysis in lint-only mode.
     // We'll just return an empty analysis manager in that case.

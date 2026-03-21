@@ -202,7 +202,10 @@ void registerAnalysis(py::module_& m, py::module_& ast) {
                                &ValueDriver::isInSingleDriverProcedure);
 
     py::classh<AnalysisManager>(m, "AnalysisManager")
-        .def(py::init<AnalysisOptions>(), "options"_a = AnalysisOptions())
+        .def(py::init([](AnalysisOptions options) {
+                 return std::make_unique<AnalysisManager>(std::move(options));
+             }),
+             "options"_a = AnalysisOptions())
         .def("addProcListener",
              py::overload_cast<std::function<void(const AnalyzedProcedure&)>>(
                  &AnalysisManager::addListener),

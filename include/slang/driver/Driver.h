@@ -26,6 +26,7 @@ namespace slang {
 class JsonDiagnosticClient;
 class JsonWriter;
 class TextDiagnosticClient;
+class ThreadPool;
 enum class ShowHierarchyPathOption;
 
 } // namespace slang
@@ -122,6 +123,10 @@ public:
 
     /// The object that handles loading and parsing source files.
     SourceLoader sourceLoader;
+
+    /// A shared thread pool for doing work in parallel.
+    /// Created on demand when threading is enabled, otherwise left null.
+    std::shared_ptr<ThreadPool> threadPool;
 
     /// A list of syntax trees that have been parsed.
     std::vector<std::shared_ptr<syntax::SyntaxTree>> syntaxTrees;

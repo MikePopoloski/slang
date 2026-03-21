@@ -7,10 +7,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#if defined(SLANG_USE_THREADS)
-#    include <BS_thread_pool.hpp>
-#endif
+#include <exception>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <optional>
 
@@ -22,6 +21,7 @@
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/ConcurrentMap.h"
 #include "slang/util/SmallMap.h"
+#include "slang/util/ThreadPool.h"
 
 namespace slang::ast {
 
@@ -88,8 +88,9 @@ public:
 /// be run to check for various issues or extract information.
 class SLANG_EXPORT AnalysisManager {
 public:
-    /// Default constructor for the analysis manager.
-    explicit AnalysisManager(AnalysisOptions options = {});
+    /// Constructs a new analysis manager.
+    explicit AnalysisManager(AnalysisOptions options = {},
+                             std::shared_ptr<ThreadPool> threadPool = nullptr);
 
     /// Gets the set of options used to construct the analysis manager.
     const AnalysisOptions& getOptions() const { return options; }
@@ -216,6 +217,8 @@ private:
                                SmallSet<const ast::SubroutineSymbol*, 2>& visited,
                                std::vector<const ast::Statement*>& controls);
 
+    void addScopeResult(const ast::Scope& scope, const AnalyzedScope& result);
+
     void handleAssertion(std::unique_ptr<AnalyzedAssertion>&& assertion);
     void wait();
     WorkerState& getState();
@@ -238,13 +241,12 @@ private:
 
     const SourceManager* sourceManager = nullptr;
 
-#if defined(SLANG_USE_THREADS)
-    BS::thread_pool<> threadPool;
+    std::shared_ptr<ThreadPool> threadPool;
 
     // A mutex for shared state; anything protected by it is declared below.
+    // Only used when threading is enabled.
     std::mutex mutex;
     std::exception_ptr pendingException;
-#endif
 
     struct NonProceduralExprVisitor {
         NonProceduralExprVisitor(AnalysisManager& manager, const ast::Symbol& containingSymbol,
