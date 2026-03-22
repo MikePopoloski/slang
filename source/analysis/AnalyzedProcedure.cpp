@@ -212,9 +212,13 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
                                 procKind == ProceduralBlockKind::AlwaysComb ||
                                 procKind == ProceduralBlockKind::AlwaysLatch;
 
+        // The visit predicate returns false if getFunctionValUses should not
+        // visit a given subroutine, due to having already seen it.
         SmallSet<const SubroutineSymbol*, 2> visited;
+        auto visitPred = [&](const SubroutineSymbol& sub) { return visited.insert(&sub).second; };
+
         for (auto call : dfaCalls) {
-            manager.getFunctionValUses(*call, analyzedSymbol, visited, drivers,
+            manager.getFunctionValUses(*call, analyzedSymbol, visitPred, drivers,
                                        needsReads ? &readSet : nullptr);
         }
     }

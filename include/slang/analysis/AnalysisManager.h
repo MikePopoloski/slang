@@ -20,6 +20,7 @@
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/ConcurrentMap.h"
+#include "slang/util/Function.h"
 #include "slang/util/SmallMap.h"
 #include "slang/util/ThreadPool.h"
 
@@ -210,7 +211,7 @@ private:
                                                const AnalyzedProcedure* parentProcedure = nullptr);
 
     void getFunctionValUses(const ast::CallExpression& expr, const ast::Symbol& containingSymbol,
-                            SmallSet<const ast::SubroutineSymbol*, 2>& visited,
+                            function_ref<bool(const ast::SubroutineSymbol&)> visitPredicate,
                             SmallVectorBase<SymbolDriverListPair>& drivers,
                             SmallVectorBase<ReadRange>* reads);
 
@@ -232,6 +233,7 @@ private:
         analyzedSubroutines;
     concurrent_map<const ast::Symbol*, std::vector<std::unique_ptr<AnalyzedAssertion>>>
         analyzedAssertions;
+    concurrent_set<const ast::SubroutineSymbol*> visitedNonProcCalls;
 
     DriverTracker driverTracker;
 
@@ -272,7 +274,6 @@ private:
     private:
         AnalysisManager& manager;
         const ast::Symbol& containingSymbol;
-        SmallSet<const ast::SubroutineSymbol*, 2> visitedSubroutines;
         bool isDisableCondition;
 
         const ast::TimingControl* getDefaultClocking() const;

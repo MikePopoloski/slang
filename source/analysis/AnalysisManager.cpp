@@ -152,7 +152,7 @@ void AnalysisManager::analyzeCheckerInstance(const CheckerInstanceSymbol& inst,
 }
 
 void AnalysisManager::getFunctionValUses(const CallExpression& expr, const Symbol& containingSymbol,
-                                         SmallSet<const SubroutineSymbol*, 2>& visited,
+                                         function_ref<bool(const SubroutineSymbol&)> visitPredicate,
                                          SmallVectorBase<SymbolDriverListPair>& drivers,
                                          SmallVectorBase<ReadRange>* reads) {
     if (expr.isSystemCall() || expr.thisClass() ||
@@ -178,7 +178,7 @@ void AnalysisManager::getFunctionValUses(const CallExpression& expr, const Symbo
 
     // If we've already visited this function then we don't need to
     // analyze it again.
-    if (!visited.insert(&subroutine).second)
+    if (!visitPredicate(subroutine))
         return;
 
     // Get analysis for the function.
@@ -225,7 +225,7 @@ void AnalysisManager::getFunctionValUses(const CallExpression& expr, const Symbo
 
     // Recurse into functions called by this function.
     for (auto call : analysis.getCallExpressions())
-        getFunctionValUses(*call, containingSymbol, visited, drivers, reads);
+        getFunctionValUses(*call, containingSymbol, visitPredicate, drivers, reads);
 }
 
 void AnalysisManager::getTaskTimingControls(const CallExpression& expr,
@@ -447,7 +447,11 @@ void AnalysisManager::NonProceduralExprVisitor::visitCall(const CallExpression& 
     }
 
     SmallVector<SymbolDriverListPair, 2> drivers;
-    manager.getFunctionValUses(expr, containingSymbol, visitedSubroutines, drivers, nullptr);
+    manager.getFunctionValUses(
+        expr, containingSymbol,
+        [&](const SubroutineSymbol& sub) { return manager.visitedNonProcCalls.insert(&sub); },
+        drivers, nullptr);
+
     if (!drivers.empty())
         manager.driverTracker.add(state.context, state.driverAlloc, drivers);
 }
