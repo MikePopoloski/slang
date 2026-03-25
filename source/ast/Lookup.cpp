@@ -1048,6 +1048,16 @@ const Symbol* findThisHandle(const Scope& scope, bitmask<LookupFlags> flags, Sou
             if (sub.thisVar)
                 return sub.thisVar;
         }
+        else if (parent->kind == SymbolKind::MethodPrototype) {
+            // Default argument expressions in an extern method prototype are evaluated
+            // in the prototype's scope. Allow 'this' if the prototype is non-static.
+            auto& proto = parent->as<MethodPrototypeSymbol>();
+            if (!proto.flags.has(MethodFlags::Static)) {
+                auto parentScope = parent->getParentScope();
+                if (parentScope && parentScope->asSymbol().kind == SymbolKind::ClassType)
+                    return parentScope->asSymbol().as<ClassType>().thisVar;
+            }
+        }
         else if (parent->kind == SymbolKind::ConstraintBlock) {
             auto thisVar = parent->as<ConstraintBlockSymbol>().thisVar;
             if (thisVar)
