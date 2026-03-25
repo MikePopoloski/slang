@@ -28,6 +28,25 @@ using namespace slang::driver;
 void printASTJson(Compilation& compilation, const std::string& fileName,
                   const std::vector<std::string>& scopes, bool includeSourceInfo,
                   bool detailedTypes) {
+    // Stream output directly to the destination.  A single JsonWriter (and
+    // ASTSerializer) is kept alive for the entire run so that shared state
+    // such as the set of already-printed enum types remains consistent across
+    // the design root and all definition serializations.  After each complete
+    // top-level value the buffer is flushed and cleared via flushTo(), keeping
+    // peak memory proportional to the largest single serialized object.
+
+    std::ofstream fileStream;
+    std::ostream* out;
+
+    if (fileName == "-") {
+        out = &std::cout;
+    }
+    else {
+        fileStream.open(fileName);
+        fileStream.exceptions(std::ios::failbit | std::ios::badbit);
+        out = &fileStream;
+    }
+
     JsonWriter writer;
     writer.setPrettyPrint(true);
 
@@ -40,44 +59,74 @@ void printASTJson(Compilation& compilation, const std::string& fileName,
         serializer.startObject();
         serializer.writeProperty("design");
         serializer.serialize(compilation.getRoot());
+        writer.flushTo(*out);
+
         serializer.writeProperty("definitions");
         serializer.startArray();
-        for (auto def : compilation.getDefinitions())
+        for (auto def : compilation.getDefinitions()) {
             serializer.serialize(*def);
+            writer.flushTo(*out);
+        }
         serializer.endArray();
         serializer.endObject();
     }
     else {
         for (auto& scopeName : scopes) {
             auto sym = compilation.getRoot().lookupName(scopeName);
-            if (sym)
+            if (sym) {
                 serializer.serialize(*sym);
+                writer.flushTo(*out);
+            }
         }
     }
 
+    // Write whatever remains in the buffer (closing brackets, final newline).
     writer.writeNewLine();
-    OS::writeFile(fileName, writer.view());
+    writer.flushTo(*out);
 }
 
 void printCSTJson(Driver& driver, const std::string& fileName,
                   CSTJsonMode mode = CSTJsonMode::Full) {
-    JsonWriter writer;
-    writer.setPrettyPrint(true);
+    // Stream output directly to the destination instead of accumulating the
+    // entire JSON tree in memory first.  Each syntax tree is serialized into
+    // its own temporary JsonWriter buffer, written out immediately, and then
+    // discarded, keeping memory proportional to the largest single tree.
 
-    CSTSerializer converter(writer, mode);
+    std::ofstream fileStream;
+    std::ostream* out;
 
-    writer.startObject();
-    writer.writeProperty("syntaxTrees");
-    writer.startArray();
+    if (fileName == "-") {
+        out = &std::cout;
+    }
+    else {
+        fileStream.open(fileName);
+        fileStream.exceptions(std::ios::failbit | std::ios::badbit);
+        out = &fileStream;
+    }
 
-    for (auto& tree : driver.syntaxTrees)
+    // Write the outer envelope header.
+    *out << "{\n  \"syntaxTrees\": [";
+
+    // Serialize each tree into a fresh writer and flush it immediately.
+    // setInitialIndent(4) makes each tree object open at the 4-space level
+    // so its contents are indented at 6 spaces, matching the original output.
+    bool first = true;
+    for (auto& tree : driver.syntaxTrees) {
+        JsonWriter treeWriter;
+        treeWriter.setPrettyPrint(true);
+        treeWriter.setInitialIndent(4);
+
+        CSTSerializer converter(treeWriter, mode);
         converter.serialize(*tree);
 
-    writer.endArray();
-    writer.endObject();
+        auto sv = first ? std::string_view("\n    ") : std::string_view(",\n    ");
+        out->write(sv.data(), (std::streamsize)sv.size());
+        first = false;
+        auto view = treeWriter.view();
+        out->write(view.data(), (std::streamsize)view.size());
+    }
 
-    writer.writeNewLine();
-    OS::writeFile(fileName, writer.view());
+    *out << "\n  ]\n}\n";
 }
 
 template<typename TArgs>
