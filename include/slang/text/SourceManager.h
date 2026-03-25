@@ -95,12 +95,25 @@ public:
 
     /// Describes the origin of a source buffer.
     enum class BufferKind {
+        /// The buffer is unknown to the source manager.
         Unknown,
+
+        /// A design file.
         DesignFile,
+
+        /// A library file.
         LibraryFile,
+
+        /// A library map.
         LibraryMap,
+
+        /// An include file.
         IncludeFile,
+
+        /// A macro expansion.
         Macro,
+
+        /// A macro argument substitution.
         MacroArg
     };
 

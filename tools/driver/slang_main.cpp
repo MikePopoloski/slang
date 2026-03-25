@@ -28,10 +28,10 @@ using namespace slang::driver;
 void printASTJson(Compilation& compilation, const std::string& fileName,
                   const std::vector<std::string>& scopes, bool includeSourceInfo,
                   bool detailedTypes) {
-    // Stream output directly to the destination.  A single JsonWriter (and
+    // Stream output directly to the destination. A single JsonWriter (and
     // ASTSerializer) is kept alive for the entire run so that shared state
     // such as the set of already-printed enum types remains consistent across
-    // the design root and all definition serializations.  After each complete
+    // the design root and all definition serializations. After each complete
     // top-level value the buffer is flushed and cleared via flushTo(), keeping
     // peak memory proportional to the largest single serialized object.
 
@@ -88,7 +88,7 @@ void printASTJson(Compilation& compilation, const std::string& fileName,
 void printCSTJson(Driver& driver, const std::string& fileName,
                   CSTJsonMode mode = CSTJsonMode::Full) {
     // Stream output directly to the destination instead of accumulating the
-    // entire JSON tree in memory first.  Each syntax tree is serialized into
+    // entire JSON tree in memory first. Each syntax tree is serialized into
     // its own temporary JsonWriter buffer, written out immediately, and then
     // discarded, keeping memory proportional to the largest single tree.
 
@@ -109,7 +109,7 @@ void printCSTJson(Driver& driver, const std::string& fileName,
 
     // Serialize each tree into a fresh writer and flush it immediately.
     // setInitialIndent(4) makes each tree object open at the 4-space level
-    // so its contents are indented at 6 spaces, matching the original output.
+    // so its contents are indented at 6 spaces.
     bool first = true;
     for (auto& tree : driver.syntaxTrees) {
         JsonWriter treeWriter;
@@ -119,9 +119,10 @@ void printCSTJson(Driver& driver, const std::string& fileName,
         CSTSerializer converter(treeWriter, mode);
         converter.serialize(*tree);
 
-        auto sv = first ? std::string_view("\n    ") : std::string_view(",\n    ");
+        auto sv = first ? "\n    "sv : ",\n    "sv;
         out->write(sv.data(), (std::streamsize)sv.size());
         first = false;
+
         auto view = treeWriter.view();
         out->write(view.data(), (std::streamsize)view.size());
     }

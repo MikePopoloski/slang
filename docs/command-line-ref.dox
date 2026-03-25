@@ -622,11 +622,10 @@ Allow interface instances that are bind/defparam targets to be assigned to virtu
 SystemVerilog doesn't permit this, but some tools allow it anyway so this flag can be used
 for compatibility purposes.
 
-`--allow-bare-associative-pattern`
+`--allow-array-concat-assign-pattern`
 
-Allow associative array literals to be written without the apostrophe prefix, i.e. as
-`{key:value, ...}` instead of the LRM-required `'{key:value, ...}`. A warning is always
-emitted when this non-standard syntax is encountered. This option is implied by `--compat vcs`.
+Allow assignment pattern expressions to be used in unpacked array concatenations.
+The LRM states that these are not assignment-like contexts but some tools allow it anyway.
 
 `--cmd-ignore <vendor_cmd>,<N>`
 

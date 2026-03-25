@@ -165,9 +165,9 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
         library = it->library;
     }
 
-    const auto ppOpts = options.getOrDefault<PreprocessorOptions>();
-    if (ppOpts.bufferChangeCB)
-        ppOpts.bufferChangeCB(sources.front().id, false, false);
+    const auto ppOpts = options.get<PreprocessorOptions>();
+    if (ppOpts && ppOpts->bufferChangeCB)
+        ppOpts->bufferChangeCB(sources.front().id, false, false);
 
     Parser parser(preprocessor, options);
 

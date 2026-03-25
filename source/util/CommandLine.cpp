@@ -85,9 +85,14 @@ void CommandLine::add(std::string_view name, std::vector<std::string>& value, st
     addInternal(name, &value, desc, valueName, flags);
 }
 
-void CommandLine::add(std::string_view name, OptionCallback cb, std::string_view desc,
+void CommandLine::add(std::string_view name, OptionStrCallback cb, std::string_view desc,
                       std::string_view valueName, bitmask<CommandLineFlags> flags) {
-    addInternal(name, cb, desc, valueName, flags);
+    addInternal(name, std::move(cb), desc, valueName, flags);
+}
+
+void CommandLine::add(std::string_view name, OptionBoolCallback cb, std::string_view desc,
+                      bitmask<CommandLineFlags> flags) {
+    addInternal(name, std::move(cb), desc, {}, flags);
 }
 
 void CommandLine::addInternal(std::string_view name, OptionStorage storage, std::string_view desc,
@@ -147,7 +152,7 @@ void CommandLine::setPositional(std::vector<std::string>& values, std::string_vi
     positional->flags = flags;
 }
 
-void CommandLine::setPositional(const OptionCallback& cb, std::string_view valueName,
+void CommandLine::setPositional(const OptionStrCallback& cb, std::string_view valueName,
                                 bitmask<CommandLineFlags> flags) {
     if (positional)
         SLANG_THROW(std::runtime_error("Can only set one positional argument"));
@@ -696,7 +701,7 @@ void CommandLine::addError(std::string msg, SourceLocation loc) {
 }
 
 bool CommandLine::Option::expectsValue() const {
-    return storage.index() != 0;
+    return storage.index() != 0 && !std::holds_alternative<OptionBoolCallback>(storage);
 }
 
 void CommandLine::Option::set(std::string_view name, std::string_view value, bool ignoreDup,
@@ -715,7 +720,10 @@ void CommandLine::Option::set(std::string_view name, std::string_view value, boo
 
     std::visit(
         [&](auto&& arg) {
-            if constexpr (std::is_same_v<OptionCallback, std::decay_t<decltype(arg)>>) {
+            if constexpr (std::is_same_v<OptionStrCallback, std::decay_t<decltype(arg)>>) {
+                set(arg, name, value, loc);
+            }
+            else if constexpr (std::is_same_v<OptionBoolCallback, std::decay_t<decltype(arg)>>) {
                 set(arg, name, value, loc);
             }
             else {
@@ -734,8 +742,8 @@ void CommandLine::Option::set(std::string_view name, std::string_view value, boo
         storage);
 }
 
-std::optional<bool> CommandLine::parseBool(std::string_view name, std::string_view value,
-                                           std::string& error) {
+std::optional<bool> CommandLine::Option::parseBool(std::string_view name, std::string_view value,
+                                                   SourceLocation loc) {
     if (value.empty())
         return true;
     if (value == "True" || value == "true")
@@ -743,17 +751,7 @@ std::optional<bool> CommandLine::parseBool(std::string_view name, std::string_vi
     if (value == "False" || value == "false")
         return false;
 
-    error = fmt::format("invalid value '{}' for boolean argument '{}'", value, name);
-    return {};
-}
-
-std::optional<bool> CommandLine::Option::parseBool(std::string_view name, std::string_view value,
-                                                   SourceLocation loc) {
-    std::string err;
-    if (auto result = CommandLine::parseBool(name, value, err))
-        return result;
-
-    parent.addError(std::move(err), loc);
+    parent.addError(fmt::format("invalid value '{}' for boolean argument '{}'", value, name), loc);
     return {};
 }
 
@@ -905,7 +903,7 @@ void CommandLine::Option::set(std::vector<std::string>& target, std::string_view
         target.emplace_back(entry);
 }
 
-void CommandLine::Option::set(OptionCallback& target, std::string_view, std::string_view value,
+void CommandLine::Option::set(OptionStrCallback& target, std::string_view, std::string_view value,
                               SourceLocation loc) {
     SmallVector<std::string_view> splitMem;
     for (auto entry : parseList(value, flags.has(CommandLineFlags::CommaList), splitMem)) {
@@ -915,6 +913,12 @@ void CommandLine::Option::set(OptionCallback& target, std::string_view, std::str
             return;
         }
     }
+}
+
+void CommandLine::Option::set(OptionBoolCallback& target, std::string_view name,
+                              std::string_view value, SourceLocation loc) {
+    if (auto result = parseBool(name, value, loc))
+        target(*result);
 }
 
 std::string CommandLine::addIgnoreCommand(std::string_view value) {

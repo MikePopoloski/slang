@@ -252,16 +252,15 @@ ExpressionSyntax& Parser::parsePrimaryExpression(bitmask<ExpressionOptions> opti
                 default: {
                     auto& first = parseExpression();
                     if (peek(TokenKind::Colon))
-                        return parseAssignmentPatternFromBrace(openBrace, &first, nullptr);
+                        return parseAssignmentPatternFromBrace(openBrace, &first);
                     if (!peek(TokenKind::OpenBrace))
                         return parseConcatenation(openBrace, &first);
-                    else {
-                        auto openBraceInner = consume();
-                        auto& concat = parseConcatenation(openBraceInner, nullptr);
-                        auto closeBrace = expect(TokenKind::CloseBrace);
-                        return factory.multipleConcatenationExpression(openBrace, first, concat,
-                                                                       closeBrace);
-                    }
+
+                    auto openBraceInner = consume();
+                    auto& concat = parseConcatenation(openBraceInner, nullptr);
+                    auto closeBrace = expect(TokenKind::CloseBrace);
+                    return factory.multipleConcatenationExpression(openBrace, first, concat,
+                                                                   closeBrace);
                 }
             }
         }
@@ -538,17 +537,16 @@ AssignmentPatternItemSyntax& Parser::parseAssignmentPatternItem(ExpressionSyntax
 }
 
 // Parse a structured assignment pattern whose opening brace has already been consumed as a plain
-// '{' token (no apostrophe).  The LRM requires the '{ prefix; this non-standard form is accepted
-// by some tools (e.g. VCS).  A diagnostic is always emitted; its severity is controlled by the
-// AllowBareAssociativePattern compilation flag / --compat vcs.
+// '{' token (no apostrophe). The LRM requires the '{ prefix; this non-standard form is accepted
+// by some tools (e.g. VCS).
 AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternFromBrace(
-    Token openBrace, ExpressionSyntax* firstExpr, DataTypeSyntax* type) {
+    Token openBrace, ExpressionSyntax* firstExpr) {
     addDiag(diag::BareAssociativePattern, openBrace.location());
 
     SmallVector<TokenOrSyntax, 8> buffer;
-    Token closeBrace;
-
     buffer.push_back(&parseAssignmentPatternItem(firstExpr));
+
+    Token closeBrace;
     if (peek(TokenKind::Comma)) {
         buffer.push_back(consume());
         parseList<isPossibleExpressionOrCommaOrDefault, isEndOfBracedList>(
@@ -560,7 +558,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternFromBrace(
     }
 
     auto& pattern = factory.structuredAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
-    return factory.assignmentPatternExpression(type, pattern);
+    return factory.assignmentPatternExpression(nullptr, pattern);
 }
 
 ElementSelectSyntax& Parser::parseElementSelect() {

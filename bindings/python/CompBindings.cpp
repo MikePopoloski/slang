@@ -66,6 +66,8 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .value("DisableInstanceCaching", CompilationFlags::DisableInstanceCaching)
         .value("DisallowRefsToUnknownInstances", CompilationFlags::DisallowRefsToUnknownInstances)
         .value("AllowUnnamedGenerate", CompilationFlags::AllowUnnamedGenerate)
+        .value("AllowVirtualIfaceWithOverride", CompilationFlags::AllowVirtualIfaceWithOverride)
+        .value("AllowArrayConcatAssignPattern", CompilationFlags::AllowArrayConcatAssignPattern)
         .finalize();
 
     py::classh<CompilationOptions>(ast, "CompilationOptions")

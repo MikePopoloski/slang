@@ -8,6 +8,7 @@
 #pragma once
 
 #include <cctype>
+#include <deque>
 #include <fmt/core.h>
 #include <functional>
 #include <map>
@@ -234,7 +235,7 @@ public:
     void add(std::string_view name, std::vector<std::string>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
-    using OptionCallback = std::function<std::string(std::string_view)>;
+    using OptionStrCallback = std::function<std::string(std::string_view)>;
 
     /// Register an option with @a name that will be parsed as a string and
     /// forwarded to the given @a cb callback function for handling.
@@ -247,8 +248,23 @@ public:
     /// @param desc a human-friendly description for printing help text
     /// @param valueName an example name for the value when printing help text
     /// @param flags additional flags that control how the option behaves
-    void add(std::string_view name, OptionCallback cb, std::string_view desc,
+    void add(std::string_view name, OptionStrCallback cb, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
+
+    using OptionBoolCallback = std::function<std::string(bool)>;
+
+    /// Register an option with @a name that will be parsed as a boolean and
+    /// forwarded to the given @a cb callback function for handling.
+    /// If the option is not provided on a command line, the callback
+    /// will never be invoked.
+    ///
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option
+    /// @param cb a callback that will be invoked if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param flags additional flags that control how the option behaves
+    void add(std::string_view name, OptionBoolCallback cb, std::string_view desc,
+             bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as a string enum value.
     /// The string will be matched against the available enum values using the kebab case name
@@ -286,7 +302,7 @@ public:
     /// @param valueName for including in the help text
     /// @param flags additional flags that control how the option behaves
     /// @note only one variable or callback be set to receive positional arguments
-    void setPositional(const OptionCallback& cb, std::string_view valueName,
+    void setPositional(const OptionStrCallback& cb, std::string_view valueName,
                        bitmask<CommandLineFlags> flags = {});
 
     /// Adds a command that will be ignored if encountered during argument parsing.
@@ -371,23 +387,13 @@ public:
     /// @a overview text is a human friendly description of what the program does.
     std::string getHelpText(std::string_view overview) const;
 
-    /// Parses the given option string as a boolean value.
-    ///
-    /// An empty string results in a "true" value.
-    ///
-    /// This returns nullopt if the provided value is unparseable as a boolean,
-    /// in which case @a error will be set to a human-friendly string explaining
-    /// the problem.
-    static std::optional<bool> parseBool(std::string_view name, std::string_view value,
-                                         std::string& error);
-
 private:
     using OptionStorage =
         std::variant<std::optional<bool>*, std::optional<int32_t>*, std::optional<uint32_t>*,
                      std::optional<int64_t>*, std::optional<uint64_t>*, std::optional<double>*,
                      std::optional<std::string>*, std::vector<int32_t>*, std::vector<uint32_t>*,
                      std::vector<int64_t>*, std::vector<uint64_t>*, std::vector<double>*,
-                     std::vector<std::string>*, OptionCallback>;
+                     std::vector<std::string>*, OptionStrCallback, OptionBoolCallback>;
 
     class Option {
     public:
@@ -431,7 +437,9 @@ private:
                  SourceLocation loc);
         void set(std::vector<std::string>& target, std::string_view name, std::string_view value,
                  SourceLocation loc);
-        void set(OptionCallback& target, std::string_view name, std::string_view value,
+        void set(OptionStrCallback& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(OptionBoolCallback& target, std::string_view name, std::string_view value,
                  SourceLocation loc);
 
         std::optional<bool> parseBool(std::string_view name, std::string_view value,

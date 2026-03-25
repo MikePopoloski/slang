@@ -558,8 +558,6 @@ SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, cons
 
     if (entry.isLibraryFile)
         sourceManager.setBufferKind(buffer->id, SourceManager::BufferKind::LibraryFile);
-    else
-        sourceManager.setBufferKind(buffer->id, SourceManager::BufferKind::DesignFile);
 
     if (entry.unit) {
         return std::pair{*buffer, entry.unit};

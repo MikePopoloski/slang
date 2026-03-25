@@ -51,6 +51,16 @@ std::string argFormatter(const DiagnosticEngine& self, py::object obj) {
 }
 
 void registerText(py::module_& m) {
+    py::native_enum<SourceManager::BufferKind>(m, "BufferKind", "enum.Enum")
+        .value("Unknown", SourceManager::BufferKind::Unknown)
+        .value("DesignFile", SourceManager::BufferKind::DesignFile)
+        .value("LibraryFile", SourceManager::BufferKind::LibraryFile)
+        .value("LibraryMap", SourceManager::BufferKind::LibraryMap)
+        .value("IncludeFile", SourceManager::BufferKind::IncludeFile)
+        .value("Macro", SourceManager::BufferKind::Macro)
+        .value("MacroArg", SourceManager::BufferKind::MacroArg)
+        .finalize();
+
     py::classh<BufferID>(m, "BufferID")
         .def(py::init<>())
         .def_property_readonly("id", &BufferID::getId)
@@ -130,6 +140,8 @@ void registerText(py::module_& m) {
         .def("getColumnNumber", &SourceManager::getColumnNumber, "location"_a)
         .def("getDisplayColumnNumber", &SourceManager::getDisplayColumnNumber, "location"_a)
         .def("getIncludedFrom", &SourceManager::getIncludedFrom, "buffer"_a)
+        .def("getBufferKind", &SourceManager::getBufferKind, "buffer"_a)
+        .def("setBufferKind", &SourceManager::setBufferKind, "buffer"_a, "kind"_a)
         .def("getMacroName", &SourceManager::getMacroName, "location"_a)
         .def("isFileLoc", &SourceManager::isFileLoc, "location"_a)
         .def("isMacroLoc", &SourceManager::isMacroLoc, "location"_a)

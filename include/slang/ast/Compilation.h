@@ -120,11 +120,11 @@ enum class SLANG_EXPORT CompilationFlags {
     /// to virtual interfaces.
     AllowVirtualIfaceWithOverride = 1 << 14,
 
-    /// Allow associative array literals written as {key:value, ...} without
-    /// the apostrophe prefix required by the LRM (non-standard; accepted by VCS).
-    AllowBareAssociativePattern = 1 << 15
+    /// Allow assignment pattern expressions to be used in unpacked array concatenations.
+    /// Normally these are not assignment-like contexts but some tools allow it anyway.
+    AllowArrayConcatAssignPattern = 1 << 15
 };
-SLANG_BITMASK(CompilationFlags, AllowBareAssociativePattern)
+SLANG_BITMASK(CompilationFlags, AllowArrayConcatAssignPattern)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {

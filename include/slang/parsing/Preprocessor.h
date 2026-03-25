@@ -69,7 +69,7 @@ struct SLANG_EXPORT PreprocessorOptions {
     /// file (including include files and skipped headers). The arguments are the
     /// BufferID of the affected file, whether we are returning to a file (isBack),
     /// and whether the file is being skipped as an already-included header (isSkip).
-    function_ref<void(BufferID, bool, bool)> bufferChangeCB;
+    function_ref<void(BufferID, bool isBack, bool isSkip)> bufferChangeCB;
 };
 
 /// Metadata about an include directive that was invoked.

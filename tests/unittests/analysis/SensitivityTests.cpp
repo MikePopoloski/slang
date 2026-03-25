@@ -209,7 +209,7 @@ endmodule
 
 TEST_CASE("Sensitivity list - locals excluded from always_comb") {
     // 'temp' is a static local variable; it must not appear in the sensitivity
-    // list even though it is read on the RHS.  Only the external input 'a'
+    // list even though it is read on the RHS. Only the external input 'a'
     // should be present.
     SensitivityHarness h(R"(
 module m;

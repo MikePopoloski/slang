@@ -308,7 +308,7 @@ error ImplicitParamTypeKeyword "implicit parameter type not allowed without use 
 warning dpi-pure-task DPIPureTask "DPI tasks cannot be marked 'pure'"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
-warning nonstandard-bare-assoc-pattern BareAssociativePattern "associative array literal is missing the required apostrophe prefix '{{'"
+warning nonstandard-bare-assoc-pattern BareAssociativePattern "associative array literal is missing the required apostrophe prefix"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
 warning nonstandard-hierarchical-cross NonstandardHierarchicalCross "non-standard hierarchical reference in cover cross item"
 warning foreach-call-expr ForeachCallExpr "foreach array expression is not a name"

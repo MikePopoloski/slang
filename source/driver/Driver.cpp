@@ -16,7 +16,6 @@
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/diagnostics/DriverDiags.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
-#include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/SourceLoader.h"
 #include "slang/parsing/Parser.h"
@@ -231,10 +230,11 @@ void Driver::addStandardArgs() {
                 "--allow-virtual-iface-with-override",
                 "Allow interface instances that are bind/defparam targets to be assigned "
                 "to virtual interfaces");
-    addCompFlag(CompilationFlags::AllowBareAssociativePattern, "--allow-bare-associative-pattern",
-                "Allow associative array literals written as {key:value, ...} without "
-                "the apostrophe prefix required by the LRM (non-standard; enabled automatically "
-                "under --compat vcs)");
+    addCompFlag(CompilationFlags::AllowArrayConcatAssignPattern,
+                "--allow-array-concat-assign-pattern",
+                "Allow assignment pattern expressions to be used in unpacked array "
+                "concatenations. The LRM states that these are not assignment-like "
+                "contexts but some tools allow it anyway.");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "
@@ -253,12 +253,9 @@ void Driver::addStandardArgs() {
     cmdLine.add("-W", options.warningOptions, "Control the specified warning", "<warning>");
     cmdLine.add(
         "--color-diagnostics",
-        [this](std::string_view value) {
-            std::string error;
-            if (auto result = CommandLine::parseBool("--color-diagnostics"sv, value, error))
-                setTerminalColorsEnabled(*result);
-
-            return error;
+        [this](bool value) {
+            setTerminalColorsEnabled(value);
+            return "";
         },
         "Always print diagnostics in color. "
         "If this option is unset, colors will be enabled if a color-capable "
@@ -655,11 +652,6 @@ bool Driver::processOptions() {
 
     compatSettings.configureDiagnostics(diagEngine);
 
-    // BareAssociativePattern: warning when the user has explicitly opted in (via --compat vcs or
-    // --allow-bare-associative-pattern), error otherwise.
-    if (options.compilationFlags.at(CompilationFlags::AllowBareAssociativePattern) != true)
-        diagEngine.setBaselineSeverity(diag::BareAssociativePattern, DiagnosticSeverity::Error);
-
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
     diagEngine.issue(optionDiags);
 
@@ -975,37 +967,45 @@ void Driver::optionallyWriteDepFiles() {
     }
 }
 
-bool Driver::parseAllSources() {
-    Bag bag;
+static std::string_view bufferKindToStr(SourceManager::BufferKind kind) {
+    switch (kind) {
+        case SourceManager::BufferKind::LibraryFile:
+            return "library"sv;
+        case SourceManager::BufferKind::LibraryMap:
+            return "libmap"sv;
+        case SourceManager::BufferKind::DesignFile:
+            return "design"sv;
+        case SourceManager::BufferKind::IncludeFile:
+            return "include"sv;
+        default:
+            return ""sv;
+    }
+}
 
-    std::function<void(BufferID, bool, bool)> cb;
+bool Driver::parseAllSources() {
+    if (!threadPool) {
+        const auto numThreads = options.numThreads.value_or(0u);
+        if (numThreads != 1u)
+            threadPool = std::make_shared<ThreadPool>(numThreads);
+    }
+
+    auto bag = createParseOptionBag();
+
     if (options.showParsedFiles == true) {
-        cb = [&](BufferID buf, bool isBack, bool isSkip) {
-            std::string_view kind;
-            switch (sourceManager.getBufferKind(buf)) {
-                case SourceManager::BufferKind::LibraryFile:
-                    kind = "library";
-                    break;
-                case SourceManager::BufferKind::LibraryMap:
-                    kind = "libmap";
-                    break;
-                case SourceManager::BufferKind::DesignFile:
-                    kind = "design";
-                    break;
-                case SourceManager::BufferKind::IncludeFile:
-                    kind = "include";
-                    break;
-                default:
-                    kind = "";
-                    break;
-            }
-            auto path = sourceManager.getFullPath(buf).string();
+        concurrent_map<size_t, std::vector<std::string>> parsedFiles;
+        bag.insertOrGet<PreprocessorOptions>().bufferChangeCB = [&](BufferID buf, bool isBack,
+                                                                    bool isSkip) {
+            auto path = getU8Str(sourceManager.getFullPath(buf));
             std::string msg;
-            if (isBack)
+            if (isBack) {
                 msg = fmt::format("Back to file '{}'.\n", path);
-            else
+            }
+            else {
+                auto kind = bufferKindToStr(sourceManager.getBufferKind(buf));
                 msg = fmt::format("{} {} file '{}'.\n", isSkip ? "Skipping" : "Parsing", kind,
                                   path);
+            }
+
 #if defined(SLANG_USE_THREADS)
             size_t idx = BS::this_thread::get_index().value_or(0);
 #else
@@ -1014,28 +1014,22 @@ bool Driver::parseAllSources() {
             auto appendMsg = [&](auto& entry) { entry.second.push_back(std::move(msg)); };
             parsedFiles.try_emplace_and_visit(idx, appendMsg, appendMsg);
         };
-        addParseOptions(bag, cb);
+
+        syntaxTrees = sourceLoader.loadAndParseSources(bag, threadPool.get());
+
+        std::vector<std::pair<size_t, std::vector<std::string>>> threadOutputs;
+        parsedFiles.visit_all([&](auto&& entry) {
+            threadOutputs.emplace_back(entry.first, std::move(entry.second));
+        });
+        std::sort(threadOutputs.begin(), threadOutputs.end(),
+                  [](const auto& a, const auto& b) { return a.first < b.first; });
+        for (auto& [idx, msgs] : threadOutputs) {
+            for (auto& msg : msgs)
+                OS::print(msg);
+        }
     }
     else {
-        addParseOptions(bag);
-    }
-
-    if (!threadPool) {
-        const auto numThreads = options.numThreads.value_or(0u);
-        if (numThreads != 1u)
-            threadPool = std::make_shared<ThreadPool>(numThreads);
-    }
-
-    syntaxTrees = sourceLoader.loadAndParseSources(bag, threadPool.get());
-
-    std::vector<std::pair<size_t, std::vector<std::string>>> threadOutputs;
-    parsedFiles.cvisit_all(
-        [&](const auto& entry) { threadOutputs.emplace_back(entry.first, entry.second); });
-    std::sort(threadOutputs.begin(), threadOutputs.end(),
-              [](const auto& a, const auto& b) { return a.first < b.first; });
-    for (auto& [idx, msgs] : threadOutputs) {
-        for (auto& msg : msgs)
-            OS::print(msg);
+        syntaxTrees = sourceLoader.loadAndParseSources(bag, threadPool.get());
     }
 
     if (!reportLoadErrors())
@@ -1064,8 +1058,7 @@ Bag Driver::createOptionBag() const {
     return bag;
 }
 
-void Driver::addParseOptions(Bag& bag,
-                             function_ref<void(BufferID, bool, bool)> bufferChangeCB) const {
+void Driver::addParseOptions(Bag& bag) const {
     SourceOptions soptions;
     soptions.numThreads = options.numThreads;
     soptions.singleUnit = options.singleUnit == true;
@@ -1082,8 +1075,6 @@ void Driver::addParseOptions(Bag& bag,
         ppoptions.maxIncludeDepth = *options.maxIncludeDepth;
     for (const auto& d : options.ignoreDirectives)
         ppoptions.ignoreDirectives.emplace(d);
-    if (bufferChangeCB)
-        ppoptions.bufferChangeCB = bufferChangeCB;
 
     LexerOptions loptions;
     loptions.languageVersion = languageVersion;

@@ -85,7 +85,7 @@ public:
 
     /// Flushes the accumulated content to the given output stream, retaining
     /// only the trailing separator state so that subsequent writes continue
-    /// correctly.  Call this after completing each top-level value to bound
+    /// correctly. Call this after completing each top-level value to bound
     /// the in-memory buffer size.
     void flushTo(std::ostream& out);
 

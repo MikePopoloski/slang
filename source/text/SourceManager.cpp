@@ -198,12 +198,11 @@ SourceManager::BufferKind SourceManager::getBufferKind(BufferID buffer) const {
     if (buffer && buffer.getId() < bufferEntries.size()) {
         if (auto* exp = std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]))
             return exp->isMacroArg ? BufferKind::MacroArg : BufferKind::Macro;
+        else
+            return std::get<FileInfo>(bufferEntries[buffer.getId()]).bufferKind;
     }
-    auto info = getFileInfo(buffer, lock);
-    if (!info)
-        return BufferKind::Unknown;
 
-    return info->bufferKind;
+    return BufferKind::Unknown;
 }
 
 void SourceManager::setBufferKind(BufferID buffer, BufferKind kind) {

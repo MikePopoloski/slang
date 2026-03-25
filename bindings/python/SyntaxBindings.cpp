@@ -522,7 +522,8 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
              "alloc"_a, "diagnostics"_a, "sourceManager"_a, "options"_a = LexerOptions())
         .def("lex", py::overload_cast<>(&Lexer::lex))
         .def("isNextTokenOnSameLine", &Lexer::isNextTokenOnSameLine)
-        .def_property_readonly("library", &Lexer::getLibrary);
+        .def_property_readonly("library", &Lexer::getLibrary)
+        .def_property_readonly("bufferId", &Lexer::getBufferId);
 
     py::classh<PreprocessorOptions>(parsing, "PreprocessorOptions")
         .def(py::init<>())
@@ -532,7 +533,8 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
         .def_readwrite("predefines", &PreprocessorOptions::predefines)
         .def_readwrite("undefines", &PreprocessorOptions::undefines)
         .def_readwrite("additionalIncludePaths", &PreprocessorOptions::additionalIncludePaths)
-        .def_readwrite("ignoreDirectives", &PreprocessorOptions::ignoreDirectives);
+        .def_readwrite("ignoreDirectives", &PreprocessorOptions::ignoreDirectives)
+        .def_readwrite("keywordMapping", &PreprocessorOptions::keywordMapping);
 
     py::classh<ParserOptions>(parsing, "ParserOptions")
         .def(py::init<>())

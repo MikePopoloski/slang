@@ -204,7 +204,7 @@ private:
     syntax::StructurePatternMemberSyntax& parseMemberPattern();
     syntax::AssignmentPatternExpressionSyntax& parseAssignmentPatternExpression(syntax::DataTypeSyntax* type);
     syntax::AssignmentPatternExpressionSyntax& parseAssignmentPatternFromBrace(
-        Token openBrace, syntax::ExpressionSyntax* firstExpr, syntax::DataTypeSyntax* type);
+        Token openBrace, syntax::ExpressionSyntax* firstExpr);
     syntax::AssignmentPatternItemSyntax& parseAssignmentPatternItem(syntax::ExpressionSyntax* key);
     syntax::EventExpressionSyntax& parseSignalEvent();
     syntax::EventExpressionSyntax& parseEventExpression();

@@ -472,8 +472,7 @@ private:
     bool parseUnitListing(const SourceBuffer& sourceBuffer);
     std::string parseMapKeywordVersion(std::string_view value);
     void addLibraryFiles(std::string_view pattern);
-    void addParseOptions(Bag& bag,
-                         function_ref<void(BufferID, bool, bool)> bufferChangeCB = nullptr) const;
+    void addParseOptions(Bag& bag) const;
     void addCompilationOptions(Bag& bag) const;
     void issueCommandLineErrors(const CommandLine& cl);
     bool reportLoadErrors();
@@ -483,9 +482,6 @@ private:
     std::vector<std::tuple<std::string_view, std::string_view, std::string_view>>
         translateOffFormats;
     std::unique_ptr<JsonWriter> jsonWriter;
-
-    /// For storing the list of file parsing strings, keyed by thread index.
-    concurrent_map<size_t, std::vector<std::string>> parsedFiles;
 };
 
 } // namespace slang::driver

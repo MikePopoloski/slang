@@ -679,9 +679,6 @@ TEST_CASE("Driver file kind tracking") {
 
     auto& sm = driver.sourceManager;
     for (auto buf : sm.getAllBuffers()) {
-        if (sm.isMacroLoc(SourceLocation(buf, 0)) || sm.getIncludedFrom(buf))
-            continue;
-
         auto name = sm.getRawFileName(buf);
         auto kind = sm.getBufferKind(buf);
         if (contains(name, ".map"))
