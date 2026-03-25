@@ -127,7 +127,7 @@ void SourceLoader::addLibraryMapsInternal(std::string_view pattern, const fs::pa
     }
 
     for (auto& path : files) {
-        auto buffer = sourceManager.readSource(path, /* library */ nullptr);
+        auto buffer = sourceManager.readSource(path);
         if (!buffer) {
             addError(path, buffer.error());
             continue;
@@ -199,7 +199,7 @@ SourceBuffer SourceLoader::findBuffer(std::string_view name) const {
             if (!sourceManager.isCached(path)) {
                 // This file is never part of a library because if
                 // it was we would have already loaded it earlier.
-                auto readResult = sourceManager.readSource(path, /* library */ nullptr);
+                auto readResult = sourceManager.readSource(path);
                 if (readResult) {
                     return *readResult;
                 }

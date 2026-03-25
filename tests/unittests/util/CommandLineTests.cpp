@@ -301,15 +301,15 @@ TEST_CASE("Test CommandLine -- user errors") {
 
     auto errors = cmdLine.getErrors();
     REQUIRE(errors.size() == 9);
-    CHECK(errors[0] == "prog: expected value for argument '--foo'"s);
-    CHECK(errors[1] == "prog: invalid value '123f4' for integer argument '--foo'"s);
-    CHECK(errors[2] == "prog: expected value for argument '--bar'"s);
-    CHECK(errors[3] == "prog: invalid value '123.45g' for float argument '--bar'"s);
-    CHECK(errors[4] == "prog: invalid value 'asdf' for boolean argument '--frob=asdf'"s);
-    CHECK(errors[5] == "prog: more than one value provided for argument '--foo'"s);
-    CHECK(errors[6] == "prog: unknown command line argument '-D'"s);
-    CHECK(errors[7] == "prog: unknown command line argument '--frib', did you mean '--frob'?"s);
-    CHECK(errors[8] == "prog: no value provided for argument '--bar'"s);
+    CHECK(errors[0].message == "expected value for argument '--foo'"s);
+    CHECK(errors[1].message == "invalid value '123f4' for integer argument '--foo'"s);
+    CHECK(errors[2].message == "expected value for argument '--bar'"s);
+    CHECK(errors[3].message == "invalid value '123.45g' for float argument '--bar'"s);
+    CHECK(errors[4].message == "invalid value 'asdf' for boolean argument '--frob=asdf'"s);
+    CHECK(errors[5].message == "more than one value provided for argument '--foo'"s);
+    CHECK(errors[6].message == "unknown command line argument '-D'"s);
+    CHECK(errors[7].message == "unknown command line argument '--frib', did you mean '--frob'?"s);
+    CHECK(errors[8].message == "no value provided for argument '--bar'"s);
 }
 
 TEST_CASE("Test CommandLine -- grouping") {
@@ -392,7 +392,7 @@ TEST_CASE("Test CommandLine -- grouping error") {
 
     auto errors = cmdLine.getErrors();
     REQUIRE(errors.size() == 1);
-    CHECK(errors[0] == "prog: unknown command line argument '-abc', did you mean '-a'?"s);
+    CHECK(errors[0].message == "unknown command line argument '-abc', did you mean '-a'?"s);
 }
 
 TEST_CASE("Test CommandLine -- grouping trailing error") {
@@ -409,7 +409,7 @@ TEST_CASE("Test CommandLine -- grouping trailing error") {
 
     auto errors = cmdLine.getErrors();
     REQUIRE(errors.size() == 1);
-    CHECK(errors[0] == "prog: no value provided for argument 'c'"s);
+    CHECK(errors[0].message == "no value provided for argument 'c'"s);
 }
 
 TEST_CASE("Test CommandLine -- nearest match tests") {
@@ -422,8 +422,8 @@ TEST_CASE("Test CommandLine -- nearest match tests") {
 
     auto errors = cmdLine.getErrors();
     REQUIRE(errors.size() == 2);
-    CHECK(errors[0] == "prog: unknown command line argument '--asdfasdf=asdfasdf'"s);
-    CHECK(errors[1] == "prog: unknown command line argument '--fooey', did you mean '--foo'?"s);
+    CHECK(errors[0].message == "unknown command line argument '--asdfasdf=asdfasdf'"s);
+    CHECK(errors[1].message == "unknown command line argument '--fooey', did you mean '--foo'?"s);
 }
 
 TEST_CASE("Test CommandLine -- positional not allowed") {
@@ -436,7 +436,7 @@ TEST_CASE("Test CommandLine -- positional not allowed") {
 
     auto errors = cmdLine.getErrors();
     REQUIRE(errors.size() == 1);
-    CHECK(errors[0] == "prog: positional arguments are not allowed (see e.g. 'asdf')"s);
+    CHECK(errors[0].message == "positional arguments are not allowed (see e.g. 'asdf')"s);
 }
 
 TEST_CASE("Test CommandLine -- plusarg errors") {
@@ -453,9 +453,9 @@ TEST_CASE("Test CommandLine -- plusarg errors") {
 
     auto errors = cmdLine.getErrors();
     REQUIRE(errors.size() == 3);
-    CHECK(errors[0] == "prog: unknown command line argument '+unknown'"s);
-    CHECK(errors[1] == "prog: no value provided for argument '+foo'"s);
-    CHECK(errors[2] == "prog: invalid value 'asdf' for float argument '+num'"s);
+    CHECK(errors[0].message == "unknown command line argument '+unknown'"s);
+    CHECK(errors[1].message == "no value provided for argument '+foo'"s);
+    CHECK(errors[2].message == "invalid value 'asdf' for float argument '+num'"s);
 }
 
 TEST_CASE("Test CommandLine -- file names") {
@@ -584,8 +584,8 @@ TEST_CASE("Test CommandLine -- enum options invalid value") {
 
     auto errors = cmdLine.getErrors();
     REQUIRE(errors.size() == 1);
-    CHECK(errors[0] == "prog: invalid value 'invalid', valid options are: 'fast', 'normal', "
-                       "'slow', 'very-detailed-mode'");
+    CHECK(errors[0].message == "invalid value 'invalid', valid options are: 'fast', 'normal', "
+                               "'slow', 'very-detailed-mode'");
 }
 
 TEST_CASE("Test CommandLine -- enum options case sensitive") {
@@ -599,8 +599,8 @@ TEST_CASE("Test CommandLine -- enum options case sensitive") {
 
     auto errors = cmdLine.getErrors();
     REQUIRE(errors.size() == 1);
-    CHECK(errors[0] == "prog: invalid value 'Fast', valid options are: 'fast', 'normal', 'slow', "
-                       "'very-detailed-mode'");
+    CHECK(errors[0].message == "invalid value 'Fast', valid options are: 'fast', 'normal', 'slow', "
+                               "'very-detailed-mode'");
 }
 
 TEST_CASE("Test CommandLine -- enum options default value") {
@@ -637,8 +637,8 @@ TEST_CASE("Test CommandLine -- enum options invalid value with valid prefix") {
         CHECK(!cmdLine.parse("prog --mode fast-invalid"));
         auto errors = cmdLine.getErrors();
         REQUIRE(errors.size() == 1);
-        CHECK(errors[0] ==
-              "prog: invalid value 'fast-invalid', valid options are: 'fast', 'normal', "
+        CHECK(errors[0].message ==
+              "invalid value 'fast-invalid', valid options are: 'fast', 'normal', "
               "'slow', 'very-detailed-mode'");
     }
 }

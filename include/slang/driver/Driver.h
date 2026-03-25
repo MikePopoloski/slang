@@ -262,9 +262,6 @@ public:
         /// @name Diagnostics control
         /// @{
 
-        /// If true, print diagnostics with color.
-        std::optional<bool> colorDiags;
-
         /// If true, include column numbers in printed diagnostics.
         std::optional<bool> diagColumn;
 
@@ -371,8 +368,7 @@ public:
     template<typename TArgs>
     [[nodiscard]] bool parseCommandLine(int argc, TArgs argv) {
         if (!cmdLine.parse(argc, argv)) {
-            for (auto& err : cmdLine.getErrors())
-                OS::printE(err + '\n');
+            issueCommandLineErrors(cmdLine);
             return false;
         }
         return !anyFailedLoads;
@@ -382,7 +378,7 @@ public:
     ///
     /// Any errors encountered will be printed to stderr.
     [[nodiscard]] bool parseCommandLine(std::string_view argList,
-                                        CommandLine::ParseOptions parseOptions = {});
+                                        const CommandLine::ParseOptions& parseOptions = {});
 
     /// @brief Processes the given command file(s) for more options.
     ///
@@ -469,13 +465,17 @@ public:
     /// Prints a note to stderr with appropriate terminal colors.
     void printNote(const std::string& message);
 
+    /// Sets whether terminal output should use color.
+    void setTerminalColorsEnabled(bool enable);
+
 private:
-    bool parseUnitListing(std::string_view text);
+    bool parseUnitListing(const SourceBuffer& sourceBuffer);
     std::string parseMapKeywordVersion(std::string_view value);
     void addLibraryFiles(std::string_view pattern);
     void addParseOptions(Bag& bag,
                          function_ref<void(BufferID, bool, bool)> bufferChangeCB = nullptr) const;
     void addCompilationOptions(Bag& bag) const;
+    void issueCommandLineErrors(const CommandLine& cl);
     bool reportLoadErrors();
 
     bool anyFailedLoads = false;

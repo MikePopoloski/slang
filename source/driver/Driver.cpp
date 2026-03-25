@@ -14,6 +14,7 @@
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/diagnostics/DriverDiags.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
@@ -40,6 +41,7 @@ using namespace analysis;
 Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
     textDiagClient = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(textDiagClient);
+    setTerminalColorsEnabled(OS::fileSupportsColors(stderr));
 }
 
 Driver::~Driver() = default;
@@ -249,10 +251,18 @@ void Driver::addStandardArgs() {
 
     // Diagnostics control
     cmdLine.add("-W", options.warningOptions, "Control the specified warning", "<warning>");
-    cmdLine.add("--color-diagnostics", options.colorDiags,
-                "Always print diagnostics in color. "
-                "If this option is unset, colors will be enabled if a color-capable "
-                "terminal is detected.");
+    cmdLine.add(
+        "--color-diagnostics",
+        [this](std::string_view value) {
+            std::string error;
+            if (auto result = CommandLine::parseBool("--color-diagnostics"sv, value, error))
+                setTerminalColorsEnabled(*result);
+
+            return error;
+        },
+        "Always print diagnostics in color. "
+        "If this option is unset, colors will be enabled if a color-capable "
+        "terminal is detected.");
     cmdLine.add("--diag-column", options.diagColumn, "Show column numbers in diagnostic output");
     cmdLine.addEnum<ColumnUnit, ColumnUnit_traits>("--diag-column-unit", options.diagColumnUnit,
                                                    "Unit for column numbers in diagnostics",
@@ -446,13 +456,29 @@ void Driver::addStandardArgs() {
 }
 
 [[nodiscard]] bool Driver::parseCommandLine(std::string_view argList,
-                                            CommandLine::ParseOptions parseOptions) {
+                                            const CommandLine::ParseOptions& parseOptions) {
     if (!cmdLine.parse(argList, parseOptions)) {
-        for (auto& err : cmdLine.getErrors())
-            OS::printE(fmt::format("{}\n", err));
+        issueCommandLineErrors(cmdLine);
         return false;
     }
     return !anyFailedLoads;
+}
+
+void Driver::issueCommandLineErrors(const CommandLine& cl) {
+    for (auto& err : cl.getErrors()) {
+        auto loc = err.location;
+        if (!loc)
+            loc = SourceLocation::NoLocation;
+
+        Diagnostic d(diag::CommandLineError, loc);
+        d << err.message;
+        diagEngine.issue(d);
+    }
+
+    if (!textDiagClient->empty()) {
+        OS::printE(textDiagClient->getString());
+        textDiagClient->clear();
+    }
 }
 
 bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bool separateUnit) {
@@ -469,9 +495,9 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bo
         return onError(pattern, globEc);
 
     for (auto& path : files) {
-        SmallVector<char> buffer;
-        if (auto readEc = OS::readFile(path, buffer))
-            return onError(getU8Str(path), readEc);
+        auto buffer = sourceManager.readSource(path);
+        if (!buffer)
+            return onError(getU8Str(path), buffer.error());
 
         if (!activeCommandFiles.insert(path).second) {
             printError(
@@ -487,13 +513,9 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bo
             fs::current_path(path.parent_path(), ec);
         }
 
-        SLANG_ASSERT(!buffer.empty());
-        buffer.pop_back();
-        std::string_view argStr(buffer.data(), buffer.size());
-
         bool result;
         if (separateUnit) {
-            result = parseUnitListing(argStr);
+            result = parseUnitListing(*buffer);
         }
         else {
             CommandLine::ParseOptions parseOpts;
@@ -501,7 +523,8 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bo
             parseOpts.ignoreProgramName = true;
             parseOpts.supportComments = true;
             parseOpts.ignoreDuplicates = true;
-            result = parseCommandLine(argStr, parseOpts);
+            parseOpts.sourceBuffer = *buffer;
+            result = parseCommandLine(buffer->data, parseOpts);
         }
 
         if (makeRelative)
@@ -519,18 +542,6 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bo
 }
 
 bool Driver::processOptions() {
-    bool showColors;
-    if (options.colorDiags.has_value())
-        showColors = *options.colorDiags;
-    else
-        showColors = OS::fileSupportsColors(stderr);
-
-    if (showColors) {
-        OS::setStderrColorsEnabled(true);
-        if (OS::fileSupportsColors(stdout))
-            OS::setStdoutColorsEnabled(true);
-    }
-
     if (options.languageVersion.has_value()) {
         if (options.languageVersion == "1364-2005")
             languageVersion = LanguageVersion::v1364_2005;
@@ -630,7 +641,6 @@ bool Driver::processOptions() {
     }
 
     auto& tdc = *textDiagClient;
-    tdc.showColors(showColors);
     tdc.showColumn(options.diagColumn.value_or(true));
     tdc.setColumnUnit(options.diagColumnUnit.value_or(ColumnUnit::Display));
     tdc.showLocation(options.diagLocation.value_or(true));
@@ -1195,7 +1205,7 @@ bool Driver::reportParseDiags() {
     diags.sort(sourceManager);
     diagEngine.issue(diags);
 
-    OS::printE(fmt::format("{}", textDiagClient->getString()));
+    OS::printE(textDiagClient->getString());
     return diagEngine.getNumErrors() == 0;
 }
 
@@ -1279,7 +1289,7 @@ bool Driver::runFullCompilation(bool quiet) {
     return reportDiagnostics(quiet);
 }
 
-bool Driver::parseUnitListing(std::string_view text) {
+bool Driver::parseUnitListing(const SourceBuffer& buffer) {
     CommandLine unitCmdLine;
     std::vector<std::string> includes;
     unitCmdLine.add("-I,--include-directory,+incdir", includes, "", "",
@@ -1322,10 +1332,10 @@ bool Driver::parseUnitListing(std::string_view text) {
     parseOpts.ignoreProgramName = true;
     parseOpts.supportComments = true;
     parseOpts.ignoreDuplicates = true;
+    parseOpts.sourceBuffer = buffer;
 
-    if (!unitCmdLine.parse(text, parseOpts)) {
-        for (auto& err : unitCmdLine.getErrors())
-            OS::printE(fmt::format("{}\n", err));
+    if (!unitCmdLine.parse(buffer.data, parseOpts)) {
+        issueCommandLineErrors(unitCmdLine);
         return false;
     }
 
@@ -1398,6 +1408,19 @@ void Driver::printNote(const std::string& message) {
     OS::printE(fg(textDiagClient->noteColor), "  note: ");
     OS::printE(message);
     OS::printE("\n");
+}
+
+void Driver::setTerminalColorsEnabled(bool enable) {
+    if (enable) {
+        OS::setStderrColorsEnabled(true);
+        if (OS::fileSupportsColors(stdout))
+            OS::setStdoutColorsEnabled(true);
+    }
+    else {
+        OS::setStderrColorsEnabled(false);
+        OS::setStdoutColorsEnabled(false);
+    }
+    textDiagClient->showColors(enable);
 }
 
 bool Driver::Options::lintMode() const {

@@ -188,8 +188,8 @@ public:
                               const SourceLibrary* library = nullptr);
 
     /// Read in a source file from disk.
-    BufferOrError readSource(const std::filesystem::path& path, const SourceLibrary* library,
-                             uint64_t sortKey = UINT64_MAX);
+    BufferOrError readSource(const std::filesystem::path& path,
+                             const SourceLibrary* library = nullptr, uint64_t sortKey = UINT64_MAX);
 
     /// Read in a header file from disk.
     BufferOrError readHeader(std::string_view path, SourceLocation includedFrom,

@@ -220,7 +220,8 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def("reportCompilation", &Driver::reportCompilation, "compilation"_a, "quiet"_a)
         .def("runAnalysis", &Driver::runAnalysis, "compilation"_a)
         .def("reportDiagnostics", &Driver::reportDiagnostics, "quiet"_a)
-        .def("runFullCompilation", &Driver::runFullCompilation, "quiet"_a = false);
+        .def("runFullCompilation", &Driver::runFullCompilation, "quiet"_a = false)
+        .def("setTerminalColorsEnabled", &Driver::setTerminalColorsEnabled, "enable"_a);
 
     py::classh<SourceOptions>(driver, "SourceOptions")
         .def(py::init<>())

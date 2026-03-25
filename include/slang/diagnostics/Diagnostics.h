@@ -46,6 +46,7 @@ class Symbol;
     x(Compilation) \
     x(Analysis) \
     x(Meta) \
+    x(Driver) \
     x(Tidy) \
     x(Netlist)
 SLANG_ENUM_SIZED(DiagSubsystem, uint16_t, DS)

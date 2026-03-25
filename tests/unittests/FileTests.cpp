@@ -16,9 +16,9 @@ TEST_CASE("Read source") {
     SourceManager manager;
     std::string testPath = getTestInclude();
 
-    CHECK(!manager.readSource("X:\\nonsense.txt", /* library */ nullptr));
+    CHECK(!manager.readSource("X:\\nonsense.txt"));
 
-    auto file = manager.readSource(testPath, /* library */ nullptr);
+    auto file = manager.readSource(testPath);
     REQUIRE(file);
     CHECK(file->data.length() > 0);
 }
