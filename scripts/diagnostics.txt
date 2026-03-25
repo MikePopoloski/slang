@@ -308,6 +308,7 @@ error ImplicitParamTypeKeyword "implicit parameter type not allowed without use 
 warning dpi-pure-task DPIPureTask "DPI tasks cannot be marked 'pure'"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
+warning nonstandard-bare-assoc-pattern BareAssociativePattern "associative array literal is missing the required apostrophe prefix '{{'"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
 warning nonstandard-hierarchical-cross NonstandardHierarchicalCross "non-standard hierarchical reference in cover cross item"
 warning foreach-call-expr ForeachCallExpr "foreach array expression is not a name"
@@ -1294,7 +1295,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
                   initializer-required package-import-in-class foreach-call-expr nonstandard-hierarchical-cross
-                  nonstandard-inside }
+                  nonstandard-inside nonstandard-bare-assoc-pattern }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

@@ -15,6 +15,7 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/SourceLoader.h"
 #include "slang/parsing/Parser.h"
@@ -228,6 +229,10 @@ void Driver::addStandardArgs() {
                 "--allow-virtual-iface-with-override",
                 "Allow interface instances that are bind/defparam targets to be assigned "
                 "to virtual interfaces");
+    addCompFlag(CompilationFlags::AllowBareAssociativePattern, "--allow-bare-associative-pattern",
+                "Allow associative array literals written as {key:value, ...} without "
+                "the apostrophe prefix required by the LRM (non-standard; enabled automatically "
+                "under --compat vcs)");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "
@@ -639,6 +644,11 @@ bool Driver::processOptions() {
     diagEngine.setErrorLimit((int)options.errorLimit.value_or(20));
 
     compatSettings.configureDiagnostics(diagEngine);
+
+    // BareAssociativePattern: warning when the user has explicitly opted in (via --compat vcs or
+    // --allow-bare-associative-pattern), error otherwise.
+    if (options.compilationFlags.at(CompilationFlags::AllowBareAssociativePattern) != true)
+        diagEngine.setBaselineSeverity(diag::BareAssociativePattern, DiagnosticSeverity::Error);
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
     diagEngine.issue(optionDiags);

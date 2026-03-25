@@ -33,7 +33,8 @@ using namespace analysis;
     CompilationFlags::AllowRecursiveImplicitCall, \
     CompilationFlags::AllowBareValParamAssignment, \
     CompilationFlags::AllowSelfDeterminedStreamConcat, \
-    CompilationFlags::AllowMergingAnsiPorts
+    CompilationFlags::AllowMergingAnsiPorts, \
+    CompilationFlags::AllowBareAssociativePattern
 
 static constexpr CompilationFlags vcsCompFlags[] = {VCS_COMP_FLAGS};
 static constexpr CompilationFlags allCompFlags[] = {

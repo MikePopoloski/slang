@@ -118,9 +118,13 @@ enum class SLANG_EXPORT CompilationFlags {
 
     /// Allow interface instances that are bind/defparam targets to be assigned
     /// to virtual interfaces.
-    AllowVirtualIfaceWithOverride = 1 << 14
+    AllowVirtualIfaceWithOverride = 1 << 14,
+
+    /// Allow associative array literals written as {key:value, ...} without
+    /// the apostrophe prefix required by the LRM (non-standard; accepted by VCS).
+    AllowBareAssociativePattern = 1 << 15
 };
-SLANG_BITMASK(CompilationFlags, AllowVirtualIfaceWithOverride)
+SLANG_BITMASK(CompilationFlags, AllowBareAssociativePattern)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {

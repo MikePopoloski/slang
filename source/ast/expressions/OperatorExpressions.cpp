@@ -1839,8 +1839,18 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& comp,
                                           /* isInterfacePort */ false);
             }
 
-            if (!arg)
-                arg = &create(comp, *argSyntax, context);
+            if (!arg) {
+                // In VCS compat mode, bare (no-apostrophe) associative patterns may appear as
+                // elements of an unpacked array concatenation.  Pass the element type so that
+                // bindAssignmentPattern can resolve the pattern's target type from context.
+                if (argSyntax->kind == SyntaxKind::AssignmentPatternExpression &&
+                    comp.hasFlag(CompilationFlags::AllowBareAssociativePattern)) {
+                    arg = &create(comp, *argSyntax, context, ASTFlags::None, &elemType);
+                }
+                else {
+                    arg = &create(comp, *argSyntax, context);
+                }
+            }
 
             if (arg->bad()) {
                 bad = true;

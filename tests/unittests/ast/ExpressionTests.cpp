@@ -3887,3 +3887,114 @@ endfunction
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Bare associative array pattern -- diagnostic emitted with option") {
+    // {key:value} without the apostrophe prefix is non-standard.  With AllowBareAssociativePattern
+    // the code parses and elaborates cleanly, emitting only the one BareAssociativePattern
+    // warning (the Driver would keep it at warning severity in this case).
+    auto tree = SyntaxTree::fromText(R"(
+package P;
+    typedef int int_queue[$];
+    task automatic T();
+        int_queue q[string] = {"k":{0,1,2}};
+    endtask
+endpackage
+)");
+
+    CompilationOptions co;
+    co.flags |= CompilationFlags::AllowBareAssociativePattern;
+
+    Bag opts;
+    opts.set(co);
+
+    Compilation compilation(opts);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BareAssociativePattern);
+}
+
+TEST_CASE("Bare associative array pattern -- single diagnostic without option") {
+    // Without the option the diagnostic is also emitted (the Driver raises it to an error in
+    // strict mode).  Verify there is exactly one diagnostic and no cascading parse errors.
+    auto tree = SyntaxTree::fromText(R"(
+package P;
+    typedef int int_queue[$];
+    task automatic T();
+        int_queue q[string] = {"k":{0,1,2}};
+    endtask
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BareAssociativePattern);
+}
+
+TEST_CASE("Bare associative pattern in unpacked array concat -- with option") {
+    // VCS compat: outer {elem, ...} is an unpacked-array concatenation for string[][int];
+    // each inner {int_key: str_val, ...} is a bare (no-apostrophe) associative pattern.
+    // With AllowBareAssociativePattern, each inner pattern gets one BareAssociativePattern
+    // diagnostic (warning) and no AssignmentPatternNoContext error.
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    class C;
+        string s[][int];
+        function f();
+            s = {
+                {0: "sv1", 1: "sv2"},
+                {1: "sv2",  2: "sv4"}
+            };
+        endfunction
+    endclass
+endmodule
+)");
+
+    CompilationOptions co;
+    co.flags |= CompilationFlags::AllowBareAssociativePattern;
+
+    Bag opts;
+    opts.set(co);
+
+    Compilation compilation(opts);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    // Two inner bare patterns → two BareAssociativePattern diagnostics, nothing else.
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BareAssociativePattern);
+    CHECK(diags[1].code == diag::BareAssociativePattern);
+}
+
+TEST_CASE("Bare associative pattern in unpacked array concat -- without option") {
+    // Without the flag, each inner bare pattern raises BareAssociativePattern.
+    // The element type is not propagated, so AssignmentPatternNoContext fires too.
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    class C;
+        string s[][int];
+        function f();
+            s = {
+                {0: "sv1", 1: "sv2"},
+                {1: "sv2",  2: "sv4"}
+            };
+        endfunction
+    endclass
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    // Two BareAssociativePattern + two AssignmentPatternNoContext (one per inner pattern).
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::BareAssociativePattern);
+    CHECK(diags[1].code == diag::AssignmentPatternNoContext);
+    CHECK(diags[2].code == diag::BareAssociativePattern);
+    CHECK(diags[3].code == diag::AssignmentPatternNoContext);
+}
