@@ -993,8 +993,7 @@ bool Driver::parseAllSources() {
 
     if (options.showParsedFiles == true) {
         concurrent_map<size_t, std::vector<std::string>> parsedFiles;
-        bag.insertOrGet<PreprocessorOptions>().bufferChangeCB = [&](BufferID buf, bool isBack,
-                                                                    bool isSkip) {
+        auto bufferChangeCB = [&](BufferID buf, bool isBack, bool isSkip) {
             auto path = getU8Str(sourceManager.getFullPath(buf));
             std::string msg;
             if (isBack) {
@@ -1014,6 +1013,8 @@ bool Driver::parseAllSources() {
             auto appendMsg = [&](auto& entry) { entry.second.push_back(std::move(msg)); };
             parsedFiles.try_emplace_and_visit(idx, appendMsg, appendMsg);
         };
+
+        bag.insertOrGet<PreprocessorOptions>().bufferChangeCB = bufferChangeCB;
 
         syntaxTrees = sourceLoader.loadAndParseSources(bag, threadPool.get());
 
