@@ -93,6 +93,24 @@ public:
     /// or nullptr if it's not explicitly part of any library.
     const SourceLibrary* getLibraryFor(BufferID buffer) const;
 
+    /// Describes the origin of a source buffer.
+    enum class BufferKind {
+        Unknown,
+        DesignFile,
+        LibraryFile,
+        LibraryMap,
+        IncludeFile,
+        Macro,
+        MacroArg
+    };
+
+    /// Gets the kind for the given buffer. Returns BufferKind::Macro or BufferKind::MacroArg
+    /// for macro expansion buffers, and the appropriate file kind for source file buffers.
+    BufferKind getBufferKind(BufferID buffer) const;
+
+    /// Marks the given source file buffer as the specified kind.
+    void setBufferKind(BufferID buffer, BufferKind kind);
+
     /// Attempts to get the name of the macro represented by a macro location.
     /// If no macro name can be found, returns an empty string view.
     std::string_view getMacroName(SourceLocation location) const;
@@ -272,12 +290,15 @@ private:
         const SourceLibrary* library = nullptr;
         SourceLocation includedFrom;
         uint64_t sortKey = 0;
+        BufferKind bufferKind = BufferKind::DesignFile;
         std::vector<LineDirectiveInfo> lineDirectives;
 
         FileInfo() {}
+
         FileInfo(FileData* data, const SourceLibrary* library, SourceLocation includedFrom,
                  uint64_t sortKey) :
-            data(data), library(library), includedFrom(includedFrom), sortKey(sortKey) {}
+            data(data), library(library), includedFrom(includedFrom), sortKey(sortKey),
+            bufferKind(includedFrom.valid() ? BufferKind::IncludeFile : BufferKind::DesignFile) {}
 
         // Returns a pointer to the LineDirectiveInfo for the nearest enclosing
         // line directive of the given raw line number, or nullptr if there is none

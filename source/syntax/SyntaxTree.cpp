@@ -165,6 +165,10 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
         library = it->library;
     }
 
+    const auto ppOpts = options.getOrDefault<PreprocessorOptions>();
+    if (ppOpts.bufferChangeCB)
+        ppOpts.bufferChangeCB(sources.front().id, false, false);
+
     Parser parser(preprocessor, options);
 
     SyntaxNode* root;
@@ -215,6 +219,8 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapText(std::string_view text
 std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapBuffer(const SourceBuffer& buffer,
                                                              SourceManager& sourceManager,
                                                              const Bag& options) {
+    sourceManager.setBufferKind(buffer.id, SourceManager::BufferKind::LibraryMap);
+
     BumpAllocator alloc;
     Diagnostics diagnostics;
     Preprocessor preprocessor(sourceManager, alloc, diagnostics, options);
