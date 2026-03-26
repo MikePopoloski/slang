@@ -2155,6 +2155,26 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Empty connection in uninstantiated module") {
+    auto tree = SyntaxTree::fromText(R"(
+module top ();
+    foo bar (.i());
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::IgnoreUnknownModules;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    NO_COMPILATION_ERRORS;
+
+    auto& bar = compilation.getRoot().lookupName<UninstantiatedDefSymbol>("top.bar");
+    CHECK(bar.getPortConnections()[0]->as<SimpleAssertionExpr>().expr.kind ==
+          ExpressionKind::EmptyArgument);
+}
+
 TEST_CASE("maybe_unknown attribute suppresses unknown module errors") {
     auto tree = SyntaxTree::fromText(R"(
 module top;
