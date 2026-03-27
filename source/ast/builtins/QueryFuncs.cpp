@@ -47,6 +47,12 @@ public:
                 diag.addNote(diag::NoteDeclarationHere, type.location);
             return comp.getErrorType();
         }
+
+        // const evalable integer
+        if (type.isPredefinedInteger() && context.tryEval(*args[0])) {
+            context.addDiag(diag::BitsOfIntegerConstant, range) << type << type.getBitWidth();
+        }
+
         return comp.getIntegerType();
     }
 
