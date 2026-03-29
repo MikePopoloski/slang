@@ -1330,8 +1330,9 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
                     }
                 }
 
-                return comp.emplace<SimpleAssertionExpr>(Expression::bind(*expr, context, flags),
-                                                         std::nullopt);
+                return comp.emplace<SimpleAssertionExpr>(
+                    Expression::bindRValue(comp.getErrorType(), *expr, {}, context, flags),
+                    std::nullopt);
             }
         }
     }

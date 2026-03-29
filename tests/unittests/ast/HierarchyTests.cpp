@@ -672,10 +672,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[1].code == diag::EmptyConcatNotAllowed);
-    CHECK(diags[2].code == diag::EmptyConcatNotAllowed);
 }
 
 TEST_CASE("Manually specify top modules") {
@@ -2373,6 +2372,28 @@ endpackage
 )");
 
     Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Uninstantiated def with assignment pattern ports") {
+    auto tree = SyntaxTree::fromText(R"(
+module sub(
+  input logic [31:0] data [3:0]
+);
+endmodule
+
+module unused;
+  sub u0(.data('{default:'0}));
+endmodule
+
+module top;
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.insert("top");
+
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
