@@ -299,6 +299,28 @@ endmodule
     CHECK(diags[11].code == diag::InvalidDPICIdentifier);
 }
 
+TEST_CASE("Compilation collects DPI exports") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void f1; endfunction
+    function void f2; endfunction
+    export "DPI-C" function f1;
+    export "DPI-C" my_f2 = function f2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto exports = compilation.getResolvedDPIExports();
+    REQUIRE(exports.size() == 2);
+    CHECK(exports[0].first->name == "f1");
+    CHECK(exports[0].second == "f1");
+    CHECK(exports[1].first->name == "f2");
+    CHECK(exports[1].second == "my_f2");
+}
+
 TEST_CASE("DPI signature checking") {
     auto tree = SyntaxTree::fromText(R"(
 import "DPI-C" function int foo(int a, output b);
