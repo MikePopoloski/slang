@@ -3929,7 +3929,9 @@ MemberSyntax* Parser::parseLibraryMember() {
             return &factory.emptyMember(nullptr, nullptr, consume());
         case TokenKind::IncludeKeyword: {
             auto keyword = consume();
+            getPP().setFilePathMode(true);
             auto& path = parseFilePathSpec();
+            getPP().setFilePathMode(false);
             auto semi = expect(TokenKind::Semicolon);
             return &factory.libraryIncludeStatement(nullptr, keyword, path, semi);
         }
@@ -3958,6 +3960,7 @@ LibraryDeclarationSyntax& Parser::parseLibraryDecl() {
         return buffer.copy(alloc);
     };
 
+    getPP().setFilePathMode(true);
     auto filePaths = parseFilePathList();
 
     LibraryIncDirClauseSyntax* incDir = nullptr;
@@ -3967,6 +3970,7 @@ LibraryDeclarationSyntax& Parser::parseLibraryDecl() {
         auto incPaths = parseFilePathList();
         incDir = &factory.libraryIncDirClause(minus, incDirKeyword, incPaths);
     }
+    getPP().setFilePathMode(false);
 
     return factory.libraryDeclaration(nullptr, keyword, name, filePaths, incDir,
                                       expect(TokenKind::Semicolon));

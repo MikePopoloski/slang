@@ -1242,6 +1242,11 @@ void Lexer::lexTrivia() {
                 scanWhitespace();
                 break;
             case '/':
+                // In file path mode, don't treat / as a comment start. File paths
+                // can contain wildcard sequences like /* that would otherwise be
+                // misidentified as a block comment (e.g. $ROOT/*/subdir/*.v).
+                if (filePathMode)
+                    return;
                 switch (peek(1)) {
                     case '/':
                         advance(2);

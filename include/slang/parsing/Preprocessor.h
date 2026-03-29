@@ -166,6 +166,11 @@ public:
     /// Gets the allocator used by the preprocessor.
     BumpAllocator& getAllocator() const { return alloc; }
 
+    /// Enables or disables file path mode on the current lexer. When enabled,
+    /// '/' is not treated as a comment start, allowing file paths with glob
+    /// wildcards like $ROOT/*/subdir/*.v to be parsed correctly.
+    void setFilePathMode(bool enable);
+
     /// Gets the diagnostic bag passed to the Preprocessor's constructor.
     Diagnostics& getDiagnostics() const { return diagnostics; }
 

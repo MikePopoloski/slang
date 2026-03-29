@@ -88,6 +88,11 @@ Preprocessor::Preprocessor(const Preprocessor& other) :
     keywordVersionStack.push_back(LF::getDefaultKeywordVersion(options.languageVersion));
 }
 
+void Preprocessor::setFilePathMode(bool enable) {
+    if (!lexerStack.empty())
+        lexerStack.back()->setFilePathMode(enable);
+}
+
 void Preprocessor::pushSource(std::string_view source, std::string_view name) {
     auto buffer = sourceManager.assignText(source);
     pushSource(buffer);

@@ -1225,6 +1225,28 @@ library rtlLib /a/b/c, f/...*?/asdf*.v,
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Library map path with glob wildcard containing /*") {
+    // Paths like $ROOT/*/subdir/*.v contain /* which must not be treated as
+    // a block comment start by the lexer.
+    auto tree = SyntaxTree::fromLibraryMapText(
+        R"(library STUB $IP_ROOT/*/stub/*.v, $PRJ/top/stubs/*.v;)", getSourceManager());
+
+    REQUIRE(tree);
+
+    diagnostics = tree->diagnostics();
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    auto& libMap = tree->root().as<LibraryMapSyntax>();
+    REQUIRE(libMap.members.size() == 1);
+    auto& libDecl = libMap.members[0]->as<LibraryDeclarationSyntax>();
+    CHECK(libDecl.name.valueText() == "STUB");
+    REQUIRE(libDecl.filePaths.size() == 2);
+    CHECK(libDecl.filePaths[0]->path.valueText().find("$IP_ROOT/*/stub/*.v") !=
+          std::string_view::npos);
+    CHECK(libDecl.filePaths[1]->path.valueText().find("$PRJ/top/stubs/*.v") !=
+          std::string_view::npos);
+}
+
 TEST_CASE("Genblock parsing regress") {
     auto& text = R"(
 module m;
