@@ -1381,6 +1381,20 @@ module m;
 endmodule
 ```
 
+-Wshadow-property
+A class property declaration shadows a property with the same name declared in a base class.
+This can lead to subtle bugs where the programmer intends to reference the base class property
+but unintentionally references the derived class property instead.
+```
+class Base;
+    int x;
+endclass
+
+class Derived extends Base;
+    int x;  // shadows Base::x
+endclass
+```
+
 -Wrandomize-var-shadow
 An identifier used inside a `randomize()` 'with' constraint block resolves to a member of
 the class being randomized, but a variable with the same name also exists in an enclosing

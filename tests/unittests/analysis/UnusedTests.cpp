@@ -966,3 +966,69 @@ endclass
     auto diags = analyzeShadow(text, compilation);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Shadow property warning") {
+    auto& text = R"(
+class Base;
+    int x;
+    int y;
+endclass
+
+class Derived extends Base;
+    int x;  // shadows Base::x
+endclass
+)";
+
+    Compilation compilation;
+    auto diags = analyzeShadow(text, compilation);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ShadowProperty);
+}
+
+TEST_CASE("Shadow property warning - no false positives") {
+    auto& text = R"(
+class Base;
+    int x;
+    function void f(); endfunction
+endclass
+
+class Derived extends Base;
+    // Overriding a method is not a property shadow.
+    function void f(); endfunction
+    // A property that doesn't exist in the base is fine.
+    int z;
+endclass
+
+class Base2;
+    int x;
+endclass
+
+class Mid extends Base2;
+endclass
+
+class Derived3 extends Mid;
+    int x;
+endclass
+)";
+
+    Compilation compilation;
+    auto diags = analyzeShadow(text, compilation);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ShadowProperty);
+}
+
+TEST_CASE("Shadow property - method shadowing property not warned") {
+    auto& text = R"(
+class Base;
+    function void f(); endfunction
+endclass
+
+class Derived extends Base;
+    int f;
+endclass
+)";
+
+    Compilation compilation;
+    auto diags = analyzeShadow(text, compilation);
+    CHECK_DIAGS_EMPTY;
+}
