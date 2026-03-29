@@ -1224,6 +1224,59 @@ TEST_CASE("Driver disable local includes") {
     CHECK(stderrContains("file_defn.svh"));
 }
 
+TEST_CASE("Driver incdir-first -- default finds local file first") {
+    auto guard = OS::captureOutput();
+
+    // Without --incdir-first, the local file (data/incdir_shadow.svh) is found
+    // before the +incdir version (data/nested/incdir_shadow.svh). The local file
+    // defines INCDIR_SHADOW_IS_LOCAL, which triggers a deliberate compile error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo -I \"{0}nested\" \"{0}incdir_first_test.sv\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stderrContains("local_was_found_error"));
+}
+
+TEST_CASE("Driver incdir-first -- finds incdir file first with --incdir-first") {
+    auto guard = OS::captureOutput();
+
+    // With --incdir-first, the +incdir version (data/nested/incdir_shadow.svh) is
+    // searched before the local file. That file does not define INCDIR_SHADOW_IS_LOCAL,
+    // so the module compiles without errors.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo -I \"{0}nested\" --incdir-first \"{0}incdir_first_test.sv\"",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+}
+
+TEST_CASE("Driver incdir-first -- compat vcs enables incdir-first automatically") {
+    auto guard = OS::captureOutput();
+
+    // --compat=vcs must automatically enable incdir-first behavior without the user
+    // needing to pass --incdir-first explicitly.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo -I \"{0}nested\" --compat=vcs \"{0}incdir_first_test.sv\"",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+}
+
 TEST_CASE("Map keyword version option positive") {
     auto guard = OS::captureOutput();
 
