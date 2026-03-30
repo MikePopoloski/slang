@@ -3300,8 +3300,10 @@ TEST_CASE("v1800-2023 clarification: non-blocking assignments to elements of dyn
     auto tree = SyntaxTree::fromText(R"(
 module m;
     int i[];
+    struct { logic foo[]; } s;
     initial begin
         i[0] <= 1;
+        s.foo[0] <= 1;
     end
 endmodule
 )");
@@ -3310,8 +3312,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::NonblockingDynamicAssign);
+    CHECK(diags[1].code == diag::NonblockingDynamicAssign);
 }
 
 TEST_CASE("v1800-2023 clarification: static casts are assignment-like contexts") {

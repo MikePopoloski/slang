@@ -92,16 +92,15 @@ bool requireLValueHelper(const T& expr, const ASTContext& context, SourceLocatio
         return false;
     }
 
-    if (ValueExpressionBase::isKind(val.kind)) {
-        auto& sym = val.template as<ValueExpressionBase>().symbol;
-        if (sym.kind == SymbolKind::Net) {
-            if (sym.template as<NetSymbol>().netType.netKind == NetType::UserDefined) {
-                context.addDiag(diag::UserDefPartialDriver, expr.sourceRange) << sym.name;
-                return false;
-            }
+    if (auto sym = val.getSymbolReference(); sym && sym->isValue()) {
+        if (auto net = sym->template as_if<NetSymbol>();
+            net && net->netType.netKind == NetType::UserDefined) {
+            context.addDiag(diag::UserDefPartialDriver, expr.sourceRange) << sym->name;
+            return false;
         }
 
-        if (flags.has(AssignFlags::NonBlocking) && sym.getType().isDynamicallySizedArray()) {
+        if (flags.has(AssignFlags::NonBlocking) &&
+            sym->template as<ValueSymbol>().getType().isDynamicallySizedArray()) {
             if (!location)
                 location = expr.sourceRange.start();
 

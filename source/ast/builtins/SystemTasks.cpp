@@ -68,18 +68,14 @@ public:
     }
 };
 
-struct MonitorVisitor : public ASTVisitor<MonitorVisitor, VisitFlags::AllGood> {
-    const ASTContext& context;
-
-    MonitorVisitor(const ASTContext& context) : context(context) {}
-
-    void handle(const ValueExpressionBase& expr) {
-        if (VariableSymbol::isKind(expr.symbol.kind) &&
-            expr.symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
-            context.addDiag(diag::AutoVarTraced, expr.sourceRange) << expr.symbol.name;
+static void checkMonitorArg(const ASTContext& context, const Expression& expr) {
+    expr.visitSymbolReferences([&](const Expression&, const Symbol& sym) {
+        if (auto var = sym.as_if<VariableSymbol>();
+            var && var->lifetime == VariableLifetime::Automatic) {
+            context.addDiag(diag::AutoVarTraced, expr.sourceRange) << sym.name;
         }
-    }
-};
+    });
+}
 
 class MonitorTask : public DisplayTask {
 public:
@@ -92,9 +88,8 @@ public:
             return result;
 
         // Additional restriction for monitor tasks: automatic variables cannot be referenced.
-        MonitorVisitor visitor(context);
         for (auto arg : args)
-            arg->visit(visitor);
+            checkMonitorArg(context, *arg);
 
         return result;
     }
@@ -284,9 +279,8 @@ public:
             return result;
 
         // Additional restriction for monitor tasks: automatic variables cannot be referenced.
-        MonitorVisitor visitor(context);
         for (auto arg : args.subspan(1))
-            arg->visit(visitor);
+            checkMonitorArg(context, *arg);
 
         return result;
     }
