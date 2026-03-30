@@ -111,7 +111,7 @@ endmodule
     comp.addSyntaxTree(tree)
     assert len(comp.getAllDiagnostics()) == 0
 
-    exports = comp.getResolvedDPIExports()
+    exports = comp.getDPIExports()
     assert len(exports) == 2
     assert exports[0][0].name == "f1"
     assert exports[0][1] == "f1"

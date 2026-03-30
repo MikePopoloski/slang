@@ -131,11 +131,11 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def("getStdPackage", &Compilation::getStdPackage, byrefint)
         .def("getPackages", &Compilation::getPackages, byrefint)
         .def("getGateType", &Compilation::getGateType, byrefint, "name"_a)
-        .def("getResolvedDPIExports",
+        .def("getDPIExports",
              [](const Compilation& self) {
                  py::list result;
                  auto parent = py::cast(&self);
-                 for (auto& [sub, cId] : self.getResolvedDPIExports())
+                 for (auto& [sub, cId] : self.getDPIExports())
                      result.append(py::make_tuple(py::cast(sub, byrefint, parent), cId));
                  return result;
              })

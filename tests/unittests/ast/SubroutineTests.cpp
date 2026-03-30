@@ -313,7 +313,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    auto exports = compilation.getResolvedDPIExports();
+    auto exports = compilation.getDPIExports();
     REQUIRE(exports.size() == 2);
     CHECK(exports[0].first->name == "f1");
     CHECK(exports[0].second == "f1");

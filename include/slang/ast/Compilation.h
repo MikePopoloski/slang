@@ -549,12 +549,12 @@ public:
     /// but are otherwise unused by SystemVerilog code.
     void noteDPIExportDirective(const syntax::DPIExportSyntax& syntax, const Scope& scope);
 
-    /// A resolved DPI export: the subroutine symbol and its C identifier.
-    using ResolvedDPIExport = std::pair<const SubroutineSymbol*, std::string>;
+    /// A DPI export entry: the subroutine symbol and its C identifier.
+    using DPIExport = std::pair<const SubroutineSymbol*, std::string>;
 
-    /// Returns the resolved DPI exports collected during elaboration. Each entry
+    /// Returns the DPI exports collected during elaboration. Each entry
     /// contains the exported subroutine symbol and its C identifier.
-    std::span<const ResolvedDPIExport> getResolvedDPIExports() const { return resolvedDPIExports; }
+    std::span<const DPIExport> getDPIExports() const { return dpiExports; }
 
     /// Tracks the existence of an out-of-block declaration (method or constraint) in the
     /// given scope. This can later be retrieved by calling findOutOfBlockDecl().
@@ -1000,11 +1000,11 @@ private:
     // modified after elaboration begins.
     HierarchyOverrideNode hierarchyOverrides;
 
-    // A list of DPI export directives we've encountered during elaboration.
-    std::vector<std::pair<const syntax::DPIExportSyntax*, const Scope*>> dpiExports;
+    // A list of raw DPI export directives collected during elaboration.
+    std::vector<std::pair<const syntax::DPIExportSyntax*, const Scope*>> dpiExportDirectives;
 
-    // Resolved DPI exports: (subroutine, C identifier) pairs.
-    std::vector<ResolvedDPIExport> resolvedDPIExports;
+    // Resolved DPI exports collected during elaboration: (subroutine, C identifier) pairs.
+    std::vector<DPIExport> dpiExports;
 
     // A list of bind directives we've encountered during elaboration.
     std::vector<std::pair<const syntax::BindDirectiveSyntax*, const Scope*>> bindDirectives;
