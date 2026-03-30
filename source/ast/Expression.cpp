@@ -1175,6 +1175,17 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
             SLANG_ASSERT(!accessViaExpr);
             expr = &AssertionInstanceExpression::bindPort(*symbol, result.nameRange, context);
             break;
+        case SymbolKind::Instance:
+            if (accessViaExpr) {
+                auto type = comp.emplace<VirtualInterfaceType>(symbol->as<InstanceSymbol>(),
+                                                               nullptr,
+                                                               /* isRealIface */ true,
+                                                               result.nameRange.start());
+                expr = comp.emplace<MemberAccessExpression>(*type, *accessViaExpr, *symbol,
+                                                            result.nameRange);
+                break;
+            }
+            [[fallthrough]];
         default: {
             const bool constraintAllowed = !result.selectors.empty();
             const bool isDottedAccess =

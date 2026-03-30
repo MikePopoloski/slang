@@ -1010,3 +1010,28 @@ parameter p = foo();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstEvalVifType);
 }
+
+TEST_CASE("Virtual interface instance access regress -- GH #1765") {
+    auto tree = SyntaxTree::fromText(R"(
+interface A;
+endinterface
+
+interface B;
+    A a();
+endinterface
+
+class C;
+    virtual A intf1;
+    virtual B intf2;
+
+    function set_intf(virtual B b);
+        intf2 = b;
+        intf1 = b.a;
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
