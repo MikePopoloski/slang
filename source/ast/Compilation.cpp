@@ -1989,15 +1989,14 @@ void Compilation::checkDPIMethods(std::span<const SubroutineSymbol* const> dpiIm
             if (!nameInserted) {
                 shouldRecordResolved = false;
                 if (!checkSignaturesMatch(sub, *nameIt->second)) {
-                    auto& diag = scope->addDiag(diag::DPISignatureMismatch,
-                                                syntax->name.range());
+                    auto& diag = scope->addDiag(diag::DPISignatureMismatch, syntax->name.range());
                     diag << cId;
                     diag.addNote(diag::NotePreviousDefinition, nameIt->second->location);
                 }
             }
 
-            auto [scopeIt, scopeInserted] =
-                exportsByScope.emplace(std::make_tuple(cId, scope), syntax);
+            auto [scopeIt, scopeInserted] = exportsByScope.emplace(std::make_tuple(cId, scope),
+                                                                   syntax);
             if (!scopeInserted) {
                 shouldRecordResolved = false;
                 auto& diag = scope->addDiag(diag::DPIExportDuplicateCId, syntax->name.range());
