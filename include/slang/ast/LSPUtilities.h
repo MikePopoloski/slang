@@ -70,13 +70,16 @@ struct LSPVisitor {
         // the lsp depends only on the selected member and not on
         // the handle itself. Otherwise, the opposite is true.
         auto& valueType = expr.value().type->getCanonicalType();
-        if (valueType.isClass() || valueType.isCovergroup() || valueType.isVoid()) {
+        if (valueType.isObjectHandleType() || valueType.isVoid()) {
             auto lsp = std::exchange(currentLSP, nullptr);
             if (!lsp)
                 lsp = &expr;
 
-            if (VariableSymbol::isKind(expr.member.kind))
-                owner.noteReference(expr.member.as<VariableSymbol>(), *lsp);
+            // Access via a virtual interface never counts as a reference
+            // because we don't even know which concrete symbol this will
+            // eventually resolve to at runtime (if any).
+            if (expr.member.isValue() && !valueType.isVirtualInterface())
+                owner.noteReference(expr.member.as<ValueSymbol>(), *lsp);
 
             // Make sure the value gets visited but not as an lvalue anymore.
             auto guard = owner.saveLValueFlag();

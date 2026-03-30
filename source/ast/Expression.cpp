@@ -629,8 +629,8 @@ const Symbol* Expression::getSymbolReference(bool allowPacked) const {
         case ExpressionKind::MemberAccess: {
             auto& access = as<MemberAccessExpression>();
             auto& val = access.value();
-            if (allowPacked || val.type->isClass() || val.type->isUnpackedStruct() ||
-                val.type->isUnpackedUnion()) {
+            if (allowPacked || val.type->isUnpackedStruct() || val.type->isUnpackedUnion() ||
+                val.type->isObjectHandleType()) {
                 return &access.member;
             }
             return nullptr;
@@ -1082,7 +1082,7 @@ Expression& Expression::bindName(Compilation& comp, const NameSyntax& syntax,
 Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result,
                                          const InvocationExpressionSyntax* invocation,
                                          const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                         const ASTContext& context) {
+                                         const ASTContext& context, Expression* accessViaExpr) {
     const Symbol* symbol = result.found;
     if (!symbol)
         return badExpr(comp, nullptr);
@@ -1137,7 +1137,7 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
         case SymbolKind::Subroutine: {
             SLANG_ASSERT(result.selectors.empty());
             SourceRange callRange = invocation ? invocation->sourceRange() : result.nameRange;
-            expr = &CallExpression::fromLookup(comp, &symbol->as<SubroutineSymbol>(), nullptr,
+            expr = &CallExpression::fromLookup(comp, &symbol->as<SubroutineSymbol>(), accessViaExpr,
                                                invocation, withClause, callRange, context);
             invocation = nullptr;
             withClause = nullptr;
@@ -1156,6 +1156,7 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
         case SymbolKind::Sequence:
         case SymbolKind::Property:
         case SymbolKind::LetDecl: {
+            // TODO: make use of accessViaExpr?
             const InvocationExpressionSyntax* localInvoke = nullptr;
             if (result.selectors.empty())
                 localInvoke = std::exchange(invocation, nullptr);
@@ -1171,25 +1172,26 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
             break;
         }
         case SymbolKind::AssertionPort:
+            SLANG_ASSERT(!accessViaExpr);
             expr = &AssertionInstanceExpression::bindPort(*symbol, result.nameRange, context);
             break;
-        case SymbolKind::ConstraintBlock: {
-            // If there are selectors then this is ok -- either they will be valid because
-            // they're accessing a built-in method or they will issue an error.
-            const bool constraintAllowed = !result.selectors.empty();
-            auto hierRef = HierarchicalReference::fromLookup(comp, result);
-            expr = &ValueExpressionBase::fromSymbol(context, *symbol, &hierRef, result.nameRange,
-                                                    constraintAllowed);
-            break;
-        }
         default: {
+            const bool constraintAllowed = !result.selectors.empty();
             const bool isDottedAccess =
                 context.flags.has(ASTFlags::LValue) && !result.selectors.empty() &&
                 std::get_if<LookupResult::MemberSelector>(&result.selectors[0]) != nullptr;
 
             auto hierRef = HierarchicalReference::fromLookup(comp, result);
             expr = &ValueExpressionBase::fromSymbol(context, *symbol, &hierRef, result.nameRange,
-                                                    /* constraintAllowed */ false, isDottedAccess);
+                                                    constraintAllowed, isDottedAccess);
+
+            // If we were accessed via a virtual interface wrap the result up
+            // in a member access expression, so we don't lose the information
+            // about how we got here through the vif access.
+            if (accessViaExpr && !expr->bad()) {
+                expr = comp.emplace<MemberAccessExpression>(*expr->type, *accessViaExpr, *symbol,
+                                                            result.nameRange);
+            }
             break;
         }
     }
@@ -1211,7 +1213,7 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
                 if (!nextResult.found)
                     return badExpr(comp, expr);
 
-                return bindLookupResult(comp, nextResult, invocation, withClause, context);
+                return bindLookupResult(comp, nextResult, invocation, withClause, context, expr);
             }
 
             if (i == result.selectors.size() - 1) {

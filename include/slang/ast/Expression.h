@@ -392,8 +392,8 @@ protected:
     static Expression& bindLookupResult(
         Compilation& compilation, LookupResult& result,
         const syntax::InvocationExpressionSyntax* invocation,
-        const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
-        const ASTContext& context);
+        const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context,
+        Expression* accessViaExpr = nullptr);
 
     static Expression& bindSelectExpression(Compilation& compilation,
                                             const syntax::ElementSelectExpressionSyntax& syntax,

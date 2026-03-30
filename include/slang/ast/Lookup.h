@@ -269,8 +269,8 @@ public:
     /// selected child in @a result -- if any errors occur, diagnostics are issued to
     /// the result object and nullptr is returned.
     static void selectChild(const Type& virtualInterface, SourceRange range,
-                            std::span<LookupResult::Selector> selectors, const ASTContext& context,
-                            LookupResult& result);
+                            std::span<const LookupResult::Selector> selectors,
+                            const ASTContext& context, LookupResult& result);
 
     /// Searches for a class with the given @a name within @a context -- if no symbol is
     /// found, or if the found symbol is not a class type, appropriate diagnostics are issued.

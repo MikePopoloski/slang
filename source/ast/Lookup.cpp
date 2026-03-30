@@ -200,18 +200,6 @@ const NameSyntax* splitScopedName(const ScopedNameSyntax& syntax,
     return scoped->left;
 }
 
-const Symbol* getVirtualInterfaceTarget(const Type& type, const ASTContext& context,
-                                        SourceRange range) {
-    if (context.flags.has(ASTFlags::NonProcedural))
-        context.addDiag(diag::DynamicNotProcedural, range);
-
-    auto& vit = type.getCanonicalType().as<VirtualInterfaceType>();
-    if (vit.modport)
-        return vit.modport;
-
-    return &vit.iface;
-}
-
 bool isInProgram(const Symbol& symbol) {
     auto curr = &symbol;
     while (true) {
@@ -332,7 +320,6 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
     };
 
     // Loop through each dotted name component and try to find it in the preceeding scope.
-    bool isVirtualIface = false;
     for (auto it = nameParts.rbegin(); it != nameParts.rend(); it++) {
         if (!checkClassParams(name))
             return false;
@@ -350,22 +337,8 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
                 case SymbolKind::LetDecl:
                 case SymbolKind::AssertionPort:
                     return true;
-                default: {
-                    if (!symbol->isValue())
-                        return false;
-
-                    // If this is a virtual interface value we should unwrap to
-                    // the target interface and continue the hierarchical lookup.
-                    auto& type = symbol->as<ValueSymbol>().getType();
-                    if (type.isVirtualInterface()) {
-                        isVirtualIface = true;
-                        context.getCompilation().noteReference(*symbol);
-                        symbol = getVirtualInterfaceTarget(type, context, name.range);
-                        return false;
-                    }
-
-                    return true;
-                }
+                default:
+                    return symbol->isValue();
             }
         };
 
@@ -392,16 +365,15 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
 
         // This is a hierarchical lookup if we previously decided it was hierarchical, or:
         // - This is not a clocking block access
-        // - This is not a virtual interface access (or descended from one)
         // - This is not a direct interface port, package, or $unit reference
-        const bool isCBOrVirtualIface = symbol->kind == SymbolKind::ClockingBlock || isVirtualIface;
+        const bool isCB = symbol->kind == SymbolKind::ClockingBlock;
         if (it == nameParts.rbegin()) {
             if (symbol->kind == SymbolKind::InterfacePort) {
                 result.flags |= LookupResultFlags::IfacePort;
                 result.path.emplace_back(*symbol);
             }
             else if (symbol->kind != SymbolKind::Package &&
-                     symbol->kind != SymbolKind::CompilationUnit && !isCBOrVirtualIface) {
+                     symbol->kind != SymbolKind::CompilationUnit && !isCB) {
                 result.flags |= LookupResultFlags::IsHierarchical;
                 result.path.emplace_back(*symbol);
             }
@@ -414,7 +386,7 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
             result.addDiag(*context.scope, diag::InvalidHierarchicalIfacePortConn, errorRange);
             return false;
         }
-        else if (!isCBOrVirtualIface) {
+        else if (!isCB) {
             result.flags |= LookupResultFlags::IsHierarchical;
             result.path.emplace_back(*symbol);
         }
@@ -1459,8 +1431,8 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
 }
 
 void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
-                         std::span<LookupResult::Selector> selectors, const ASTContext& context,
-                         LookupResult& result) {
+                         std::span<const LookupResult::Selector> selectors,
+                         const ASTContext& context, LookupResult& result) {
     NameComponents unused;
     SmallVector<NamePlusLoc, 4> nameParts;
     SmallVector<const ElementSelectSyntax*> elementSelects;
@@ -1484,8 +1456,27 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
         }
     }
 
+    if (context.flags.has(ASTFlags::NonProcedural))
+        context.addDiag(diag::DynamicNotProcedural, range);
+
+    auto& vit = virtualInterface.getCanonicalType().as<VirtualInterfaceType>();
+    if (vit.modport)
+        result.found = vit.modport;
+    else
+        result.found = &vit.iface;
+
     result.nameRange = range;
-    result.found = getVirtualInterfaceTarget(virtualInterface, context, range);
+    if (!selectors.empty()) {
+        auto& last = selectors.back();
+        if (auto memberSel = std::get_if<LookupResult::MemberSelector>(&last)) {
+            result.nameRange = {range.start(), memberSel->nameRange.end()};
+        }
+        else {
+            result.nameRange = {range.start(),
+                                std::get<const ElementSelectSyntax*>(last)->sourceRange().end()};
+        }
+    }
+
     lookupDownward(nameParts, unused, context, LookupFlags::None, result);
 }
 

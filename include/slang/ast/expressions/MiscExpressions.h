@@ -35,9 +35,9 @@ public:
                                   const HierarchicalReference* hierRef, SourceRange sourceRange,
                                   bool constraintAllowed = false, bool isDottedAccess = false);
 
-    static bool checkVariableAssignment(const ASTContext& context, const VariableSymbol& var,
-                                        bitmask<AssignFlags> flags, SourceLocation assignLoc,
-                                        SourceRange varRange);
+    static bool checkLValue(const ASTContext& context, const ValueSymbol& symbol,
+                            bitmask<AssignFlags> flags, SourceLocation assignLoc,
+                            SourceRange varRange);
 
     static bool isKind(ExpressionKind kind) {
         return kind == ExpressionKind::NamedValue || kind == ExpressionKind::HierarchicalValue;

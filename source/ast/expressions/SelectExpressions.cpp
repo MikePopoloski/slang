@@ -69,13 +69,12 @@ static const Type& getIndexedType(TTypeProvider& typeProvider, const ASTContext&
 
 static void checkForVectoredSelect(const Expression& value, SourceRange range,
                                    const ASTContext& context) {
-    if (value.kind != ExpressionKind::NamedValue && value.kind != ExpressionKind::HierarchicalValue)
-        return;
+    if (auto sym = value.getSymbolReference();
+        sym && sym->kind == SymbolKind::Net &&
+        sym->as<NetSymbol>().expansionHint == NetSymbol::Vectored) {
 
-    const Symbol& sym = value.as<ValueExpressionBase>().symbol;
-    if (sym.kind == SymbolKind::Net && sym.as<NetSymbol>().expansionHint == NetSymbol::Vectored) {
         auto& diag = context.addDiag(diag::SelectOfVectoredNet, range);
-        diag.addNote(diag::NoteDeclarationHere, sym.location);
+        diag.addNote(diag::NoteDeclarationHere, sym->location);
     }
 }
 
@@ -1326,11 +1325,10 @@ bool MemberAccessExpression::requireLValueImpl(const ASTContext& context, Source
     // If this is a selection of a class or covergroup member, assignability depends only
     // on the selected member and not on the handle itself. Otherwise, the opposite is true.
     auto& valueType = value().type->getCanonicalType();
-    if (valueType.isClass() || valueType.isCovergroup() || valueType.isVoid()) {
-        if (VariableSymbol::isKind(member.kind)) {
-            return ValueExpressionBase::checkVariableAssignment(context,
-                                                                member.as<VariableSymbol>(), flags,
-                                                                location, sourceRange);
+    if (valueType.isObjectHandleType() || valueType.isVoid()) {
+        if (member.isValue()) {
+            return ValueExpressionBase::checkLValue(context, member.as<ValueSymbol>(), flags,
+                                                    location, sourceRange);
         }
 
         if (!location)

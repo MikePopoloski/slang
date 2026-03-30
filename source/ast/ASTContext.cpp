@@ -412,7 +412,7 @@ void ASTContext::noteReference(const ValueSymbol& symbol, bool isDottedAccess) c
         bool isLValue = flags.has(ASTFlags::LValue);
         if (isDottedAccess) {
             auto& type = symbol.getType();
-            if (type.isClass() || type.isCovergroup())
+            if (type.isObjectHandleType())
                 isLValue = false;
         }
 

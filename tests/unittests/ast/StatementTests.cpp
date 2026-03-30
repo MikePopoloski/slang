@@ -1124,6 +1124,8 @@ module m;
     logic l[3];
     wire [2:0] w;
 
+    wire struct packed { logic a; logic b; } st;
+
     nettype int nt;
     nt x;
 
@@ -1135,6 +1137,7 @@ module m;
         release i[1];
         force {w[1], x} = 1;
         assign q = 1;
+        force st.a = 1;
     end
 endmodule
 )");
