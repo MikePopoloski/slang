@@ -1983,27 +1983,30 @@ void Compilation::checkDPIMethods(std::span<const SubroutineSymbol* const> dpiIm
 
         std::string_view cId = getCId(*scope, syntax->c_identifier, syntax->name);
         if (!cId.empty()) {
-            {
-                auto [it, inserted] = nameMap.emplace(cId, &sub);
-                if (!inserted) {
-                    if (!checkSignaturesMatch(sub, *it->second)) {
-                        auto& diag = scope->addDiag(diag::DPISignatureMismatch,
-                                                    syntax->name.range());
-                        diag << cId;
-                        diag.addNote(diag::NotePreviousDefinition, it->second->location);
-                    }
-                }
-            }
-            {
-                auto [it, inserted] = exportsByScope.emplace(std::make_tuple(cId, scope), syntax);
-                if (!inserted) {
-                    auto& diag = scope->addDiag(diag::DPIExportDuplicateCId, syntax->name.range());
+            bool shouldRecordResolved = true;
+
+            auto [nameIt, nameInserted] = nameMap.emplace(cId, &sub);
+            if (!nameInserted) {
+                shouldRecordResolved = false;
+                if (!checkSignaturesMatch(sub, *nameIt->second)) {
+                    auto& diag = scope->addDiag(diag::DPISignatureMismatch,
+                                                syntax->name.range());
                     diag << cId;
-                    diag.addNote(diag::NotePreviousDefinition, it->second->name.location());
+                    diag.addNote(diag::NotePreviousDefinition, nameIt->second->location);
                 }
             }
 
-            resolvedDPIExports.emplace_back(&sub, std::string(cId));
+            auto [scopeIt, scopeInserted] =
+                exportsByScope.emplace(std::make_tuple(cId, scope), syntax);
+            if (!scopeInserted) {
+                shouldRecordResolved = false;
+                auto& diag = scope->addDiag(diag::DPIExportDuplicateCId, syntax->name.range());
+                diag << cId;
+                diag.addNote(diag::NotePreviousDefinition, scopeIt->second->name.location());
+            }
+
+            if (shouldRecordResolved)
+                resolvedDPIExports.emplace_back(&sub, std::string(cId));
         }
     }
 }
