@@ -554,9 +554,7 @@ public:
 
     /// Returns the resolved DPI exports collected during elaboration. Each entry
     /// contains the exported subroutine symbol and its C identifier.
-    std::span<const ResolvedDPIExport> getResolvedDPIExports() const {
-        return resolvedDPIExports;
-    }
+    std::span<const ResolvedDPIExport> getResolvedDPIExports() const { return resolvedDPIExports; }
 
     /// Tracks the existence of an out-of-block declaration (method or constraint) in the
     /// given scope. This can later be retrieved by calling findOutOfBlockDecl().
