@@ -1460,6 +1460,20 @@ class C;
 endclass
 ```
 
+-Wbits-of-integer-constant
+$bits applied to a parameter with a simple integer or scalar type always returns
+the fixed width of that type, not a value derived from the parameter itself.
+For example, `$bits(P)` where P is `parameter int` always returns 32.
+The intention here is often to instead use the parameter directly, or use $clog2().
+```
+module m;
+    parameter int max_value = 10;
+    logic[$bits(max_value+1)-1:0] value;
+
+    logic[$clog2(max_value+1)-1:0] value;
+endmodule
+```
+
 @category Compatibility
 
 -Wdpi-spec

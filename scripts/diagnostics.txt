@@ -1076,6 +1076,7 @@ warning format-multibit-strength FormatMultibitStrength "formatting strength val
 warning nonstandard-sys-func NonstandardSysFunc "system function '{}' is non-standard"
 warning isunbounded-param-arg IsUnboundedParamArg "argument to $isunbounded must be the name of a parameter"
 warning dynamic-cast-const DynamicCastConst "$cast from {} to {} will always {}"
+warning bits-of-integer-constant BitsOfIntegerConstant "$bits of expression with type {} always returns '{}'; did you mean to use the constant value directly, or use $clog2?"
 
 subsystem ConstEval
 note NoteInCallTo "in call to '{}'"
@@ -1300,7 +1301,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
                   initializer-required package-import-in-class foreach-call-expr nonstandard-hierarchical-cross
-                  nonstandard-inside nonstandard-bare-assoc-pattern }
+                  nonstandard-inside nonstandard-bare-assoc-pattern bits-of-integer-constant }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

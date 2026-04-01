@@ -1680,6 +1680,57 @@ localparam p = $bits(a);
     CHECK(p.getValue().integer() == -8);
 }
 
+TEST_CASE("$bits on simple integer parameter") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef int my_int_t;
+    parameter int P = 5;
+    localparam int LP = 10;
+    parameter my_int_t R = 42;
+    localparam a = $bits(P);
+    localparam b = $bits(P+1);
+    localparam c = $bits(LP);
+    localparam d = $bits(R);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK(diags.size() == 4);
+    for (auto& d : diags)
+        CHECK(d.code == diag::BitsOfIntegerConstant);
+}
+
+TEST_CASE("$bits on simple integer parameter: no warn cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter type T = int, parameter T TP = 5);
+    typedef struct packed { logic [7:0] a; logic [7:0] b; } my_t;
+    parameter my_t S = '{default: 0};
+
+    // Allow type parameters that happen to be ints
+    localparam a = $bits(T);
+    localparam b = $bits(S);
+    // It will warn in this case, but $bits(T) can be used instead.
+    // localparam c = $bits(TP);
+    localparam d = $bits(int);
+
+    // Allow signals that are ints
+    int x;
+    logic [31:0] y;
+    byte z;
+    localparam e = $bits(x);
+    localparam f = $bits(y);
+    localparam g = $bits(z);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Restriction on automatic variables in $past") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
