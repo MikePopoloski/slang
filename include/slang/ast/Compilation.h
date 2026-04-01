@@ -549,11 +549,19 @@ public:
     /// but are otherwise unused by SystemVerilog code.
     void noteDPIExportDirective(const syntax::DPIExportSyntax& syntax, const Scope& scope);
 
-    /// A DPI export entry: the subroutine symbol and its C identifier.
-    using DPIExport = std::pair<const SubroutineSymbol*, std::string>;
+    /// A DPI export entry.
+    struct DPIExport {
+        /// The exported subroutine symbol.
+        const SubroutineSymbol* subroutine = nullptr;
 
-    /// Returns the DPI exports collected during elaboration. Each entry
-    /// contains the exported subroutine symbol and its C identifier.
+        /// The C identifier used for the export.
+        std::string cIdentifier;
+
+        /// The original export declaration syntax node.
+        const syntax::DPIExportSyntax* syntax = nullptr;
+    };
+
+    /// Returns the DPI exports collected during elaboration.
     std::span<const DPIExport> getDPIExports() const { return dpiExports; }
 
     /// Tracks the existence of an out-of-block declaration (method or constraint) in the
@@ -1003,7 +1011,7 @@ private:
     // A list of raw DPI export directives collected during elaboration.
     std::vector<std::pair<const syntax::DPIExportSyntax*, const Scope*>> dpiExportDirectives;
 
-    // Resolved DPI exports collected during elaboration: (subroutine, C identifier) pairs.
+    // Resolved DPI exports collected during elaboration.
     std::vector<DPIExport> dpiExports;
 
     // A list of bind directives we've encountered during elaboration.

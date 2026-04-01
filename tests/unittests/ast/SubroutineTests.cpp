@@ -11,6 +11,7 @@
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
+#include "slang/syntax/AllSyntax.h"
 
 TEST_CASE("Functions -- mixed param types") {
     auto tree = SyntaxTree::fromText(R"(
@@ -315,10 +316,14 @@ endmodule
 
     auto exports = compilation.getDPIExports();
     REQUIRE(exports.size() == 2);
-    CHECK(exports[0].first->name == "f1");
-    CHECK(exports[0].second == "f1");
-    CHECK(exports[1].first->name == "f2");
-    CHECK(exports[1].second == "my_f2");
+    CHECK(exports[0].subroutine->name == "f1");
+    CHECK(exports[0].cIdentifier == "f1");
+    CHECK(exports[0].syntax != nullptr);
+    CHECK(exports[0].syntax->name.valueText() == "f1");
+    CHECK(exports[1].subroutine->name == "f2");
+    CHECK(exports[1].cIdentifier == "my_f2");
+    CHECK(exports[1].syntax != nullptr);
+    CHECK(exports[1].syntax->c_identifier.valueText() == "my_f2");
 }
 
 TEST_CASE("DPI signature checking") {

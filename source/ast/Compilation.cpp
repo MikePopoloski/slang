@@ -2005,7 +2005,7 @@ void Compilation::checkDPIMethods(std::span<const SubroutineSymbol* const> dpiIm
             }
 
             if (shouldRecordResolved)
-                dpiExports.emplace_back(&sub, std::string(cId));
+                dpiExports.push_back(DPIExport{&sub, std::string(cId), syntax});
         }
     }
 }

@@ -113,10 +113,14 @@ endmodule
 
     exports = comp.getDPIExports()
     assert len(exports) == 2
-    assert exports[0][0].name == "f1"
-    assert exports[0][1] == "f1"
-    assert exports[1][0].name == "f2"
-    assert exports[1][1] == "my_f2"
+    assert exports[0].subroutine.name == "f1"
+    assert exports[0].cIdentifier == "f1"
+    assert exports[0].syntax is not None
+    assert exports[0].syntax.kind == SyntaxKind.DPIExport
+    assert exports[1].subroutine.name == "f2"
+    assert exports[1].cIdentifier == "my_f2"
+    assert exports[1].syntax is not None
+    assert exports[1].syntax.kind == SyntaxKind.DPIExport
 
 
 def test_include_metadata():
