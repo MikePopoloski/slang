@@ -502,18 +502,23 @@ void ASTContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked,
 
                 result.kind = DimensionKind::AbbreviatedRange;
                 result.range = {0, *value - 1};
+                result.leftExpr = &expr;
             }
             break;
         }
         case SyntaxKind::SimpleRangeSelect: {
             auto& rangeSyntax = syntax.as<RangeSelectSyntax>();
-            auto left = evalInteger(*rangeSyntax.left);
-            auto right = evalInteger(*rangeSyntax.right);
+            auto& leftExpr = Expression::bind(*rangeSyntax.left, *this);
+            auto& rightExpr = Expression::bind(*rangeSyntax.right, *this);
+            auto left = evalInteger(leftExpr);
+            auto right = evalInteger(rightExpr);
             if (!left || !right)
                 return;
 
             result.kind = DimensionKind::Range;
             result.range = {*left, *right};
+            result.leftExpr = &leftExpr;
+            result.rightExpr = &rightExpr;
             break;
         }
         default:

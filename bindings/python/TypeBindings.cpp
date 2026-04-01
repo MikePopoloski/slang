@@ -149,7 +149,8 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("initializer", &DeclaredType::getInitializer)
         .def_property_readonly("initializerSyntax", &DeclaredType::getInitializerSyntax)
         .def_property_readonly("initializerLocation", &DeclaredType::getInitializerLocation)
-        .def_property_readonly("isEvaluating", &DeclaredType::isEvaluating);
+        .def_property_readonly("isEvaluating", &DeclaredType::isEvaluating)
+        .def_property_readonly("resolvedDimensions", &DeclaredType::getResolvedDimensions);
 
     py::classh<IntegralType, Type>(m, "IntegralType")
         .def("getBitVectorRange", &IntegralType::getBitVectorRange)

@@ -9,6 +9,7 @@
 
 #include <tuple>
 
+#include "slang/ast/EvaluatedDimension.h"
 #include "slang/ast/Lookup.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/SemanticFacts.h"
@@ -186,19 +187,6 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
 };
 SLANG_BITMASK(ASTFlags, WildcardPortConn)
 
-// clang-format off
-#define DK(x) \
-    x(Unknown) \
-    x(Range) \
-    x(AbbreviatedRange) \
-    x(Dynamic) \
-    x(Associative) \
-    x(Queue) \
-    x(DPIOpenArray)
-// clang-format on
-SLANG_ENUM(DimensionKind, DK)
-#undef DK
-
 /// Various flags that can be applied to a constant expression evaluation.
 enum class SLANG_EXPORT EvalFlags : uint8_t {
     /// No special flags specified.
@@ -221,29 +209,6 @@ enum class SLANG_EXPORT EvalFlags : uint8_t {
     AllowUnboundedPlaceholder = 1 << 3
 };
 SLANG_BITMASK(EvalFlags, AllowUnboundedPlaceholder)
-
-/// The result of evaluating dimension syntax nodes.
-struct SLANG_EXPORT EvaluatedDimension {
-    /// The kind of dimension indicated by the syntax nodes.
-    DimensionKind kind = DimensionKind::Unknown;
-
-    /// The compile-time constant range specifying the dimensions.
-    ConstantRange range;
-
-    /// If the dimension is for an associative type, this is a pointer to that type.
-    /// Otherwise nullptr.
-    const Type* associativeType = nullptr;
-
-    /// If the dimension is for a queue type, this is the optionally specified
-    /// max queue size.
-    uint32_t queueMaxSize = 0;
-
-    /// Indicates whether the dimension is for a range (as opposed to a single
-    /// index or an associative array access, for example).
-    bool isRange() const {
-        return kind == DimensionKind::Range || kind == DimensionKind::AbbreviatedRange;
-    }
-};
 
 /// Information required to instantiate a sequence, property, or checker instance.
 struct SLANG_EXPORT AssertionInstanceDetails {
