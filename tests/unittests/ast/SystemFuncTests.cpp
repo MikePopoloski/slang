@@ -2406,3 +2406,33 @@ endmodule
     CHECK(diags[1].code == diag::TooManyArguments);
     CHECK(diags[2].code == diag::NoImplicitConversion);
 }
+
+TEST_CASE("$monitor field check regress -- GH #1768") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    typedef struct {
+        logic [7:0] a1;
+    } s2_t;
+
+    typedef struct {
+        s2_t s2;
+    } s1_t;
+
+    logic [7:0] a2;
+    logic clk;
+    s1_t s1;
+
+    initial begin
+        forever @(negedge clk) $strobe("%t %m a1=%x", $time, s1.s2.a1);
+    end
+
+    initial begin
+        forever @(negedge clk) $strobe("%t %m a2=%x", $time, a2);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
