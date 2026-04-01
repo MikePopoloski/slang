@@ -269,4 +269,11 @@ if(SLANG_INCLUDE_INSTALL)
       EXPORT slangTargets
       COMPONENT slang_Development)
   endif()
+
+  if(SLANG_USE_THREADS)
+    install(
+      FILES ${PROJECT_SOURCE_DIR}/external/BS_thread_pool.hpp
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      COMPONENT slang_Development)
+  endif()
 endif()
