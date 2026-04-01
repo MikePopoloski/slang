@@ -1984,6 +1984,51 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Interface instance array to virtual interface in uninstantiated module -- GH #1766") {
+    auto tree = SyntaxTree::fromText(R"(
+interface intf #(
+  parameter int WIDTH = 8
+)(
+  input logic clk_i
+);
+  logic [WIDTH-1:0] data;
+endinterface
+
+class cls #(
+  parameter int W = 8,
+  parameter int N = 2
+);
+  virtual intf #(.WIDTH(W)) vif [N];
+
+  function new(virtual intf #(.WIDTH(W)) my_intf [N]);
+    this.vif = my_intf;
+  endfunction
+endclass
+
+module other_top;
+endmodule
+
+module bug_top #(
+  parameter int NumPorts = 2,
+  parameter int Width    = 16
+);
+  logic clk;
+  intf #(.WIDTH(Width)) i_array [NumPorts] (clk);
+
+  initial begin : proc
+    static cls #(.W(Width), .N(NumPorts)) c = new(i_array);
+  end
+endmodule
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("other_top");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Instance caching with nested bind directives") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

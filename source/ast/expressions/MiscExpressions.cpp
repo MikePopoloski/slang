@@ -155,6 +155,17 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
                                                             sourceRange);
         }
 
+        // An UninstantiatedDef is a placeholder for an instance (module, interface, etc.)
+        // that could not be elaborated, e.g. because we are in an uninstantiated module
+        // context where parameter values are not known. The type is unknown in this case,
+        // so return an error-typed expression without emitting an error, consistent with
+        // how tryBindInterfaceRef handles the same situation.
+        if (symbol.kind == SymbolKind::UninstantiatedDef) {
+            return *comp.emplace<ArbitrarySymbolExpression>(*context.scope, symbol,
+                                                            comp.getErrorType(), hierRef,
+                                                            sourceRange);
+        }
+
         // It's possible for the name to be empty here in cases
         // where we looked up something like a generic class type
         // and there was some error in resolving it to a real type,
