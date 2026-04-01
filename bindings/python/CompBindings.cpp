@@ -11,6 +11,7 @@
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/symbols/AttributeSymbol.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
@@ -130,6 +131,14 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def("getStdPackage", &Compilation::getStdPackage, byrefint)
         .def("getPackages", &Compilation::getPackages, byrefint)
         .def("getGateType", &Compilation::getGateType, byrefint, "name"_a)
+        .def("getDPIExports",
+             [](const Compilation& self) {
+                 py::list result;
+                 auto parent = py::cast(&self);
+                 for (auto& entry : self.getDPIExports())
+                     result.append(py::cast(&entry, byrefint, parent));
+                 return result;
+             })
         .def("getAttributes",
              py::overload_cast<const Symbol&>(&Compilation::getAttributes, py::const_), byrefint,
              "symbol"_a)
@@ -170,6 +179,11 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def_readwrite("definition", &Compilation::DefinitionLookupResult::definition)
         .def_readwrite("configRoot", &Compilation::DefinitionLookupResult::configRoot)
         .def_readwrite("configRule", &Compilation::DefinitionLookupResult::configRule);
+
+    py::classh<Compilation::DPIExport>(comp, "DPIExport")
+        .def_readonly("subroutine", &Compilation::DPIExport::subroutine)
+        .def_readonly("cIdentifier", &Compilation::DPIExport::cIdentifier)
+        .def_readonly("syntax", &Compilation::DPIExport::syntax);
 
     py::classh<ScriptSession>(ast, "ScriptSession")
         .def(py::init<>())

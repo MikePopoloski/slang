@@ -11,6 +11,7 @@
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
+#include "slang/syntax/AllSyntax.h"
 
 TEST_CASE("Functions -- mixed param types") {
     auto tree = SyntaxTree::fromText(R"(
@@ -297,6 +298,32 @@ endmodule
     CHECK(diags[9].code == diag::DPIExportImportedFunc);
     CHECK(diags[10].code == diag::InvalidDPICIdentifier);
     CHECK(diags[11].code == diag::InvalidDPICIdentifier);
+}
+
+TEST_CASE("Compilation collects DPI exports") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void f1; endfunction
+    function void f2; endfunction
+    export "DPI-C" function f1;
+    export "DPI-C" my_f2 = function f2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto exports = compilation.getDPIExports();
+    REQUIRE(exports.size() == 2);
+    CHECK(exports[0].subroutine->name == "f1");
+    CHECK(exports[0].cIdentifier == "f1");
+    CHECK(exports[0].syntax != nullptr);
+    CHECK(exports[0].syntax->name.valueText() == "f1");
+    CHECK(exports[1].subroutine->name == "f2");
+    CHECK(exports[1].cIdentifier == "my_f2");
+    CHECK(exports[1].syntax != nullptr);
+    CHECK(exports[1].syntax->c_identifier.valueText() == "my_f2");
 }
 
 TEST_CASE("DPI signature checking") {
