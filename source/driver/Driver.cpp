@@ -75,6 +75,10 @@ void Driver::addStandardArgs() {
     cmdLine.add("--disable-local-includes", options.disableLocalIncludes,
                 "Disables \"local\" include path lookup, where include directives search "
                 "relative to the file containing the directive first");
+    cmdLine.add("--incdir-first", options.incDirFirst,
+                "Search user-specified include directories (+incdir/-I) before the local "
+                "directory of the file containing the include directive. This matches the "
+                "behavior of VCS and similar simulators");
 
     // Preprocessor
     cmdLine.add("-D,--define-macro,+define", options.defines,
@@ -617,6 +621,9 @@ bool Driver::processOptions() {
 
     if (options.disableLocalIncludes == true)
         sourceManager.setDisableLocalIncludes(true);
+
+    if (options.incDirFirst.value_or(options.compat == CompatMode::Vcs))
+        sourceManager.setIncDirFirst(true);
 
     if (!reportLoadErrors())
         return false;

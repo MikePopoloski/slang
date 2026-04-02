@@ -221,6 +221,12 @@ public:
     /// relative to the file containing the directive first.
     void setDisableLocalIncludes(bool set) { disableLocalIncludes = set; }
 
+    /// Sets whether user-specified include directories (+incdir/-I) are searched before
+    /// the local directory of the file containing the include directive. When false (the
+    /// default), the local directory is searched first. When true, the behavior matches
+    /// VCS and similar simulators that always prefer +incdir directories over local lookup.
+    void setIncDirFirst(bool set) { incDirFirst = set; }
+
     /// Adds a line directive at the given location.
     void addLineDirective(SourceLocation location, size_t lineNum, std::string_view name,
                           uint8_t level);
@@ -367,6 +373,7 @@ private:
     std::atomic<uint32_t> unnamedBufferCount = 0;
     bool disableProximatePaths = false;
     bool disableLocalIncludes = false;
+    bool incDirFirst = false;
 
     template<IsLock TLock>
     FileInfo* getFileInfo(BufferID buffer, TLock& lock);

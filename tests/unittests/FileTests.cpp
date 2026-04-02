@@ -135,7 +135,8 @@ TEST_CASE("File globbing") {
     globAndCheck(testDir, ".../f*.svh", GlobMode::Files, GlobRank::WildcardName, {},
                  {"file.svh", "file_defn.svh", "file_uses_defn.svh"});
     globAndCheck(testDir, "*ste*/", GlobMode::Files, GlobRank::Directory, {},
-                 {"file.svh", "macro.svh", "nested_local.svh", "system.svh", "system.map"});
+                 {"file.svh", "macro.svh", "nested_local.svh", "system.svh", "system.map",
+                  "incdir_shadow.svh"});
     globAndCheck(testDir, testDir + "/library/pkg.sv", GlobMode::Files, GlobRank::ExactPath, {},
                  {"pkg.sv"});
     globAndCheck(testDir, testDir + "/li?ra?y/pkg.sv", GlobMode::Files, GlobRank::SimpleName, {},

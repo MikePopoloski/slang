@@ -454,7 +454,7 @@ SourceManager::BufferOrError SourceManager::readHeader(
         return nonstd::make_unexpected(make_error_code(std::errc::no_such_file_or_directory));
     }
 
-    // search relative to the current file
+    // Determine the local (relative-to-current-file) directory, used below.
     const fs::path* currFileDir = nullptr;
     if (!disableLocalIncludes) {
         auto fileLoc = getFullyExpandedLoc(includedFrom);
@@ -465,7 +465,10 @@ SourceManager::BufferOrError SourceManager::readHeader(
             currFileDir = info->data->directory;
     }
 
-    if (currFileDir) {
+    // When incDirFirst is set, user-specified directories (+incdir/-I) are searched
+    // before the local directory, matching the behavior of VCS and similar simulators.
+    // Otherwise (default), the local directory is searched first.
+    if (!incDirFirst && currFileDir) {
         auto result = openCached(*currFileDir / p, includedFrom, library);
         if (result)
             return result;
@@ -490,6 +493,12 @@ SourceManager::BufferOrError SourceManager::readHeader(
     std::shared_lock<std::shared_mutex> includeDirLock(includeDirMutex);
     for (auto& d : userDirectories) {
         auto result = openCached(d / p, includedFrom, library);
+        if (result)
+            return result;
+    }
+
+    if (incDirFirst && currFileDir) {
+        auto result = openCached(*currFileDir / p, includedFrom, library);
         if (result)
             return result;
     }

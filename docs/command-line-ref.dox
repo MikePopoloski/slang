@@ -170,6 +170,14 @@ Undefine the given macro at the start of all source files.
 Disables "local" include path lookup, where include directives search relative to the file
 containing the directive first.
 
+`--incdir-first`
+
+Search user-specified include directories (set via `-I`, `--include-directory`, or `+incdir`)
+before the local directory of the file containing the include directive. By default, slang
+searches the local directory first and falls back to the user-specified directories.
+
+This option is enabled automatically when `--compat=vcs` is used.
+
 @section clr-preprocessor Preprocessor
 
 `--comments`

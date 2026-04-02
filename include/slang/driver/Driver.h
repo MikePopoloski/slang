@@ -174,6 +174,11 @@ public:
         /// relative to the file containing the directive first.
         std::optional<bool> disableLocalIncludes;
 
+        /// If true, user-specified include directories (+incdir/-I) are searched before
+        /// the local directory of the file containing the include directive, matching the
+        /// behavior of VCS and similar simulators.
+        std::optional<bool> incDirFirst;
+
         /// If true, the preprocessor will allow trailing spaces after the continuation character
         /// in macro definitions.
         std::optional<bool> allowMacroTrailingSpace;
