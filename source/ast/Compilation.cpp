@@ -22,6 +22,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/CharInfo.h"
+#include "slang/text/SourceManager.h"
 #include "slang/util/TimeTrace.h"
 
 using namespace slang::parsing;
@@ -865,9 +866,27 @@ void Compilation::insertDefinition(Symbol& symbol, const Scope& scope) {
                 auto vSym = *v;
                 auto vLib = vSym->getSourceLibrary();
                 if (vLib == symLib) {
-                    // Duplicate in the same library. If they are both the same kind
-                    // then we report a warning and take the first one, otherwise
-                    // we give a hard error.
+                    // Duplicate in the same library.
+                    if (hasFlag(CompilationFlags::AllowLibModuleRedefinition)) {
+                        // VCS-like behavior: silently keep the first definition and
+                        // discard all subsequent ones, but only when the incoming
+                        // duplicate comes from a library file (-v / --libfile).
+                        bool isLibrary = false;
+                        if (symbol.kind == SymbolKind::Definition) {
+                            auto st = symbol.as<DefinitionSymbol>().syntaxTree;
+                            isLibrary = st && st->isLibraryUnit;
+                        }
+                        else if (sourceManager) {
+                            auto loc = symbol.location;
+                            isLibrary = loc.valid() && sourceManager->getBufferKind(loc.buffer()) ==
+                                                           SourceManager::BufferKind::LibraryFile;
+                        }
+                        if (isLibrary)
+                            return;
+                    }
+
+                    // If they are both the same kind then we report a warning and
+                    // take the first one, otherwise we give a hard error.
                     if (vSym->kind == symbol.kind) {
                         if (!warned) {
                             // We keep going after this because there might also

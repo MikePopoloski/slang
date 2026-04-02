@@ -239,6 +239,11 @@ void Driver::addStandardArgs() {
                 "Allow assignment pattern expressions to be used in unpacked array "
                 "concatenations. The LRM states that these are not assignment-like "
                 "contexts but some tools allow it anyway.");
+    addCompFlag(CompilationFlags::AllowLibModuleRedefinition, "--allow-lib-module-redef",
+                "Allow multiple definitions of the same module, interface, program, or "
+                "primitive at the root scope within the same library when the conflicting "
+                "definition comes from a library file (-v / --libfile); the first definition "
+                "is kept and subsequent library-file redefinitions are silently discarded");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "
