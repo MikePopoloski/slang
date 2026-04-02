@@ -2444,9 +2444,6 @@ void Compilation::resolveDefParamsAndBinds() {
         // constantly mucking with parameter values in ways that can change the actual
         // hierarchy that gets instantiated. Cloning lets us do that in an isolated context
         // and throw that work away once we know the final parameter values.
-        Compilation initialClone({}, defaultLibPtr);
-        cloneInto(initialClone);
-
         size_t currBlocksSeen;
         auto nextIt = [&] {
             // If we haven't found any new blocks we're done iterating.
@@ -2460,37 +2457,43 @@ void Compilation::resolveDefParamsAndBinds() {
             return false;
         };
 
-        while (true) {
-            DefParamVisitor v(options.maxInstanceDepth, options.maxDefParamBlocks, generateLevel);
-            initialClone.getRoot(/* skipDefParamsAndBinds */ true).visit(v);
-            if (checkProblem(v))
-                return;
+        {
+            Compilation initialClone({}, defaultLibPtr);
+            cloneInto(initialClone);
 
-            currBlocksSeen = v.numBlocksSeen;
-            if (v.found.size() > numDefParamsSeen ||
-                initialClone.bindDirectives.size() > numBindsSeen) {
-                numDefParamsSeen = v.found.size();
-                saveState(v, initialClone);
-                break;
+            while (true) {
+                DefParamVisitor v(options.maxInstanceDepth, options.maxDefParamBlocks,
+                                  generateLevel);
+                initialClone.getRoot(/* skipDefParamsAndBinds */ true).visit(v);
+                if (checkProblem(v))
+                    return;
+
+                currBlocksSeen = v.numBlocksSeen;
+                if (v.found.size() > numDefParamsSeen ||
+                    initialClone.bindDirectives.size() > numBindsSeen) {
+                    numDefParamsSeen = v.found.size();
+                    saveState(v, initialClone);
+                    break;
+                }
+
+                // We didn't find any more binds or defparams so increase
+                // our generate level and try again.
+                if (nextIt() || !v.skippedAnything) {
+                    saveState(v, initialClone);
+                    break;
+                }
             }
 
-            // We didn't find any more binds or defparams so increase
-            // our generate level and try again.
-            if (nextIt() || !v.skippedAnything) {
-                saveState(v, initialClone);
-                break;
+            // If we have found more binds, do another visit to let them be applied
+            // and potentially add blocks and defparams to our set for this level.
+            if (initialClone.bindDirectives.size() > numBindsSeen) {
+                // Reset the number of defparams seen to ensure that
+                // we re-resolve everything after the next iteration.
+                numDefParamsSeen = 0;
+                numBindsSeen = initialClone.bindDirectives.size();
+                continue;
             }
-        }
-
-        // If we have found more binds, do another visit to let them be applied
-        // and potentially add blocks and defparams to our set for this level.
-        if (initialClone.bindDirectives.size() > numBindsSeen) {
-            // Reset the number of defparams seen to ensure that
-            // we re-resolve everything after the next iteration.
-            numDefParamsSeen = 0;
-            numBindsSeen = initialClone.bindDirectives.size();
-            continue;
-        }
+        } // initialClone freed here
 
         // If we found no defparams we're done.
         if (numDefParamsSeen == 0)
