@@ -382,6 +382,58 @@ namespace slang::syntax {
             outf.write("    PtrTokenOrSyntax getChildPtr(size_t index);\n")
             outf.write("    void setChild(size_t index, TokenOrSyntax child);\n\n")
 
+            # Generate getSize(): total memory for this node and all non-SyntaxNode
+            # members it owns (directly or via contained lists/tokens).
+            #
+            # Rules per member type:
+            #   Token          - sizeof in sizeof(*this); add getReferencedSize()
+            #                    for the Info block + trivia heap.
+            #   TokenList      - sizeof(TokenList) in sizeof(*this); add the span
+            #                    array (size*sizeof(Token)) and getReferencedSize()
+            #                    for every Token value in the span.
+            #   SyntaxList<U>  - sizeof in sizeof(*this); add the pointer span array
+            #                    (size*sizeof(U*)); do NOT recurse into U nodes —
+            #                    the visitor counts those separately.
+            #   SepSyntaxList  - sizeof in sizeof(*this); add the TokenOrSyntax span
+            #                    array and getReferencedSize() for separator Tokens;
+            #                    do NOT recurse into U nodes.
+            #   U* / not_null  - pointer already in sizeof(*this); nothing extra.
+            outf.write("    size_t getSize() const {\n")
+            outf.write("        size_t total = sizeof(*this);\n")
+            for m in currtype.combinedMembers:
+                mtype, mname = m[0], m[1]
+                if mtype == "Token":
+                    outf.write(
+                        "        total += {}.getReferencedSize();\n".format(mname)
+                    )
+                elif mtype == "TokenList":
+                    outf.write(
+                        "        total += {0}.size() * sizeof(Token);\n".format(mname)
+                    )
+                    outf.write(
+                        "        for (const auto& t : {0}) total += t.getReferencedSize();\n".format(
+                            mname
+                        )
+                    )
+                elif mtype.startswith("SyntaxList<"):
+                    outf.write(
+                        "        total += {0}.size() * sizeof(void*);\n".format(mname)
+                    )
+                elif mtype.startswith("SeparatedSyntaxList<"):
+                    outf.write(
+                        "        total += {0}.getChildCount() * sizeof(TokenOrSyntax);\n".format(
+                            mname
+                        )
+                    )
+                    outf.write(
+                        "        for (const auto& ts : {0}.elems())\n".format(mname)
+                    )
+                    outf.write(
+                        "            if (ts.isToken()) total += ts.token().getReferencedSize();\n"
+                    )
+            outf.write("        return total;\n")
+            outf.write("    }\n\n")
+
             docf.write(
                 "    @fn static bool slang::syntax::{}::isChildOptional(size_t index);\n".format(
                     name

@@ -452,6 +452,23 @@ Token Token::deepClone(BumpAllocator& alloc) const {
     return clone(alloc, triviaBuffer.copy(alloc), rawText(), location());
 }
 
+size_t Token::getReferencedSize() const {
+    if (!info)
+        return 0;
+    size_t size = sizeof(Info) + getExtraSize(kind);
+    if (triviaCountSmall > 0) {
+        size += sizeof(const Trivia*);
+        if (triviaCountSmall > MaxTriviaSmallCount)
+            size += sizeof(size_t);
+    }
+    size += trivia().size() * sizeof(Trivia);
+    return size;
+}
+
+size_t Token::getTriviaArraySize() const {
+    return trivia().size() * sizeof(Trivia);
+}
+
 void Token::init(BumpAllocator& alloc, TokenKind kind_, std::span<Trivia const> trivia,
                  std::string_view rawText, SourceLocation location) {
     kind = kind_;

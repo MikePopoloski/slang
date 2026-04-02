@@ -824,4 +824,16 @@ const SourceManager::LineDirectiveInfo* SourceManager::FileInfo::getPreviousLine
     }
 }
 
+size_t SourceManager::getMemoryUsage() const {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    size_t total = 0;
+    for (auto& [path, entry] : lookupCache) {
+        if (entry.first) {
+            total += entry.first->mem.size();
+            total += entry.first->lineOffsets.size() * sizeof(size_t);
+        }
+    }
+    return total;
+}
+
 } // namespace slang

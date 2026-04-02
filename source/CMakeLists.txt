@@ -98,6 +98,7 @@ add_library(
   parsing/Preprocessor_macros.cpp
   parsing/Preprocessor_pragmas.cpp
   parsing/Token.cpp
+  syntax/CSTMemoryStats.cpp
   syntax/CSTSerializer.cpp
   syntax/SyntaxFacts.cpp
   syntax/SyntaxNode.cpp

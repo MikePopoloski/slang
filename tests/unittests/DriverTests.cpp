@@ -9,6 +9,7 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/driver/Driver.h"
+#include "slang/syntax/CSTMemoryStats.h"
 #include "slang/text/SourceManager.h"
 
 using namespace slang::driver;
@@ -1339,4 +1340,38 @@ TEST_CASE("Driver file preprocess with source info") {
     CHECK(contains(output, "test.sv:4\nmodule m;"));
     CHECK(contains(output, "mod1.sv:1\nmodule mod1"));
     CHECK(contains(output, "test.sv:15\n"));
+}
+
+TEST_CASE("Driver CST memory stats -- output contains expected sections") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format(
+        "testfoo \"{0}test4.sv\" --top=frob --allow-use-before-declare -DFOOBAR -Gbar=1",
+        findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    // Write CST stats to a temp file and verify the major section headers are present.
+    std::string tmpPath = "/tmp/slang_cst_stats_test.txt";
+    printCSTMemoryStats(driver, tmpPath);
+
+    std::ifstream f(tmpPath);
+    REQUIRE(f.is_open());
+    std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    std::remove(tmpPath.c_str());
+
+    CHECK(content.find("--- CST (Concrete Syntax Tree) ---") != std::string::npos);
+    CHECK(content.find("Driver Components:") != std::string::npos);
+    CHECK(content.find("Source Manager") != std::string::npos);
+    CHECK(content.find("Syntax Tree Allocators") != std::string::npos);
+    CHECK(content.find("Syntax Node Data:") != std::string::npos);
+    CHECK(content.find("Node type breakdown") != std::string::npos);
+    CHECK(content.find("Module/Package/Scope breakdown") != std::string::npos);
+    // The parsed module should appear as a named scope.
+    CHECK(content.find("baz") != std::string::npos);
 }

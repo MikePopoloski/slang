@@ -9,6 +9,7 @@
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/parsing/ParserMetadata.h"
+#include "slang/parsing/Token.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxPrinter.h"
@@ -184,6 +185,39 @@ public:
         insertAtBack(portList->ports, makeArg("argZ"), makeComma());
     }
 };
+
+TEST_CASE("Token getReferencedSize and SyntaxNode getSize") {
+    using namespace slang::parsing;
+    using namespace slang::syntax;
+
+    auto tree = SyntaxTree::fromText("module m; endmodule");
+
+    // Collect all tokens and find the ModuleDeclarationSyntax via the visitor.
+    struct Collector : public SyntaxVisitor<Collector> {
+        void visitToken(Token tok) {
+            if (tok.valid())
+                tokens.push_back(tok);
+        }
+        void handle(const ModuleDeclarationSyntax& node) {
+            modDecl = &node;
+            visitDefault(node);
+        }
+        std::vector<Token> tokens;
+        const ModuleDeclarationSyntax* modDecl = nullptr;
+    } collector;
+    tree->root().visit(collector);
+
+    // Every valid token must have a positive referenced size (Info block).
+    REQUIRE(!collector.tokens.empty());
+    for (auto& tok : collector.tokens) {
+        CHECK(tok.getReferencedSize() > 0);
+        CHECK(tok.getTriviaArraySize() <= tok.getReferencedSize());
+    }
+
+    // getSize() on the module declaration must be >= the struct's sizeof.
+    REQUIRE(collector.modDecl != nullptr);
+    CHECK(collector.modDecl->getSize() >= sizeof(*collector.modDecl));
+}
 
 TEST_CASE("Basic rewriting") {
     auto tree = SyntaxTree::fromText(R"(

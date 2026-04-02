@@ -185,6 +185,14 @@ public:
     bool valid() const { return info != nullptr; }
     explicit operator bool() const { return valid(); }
 
+    /// Returns the size in bytes of all heap-allocated data referenced by this token beyond
+    /// sizeof(Token): the Info block (including any extra type-specific data) plus the trivia
+    /// array.
+    size_t getReferencedSize() const;
+
+    /// Returns the size in bytes of the trivia array separately allocated for this token.
+    size_t getTriviaArraySize() const;
+
     bool operator==(const Token& other) const { return kind == other.kind && info == other.info; }
 
     /// Modification methods to make it easier to deal with immutable tokens.

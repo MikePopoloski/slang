@@ -146,6 +146,9 @@ public:
     /// Gets the number of (direct) children underneath this node in the tree.
     size_t getChildCount() const; // Note: implemented in AllSyntax.cpp
 
+    /// Gets the memory allocated for this node.
+    size_t getSize() const { return sizeof(*this); }
+
     /// An iterator that walks through all tokens in a syntax node in order.
     class SLANG_EXPORT token_iterator : public iterator_facade<token_iterator> {
     public:

@@ -68,7 +68,15 @@ BumpAllocator::Segment* BumpAllocator::allocSegment(Segment* prev, size_t size) 
     auto seg = (Segment*)::operator new(size);
     seg->prev = prev;
     seg->current = (byte*)seg + sizeof(Segment);
+    seg->allocatedSize = size;
     return seg;
+}
+
+size_t BumpAllocator::getTotalAllocatedBytes() const {
+    size_t total = 0;
+    for (Segment* seg = head; seg; seg = seg->prev)
+        total += seg->allocatedSize;
+    return total;
 }
 
 } // namespace slang

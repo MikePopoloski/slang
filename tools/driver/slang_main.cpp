@@ -14,6 +14,7 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
+#include "slang/syntax/CSTMemoryStats.h"
 #include "slang/syntax/CSTSerializer.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/Json.h"
@@ -212,6 +213,12 @@ int driverMain(int argc, TArgs argv) {
                            "the results to the given file in Chrome Event Tracing JSON format",
                            "<path>");
 
+        std::optional<std::string> cstMemoryStatsFile;
+        driver.cmdLine.add(
+            "--cst-memory-stats", cstMemoryStatsFile,
+            "Dump CST memory usage statistics to the specified file, or '-' for stdout", "<file>",
+            CommandLineFlags::FilePath);
+
         if (!driver.parseCommandLine(argc, argv))
             return 1;
 
@@ -283,6 +290,9 @@ int driverMain(int argc, TArgs argv) {
                 printCSTJson(driver, *cstJsonFile, cstJsonMode.value_or(CSTJsonMode::Full));
             }
 
+            if (cstMemoryStatsFile)
+                printCSTMemoryStats(driver, *cstMemoryStatsFile);
+
             if (onlyParse == true)
                 return ok && driver.reportParseDiags();
 
@@ -305,6 +315,7 @@ int driverMain(int argc, TArgs argv) {
                 printASTJson(*compilation, *astJsonFile, astJsonScopes, includeSourceInfo == true,
                              serializeDetailedTypes == true);
             }
+
             return ok;
         };
 

@@ -172,6 +172,10 @@ public:
     /// Gets the actual source text for a given file buffer.
     std::string_view getSourceText(BufferID buffer) const;
 
+    /// Returns the total bytes consumed by all loaded source files:
+    /// raw file content plus any cached line-offset tables.
+    size_t getMemoryUsage() const;
+
     /// Gets a value that can be used to sort a given buffer when comparing
     /// to other buffers.
     uint64_t getSortKey(BufferID buffer) const;

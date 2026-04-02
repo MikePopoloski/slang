@@ -340,6 +340,22 @@ Controls the level of detail included in the CST JSON output. The available mode
 
 The default mode is `full` if this option is not specified.
 
+`--cst-memory-stats <file>`
+
+Dump memory usage statistics for the concrete syntax tree to the specified file, or '-' for
+stdout. May be invoked as soon as parsing is complete, even when elaboration is skipped.
+
+The report is organized into three sections:
+
+- **Driver Components** — bytes consumed by the source manager (raw file content and cached
+  line-offset tables) and by the bump allocators backing each parsed syntax tree and library
+  map tree.
+- **Syntax Node Data** — total bytes attributed to syntax nodes, with a per-kind breakdown
+  sorted by memory consumption (count, total bytes, and average bytes per node), followed by
+  token and trivia heap totals.
+- **Module/Package/Scope breakdown** — node memory grouped by the enclosing
+  module/interface/program/package scope, sorted by memory consumption.
+
 @section depfiles Dependency Files
 
 These options output various dependency files as filelists in addition to other actions.

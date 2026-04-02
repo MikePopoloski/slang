@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include "slang/util/Bag.h"
+#include "slang/util/BumpAllocator.h"
 #include "slang/util/Random.h"
 #include "slang/util/TimeTrace.h"
 
@@ -22,6 +23,21 @@ TEST_CASE("Assertions") {
     CHECK_THROWS_AS([&] { SLANG_UNREACHABLE; }(), std::logic_error);
 }
 #endif
+
+TEST_CASE("BumpAllocator getTotalAllocatedBytes") {
+    using namespace slang;
+
+    // BumpAllocator pre-allocates an initial segment, so total is non-zero from the start.
+    BumpAllocator ba;
+    size_t initial = ba.getTotalAllocatedBytes();
+    CHECK(initial > 0);
+
+    // After allocating more than a segment can hold, a new segment is added.
+    // Force overflow by allocating more than SEGMENT_SIZE at once.
+    constexpr size_t big = 1024 * 1024; // 1 MB, larger than the default segment
+    ba.allocate(big, 1);
+    CHECK(ba.getTotalAllocatedBytes() >= initial + big);
+}
 
 TEST_CASE("TypeName test") {
     CHECK(typeName<void>() == "void");

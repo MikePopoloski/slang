@@ -95,11 +95,16 @@ public:
 #endif
     }
 
+    /// Returns the total number of bytes reserved from the OS by this allocator
+    /// (sum of all segment allocation sizes, excluding segment headers).
+    size_t getTotalAllocatedBytes() const;
+
 protected:
     // Allocations are tracked as a linked list of segments.
     struct Segment {
         Segment* prev;
         byte* current;
+        size_t allocatedSize; // total bytes requested from OS for this segment
     };
 
     Segment* head;
