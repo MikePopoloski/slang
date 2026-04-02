@@ -17,6 +17,8 @@
 #include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
 #include "slang/util/CommandLine.h"
+#include "slang/util/ConcurrentMap.h"
+#include "slang/util/Function.h"
 #include "slang/util/LanguageVersion.h"
 #include "slang/util/OS.h"
 #include "slang/util/Util.h"
@@ -26,6 +28,7 @@ namespace slang {
 class JsonDiagnosticClient;
 class JsonWriter;
 class TextDiagnosticClient;
+class ThreadPool;
 enum class ShowHierarchyPathOption;
 
 } // namespace slang
@@ -123,6 +126,10 @@ public:
     /// The object that handles loading and parsing source files.
     SourceLoader sourceLoader;
 
+    /// A shared thread pool for doing work in parallel.
+    /// Created on demand when threading is enabled, otherwise left null.
+    std::shared_ptr<ThreadPool> threadPool;
+
     /// A list of syntax trees that have been parsed.
     std::vector<std::shared_ptr<syntax::SyntaxTree>> syntaxTrees;
 
@@ -171,8 +178,14 @@ public:
         /// in macro definitions.
         std::optional<bool> allowMacroTrailingSpace;
 
+<<<<<<< keywords
         /// A list of keywords to treat as plain identifiers for compatibility with legacy code.
         std::vector<std::string> allowKeywordsAsIdentifiers;
+=======
+        /// If true, the preprocessor will print the name and kind of each file
+        /// as it is parsed.
+        std::optional<bool> showParsedFiles;
+>>>>>>> master
 
         /// @}
         /// @name Parsing
@@ -253,9 +266,6 @@ public:
         /// @}
         /// @name Diagnostics control
         /// @{
-
-        /// If true, print diagnostics with color.
-        std::optional<bool> colorDiags;
 
         /// If true, include column numbers in printed diagnostics.
         std::optional<bool> diagColumn;
@@ -363,8 +373,7 @@ public:
     template<typename TArgs>
     [[nodiscard]] bool parseCommandLine(int argc, TArgs argv) {
         if (!cmdLine.parse(argc, argv)) {
-            for (auto& err : cmdLine.getErrors())
-                OS::printE(err + '\n');
+            issueCommandLineErrors(cmdLine);
             return false;
         }
         return !anyFailedLoads;
@@ -374,7 +383,7 @@ public:
     ///
     /// Any errors encountered will be printed to stderr.
     [[nodiscard]] bool parseCommandLine(std::string_view argList,
-                                        CommandLine::ParseOptions parseOptions = {});
+                                        const CommandLine::ParseOptions& parseOptions = {});
 
     /// @brief Processes the given command file(s) for more options.
     ///
@@ -461,12 +470,16 @@ public:
     /// Prints a note to stderr with appropriate terminal colors.
     void printNote(const std::string& message);
 
+    /// Sets whether terminal output should use color.
+    void setTerminalColorsEnabled(bool enable);
+
 private:
-    bool parseUnitListing(std::string_view text);
+    bool parseUnitListing(const SourceBuffer& sourceBuffer);
     std::string parseMapKeywordVersion(std::string_view value);
     void addLibraryFiles(std::string_view pattern);
     void addParseOptions(Bag& bag) const;
     void addCompilationOptions(Bag& bag) const;
+    void issueCommandLineErrors(const CommandLine& cl);
     bool reportLoadErrors();
 
     bool anyFailedLoads = false;

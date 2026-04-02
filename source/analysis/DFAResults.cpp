@@ -52,6 +52,12 @@ bool DFAResults::isDefinitelyAssigned(const ValueSymbol& symbol) const {
     return it->second < assigned.size() && !assigned[it->second].empty();
 }
 
+const DFAResults::LValueSymbol* DFAResults::getLValue(const ast::ValueSymbol& symbol) const {
+    if (auto it = symbolToSlot.find(&symbol); it != symbolToSlot.end())
+        return &lvalues[it->second];
+    return nullptr;
+}
+
 void DFAResults::visitPartiallyAssigned(bool skipAutomatic, AssignedSymbolCB cb) const {
     auto& currState = *stateRef;
     for (size_t index = 0; index < lvalues.size(); index++) {
@@ -214,24 +220,23 @@ const TimingControl* DFAResults::inferClock(AnalysisContext& context, const Symb
         }
 
         if (!timing.iffCondition) {
-            if (ValueExpressionBase::isKind(timing.expr.kind)) {
-                auto& symbol = timing.expr.as<ValueExpressionBase>().symbol;
-                if (symbol.getType().isEvent() && !isReferenced(symbol)) {
-                    // We found an event variable and it's not referenced elsewhere.
-                    // This is a valid clock to infer; if we previously found one then
-                    // there is no unique clock and we should return.
-                    if (inferredClock)
-                        return false;
-                    inferredClock = &timing;
-                }
-            }
-            else if (timing.expr.kind == ExpressionKind::ArbitrarySymbol) {
-                auto& ase = timing.expr.as<ArbitrarySymbolExpression>();
-                if (ase.symbol->kind == SymbolKind::ClockingBlock) {
+            if (auto sym = timing.expr.getSymbolReference()) {
+                if (sym->kind == SymbolKind::ClockingBlock) {
                     // We found a clocking block identifier.
                     if (inferredClock)
                         return false;
                     inferredClock = &timing;
+                }
+                else if (sym->isValue()) {
+                    auto& val = sym->as<ValueSymbol>();
+                    if (val.getType().isEvent() && !isReferenced(val)) {
+                        // We found an event variable and it's not referenced elsewhere.
+                        // This is a valid clock to infer; if we previously found one then
+                        // there is no unique clock and we should return.
+                        if (inferredClock)
+                            return false;
+                        inferredClock = &timing;
+                    }
                 }
             }
         }

@@ -129,8 +129,11 @@ void LValue::store(const ConstantValue& newValue) {
             auto& sv = newValue.integer();
             int32_t msb = (int32_t)sv.getBitWidth() - 1;
             for (auto& elem : concat->elems) {
-                int32_t width = (int32_t)elem.load().integer().getBitWidth();
-                elem.store(sv.slice(msb, msb - width + 1));
+                auto loaded = elem.load();
+                int32_t width = (int32_t)loaded.integer().getBitWidth();
+                auto sliced = sv.slice(msb, msb - width + 1);
+                sliced.setSigned(loaded.integer().isSigned());
+                elem.store(ConstantValue(std::move(sliced)));
                 msb -= width;
             }
         }

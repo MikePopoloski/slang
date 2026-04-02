@@ -7,7 +7,6 @@
 //------------------------------------------------------------------------------
 #include "slang/driver/SourceLoader.h"
 
-#include <BS_thread_pool.hpp>
 #include <fmt/core.h>
 
 #include "slang/parsing/Preprocessor.h"
@@ -15,6 +14,7 @@
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/String.h"
+#include "slang/util/ThreadPool.h"
 
 namespace fs = std::filesystem;
 
@@ -127,7 +127,7 @@ void SourceLoader::addLibraryMapsInternal(std::string_view pattern, const fs::pa
     }
 
     for (auto& path : files) {
-        auto buffer = sourceManager.readSource(path, /* library */ nullptr);
+        auto buffer = sourceManager.readSource(path);
         if (!buffer) {
             addError(path, buffer.error());
             continue;
@@ -199,7 +199,7 @@ SourceBuffer SourceLoader::findBuffer(std::string_view name) const {
             if (!sourceManager.isCached(path)) {
                 // This file is never part of a library because if
                 // it was we would have already loaded it earlier.
-                auto readResult = sourceManager.readSource(path, /* library */ nullptr);
+                auto readResult = sourceManager.readSource(path);
                 if (readResult) {
                     return *readResult;
                 }
@@ -209,7 +209,8 @@ SourceBuffer SourceLoader::findBuffer(std::string_view name) const {
     return {};
 }
 
-SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& optionBag) {
+SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& optionBag,
+                                                               ThreadPool* pool) {
     SyntaxTreeList syntaxTrees;
     std::vector<SourceBuffer> singleUnitBuffers;
     std::vector<SourceBuffer> deferredLibBuffers;
@@ -280,20 +281,18 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         return tree;
     };
 
-    if (fileEntries.size() >= MinFilesForThreading && srcOptions.numThreads != 1u) {
-        // If there are enough files to parse and the user hasn't disabled
-        // the use of threads, do the parsing via a thread pool.
-        BS::thread_pool<> threadPool(srcOptions.numThreads.value_or(0u));
-
+    if (pool && fileEntries.size() >= MinFilesForThreading) {
+        // If there are enough files to parse and a thread pool has been
+        // provided, do the parsing in parallel.
         std::vector<LoadResult> loadResults;
         loadResults.resize(fileEntries.size());
 
         // Load all source files that were specified on the command line
         // or via library maps.
-        threadPool.detach_loop(size_t(0), fileEntries.size(), [&](size_t i) {
+        pool->detach_loop(size_t(0), fileEntries.size(), [&](size_t i) {
             loadResults[i] = loadAndParse(fileEntries[i], optionBag, srcOptions, i);
         });
-        threadPool.wait();
+        pool->wait();
 
         for (auto&& result : loadResults)
             handleLoadResult(std::move(result));
@@ -310,11 +309,11 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
             const size_t numTrees = syntaxTrees.size();
             syntaxTrees.resize(numTrees + unitList.size());
 
-            threadPool.detach_loop(size_t(0), unitList.size(), [&](size_t i) {
+            pool->detach_loop(size_t(0), unitList.size(), [&](size_t i) {
                 syntaxTrees[i + numTrees] = parseSeparateUnit(*unitList[i]->first,
                                                               unitList[i]->second);
             });
-            threadPool.wait();
+            pool->wait();
         }
 
         // If we deferred libraries due to wanting to inherit macros, parse them now.
@@ -322,13 +321,13 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
             const size_t numTrees = syntaxTrees.size();
             syntaxTrees.resize(numTrees + deferredLibBuffers.size());
 
-            threadPool.detach_loop(size_t(0), deferredLibBuffers.size(), [&](size_t i) {
+            pool->detach_loop(size_t(0), deferredLibBuffers.size(), [&](size_t i) {
                 auto tree = SyntaxTree::fromBuffer(deferredLibBuffers[i], sourceManager, optionBag,
                                                    inheritedMacros);
                 tree->isLibraryUnit = true;
                 syntaxTrees[i + numTrees] = std::move(tree);
             });
-            threadPool.wait();
+            pool->wait();
         }
     }
     else {
@@ -556,6 +555,9 @@ SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, cons
 
     if (!buffer)
         return std::pair{&entry, buffer.error()};
+
+    if (entry.isLibraryFile)
+        sourceManager.setBufferKind(buffer->id, SourceManager::BufferKind::LibraryFile);
 
     if (entry.unit) {
         return std::pair{*buffer, entry.unit};

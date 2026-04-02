@@ -404,7 +404,7 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
     // u and v by d. Note that we have taken Knuth's advice here to use a power
     // of 2 value for d such that d * v[n-1] >= b/2 (b is the base). A power of
     // 2 allows us to shift instead of multiply and it is easy to determine the
-    // shift amount from the leading zeros.  We are basically normalizing the u
+    // shift amount from the leading zeros. We are basically normalizing the u
     // and v so that its high bits are shifted to the top of v's range without
     // overflow. Note that this can require an extra word in u so that u must
     // be of length m+n+1.

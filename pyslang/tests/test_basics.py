@@ -98,6 +98,31 @@ source:3:23: warning: arithmetic between operands of different types ('logic' an
 """
 
 
+def test_resolved_dpi_exports():
+    tree = SyntaxTree.fromText("""
+module m;
+    function void f1; endfunction
+    function void f2; endfunction
+    export "DPI-C" function f1;
+    export "DPI-C" my_f2 = function f2;
+endmodule
+""")
+    comp = Compilation()
+    comp.addSyntaxTree(tree)
+    assert len(comp.getAllDiagnostics()) == 0
+
+    exports = comp.getDPIExports()
+    assert len(exports) == 2
+    assert exports[0].subroutine.name == "f1"
+    assert exports[0].cIdentifier == "f1"
+    assert exports[0].syntax is not None
+    assert exports[0].syntax.kind == SyntaxKind.DPIExport
+    assert exports[1].subroutine.name == "f2"
+    assert exports[1].cIdentifier == "my_f2"
+    assert exports[1].syntax is not None
+    assert exports[1].syntax.kind == SyntaxKind.DPIExport
+
+
 def test_include_metadata():
     tree = SyntaxTree.fromText("""
     `include "{}/some_file.svh"

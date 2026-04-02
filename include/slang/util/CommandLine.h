@@ -8,6 +8,7 @@
 #pragma once
 
 #include <cctype>
+#include <deque>
 #include <fmt/core.h>
 #include <functional>
 #include <map>
@@ -16,6 +17,7 @@
 #include <variant>
 #include <vector>
 
+#include "slang/text/SourceLocation.h"
 #include "slang/util/Enum.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/String.h"
@@ -233,7 +235,7 @@ public:
     void add(std::string_view name, std::vector<std::string>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
-    using OptionCallback = std::function<std::string(std::string_view)>;
+    using OptionStrCallback = std::function<std::string(std::string_view)>;
 
     /// Register an option with @a name that will be parsed as a string and
     /// forwarded to the given @a cb callback function for handling.
@@ -246,8 +248,23 @@ public:
     /// @param desc a human-friendly description for printing help text
     /// @param valueName an example name for the value when printing help text
     /// @param flags additional flags that control how the option behaves
-    void add(std::string_view name, OptionCallback cb, std::string_view desc,
+    void add(std::string_view name, OptionStrCallback cb, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
+
+    using OptionBoolCallback = std::function<std::string(bool)>;
+
+    /// Register an option with @a name that will be parsed as a boolean and
+    /// forwarded to the given @a cb callback function for handling.
+    /// If the option is not provided on a command line, the callback
+    /// will never be invoked.
+    ///
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option
+    /// @param cb a callback that will be invoked if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param flags additional flags that control how the option behaves
+    void add(std::string_view name, OptionBoolCallback cb, std::string_view desc,
+             bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as a string enum value.
     /// The string will be matched against the available enum values using the kebab case name
@@ -285,7 +302,7 @@ public:
     /// @param valueName for including in the help text
     /// @param flags additional flags that control how the option behaves
     /// @note only one variable or callback be set to receive positional arguments
-    void setPositional(const OptionCallback& cb, std::string_view valueName,
+    void setPositional(const OptionStrCallback& cb, std::string_view valueName,
                        bitmask<CommandLineFlags> flags = {});
 
     /// Adds a command that will be ignored if encountered during argument parsing.
@@ -308,8 +325,19 @@ public:
     std::string addRenameCommand(std::string_view value);
 
     /// Parse the provided command line (C-style).
-    /// @return true on success, false if an errors occurs.
+    /// @return true on success, false if any errors occur.
     bool parse(int argc, const char* const argv[]);
+
+    /// Represents an error encountered while parsing command line arguments.
+    struct Error {
+        /// A human-readable error message.
+        std::string message;
+
+        /// The source location of the argument that caused the error,
+        /// if the command line string was provided via a SourceBuffer.
+        /// Otherwise this will be an empty / invalid value.
+        SourceLocation location;
+    };
 
     /// Contains various options to control parsing of command flags.
     struct ParseOptions {
@@ -330,17 +358,21 @@ public:
         /// argument setter is found.
         bool ignoreDuplicates = false;
 
+        /// If set, the command line string is associated with this source buffer,
+        /// allowing errors to carry SourceLocation information.
+        SourceBuffer sourceBuffer;
+
         ParseOptions() {}
     };
 
     /// Parse the provided command line (space delimited, with handling of
     /// quoted arguments).
     /// @return true on success, false if an errors occurs.
-    bool parse(std::string_view argList, ParseOptions options = {});
+    bool parse(std::string_view argList, const ParseOptions& options = {});
 
     /// Parse the provided command line (as a pre-separated list of strings).
     /// @return true on success, false if an errors occurs.
-    bool parse(std::span<const std::string_view> args, ParseOptions options = {});
+    bool parse(std::span<const std::string_view> args, const ParseOptions& options = {});
 
     /// Gets the name of the program, parsed out of the first item on the command line.
     std::string_view getProgramName() const { return programName; }
@@ -349,7 +381,7 @@ public:
     void setProgramName(std::string_view name) { programName = name; }
 
     /// Gets the set of errors that were encountered when parsing command line options.
-    std::span<const std::string> getErrors() const { return errors; }
+    std::span<const Error> getErrors() const { return errors; }
 
     /// Gets a string representing program help text, based on registered flags.
     /// @a overview text is a human friendly description of what the program does.
@@ -361,46 +393,67 @@ private:
                      std::optional<int64_t>*, std::optional<uint64_t>*, std::optional<double>*,
                      std::optional<std::string>*, std::vector<int32_t>*, std::vector<uint32_t>*,
                      std::vector<int64_t>*, std::vector<uint64_t>*, std::vector<double>*,
-                     std::vector<std::string>*, OptionCallback>;
+                     std::vector<std::string>*, OptionStrCallback, OptionBoolCallback>;
 
     class Option {
     public:
+        CommandLine& parent;
         OptionStorage storage;
         std::string desc;
         std::string valueName;
         std::string allArgNames;
         bitmask<CommandLineFlags> flags;
 
+        explicit Option(CommandLine& parent) : parent(parent) {}
+
         bool expectsValue() const;
 
-        std::string set(std::string_view name, std::string_view value, bool ignoreDup);
+        void set(std::string_view name, std::string_view value, bool ignoreDup, SourceLocation loc);
 
     private:
-        std::string set(std::optional<bool>& target, std::string_view name, std::string_view value);
-        std::string set(std::optional<int32_t>& target, std::string_view name,
-                        std::string_view value);
-        std::string set(std::optional<uint32_t>& target, std::string_view name,
-                        std::string_view value);
-        std::string set(std::optional<int64_t>& target, std::string_view name,
-                        std::string_view value);
-        std::string set(std::optional<uint64_t>& target, std::string_view name,
-                        std::string_view value);
-        std::string set(std::optional<double>& target, std::string_view name,
-                        std::string_view value);
-        std::string set(std::optional<std::string>& target, std::string_view name,
-                        std::string_view value);
-        std::string set(std::vector<int32_t>& target, std::string_view name,
-                        std::string_view value);
-        std::string set(std::vector<uint32_t>& target, std::string_view name,
-                        std::string_view value);
-        std::string set(std::vector<int64_t>& target, std::string_view name,
-                        std::string_view value);
-        std::string set(std::vector<uint64_t>& target, std::string_view name,
-                        std::string_view value);
-        std::string set(std::vector<double>& target, std::string_view name, std::string_view value);
-        std::string set(std::vector<std::string>& target, std::string_view name,
-                        std::string_view value);
-        std::string set(OptionCallback& target, std::string_view name, std::string_view value);
+        void set(std::optional<bool>& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(std::optional<int32_t>& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(std::optional<uint32_t>& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(std::optional<int64_t>& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(std::optional<uint64_t>& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(std::optional<double>& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(std::optional<std::string>& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(std::vector<int32_t>& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(std::vector<uint32_t>& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(std::vector<int64_t>& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(std::vector<uint64_t>& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(std::vector<double>& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(std::vector<std::string>& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(OptionStrCallback& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+        void set(OptionBoolCallback& target, std::string_view name, std::string_view value,
+                 SourceLocation loc);
+
+        std::optional<bool> parseBool(std::string_view name, std::string_view value,
+                                      SourceLocation loc);
+        std::optional<double> parseDouble(std::string_view name, std::string_view value,
+                                          SourceLocation loc);
+
+        template<typename T>
+        std::optional<T> parseInt(std::string_view name, std::string_view value,
+                                  SourceLocation loc);
+
+        template<typename T>
+        void setIntList(std::vector<T>& target, std::string_view name, std::string_view value,
+                        SourceLocation loc);
 
         template<typename T>
         static constexpr bool allowValue(const std::optional<T>& target) {
@@ -412,24 +465,59 @@ private:
             return true;
         }
     };
+    friend class Option;
+
+    struct ArgToken {
+        std::string_view str;
+        SourceLocation loc;
+    };
+
+    class TokenBuilder {
+    public:
+        explicit TokenBuilder(SourceBuffer buffer) : buffer(buffer) {}
+
+        void append(const char* ptr);
+        void append(const char* ptr, const std::string& value);
+        void finish();
+
+        bool isPending() const { return hasArg; }
+        void setPending(const char* ptr);
+
+        std::span<const ArgToken> getTokens() const { return tokens; }
+
+        void setOverrideLoc(const char* ptr);
+        void clearOverrideLoc();
+
+    private:
+        std::string current;
+        bool hasArg = false;
+        std::deque<std::string> storage;
+        SmallVector<ArgToken, 8> tokens;
+        SourceBuffer buffer;
+        std::optional<SourceLocation> overrideLoc;
+    };
 
     void addInternal(std::string_view name, OptionStorage storage, std::string_view desc,
                      std::string_view valueName, bitmask<CommandLineFlags> flags);
 
-    void parseStr(std::string_view argList, ParseOptions options, bool& hasArg,
-                  std::string& current, SmallVectorBase<std::string>& storage);
+    void tokenize(std::string_view argList, const ParseOptions& options, TokenBuilder& builder);
 
-    void handleArg(std::string_view arg, Option*& expectingVal, std::string& expectingValName,
-                   bool& hadUnknowns, ParseOptions options);
+    bool parseImpl(std::span<const ArgToken> args, const ParseOptions& options);
 
-    void handlePlusArg(std::string_view arg, ParseOptions options, bool& hadUnknowns);
+    void handleArg(std::string_view arg, Option*& expectingVal, ArgToken& expectingValToken,
+                   bool& hadUnknowns, const ParseOptions& options, SourceLocation loc);
+
+    void handlePlusArg(std::string_view arg, const ParseOptions& options, bool& hadUnknowns,
+                       SourceLocation loc);
 
     // Converts CamelCase strings to kebab-case (e.g. "SimpleTrivia" -> "simple-trivia").
     static std::string toKebabCase(std::string_view str);
 
     Option* findOption(std::string_view arg, std::string_view& value) const;
-    Option* tryGroupOrPrefix(std::string_view& arg, std::string_view& value, ParseOptions options);
+    Option* tryGroupOrPrefix(std::string_view& arg, std::string_view& value,
+                             const ParseOptions& options, SourceLocation loc);
     std::string findNearestMatch(std::string_view arg) const;
+    void addError(std::string msg, SourceLocation loc);
 
     std::shared_ptr<Option> positional;
     std::map<std::string, std::shared_ptr<Option>> optionMap;
@@ -442,13 +530,13 @@ private:
     // so that +vendorXYZ+vendorARG can be ignored by matching against +vendorXYZ
     std::map<std::string, int> cmdIgnore;
 
-    /// A map of commands to be renamed, pointing to new name
-    /// key is the vendor command name (including any leading +/- symbols)
-    /// value is the command name to be used instead
+    // A map of commands to be renamed, pointing to new name
+    // key is the vendor command name (including any leading +/- symbols)
+    // value is the command name to be used instead
     std::map<std::string, std::string> cmdRename;
 
     std::string programName;
-    std::vector<std::string> errors;
+    std::vector<Error> errors;
 };
 
 template<typename T, typename Traits>

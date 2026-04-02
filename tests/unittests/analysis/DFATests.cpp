@@ -388,6 +388,119 @@ endmodule
     CHECK_DIAGS_EMPTY;
 }
 
+TEST_CASE("For loop unrolling with automatic var declared outside loop header") {
+    // An automatic loop variable initialized in the for header (but declared
+    // before it) should be successfully unrolled, just like one declared inside.
+    auto& code = R"(
+module Test;
+  logic [3:0] a;
+  always_comb begin
+    automatic int i;
+    for (i = 0; i < 4; i++) begin
+      a[i] = 1'b1;
+    end
+  end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("For loop unrolling with multiple automatic vars declared outside loop header") {
+    // Multiple automatic loop variables initialized in the for header (but
+    // declared before it) should all be successfully unrolled.
+    auto& code = R"(
+module Test;
+  logic [3:0] a;
+  logic [3:0] b;
+  always_comb begin
+    automatic int i;
+    automatic int j;
+    for (i = 0, j = 3; i < 4; i++, j--) begin
+      a[i] = 1'b1;
+      b[j] = 1'b0;
+    end
+  end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("For loop with missing steps: body executes at least once (automatic var)") {
+    auto& code = R"(
+module Test;
+  logic [3:0] a;
+  always_comb begin
+    automatic int i;
+    for (i = 0; i < 4; ) begin
+      a[i] = 1'b1;
+      i++;
+    end
+  end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("For loop with missing steps: body never executes when condition initially false") {
+    auto& code = R"(
+module Test;
+  logic [3:0] a;
+  always_comb begin
+    automatic int i;
+    // condition is false from the start: loop body never runs
+    for (i = 10; i < 4; ) begin
+      a[i] = 1'b1;
+    end
+  end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::LoopCondNotModified);
+}
+
+TEST_CASE("For loop with no stop expression: body always executes") {
+    // A loop with no stop expression is infinite. The body is guaranteed to
+    // execute at least once and the normal exit path is unreachable.
+    auto& code = R"(
+module Test;
+  logic [3:0] a;
+  always_comb begin
+    automatic int i = 0;
+    for (; ; i++) begin
+      a[i] = 1'b1;
+      if (i == 3) break;
+    end
+  end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
 TEST_CASE("Latch with conditions inside loop regress -- GH #1364") {
     auto& code = R"(
 module Test;

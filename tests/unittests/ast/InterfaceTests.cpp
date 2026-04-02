@@ -3,6 +3,8 @@
 
 #include "Test.h"
 
+#include "slang/ast/ASTVisitor.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -747,7 +749,7 @@ interface automatic sliceIfc#(I=0)();
   wire reset = ii.reset;
 
   I i();
-  allIfc allInst(.clk(), .rst(), .i(i), .i1(i.ii));
+  allIfc allInst(.clk(0), .rst(0), .i(i), .i1(i.ii));
 
   var requestType request;
   var responseType response;
@@ -939,4 +941,97 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::VirtualInterfaceIfaceMember);
+}
+
+TEST_CASE("Virtual interface member access AST") {
+    auto tree = SyntaxTree::fromText(R"(
+interface Iface;
+    logic data;
+endinterface
+
+module m;
+    Iface if1(), if2();
+    virtual Iface vif1 = if1, vif2 = if2;
+
+    initial begin
+        vif1.data = 1'b1;
+        vif2.data = 1'b0;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    // Collect all MemberAccessExpression nodes for virtual interface member accesses.
+    SmallVector<const MemberAccessExpression*> accesses;
+    compilation.getRoot().visit(makeVisitor([&](auto&, const MemberAccessExpression& expr) {
+        if (expr.value().type->isVirtualInterface())
+            accesses.push_back(&expr);
+    }));
+
+    // There should be exactly two accesses (vif1.data and vif2.data).
+    REQUIRE(accesses.size() == 2);
+    auto& a0 = *accesses[0];
+    auto& a1 = *accesses[1];
+
+    // Both accesses refer to the same interface member symbol (logic data).
+    CHECK(&a0.member == &a1.member);
+
+    // But the handle expressions must point to different virtual interface variables.
+    auto sym0 = a0.value().getSymbolReference();
+    auto sym1 = a1.value().getSymbolReference();
+    REQUIRE(sym0);
+    REQUIRE(sym1);
+    CHECK(sym0 != sym1);
+    CHECK(sym0->name == "vif1");
+    CHECK(sym1->name == "vif2");
+}
+
+TEST_CASE("Virtual interface consteval should fail") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int bar;
+endinterface
+
+function int foo;
+    virtual I i;
+    return i.bar;
+endfunction
+
+parameter p = foo();
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalVifType);
+}
+
+TEST_CASE("Virtual interface instance access regress -- GH #1765") {
+    auto tree = SyntaxTree::fromText(R"(
+interface A;
+endinterface
+
+interface B;
+    A a();
+endinterface
+
+class C;
+    virtual A intf1;
+    virtual B intf2;
+
+    function set_intf(virtual B b);
+        intf2 = b;
+        intf1 = b.a;
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

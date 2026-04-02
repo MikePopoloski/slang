@@ -42,20 +42,18 @@ Diagnostic& AnalysisContext::addDiag(const Symbol& symbol, DiagCode code, Source
     return diagnostics.add(symbol, code, sourceRange);
 }
 
-AnalysisManager::AnalysisManager(AnalysisOptions options) :
-#if defined(SLANG_USE_THREADS)
-    options(options), threadPool(options.numThreads) {
-#else
-    options(options) {
-#endif
+AnalysisManager::AnalysisManager(AnalysisOptions options, std::shared_ptr<ThreadPool> threadPool) :
+    options(options), threadPool(std::move(threadPool)) {
 
-#if defined(SLANG_USE_THREADS)
-    workerStates.reserve(threadPool.get_thread_count() + 1);
-    for (size_t i = 0; i < threadPool.get_thread_count() + 1; i++)
+    if (this->threadPool) {
+        const size_t count = this->threadPool->get_thread_count() + 1;
+        workerStates.reserve(count);
+        for (size_t i = 0; i < count; i++)
+            workerStates.emplace_back(*this);
+    }
+    else {
         workerStates.emplace_back(*this);
-#else
-    workerStates.emplace_back(*this);
-#endif
+    }
 }
 
 void AnalysisManager::analyze(const Compilation& compilation) {
@@ -153,9 +151,10 @@ void AnalysisManager::analyzeCheckerInstance(const CheckerInstanceSymbol& inst,
     }
 }
 
-void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbol& containingSymbol,
-                                         SmallSet<const SubroutineSymbol*, 2>& visited,
-                                         std::vector<SymbolDriverListPair>& drivers) {
+void AnalysisManager::getFunctionValUses(const CallExpression& expr, const Symbol& containingSymbol,
+                                         function_ref<bool(const SubroutineSymbol&)> visitPredicate,
+                                         SmallVectorBase<SymbolDriverListPair>& drivers,
+                                         SmallVectorBase<ReadRange>* reads) {
     if (expr.isSystemCall() || expr.thisClass() ||
         expr.getSubroutineKind() != SubroutineKind::Function) {
         return;
@@ -179,7 +178,7 @@ void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbo
 
     // If we've already visited this function then we don't need to
     // analyze it again.
-    if (!visited.insert(&subroutine).second)
+    if (!visitPredicate(subroutine))
         return;
 
     // Get analysis for the function.
@@ -191,16 +190,18 @@ void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbo
     auto funcDrivers = analysis.getDrivers();
     drivers.reserve(drivers.size() + funcDrivers.size());
 
+    auto isLocal = [&](const Symbol& symbol) {
+        auto scope = symbol.getParentScope();
+        while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
+            scope = scope->asSymbol().getParentScope();
+
+        return scope == &subroutine;
+    };
+
     for (auto& [valueSym, driverList] : funcDrivers) {
         // The user can disable this inlining of drivers for function locals via a flag.
-        if (hasFlag(AnalysisFlags::AllowMultiDrivenLocals)) {
-            auto scope = valueSym->getParentScope();
-            while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
-                scope = scope->asSymbol().getParentScope();
-
-            if (scope == &subroutine)
-                continue;
-        }
+        if (hasFlag(AnalysisFlags::AllowMultiDrivenLocals) && isLocal(*valueSym))
+            continue;
 
         DriverList perSymbol;
         for (auto& [driver, bounds] : driverList) {
@@ -213,15 +214,23 @@ void AnalysisManager::getFunctionDrivers(const CallExpression& expr, const Symbo
         drivers.emplace_back(valueSym, std::move(perSymbol));
     }
 
-    // If this function has any calls, we need to recursively add drivers
-    // from those calls as well.
+    // Optionally collect reads from the function body.
+    // Note: this excludes locally declared variables.
+    if (reads) {
+        for (auto& read : analysis.getReadSet()) {
+            if (!isLocal(*read.symbol))
+                reads->push_back(read);
+        }
+    }
+
+    // Recurse into functions called by this function.
     for (auto call : analysis.getCallExpressions())
-        getFunctionDrivers(*call, containingSymbol, visited, drivers);
+        getFunctionValUses(*call, containingSymbol, visitPredicate, drivers, reads);
 }
 
 void AnalysisManager::getTaskTimingControls(const CallExpression& expr,
                                             SmallSet<const SubroutineSymbol*, 2>& visited,
-                                            std::vector<const Statement*>& controls) {
+                                            SmallVectorBase<const Statement*>& controls) {
     if (expr.getSubroutineKind() != SubroutineKind::Task || expr.isSystemCall()) {
         return;
     }
@@ -321,24 +330,29 @@ void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
     // Kick off a new analysis task if we haven't already seen
     // this scope before.
     if (analyzedScopes.try_emplace(&scope, std::nullopt)) {
-#if defined(SLANG_USE_THREADS)
-        threadPool.detach_task([this, &scope] {
-            SLANG_TRY {
-                auto& result = analyzeScopeBlocking(scope);
-                analyzedScopes.visit(&scope, [&result](auto& item) { item.second = &result; });
-                for (auto& listener : scopeListeners)
-                    listener(result);
-            }
-            SLANG_CATCH(...) {
-                std::unique_lock<std::mutex> lock(mutex);
-                pendingException = std::current_exception();
-            }
-        });
-#else
-        auto& result = analyzeScopeBlocking(scope);
-        analyzedScopes.visit(&scope, [&result](auto& item) { item.second = &result; });
-#endif
+        if (threadPool) {
+            threadPool->detach_task([this, &scope] {
+                SLANG_TRY {
+                    auto& result = analyzeScopeBlocking(scope);
+                    addScopeResult(scope, result);
+                }
+                SLANG_CATCH(...) {
+                    std::unique_lock<std::mutex> lock(mutex);
+                    pendingException = std::current_exception();
+                }
+            });
+        }
+        else {
+            auto& result = analyzeScopeBlocking(scope);
+            addScopeResult(scope, result);
+        }
     }
+}
+
+void AnalysisManager::addScopeResult(const Scope& scope, const AnalyzedScope& result) {
+    analyzedScopes.visit(&scope, [&result](auto& item) { item.second = &result; });
+    for (auto& listener : scopeListeners)
+        listener(result);
 }
 
 AnalyzedProcedure AnalysisManager::analyzeProcedure(AnalysisContext& context, const Symbol& symbol,
@@ -396,18 +410,18 @@ void AnalysisManager::handleAssertion(std::unique_ptr<AnalyzedAssertion>&& asser
 
 AnalysisManager::WorkerState& AnalysisManager::getState() {
 #if defined(SLANG_USE_THREADS)
-    return workerStates[BS::this_thread::get_index().value_or(workerStates.size() - 1)];
-#else
-    return workerStates[0];
+    if (threadPool)
+        return workerStates[BS::this_thread::get_index().value_or(workerStates.size() - 1)];
 #endif
+    return workerStates[0];
 }
 
 void AnalysisManager::wait() {
-#if defined(SLANG_USE_THREADS)
-    threadPool.wait();
-    if (pendingException)
-        std::rethrow_exception(pendingException);
-#endif
+    if (threadPool) {
+        threadPool->wait();
+        if (pendingException)
+            std::rethrow_exception(pendingException);
+    }
 }
 
 const TimingControl* AnalysisManager::NonProceduralExprVisitor::getDefaultClocking() const {
@@ -432,8 +446,12 @@ void AnalysisManager::NonProceduralExprVisitor::visitCall(const CallExpression& 
             ClockInference::checkSampledValueFuncs(state.context, containingSymbol, expr);
     }
 
-    std::vector<SymbolDriverListPair> drivers;
-    manager.getFunctionDrivers(expr, containingSymbol, visitedSubroutines, drivers);
+    SmallVector<SymbolDriverListPair, 2> drivers;
+    manager.getFunctionValUses(
+        expr, containingSymbol,
+        [&](const SubroutineSymbol& sub) { return manager.visitedNonProcCalls.insert(&sub); },
+        drivers, nullptr);
+
     if (!drivers.empty())
         manager.driverTracker.add(state.context, state.driverAlloc, drivers);
 }

@@ -11,6 +11,7 @@
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/symbols/AttributeSymbol.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
@@ -66,6 +67,8 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .value("DisableInstanceCaching", CompilationFlags::DisableInstanceCaching)
         .value("DisallowRefsToUnknownInstances", CompilationFlags::DisallowRefsToUnknownInstances)
         .value("AllowUnnamedGenerate", CompilationFlags::AllowUnnamedGenerate)
+        .value("AllowVirtualIfaceWithOverride", CompilationFlags::AllowVirtualIfaceWithOverride)
+        .value("AllowArrayConcatAssignPattern", CompilationFlags::AllowArrayConcatAssignPattern)
         .finalize();
 
     py::classh<CompilationOptions>(ast, "CompilationOptions")
@@ -128,6 +131,14 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def("getStdPackage", &Compilation::getStdPackage, byrefint)
         .def("getPackages", &Compilation::getPackages, byrefint)
         .def("getGateType", &Compilation::getGateType, byrefint, "name"_a)
+        .def("getDPIExports",
+             [](const Compilation& self) {
+                 py::list result;
+                 auto parent = py::cast(&self);
+                 for (auto& entry : self.getDPIExports())
+                     result.append(py::cast(&entry, byrefint, parent));
+                 return result;
+             })
         .def("getAttributes",
              py::overload_cast<const Symbol&>(&Compilation::getAttributes, py::const_), byrefint,
              "symbol"_a)
@@ -168,6 +179,11 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def_readwrite("definition", &Compilation::DefinitionLookupResult::definition)
         .def_readwrite("configRoot", &Compilation::DefinitionLookupResult::configRoot)
         .def_readwrite("configRule", &Compilation::DefinitionLookupResult::configRule);
+
+    py::classh<Compilation::DPIExport>(comp, "DPIExport")
+        .def_readonly("subroutine", &Compilation::DPIExport::subroutine)
+        .def_readonly("cIdentifier", &Compilation::DPIExport::cIdentifier)
+        .def_readonly("syntax", &Compilation::DPIExport::syntax);
 
     py::classh<ScriptSession>(ast, "ScriptSession")
         .def(py::init<>())
@@ -211,16 +227,17 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
              "separateUnit"_a)
         .def("processOptions", &Driver::processOptions)
         .def("runPreprocessor", &Driver::runPreprocessor, "flags"_a)
-        .def("reportMacros", &Driver::reportMacros)
+        .def("reportMacros", &Driver::reportMacros, "groupByFile"_a = false)
         .def("optionallyWriteDepFiles", &Driver::optionallyWriteDepFiles)
         .def("parseAllSources", &Driver::parseAllSources)
         .def("createOptionBag", &Driver::createOptionBag)
-        .def("createCompilation", &Driver::createCompilation)
+        .def("createCompilation", &Driver::createCompilation, py::keep_alive<0, 1>())
         .def("reportParseDiags", &Driver::reportParseDiags)
         .def("reportCompilation", &Driver::reportCompilation, "compilation"_a, "quiet"_a)
         .def("runAnalysis", &Driver::runAnalysis, "compilation"_a)
         .def("reportDiagnostics", &Driver::reportDiagnostics, "quiet"_a)
-        .def("runFullCompilation", &Driver::runFullCompilation, "quiet"_a = false);
+        .def("runFullCompilation", &Driver::runFullCompilation, "quiet"_a = false)
+        .def("setTerminalColorsEnabled", &Driver::setTerminalColorsEnabled, "enable"_a);
 
     py::classh<SourceOptions>(driver, "SourceOptions")
         .def(py::init<>())
@@ -240,7 +257,12 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def("addSeparateUnit", &SourceLoader::addSeparateUnit, "filePatterns"_a, "includePaths"_a,
              "defines"_a, "libraryName"_a, "warningOptions"_a)
         .def("loadSources", &SourceLoader::loadSources)
-        .def("loadAndParseSources", &SourceLoader::loadAndParseSources, "optionBag"_a)
+        .def(
+            "loadAndParseSources",
+            [](SourceLoader& self, const Bag& optionBag) {
+                return self.loadAndParseSources(optionBag);
+            },
+            "optionBag"_a)
         .def_property_readonly("hasFiles", &SourceLoader::hasFiles)
         .def_property_readonly("libraryMaps", &SourceLoader::getLibraryMaps)
         .def_property_readonly("errors", &SourceLoader::getErrors);

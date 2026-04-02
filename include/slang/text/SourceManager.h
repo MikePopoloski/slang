@@ -93,6 +93,37 @@ public:
     /// or nullptr if it's not explicitly part of any library.
     const SourceLibrary* getLibraryFor(BufferID buffer) const;
 
+    /// Describes the origin of a source buffer.
+    enum class BufferKind {
+        /// The buffer is unknown to the source manager.
+        Unknown,
+
+        /// A design file.
+        DesignFile,
+
+        /// A library file.
+        LibraryFile,
+
+        /// A library map.
+        LibraryMap,
+
+        /// An include file.
+        IncludeFile,
+
+        /// A macro expansion.
+        Macro,
+
+        /// A macro argument substitution.
+        MacroArg
+    };
+
+    /// Gets the kind for the given buffer. Returns BufferKind::Macro or BufferKind::MacroArg
+    /// for macro expansion buffers, and the appropriate file kind for source file buffers.
+    BufferKind getBufferKind(BufferID buffer) const;
+
+    /// Marks the given source file buffer as the specified kind.
+    void setBufferKind(BufferID buffer, BufferKind kind);
+
     /// Attempts to get the name of the macro represented by a macro location.
     /// If no macro name can be found, returns an empty string view.
     std::string_view getMacroName(SourceLocation location) const;
@@ -170,8 +201,8 @@ public:
                               const SourceLibrary* library = nullptr);
 
     /// Read in a source file from disk.
-    BufferOrError readSource(const std::filesystem::path& path, const SourceLibrary* library,
-                             uint64_t sortKey = UINT64_MAX);
+    BufferOrError readSource(const std::filesystem::path& path,
+                             const SourceLibrary* library = nullptr, uint64_t sortKey = UINT64_MAX);
 
     /// Read in a header file from disk.
     BufferOrError readHeader(std::string_view path, SourceLocation includedFrom,
@@ -272,12 +303,15 @@ private:
         const SourceLibrary* library = nullptr;
         SourceLocation includedFrom;
         uint64_t sortKey = 0;
+        BufferKind bufferKind = BufferKind::DesignFile;
         std::vector<LineDirectiveInfo> lineDirectives;
 
         FileInfo() {}
+
         FileInfo(FileData* data, const SourceLibrary* library, SourceLocation includedFrom,
                  uint64_t sortKey) :
-            data(data), library(library), includedFrom(includedFrom), sortKey(sortKey) {}
+            data(data), library(library), includedFrom(includedFrom), sortKey(sortKey),
+            bufferKind(includedFrom.valid() ? BufferKind::IncludeFile : BufferKind::DesignFile) {}
 
         // Returns a pointer to the LineDirectiveInfo for the nearest enclosing
         // line directive of the given raw line number, or nullptr if there is none

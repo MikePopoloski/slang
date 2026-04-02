@@ -452,7 +452,8 @@ void registerSymbols(py::module_& m) {
     py::classh<ProceduralBlockSymbol, Symbol>(m, "ProceduralBlockSymbol")
         .def_readonly("procedureKind", &ProceduralBlockSymbol::procedureKind)
         .def_property_readonly("isSingleDriverBlock", &ProceduralBlockSymbol::isSingleDriverBlock)
-        .def_property_readonly("body", &ProceduralBlockSymbol::getBody);
+        .def_property_readonly("body", &ProceduralBlockSymbol::getBody)
+        .def_property_readonly("blocks", &ProceduralBlockSymbol::getBlocks);
 
     py::classh<GenerateBlockSymbol, Symbol, Scope>(m, "GenerateBlockSymbol")
         .def_readonly("constructIndex", &GenerateBlockSymbol::constructIndex)

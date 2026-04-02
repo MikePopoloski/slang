@@ -654,6 +654,30 @@ endfunction
     CHECK(init->eval(ctx).integer() == 1);
 }
 
+TEST_CASE("This handle in extern method default arg") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    int a = 1;
+    extern function void disp(int x = this.a);
+endclass
+
+function void A::disp(int x = this.a);
+    $display("x = %0d", x);
+endfunction
+
+module test;
+    initial begin
+        automatic A a = new();
+        a.disp();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("This handle errors") {
     auto tree = SyntaxTree::fromText(R"(
 class C;

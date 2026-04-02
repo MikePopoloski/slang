@@ -8,6 +8,7 @@
 #pragma once
 
 #include <memory>
+#include <ostream>
 
 #include "slang/util/Util.h"
 
@@ -33,6 +34,11 @@ public:
     /// When pretty printing is on, newlines, additional whitespace,
     /// and indentation are added to make the output more human friendly.
     void setPrettyPrint(bool enabled) { pretty = enabled; }
+
+    /// Sets the initial indentation level (in spaces, not levels).
+    /// Use this when the writer is being used for a sub-tree that will be
+    /// embedded inside an already-indented context.
+    void setInitialIndent(int indent) { currentIndent = indent; }
 
     /// @return a view of the emitted JSON text so far.
     /// @note the returned view is not guaranteed to remain valid once
@@ -76,6 +82,12 @@ public:
 
     /// Writes a newline character into the buffer.
     void writeNewLine();
+
+    /// Flushes the accumulated content to the given output stream, retaining
+    /// only the trailing separator state so that subsequent writes continue
+    /// correctly. Call this after completing each top-level value to bound
+    /// the in-memory buffer size.
+    void flushTo(std::ostream& out);
 
     // Don't let c-strings implicitly convert to bool, we want callers
     // to pass a string_view instead.

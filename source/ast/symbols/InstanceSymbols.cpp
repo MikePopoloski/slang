@@ -1330,8 +1330,9 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
                     }
                 }
 
-                return comp.emplace<SimpleAssertionExpr>(Expression::bind(*expr, context, flags),
-                                                         std::nullopt);
+                return comp.emplace<SimpleAssertionExpr>(
+                    Expression::bindRValue(comp.getErrorType(), *expr, {}, context, flags),
+                    std::nullopt);
             }
         }
     }
@@ -1365,7 +1366,9 @@ std::span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnection
                     results.push_back(bindUnknownPortConn(context, *ex));
                 }
                 else if (npc.openParen) {
-                    results.push_back(comp.emplace<InvalidAssertionExpr>(nullptr));
+                    auto emptyExpr = comp.emplace<EmptyArgumentExpression>(comp.getVoidType(),
+                                                                           npc.sourceRange());
+                    results.push_back(comp.emplace<SimpleAssertionExpr>(*emptyExpr, std::nullopt));
                 }
                 else {
                     auto idName = comp.emplace<IdentifierNameSyntax>(npc.name);

@@ -890,6 +890,24 @@ public:
             if (conn.expr)
                 return createConnection(port, *conn.expr, attrs);
 
+            if (!port.isNullPort && port.direction != ArgumentDirection::Ref) {
+                DiagCode code;
+                switch (port.direction) {
+                    case ArgumentDirection::Out:
+                        code = diag::EmptyOutputPortConn;
+                        break;
+                    case ArgumentDirection::InOut:
+                        code = diag::EmptyInOutPortConn;
+                        break;
+                    default:
+                        code = diag::EmptyInputPortConn;
+                        break;
+                }
+                auto& diag = scope.addDiag(code, conn.name.range());
+                diag << port.name;
+                if (port.direction == ArgumentDirection::In && port.hasInitializer())
+                    diag.addNote(diag::EmptyInputPortConnDefault, port.location);
+            }
             return emptyConnection(port);
         }
 

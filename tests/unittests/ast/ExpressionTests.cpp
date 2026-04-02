@@ -9,6 +9,7 @@
 #include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
+#include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -1844,7 +1845,6 @@ module m;
         arr[null] = 3;
     end
 
-    localparam int foo = bar();
     function automatic int bar;
         ft c = null;
         ft d, e;
@@ -1863,6 +1863,11 @@ module m;
 
     Foo farray[3] ();
     initial baz(farray[1]);
+
+    const virtual interface Foo d = null;
+    initial begin
+        d.i = 1;
+    end
 endmodule
 )");
 
@@ -2024,15 +2029,27 @@ module m;
     wire j = i[1];
     wire [1:0] k = i[1:0];
 endmodule
+
+interface I;
+    wire vectored integer i;
+endinterface
+
+module n;
+    virtual I vif;
+    initial begin
+        static logic [1:0] l = vif.i[1:0];
+    end
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::SelectOfVectoredNet);
     CHECK(diags[1].code == diag::SelectOfVectoredNet);
+    CHECK(diags[2].code == diag::SelectOfVectoredNet);
 }
 
 TEST_CASE("Initializing based on own variable") {
@@ -2480,6 +2497,24 @@ endfunction
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Inside expression without braces") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int x;
+    int arr[3];
+    logic result;
+    assign result = x inside arr;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NonstandardInside);
 }
 
 TEST_CASE("Assignment assertion regress GH #456") {
@@ -3265,8 +3300,10 @@ TEST_CASE("v1800-2023 clarification: non-blocking assignments to elements of dyn
     auto tree = SyntaxTree::fromText(R"(
 module m;
     int i[];
+    struct { logic foo[]; } s;
     initial begin
         i[0] <= 1;
+        s.foo[0] <= 1;
     end
 endmodule
 )");
@@ -3275,8 +3312,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::NonblockingDynamicAssign);
+    CHECK(diags[1].code == diag::NonblockingDynamicAssign);
 }
 
 TEST_CASE("v1800-2023 clarification: static casts are assignment-like contexts") {
@@ -3853,7 +3891,31 @@ endmodule
     auto& expr = Expression::bind(*declarator,
                                   ASTContext(*aDecl->getParentScope(), LookupLocation::max));
 
-    REQUIRE(expr.as<HierarchicalValueExpression>().sourceRange.start().valid());
+    REQUIRE(expr.as<MemberAccessExpression>().sourceRange.start().valid());
+}
+
+TEST_CASE("Virtual interface lvalue errors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface Foo;
+    logic i;
+    wire w;
+    modport m(output i);
+endinterface
+
+module m;
+    const virtual interface Foo d = null;
+    initial begin
+        d.w = 0;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssignToNet);
 }
 
 TEST_CASE("v1800-2023: nonblocking assignment to ref static") {
@@ -3868,4 +3930,77 @@ endfunction
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Bare associative array pattern -- diagnostic emitted with option") {
+    auto tree = SyntaxTree::fromText(R"(
+package P;
+    typedef int int_queue[$];
+    task automatic T();
+        int_queue q[string] = {"k":{0,1,2}};
+    endtask
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BareAssociativePattern);
+}
+
+TEST_CASE("Bare associative pattern in unpacked array concat -- with option") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    class C;
+        string s[][int];
+        function f();
+            s = {
+                {0: "sv1", 1: "sv2"},
+                {1: "sv2",  2: "sv4"}
+            };
+        endfunction
+    endclass
+endmodule
+)");
+
+    CompilationOptions co;
+    co.flags |= CompilationFlags::AllowArrayConcatAssignPattern;
+
+    Compilation compilation(co);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BareAssociativePattern);
+    CHECK(diags[1].code == diag::BareAssociativePattern);
+}
+
+TEST_CASE("Bare associative pattern in unpacked array concat -- without option") {
+    // Without the flag, each inner bare pattern raises BareAssociativePattern.
+    // The element type is not propagated, so AssignmentPatternNoContext fires too.
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    class C;
+        string s[][int];
+        function f();
+            s = {
+                {0: "sv1", 1: "sv2"},
+                {1: "sv2",  2: "sv4"}
+            };
+        endfunction
+    endclass
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::BareAssociativePattern);
+    CHECK(diags[1].code == diag::AssignmentPatternNoContext);
+    CHECK(diags[2].code == diag::BareAssociativePattern);
+    CHECK(diags[3].code == diag::AssignmentPatternNoContext);
 }

@@ -25,6 +25,7 @@ namespace slang {
 
 class Bag;
 class SourceManager;
+class ThreadPool;
 struct SourceBuffer;
 struct SourceLibrary;
 
@@ -155,7 +156,7 @@ public:
     std::vector<SourceBuffer> loadSources();
 
     /// Loads and parses all of the source files that have been added to the loader.
-    SyntaxTreeList loadAndParseSources(const Bag& optionBag);
+    SyntaxTreeList loadAndParseSources(const Bag& optionBag, ThreadPool* threadPool = nullptr);
 
     /// Returns the per-buffer warning option strings collected during the last call to
     /// loadAndParseSources. Each entry maps a buffer to the -W option strings (without

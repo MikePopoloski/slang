@@ -250,7 +250,7 @@ error RandJoinNotEnough "rand join list must contain at least two productions"
 error InvalidDistExpression "cannot use a 'dist' expression in this context"
 error InvalidForInitializer "for loop initializer must be an assignment expression"
 error CoverCrossItems "cover cross declaration requires at least two coverage items"
-error CoverCrossSelectNotAllowed "element selects are not allowed in implicit coverpoints; extract expression to a coverpoint"
+error CoverCrossSelectNotAllowed "element selects are not allowed in implicit coverpoints; extract expression to a named coverpoint"
 error InvalidCoverageOption "invalid coverage option assignment"
 error CoverageBinDefaultWildcard "default coverage bins cannot be marked 'wildcard'"
 error CoverageBinDefSeqSize "default sequence bin cannot be declared as an array"
@@ -308,11 +308,13 @@ error ImplicitParamTypeKeyword "implicit parameter type not allowed without use 
 warning dpi-pure-task DPIPureTask "DPI tasks cannot be marked 'pure'"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
+warning nonstandard-bare-assoc-pattern BareAssociativePattern "associative array literal is missing the required apostrophe prefix"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
-warning non-standard-hierarchical-cross NonstandardHierarchicalCross "non-standard hierarchical reference in cover cross item"
+warning nonstandard-hierarchical-cross NonstandardHierarchicalCross "non-standard hierarchical reference in cover cross item"
 warning foreach-call-expr ForeachCallExpr "foreach array expression is not a name"
 warning lifetime-prototype LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
 warning nonstandard-dist NonstandardDist "use of parentheses around 'dist' expression is non-standard"
+warning nonstandard-inside NonstandardInside "use of 'inside' without braces is non-standard"
 warning empty-body EmptyBody "{} has empty body (put the semicolon on a separate line to silence this warning)"
 warning dangling-else DanglingElse "ambiguous dangling 'else'; add begin/end to clarify which 'if' the 'else' belongs to"
 note NoteMatchingIf "'if' statement here"
@@ -567,6 +569,10 @@ warning unconnected-output-port UnconnectedOutputPort "output port '{}' has no c
 warning unconnected-inout-port UnconnectedInOutPort "inout port '{}' has no connection"
 warning null-port NullPort "port has no name and no connection; this may be an unintentional extra comma in the port list"
 warning unconnected-unnamed-port UnconnectedUnnamedPort "instance does not provide a connection for an unnamed port"
+warning empty-input-connection EmptyInputPortConn "input port '{}' is explicitly connected to nothing"
+warning empty-output-connection EmptyOutputPortConn "output port '{}' is explicitly connected to nothing"
+warning empty-inout-connection EmptyInOutPortConn "inout port '{}' is explicitly connected to nothing"
+note EmptyInputPortConnDefault "port has a default value expression here that will not be used"
 warning implicit-net-port ImplicitNetPortNoDefault "implicit net port disallowed because `default_nettype is set to 'none'"
 warning dup-attr DuplicateAttribute "duplicate attribute definition '{}'; taking last value"
 warning empty-member EmptyMember "extra ';' has no effect"
@@ -819,7 +825,7 @@ error StatementNotInLoop "statement can only be used inside a loop"
 error ExprNotStatement "expression is not allowed as a statement"
 error ExprNotConstraint "expression is not allowed in a constraint"
 error VoidCastFuncCall "void casting is only allowed for function calls"
-error NotAnArray "name must refer to an iterable array"
+error NotAnArray "expression has type {} which is not an iterable array"
 error TooManyForeachVars "too many loop variables for array of type {}"
 error ForeachDynamicDimAfterSkipped "foreach index '{}' can't iterate over a dynamically sized dimension since a previous dimension was omitted"
 error LoopVarShadowsArray "loop variable '{}' shadows foreach array target"
@@ -1070,6 +1076,7 @@ warning format-multibit-strength FormatMultibitStrength "formatting strength val
 warning nonstandard-sys-func NonstandardSysFunc "system function '{}' is non-standard"
 warning isunbounded-param-arg IsUnboundedParamArg "argument to $isunbounded must be the name of a parameter"
 warning dynamic-cast-const DynamicCastConst "$cast from {} to {} will always {}"
+warning bits-of-integer-constant BitsOfIntegerConstant "$bits of expression with type {} always returns '{}'; did you mean to use the constant value directly, or use $clog2?"
 
 subsystem ConstEval
 note NoteInCallTo "in call to '{}'"
@@ -1099,6 +1106,7 @@ error ConstEvalAssociativeIndexInvalid "index {} has x or z bits which is invali
 error ConstEvalDisableTarget "disable statement in a constant function cannot target a block that is not currently executing"
 error ConstEvalClassType "class types are not allowed in constant expressions"
 error ConstEvalCovergroupType "covergroup types are not allowed in constant expressions"
+error ConstEvalVifType "virtual interface types are not allowed in constant expressions"
 error ConstEvalProceduralAssign "procedural assign and deassign statements are not allowed in constant functions"
 error ConstEvalTaggedUnion "cannot access '{}' because it is not the currently active member of the tagged union"
 error ConstEvalRandValue "random value statements are not allowed in constant functions"
@@ -1233,6 +1241,7 @@ warning unused-but-set-local-property UnusedButSetLocalProperty "'local' class p
 warning unassigned-local-property UnassignedLocalProperty "'local' class property '{}' is never assigned a value"
 warning shadow-value ShadowValue "'{}' shadows a declaration in an outer scope"
 warning shadow-hierarchy ShadowHierarchy "'{}' shadows a declaration in an outer scope"
+warning shadow-property ShadowProperty "'{}' shadows a property declared in '{}'"
 warning inferred-latch InferredLatch "latch inferred for '{}' because it is not assigned on all control paths"
 warning inferred-comb InferredComb "combinational logic inferred for '{}' because it is assigned on all control paths"
 warning incomplete-return IncompleteReturn "non-void function '{}' does not return a value on all control paths"
@@ -1265,6 +1274,9 @@ subsystem Meta
 fatal TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
 warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'"
 
+subsystem Driver
+error CommandLineError "{}"
+
 // Following are groups of diagnostics, to make it easy to control them from the command line.
 // The default group is the set of warnings that are enabled by default.
 
@@ -1288,7 +1300,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   nonstandard-string-concat nested-comment multi-write read-write mixed-var-assigns
                   multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
-                  initializer-required package-import-in-class foreach-call-expr }
+                  initializer-required package-import-in-class foreach-call-expr nonstandard-hierarchical-cross
+                  nonstandard-inside nonstandard-bare-assoc-pattern }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
@@ -1298,9 +1311,10 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 consecutive-comparison case-outside-range case-enum case-dup case-overlap
                 case-unreachable incomplete-return missing-return case-redundant-default case-incomplete
                 case-wildcard-2state inferred-latch inferred-comb randomize-var-shadow shadow-value
-                shadow-hierarchy implicit-conv inc-dec-bit dangling-else constraint-func-cycle
+                shadow-hierarchy shadow-property implicit-conv inc-dec-bit dangling-else constraint-func-cycle
                 misleading-indentation constraint-solve-cycle header-guard dynamic-cast-const
-                fork-loop-var loop-var-modify loop-cond-not-modified divide-by-zero colon-plus }
+                fork-loop-var loop-var-modify loop-cond-not-modified divide-by-zero colon-plus empty-input-connection
+                bits-of-integer-constant }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }
@@ -1323,3 +1337,5 @@ group parentheses = { bitwise-rel-precedence arith-in-shift logical-not-parenthe
                       logical-op-parentheses conditional-precedence consecutive-comparison }
 
 group unconnected-port = { unconnected-input-port unconnected-output-port unconnected-inout-port }
+group empty-connection = { empty-input-connection empty-output-connection empty-inout-connection }
+group shadow = { randomize-var-shadow shadow-value shadow-hierarchy shadow-property }

@@ -389,6 +389,18 @@ bool Type::isHandleType() const {
     }
 }
 
+bool Type::isObjectHandleType() const {
+    auto ct = &getCanonicalType();
+    switch (ct->kind) {
+        case SymbolKind::VirtualInterfaceType:
+        case SymbolKind::ClassType:
+        case SymbolKind::CovergroupType:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool Type::isUnion() const {
     const Type& ct = getCanonicalType();
     switch (ct.kind) {
@@ -856,8 +868,9 @@ bool Type::isValidForDPIReturn() const {
         case SymbolKind::CHandleType:
         case SymbolKind::StringType:
         case SymbolKind::ScalarType:
-        case SymbolKind::PredefinedIntegerType:
             return true;
+        case SymbolKind::PredefinedIntegerType:
+            return !isFourState();
         default:
             return false;
     }

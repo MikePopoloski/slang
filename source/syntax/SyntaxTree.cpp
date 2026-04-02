@@ -44,7 +44,7 @@ SyntaxTree::TreeOrError SyntaxTree::fromFile(std::string_view path) {
 
 SyntaxTree::TreeOrError SyntaxTree::fromFile(std::string_view path, SourceManager& sourceManager,
                                              const Bag& options) {
-    auto buffer = sourceManager.readSource(path, /* library */ nullptr);
+    auto buffer = sourceManager.readSource(path);
     if (!buffer)
         return nonstd::make_unexpected(std::pair{buffer.error(), path});
     return create(sourceManager, std::span(&buffer.value(), 1), options, {}, false);
@@ -58,7 +58,7 @@ SyntaxTree::TreeOrError SyntaxTree::fromFiles(std::span<const std::string_view> 
                                               SourceManager& sourceManager, const Bag& options) {
     SmallVector<SourceBuffer, 4> buffers(paths.size(), UninitializedTag());
     for (auto path : paths) {
-        auto buffer = sourceManager.readSource(path, /* library */ nullptr);
+        auto buffer = sourceManager.readSource(path);
         if (!buffer)
             return nonstd::make_unexpected(std::pair{buffer.error(), path});
 
@@ -165,6 +165,10 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
         library = it->library;
     }
 
+    const auto ppOpts = options.get<PreprocessorOptions>();
+    if (ppOpts && ppOpts->bufferChangeCB)
+        ppOpts->bufferChangeCB(sources.front().id, false, false);
+
     Parser parser(preprocessor, options);
 
     SyntaxNode* root;
@@ -190,7 +194,7 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
 std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapFile(std::string_view path,
                                                            SourceManager& sourceManager,
                                                            const Bag& options) {
-    auto buffer = sourceManager.readSource(path, /* library */ nullptr);
+    auto buffer = sourceManager.readSource(path);
     if (!buffer)
         return nullptr;
 
@@ -215,6 +219,8 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapText(std::string_view text
 std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapBuffer(const SourceBuffer& buffer,
                                                              SourceManager& sourceManager,
                                                              const Bag& options) {
+    sourceManager.setBufferKind(buffer.id, SourceManager::BufferKind::LibraryMap);
+
     BumpAllocator alloc;
     Diagnostics diagnostics;
     Preprocessor preprocessor(sourceManager, alloc, diagnostics, options);

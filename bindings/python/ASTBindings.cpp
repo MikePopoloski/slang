@@ -127,6 +127,8 @@ void registerAST(py::module_& m) {
         .def_readonly("range", &EvaluatedDimension::range)
         .def_readonly("associativeType", &EvaluatedDimension::associativeType)
         .def_readonly("queueMaxSize", &EvaluatedDimension::queueMaxSize)
+        .def_readonly("leftExpr", &EvaluatedDimension::leftExpr)
+        .def_readonly("rightExpr", &EvaluatedDimension::rightExpr)
         .def_property_readonly("isRange", &EvaluatedDimension::isRange);
 
     py::classh<ASTContext>(m, "ASTContext")

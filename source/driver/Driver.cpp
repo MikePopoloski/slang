@@ -14,6 +14,7 @@
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/diagnostics/DriverDiags.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/SourceLoader.h"
@@ -25,6 +26,7 @@
 #include "slang/text/Json.h"
 #include "slang/util/Random.h"
 #include "slang/util/String.h"
+#include "slang/util/ThreadPool.h"
 
 namespace fs = std::filesystem;
 
@@ -38,6 +40,7 @@ using namespace analysis;
 Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
     textDiagClient = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(textDiagClient);
+    setTerminalColorsEnabled(OS::fileSupportsColors(stderr));
 }
 
 Driver::~Driver() = default;
@@ -109,6 +112,8 @@ void Driver::addStandardArgs() {
                 "May be specified multiple times or as a comma-separated list (e.g. "
                 "'context,config'). Only supports context and config currently.",
                 "<keyword>", CommandLineFlags::CommaList);
+    cmdLine.add("--show-parsed-files", options.showParsedFiles,
+                "Print the name and kind of each file as it is parsed.");
 
     // Legacy vendor commands support
     cmdLine.add(
@@ -230,6 +235,11 @@ void Driver::addStandardArgs() {
                 "--allow-virtual-iface-with-override",
                 "Allow interface instances that are bind/defparam targets to be assigned "
                 "to virtual interfaces");
+    addCompFlag(CompilationFlags::AllowArrayConcatAssignPattern,
+                "--allow-array-concat-assign-pattern",
+                "Allow assignment pattern expressions to be used in unpacked array "
+                "concatenations. The LRM states that these are not assignment-like "
+                "contexts but some tools allow it anyway.");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "
@@ -246,10 +256,15 @@ void Driver::addStandardArgs() {
 
     // Diagnostics control
     cmdLine.add("-W", options.warningOptions, "Control the specified warning", "<warning>");
-    cmdLine.add("--color-diagnostics", options.colorDiags,
-                "Always print diagnostics in color. "
-                "If this option is unset, colors will be enabled if a color-capable "
-                "terminal is detected.");
+    cmdLine.add(
+        "--color-diagnostics",
+        [this](bool value) {
+            setTerminalColorsEnabled(value);
+            return "";
+        },
+        "Always print diagnostics in color. "
+        "If this option is unset, colors will be enabled if a color-capable "
+        "terminal is detected.");
     cmdLine.add("--diag-column", options.diagColumn, "Show column numbers in diagnostic output");
     cmdLine.addEnum<ColumnUnit, ColumnUnit_traits>("--diag-column-unit", options.diagColumnUnit,
                                                    "Unit for column numbers in diagnostics",
@@ -443,13 +458,29 @@ void Driver::addStandardArgs() {
 }
 
 [[nodiscard]] bool Driver::parseCommandLine(std::string_view argList,
-                                            CommandLine::ParseOptions parseOptions) {
+                                            const CommandLine::ParseOptions& parseOptions) {
     if (!cmdLine.parse(argList, parseOptions)) {
-        for (auto& err : cmdLine.getErrors())
-            OS::printE(fmt::format("{}\n", err));
+        issueCommandLineErrors(cmdLine);
         return false;
     }
     return !anyFailedLoads;
+}
+
+void Driver::issueCommandLineErrors(const CommandLine& cl) {
+    for (auto& err : cl.getErrors()) {
+        auto loc = err.location;
+        if (!loc)
+            loc = SourceLocation::NoLocation;
+
+        Diagnostic d(diag::CommandLineError, loc);
+        d << err.message;
+        diagEngine.issue(d);
+    }
+
+    if (!textDiagClient->empty()) {
+        OS::printE(textDiagClient->getString());
+        textDiagClient->clear();
+    }
 }
 
 bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bool separateUnit) {
@@ -466,9 +497,9 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bo
         return onError(pattern, globEc);
 
     for (auto& path : files) {
-        SmallVector<char> buffer;
-        if (auto readEc = OS::readFile(path, buffer))
-            return onError(getU8Str(path), readEc);
+        auto buffer = sourceManager.readSource(path);
+        if (!buffer)
+            return onError(getU8Str(path), buffer.error());
 
         if (!activeCommandFiles.insert(path).second) {
             printError(
@@ -484,13 +515,9 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bo
             fs::current_path(path.parent_path(), ec);
         }
 
-        SLANG_ASSERT(!buffer.empty());
-        buffer.pop_back();
-        std::string_view argStr(buffer.data(), buffer.size());
-
         bool result;
         if (separateUnit) {
-            result = parseUnitListing(argStr);
+            result = parseUnitListing(*buffer);
         }
         else {
             CommandLine::ParseOptions parseOpts;
@@ -498,7 +525,8 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bo
             parseOpts.ignoreProgramName = true;
             parseOpts.supportComments = true;
             parseOpts.ignoreDuplicates = true;
-            result = parseCommandLine(argStr, parseOpts);
+            parseOpts.sourceBuffer = *buffer;
+            result = parseCommandLine(buffer->data, parseOpts);
         }
 
         if (makeRelative)
@@ -516,18 +544,6 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bo
 }
 
 bool Driver::processOptions() {
-    bool showColors;
-    if (options.colorDiags.has_value())
-        showColors = *options.colorDiags;
-    else
-        showColors = OS::fileSupportsColors(stderr);
-
-    if (showColors) {
-        OS::setStderrColorsEnabled(true);
-        if (OS::fileSupportsColors(stdout))
-            OS::setStdoutColorsEnabled(true);
-    }
-
     if (options.languageVersion.has_value()) {
         if (options.languageVersion == "1364-2005")
             languageVersion = LanguageVersion::v1364_2005;
@@ -627,7 +643,6 @@ bool Driver::processOptions() {
     }
 
     auto& tdc = *textDiagClient;
-    tdc.showColors(showColors);
     tdc.showColumn(options.diagColumn.value_or(true));
     tdc.setColumnUnit(options.diagColumnUnit.value_or(ColumnUnit::Display));
     tdc.showLocation(options.diagLocation.value_or(true));
@@ -957,8 +972,72 @@ void Driver::optionallyWriteDepFiles() {
     }
 }
 
+static std::string_view bufferKindToStr(SourceManager::BufferKind kind) {
+    switch (kind) {
+        case SourceManager::BufferKind::LibraryFile:
+            return "library"sv;
+        case SourceManager::BufferKind::LibraryMap:
+            return "libmap"sv;
+        case SourceManager::BufferKind::DesignFile:
+            return "design"sv;
+        case SourceManager::BufferKind::IncludeFile:
+            return "include"sv;
+        default:
+            return ""sv;
+    }
+}
+
 bool Driver::parseAllSources() {
-    syntaxTrees = sourceLoader.loadAndParseSources(createParseOptionBag());
+    if (!threadPool) {
+        const auto numThreads = options.numThreads.value_or(0u);
+        if (numThreads != 1u)
+            threadPool = std::make_shared<ThreadPool>(numThreads);
+    }
+
+    auto bag = createParseOptionBag();
+
+    if (options.showParsedFiles == true) {
+        concurrent_map<size_t, std::vector<std::string>> parsedFiles;
+        auto bufferChangeCB = [&](BufferID buf, bool isBack, bool isSkip) {
+            auto path = getU8Str(sourceManager.getFullPath(buf));
+            std::string msg;
+            if (isBack) {
+                msg = fmt::format("Back to file '{}'.\n", path);
+            }
+            else {
+                auto kind = bufferKindToStr(sourceManager.getBufferKind(buf));
+                msg = fmt::format("{} {} file '{}'.\n", isSkip ? "Skipping" : "Parsing", kind,
+                                  path);
+            }
+
+#if defined(SLANG_USE_THREADS)
+            size_t idx = BS::this_thread::get_index().value_or(0);
+#else
+            size_t idx = 0;
+#endif
+            auto appendMsg = [&](auto& entry) { entry.second.push_back(std::move(msg)); };
+            parsedFiles.try_emplace_and_visit(idx, appendMsg, appendMsg);
+        };
+
+        bag.insertOrGet<PreprocessorOptions>().bufferChangeCB = bufferChangeCB;
+
+        syntaxTrees = sourceLoader.loadAndParseSources(bag, threadPool.get());
+
+        std::vector<std::pair<size_t, std::vector<std::string>>> threadOutputs;
+        parsedFiles.visit_all([&](auto&& entry) {
+            threadOutputs.emplace_back(entry.first, std::move(entry.second));
+        });
+        std::sort(threadOutputs.begin(), threadOutputs.end(),
+                  [](const auto& a, const auto& b) { return a.first < b.first; });
+        for (auto& [idx, msgs] : threadOutputs) {
+            for (auto& msg : msgs)
+                OS::print(msg);
+        }
+    }
+    else {
+        syntaxTrees = sourceLoader.loadAndParseSources(bag, threadPool.get());
+    }
+
     if (!reportLoadErrors())
         return false;
 
@@ -1082,7 +1161,6 @@ analysis::AnalysisOptions Driver::getAnalysisOptions() const {
     using namespace slang::analysis;
 
     AnalysisOptions ao;
-    ao.numThreads = options.numThreads.value_or(0);
     ao.flags |= AnalysisFlags::CheckUnused | AnalysisFlags::CheckShadow;
     if (options.maxCaseAnalysisSteps)
         ao.maxCaseAnalysisSteps = *options.maxCaseAnalysisSteps;
@@ -1125,7 +1203,7 @@ bool Driver::reportParseDiags() {
     diags.sort(sourceManager);
     diagEngine.issue(diags);
 
-    OS::printE(fmt::format("{}", textDiagClient->getString()));
+    OS::printE(textDiagClient->getString());
     return diagEngine.getNumErrors() == 0;
 }
 
@@ -1144,11 +1222,11 @@ void Driver::reportCompilation(Compilation& compilation, bool quiet) {
 }
 
 std::unique_ptr<AnalysisManager> Driver::runAnalysis(ast::Compilation& compilation) {
-
     compilation.getAllDiagnostics();
     compilation.freeze();
 
-    auto analysisManager = std::make_unique<analysis::AnalysisManager>(getAnalysisOptions());
+    auto analysisManager = std::make_unique<analysis::AnalysisManager>(getAnalysisOptions(),
+                                                                       threadPool);
 
     // We can't / shouldn't run analysis in lint-only mode.
     // We'll just return an empty analysis manager in that case.
@@ -1209,7 +1287,7 @@ bool Driver::runFullCompilation(bool quiet) {
     return reportDiagnostics(quiet);
 }
 
-bool Driver::parseUnitListing(std::string_view text) {
+bool Driver::parseUnitListing(const SourceBuffer& buffer) {
     CommandLine unitCmdLine;
     std::vector<std::string> includes;
     unitCmdLine.add("-I,--include-directory,+incdir", includes, "", "",
@@ -1252,10 +1330,10 @@ bool Driver::parseUnitListing(std::string_view text) {
     parseOpts.ignoreProgramName = true;
     parseOpts.supportComments = true;
     parseOpts.ignoreDuplicates = true;
+    parseOpts.sourceBuffer = buffer;
 
-    if (!unitCmdLine.parse(text, parseOpts)) {
-        for (auto& err : unitCmdLine.getErrors())
-            OS::printE(fmt::format("{}\n", err));
+    if (!unitCmdLine.parse(buffer.data, parseOpts)) {
+        issueCommandLineErrors(unitCmdLine);
         return false;
     }
 
@@ -1328,6 +1406,19 @@ void Driver::printNote(const std::string& message) {
     OS::printE(fg(textDiagClient->noteColor), "  note: ");
     OS::printE(message);
     OS::printE("\n");
+}
+
+void Driver::setTerminalColorsEnabled(bool enable) {
+    if (enable) {
+        OS::setStderrColorsEnabled(true);
+        if (OS::fileSupportsColors(stdout))
+            OS::setStdoutColorsEnabled(true);
+    }
+    else {
+        OS::setStderrColorsEnabled(false);
+        OS::setStdoutColorsEnabled(false);
+    }
+    textDiagClient->showColors(enable);
 }
 
 bool Driver::Options::lintMode() const {

@@ -37,16 +37,44 @@ enum class SLANG_EXPORT AnalysisFlags {
     /// Analysis should check for and report on declarations that shadow
     /// declarations in outer scopes.
     CheckShadow = 1 << 5,
+
+    /// When set, reads within functions called from a continuous assignment
+    /// (assign statement) are inlined into the assignment's implicit sensitivity
+    /// read-set, matching the behaviour of always_comb.
+    ///
+    /// The LRM does not specify whether function bodies should be inlined for
+    /// continuous assignments; different simulators choose differently. The
+    /// default (flag not set) is to include only the signals directly visible in
+    /// the assignment expression, consistent with always @* behaviour.
+    InlineContAssignFunctionReads = 1 << 6,
+
+    /// When set, @c always @* uses longest static prefix (LSP) ranges when
+    /// building its implicit sensitivity list, matching the behaviour of
+    /// @c always_comb. This is a non-standard extension supported by some
+    /// simulators.
+    ///
+    /// Per LRM 9.4.2.2 the default (flag not set) is to treat the sensitivity as
+    /// covering the entire variable for any partial select -- i.e. the sensitivity
+    /// is derived from identifiers only, not from LSPs.
+    AlwaysStarUsesLSPs = 1 << 7,
+
+    /// When set, @c assign (continuous assignment) uses longest static prefix
+    /// (LSP) ranges when building its implicit sensitivity list, matching the
+    /// behaviour of @c always_comb.
+    ///
+    /// The LRM does not specify exactly how continuous assignment sensitivities
+    /// should be determined; different simulators choose differently. The
+    /// default (flag not set) is to treat the sensitivity as covering the entire
+    /// variable for any partial select -- i.e. the sensitivity is derived from
+    /// identifiers only, not from LSPs.
+    ContAssignUsesLSPs = 1 << 8,
 };
-SLANG_BITMASK(AnalysisFlags, CheckShadow)
+SLANG_BITMASK(AnalysisFlags, ContAssignUsesLSPs)
 
 /// Contains various options that can control analysis behavior.
 struct SLANG_EXPORT AnalysisOptions {
     /// Flags that control analysis behavior.
     bitmask<AnalysisFlags> flags;
-
-    /// The number of threads to use for analysis.
-    uint32_t numThreads = 0;
 
     /// The maximum number of case analysis steps to perform before giving up.
     uint32_t maxCaseAnalysisSteps = 65535;

@@ -33,7 +33,8 @@ using namespace analysis;
     CompilationFlags::AllowRecursiveImplicitCall, \
     CompilationFlags::AllowBareValParamAssignment, \
     CompilationFlags::AllowSelfDeterminedStreamConcat, \
-    CompilationFlags::AllowMergingAnsiPorts
+    CompilationFlags::AllowMergingAnsiPorts, \
+    CompilationFlags::AllowArrayConcatAssignPattern
 
 static constexpr CompilationFlags vcsCompFlags[] = {VCS_COMP_FLAGS};
 static constexpr CompilationFlags allCompFlags[] = {
@@ -90,6 +91,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::UnknownSystemName,
                  diag::NonstandardHierarchicalCross,
                  diag::NonstandardStringConcat,
+                 diag::NonstandardInside,
                  diag::MixedVarAssigns,
                  diag::MultipleContAssigns,
                  diag::MultipleAlwaysAssigns,
@@ -132,6 +134,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::QualifiersOnOutOfBlock,
                  diag::MemberImplNotFound,
                  diag::PackageImportInClass,
+                 diag::BareAssociativePattern,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }

@@ -104,6 +104,10 @@ void TextDiagnosticClient::clear() {
     buffer->clear();
 }
 
+bool TextDiagnosticClient::empty() const {
+    return buffer->empty();
+}
+
 std::string TextDiagnosticClient::getString() const {
     return buffer->str();
 }

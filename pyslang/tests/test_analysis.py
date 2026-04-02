@@ -1,7 +1,14 @@
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
 
-from pyslang.analysis import AnalysisManager, DriverKind, FlowAnalysis
+from pyslang.analysis import (
+    AnalysisManager,
+    DriverKind,
+    FlowAnalysis,
+    ReadRange,
+    SensitivityList,
+    SensitivityListKind,
+)
 from pyslang.ast import (
     Compilation,
     ExpressionStatement,
@@ -417,3 +424,161 @@ endmodule
     flow.run(proc_block.body)
 
     assert "add" in calls_found, f"Should find call to 'add', found: {calls_found}"
+
+
+# ---------------------------------------------------------------------------
+# SensitivityList / ReadRange tests
+# ---------------------------------------------------------------------------
+
+
+def _get_proc_block(code):
+    """Compile *code*, return the first ProceduralBlockSymbol found in module m."""
+    tree = SyntaxTree.fromText(code)
+    compilation = Compilation()
+    compilation.addSyntaxTree(tree)
+    compilation.getAllDiagnostics()
+    m = compilation.getRoot().lookupName("m")
+    for member in m.body:
+        if isinstance(member, ProceduralBlockSymbol):
+            return compilation, member
+    raise AssertionError("No procedural block found")
+
+
+def _analyze(code):
+    """Compile *code* and return (compilation, AnalyzedProcedure) for module m."""
+    compilation, _ = _get_proc_block(code)
+    procs = []
+    am = AnalysisManager()
+    am.addProcListener(lambda p: procs.append(p))
+    am.analyze(compilation)
+    if procs:
+        return procs[0]
+    raise AssertionError("No AnalyzedProcedure for a ProceduralBlockSymbol found")
+
+
+def test_sensitivity_list_always_comb_implicit():
+    """always_comb produces an Implicit sensitivity list over the read signals."""
+    proc = _analyze("""
+module m;
+    logic a, b, y;
+    always_comb y = a & b;
+endmodule
+""")
+    sl = proc.sensitivityList
+    assert sl.kind == SensitivityListKind.Implicit
+    assert sl.timingControl is None
+    names = {rr.symbol.name for rr in sl.reads}
+    assert names == {"a", "b"}
+
+
+def test_sensitivity_list_read_range_type():
+    """Each entry in SensitivityList.reads is a ReadRange with the right fields."""
+    proc = _analyze("""
+module m;
+    logic [7:0] vec;
+    logic y;
+    always_comb y = vec[5];
+endmodule
+""")
+    sl = proc.sensitivityList
+    assert sl.kind == SensitivityListKind.Implicit
+    rrs = list(sl.reads)
+    assert len(rrs) == 1
+    rr = rrs[0]
+    assert rr.symbol.name == "vec"
+    lo, hi = rr.bitRange
+    # always_comb uses LSPs by default so bit range is [5, 5]
+    assert lo == 5
+    assert hi == 5
+
+
+def test_sensitivity_list_always_ff_explicit():
+    """always_ff produces an Explicit sensitivity list with a timingControl."""
+    proc = _analyze("""
+module m(input logic clk);
+    logic [7:0] count;
+    always_ff @(posedge clk) count <= count + 1;
+endmodule
+""")
+    sl = proc.sensitivityList
+    assert sl.kind == SensitivityListKind.Explicit
+    assert sl.timingControl is not None
+    names = {rr.symbol.name for rr in sl.reads}
+    assert {"clk"} == names
+
+
+def test_sensitivity_list_initial_none():
+    """initial blocks have no event-based sensitivity (Kind.None_)."""
+    proc = _analyze("""
+module m;
+    logic a;
+    initial a = 1;
+endmodule
+""")
+    sl = proc.sensitivityList
+    assert sl.kind == SensitivityListKind.None_
+    assert list(sl.reads) == []
+
+
+def test_sensitivity_list_always_star_implicit():
+    """always @* derives an Implicit sensitivity like always_comb."""
+    proc = _analyze("""
+module m;
+    logic a, b, y;
+    always @(*) y = a | b;
+endmodule
+""")
+    sl = proc.sensitivityList
+    assert sl.kind == SensitivityListKind.Implicit
+    names = {rr.symbol.name for rr in sl.reads}
+    assert names == {"a", "b"}
+
+
+def test_sensitivity_list_always_comb_partially_driven():
+    """Bits of a vector that are also written are excluded from the sensitivity."""
+    proc = _analyze("""
+module m;
+    logic [7:0] vec;
+    logic [3:0] y;
+    always_comb begin
+        vec[3:0] = 4'h0;
+        y = vec[7:4];
+    end
+endmodule
+""")
+    sl = proc.sensitivityList
+    assert sl.kind == SensitivityListKind.Implicit
+    rrs = list(sl.reads)
+    vec_entries = [rr for rr in rrs if rr.symbol.name == "vec"]
+    assert len(vec_entries) == 1
+    lo, hi = vec_entries[0].bitRange
+    assert lo == 4
+    assert hi == 7
+
+
+def test_analyzed_procedure_read_set():
+    """AnalyzedProcedure.readSet contains all symbols read in the procedure."""
+    proc = _analyze("""
+module m;
+    logic a, b, y;
+    always_comb y = a & b;
+endmodule
+""")
+    names = {rr.symbol.name for rr in proc.readSet}
+    assert {"a", "b"} == names
+
+
+def test_analyzed_procedure_implicit_event_read_sets():
+    """ImplicitEventReadSet is populated for always @* blocks."""
+    proc = _analyze("""
+module m;
+    logic a, b, y;
+    always @(*) y = a ^ b;
+endmodule
+""")
+    iers = list(proc.implicitEventReadSets)
+    assert len(iers) == 1
+    ier = iers[0]
+    assert ier.statement is not None
+    names = {rr.symbol.name for rr in ier.reads}
+    assert names == {"a", "b"}

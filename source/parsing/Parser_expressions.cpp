@@ -251,15 +251,16 @@ ExpressionSyntax& Parser::parsePrimaryExpression(bitmask<ExpressionOptions> opti
                     return parseStreamConcatenation(openBrace);
                 default: {
                     auto& first = parseExpression();
+                    if (peek(TokenKind::Colon))
+                        return parseAssignmentPatternFromBrace(openBrace, &first);
                     if (!peek(TokenKind::OpenBrace))
                         return parseConcatenation(openBrace, &first);
-                    else {
-                        auto openBraceInner = consume();
-                        auto& concat = parseConcatenation(openBraceInner, nullptr);
-                        auto closeBrace = expect(TokenKind::CloseBrace);
-                        return factory.multipleConcatenationExpression(openBrace, first, concat,
-                                                                       closeBrace);
-                    }
+
+                    auto openBraceInner = consume();
+                    auto& concat = parseConcatenation(openBraceInner, nullptr);
+                    auto closeBrace = expect(TokenKind::CloseBrace);
+                    return factory.multipleConcatenationExpression(openBrace, first, concat,
+                                                                   closeBrace);
                 }
             }
         }
@@ -333,7 +334,22 @@ void Parser::handleExponentSplit(Token token, size_t offset) {
 
 ExpressionSyntax& Parser::parseInsideExpression(ExpressionSyntax& expr) {
     auto inside = expect(TokenKind::InsideKeyword);
-    auto& list = parseRangeList();
+    if (peek(TokenKind::OpenBrace)) {
+        auto& list = parseRangeList();
+        return factory.insideExpression(expr, inside, list);
+    }
+
+    // Non-standard: inside without braces
+    addDiag(diag::NonstandardInside, peek().location());
+    auto& rhs = parseSubExpression(ExpressionOptions::None, 0);
+
+    auto openBrace = Token::createMissing(alloc, TokenKind::OpenBrace,
+                                          rhs.getFirstToken().location());
+    auto closeBrace = Token::createMissing(alloc, TokenKind::CloseBrace,
+                                           rhs.getLastToken().location());
+    SmallVector<TokenOrSyntax, 2> items;
+    items.push_back(&rhs);
+    auto& list = factory.rangeList(openBrace, items.copy(alloc), closeBrace);
     return factory.insideExpression(expr, inside, list);
 }
 
@@ -518,6 +534,31 @@ AssignmentPatternItemSyntax& Parser::parseAssignmentPatternItem(ExpressionSyntax
 
     auto colon = expect(TokenKind::Colon);
     return factory.assignmentPatternItem(*key, colon, parseExpression());
+}
+
+// Parse a structured assignment pattern whose opening brace has already been consumed as a plain
+// '{' token (no apostrophe). The LRM requires the '{ prefix; this non-standard form is accepted
+// by some tools (e.g. VCS).
+AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternFromBrace(
+    Token openBrace, ExpressionSyntax* firstExpr) {
+    addDiag(diag::BareAssociativePattern, openBrace.location());
+
+    SmallVector<TokenOrSyntax, 8> buffer;
+    buffer.push_back(&parseAssignmentPatternItem(firstExpr));
+
+    Token closeBrace;
+    if (peek(TokenKind::Comma)) {
+        buffer.push_back(consume());
+        parseList<isPossibleExpressionOrCommaOrDefault, isEndOfBracedList>(
+            buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::False,
+            diag::ExpectedAssignmentKey, [this] { return &parseAssignmentPatternItem(nullptr); });
+    }
+    else {
+        closeBrace = expect(TokenKind::CloseBrace);
+    }
+
+    auto& pattern = factory.structuredAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
+    return factory.assignmentPatternExpression(nullptr, pattern);
 }
 
 ElementSelectSyntax& Parser::parseElementSelect() {
@@ -821,7 +862,7 @@ ExpressionSyntax& Parser::parseForeachArrayExpression() {
                     expr = &factory.elementSelectExpression(*expr, parseElementSelect());
                 }
                 else {
-                    // This is the loop-variable bracket — leave it for parseForeachLoopVariables.
+                    // This is the loop-variable bracket - leave it for parseForeachLoopVariables.
                     return *expr;
                 }
                 break;

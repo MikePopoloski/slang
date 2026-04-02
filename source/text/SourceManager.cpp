@@ -193,6 +193,25 @@ const SourceLibrary* SourceManager::getLibraryFor(BufferID buffer) const {
     return info->library;
 }
 
+SourceManager::BufferKind SourceManager::getBufferKind(BufferID buffer) const {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    if (buffer && buffer.getId() < bufferEntries.size()) {
+        if (auto* exp = std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]))
+            return exp->isMacroArg ? BufferKind::MacroArg : BufferKind::Macro;
+        else
+            return std::get<FileInfo>(bufferEntries[buffer.getId()]).bufferKind;
+    }
+
+    return BufferKind::Unknown;
+}
+
+void SourceManager::setBufferKind(BufferID buffer, BufferKind kind) {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    auto info = getFileInfo(buffer, lock);
+    if (info)
+        info->bufferKind = kind;
+}
+
 std::string_view SourceManager::getMacroName(SourceLocation location) const {
     std::shared_lock<std::shared_mutex> lock(mutex);
     while (isMacroArgLocImpl(location, lock))

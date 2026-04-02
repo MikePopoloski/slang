@@ -118,9 +118,13 @@ enum class SLANG_EXPORT CompilationFlags {
 
     /// Allow interface instances that are bind/defparam targets to be assigned
     /// to virtual interfaces.
-    AllowVirtualIfaceWithOverride = 1 << 14
+    AllowVirtualIfaceWithOverride = 1 << 14,
+
+    /// Allow assignment pattern expressions to be used in unpacked array concatenations.
+    /// Normally these are not assignment-like contexts but some tools allow it anyway.
+    AllowArrayConcatAssignPattern = 1 << 15
 };
-SLANG_BITMASK(CompilationFlags, AllowVirtualIfaceWithOverride)
+SLANG_BITMASK(CompilationFlags, AllowArrayConcatAssignPattern)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {
@@ -544,6 +548,21 @@ public:
     /// Notes the presence of a DPI export directive. These will be checked for correctness
     /// but are otherwise unused by SystemVerilog code.
     void noteDPIExportDirective(const syntax::DPIExportSyntax& syntax, const Scope& scope);
+
+    /// A DPI export entry.
+    struct DPIExport {
+        /// The exported subroutine symbol.
+        const SubroutineSymbol* subroutine = nullptr;
+
+        /// The C identifier used for the export.
+        std::string cIdentifier;
+
+        /// The original export declaration syntax node.
+        const syntax::DPIExportSyntax* syntax = nullptr;
+    };
+
+    /// Returns the DPI exports collected during elaboration.
+    std::span<const DPIExport> getDPIExports() const { return dpiExports; }
 
     /// Tracks the existence of an out-of-block declaration (method or constraint) in the
     /// given scope. This can later be retrieved by calling findOutOfBlockDecl().
@@ -989,8 +1008,11 @@ private:
     // modified after elaboration begins.
     HierarchyOverrideNode hierarchyOverrides;
 
-    // A list of DPI export directives we've encountered during elaboration.
-    std::vector<std::pair<const syntax::DPIExportSyntax*, const Scope*>> dpiExports;
+    // A list of raw DPI export directives collected during elaboration.
+    std::vector<std::pair<const syntax::DPIExportSyntax*, const Scope*>> dpiExportDirectives;
+
+    // Resolved DPI exports collected during elaboration.
+    std::vector<DPIExport> dpiExports;
 
     // A list of bind directives we've encountered during elaboration.
     std::vector<std::pair<const syntax::BindDirectiveSyntax*, const Scope*>> bindDirectives;

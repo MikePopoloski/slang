@@ -672,10 +672,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[1].code == diag::EmptyConcatNotAllowed);
-    CHECK(diags[2].code == diag::EmptyConcatNotAllowed);
 }
 
 TEST_CASE("Manually specify top modules") {
@@ -1985,6 +1984,51 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Interface instance array to virtual interface in uninstantiated module -- GH #1766") {
+    auto tree = SyntaxTree::fromText(R"(
+interface intf #(
+  parameter int WIDTH = 8
+)(
+  input logic clk_i
+);
+  logic [WIDTH-1:0] data;
+endinterface
+
+class cls #(
+  parameter int W = 8,
+  parameter int N = 2
+);
+  virtual intf #(.WIDTH(W)) vif [N];
+
+  function new(virtual intf #(.WIDTH(W)) my_intf [N]);
+    this.vif = my_intf;
+  endfunction
+endclass
+
+module other_top;
+endmodule
+
+module bug_top #(
+  parameter int NumPorts = 2,
+  parameter int Width    = 16
+);
+  logic clk;
+  intf #(.WIDTH(Width)) i_array [NumPorts] (clk);
+
+  initial begin : proc
+    static cls #(.W(Width), .N(NumPorts)) c = new(i_array);
+  end
+endmodule
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("other_top");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Instance caching with nested bind directives") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -2153,6 +2197,26 @@ endmodule
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Empty connection in uninstantiated module") {
+    auto tree = SyntaxTree::fromText(R"(
+module top ();
+    foo bar (.i());
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::IgnoreUnknownModules;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    NO_COMPILATION_ERRORS;
+
+    auto& bar = compilation.getRoot().lookupName<UninstantiatedDefSymbol>("top.bar");
+    CHECK(bar.getPortConnections()[0]->as<SimpleAssertionExpr>().expr.kind ==
+          ExpressionKind::EmptyArgument);
 }
 
 TEST_CASE("maybe_unknown attribute suppresses unknown module errors") {
@@ -2353,6 +2417,28 @@ endpackage
 )");
 
     Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Uninstantiated def with assignment pattern ports") {
+    auto tree = SyntaxTree::fromText(R"(
+module sub(
+  input logic [31:0] data [3:0]
+);
+endmodule
+
+module unused;
+  sub u0(.data('{default:'0}));
+endmodule
+
+module top;
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.insert("top");
+
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }

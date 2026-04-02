@@ -111,6 +111,13 @@ printing all macros in a single flat sorted list. Each group is preceded by a co
 of the form `//<filename>:` so the originating file is clearly visible. Has no effect when
 used without `--macros-only`.
 
+`--show-parsed-files`
+
+Print the name and kind of each file as it is parsed. For each file, the output includes
+whether it is a design, library, library map, or include file, and indicates when the preprocessor
+returns to a previously active file after finishing an include. This is useful for tracing which
+files are parsed and in what order.
+
 `--parse-only`
 
 Perform parsing of all input files but don't perform type checking and elaboration.
@@ -620,6 +627,11 @@ allows hierarchical references to unnamed generate blocks via those external nam
 Allow interface instances that are bind/defparam targets to be assigned to virtual interfaces.
 SystemVerilog doesn't permit this, but some tools allow it anyway so this flag can be used
 for compatibility purposes.
+
+`--allow-array-concat-assign-pattern`
+
+Allow assignment pattern expressions to be used in unpacked array concatenations.
+The LRM states that these are not assignment-like contexts but some tools allow it anyway.
 
 `--cmd-ignore <vendor_cmd>,<N>`
 

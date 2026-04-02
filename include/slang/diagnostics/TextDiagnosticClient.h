@@ -47,7 +47,8 @@ public:
     void report(const ReportedDiagnostic& diagnostic) override;
 
     void clear();
-    std::string getString() const;
+    [[nodiscard]] bool empty() const;
+    [[nodiscard]] std::string getString() const;
 
 private:
     std::unique_ptr<FormatBuffer> buffer;

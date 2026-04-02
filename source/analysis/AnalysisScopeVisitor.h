@@ -267,6 +267,7 @@ struct AnalysisScopeVisitor {
                                       symbol.as<ClockVarSymbol>());
         }
         else if (symbol.kind == SymbolKind::ClassProperty) {
+            checkShadowProperty(symbol.as<ClassPropertySymbol>());
             if (symbol.as<ClassPropertySymbol>().visibility == Visibility::Local) {
                 checkValueUnused(symbol, diag::UnusedLocalClassProperty,
                                  diag::UnassignedLocalProperty, diag::UnusedButSetLocalProperty,
@@ -517,6 +518,30 @@ private:
     void addUnusedDiag(const Symbol& symbol, DiagCode code) {
         if (shouldWarnUnused(symbol))
             context.addDiag(symbol, code, symbol.location) << symbol.name;
+    }
+
+    void checkShadowProperty(const ClassPropertySymbol& symbol) {
+        if (!manager.hasFlag(AnalysisFlags::CheckShadow))
+            return;
+
+        if (symbol.name.empty() || symbol.name == "_"sv)
+            return;
+
+        auto scope = symbol.getParentScope();
+        if (!scope || scope->asSymbol().kind != SymbolKind::ClassType)
+            return;
+
+        auto baseType = scope->asSymbol().as<ClassType>().getBaseClass();
+        if (!baseType || baseType->isError())
+            return;
+
+        auto found = baseType->getCanonicalType().as<ClassType>().find(symbol.name);
+        if (!found || found->kind != SymbolKind::ClassProperty)
+            return;
+
+        auto& diag = context.addDiag(symbol, diag::ShadowProperty, symbol.location);
+        diag << symbol.name << found->getParentScope()->asSymbol().name;
+        diag.addNote(diag::NoteDeclarationHere, found->location);
     }
 
     void checkShadow(const Symbol& symbol) {

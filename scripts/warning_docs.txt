@@ -280,6 +280,45 @@ module n;
 endmodule
 ```
 
+-Wempty-input-connection
+An instance input port was explicitly connected to nothing via `.port_name()` syntax.
+This causes the port to receive the default value of its *type* (e.g. `'x` for `logic`),
+not the default value expression declared on the port, if any.
+If the intent is to use the port's default value expression, omit the connection entirely
+or use a named connection with the default value explicitly.
+```
+module m(input logic a = 1, input logic b);
+endmodule
+
+module n;
+    m m1(.a(), .b());   // a defaults to 'x, not 1; b also defaults to 'x
+endmodule
+```
+
+-Wempty-output-connection
+An instance output port was explicitly connected to nothing via `.port_name()` syntax.
+The driven value from the module is silently discarded.
+```
+module m(output logic o);
+    assign o = 1;
+endmodule
+
+module n;
+    m m1(.o());   // driven value is discarded
+endmodule
+```
+
+-Wempty-inout-connection
+An instance inout port was explicitly connected to nothing via `.port_name()` syntax.
+```
+module m(inout wire w);
+endmodule
+
+module n;
+    m m1(.w());   // inout left disconnected
+endmodule
+```
+
 -Wudp-port-empty
 A connection to a user-defined primitive instance is an empty expression.
 While allowed, this is easily confused with a misplaced comma and is likely
@@ -1342,6 +1381,20 @@ module m;
 endmodule
 ```
 
+-Wshadow-property
+A class property declaration shadows a property with the same name declared in a base class.
+This can lead to subtle bugs where the programmer intends to reference the base class property
+but unintentionally references the derived class property instead.
+```
+class Base;
+    int x;
+endclass
+
+class Derived extends Base;
+    int x;  // shadows Base::x
+endclass
+```
+
 -Wrandomize-var-shadow
 An identifier used inside a `randomize()` 'with' constraint block resolves to a member of
 the class being randomized, but a variable with the same name also exists in an enclosing
@@ -1405,6 +1458,20 @@ class C;
     constraint C1 { solve x before y; }
     constraint C2 { solve y before x; }
 endclass
+```
+
+-Wbits-of-integer-constant
+$bits applied to a parameter with a simple integer or scalar type always returns
+the fixed width of that type, not a value derived from the parameter itself.
+For example, `$bits(P)` where P is `parameter int` always returns 32.
+The intention here is often to instead use the parameter directly, or use $clog2().
+```
+module m;
+    parameter int max_value = 10;
+    logic[$bits(max_value+1)-1:0] value;
+
+    logic[$clog2(max_value+1)-1:0] value;
+endmodule
 ```
 
 @category Compatibility
@@ -1989,8 +2056,8 @@ SystemVerilog LRM but is supported by some tools. In VCS compatibility mode
 this is ignored; otherwise it is an error that can be downgraded to a warning.
 ```
 module top;
-    int arr[4];
-    function automatic int get_arr(); endfunction
+    typedef int Arr[4];
+    function automatic Arr get_arr(); endfunction
     initial begin
         foreach (get_arr()[i]) begin end
     end
@@ -2024,6 +2091,17 @@ class C;
         a -> (b dist { 0 := 1, [1:15] := 1});
     }
 endclass
+```
+
+-Wnonstandard-inside
+Using 'inside' without braces around the value list is non-standard, but some tools
+allow it as an extension. Standard syntax requires braces around the range list.
+```
+module m;
+    int x;
+    int arr[3];
+    int result = x inside arr;
+endmodule
 ```
 
 -Wimplicit-net-port
@@ -2091,9 +2169,9 @@ wording in prior versions so this is implemented as a pedantic warning only.
 localparam p = $isunbounded(1 + 1);
 ```
 
--Wnon-standard-hierarchical-cross
+-Wnonstandard-hierarchical-cross
 Hierarchical (dotted) references in cover cross items are not part of the
-SystemVerilog standard but are supported by some commercial tools like Xcelium.
+SystemVerilog standard but are supported by some commercial tools.
 The implicit coverpoint created from the reference will be named by replacing
 dots with underscores (e.g. `status.mpp` becomes `status_mpp`).
 ```
@@ -2106,6 +2184,18 @@ module m;
     covergroup cg;
         cross status.mpp, status.mode;
     endgroup
+endmodule
+```
+
+-Wnonstandard-bare-assoc-pattern
+The LRM requires associative array literals to use the apostrophe prefix before the
+opening brace, but some tools allow omitting it (like with normal concatenation syntax) as well.
+```
+module m;
+   string s[int];
+   function void f();
+       s = {0: "sv1", 1: "sv2"};
+   endfunction
 endmodule
 ```
 

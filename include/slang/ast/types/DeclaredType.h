@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/EvaluatedDimension.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/syntax/SyntaxNode.h"
 
@@ -138,6 +139,14 @@ public:
     const syntax::SyntaxList<syntax::VariableDimensionSyntax>* getDimensionSyntax() const {
         return dimensions;
     }
+
+    /// Returns all declared dimensions for this type, in declaration order.
+    ///
+    /// Packed dimensions from the base type syntax come first, followed by any unpacked
+    /// dimensions set via @a setDimensionSyntax.
+    ///
+    /// @note The result is recomputed on each call and is not cached.
+    std::vector<EvaluatedDimension> getResolvedDimensions() const;
 
     /// Resolves and returns the initializer expression, if present. Otherwise returns nullptr.
     const Expression* getInitializer() const;

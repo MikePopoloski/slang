@@ -231,6 +231,10 @@ public:
     /// classes, events, chandles, virtual interfaces, and the null type.
     bool isHandleType() const;
 
+    /// Indicates whether this is a type that is a handle to some object that
+    /// contains accessible members (classes, covergroups, virtual interfaces).
+    bool isObjectHandleType() const;
+
     /// Indicates whether this is a type alias.
     /// Note that unlike other methods, this one does not unwrap to the canonical type.
     bool isAlias() const { return kind == SymbolKind::TypeAlias; }

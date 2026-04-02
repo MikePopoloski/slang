@@ -1387,7 +1387,7 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass, bool hasBaseClass) {
         }
         else if (decl.kind == SyntaxKind::PackageImportDeclaration) {
             // Package imports are not allowed in classes per the LRM but are supported
-            // by some tools (e.g. VCS); emit a separate downgradable diagnostic.
+            // by some tools; emit a separate downgradable diagnostic.
             addDiag(diag::PackageImportInClass, decl.sourceRange());
         }
         else if (decl.kind == SyntaxKind::NetTypeDeclaration ||
@@ -1941,6 +1941,7 @@ CoverCrossSyntax* Parser::parseCoverCross(AttrList attributes, NamedLabelSyntax*
             addDiag(diag::CoverCrossSelectNotAllowed, name.sourceRange());
         else if (name.kind != SyntaxKind::IdentifierName)
             addDiag(diag::NonstandardHierarchicalCross, name.sourceRange());
+
         buffer.push_back(&name);
         if (!peek(TokenKind::Comma))
             break;

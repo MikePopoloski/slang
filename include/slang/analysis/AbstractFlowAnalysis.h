@@ -42,9 +42,11 @@ protected:
     ConstantValue tryEvalBool(const Expression& expr) const;
 
     enum class WillExecute { Yes, No, Maybe };
+
+    using ForLoopVars = SmallVector<std::pair<ConstantValue*, const VariableSymbol*>>;
+
     WillExecute tryGetLoopIterValues(const ForLoopStatement& stmt,
-                                     SmallVector<ConstantValue>& values,
-                                     SmallVector<ConstantValue*>& localPtrs);
+                                     SmallVector<ConstantValue>& values, ForLoopVars& iterVars);
 
     bool isFullyCovered(const CaseStatement& stmt, const Statement* knownBranch,
                         bool isKnown) const;
@@ -107,6 +109,10 @@ public:
 protected:
     using FlowAnalysisBase::FlowAnalysisBase;
 
+    // ------------------------------------------------------------------------
+    // Current state management
+    // ------------------------------------------------------------------------
+
     /// Gets the current flow state.
     TState& getState() { return state; }
 
@@ -156,7 +162,28 @@ protected:
     /// Gets the set of states at various return points in a subroutine.
     std::span<const TState> getReturnStates() const { return returnStates; }
 
-    // **** Statement Visitors ****
+    // ------------------------------------------------------------------------
+    // Visitor hooks
+    // ------------------------------------------------------------------------
+
+    /// Called before entering a timing control expression (wait condition, event
+    /// references in wait_order, etc.). Derived classes can override to suppress
+    /// implicit sensitivity tracking inside timing expressions.
+    void enterTimingControlExpr() {}
+
+    /// Called after leaving a timing control expression.
+    void leaveTimingControlExpr() {}
+
+    /// Called before entering an assertion action block.
+    /// Derived classes can override to suppress implicit sensitivity tracking.
+    void enterAssertionActionBlock() {}
+
+    /// Called after leaving an assertion action block.
+    void leaveAssertionActionBlock() {}
+
+    // ------------------------------------------------------------------------
+    // Statement visitors
+    // ------------------------------------------------------------------------
 
     void visitStmt(const InvalidStatement&) { bad = true; }
 
@@ -422,13 +449,8 @@ protected:
         for (auto init : stmt.initializers)
             visit(*init);
 
-        for (auto var : stmt.loopVars) {
-            if (auto init = var->getInitializer())
-                visit(*init);
-        }
-
         SmallVector<ConstantValue> iterValues;
-        SmallVector<ConstantValue*> localPtrs;
+        ForLoopVars iterVars;
         auto oldForLoopSteps = forLoopSteps;
         auto bodyWillExecute = WillExecute::Maybe;
         TState bodyState, exitState;
@@ -443,10 +465,14 @@ protected:
             // If we have a deterministic set of iteration values we can "unroll" the
             // loop and get finer grained tracking of data flow within it.
             if (!cv)
-                bodyWillExecute = tryGetLoopIterValues(stmt, iterValues, localPtrs);
+                bodyWillExecute = tryGetLoopIterValues(stmt, iterValues, iterVars);
+            else
+                bodyWillExecute = cv.isTrue() ? WillExecute::Yes : WillExecute::No;
         }
         else {
-            // If there's no stop expression, the loop is infinite.
+            // If there's no stop expression, the loop is infinite, so the
+            // body always executes at least once.
+            bodyWillExecute = WillExecute::Yes;
             bodyState = std::move(state);
             exitState = (DERIVED).unreachableState();
         }
@@ -471,7 +497,7 @@ protected:
             // We have a set of iteration values that we can use to unroll the loop.
             auto savedUnrollFlag = std::exchange(inUnrolledForLoop, true);
             for (size_t i = 0; i < iterValues.size();) {
-                for (auto local : localPtrs)
+                for (auto& [local, _] : iterVars)
                     *local = std::move(iterValues[i++]);
 
                 visit(stmt.body);
@@ -482,10 +508,8 @@ protected:
         }
 
         // Clean up any locals we may have created.
-        if (!localPtrs.empty()) {
-            for (auto var : stmt.loopVars)
-                evalContext.deleteLocal(var);
-        }
+        for (auto& [_, var] : iterVars)
+            evalContext.deleteLocal(var);
 
         forLoopSteps = oldForLoopSteps;
         inCheckLoopVars = savedCheckLoopVars;
@@ -577,7 +601,10 @@ protected:
     }
 
     void visitStmt(const WaitStatement& stmt) {
+        // The wait condition is a timing control expression.
+        (DERIVED).enterTimingControlExpr();
         visitCondition(stmt.cond);
+        (DERIVED).leaveTimingControlExpr();
 
         // The body is never executed until the condition is true.
         setState(std::move(stateWhenTrue));
@@ -585,8 +612,11 @@ protected:
     }
 
     void visitStmt(const WaitOrderStatement& stmt) {
+        // Event references in wait_order are timing control expressions.
+        (DERIVED).enterTimingControlExpr();
         for (auto expr : stmt.events)
             visit(*expr);
+        (DERIVED).leaveTimingControlExpr();
 
         auto initialState = (DERIVED).copyState(state);
         if (stmt.ifTrue) {
@@ -730,13 +760,20 @@ protected:
             auto trueState = std::move(stateWhenTrue), falseState = std::move(stateWhenFalse);
             if (stmt.ifTrue) {
                 setState(std::move(trueState));
+
+                (DERIVED).enterAssertionActionBlock();
                 visit(*stmt.ifTrue);
+                (DERIVED).leaveAssertionActionBlock();
+
                 trueState = std::move(state);
             }
 
             setState(std::move(falseState));
-            if (stmt.ifFalse)
+            if (stmt.ifFalse) {
+                (DERIVED).enterAssertionActionBlock();
                 visit(*stmt.ifFalse);
+                (DERIVED).leaveAssertionActionBlock();
+            }
 
             (DERIVED).joinState(state, trueState);
         }
@@ -761,7 +798,9 @@ protected:
     void visitStmt(const WaitForkStatement&) {}
     void visitStmt(const DisableForkStatement&) {}
 
-    // **** Expression Visitors ****
+    // ------------------------------------------------------------------------
+    // Expression visitors
+    // ------------------------------------------------------------------------
 
     void visitExpr(const InvalidExpression&) { bad = true; }
 

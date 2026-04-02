@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/ast/Expression.h"
 #include "slang/ast/ScriptSession.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -1959,8 +1960,8 @@ module top2;
     initial begin
         v16 = p16;
         v32 = p32;
-        v16 = p32; // illegal – parameter values don't match
-        v16 = v32; // illegal – parameter values don't match
+        v16 = p32; // illegal - parameter values don't match
+        v16 = v32; // illegal - parameter values don't match
         v16_phy = v16;
         v16 = v16_phy; // illegal assignment from selected modport to
                        // no selected modport
@@ -2482,4 +2483,128 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::EnumCircularBaseType);
+}
+
+TEST_CASE("getResolvedDimensions - no dims") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int x;
+endmodule
+)");
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation).body;
+    const auto& x = instance.find<VariableSymbol>("x");
+    auto dims = x.getDeclaredType()->getResolvedDimensions();
+    CHECK(dims.empty());
+    CHECK(compilation.getAllDiagnostics().empty());
+}
+
+TEST_CASE("getResolvedDimensions - literal packed range") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    bit [7:0] data;
+endmodule
+)");
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation).body;
+    const auto& data = instance.find<VariableSymbol>("data");
+    auto dims = data.getDeclaredType()->getResolvedDimensions();
+    REQUIRE(dims.size() == 1);
+    CHECK(dims[0].kind == DimensionKind::Range);
+    CHECK(dims[0].range.left == 7);
+    CHECK(dims[0].range.right == 0);
+    REQUIRE(dims[0].leftExpr != nullptr);
+    REQUIRE(dims[0].rightExpr != nullptr);
+    // Both are integer literal expressions
+    CHECK(dims[0].leftExpr->kind == ExpressionKind::IntegerLiteral);
+    CHECK(dims[0].rightExpr->kind == ExpressionKind::IntegerLiteral);
+    CHECK(compilation.getAllDiagnostics().empty());
+}
+
+TEST_CASE("getResolvedDimensions - parameterized packed range") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter int N = 4);
+    localparam int W = N * 2;
+    bit [W-1:0] data;
+endmodule
+)");
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation).body;
+    const auto& data = instance.find<VariableSymbol>("data");
+    auto dims = data.getDeclaredType()->getResolvedDimensions();
+    REQUIRE(dims.size() == 1);
+    CHECK(dims[0].kind == DimensionKind::Range);
+    // N=4, W=8, so range is [7:0]
+    CHECK(dims[0].range.left == 7);
+    CHECK(dims[0].range.right == 0);
+    // The original expression for W-1 should be a binary subtraction, not a literal
+    REQUIRE(dims[0].leftExpr != nullptr);
+    CHECK(dims[0].leftExpr->kind == ExpressionKind::BinaryOp);
+    REQUIRE(dims[0].rightExpr != nullptr);
+    CHECK(dims[0].rightExpr->kind == ExpressionKind::IntegerLiteral);
+    CHECK(compilation.getAllDiagnostics().empty());
+}
+
+TEST_CASE("getResolvedDimensions - packed + unpacked") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [3:0] arr [7:0];
+endmodule
+)");
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation).body;
+    const auto& arr = instance.find<VariableSymbol>("arr");
+    auto dims = arr.getDeclaredType()->getResolvedDimensions();
+    // One packed dim [3:0], one unpacked dim [7:0]
+    REQUIRE(dims.size() == 2);
+    CHECK(dims[0].kind == DimensionKind::Range);
+    CHECK(dims[0].range.left == 3);
+    CHECK(dims[0].range.right == 0);
+    CHECK(dims[1].kind == DimensionKind::Range);
+    CHECK(dims[1].range.left == 7);
+    CHECK(dims[1].range.right == 0);
+    CHECK(compilation.getAllDiagnostics().empty());
+}
+
+TEST_CASE("getResolvedDimensions - packed struct") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct packed { bit a; bit b; } [3:0] arr;
+endmodule
+)");
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation).body;
+    const auto& arr = instance.find<VariableSymbol>("arr");
+    auto dims = arr.getDeclaredType()->getResolvedDimensions();
+    REQUIRE(dims.size() == 1);
+    CHECK(dims[0].kind == DimensionKind::Range);
+    CHECK(dims[0].range.left == 3);
+    CHECK(dims[0].range.right == 0);
+    CHECK(compilation.getAllDiagnostics().empty());
+}
+
+TEST_CASE("getResolvedDimensions - typedef does not expose inner dims") {
+    // The variable's DeclaredType uses a named type (typedef), so it has no
+    // inline packed dims. The typedef's own DeclaredType carries the dims.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    parameter int N = 4;
+    typedef bit [N-1:0] mytype_t;
+    mytype_t data;
+endmodule
+)");
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation).body;
+    const auto& data = instance.find<VariableSymbol>("data");
+    auto dims = data.getDeclaredType()->getResolvedDimensions();
+    CHECK(dims.empty());
+
+    const auto& td = instance.find<TypeAliasType>("mytype_t");
+    auto tdDims = td.targetType.getResolvedDimensions();
+    REQUIRE(tdDims.size() == 1);
+    CHECK(tdDims[0].range.left == 3);
+    CHECK(tdDims[0].range.right == 0);
+    REQUIRE(tdDims[0].leftExpr != nullptr);
+    CHECK(tdDims[0].leftExpr->kind == ExpressionKind::BinaryOp);
+    CHECK(compilation.getAllDiagnostics().empty());
 }

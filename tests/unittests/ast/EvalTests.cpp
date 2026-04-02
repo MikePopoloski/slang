@@ -2651,6 +2651,23 @@ TEST_CASE("Eval bad statement") {
     CHECK(!session.eval("fork=L:for"));
 }
 
+TEST_CASE("Concat LHS assignment preserves signedness -- GH #1705") {
+    ScriptSession session;
+    session.eval(R"(
+function [7:0] f(input [7:0] value);
+    reg signed [2:0] tmp1, tmp2;
+    begin
+        {tmp1, tmp2} = {value[2:0], value[6:4]};
+        f[7:4] = tmp1;
+        f[3:0] = tmp2;
+    end
+endfunction
+)");
+
+    CHECK(session.eval("f(8'h5a)").integer() == 0x2d);
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Void system functions in constant functions") {
     // Regression test: void-returning system methods (push_back, sort, etc.)
     // should not cause constant function evaluation to fail.

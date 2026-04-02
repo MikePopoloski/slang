@@ -1124,6 +1124,8 @@ module m;
     logic l[3];
     wire [2:0] w;
 
+    wire struct packed { logic a; logic b; } st;
+
     nettype int nt;
     nt x;
 
@@ -1135,6 +1137,7 @@ module m;
         release i[1];
         force {w[1], x} = 1;
         assign q = 1;
+        force st.a = 1;
     end
 endmodule
 )");
@@ -1604,19 +1607,27 @@ module top;
       da3 = {da3, c2::self().da2[t_id].da1};
     end
   endtask
+
+  typedef int Arr[4];
+  function automatic Arr get_arr(); endfunction
+  initial begin
+    foreach (get_arr()[i]) begin end
+  end
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
+
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ForeachCallExpr);
+    CHECK(diags[1].code == diag::ForeachCallExpr);
 }
 
 TEST_CASE("foreach loop intermediate bracket followed by invocation") {
     // Covers the OpenParenthesis branch in parseForeachArrayExpression's OpenBracket
-    // handler.  Non-name foreach expressions emit ForeachCallExpr at parse time.
+    // handler. Non-name foreach expressions emit ForeachCallExpr at parse time.
     auto tree = SyntaxTree::fromText(R"(
 module m;
     initial begin
