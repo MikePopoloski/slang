@@ -3450,12 +3450,11 @@ endmodule
 TEST_CASE("allowMissingProtectedScopeEnd - module") {
     // Include file where the module's endmodule is inside a protected region.
     SyntaxTree::getDefaultSourceManager().assignText(
-        "missing_endmodule.sv",
-        "module m;\n"
-        "`pragma protect begin_protected\n"
-        "`pragma protect encoding=(enctype=\"raw\"), data_block\n"
-        "encrypted_payload_containing_endmodule\n"
-        "`pragma protect end_protected\n");
+        "missing_endmodule.sv", "module m;\n"
+                                "`pragma protect begin_protected\n"
+                                "`pragma protect encoding=(enctype=\"raw\"), data_block\n"
+                                "encrypted_payload_containing_endmodule\n"
+                                "`pragma protect end_protected\n");
 
     PreprocessorOptions ppOpts;
     ppOpts.allowMissingProtectedScopeEnd = true;
@@ -3472,12 +3471,11 @@ TEST_CASE("allowMissingProtectedScopeEnd - module") {
 TEST_CASE("allowMissingProtectedScopeEnd - class") {
     // Include file where the class's endclass is inside a protected region.
     SyntaxTree::getDefaultSourceManager().assignText(
-        "missing_endclass.sv",
-        "class c;\n"
-        "`pragma protect begin_protected\n"
-        "`pragma protect encoding=(enctype=\"raw\"), data_block\n"
-        "encrypted_payload_containing_endclass\n"
-        "`pragma protect end_protected\n");
+        "missing_endclass.sv", "class c;\n"
+                               "`pragma protect begin_protected\n"
+                               "`pragma protect encoding=(enctype=\"raw\"), data_block\n"
+                               "encrypted_payload_containing_endclass\n"
+                               "`pragma protect end_protected\n");
 
     PreprocessorOptions ppOpts;
     ppOpts.allowMissingProtectedScopeEnd = true;
@@ -3494,12 +3492,11 @@ TEST_CASE("allowMissingProtectedScopeEnd - class") {
 TEST_CASE("allowMissingProtectedScopeEnd - without option, error is reported") {
     // Without the option, the missing endmodule should produce a parse error.
     SyntaxTree::getDefaultSourceManager().assignText(
-        "missing_endmodule_no_opt.sv",
-        "module m;\n"
-        "`pragma protect begin_protected\n"
-        "`pragma protect encoding=(enctype=\"raw\"), data_block\n"
-        "encrypted_payload_containing_endmodule\n"
-        "`pragma protect end_protected\n");
+        "missing_endmodule_no_opt.sv", "module m;\n"
+                                       "`pragma protect begin_protected\n"
+                                       "`pragma protect encoding=(enctype=\"raw\"), data_block\n"
+                                       "encrypted_payload_containing_endmodule\n"
+                                       "`pragma protect end_protected\n");
 
     auto tree = SyntaxTree::fromText("`include \"missing_endmodule_no_opt.sv\"");
     auto errors = filterWarnings(tree->diagnostics());
@@ -3511,22 +3508,20 @@ TEST_CASE("allowMissingProtectedScopeEnd - no false fabrication when scope is in
     // but the real endmodule is in the parent. The option must NOT fabricate an extra
     // endmodule when the child exits (expectedEndKindBuffer != child buffer).
     SyntaxTree::getDefaultSourceManager().assignText(
-        "protected_child.sv",
-        "`pragma protect begin_protected\n"
-        "`pragma protect encoding=(enctype=\"raw\"), data_block\n"
-        "encrypted_payload_no_scope\n"
-        "`pragma protect end_protected\n");
+        "protected_child.sv", "`pragma protect begin_protected\n"
+                              "`pragma protect encoding=(enctype=\"raw\"), data_block\n"
+                              "encrypted_payload_no_scope\n"
+                              "`pragma protect end_protected\n");
 
     PreprocessorOptions ppOpts;
     ppOpts.allowMissingProtectedScopeEnd = true;
     Bag options;
     options.set(ppOpts);
 
-    auto tree = SyntaxTree::fromText(
-        "module m;\n"
-        "`include \"protected_child.sv\"\n"
-        "endmodule\n",
-        options);
+    auto tree = SyntaxTree::fromText("module m;\n"
+                                     "`include \"protected_child.sv\"\n"
+                                     "endmodule\n",
+                                     options);
     auto errors = filterWarnings(tree->diagnostics());
     CHECK(errors.empty());
     CHECK(std::any_of(tree->diagnostics().begin(), tree->diagnostics().end(),
