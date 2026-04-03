@@ -500,6 +500,7 @@ void Preprocessor::handleEncryptedRegion(Token keyword, const PragmaExpressionSy
 
     Token token = lexerStack.back()->lexEncodedText(protectEncoding, protectBytes, isSingleLine,
                                                     /* legacyProtectedMode */ false);
+    hasProtectedCode = true;
     addDiag(diag::ProtectedEnvelope, token.location());
 
     skippedTokens.push_back(token);
