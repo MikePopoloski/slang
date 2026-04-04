@@ -182,10 +182,13 @@ public:
     /// This is detected by examining the leading trivia of this token for newlines.
     bool isOnSameLine() const;
 
-    bool valid() const { return info != nullptr; }
+    bool valid() const { return hasInfoPtr || kind != TokenKind::Unknown; }
     explicit operator bool() const { return valid(); }
 
-    bool operator==(const Token& other) const { return kind == other.kind && info == other.info; }
+    bool operator==(const Token& other) const {
+        return kind == other.kind &&
+               (hasInfoPtr ? info == other.info : nonInfoLoc == other.nonInfoLoc);
+    }
 
     /// Modification methods to make it easier to deal with immutable tokens.
     [[nodiscard]] Token withTrivia(BumpAllocator& alloc, std::span<Trivia const> trivia) const;
@@ -205,14 +208,27 @@ private:
     void init(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
               std::string_view rawText, SourceLocation location);
 
+    Info& getInfo() const {
+        SLANG_ASSERT(hasInfoPtr && info);
+        return *info;
+    }
+
     // Some data is stored directly in the token here because we have 6 bytes of padding that
     // would otherwise go unused. The rest is stored in the info block.
     bool missing : 1;
+    bool hasInfoPtr : 1;
     uint8_t triviaCountSmall : 4;
-    uint8_t reserved : 3;
+    uint8_t reserved : 2;
     NumericTokenFlags numFlags;
     uint32_t rawLen = 0;
-    Info* info = nullptr;
+
+    // Tokens have an info block unless they have no trivia, no raw text,
+    // and no other extra info to carry. In that case we just store the
+    // location here and don't allocate an info block.
+    union {
+        Info* info = nullptr;
+        SourceLocation nonInfoLoc;
+    };
 
     // We use some free bits in the token structure to count how many trivia elements
     // this token has. This is enough space for the vast majority of tokens, but for
