@@ -191,6 +191,9 @@ bool Preprocessor::popSource() {
     if (options.bufferChangeCB && !lexerStack.empty())
         options.bufferChangeCB(lexerStack.back()->getBufferId(), prevIncludeDepth > 0, false);
 
+    hasProtectedCode = false;
+    expectedEndKind = TokenKind::Unknown;
+
     if (!pendingMacroFrames.empty() && lexerStack.size() == pendingMacroFrames.back().lexerDepth) {
         auto& frame = pendingMacroFrames.back();
         expandedTokens = std::move(frame.tokens);
@@ -206,6 +209,15 @@ bool Preprocessor::popSource() {
         addDiag(diag::MissingEndIfDirective, branchStack.back().directive.range());
 
     return true;
+}
+
+std::optional<Token> Preprocessor::onIncludeEndOfFile(Token eofToken) {
+    // Fabricate the missing end token if a scope was opened in this include file (and not
+    // yet closed) and the file had protected code. expectedEndKind is reset whenever a
+    // child include is pushed or popped, so this only fires for files with no sub-includes.
+    if (expectedEndKind == TokenKind::Unknown || !hasProtectedCode)
+        return std::nullopt;
+    return Token::createMissing(alloc, expectedEndKind, eofToken.location());
 }
 
 void Preprocessor::predefine(const std::string& definition, std::string_view name) {
@@ -564,6 +576,16 @@ Token Preprocessor::nextRaw() {
     if (token.kind != TokenKind::EndOfFile)
         return token;
 
+    // If this include file had protected code with a missing end keyword, fabricate the
+    // end token now (before popSource so hasProtectedCode still reflects this file), pop
+    // the source, and return the fabricated token directly.
+    if (options.allowMissingProtectedScopeEnd && includeDepth > 0) {
+        if (auto fabricated = onIncludeEndOfFile(token)) {
+            popSource();
+            return *fabricated;
+        }
+    }
+
     // don't return EndOfFile tokens for included files, fall
     // through to loop to merge trivia
     if (popSource())
@@ -589,7 +611,6 @@ Token Preprocessor::nextRaw() {
     if (trivia.empty() || trivia.back().kind != TriviaKind::EndOfLine)
         trivia.push_back(Trivia(TriviaKind::EndOfLine, ""sv));
 
-    // finally found a real token to return, so update trivia and get out of here
     return token.withTrivia(alloc, trivia.copy(alloc));
 }
 
@@ -675,6 +696,8 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
                  onceIt == includeOnceHeaders.end() ||
                  (!onceIt->second.empty() && !isDefined(onceIt->second))) {
             includeDepth++;
+            hasProtectedCode = false;
+            expectedEndKind = TokenKind::Unknown;
             pushSource(*buffer);
 
             includeDirectives.push_back(IncludeMetadata{
@@ -1263,6 +1286,7 @@ std::pair<Trivia, Trivia> Preprocessor::handleProtectedDirective(Token directive
                                                     /* isSingleLine */ false,
                                                     /* legacyProtectedMode */ true);
     skipped.push_back(token);
+    hasProtectedCode = true;
 
     addDiag(diag::ProtectedEnvelope, token.location());
 

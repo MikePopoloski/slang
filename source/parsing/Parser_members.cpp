@@ -82,12 +82,15 @@ MemberSyntax& Parser::parseModule(AttrList attributes, SyntaxKind parentKind,
     auto savedDefinitionKind = currentDefinitionKind;
     currentDefinitionKind = declKind;
 
+    getPP().setExpectedEndKind(endKind);
+
     Token endmodule;
     auto members = parseMemberList<MemberSyntax>(
         endKind, endmodule, declKind, [this](SyntaxKind parentKind, bool& anyLocalModules) {
             return parseMember(parentKind, anyLocalModules);
         });
 
+    getPP().setExpectedEndKind(TokenKind::Unknown);
     currentDefinitionKind = savedDefinitionKind;
     pp.popDesignElementStack();
 
@@ -108,6 +111,8 @@ AnonymousProgramSyntax& Parser::parseAnonymousProgram(AttrList attributes) {
     auto keyword = consume();
     auto semi = expect(TokenKind::Semicolon);
 
+    getPP().setExpectedEndKind(TokenKind::EndProgramKeyword);
+
     Token endkeyword;
     auto members = parseMemberList<MemberSyntax>(
         TokenKind::EndProgramKeyword, endkeyword, SyntaxKind::AnonymousProgram,
@@ -115,6 +120,7 @@ AnonymousProgramSyntax& Parser::parseAnonymousProgram(AttrList attributes) {
             return parseMember(parentKind, anyLocalModules);
         });
 
+    getPP().setExpectedEndKind(TokenKind::Unknown);
     pp.popDesignElementStack();
 
     return factory.anonymousProgram(attributes, keyword, semi, members, endkeyword);
@@ -1182,12 +1188,16 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
         implementsClause = parseImplementsClause(TokenKind::ImplementsKeyword, semi);
     }
 
+    getPP().setExpectedEndKind(TokenKind::EndClassKeyword);
+
     Token endClass;
     auto members = parseMemberList<MemberSyntax>(
         TokenKind::EndClassKeyword, endClass, SyntaxKind::ClassDeclaration,
         [this, isIfaceClass, extendsClause](SyntaxKind, bool&) {
             return parseClassMember(isIfaceClass, extendsClause != nullptr);
         });
+
+    getPP().setExpectedEndKind(TokenKind::Unknown);
 
     auto endBlockName = parseNamedBlockClause();
     checkBlockNames(name, endBlockName);

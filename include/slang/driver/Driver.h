@@ -200,6 +200,11 @@ public:
         /// The number of threads to use for parsing.
         std::optional<uint32_t> numThreads;
 
+        /// If true, the preprocessor will assume that a missing end of scope token for a
+        /// module/program/package/class inside an include file with protected code has the
+        /// end of scope token was inside the protected code.
+        std::optional<bool> allowMissingProtectedScopeEnd;
+
         /// @}
         /// @name Compilation
         /// @{

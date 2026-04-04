@@ -113,6 +113,11 @@ void Driver::addStandardArgs() {
                 "character in a macro definition");
     cmdLine.add("--show-parsed-files", options.showParsedFiles,
                 "Print the name and kind of each file as it is parsed.");
+    cmdLine.add("--allow-missing-protected-scope-end", options.allowMissingProtectedScopeEnd,
+                "If true, the preprocessor will assume that a missing end of scope keyword for a "
+                "module/program/package/class inside an include file with protected code has the "
+                "end of scope keyword inside the protected code. This only works if the include "
+                "file with protected code does not include any other files.");
 
     // Legacy vendor commands support
     cmdLine.add(
@@ -1083,6 +1088,8 @@ void Driver::addParseOptions(Bag& bag) const {
         ppoptions.maxIncludeDepth = *options.maxIncludeDepth;
     for (const auto& d : options.ignoreDirectives)
         ppoptions.ignoreDirectives.emplace(d);
+    if (options.allowMissingProtectedScopeEnd.has_value())
+        ppoptions.allowMissingProtectedScopeEnd = *options.allowMissingProtectedScopeEnd;
 
     LexerOptions loptions;
     loptions.languageVersion = languageVersion;

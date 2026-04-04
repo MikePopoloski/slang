@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <functional>
 #include <memory>
 
 #include "slang/parsing/Lexer.h"
@@ -70,6 +71,11 @@ struct SLANG_EXPORT PreprocessorOptions {
     /// BufferID of the affected file, whether we are returning to a file (isBack),
     /// and whether the file is being skipped as an already-included header (isSkip).
     function_ref<void(BufferID, bool isBack, bool isSkip)> bufferChangeCB;
+
+    /// If true, the preprocessor will assume that a missing end of scope token for a
+    /// module/program/package/class inside an include file with protected code has the
+    /// end of scope token was inside the protected code.
+    bool allowMissingProtectedScopeEnd = false;
 };
 
 /// Metadata about an include directive that was invoked.
@@ -138,6 +144,12 @@ public:
     /// where directives may appear.
     void popDesignElementStack() { designElementDepth--; }
 
+    /// Sets the expected end keyword for the innermost open scope. Used by the parser
+    /// to inform the preprocessor what end token to fabricate if the scope's end is
+    /// inside a protected (encrypted) region at the end of an include file. Pass
+    /// TokenKind::Unknown to indicate that no scope is currently open.
+    void setExpectedEndKind(TokenKind kind) { expectedEndKind = kind; }
+
     /// Gets the currently active time scale value, if any has been set by the user.
     const std::optional<TimeScale>& getTimeScale() const { return activeTimeScale; }
 
@@ -194,6 +206,7 @@ private:
     Token nextProcessed();
     Token nextRaw();
     bool popSource();
+    std::optional<Token> onIncludeEndOfFile(Token eofToken);
 
     // directive handling methods
     Token handleDirectives(Token token);
@@ -545,6 +558,13 @@ private:
     TokenKind defaultNetType = TokenKind::WireKeyword;
     TokenKind unconnectedDrive = TokenKind::Unknown;
     bool cellDefine = false;
+    bool hasProtectedCode = false;
+
+    // When allowMissingProtectedScopeEnd is enabled, this holds the end keyword expected
+    // by the innermost open scope (set by the parser via setExpectedEndKind). It is reset
+    // to Unknown when entering or exiting any child include, so fabrication only triggers
+    // for include files that contain no sub-includes of their own.
+    TokenKind expectedEndKind = TokenKind::Unknown;
 
     int designElementDepth = 0;
     uint32_t includeDepth = 0;
