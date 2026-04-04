@@ -167,6 +167,28 @@ void registerAnalysis(py::module_& m, py::module_& ast) {
         .value("Continuous", DriverKind::Continuous)
         .finalize();
 
+    py::native_enum<DriverSource>(m, "DriverSource", "enum.Enum")
+        .value("Initial", DriverSource::Initial)
+        .value("Final", DriverSource::Final)
+        .value("Always", DriverSource::Always)
+        .value("AlwaysComb", DriverSource::AlwaysComb)
+        .value("AlwaysLatch", DriverSource::AlwaysLatch)
+        .value("AlwaysFF", DriverSource::AlwaysFF)
+        .value("Subroutine", DriverSource::Subroutine)
+        .value("Other", DriverSource::Other)
+        .finalize();
+
+    py::native_enum<DriverFlags>(m, "DriverFlags", "enum.Flag")
+        .value("None", DriverFlags::None)
+        .value("InputPort", DriverFlags::InputPort)
+        .value("OutputPort", DriverFlags::OutputPort)
+        .value("ClockVar", DriverFlags::ClockVar)
+        .value("Initializer", DriverFlags::Initializer)
+        .value("FromSideEffect", DriverFlags::FromSideEffect)
+        .value("HasOverrideRange", DriverFlags::HasOverrideRange)
+        .value("ViaIndirectPort", DriverFlags::ViaIndirectPort)
+        .finalize();
+
     py::native_enum<AnalysisFlags>(m, "AnalysisFlags", "enum.Flag")
         .value("None", AnalysisFlags::None)
         .value("CheckUnused", AnalysisFlags::CheckUnused)
