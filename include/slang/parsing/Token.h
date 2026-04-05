@@ -220,7 +220,12 @@ private:
     uint8_t triviaCountSmall : 4;
     uint8_t reserved : 2;
     NumericTokenFlags numFlags;
-    uint32_t rawLen = 0;
+
+    // This is the length of the raw text string, stored in the Info block,
+    // if we have one. Also for some kinds we pack some data into the upper
+    // 16 bits. We know in those cases that the raw length can't possibly
+    // be long enough to need those extra bits.
+    uint32_t rawLenAndExtra = 0;
 
     // Tokens have an info block unless they have no trivia, no raw text,
     // and no other extra info to carry. In that case we just store the

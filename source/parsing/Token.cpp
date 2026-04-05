@@ -28,12 +28,9 @@ struct Token::Info {
 
     byte* extra() { return reinterpret_cast<byte*>(this + 1); }
 
-    logic_t& bit() { return *reinterpret_cast<logic_t*>(extra()); }
     double& real() { return *reinterpret_cast<double*>(extra()); }
     SVIntStorage& integer() { return *reinterpret_cast<SVIntStorage*>(extra()); }
     std::string_view& stringText() { return *reinterpret_cast<std::string_view*>(extra()); }
-    SyntaxKind& directiveKind() { return *reinterpret_cast<SyntaxKind*>(extra()); }
-    KnownSystemName& systemName() { return *reinterpret_cast<KnownSystemName*>(extra()); }
 };
 
 static constexpr size_t getExtraSize(TokenKind kind) {
@@ -49,16 +46,6 @@ static constexpr size_t getExtraSize(TokenKind kind) {
             break;
         case TokenKind::IntegerLiteral:
             size = sizeof(SVIntStorage);
-            break;
-        case TokenKind::UnbasedUnsizedLiteral:
-            size = sizeof(logic_t);
-            break;
-        case TokenKind::Directive:
-        case TokenKind::MacroUsage:
-            size = sizeof(SyntaxKind);
-            break;
-        case TokenKind::SystemIdentifier:
-            size = sizeof(KnownSystemName);
             break;
         default:
             return 0;
@@ -226,21 +213,33 @@ Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivi
              std::string_view rawText, SourceLocation location, SyntaxKind directive) {
     SLANG_ASSERT(kind == TokenKind::Directive || kind == TokenKind::MacroUsage);
     init(alloc, kind, trivia, rawText, location);
-    getInfo().directiveKind() = directive;
+
+    SLANG_ASSERT(rawText.length() < UINT16_MAX);
+    uint32_t val = 0;
+    memcpy(&val, &directive, sizeof(directive));
+    rawLenAndExtra |= val << 16;
 }
 
 Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
              std::string_view rawText, SourceLocation location, KnownSystemName systemName) {
     SLANG_ASSERT(kind == TokenKind::SystemIdentifier);
     init(alloc, kind, trivia, rawText, location);
-    getInfo().systemName() = systemName;
+
+    SLANG_ASSERT(rawText.length() < UINT16_MAX);
+    uint32_t val = 0;
+    memcpy(&val, &systemName, sizeof(systemName));
+    rawLenAndExtra |= val << 16;
 }
 
 Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
              std::string_view rawText, SourceLocation location, logic_t bit) {
     SLANG_ASSERT(kind == TokenKind::UnbasedUnsizedLiteral);
     init(alloc, kind, trivia, rawText, location);
-    getInfo().bit() = bit;
+
+    SLANG_ASSERT(rawText.length() < UINT16_MAX);
+    uint32_t val = 0;
+    memcpy(&val, &bit, sizeof(bit));
+    rawLenAndExtra |= val << 16;
 }
 
 Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
@@ -298,7 +297,7 @@ std::string_view Token::rawText() const {
     if (!text.empty())
         return text;
 
-    auto getRaw = [this]() {
+    auto getRaw = [this](uint32_t length) {
         byte* ptr = getInfo().extra() + getExtraSize(kind);
         if (triviaCountSmall != 0) {
             ptr += sizeof(const Trivia*);
@@ -308,28 +307,29 @@ std::string_view Token::rawText() const {
 
         const char* raw;
         memcpy(reinterpret_cast<void*>(&raw), ptr, sizeof(raw));
-        return std::string_view(raw, rawLen);
+        return std::string_view(raw, length);
     };
 
     // not a simple token, so extract info from our data pointer
     switch (kind) {
         case TokenKind::Identifier:
-        case TokenKind::SystemIdentifier:
         case TokenKind::IncludeFileName:
         case TokenKind::StringLiteral:
         case TokenKind::IntegerLiteral:
         case TokenKind::IntegerBase:
-        case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:
-        case TokenKind::Directive:
-        case TokenKind::MacroUsage:
         case TokenKind::EmptyMacroArgument:
         case TokenKind::LineContinuation:
-            return getRaw();
+            return getRaw(rawLenAndExtra);
+        case TokenKind::UnbasedUnsizedLiteral:
+        case TokenKind::Directive:
+        case TokenKind::MacroUsage:
+        case TokenKind::SystemIdentifier:
+            return getRaw(rawLenAndExtra & 0xffff);
         case TokenKind::Unknown:
             if (hasInfoPtr && info)
-                return getRaw();
+                return getRaw(rawLenAndExtra);
             return "";
         case TokenKind::Placeholder:
         case TokenKind::EndOfFile:
@@ -380,7 +380,10 @@ double Token::realValue() const {
 
 logic_t Token::bitValue() const {
     SLANG_ASSERT(kind == TokenKind::UnbasedUnsizedLiteral);
-    return getInfo().bit();
+    logic_t result;
+    uint32_t val = rawLenAndExtra >> 16;
+    memcpy(&result, &val, sizeof(result));
+    return result;
 }
 
 NumericTokenFlags Token::numericFlags() const {
@@ -391,12 +394,18 @@ NumericTokenFlags Token::numericFlags() const {
 
 SyntaxKind Token::directiveKind() const {
     SLANG_ASSERT(kind == TokenKind::Directive || kind == TokenKind::MacroUsage);
-    return getInfo().directiveKind();
+    SyntaxKind result;
+    uint32_t val = rawLenAndExtra >> 16;
+    memcpy(&result, &val, sizeof(result));
+    return result;
 }
 
 KnownSystemName Token::systemName() const {
     SLANG_ASSERT(kind == TokenKind::SystemIdentifier);
-    return getInfo().systemName();
+    KnownSystemName result;
+    uint32_t val = rawLenAndExtra >> 16;
+    memcpy(&result, &val, sizeof(result));
+    return result;
 }
 
 bool Token::isOnSameLine() const {
@@ -446,6 +455,18 @@ Token Token::clone(BumpAllocator& alloc, std::span<Trivia const> trivia, std::st
     if (hasInfoPtr && result.hasInfoPtr)
         memcpy(result.getInfo().extra(), getInfo().extra(), getExtraSize(kind));
 
+    switch (kind) {
+        case TokenKind::UnbasedUnsizedLiteral:
+        case TokenKind::Directive:
+        case TokenKind::MacroUsage:
+        case TokenKind::SystemIdentifier:
+            SLANG_ASSERT(rawText.length() < UINT16_MAX);
+            result.rawLenAndExtra = (rawLenAndExtra & 0xffff0000) | result.rawLenAndExtra;
+            break;
+        default:
+            break;
+    }
+
     return result;
 }
 
@@ -490,7 +511,7 @@ void Token::init(BumpAllocator& alloc, TokenKind kind_, std::span<Trivia const> 
     triviaCountSmall = 0;
     reserved = 0;
     numFlags.raw = 0;
-    rawLen = uint32_t(rawText.size());
+    rawLenAndExtra = uint32_t(rawText.size());
 
     size_t extra = getExtraSize(kind);
     SLANG_ASSERT(extra % alignof(void*) == 0);
