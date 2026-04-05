@@ -1277,6 +1277,82 @@ TEST_CASE("Driver incdir-first -- compat vcs enables incdir-first automatically"
     CHECK(driver.runFullCompilation());
 }
 
+TEST_CASE("Driver module redef -- default errors on different-kind redefinition") {
+    auto guard = OS::captureOutput();
+
+    // Without --allow-lib-module-redef, a module and a primitive sharing the same
+    // name in the same library produce a hard Redefinition error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo --single-unit \"{0}redef_module.sv\" "
+                            "\"{0}redef_primitive.sv\" \"{0}redef_top.sv\"",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stderrContains("redefinition of 'mux_primitive'"));
+}
+
+TEST_CASE("Driver module redef -- allow-lib-module-redef keeps first definition for lib files") {
+    auto guard = OS::captureOutput();
+
+    // With --allow-lib-module-redef and both conflicting files as library files (-v),
+    // the first definition (module) wins and the conflicting primitive is silently discarded.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo --single-unit --allow-lib-module-redef "
+                            "-v \"{0}redef_module.sv\" -v \"{0}redef_primitive.sv\" "
+                            "\"{0}redef_top.sv\"",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+}
+
+TEST_CASE("Driver module redef -- allow-lib-module-redef errors on non-library redef") {
+    auto guard = OS::captureOutput();
+
+    // With --allow-lib-module-redef but files NOT specified as libraries (no -v),
+    // redefinition is still an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo --single-unit --allow-lib-module-redef "
+                            "\"{0}redef_module.sv\" \"{0}redef_primitive.sv\" "
+                            "\"{0}redef_top.sv\"",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stderrContains("redefinition of 'mux_primitive'"));
+}
+
+TEST_CASE("Driver module redef -- compat vcs enables allow-lib-module-redef automatically") {
+    auto guard = OS::captureOutput();
+
+    // --compat=vcs must automatically enable --allow-lib-module-redef behavior.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo --single-unit --compat=vcs "
+                            "-v \"{0}redef_module.sv\" -v \"{0}redef_primitive.sv\" "
+                            "\"{0}redef_top.sv\"",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+}
+
 TEST_CASE("Map keyword version option positive") {
     auto guard = OS::captureOutput();
 

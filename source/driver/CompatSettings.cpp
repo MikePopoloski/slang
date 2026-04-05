@@ -34,7 +34,8 @@ using namespace analysis;
     CompilationFlags::AllowBareValParamAssignment, \
     CompilationFlags::AllowSelfDeterminedStreamConcat, \
     CompilationFlags::AllowMergingAnsiPorts, \
-    CompilationFlags::AllowArrayConcatAssignPattern
+    CompilationFlags::AllowArrayConcatAssignPattern, \
+    CompilationFlags::AllowLibModuleRedefinition
 
 static constexpr CompilationFlags vcsCompFlags[] = {VCS_COMP_FLAGS};
 static constexpr CompilationFlags allCompFlags[] = {

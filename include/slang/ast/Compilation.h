@@ -122,9 +122,15 @@ enum class SLANG_EXPORT CompilationFlags {
 
     /// Allow assignment pattern expressions to be used in unpacked array concatenations.
     /// Normally these are not assignment-like contexts but some tools allow it anyway.
-    AllowArrayConcatAssignPattern = 1 << 15
+    AllowArrayConcatAssignPattern = 1 << 15,
+
+    /// Allow multiple definitions of the same module, interface, program, or primitive at
+    /// the root scope within the same library, keeping the first and silently discarding
+    /// subsequent ones, but only when the conflicting definition comes from a library file
+    /// (specified with -v / --libfile). This matches the behavior of VCS and similar simulators.
+    AllowLibModuleRedefinition = 1 << 16
 };
-SLANG_BITMASK(CompilationFlags, AllowArrayConcatAssignPattern)
+SLANG_BITMASK(CompilationFlags, AllowLibModuleRedefinition)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {

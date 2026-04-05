@@ -641,6 +641,21 @@ for compatibility purposes.
 Allow assignment pattern expressions to be used in unpacked array concatenations.
 The LRM states that these are not assignment-like contexts but some tools allow it anyway.
 
+`--allow-lib-module-redef`
+
+Allow multiple definitions of the same module, interface, program, or primitive at the root
+scope within the same library, provided the conflicting definition comes from a library file
+specified with `-v` / `--libfile`. The first definition encountered is kept and all subsequent
+redefinitions from library files are silently discarded, regardless of whether the kind
+(module vs primitive etc.) matches. This matches the behavior of VCS and similar simulators,
+which resolve such conflicts by picking the first definition found in compilation order.
+
+Without this option (or when the conflicting definition is not a library file), a same-kind
+redefinition produces a `duplicate-definition` warning and a different-kind redefinition
+(e.g. a `module` and a `primitive` sharing the same name) is a hard error.
+
+This option is enabled automatically when `--compat=vcs` or `--compat=all` is used.
+
 `--cmd-ignore <vendor_cmd>,<N>`
 
 Define rule to ignore vendor command &lt;vendor_cmd> with its following &lt;N> parameters.
