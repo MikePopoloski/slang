@@ -3,7 +3,9 @@
 
 from pyslang.analysis import (
     AnalysisManager,
+    DriverFlags,
     DriverKind,
+    DriverSource,
     FlowAnalysis,
     ReadRange,
     SensitivityList,
@@ -248,6 +250,31 @@ endmodule
 def test_driver_kind_enum():
     assert hasattr(DriverKind, "Procedural")
     assert hasattr(DriverKind, "Continuous")
+
+
+def test_value_driver_metadata_enums():
+    tree = SyntaxTree.fromText("""
+module m(input logic a, b, output logic c);
+    assign c = a & b;
+endmodule
+""")
+    compilation = Compilation()
+    compilation.addSyntaxTree(tree)
+    compilation.getAllDiagnostics()
+
+    root = compilation.getRoot()
+    c = root.lookupName("m.c")
+
+    am = AnalysisManager()
+    am.analyze(compilation)
+
+    drivers = am.getDrivers(c)
+    assert len(drivers) == 1
+
+    driver = drivers[0][0]
+    assert driver.kind == DriverKind.Continuous
+    assert driver.source == DriverSource.Other
+    assert driver.flags == DriverFlags["None"]
 
 
 def test_lsp_utilities_get_bounds():
