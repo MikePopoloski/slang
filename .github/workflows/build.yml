@@ -48,7 +48,7 @@ jobs:
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.22
       with:
-        key: ${{ github.job }}-${{ matrix.os }}
+        key: ${{ matrix.preset }}
     - uses: ilammy/msvc-dev-cmd@v1
       if: matrix.os == 'windows-latest'
     - uses: konsumer/install-wasi-sdk@v1
