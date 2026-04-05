@@ -34,7 +34,6 @@ void printASTJson(Compilation& compilation, const std::string& fileName,
     // the design root and all definition serializations. After each complete
     // top-level value the buffer is flushed and cleared via flushTo(), keeping
     // peak memory proportional to the largest single serialized object.
-
     std::ofstream fileStream;
     std::ostream* out;
 
@@ -91,7 +90,6 @@ void printCSTJson(Driver& driver, const std::string& fileName,
     // entire JSON tree in memory first. Each syntax tree is serialized into
     // its own temporary JsonWriter buffer, written out immediately, and then
     // discarded, keeping memory proportional to the largest single tree.
-
     std::ofstream fileStream;
     std::ostream* out;
 
@@ -128,6 +126,33 @@ void printCSTJson(Driver& driver, const std::string& fileName,
     }
 
     *out << "\n  ]\n}\n";
+}
+
+void printTimeStats(const std::string& fileName) {
+    std::ofstream fileStream;
+    std::ostream* out;
+
+    if (fileName == "-") {
+        out = &std::cout;
+    }
+    else {
+        fileStream.open(fileName);
+        fileStream.exceptions(std::ios::failbit | std::ios::badbit);
+        out = &fileStream;
+    }
+
+    int64_t parseUs = TimeTrace::getDurationForKey("parseAllSources");
+    int64_t elabUs = TimeTrace::getDurationForKey("elaboration");
+    int64_t analysisUs = TimeTrace::getDurationForKey("semanticAnalysis");
+    uint64_t peakMemBytes = OS::getPeakMemoryBytes();
+
+    *out << fmt::format("{{\n"
+                        "  \"parse_time_us\": {},\n"
+                        "  \"elaborate_time_us\": {},\n"
+                        "  \"analysis_time_us\": {},\n"
+                        "  \"peak_memory_bytes\": {}\n"
+                        "}}\n",
+                        parseUs, elabUs, analysisUs, peakMemBytes);
 }
 
 template<typename TArgs>
@@ -212,6 +237,12 @@ int driverMain(int argc, TArgs argv) {
                            "the results to the given file in Chrome Event Tracing JSON format",
                            "<path>");
 
+        std::optional<std::string> timeStats;
+        driver.cmdLine.add("--time-stats", timeStats,
+                           "Output a summary of compilation stage timings and peak memory usage "
+                           "to the given file as JSON, or '-' for stdout",
+                           "<path>");
+
         if (!driver.parseCommandLine(argc, argv))
             return 1;
 
@@ -247,7 +278,7 @@ int driverMain(int argc, TArgs argv) {
             return 3;
         }
 
-        if (timeTrace)
+        if (timeTrace || timeStats)
             TimeTrace::initialize();
 
         auto runStages = [&]() {
@@ -325,6 +356,9 @@ int driverMain(int argc, TArgs argv) {
                     fmt::format("Unable to write time trace to '{}'", *timeTrace)));
             }
         }
+
+        if (timeStats)
+            printTimeStats(*timeStats);
 
         return ok ? 0 : 5;
     }

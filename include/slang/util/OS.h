@@ -73,6 +73,10 @@ public:
 
     static int getpid();
 
+    /// Returns the peak memory usage of the current process in bytes,
+    /// or 0 if the information is not available on this platform.
+    static uint64_t getPeakMemoryBytes();
+
 private:
     OS() = default;
 

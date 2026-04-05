@@ -24,8 +24,13 @@
 #    include <fcntl.h>
 #    include <io.h>
 #    include <process.h>
+#    include <psapi.h>
 #    include <windows.h>
-
+#elif !defined(__wasi__)
+#    include <fcntl.h>
+#    include <sys/resource.h>
+#    include <sys/stat.h>
+#    include <unistd.h>
 #else
 #    include <fcntl.h>
 #    include <sys/stat.h>
@@ -390,6 +395,28 @@ int OS::getpid() {
     return 1;
 #else
     return ::getpid();
+#endif
+}
+
+uint64_t OS::getPeakMemoryBytes() {
+#if defined(_WIN32)
+    PROCESS_MEMORY_COUNTERS info;
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &info, sizeof(info)))
+        return static_cast<uint64_t>(info.PeakWorkingSetSize);
+    return 0;
+#elif defined(__wasi__)
+    return 0;
+#elif defined(__APPLE__)
+    struct rusage usage;
+    if (getrusage(RUSAGE_SELF, &usage) == 0)
+        return static_cast<uint64_t>(usage.ru_maxrss);
+    return 0;
+#else
+    // Linux and other POSIX systems: ru_maxrss is in kilobytes
+    struct rusage usage;
+    if (getrusage(RUSAGE_SELF, &usage) == 0)
+        return static_cast<uint64_t>(usage.ru_maxrss) * 1024;
+    return 0;
 #endif
 }
 

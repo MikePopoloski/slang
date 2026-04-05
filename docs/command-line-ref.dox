@@ -820,4 +820,10 @@ various parts of the compilation take. When the program exits it will write the
 trace results to the given file, which is JSON text containing events in
 the Chrome Trace Event format.
 
+`--time-stats <path>`
+
+Print high-level timing summary stats to the given file, or stdout if the path is '-'.
+The format is a small JSON blob with keys for timing different stages of compilation, in microseconds.
+Peak process memory usage, in bytes, is also included.
+
 */

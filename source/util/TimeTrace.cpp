@@ -141,6 +141,18 @@ void TimeTrace::write(std::ostream& os) {
     profiler->write(os);
 }
 
+int64_t TimeTrace::getDurationForKey(std::string_view name) {
+    SLANG_ASSERT(profiler);
+
+    int64_t total = 0;
+    std::scoped_lock<std::mutex> lock(profiler->mut);
+    for (auto& entry : profiler->entries) {
+        if (entry.name == name)
+            total += duration_cast<microseconds>(entry.duration).count();
+    }
+    return total;
+}
+
 void TimeTrace::beginTrace(std::string_view name, std::string_view detail) {
     if (profiler)
         profiler->begin(std::string(name), [&] { return std::string(detail); });

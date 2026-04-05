@@ -1,0 +1,92 @@
+# Extra slang arguments for RTLMeter benchmark runs.
+#
+# This file lets you pass additional flags to the slang driver for specific
+# designs or configurations without modifying the upstream rtlmeter
+# descriptor.yaml files.
+#
+# Keys are either a design name (applies to ALL configurations of that design)
+# or a "DESIGN:CONFIGURATION" pair (applies to that specific case only).
+# When both match, design-level args come first, then case-level args.
+#
+# Schema:
+#   <DESIGN | DESIGN:CONFIGURATION>:
+#     skip: true          # optional - omit the case from benchmark runs
+#     args:               # optional - extra flags passed to slang
+#       - <slang flag or file path>
+#       - ...
+#
+# File paths (any entry that does not start with '-') are resolved relative to
+# the design's directory inside rtlmeter (i.e. designs/<DESIGN>/).
+#
+# skip: true on a design-level entry skips ALL configurations of that design.
+# skip: true on a DESIGN:CONFIG entry skips only that specific configuration.
+
+BlackParrot:
+  args:
+    - --allow-dup-initial-drivers
+
+Caliptra:
+  skip: true
+  args:
+    - --single-unit
+    - -DVERILATOR
+    - src/caliptra-rtl/caliptra_prim_assert.sv
+
+NVDLA:
+  args:
+    - -Wno-duplicate-definition
+
+OpenPiton:
+  skip: true
+  args:
+    - --single-unit
+    - -DVERILATOR
+    - -Wno-unconnected-port
+    - -Wno-range-oob
+    - -Wno-range-width-oob
+    - -Wno-unsized-concat
+    - -Wno-explicit-static
+    - -Wno-redef-macro
+
+OpenTitan:
+  args:
+    - --single-unit
+    - -DVERILATOR
+    - src/prim_assert.sv
+    - --relax-enum-conversions
+    - -Wno-unconnected-port
+
+VeeR-EH1:
+  args:
+    - --single-unit
+
+VeeR-EH2:
+  args:
+    - --single-unit
+
+VeeR-EL2:
+  args:
+    - --single-unit
+
+Vortex:
+  skip: true
+
+XiangShan:
+  args:
+    - --single-unit
+
+XuanTie-C906:
+  args:
+    - --single-unit
+
+XuanTie-C910:
+  args:
+    - --single-unit
+
+XuanTie-E902:
+  args:
+    - --single-unit
+
+XuanTie-E906:
+  args:
+    - --single-unit
