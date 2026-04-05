@@ -21,11 +21,13 @@
 #    ifndef STRICT
 #        define STRICT
 #    endif
+// clang-format off
 #    include <fcntl.h>
 #    include <io.h>
 #    include <process.h>
-#    include <psapi.h>
 #    include <windows.h>
+#    include <psapi.h> // MUST be included after windows.h, for some stupid reason.
+// clang-format on
 #elif !defined(__wasi__)
 #    include <fcntl.h>
 #    include <sys/resource.h>
