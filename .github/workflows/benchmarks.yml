@@ -1,0 +1,35 @@
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+    - uses: bencherdev/bencher@main
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.22
+      with:
+        key: benchmark-ubuntu
+    - name: Configure and Build
+      run: |
+        CXXFLAGS="-O3 -march=native" cmake -B build -DSLANG_INCLUDE_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=TRUE
+        cmake --build build -j8
+    - name: Track base branch benchmarks with Bencher
+      run: |
+        bencher run \
+        --project slang \
+        --token '${{ secrets.BENCHER_API_TOKEN }}' \
+        --branch master \
+        --testbed ubuntu-latest \
+        --adapter json \
+        --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+        "tests/benchmarks/run_benchmarks.py --rtlmeter-dir build/_deps/rtlmeter-src run --slang build/bin/slang --bencher"
