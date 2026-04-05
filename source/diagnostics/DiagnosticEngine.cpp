@@ -567,7 +567,7 @@ void DiagnosticEngine::parseWarningOptions(std::span<const std::string> options,
         }
     }
 
-    auto handleGroup = [&](const DiagGroup* group, bool set) {
+    auto handleGroup = [&](const DiagGroup* group, bool set, bool isDefault) {
         DiagnosticSeverity severity;
         if (!set)
             severity = DiagnosticSeverity::Ignored;
@@ -578,18 +578,22 @@ void DiagnosticEngine::parseWarningOptions(std::span<const std::string> options,
                                                 : DiagnosticSeverity::Warning;
         }
 
-        for (auto code : group->getDiags())
-            results.overrides.try_emplace(code, severity);
+        for (auto code : group->getDiags()) {
+            if (isDefault)
+                results.overrides.try_emplace(code, severity);
+            else
+                results.overrides.insert_or_assign(code, severity);
+        }
     };
 
     if (includeDefault) {
         auto group = findDiagGroup("default"sv);
         SLANG_ASSERT(group);
-        handleGroup(group, true);
+        handleGroup(group, true, /* isDefault */ true);
     }
 
     for (auto& [group, set] : groupEnables)
-        handleGroup(group, set);
+        handleGroup(group, set, /* isDefault */ false);
 
     // Special case for diagnostics with an explicit severity set by API that
     // the user is now trying to downgrade to be not an error.

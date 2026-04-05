@@ -515,6 +515,20 @@ TEST_CASE("DiagnosticEngine::setWarningOptions") {
     CHECK(msg == "warning: unknown warning option '-Wasdf' [-Wunknown-warning-option]\n");
 }
 
+TEST_CASE("DiagnosticEngine::setWarningOptions disables default group") {
+    // Regression test: -Wno-<group> should disable warnings included in the
+    // default group. Previously, the default group was processed first via
+    // try_emplace, and subsequent user group disables were silently ignored
+    // because try_emplace won't overwrite existing entries.
+    DiagnosticEngine engine(getSourceManager());
+    auto diags = engine.setWarningOptions(std::vector{"no-unconnected-port"s});
+    CHECK(diags.empty());
+
+    CHECK(engine.getSeverity(diag::UnconnectedInputPort, {}) == DiagnosticSeverity::Ignored);
+    CHECK(engine.getSeverity(diag::UnconnectedOutputPort, {}) == DiagnosticSeverity::Ignored);
+    CHECK(engine.getSeverity(diag::UnconnectedInOutPort, {}) == DiagnosticSeverity::Ignored);
+}
+
 TEST_CASE("Diagnostic Pragmas") {
     SyntaxTree::getDefaultSourceManager().clearDiagnosticDirectives();
 
