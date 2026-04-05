@@ -382,7 +382,7 @@ logic_t Token::bitValue() const {
     SLANG_ASSERT(kind == TokenKind::UnbasedUnsizedLiteral);
     logic_t result;
     uint32_t val = rawLenAndExtra >> 16;
-    memcpy(&result, &val, sizeof(result));
+    memcpy(reinterpret_cast<byte*>(&result), &val, sizeof(result));
     return result;
 }
 
@@ -396,7 +396,7 @@ SyntaxKind Token::directiveKind() const {
     SLANG_ASSERT(kind == TokenKind::Directive || kind == TokenKind::MacroUsage);
     SyntaxKind result;
     uint32_t val = rawLenAndExtra >> 16;
-    memcpy(&result, &val, sizeof(result));
+    memcpy(reinterpret_cast<byte*>(&result), &val, sizeof(result));
     return result;
 }
 
@@ -404,7 +404,7 @@ KnownSystemName Token::systemName() const {
     SLANG_ASSERT(kind == TokenKind::SystemIdentifier);
     KnownSystemName result;
     uint32_t val = rawLenAndExtra >> 16;
-    memcpy(&result, &val, sizeof(result));
+    memcpy(reinterpret_cast<byte*>(&result), &val, sizeof(result));
     return result;
 }
 
