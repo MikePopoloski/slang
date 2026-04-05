@@ -46,19 +46,13 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y g++-14 g++-11 clang-21 clang-tidy-21
     - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2
+      uses: hendrikmuhs/ccache-action@v1.2.22
       with:
-        key: ${{ github.job }}-${{ matrix.os }}
+        key: ${{ matrix.preset }}
     - uses: ilammy/msvc-dev-cmd@v1
       if: matrix.os == 'windows-latest'
-    - uses: maxim-lobanov/setup-xcode@v1
-      if: matrix.os == 'macos-latest'
-      with:
-        xcode-version: 'latest'
     - uses: konsumer/install-wasi-sdk@v1
       if: ${{ startsWith(matrix.preset, 'wasi-') }}
-      with:
-        version: "32"
     - uses: bytecodealliance/actions/wasmtime/setup@v1
       if: ${{ startsWith(matrix.preset, 'wasi-') }}
     - name: Configure
