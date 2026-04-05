@@ -49,6 +49,8 @@ jobs:
       uses: hendrikmuhs/ccache-action@v1.2.22
       with:
         key: ${{ github.job }}-${{ matrix.os }}
+    - uses: ilammy/msvc-dev-cmd@v1
+      if: matrix.os == 'windows-latest'
     - uses: konsumer/install-wasi-sdk@v1
       if: ${{ startsWith(matrix.preset, 'wasi-') }}
       with:
