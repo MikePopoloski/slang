@@ -261,11 +261,11 @@ def run_case(
 
 def format_table(results: list[tuple[str, str, dict[str, Any]]]) -> str:
     """Format results as a human-readable table."""
-    w = [32, 12, 16, 15, 14]
+    w = [32, 12, 16, 15, 13, 14]
     header = (
         f"{'Design:Config':<{w[0]}} {'Parse (ms)':>{w[1]}} "
         f"{'Elaborate (ms)':>{w[2]}} {'Analysis (ms)':>{w[3]}} "
-        f"{'Peak Mem (MB)':>{w[4]}}"
+        f"{'Total (ms)':>{w[4]}} {'Peak Mem (MB)':>{w[5]}}"
     )
     sep = "-" * (sum(w) + len(w) - 1)
     lines = [header, sep]
@@ -279,12 +279,13 @@ def format_table(results: list[tuple[str, str, dict[str, Any]]]) -> str:
         parse_ms = metrics.get("parse_time_us", 0) / 1000.0
         elab_ms = metrics.get("elaborate_time_us", 0) / 1000.0
         anal_ms = metrics.get("analysis_time_us", 0) / 1000.0
+        total_ms = parse_ms + elab_ms + anal_ms
         mem_mb = metrics.get("peak_memory_bytes", 0) / (1024.0 * 1024.0)
 
         lines.append(
             f"{label:<{w[0]}} {parse_ms:>{w[1]}.1f} "
             f"{elab_ms:>{w[2]}.1f} {anal_ms:>{w[3]}.1f} "
-            f"{mem_mb:>{w[4]}.1f}"
+            f"{total_ms:>{w[4]}.1f} {mem_mb:>{w[5]}.1f}"
         )
 
     return "\n".join(lines)
@@ -298,13 +299,18 @@ def format_bmf(results: list[tuple[str, str, dict[str, Any]]]) -> dict[str, Any]
         if metrics.get("exit_code", 0) != 0:
             continue
 
+        parse_ms = metrics.get("parse_time_us", 0) / 1000.0
+        elab_ms = metrics.get("elaborate_time_us", 0) / 1000.0
+        anal_ms = metrics.get("analysis_time_us", 0) / 1000.0
+        total_ms = parse_ms + elab_ms + anal_ms
+        mem_mb = metrics.get("peak_memory_bytes", 0) / (1024.0 * 1024.0)
+
         bmf[f"{design}:{config}"] = {
-            "parse_time_us": {"value": metrics.get("parse_time_us", 0)},
-            "elaborate_time_us": {"value": metrics.get("elaborate_time_us", 0)},
-            "analysis_time_us": {"value": metrics.get("analysis_time_us", 0)},
-            "peak_memory_mb": {
-                "value": metrics.get("peak_memory_bytes", 0) / (1024.0 * 1024.0)
-            },
+            "parse_time_ms": {"value": parse_ms},
+            "elaborate_time_ms": {"value": elab_ms},
+            "analysis_time_ms": {"value": anal_ms},
+            "total_time_ms": {"value": total_ms},
+            "peak_memory_mb": {"value": mem_mb},
         }
 
     return bmf
