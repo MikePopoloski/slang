@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * `foreach` array references can now contain function call expressions, flagged via `-Wforeach-call-expr` (thanks to @mampcs)
 * Added support for the `$deposit` system task, which is non-standard but very common in older codebases (thanks to @mampcs)
 * `--relax-string-conversions` now also allows implicit conversions from integers to strings (thanks to @mampcs)
+* Structured assignment patterns can now be written without the leading apostrophe, flagged by `-Wnonstandard-bare-assoc-pattern` (an error by default) (thanks to @mampcs)
+* Added `--allow-array-concat-assign-pattern` which allows assignment patterns (which usually require an assignment-like context) to be used in an unpacked array concatenation (thanks to @mampcs)
 
 ### Notable Breaking Changes
 * pyslang bindings are now separated into submodules matching the C++ API namespaces, which will require adding imports to your existing scripts to make them continue to run
@@ -41,6 +43,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added `-Wempty-input-connection`, `-Wempty-output-connection`, and `-Wempty-inout-connection` (grouped under `-Wempty-connection`) which warn about port connections that are explicitly connected to nothing
 * Added [-Wrandomize-var-shadow](https://sv-lang.com/warning-ref.html#randomize-var-shadow) which detects inline randomize constraint blocks that use class members which shadow local variable declarations
 * Added [-Wshadow-value](https://sv-lang.com/warning-ref.html#shadow-value) and [-Wshadow-hierarchy](https://sv-lang.com/warning-ref.html#shadow-hierarchy) which detect declarations that shadow others with the same name from outer scopes
+* Added [-Wshadow-property](https://sv-lang.com/warning-ref.html#shadow-property) which warns about class properties that shadow members of a base class
 * Added [-Winc-dec-bit](https://sv-lang.com/warning-ref.html#inc-dec-bit) which detects increment and decrement of single-bit operands
 * Added [-Wdangling-else](https://sv-lang.com/warning-ref.html#dangling-else) which detects confusingly nested if/else blocks that are missing begin/end delimiters
 * Added [-Wshift-count-overflow](https://sv-lang.com/warning-ref.html#shift-count-overflow) and [-Wshift-count-negative](https://sv-lang.com/warning-ref.html#shift-count-negative) which warn about potentially invalid constant shift values
@@ -56,6 +59,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added [-Wdivide-by-zero](https://sv-lang.com/warning-ref.html#divide-by-zero) which warns when the right hand side of a division or modulo operator is a constant zero
 * Added [-Wcolon-plus](https://sv-lang.com/warning-ref.html#colon-plus) which warns about the sequence `:+` inside a range select expression, where probably the intent was to use `+:` for ascending selection
 * Added [-Winit-self](https://sv-lang.com/warning-ref.html#init-self) when a variable's initializer refers to itself
+* Added [-Wbits-of-integer-constant](https://sv-lang.com/warning-ref.html#bits-of-integer-constant) which warns about bugprone use of $bits on integer constants (thanks to @AndrewNolte)
 * Added a `--dir-prefix` option to specify directory prefixes to try when resolving relative source file paths
 * Added a `--max-enum-values` option that limits the maximum number of enum elements in a single declaration, to prevent typos in enum range members from causing the compiler to run out of memory
 * The `--cst-json-mode` flag takes a new option `no-whitespace` which includes trivia but filters out whitespace and newlines (thanks to @AndrewNolte)
@@ -64,6 +68,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * [Compilation unit listings](https://sv-lang.com/user-manual.html#unit-listing) now accept local `-W` settings to control warnings issued for just that compilation unit
 * Added `--preprocess-source` which includes source file and line info in the output when running the preprocessor standalone, with e.g. `--preprocess` (thanks to @mampcs)
 * Added `--group-macros-by-file` which groups macros by file when outputting them via `--macros-only` (thanks to @mampcs)
+* Added `--show-parsed-files` which prints debug information about which files are parsed and what kind of file they are (thanks to @mampcs)
+* Added `--incdir-first` which reverses the include file search order so user-specified directories (+incdir/-I) are checked before the local directory of the including file (thanks to @mampcs)
+* Added `--allow-missing-protected-scope-end` which allows slang to work around encrypted code blocks in third party headers that mistakenly hide the scope end keyword of their containing module/interface/program (thanks to @mampcs)
+* Added `--allow-lib-module-redef` which allows redefining a module, interface, program, or primitive with the same name in the same library (thanks to @mampcs)
+* Added `--time-stats` which prints high-level time profiling stats and peak memory usage when running the slang frontend
 
 ### Improvements
 * Made several improvements to data flow modeling in the analysis pass to better represent SystemVerilog control flow
@@ -76,6 +85,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The parser will now perform typo correction when looking for a keyword and finding a closely named identifier instead
 * Dotted lookups will now perform typo correction and provide a note when a closely named member is found
 * The SyntaxRewriter API has gained support for rewriting individual tokens (thanks to @ilthraim)
+* Source location and context are now included when reporting errors in command files and compilation unit listings
+* Made several tweaks to decrease parser memory usage
 
 ### Fixes
 * Fixed an issue where comments immediately preceeding a disabled `` `endif `` directive could erroneously show up in preprocessed output
@@ -109,6 +120,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a spurious error when ignoring duplicate definitions (with -Wno-duplicate-definition) that are detected and instantiated as valid top modules
 * Fixed a bug where `super.new()` calls were not allowed as the first item in a sequential block within a class constructor (thanks to @mampcs)
 * Fixed a bug where lvalue concatenation assignments would lose their signedness flag in constant evaluation
+* Correctly disallow the `integer` and `time` types as DPI return types
+* Function AST nodes no longer create a return value variable when the function returns void
+* Fixed a bug that disallowed use of the class `this` handle in extern method default value expressions
+* Fixed a spurious error with assignment pattern port connections in uninstantiated contexts
+* Fixed a spurious error when assigning interface instances to virtual interface variables in uninstantiated contexts
+* The AST representation of virtual interface accesses has been reworked to correctly indicate their runtime semantics
+* Fixed `/*` in libmap file paths being treated as block comments (thanks to @mampcs)
 
 ### Tools & Bindings
 #### pyslang
@@ -117,6 +135,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Organized pyslang bindings into submodules (thanks to @CheeksTheGeek)
 * Fixed stub generation for the pyslang bindings (thanks to @ilthraim)
 * Added a new `lookup_table` parameter to AST and syntax node visitors that allow providing a dict of handlers for much faster visitation callbacks (thanks to @jacbro2021)
+* Fixed a lifetime annotation issue with Driver::createCompilation (thanks to @hankhsu1996)
+* Added bindings for DriverSource and DriverFlags (thanks to @sai-cogni)
 
 #### slang-tidy
 * Added a new LoopBeforeReset check (thanks to @spomata)
