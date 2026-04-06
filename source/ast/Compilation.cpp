@@ -868,21 +868,20 @@ void Compilation::insertDefinition(Symbol& symbol, const Scope& scope) {
                 if (vLib == symLib) {
                     // Duplicate in the same library.
                     if (hasFlag(CompilationFlags::AllowLibModuleRedefinition)) {
-                        // VCS-like behavior: silently keep the first definition and
-                        // discard all subsequent ones, but only when the incoming
-                        // duplicate comes from a library file (-v / --libfile).
-                        bool isLibrary = false;
+                        // Silently keep the first definition and discard all subsequent ones,
+                        // but only when the incoming duplicate comes from a library file.
                         if (symbol.kind == SymbolKind::Definition) {
                             auto st = symbol.as<DefinitionSymbol>().syntaxTree;
-                            isLibrary = st && st->isLibraryUnit;
+                            if (st && st->isLibraryUnit)
+                                return;
                         }
                         else if (sourceManager) {
                             auto loc = symbol.location;
-                            isLibrary = loc.valid() && sourceManager->getBufferKind(loc.buffer()) ==
-                                                           SourceManager::BufferKind::LibraryFile;
+                            if (loc.valid() && sourceManager->getBufferKind(loc.buffer()) ==
+                                                   SourceManager::BufferKind::LibraryFile) {
+                                return;
+                            }
                         }
-                        if (isLibrary)
-                            return;
                     }
 
                     // If they are both the same kind then we report a warning and

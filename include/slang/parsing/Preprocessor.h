@@ -7,7 +7,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <functional>
 #include <memory>
 
 #include "slang/parsing/Lexer.h"
@@ -74,7 +73,7 @@ struct SLANG_EXPORT PreprocessorOptions {
 
     /// If true, the preprocessor will assume that a missing end of scope token for a
     /// module/program/package/class inside an include file with protected code has the
-    /// end of scope token was inside the protected code.
+    /// end of scope token inside the protected code.
     bool allowMissingProtectedScopeEnd = false;
 };
 
@@ -206,7 +205,6 @@ private:
     Token nextProcessed();
     Token nextRaw();
     bool popSource();
-    std::optional<Token> onIncludeEndOfFile(Token eofToken);
 
     // directive handling methods
     Token handleDirectives(Token token);
@@ -557,14 +555,9 @@ private:
     std::optional<TimeScale> activeTimeScale;
     TokenKind defaultNetType = TokenKind::WireKeyword;
     TokenKind unconnectedDrive = TokenKind::Unknown;
+    TokenKind expectedEndKind = TokenKind::Unknown;
     bool cellDefine = false;
     bool hasProtectedCode = false;
-
-    // When allowMissingProtectedScopeEnd is enabled, this holds the end keyword expected
-    // by the innermost open scope (set by the parser via setExpectedEndKind). It is reset
-    // to Unknown when entering or exiting any child include, so fabrication only triggers
-    // for include files that contain no sub-includes of their own.
-    TokenKind expectedEndKind = TokenKind::Unknown;
 
     int designElementDepth = 0;
     uint32_t includeDepth = 0;

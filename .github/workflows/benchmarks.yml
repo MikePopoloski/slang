@@ -23,7 +23,7 @@ jobs:
       run: |
         CXXFLAGS="-O3 -march=native" cmake -B build -DSLANG_INCLUDE_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=TRUE
         cmake --build build -j8
-    - name: Track base branch benchmarks with Bencher
+    - name: Run and submit benchmarks
       run: |
         bencher run \
         --project slang \

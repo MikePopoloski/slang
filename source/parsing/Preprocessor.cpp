@@ -211,15 +211,6 @@ bool Preprocessor::popSource() {
     return true;
 }
 
-std::optional<Token> Preprocessor::onIncludeEndOfFile(Token eofToken) {
-    // Fabricate the missing end token if a scope was opened in this include file (and not
-    // yet closed) and the file had protected code. expectedEndKind is reset whenever a
-    // child include is pushed or popped, so this only fires for files with no sub-includes.
-    if (expectedEndKind == TokenKind::Unknown || !hasProtectedCode)
-        return std::nullopt;
-    return Token::createMissing(alloc, expectedEndKind, eofToken.location());
-}
-
 void Preprocessor::predefine(const std::string& definition, std::string_view name) {
     Preprocessor pp(*this);
     pp.pushSource("`define " + definition + "\n", name);
@@ -579,11 +570,12 @@ Token Preprocessor::nextRaw() {
     // If this include file had protected code with a missing end keyword, fabricate the
     // end token now (before popSource so hasProtectedCode still reflects this file), pop
     // the source, and return the fabricated token directly.
-    if (options.allowMissingProtectedScopeEnd && includeDepth > 0) {
-        if (auto fabricated = onIncludeEndOfFile(token)) {
-            popSource();
-            return *fabricated;
-        }
+    if (hasProtectedCode && options.allowMissingProtectedScopeEnd && includeDepth > 0 &&
+        expectedEndKind != TokenKind::Unknown) {
+        auto result = Token::createMissing(alloc, expectedEndKind, token.location())
+                          .withTrivia(alloc, token.trivia());
+        popSource();
+        return result;
     }
 
     // don't return EndOfFile tokens for included files, fall

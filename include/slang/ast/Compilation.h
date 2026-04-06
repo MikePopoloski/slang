@@ -126,8 +126,7 @@ enum class SLANG_EXPORT CompilationFlags {
 
     /// Allow multiple definitions of the same module, interface, program, or primitive at
     /// the root scope within the same library, keeping the first and silently discarding
-    /// subsequent ones, but only when the conflicting definition comes from a library file
-    /// (specified with -v / --libfile). This matches the behavior of VCS and similar simulators.
+    /// subsequent ones, but only when the conflicting definition comes from a library file.
     AllowLibModuleRedefinition = 1 << 16
 };
 SLANG_BITMASK(CompilationFlags, AllowLibModuleRedefinition)
