@@ -77,10 +77,8 @@ int NumberParser::append(Token token, bool isFirst) {
     // underscore as the first char is not allowed
     std::string_view chars = token.rawText();
     SourceLocation location = token.location();
-    if (isFirst && chars.length() && chars[0] == '_') {
+    if (isFirst && chars.length() && chars[0] == '_')
         addDiag(diag::DigitsLeadingUnderscore, location);
-        return -1;
-    }
 
     int index = 0;
     switch (literalBase) {

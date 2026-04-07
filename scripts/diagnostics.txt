@@ -56,7 +56,7 @@ error ValueOutOfRange "{} is out of allowed range ({} to {})"
 error ExpectedVectorDigits "expected vector literal digits"
 error MissingFractionalDigits "expected fractional digits after decimal"
 error MissingExponentDigits "expected exponent digits"
-error DigitsLeadingUnderscore "numeric literals must not start with a leading underscore"
+warning literal-leading-underscore DigitsLeadingUnderscore "numeric literals must not start with a leading underscore"
 warning real-underflow RealLiteralUnderflow "value of real literal is too small; minimum is {:.5e}"
 warning real-overflow RealLiteralOverflow "value of real literal is too large; maximum is {:.5e}"
 warning vector-overflow VectorLiteralOverflow "vector literal too large for the given number of bits ({} bits needed)"
@@ -1301,7 +1301,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
                   initializer-required package-import-in-class foreach-call-expr nonstandard-hierarchical-cross
-                  nonstandard-inside nonstandard-bare-assoc-pattern }
+                  nonstandard-inside nonstandard-bare-assoc-pattern literal-leading-underscore }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

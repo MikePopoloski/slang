@@ -15,6 +15,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
@@ -136,6 +137,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::MemberImplNotFound,
                  diag::PackageImportInClass,
                  diag::BareAssociativePattern,
+                 diag::DigitsLeadingUnderscore,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }

@@ -1460,6 +1460,37 @@ module m;
 endmodule
 ```
 
+-Wdynamic-cast-const
+A dynamic `$cast` call has a statically known result — it will always succeed or always
+fail regardless of any runtime state.
+\n\n
+If the cast always succeeds, you can replace it with a direct assignment or static cast instead.
+If it always fails, the cast is useless and can be removed.
+```
+class A;
+endclass
+
+class B extends A;
+endclass
+
+class C;
+endclass
+
+module m;
+    int i;
+    real r;
+    A a;
+    B b;
+    C c;
+
+    initial begin
+        $cast(a, b);            // always succeeds: B is a subtype of A
+        if ($cast(i, r)) begin end  // always succeeds: non-class static conversion
+        $cast(a, c);            // always fails: A and C are unrelated
+    end
+endmodule
+```
+
 @category Compatibility
 
 -Wdpi-spec
@@ -1677,37 +1708,6 @@ class A;
 endclass
 ```
 
--Wdynamic-cast-const
-A dynamic `$cast` call has a statically known result — it will always succeed or always
-fail regardless of any runtime state.
-\n\n
-If the cast always succeeds, you can replace it with a direct assignment or static cast instead.
-If it always fails, the cast is useless and can be removed.
-```
-class A;
-endclass
-
-class B extends A;
-endclass
-
-class C;
-endclass
-
-module m;
-    int i;
-    real r;
-    A a;
-    B b;
-    C c;
-
-    initial begin
-        $cast(a, b);            // always succeeds: B is a subtype of A
-        if ($cast(i, r)) begin end  // always succeeds: non-class static conversion
-        $cast(a, c);            // always fails: A and C are unrelated
-    end
-endmodule
-```
-
 -Wdynamic-non-procedural
 A member or element of a dynamic type is accessed outside of a procedural context (such as in
 a continuous assignment). This is not allowed in SystemVerilog but can be downgraded to a
@@ -1895,6 +1895,15 @@ module m;
    function void f();
        s = {0: "sv1", 1: "sv2"};
    endfunction
+endmodule
+```
+
+-Wliteral-leading-underscore
+Vector literals are not allowed to have leading underscores in their digits but some
+tools allow them anyway, so the error can be downgraded for compatibility.
+```
+module m;
+    logic [7:0] a = 8'h_ff;
 endmodule
 ```
 
