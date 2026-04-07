@@ -210,20 +210,6 @@ module m;
 endmodule
 ```
 
--Wnonstandard-randomize
-An argument to a scoped randomize call (`std::randomize`) contains accesses rather than simple variables.
-```
-module m;
-    int x[2];
-    struct { int y; } s;
-
-    function automatic void test;
-        std::randomize(x[0]);
-        std::randomize(s.y);
-    endfunction
-endmodule
-```
-
 -Wformat-real
 A string formatting function was passed a real value for an integer format specifier,
 which will force the value to round to an integer.
@@ -1856,6 +1842,62 @@ endclass
 endmodule
 ```
 
+-Wforeach-call-expr
+The array expression in a foreach loop must be a hierarchical name, not a
+function call or other arbitrary expression. This is not allowed by the
+SystemVerilog LRM but is supported by some tools. In VCS compatibility mode
+this is ignored; otherwise it is an error that can be downgraded to a warning.
+```
+module top;
+    typedef int Arr[4];
+    function automatic Arr get_arr(); endfunction
+    initial begin
+        foreach (get_arr()[i]) begin end
+    end
+endmodule
+```
+
+-Wnonstandard-inside
+Using 'inside' without braces around the value list is non-standard, but some tools
+allow it as an extension. Standard syntax requires braces around the range list.
+```
+module m;
+    int x;
+    int arr[3];
+    int result = x inside arr;
+endmodule
+```
+
+-Wnonstandard-hierarchical-cross
+Hierarchical (dotted) references in cover cross items are not part of the
+SystemVerilog standard but are supported by some commercial tools.
+The implicit coverpoint created from the reference will be named by replacing
+dots with underscores (e.g. `status.mpp` becomes `status_mpp`).
+```
+module m;
+    struct packed {
+        logic [1:0] mpp;
+        logic [1:0] mode;
+    } status;
+
+    covergroup cg;
+        cross status.mpp, status.mode;
+    endgroup
+endmodule
+```
+
+-Wnonstandard-bare-assoc-pattern
+The LRM requires associative array literals to use the apostrophe prefix before the
+opening brace, but some tools allow omitting it (like with normal concatenation syntax) as well.
+```
+module m;
+   string s[int];
+   function void f();
+       s = {0: "sv1", 1: "sv2"};
+   endfunction
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste
@@ -2049,21 +2091,6 @@ SystemVerilog but are supported by some tools.
 int foo[] = '{};
 ```
 
--Wforeach-call-expr
-The array expression in a foreach loop must be a hierarchical name, not a
-function call or other arbitrary expression. This is not allowed by the
-SystemVerilog LRM but is supported by some tools. In VCS compatibility mode
-this is ignored; otherwise it is an error that can be downgraded to a warning.
-```
-module top;
-    typedef int Arr[4];
-    function automatic Arr get_arr(); endfunction
-    initial begin
-        foreach (get_arr()[i]) begin end
-    end
-endmodule
-```
-
 -Wnonstandard-foreach
 foreach loops are not allowed to have multidimensional brackets when declaring
 loop variables, but most tools allow it as an extension.
@@ -2091,17 +2118,6 @@ class C;
         a -> (b dist { 0 := 1, [1:15] := 1});
     }
 endclass
-```
-
--Wnonstandard-inside
-Using 'inside' without braces around the value list is non-standard, but some tools
-allow it as an extension. Standard syntax requires braces around the range list.
-```
-module m;
-    int x;
-    int arr[3];
-    int result = x inside arr;
-endmodule
 ```
 
 -Wimplicit-net-port
@@ -2169,33 +2185,17 @@ wording in prior versions so this is implemented as a pedantic warning only.
 localparam p = $isunbounded(1 + 1);
 ```
 
--Wnonstandard-hierarchical-cross
-Hierarchical (dotted) references in cover cross items are not part of the
-SystemVerilog standard but are supported by some commercial tools.
-The implicit coverpoint created from the reference will be named by replacing
-dots with underscores (e.g. `status.mpp` becomes `status_mpp`).
+-Wnonstandard-randomize
+An argument to a scoped randomize call (`std::randomize`) contains accesses rather than simple variables.
 ```
 module m;
-    struct packed {
-        logic [1:0] mpp;
-        logic [1:0] mode;
-    } status;
+    int x[2];
+    struct { int y; } s;
 
-    covergroup cg;
-        cross status.mpp, status.mode;
-    endgroup
-endmodule
-```
-
--Wnonstandard-bare-assoc-pattern
-The LRM requires associative array literals to use the apostrophe prefix before the
-opening brace, but some tools allow omitting it (like with normal concatenation syntax) as well.
-```
-module m;
-   string s[int];
-   function void f();
-       s = {0: "sv1", 1: "sv2"};
-   endfunction
+    function automatic void test;
+        std::randomize(x[0]);
+        std::randomize(s.y);
+    endfunction
 endmodule
 ```
 
