@@ -457,7 +457,6 @@ error PrimitiveInitialInComb "combinational primitives cannot contain an initial
 error PrimitiveDupInitial "primitive cannot have both an initial statement and an output initializer"
 error PrimitiveWrongInitial "'{}' is not this primitive's output port"
 error PrimitiveInitVal "initial value for a primitive output must be a single-bit binary literal"
-error RefArgAutomaticFunc "'ref' arguments can only be used in 'automatic' subroutines"
 error InvalidInstanceForParent "cannot instantiate {} in {}"
 error InvalidPrimInstanceForParent "cannot instantiate a primitive in this scope"
 error NullPortExpression "expression given for null port"
@@ -592,6 +591,7 @@ warning static-init-value StaticInitValue "initializer for static variable '{}' 
 warning init-self InitSelf "initializer of '{}' refers to itself"
 warning unnamed-generate UnnamedGenerate "generate block is unnamed"
 warning member-impl-not-found MemberImplNotFound "implementation not found in parent scope for '{}'"
+warning ref-arg-automatic RefArgAutomaticFunc "'ref' arguments can only be used in 'automatic' subroutines"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -1301,7 +1301,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
                   initializer-required package-import-in-class foreach-call-expr nonstandard-hierarchical-cross
-                  nonstandard-inside nonstandard-bare-assoc-pattern literal-leading-underscore }
+                  nonstandard-inside nonstandard-bare-assoc-pattern literal-leading-underscore ref-arg-automatic }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

@@ -1907,6 +1907,16 @@ module m;
 endmodule
 ```
 
+-Wref-arg-automatic
+`ref` arguments are only allowed to be used in `automatic` subroutines, but some tools
+allow them with `static` subroutines anyway, so the error can be downgraded for compatibility.
+Note that tasks and functions are static by default if otherwise unmarked; it is preferable
+to mark them `automatic` rather than disable this error.
+```
+function void foo(ref int i);
+endfunction
+```
+
 @category Macros
 
 -Wignored-macro-paste
