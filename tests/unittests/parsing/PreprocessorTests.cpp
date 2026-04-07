@@ -227,6 +227,43 @@ TEST_CASE("Macro usage (simple)") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Skipped conditional branches keep nested disabled tokens") {
+    auto& text = R"(
+`ifdef NOT_DEFINED
+    outer
+    `ifdef INNER
+        inner
+    `endif
+`else
+    kept
+`endif
+)";
+
+    Token token = lexToken(text);
+    REQUIRE(token.kind == TokenKind::Identifier);
+    CHECK(token.valueText() == "kept");
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    const ConditionalBranchDirectiveSyntax* branch = nullptr;
+    for (auto trivia : token.trivia()) {
+        if (trivia.kind == TriviaKind::Directive &&
+            trivia.syntax()->kind == SyntaxKind::IfDefDirective) {
+            branch = &trivia.syntax()->as<ConditionalBranchDirectiveSyntax>();
+            break;
+        }
+    }
+
+    REQUIRE(branch);
+    std::vector<SyntaxKind> directiveKinds;
+    for (auto disabled : branch->disabledTokens) {
+        if (disabled.kind == TokenKind::Directive)
+            directiveKinds.push_back(disabled.directiveKind());
+    }
+
+    CHECK(directiveKinds ==
+          std::vector<SyntaxKind>{SyntaxKind::IfDefDirective, SyntaxKind::EndIfDirective});
+}
+
 TEST_CASE("Function macro (simple)") {
     auto& text = "`define FOO(x) x\n`FOO(3)";
     Token token = lexToken(text);
