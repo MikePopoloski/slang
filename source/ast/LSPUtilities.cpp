@@ -341,6 +341,11 @@ const Expression& LSPUtilities::cloneLSP(BumpAllocator& alloc, const Expression&
 
 const Expression& LSPUtilities::retargetLSP(BumpAllocator& alloc, const Expression& expr,
                                             const ValueSymbol& target) {
+    auto checkTypeMatch = [&](const Type& symType) {
+        auto& targetType = target.getType();
+        return symType.isMatching(targetType) || symType.isIdenticalStructUnion(targetType);
+    };
+
     switch (expr.kind) {
         case ExpressionKind::ElementSelect: {
             auto& ese = expr.as<ElementSelectExpression>();
@@ -365,12 +370,12 @@ const Expression& LSPUtilities::retargetLSP(BumpAllocator& alloc, const Expressi
         }
         case ExpressionKind::NamedValue: {
             auto& nve = expr.as<NamedValueExpression>();
-            SLANG_ASSERT(nve.symbol.getType().isMatching(target.getType()));
+            SLANG_ASSERT(checkTypeMatch(nve.symbol.getType()));
             return *alloc.emplace<NamedValueExpression>(target, nve.sourceRange);
         }
         case ExpressionKind::HierarchicalValue: {
             auto& hve = expr.as<HierarchicalValueExpression>();
-            SLANG_ASSERT(hve.symbol.getType().isMatching(target.getType()));
+            SLANG_ASSERT(checkTypeMatch(hve.symbol.getType()));
 
             auto ref = hve.ref;
             ref.target = &target;
