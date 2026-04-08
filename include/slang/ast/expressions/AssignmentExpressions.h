@@ -398,10 +398,6 @@ public:
     }
 
 private:
-    static const Expression& bindReplCount(Compilation& comp,
-                                           const syntax::ExpressionSyntax& syntax,
-                                           const ASTContext& context, size_t& count);
-
     const Expression* count_;
 };
 

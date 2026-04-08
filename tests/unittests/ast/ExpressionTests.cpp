@@ -4004,3 +4004,42 @@ endmodule
     CHECK(diags[2].code == diag::BareAssociativePattern);
     CHECK(diags[3].code == diag::AssignmentPatternNoContext);
 }
+
+TEST_CASE("Assignment pattern defaults with multi-dim arrays") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [7:0] r [10][20];
+    initial r = '{default:('{default:8'h00})};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Assignment pattern unused default is still error checked") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef logic [7:0] RT[2];
+
+function RT f1;
+    return '{0:8, 1:9, default:'{default:foo}};
+endfunction
+
+function RT f2;
+    return '{0:8, 1:9, default:'{-1{foo}}};
+endfunction
+
+$static_assert($sformatf("%p", f1()) == "'{8'd8, 8'd9}");
+$static_assert($sformatf("%p", f2()) == "'{8'd8, 8'd9}");
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::ValueMustBePositive);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
+}
