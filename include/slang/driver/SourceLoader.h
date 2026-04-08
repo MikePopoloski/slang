@@ -51,6 +51,11 @@ struct SLANG_EXPORT SourceOptions {
 
     /// If true, library files will inherit macro definitions from primary source files.
     bool librariesInheritMacros;
+
+    /// If true, files that belong to a named library (e.g. via a library map) will each
+    /// get their own syntax tree even in single-unit mode, rather than being merged into
+    /// the default-library unit. Enabled by VCS compat mode.
+    bool libsInOwnUnitInSingleUnitMode;
 };
 
 /// @brief Handles loading and parsing of groups of source files

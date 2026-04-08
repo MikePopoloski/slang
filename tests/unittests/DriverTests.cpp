@@ -1367,6 +1367,71 @@ TEST_CASE("Driver module redef -- compat vcs enables allow-lib-module-redef auto
     CHECK(driver.runFullCompilation());
 }
 
+TEST_CASE("Driver single-unit with compat vcs gives library files their own tree") {
+    auto guard = OS::captureOutput();
+
+    // With --compat=vcs and --single-unit, a file that is both listed directly and
+    // assigned to a named library via a libmap must be parsed into its own library
+    // unit rather than merged into the default single-unit tree.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo --single-unit --compat=vcs "
+                            "\"{0}libsplit_top.sv\" \"{0}libsplit_lib.sv\" "
+                            "--libmap \"{0}libsplit.map\"",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.reportParseDiags());
+
+    // Expect exactly two syntax trees: one for the default-library single unit
+    // (libsplit_top.sv) and one for the named-library unit (libsplit_lib.sv).
+    REQUIRE(driver.syntaxTrees.size() == 2);
+
+    int defaultUnits = 0, libraryUnits = 0;
+    for (auto& tree : driver.syntaxTrees) {
+        if (tree->isLibraryUnit)
+            ++libraryUnits;
+        else
+            ++defaultUnits;
+    }
+    CHECK(defaultUnits == 1);
+    CHECK(libraryUnits == 1);
+}
+
+TEST_CASE("Driver single-unit with --libs-in-own-unit gives library files their own tree") {
+    auto guard = OS::captureOutput();
+
+    // --libs-in-own-unit should produce the same split behaviour as --compat=vcs
+    // without requiring full VCS compatibility mode.
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo --single-unit --libs-in-own-unit "
+                            "\"{0}libsplit_top.sv\" \"{0}libsplit_lib.sv\" "
+                            "--libmap \"{0}libsplit.map\"",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.reportParseDiags());
+
+    REQUIRE(driver.syntaxTrees.size() == 2);
+
+    int defaultUnits = 0, libraryUnits = 0;
+    for (auto& tree : driver.syntaxTrees) {
+        if (tree->isLibraryUnit)
+            ++libraryUnits;
+        else
+            ++defaultUnits;
+    }
+    CHECK(defaultUnits == 1);
+    CHECK(libraryUnits == 1);
+}
+
 TEST_CASE("Map keyword version option positive") {
     auto guard = OS::captureOutput();
 

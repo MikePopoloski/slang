@@ -321,6 +321,11 @@ public:
         /// compilation unit, meaning all of their text will be merged together.
         std::optional<bool> singleUnit;
 
+        /// If true, files assigned to a named source library (e.g. via a library map)
+        /// are parsed into their own syntax tree in single-unit mode, rather than being
+        /// merged into the default single-unit tree.
+        std::optional<bool> libsInOwnUnit;
+
         /// A set of extensions that will be used to exclude files.
         flat_hash_set<std::string> excludeExts;
 

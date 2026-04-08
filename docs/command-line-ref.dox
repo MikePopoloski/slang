@@ -38,6 +38,13 @@ By default all files are considered to be separate compilation units and orderin
 does not matter. When this option is provided, all files are concatenated together, in order, to
 produce a single compilation unit. See @ref compilation-units for more discussion.
 
+`--libs-in-own-unit`
+
+When used with `--single-unit`, files that are assigned to a named source library
+(for example via `--libmap`) are parsed into their own syntax tree and treated as
+library units, rather than being merged into the default single-unit tree.
+This option is enabled automatically when `--compat=vcs` is used.
+
 `-v,--libfile <file-pattern>[,...]`
 
 Adds files to the compilation, like a positional argument, except that the files are
@@ -557,6 +564,8 @@ Attempt to increase compatibility with the specified tool. Various options will
 be set and some warnings will be silenced to mimic the given tool as closely as possible.
 Supported values are 'vcs' to match compatibility with Synopsys VCS, and 'all' to enable
 all possible compatibility options included with slang.
+
+When `--compat=vcs` is used, `--libs-in-own-unit` is enabled automatically.
 
 `--allow-use-before-declare`
 

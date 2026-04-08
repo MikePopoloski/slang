@@ -330,6 +330,10 @@ void Driver::addStandardArgs() {
     // File lists
     cmdLine.add("--single-unit", options.singleUnit,
                 "Treat all input files as a single compilation unit");
+    cmdLine.add("--libs-in-own-unit", options.libsInOwnUnit,
+                "In single-unit mode, parse files assigned to a named source library "
+                "(e.g. via --libmap) into their own syntax tree rather than merging "
+                "them into the default single-unit tree");
 
     cmdLine.add(
         "-v,--libfile",
@@ -1086,6 +1090,8 @@ void Driver::addParseOptions(Bag& bag) const {
     soptions.singleUnit = options.singleUnit == true;
     soptions.onlyLint = options.lintMode();
     soptions.librariesInheritMacros = options.librariesInheritMacros == true;
+    soptions.libsInOwnUnitInSingleUnitMode =
+        options.libsInOwnUnit == true || options.compat == CompatMode::Vcs;
 
     PreprocessorOptions ppoptions;
     ppoptions.predefines = options.defines;
