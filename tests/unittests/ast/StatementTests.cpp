@@ -462,6 +462,32 @@ endmodule
     CHECK(diags[5].code == diag::UnusedResult);
 }
 
+TEST_CASE("Deferred assertion ref arg to static unpacked struct member") {
+    auto tree = SyntaxTree::fromText(R"(
+module Test;
+    typedef struct {
+        int a;
+        int b;
+    } pair_t;
+
+    pair_t p;
+
+    function automatic void report_ref(ref int val);
+        $display("REF: %0d", val);
+    endfunction
+
+    initial begin
+        p.b = 20;
+        assert #0 (0) else report_ref(p.b);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Break statement check -- regression") {
     auto tree = SyntaxTree::fromText(R"(
 module foo;

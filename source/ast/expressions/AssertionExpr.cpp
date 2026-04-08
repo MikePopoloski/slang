@@ -367,15 +367,20 @@ bool AssertionExpr::checkAssertionCall(const CallExpression& call, const ASTCont
 
             if (formal->direction == ArgumentDirection::Ref) {
                 SLANG_ASSERT(index < args.size());
-                if (auto sym = args[index]->getSymbolReference()) {
-                    if (VariableSymbol::isKind(sym->kind) &&
-                        sym->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+                bool anyBad = false;
+                args[index]->visitSymbolReferences([&](const Expression&, const Symbol& sym) {
+                    if (auto var = sym.as_if<VariableSymbol>();
+                        var && var->lifetime == VariableLifetime::Automatic &&
+                        var->kind != SymbolKind::Field) {
+
                         auto& diag = context.addDiag(refArgCode, args[index]->sourceRange);
-                        diag << sym->name << formal->name;
-                        diag.addNote(diag::NoteDeclarationHere, sym->location);
-                        return false;
+                        diag << sym.name << formal->name;
+                        diag.addNote(diag::NoteDeclarationHere, sym.location);
+                        anyBad = true;
                     }
-                }
+                });
+                if (anyBad)
+                    return false;
             }
 
             index++;
