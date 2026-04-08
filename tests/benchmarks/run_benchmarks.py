@@ -181,7 +181,7 @@ def build_slang_command(
 
     # RTLMeter setup assumes we have these added to every design
     cmd.append(f"-I{design_dir.parent.parent / 'rtl'}")
-    cmd.append(design_dir.parent.parent / "rtl" / "__rtlmeter_utils.sv")
+    cmd.append(str(design_dir.parent.parent / "rtl" / "__rtlmeter_utils.sv"))
 
     # Per-design/per-case extra arguments supplied outside the descriptor.
     if extra_args:

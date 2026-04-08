@@ -8,7 +8,7 @@
 # step.
 FetchContent_Declare(
   rtlmeter
-  GIT_REPOSITORY https://github.com/verilator/rtlmeter
+  GIT_REPOSITORY https://github.com/MikePopoloski/rtlmeter
   GIT_TAG main
   GIT_SHALLOW ON)
 FetchContent_MakeAvailable(rtlmeter)

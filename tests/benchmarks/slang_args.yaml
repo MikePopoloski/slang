@@ -26,11 +26,19 @@ BlackParrot:
     - --allow-dup-initial-drivers
 
 Caliptra:
-  skip: true
   args:
     - --single-unit
-    - -DVERILATOR
     - src/caliptra-rtl/caliptra_prim_assert.sv
+    - src/caliptra-rtl/keyvault_cov_bind.sv
+    - src/adams-bridge/abr_prim_assert.sv
+    - -Wno-explicit-static
+    - -Wno-bad-procedural-force
+    - -Wno-unsized-concat
+    - -Wno-finish-num
+    - -Wno-mixed-var-assigns
+    - -Wno-literal-leading-underscore
+    - -Wno-ref-arg-automatic
+    - -Wno-nonstandard-hierarchical-cross
 
 NVDLA:
   args:
@@ -45,7 +53,6 @@ OpenPiton:
     - -Wno-range-oob
     - -Wno-range-width-oob
     - -Wno-unsized-concat
-    - -Wno-explicit-static
     - -Wno-redef-macro
 
 OpenTitan:
@@ -69,7 +76,11 @@ VeeR-EL2:
     - --single-unit
 
 Vortex:
-  skip: true
+  args:
+    - -DVERILATOR
+    - --allow-hierarchical-const
+    - -Wno-misplaced-trailing-separator
+    - -Wno-mixed-var-assigns
 
 XiangShan:
   args:
