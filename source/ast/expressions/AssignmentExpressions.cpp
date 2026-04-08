@@ -559,8 +559,21 @@ ConstantValue NewArrayExpression::evalImpl(EvalContext& context) const {
             result[index] = elems[index];
     }
 
-    // Any remaining elements are default initialized.
+    // Any remaining elements are default initialized. There is a weird special case
+    // here if we have a initializer expression that is a structured assignment pattern
+    // with a default setter -- we should use that default setter value for all default
+    // inserted elements. This isn't described in the LRM anywhere but all commercial
+    // tools do the same thing.
     ConstantValue def = type->getArrayElementType()->getDefaultValue();
+    if (initExpr() && initExpr()->kind == ExpressionKind::StructuredAssignmentPattern) {
+        auto& sap = initExpr()->as<StructuredAssignmentPatternExpression>();
+        if (sap.defaultSetter) {
+            def = sap.defaultSetter->eval(context);
+            if (!def)
+                return nullptr;
+        }
+    }
+
     for (; index < count; index++)
         result[index] = def;
 
@@ -1503,14 +1516,14 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
     const Type& type, const Type& elementType, SourceRange sourceRange) {
 
     bool bad = false;
+    const Expression* defaultSetter = nullptr;
     SmallMap<int32_t, const Expression*, 8> indexMap;
     SmallVector<IndexSetter, 4> indexSetters;
     size_t maxIndex = 0;
 
     for (auto item : syntax.items) {
         if (item->key->kind == SyntaxKind::DefaultPatternKeyExpression) {
-            context.addDiag(diag::AssignmentPatternDynamicDefault, item->key->sourceRange());
-            bad = true;
+            bindDefaultSetter(context, *item, defaultSetter, bad);
             continue;
         }
 
@@ -1537,25 +1550,40 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
         maxIndex = std::max(maxIndex, size_t(*index));
     }
 
+    // If there is a default setter expression, translate it to the target type
+    // of the array, and store that in case we need it to do constant evaluation.
+    if (defaultSetter) {
+        auto matched = matchElementValue(context, elementType, nullptr, syntax.sourceRange(), {},
+                                         defaultSetter);
+        if (!matched)
+            bad = true;
+        else
+            defaultSetter = matched;
+    }
+
     SmallVector<const Expression*> elements;
-    if (indexMap.size() != maxIndex + 1) {
+    if (indexMap.size() != maxIndex + 1 && !defaultSetter) {
         if (!bad) {
             context.addDiag(diag::AssignmentPatternMissingElements, sourceRange);
             bad = true;
         }
     }
-    else {
+    else if (!indexMap.empty() && !bad) {
         elements.reserve(maxIndex + 1);
         for (size_t i = 0; i <= maxIndex; i++) {
-            auto expr = indexMap[int32_t(i)];
-            SLANG_ASSERT(expr);
-            elements.push_back(expr);
+            if (auto it = indexMap.find(int32_t(i)); it != indexMap.end()) {
+                elements.push_back(it->second);
+                continue;
+            }
+
+            SLANG_ASSERT(defaultSetter);
+            elements.push_back(defaultSetter);
         }
     }
 
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
         type, std::span<const MemberSetter>{}, std::span<const TypeSetter>{},
-        indexSetters.copy(comp), nullptr, elements.copy(comp), sourceRange);
+        indexSetters.copy(comp), defaultSetter, elements.copy(comp), sourceRange);
 
     if (bad)
         return badExpr(comp, result);

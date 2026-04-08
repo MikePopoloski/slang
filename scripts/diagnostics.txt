@@ -641,7 +641,6 @@ error AssignmentPatternKeyDupValue "assignment pattern has multiple keys for ind
 error AssignmentPatternKeyDupName "assignment pattern has multiple keys for member '{}'"
 error AssignmentPatternNoMember "member '{}' is not covered by any assignment pattern key"
 error AssignmentPatternMissingElements "not all elements of array are covered by an assignment pattern key"
-error AssignmentPatternDynamicDefault "assignment pattern for dynamic array or queue cannot have default key"
 error AssignmentPatternDynamicType "assignment patterns for dynamic arrays, associative arrays, and queues cannot have type keys"
 error AssignmentPatternAssociativeType "assignment pattern for associative array must specify key:value pairs"
 error EmptyArgNotAllowed "empty argument not allowed"

@@ -2450,7 +2450,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 28);
+    REQUIRE(diags.size() == 27);
     CHECK(diags[0].code == diag::BadAssignmentPatternType);
     CHECK(diags[1].code == diag::AssignmentPatternNoContext);
     CHECK(diags[2].code == diag::BadAssignmentPatternType);
@@ -2463,22 +2463,21 @@ endmodule
     CHECK(diags[9].code == diag::AssignmentPatternKeyExpr);
     CHECK(diags[10].code == diag::AssignmentPatternKeyExpr);
     CHECK(diags[11].code == diag::AssignmentPatternKeyDupValue);
-    CHECK(diags[12].code == diag::AssignmentPatternDynamicDefault);
-    CHECK(diags[13].code == diag::AssignmentPatternDynamicType);
-    CHECK(diags[14].code == diag::ValueMustBePositive);
-    CHECK(diags[15].code == diag::AssignmentPatternKeyDupDefault);
-    CHECK(diags[16].code == diag::AssignmentPatternKeyExpr);
-    CHECK(diags[17].code == diag::IndexValueInvalid);
-    CHECK(diags[18].code == diag::AssignmentPatternMissingElements);
-    CHECK(diags[19].code == diag::ValueMustBePositive);
-    CHECK(diags[20].code == diag::WrongNumberAssignmentPatterns);
+    CHECK(diags[12].code == diag::AssignmentPatternDynamicType);
+    CHECK(diags[13].code == diag::ValueMustBePositive);
+    CHECK(diags[14].code == diag::AssignmentPatternKeyDupDefault);
+    CHECK(diags[15].code == diag::AssignmentPatternKeyExpr);
+    CHECK(diags[16].code == diag::IndexValueInvalid);
+    CHECK(diags[17].code == diag::AssignmentPatternMissingElements);
+    CHECK(diags[18].code == diag::ValueMustBePositive);
+    CHECK(diags[19].code == diag::WrongNumberAssignmentPatterns);
+    CHECK(diags[20].code == diag::ValueMustBePositive);
     CHECK(diags[21].code == diag::ValueMustBePositive);
-    CHECK(diags[22].code == diag::ValueMustBePositive);
-    CHECK(diags[23].code == diag::AssignmentPatternKeyDupDefault);
-    CHECK(diags[24].code == diag::AssignmentPatternKeyDupValue);
-    CHECK(diags[25].code == diag::AssignmentPatternDynamicType);
-    CHECK(diags[26].code == diag::AssignmentPatternMissingElements);
-    CHECK(diags[27].code == diag::AssignmentPatternNoMember);
+    CHECK(diags[22].code == diag::AssignmentPatternKeyDupDefault);
+    CHECK(diags[23].code == diag::AssignmentPatternKeyDupValue);
+    CHECK(diags[24].code == diag::AssignmentPatternDynamicType);
+    CHECK(diags[25].code == diag::AssignmentPatternMissingElements);
+    CHECK(diags[26].code == diag::AssignmentPatternNoMember);
 }
 
 TEST_CASE("Set membership type checking regress GH #450") {
@@ -4042,4 +4041,25 @@ $static_assert($sformatf("%p", f2()) == "'{8'd8, 8'd9}");
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
     CHECK(diags[1].code == diag::ValueMustBePositive);
     CHECK(diags[2].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Dynamic array new with assignment pattern default") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef int DT[];
+
+function DT f1(int i);
+    return new[i] ('{default:3});
+endfunction
+
+function DT f2();
+    return '{default:2, 1:3, 4:5};
+endfunction
+
+$static_assert($sformatf("%p", f1(4)) == "'{3, 3, 3, 3}");
+$static_assert($sformatf("%p", f2()) == "'{2, 3, 2, 2, 5}");
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }
