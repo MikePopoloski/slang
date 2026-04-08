@@ -567,7 +567,8 @@ const Expression* ClassType::getBaseConstructorCall() const {
     const Expression* callExpr = nullptr;
 
     auto syntax = getSyntax();
-    SLANG_ASSERT(syntax);
+    if (!syntax)
+        return nullptr;
 
     auto& classSyntax = syntax->as<ClassDeclarationSyntax>();
     if (!classSyntax.extendsClause)
