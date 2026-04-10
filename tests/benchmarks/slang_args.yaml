@@ -45,7 +45,6 @@ NVDLA:
     - -Wno-duplicate-definition
 
 OpenPiton:
-  skip: true
   args:
     - --single-unit
     - -DVERILATOR
@@ -54,6 +53,9 @@ OpenPiton:
     - -Wno-range-width-oob
     - -Wno-unsized-concat
     - -Wno-redef-macro
+    - -Wno-explicit-static
+    - -Wno-string-int-concat
+    - -Wno-range-select-reversed
 
 OpenTitan:
   args:
