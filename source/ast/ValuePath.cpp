@@ -47,6 +47,11 @@ static bool isSelectExpr(ExpressionKind kind) {
     }
 }
 
+static bool isStaticProp(const Symbol& symbol) {
+    return symbol.kind == SymbolKind::ClassProperty &&
+           symbol.as<ClassPropertySymbol>().lifetime == VariableLifetime::Static;
+}
+
 using BitRange = std::pair<uint64_t, uint64_t>;
 
 static std::optional<BitRange> computeBounds(SmallVector<const Expression*>& path, size_t skip,
@@ -142,19 +147,20 @@ ValuePath::ValuePath(const Expression& initialExpr, EvalContext& evalContext) {
                 noteSelect(elem, elem.as<RangeSelectExpression>().isConstantSelect(evalContext));
                 break;
             case ExpressionKind::MemberAccess: {
-                bool isConst = true;
+                // It's possible this is an access to a static class member,
+                // in which case this is actually the root of the path.
                 auto& mae = elem.as<MemberAccessExpression>();
-                auto& valueType = mae.value().type->getCanonicalType();
-                if (valueType.isObjectHandleType() && !valueType.isVoid()) {
-                    // It's possible this is an access to a static class member,
-                    // in which case this is still a constant select.
-                    if (auto prop = mae.member.as_if<ClassPropertySymbol>();
-                        !prop || prop->lifetime != VariableLifetime::Static) {
-                        isConst = false;
-                    }
+                if (auto prop = mae.member.as_if<ClassPropertySymbol>();
+                    prop && prop->lifetime == VariableLifetime::Static) {
+                    rootType = elem.type;
+                    rootSymbol = prop;
+                    if (!lsp)
+                        lsp = &elem;
                 }
-
-                noteSelect(elem, isConst);
+                else {
+                    auto& valueType = mae.value().type->getCanonicalType();
+                    noteSelect(elem, !valueType.isObjectHandleType() && !valueType.isVoid());
+                }
                 break;
             }
             default:
@@ -280,6 +286,13 @@ static const Expression& doRetarget(BumpAllocator& alloc, const Expression& expr
         }
         case ExpressionKind::MemberAccess: {
             auto& access = expr.as<MemberAccessExpression>();
+            if (isStaticProp(access.member)) {
+                // This is actually the root, so replace it instead of descending deeper.
+                // We're at the root; replace it and we're done.
+                SLANG_ASSERT(checkTypeMatch(*expr.type));
+                return *alloc.emplace<NamedValueExpression>(target, expr.sourceRange);
+            }
+
             auto& newVal = doRetarget(alloc, access.value(), target);
             return *alloc.emplace<MemberAccessExpression>(*expr.type,
                                                           const_cast<Expression&>(newVal),
@@ -332,9 +345,14 @@ static void doStringify(const Expression& expr, EvalContext& evalContext, Format
         }
         case ExpressionKind::MemberAccess: {
             auto& access = expr.as<MemberAccessExpression>();
-            doStringify(access.value(), evalContext, buffer);
-            if (!buffer.empty())
-                buffer.append(".");
+            if (isStaticProp(access.member)) {
+                buffer.format("{}::", access.value().type->toString());
+            }
+            else {
+                doStringify(access.value(), evalContext, buffer);
+                if (!buffer.empty())
+                    buffer.append(".");
+            }
             buffer.append(access.member.name);
             break;
         }
@@ -381,9 +399,14 @@ void ValuePath::iterator::increment() {
         case ExpressionKind::RangeSelect:
             expr = &expr->as<RangeSelectExpression>().value();
             break;
-        case ExpressionKind::MemberAccess:
-            expr = &expr->as<MemberAccessExpression>().value();
+        case ExpressionKind::MemberAccess: {
+            auto& mae = expr->as<MemberAccessExpression>();
+            if (isStaticProp(mae.member))
+                expr = nullptr;
+            else
+                expr = &mae.value();
             break;
+        }
         default:
             expr = nullptr;
             break;

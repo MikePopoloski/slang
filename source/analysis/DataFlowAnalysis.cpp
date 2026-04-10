@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/DataFlowAnalysis.h"
 
+#include "slang/ast/LSPUtilities.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 
 namespace slang::analysis {

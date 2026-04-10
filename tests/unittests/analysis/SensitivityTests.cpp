@@ -600,6 +600,26 @@ endmodule
     CHECK(sensit.reads[0].bitRange.second == 15);
 }
 
+TEST_CASE("Sensitivity list - always_comb static class prop function call") {
+    SensitivityHarness h(R"(
+class C;
+    static int i = 4;
+endclass
+
+function automatic C foo(int q);
+    return new;
+endfunction
+
+module m;
+    int j;
+    always_comb foo(j).i = 1;
+endmodule
+)");
+    auto sensit = h.sensitivity();
+    CHECK(sensit.kind == SLK::Implicit);
+    checkSensitivityNames(sensit, {"j"});
+}
+
 TEST_CASE("Sensitivity list - always_comb array variable index") {
     SensitivityHarness h(R"(
 module m;

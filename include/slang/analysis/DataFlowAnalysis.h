@@ -11,7 +11,7 @@
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/DFAResults.h"
 #include "slang/analysis/ValueDriver.h"
-#include "slang/ast/LSPUtilities.h"
+#include "slang/ast/ValuePath.h"
 
 namespace slang::analysis {
 
@@ -108,6 +108,11 @@ private:
     flat_hash_map<const ValueSymbol*, TaggedLSPMap> trackedUses;
 };
 
+template<typename T>
+concept IsSelectExpr =
+    IsAnyOf<T, ElementSelectExpression, RangeSelectExpression, MemberAccessExpression,
+            HierarchicalValueExpression, NamedValueExpression>;
+
 } // namespace detail
 
 /// The base class for data flow analysis implementations.
@@ -159,20 +164,86 @@ protected:
         AFABase(symbol, context.manager->getOptions(),
                 reportDiags ? &context.diagnostics : nullptr),
         DFAResults(context, this->getState().assigned), context(context),
-        sequenceChecker(*this, reportDiags ? &context : nullptr),
-        lspVisitor(*static_cast<TDerived*>(this)) {}
+        sequenceChecker(*this, reportDiags ? &context : nullptr) {}
 
     template<typename T>
-        requires(std::is_base_of_v<Expression, T> && !IsSelectExpr<T>)
+        requires(detail::IsSelectExpr<T>)
     void handle(const T& expr) {
-        lspVisitor.clear();
-        this->visitExpr(expr);
-    }
+        auto clearLValFlag = [this]() -> decltype(auto) {
+            // Save off the lvalue flag, and also the current sequence checker frame
+            // that may be buffering lvalue writes. Restore it on guard exit.
+            auto guard = ScopeGuard(
+                [this, savedLVal = isLValue,
+                 savedFrame = std::exchange(sequenceChecker.currFrame, nullptr)] {
+                    isLValue = savedLVal;
+                    sequenceChecker.currFrame = savedFrame;
+                });
+            isLValue = false;
+            return guard;
+        };
 
-    template<typename T>
-        requires(IsSelectExpr<T>)
-    void handle(const T& expr) {
-        lspVisitor.handle(expr);
+        ValuePath path(expr, this->getEvalContext());
+        bool hasDynamicMemberAccess = false;
+        for (auto& elem : path) {
+            switch (elem.kind) {
+                case ExpressionKind::NamedValue:
+                case ExpressionKind::HierarchicalValue:
+                    // Already handled by noteReference above.
+                    break;
+                case ExpressionKind::Call:
+                case ExpressionKind::Concatenation: {
+                    auto guard = clearLValFlag();
+                    this->visit(elem);
+                    break;
+                }
+                case ExpressionKind::ElementSelect: {
+                    // Visit just the selector.
+                    auto guard = clearLValFlag();
+                    this->visit(elem.as<ElementSelectExpression>().selector());
+                    break;
+                }
+                case ExpressionKind::RangeSelect: {
+                    auto guard = clearLValFlag();
+                    auto& rs = elem.as<RangeSelectExpression>();
+                    this->visit(rs.left());
+                    this->visit(rs.right());
+                    break;
+                }
+                case ExpressionKind::MemberAccess: {
+                    // If this is a static class property it's the end of the path,
+                    // but we still want to visit the expressions that come after
+                    // to e.g. find other variable usages.
+                    auto& mae = elem.as<MemberAccessExpression>();
+                    if (auto prop = mae.member.as_if<ClassPropertySymbol>();
+                        prop && prop->lifetime == VariableLifetime::Static) {
+                        auto guard = clearLValFlag();
+                        this->visit(mae.value());
+                    }
+                    else {
+                        auto& valType = mae.value().type->getCanonicalType();
+                        hasDynamicMemberAccess |= valType.isObjectHandleType() || valType.isVoid();
+                    }
+                    break;
+                }
+                default:
+                    SLANG_UNREACHABLE;
+            }
+        }
+
+        // If we saw a dynamic member access this is not an lvalue; otherwise noteReference
+        // will strip the dynamic portion and consider the object handle to be the thing
+        // that is assigned, which is wrong. Consider this example:
+        //   SomeClass c;
+        //   always_comb c.member = i;
+        // We should not consider this a write to `c`. Instead this means that class members
+        // (and e.g. virtual interface accesses) will never get registered as lvalues.
+        if (hasDynamicMemberAccess) {
+            auto guard = clearLValFlag();
+            noteReference(path);
+        }
+        else {
+            noteReference(path);
+        }
     }
 
     template<typename T>
@@ -305,8 +376,6 @@ protected:
     }
 
     void handle(const BinaryExpression& expr) {
-        lspVisitor.clear();
-
         if (!OpInfo::isShortCircuit(expr.op)) {
             this->visitExpr(expr);
             return;
@@ -326,8 +395,6 @@ protected:
     }
 
     void handle(const ConditionalExpression& expr) {
-        lspVisitor.clear();
-
         // The condition expression is sequenced before evaluating
         // the selected value expression. Note that there is *not* a
         // defined sequence between the left and right value expression
@@ -471,11 +538,6 @@ protected:
 private:
     detail::ExpressionSequenceChecker sequenceChecker;
 
-    template<typename TOwner>
-    friend struct ast::LSPVisitor;
-
-    LSPVisitor<TDerived> lspVisitor;
-
     // Set to true while visiting an lvalue expression.
     bool isLValue = false;
 
@@ -526,26 +588,11 @@ private:
         context.manager->analyzeNonProceduralExprs(timing, this->rootSymbol);
     }
 
-    [[nodiscard]] auto saveLValueFlag() {
-        // This is called by LSPVisitor when we're entering a non-lvalue portion
-        // of an lhs expression, such as the index portion of an element select.
-        // We need to save off the lvalue flag, and also the current sequence
-        // checker frame that may be buffering lvalue writes.
-        auto guard = ScopeGuard([this, savedLVal = isLValue,
-                                 savedFrame = std::exchange(sequenceChecker.currFrame, nullptr)] {
-            isLValue = savedLVal;
-            sequenceChecker.currFrame = savedFrame;
-        });
-        isLValue = false;
-        return guard;
-    }
-
-    void noteReference(const ValueSymbol& symbol, const Expression& lsp);
+    void noteReference(const ValuePath& path);
 };
 
 template<typename TDerived, typename TState>
-void DataFlowAnalysis<TDerived, TState>::noteReference(const ValueSymbol& symbol,
-                                                       const Expression& originalLsp) {
+void DataFlowAnalysis<TDerived, TState>::noteReference(const ValuePath& initialPath) {
     // This feels icky but we don't count a symbol as being referenced in the procedure
     // if it's only used inside an unreachable flow path. The alternative would just
     // frustrate users, but the reason it's icky is because whether a path is reachable
@@ -555,22 +602,20 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValueSymbol& symbol
     if (!currState.reachable)
         return;
 
-    const Expression* lsp = &originalLsp;
+    auto path = initialPath.shrinkToLSP();
     if (this->inUnrolledForLoop) {
         // During unrolled for loop evaluation the LSPs we evaluate can depend
         // on otherwise non-constant values, so we need to clone the LSP tree
         // and save the constants while we have them.
-        lsp = &LSPUtilities::cloneLSP(context.alloc, originalLsp, this->getEvalContext());
+        path = path.clone(context.alloc, this->getEvalContext());
     }
 
-    auto bounds = LSPUtilities::getBounds(*lsp, this->getEvalContext(), symbol.getType());
-    if (!bounds) {
-        // This probably cannot be hit given that we early out elsewhere for
-        // invalid expressions.
+    if (path.empty() || !path.lsp || !path.rootSymbol)
         return;
-    }
 
-    sequenceChecker.noteUse(symbol, *bounds, *lsp, isLValue);
+    auto& symbol = *path.rootSymbol;
+    auto bounds = path.lspBounds;
+    sequenceChecker.noteUse(symbol, bounds, *path.lsp, isLValue);
 
     if (isLValue) {
         auto [it, inserted] = symbolToSlot.try_emplace(&symbol, (uint32_t)lvalues.size());
@@ -583,32 +628,32 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValueSymbol& symbol
         if (index >= currState.assigned.size())
             currState.assigned.resize(index + 1);
 
-        currState.assigned[index].unionWith(*bounds, {}, bitMapAllocator);
+        currState.assigned[index].unionWith(bounds, {}, bitMapAllocator);
 
         auto& lspMap = lvalues[index].assigned;
-        for (auto lspIt = lspMap.find(*bounds); lspIt != lspMap.end();) {
+        for (auto lspIt = lspMap.find(bounds); lspIt != lspMap.end();) {
             // If we find an existing entry that completely contains
             // the new bounds we can just keep that one and ignore the
             // new one. Otherwise we will insert a new entry.
             auto itBounds = lspIt.bounds();
-            if (itBounds.first <= bounds->first && itBounds.second >= bounds->second)
+            if (itBounds.first <= bounds.first && itBounds.second >= bounds.second)
                 return;
 
             // If the new bounds completely contain the existing entry, we can remove it.
-            if (bounds->first < itBounds.first && bounds->second > itBounds.second) {
+            if (bounds.first < itBounds.first && bounds.second > itBounds.second) {
                 lspMap.erase(lspIt, lspMapAllocator);
-                lspIt = lspMap.find(*bounds);
+                lspIt = lspMap.find(bounds);
             }
             else {
                 ++lspIt;
             }
         }
-        lspMap.insert(*bounds, lsp, lspMapAllocator);
+        lspMap.insert(bounds, path.lsp, lspMapAllocator);
     }
     else if (!inAssertionActionBlock && !inTimingControlExpr) {
-        rvalues[&symbol].unionWith(*bounds, {}, bitMapAllocator);
+        rvalues[&symbol].unionWith(bounds, {}, bitMapAllocator);
         for (auto region : activeImplicitRegions)
-            implicitEventRVals[region][&symbol].unionWith(*bounds, {}, bitMapAllocator);
+            implicitEventRVals[region][&symbol].unionWith(bounds, {}, bitMapAllocator);
     }
 }
 
