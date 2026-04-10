@@ -1917,6 +1917,20 @@ function void foo(ref int i);
 endfunction
 ```
 
+-Wstring-int-concat
+String concatenations can only accept `string` typed operands and string literals.
+Some tools allow integer operands as well, implicitly converting them to strings,
+so this error can be downgraded for compatibility.
+```
+module m;
+    string s;
+    int i;
+    initial begin
+        s = {s, i};
+    end
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste

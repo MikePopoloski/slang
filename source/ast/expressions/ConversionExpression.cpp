@@ -443,7 +443,8 @@ Expression& ConversionExpression::makeImplicit(const ASTContext& context, const 
                                                const Expression* parentExpr,
                                                SourceRange operatorRange) {
     auto& comp = context.getCompilation();
-    SLANG_ASSERT(expr.isImplicitlyAssignableTo(comp, targetType));
+    SLANG_ASSERT(conversionKind == ConversionKind::Explicit ||
+                 expr.isImplicitlyAssignableTo(comp, targetType));
 
     Expression* op = &expr;
     selfDetermined(context, op);

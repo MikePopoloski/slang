@@ -1968,15 +1968,13 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& comp,
                 if (expr->type->isString()) {
                     selfDetermined(context, expr);
                 }
-                else if (expr->isImplicitString()) {
-                    expr = &ConversionExpression::makeImplicit(context, comp.getStringType(),
-                                                               ConversionKind::Implicit, *expr,
-                                                               nullptr, {});
-                }
                 else {
-                    errored = true;
-                    context.addDiag(diag::ConcatWithStringInt, expr->sourceRange);
-                    break;
+                    if (!expr->isImplicitString())
+                        context.addDiag(diag::ConcatWithStringInt, expr->sourceRange);
+
+                    expr = &ConversionExpression::makeImplicit(context, comp.getStringType(),
+                                                               ConversionKind::Explicit, *expr,
+                                                               nullptr, {});
                 }
                 buffer[i] = expr;
             }

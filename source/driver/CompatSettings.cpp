@@ -99,6 +99,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::MultipleAlwaysAssigns,
                  diag::MisplacedTrailingSeparator,
                  diag::InitializerRequired,
+                 diag::ConcatWithStringInt,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }

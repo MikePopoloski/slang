@@ -604,7 +604,6 @@ error BadReplicationExpression "invalid operands to replication expression ({} a
 error BadValueRange "invalid bounds in value range ({} and {})"
 error BadCastType "invalid casting type {}"
 error BadSetMembershipType "invalid type {} for {} expression"
-error ConcatWithStringInt "cannot mix strings and integers in a concatenation (use a cast if this is desired)"
 error RangeWidthOverflow "select range overflows the bounds of a signed 32-bit integer"
 error RangeSelectAssociative "cannot take a slice of an associative array"
 error CannotIndexScalar "scalar type cannot be indexed"
@@ -812,6 +811,7 @@ note NoteForPortConn "for connection to port '{}'"
 warning dynamic-non-procedural DynamicNotProcedural "cannot refer to an element or member of a dynamic type outside of a procedural context"
 warning nonstandard-string-concat NonstandardStringConcat "string concatenation using '+' operator is non-standard"
 warning inc-dec-bit IncDecBit "increment/decrement of a 1-bit operand"
+warning string-int-concat ConcatWithStringInt "cannot mix strings and integers in a concatenation (use a cast if this is desired)"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -1300,7 +1300,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
                   initializer-required package-import-in-class foreach-call-expr nonstandard-hierarchical-cross
-                  nonstandard-inside nonstandard-bare-assoc-pattern literal-leading-underscore ref-arg-automatic }
+                  nonstandard-inside nonstandard-bare-assoc-pattern literal-leading-underscore ref-arg-automatic
+                  string-int-concat }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

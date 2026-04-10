@@ -565,7 +565,7 @@ but some tools allow it anyway so this flag can be used for compatibility purpos
 
 `--relax-enum-conversions`
 
-Allow all integral types to convert implicitly to enum types in assignments. SystemVerilog doesn't
+Allow all integral types to convert implicitly to and from enum types in assignments. SystemVerilog doesn't
 permit this, but some tools allow it anyway so this flag can be used for compatibility purposes.
 
 `--relax-string-conversions`

@@ -4063,3 +4063,27 @@ $static_assert($sformatf("%p", f2()) == "'{2, 3, 2, 2, 5}");
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Bad concatenation expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    string s;
+    int i;
+    event e;
+    initial begin
+        i = {i, e};
+        s = {s, e};
+        s = {s, i};
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::BadConcatExpression);
+    CHECK(diags[1].code == diag::BadConcatExpression);
+    CHECK(diags[2].code == diag::ConcatWithStringInt);
+}
