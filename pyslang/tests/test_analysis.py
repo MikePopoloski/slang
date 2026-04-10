@@ -7,15 +7,15 @@ from pyslang.analysis import (
     DriverKind,
     DriverSource,
     FlowAnalysis,
-    ReadRange,
-    SensitivityList,
     SensitivityListKind,
 )
 from pyslang.ast import (
     Compilation,
+    EvalContext,
     ExpressionStatement,
     LSPUtilities,
     ProceduralBlockSymbol,
+    ValuePath,
 )
 from pyslang.syntax import SyntaxTree
 
@@ -197,12 +197,14 @@ endmodule
     arr = root.lookupName("m.arr")
     drivers = am.getDrivers(arr)
 
+    ec = EvalContext(root)
+
     assert len(drivers) >= 1
     for driver_tuple in drivers:
         driver = driver_tuple[0]
         if driver.lsp is not None:
-            lsp_str = LSPUtilities.stringifyLSP(driver.lsp, compilation)
-            assert "arr" in lsp_str
+            s = ValuePath(driver.lsp, ec)
+            assert s.toString(ec) == "arr[3]"
 
 
 def test_lsp_utilities_visit_lsps():

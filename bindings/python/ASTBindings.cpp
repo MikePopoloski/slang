@@ -9,6 +9,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/ValuePath.h"
 #include "slang/syntax/AllSyntax.h"
 
 void registerAST(py::module_& m) {
@@ -39,6 +40,8 @@ void registerAST(py::module_& m) {
     py::classh<EvalContext> evalCtx(m, "EvalContext");
     evalCtx
         .def(py::init<const ASTContext&, bitmask<EvalFlags>>(), "astCtx"_a,
+             "flags"_a = bitmask<EvalFlags>{})
+        .def(py::init<const Symbol&, bitmask<EvalFlags>>(), "symbol"_a,
              "flags"_a = bitmask<EvalFlags>{})
         .def_readonly("flags", &EvalContext::flags)
         .def("createLocal", &EvalContext::createLocal, byrefint, "symbol"_a, "value"_a = nullptr)
@@ -205,6 +208,24 @@ void registerAST(py::module_& m) {
         .def("getRandMode", &ASTContext::getRandMode, "symbol"_a)
         .def("addAssertionBacktrace", &ASTContext::addAssertionBacktrace, "diag"_a)
         .def("resetFlags", &ASTContext::resetFlags, "addedFlags"_a);
+
+    py::classh<ValuePath>(m, "ValuePath")
+        .def(py::init<>())
+        .def(py::init<const Expression&, EvalContext&>(), "expr"_a, "evalContext"_a)
+        .def_readonly("rootSymbol", &ValuePath::rootSymbol)
+        .def_readonly("rootType", &ValuePath::rootType)
+        .def_readonly("fullExpr", &ValuePath::fullExpr)
+        .def_readonly("lsp", &ValuePath::lsp)
+        .def_readonly("lspBounds", &ValuePath::lspBounds)
+        .def("shrinkToLSP", &ValuePath::shrinkToLSP)
+        .def("toString", &ValuePath::toString)
+        // .def(py::self == py::self)
+        // .def(py::self != py::self)
+        // .def(py::hash(py::self))
+        .def(
+            "__iter__",
+            [](const ValuePath& self) { return py::make_iterator(self.begin(), self.end()); },
+            py::keep_alive<0, 1>());
 
     py::classh<Pattern>(m, "Pattern")
         .def_readonly("kind", &Pattern::kind)

@@ -74,4 +74,5 @@ target_sources(
           Symbol.cpp
           SystemSubroutine.cpp
           TimingControl.cpp
-          TypeProvider.cpp)
+          TypeProvider.cpp
+          ValuePath.cpp)

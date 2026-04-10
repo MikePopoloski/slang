@@ -15,8 +15,8 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
-#include "slang/ast/LSPUtilities.h"
 #include "slang/ast/TimingControl.h"
+#include "slang/ast/ValuePath.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -2327,10 +2327,9 @@ struct NetAliasVisitor {
                         }
                         else {
                             auto& netSym = sym->template as<NetSymbol>();
-                            if (auto bounds = LSPUtilities::getBounds(expr, evalCtx,
-                                                                      netSym.getType())) {
-                                netAliases.push_back({&netSym, &expr, *bounds});
-                            }
+                            ValuePath path(expr, evalCtx);
+                            if (path.lsp)
+                                netAliases.push_back({&netSym, &expr, path.lspBounds});
 
                             auto& nt = netSym.netType;
                             if (!commonNetType) {
@@ -2358,6 +2357,8 @@ struct NetAliasVisitor {
         }
     }
 };
+
+using BitRange = std::pair<uint64_t, uint64_t>;
 
 std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
     if (netRefs)
@@ -2419,7 +2420,7 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
             // to the corresponding elements on the right hand side. The individual
             // elements can differ in width, so consume bits from the larger side
             // and only advance when a side has been consumed.
-            std::optional<std::pair<DriverBitRange, bool>> remainder;
+            std::optional<std::pair<BitRange, bool>> remainder;
             while (firstIt != firstEnd && secondIt != secondEnd) {
                 auto& firstAlias = *firstIt;
                 auto& secondAlias = *secondIt;
@@ -2440,8 +2441,8 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
                 uint64_t width;
                 if (firstWidth < secondWidth) {
                     width = firstWidth;
-                    remainder = std::pair(
-                        DriverBitRange(secondRange.first, secondRange.second - width), false);
+                    remainder = std::pair(BitRange(secondRange.first, secondRange.second - width),
+                                          false);
                     firstIt++;
                 }
                 else {
@@ -2451,8 +2452,8 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
                     if (firstWidth == secondWidth)
                         firstIt++;
                     else {
-                        remainder = std::pair(
-                            DriverBitRange(firstRange.first, firstRange.second - width), true);
+                        remainder = std::pair(BitRange(firstRange.first, firstRange.second - width),
+                                              true);
                     }
                 }
 

@@ -4,7 +4,7 @@
 #include "Test.h"
 
 #include "slang/ast/EvalContext.h"
-#include "slang/ast/LSPUtilities.h"
+#include "slang/ast/ValuePath.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
@@ -1737,9 +1737,7 @@ endmodule
         auto& inst = compilation.getRoot().lookupName<InstanceSymbol>(path);
 
         EvalContext evalCtx(inst);
-        FormatBuffer buffer;
-        LSPUtilities::stringifyLSP(*inst.getPortConnections()[0]->getExpression(), evalCtx, buffer);
-        return buffer.str();
+        return ValuePath(*inst.getPortConnections()[0]->getExpression(), evalCtx).toString(evalCtx);
     };
 
     auto marr0 = getConnStr("top.marr[0]");
