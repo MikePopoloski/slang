@@ -516,7 +516,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
                 return badExpr(comp, result);
 
             if (selectionRange.isLittleEndian() != valueRange.isLittleEndian() &&
-                selectionRange.width() > 1) {
+                selectionRange.width() > 1 && valueRange.width() > 1) {
                 if (!context.inUnevaluatedBranch()) {
                     auto& diag = context.addDiag(diag::SelectEndianMismatch, errorRange);
                     diag << valueType;

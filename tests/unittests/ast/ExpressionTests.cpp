@@ -4087,3 +4087,19 @@ endmodule
     CHECK(diags[1].code == diag::BadConcatExpression);
     CHECK(diags[2].code == diag::ConcatWithStringInt);
 }
+
+TEST_CASE("No range select ordering error for single bit value") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [0:0] a;
+    initial $display(a[-1:0]);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RangeOOB);
+}
