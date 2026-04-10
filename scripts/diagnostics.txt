@@ -609,8 +609,6 @@ error RangeSelectAssociative "cannot take a slice of an associative array"
 error CannotIndexScalar "scalar type cannot be indexed"
 error ExprMustBeIntegral "expression type {} is not integral"
 error IndexValueInvalid "cannot refer to element {} of {}"
-error SelectEndianMismatch "endianness of selection must match declared range (type is {})"
-error SelectEndianDynamic "range of selection [{}:{}] into {} is reversed"
 error BadAssignment "value of type {} cannot be assigned to type {}"
 error BadConversion "value of type {} cannot be converted to type {}"
 error BadIntegerCast "cannot change width or signedness of non-integral expression (type is {})"
@@ -812,6 +810,7 @@ warning dynamic-non-procedural DynamicNotProcedural "cannot refer to an element 
 warning nonstandard-string-concat NonstandardStringConcat "string concatenation using '+' operator is non-standard"
 warning inc-dec-bit IncDecBit "increment/decrement of a 1-bit operand"
 warning string-int-concat ConcatWithStringInt "cannot mix strings and integers in a concatenation (use a cast if this is desired)"
+warning range-select-reversed RangeSelectReversed "range of selection [{}:{}] from {} is reversed"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -1301,7 +1300,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
                   initializer-required package-import-in-class foreach-call-expr nonstandard-hierarchical-cross
                   nonstandard-inside nonstandard-bare-assoc-pattern literal-leading-underscore ref-arg-automatic
-                  string-int-concat }
+                  string-int-concat range-select-reversed }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

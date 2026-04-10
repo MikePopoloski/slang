@@ -1602,7 +1602,7 @@ TEST_CASE("Stream expression with") {
         {"byte b[4] = '{default:0}; logic [39:0] a = {<<3{b with[2+:5]}};", diag::RangeOOB},
         {"byte b[3:0] = '{default:0}; int a = {<<3{b with[2+:3]}};", diag::RangeOOB},
         {"byte b[0:3] = '{default:0}; int a = {<<3{b with[2:5]}};", diag::RangeOOB},
-        {"byte b[]; int a = {<<3{b with[3:2]}};", diag::SelectEndianDynamic},
+        {"byte b[]; int a = {<<3{b with[3:2]}};", diag::RangeSelectReversed},
         {"byte b[], c[4]; always {>>{b, {<<3{c with[b[0]:b[1]]}}}} = 9;", diag::BadStreamWithOrder},
         {"int a[],b[],c[];bit d;always {>>{b}}={<<{a with [2+:3],c,d}};", diag::BadStreamSize},
     };
@@ -2820,7 +2820,7 @@ endmodule
     CHECK(diags[0].code == diag::RangeSelectAssociative);
     CHECK(diags[1].code == diag::ExprMustBeIntegral);
     CHECK(diags[2].code == diag::ExprMustBeIntegral);
-    CHECK(diags[3].code == diag::SelectEndianMismatch);
+    CHECK(diags[3].code == diag::RangeSelectReversed);
     CHECK(diags[4].code == diag::ValueMustBePositive);
     CHECK(diags[5].code == diag::RangeOOB);
     CHECK(diags[6].code == diag::IndexValueInvalid);

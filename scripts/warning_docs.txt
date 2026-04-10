@@ -1931,6 +1931,20 @@ module m;
 endmodule
 ```
 
+-Wrange-select-reversed
+The ordering of a range select (ascending or descending) does not match the direction of
+the dimensions of the type being selected. Most tools error on this, but some allow it
+so the error can be downgraded for compatibility.
+```
+module m;
+    logic [63:0] a;
+    int b;
+    initial begin
+        b = a[3:7];
+    end
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste

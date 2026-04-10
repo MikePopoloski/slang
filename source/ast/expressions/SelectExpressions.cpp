@@ -518,7 +518,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
             if (selectionRange.isLittleEndian() != valueRange.isLittleEndian() &&
                 selectionRange.width() > 1 && valueRange.width() > 1) {
                 if (!context.inUnevaluatedBranch()) {
-                    auto& diag = context.addDiag(diag::SelectEndianMismatch, errorRange);
+                    auto& diag = context.addDiag(diag::RangeSelectReversed, errorRange);
+                    diag << selectionRange.left << selectionRange.right;
                     diag << valueType;
                 }
                 return badExpr(comp, result);
@@ -599,7 +600,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
             selectionRange = {*lv, *rv};
             if (selectionRange.isLittleEndian() && selectionRange.width() > 1) {
                 if (!context.inUnevaluatedBranch()) {
-                    auto& diag = context.addDiag(diag::SelectEndianDynamic, errorRange);
+                    auto& diag = context.addDiag(diag::RangeSelectReversed, errorRange);
                     diag << selectionRange.left << selectionRange.right;
                     diag << valueType;
                 }

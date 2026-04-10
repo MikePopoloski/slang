@@ -140,6 +140,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::BareAssociativePattern,
                  diag::DigitsLeadingUnderscore,
                  diag::RefArgAutomaticFunc,
+                 diag::RangeSelectReversed,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }
