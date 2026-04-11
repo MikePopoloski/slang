@@ -267,6 +267,7 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
                 if (includeAddrs) {
                     printer.options.typedefsAsLinks = true;
                     printer.options.enumsAsLinks = true;
+                    printer.options.classesAsLinks = true;
                 }
 
                 printer.append(elem);
@@ -285,9 +286,11 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
             }
 
             // Even when printing detailed type info, if we're not in a members array prefer
-            // to print links to typedefs and enums to reduce verbosity of output.
+            // to print links to typedefs, enums, classes, and covergroups to avoid
+            // re-serializing the same type many times over.
             if (!inMembersArray && includeAddrs &&
-                (std::is_same_v<TypeAliasType, T> || std::is_same_v<EnumType, T>)) {
+                (std::is_same_v<TypeAliasType, T> || std::is_same_v<EnumType, T> ||
+                 std::is_same_v<ClassType, T> || std::is_same_v<CovergroupType, T>)) {
                 writer.writeValue(printType());
                 return;
             }

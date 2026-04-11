@@ -45,6 +45,9 @@ struct SLANG_EXPORT TypePrintingOptions {
     /// Print enums as links instead of their expanded type details.
     bool enumsAsLinks = false;
 
+    /// Print classes and covergroups as links instead of their expanded type details.
+    bool classesAsLinks = false;
+
     /// Selects a style for anonymous types, either the system ID name
     /// or a more human-friendly name.
     enum AnonymousTypeStyle { SystemName, FriendlyName } anonymousTypeStyle = SystemName;

@@ -364,12 +364,16 @@ void TypePrinter::visit(const PropertyType& type, std::string_view) {
 }
 
 void TypePrinter::visit(const ClassType& type, std::string_view) {
+    if (options.classesAsLinks)
+        buffer->format("{} ", uintptr_t(&type));
     buffer->append(type.name);
     if (type.genericClass)
         appendParameters(type.genericParameters, false);
 }
 
 void TypePrinter::visit(const CovergroupType& type, std::string_view) {
+    if (options.classesAsLinks)
+        buffer->format("{} ", uintptr_t(&type));
     if (type.name.empty())
         buffer->append("<unnamed covergroup>");
     else
