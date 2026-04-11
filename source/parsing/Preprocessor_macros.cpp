@@ -59,7 +59,9 @@ void Preprocessor::createBuiltInMacro(std::string_view name, int value, std::str
 // Helper class for applying macro operators (stringification, concatenation, etc).
 class MacroOpEvaluator {
 public:
-    MacroOpEvaluator(Preprocessor& pp, SmallVectorBase<Token>& dest) : pp(pp), dest(dest) {}
+    MacroOpEvaluator(Preprocessor& pp, SmallVectorBase<Token>& dest,
+                     bool preserveTrailingTrivia = false) :
+        pp(pp), dest(dest), preserveTrailingTrivia(preserveTrailingTrivia) {}
 
     // Goes through each token and appends it to the dest buffer,
     // applying any macro operators it finds in the process.
@@ -123,6 +125,14 @@ public:
             else {
                 pp.addDiag(diag::ExpectedMacroCommentEnd, syntheticComment.location());
             }
+        }
+        else if (preserveTrailingTrivia && !emptyArgTrivia.empty() && !dest.empty()) {
+            // Preserve any leftover trivia as an EmptyMacroArgument so that it
+            // can be properly consumed by the outer expansion context (e.g. spacing
+            // that terminates an escaped identifier formed via token paste).
+            auto loc = dest.back().location() + dest.back().rawText().length();
+            dest.push_back(Token(pp.alloc, TokenKind::EmptyMacroArgument,
+                                 emptyArgTrivia.copy(pp.alloc), ""sv, loc));
         }
 
         return anyNewMacros;
@@ -344,6 +354,7 @@ private:
     bool anyNewMacros = false;
     bool didConcat = false;
     bool syntheticIsLineComment = false;
+    bool preserveTrailingTrivia = false;
 };
 
 std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMacro(
@@ -546,8 +557,25 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         if (!it->second.isExpanded) {
             std::span<const Token> argTokens = it->second;
             SmallSet<const DefineDirectiveSyntax*, 8> alreadyExpanded;
-            if (!expandReplacementList(argTokens, alreadyExpanded))
-                return false;
+
+            while (true) {
+                const Token* ptr = argTokens.data();
+                if (!expandReplacementList(argTokens, alreadyExpanded))
+                    return false;
+
+                // Apply all macro ops eagerly. If we don't we can get different expansions
+                // later if they refer to an argument of the parent expansion context.
+                SmallVector<Token, 8> argExpanded;
+                MacroOpEvaluator argEvaluator(*this, argExpanded,
+                                              /* preserveTrailingTrivia */ true);
+
+                const bool foundNewMacros = argEvaluator.apply(argTokens);
+                const bool expandedAnything = ptr != argTokens.data();
+
+                argTokens = argExpanded.copy(alloc);
+                if (!foundNewMacros && !expandedAnything)
+                    break;
+            }
 
             it->second = argTokens;
             it->second.isExpanded = true;

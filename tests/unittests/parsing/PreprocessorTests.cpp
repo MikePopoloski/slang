@@ -3527,3 +3527,121 @@ TEST_CASE("allowMissingProtectedScopeEnd - no false fabrication when scope is in
     CHECK(std::any_of(tree->diagnostics().begin(), tree->diagnostics().end(),
                       [](auto& d) { return d.code == diag::ProtectedEnvelope; }));
 }
+
+TEST_CASE("Nested token paste in parameterized macro GH #1782") {
+    // Token paste forming a macro invocation should be expanded before
+    // being passed as an argument to an inner macro. Without the fix,
+    // `PARAM_NAME_``_sum_var with _sum_var=sum would form `PARAM_NAME_sum
+    // but fail to expand it, then paste _INT/_FRAC onto it in an inner macro
+    // producing `PARAM_NAME_sum_INT which is not a defined macro.
+    auto& text = R"(
+`define DEF(d,v) \
+  `ifndef d \
+    `define d v \
+  `endif
+
+`define INT(_param, _int)     int _param``_INT = _int
+`define FRAC(_param, _frac=0) int _param``_FRAC = _frac
+
+`define FIXED_LOCALPARAM(_param, _int, _frac=0) \
+  localparam `INT(_param, _int); \
+  localparam `FRAC(_param, _frac)
+
+`define FIXED_WIDTH(_param) ((_param``_INT) + (_param``_FRAC))
+
+`define FIXED_VAR(_param, _var) \
+  `DEF(PARAM_NAME_``_var, _param) \
+  logic signed [`FIXED_WIDTH(_param)-1:0] _var
+
+`define INST(_mod, _inst, _suffix) ._mod``_suffix(_inst``_suffix)
+
+`define FIXED_PARAM_INST(_mod, _inst) \
+  `INST(_mod, _inst, _INT), \
+  `INST(_mod, _inst, _FRAC)
+
+`define ADD_PARAM_INST(_sum_param, _a_param) \
+  `FIXED_PARAM_INST(SUM, _sum_param), \
+  `FIXED_PARAM_INST(DIN, _a_param)
+
+`define ADD1(_sum_var, _a_var) \
+  fixed_add1 #(`ADD_PARAM_INST(`PARAM_NAME_``_sum_var, `PARAM_NAME_``_a_var)) \
+  u_add_``_sum_var ( \
+    .sum(_sum_var), \
+    .din(_a_var) \
+  )
+
+module fixed_add1 #(
+  parameter int SUM_INT = 5,
+  parameter int SUM_FRAC = 7,
+  parameter int DIN_INT = 4,
+  parameter int DIN_FRAC = 7
+) (
+  output logic signed [SUM_INT+SUM_FRAC-1:0] sum,
+  input  logic signed [DIN_INT+DIN_FRAC-1:0] din
+);
+endmodule
+
+module using_add;
+  `FIXED_LOCALPARAM(DATA, 4, 7);
+  `FIXED_LOCALPARAM(SUM, 5, 7);
+
+  `FIXED_VAR(DATA, a);
+  `FIXED_VAR(SUM, sum);
+
+  `ADD1(sum, a);
+endmodule
+)";
+
+    auto& expected = R"(
+module fixed_add1 #(
+  parameter int SUM_INT = 5,
+  parameter int SUM_FRAC = 7,
+  parameter int DIN_INT = 4,
+  parameter int DIN_FRAC = 7
+) (
+  output logic signed [SUM_INT+SUM_FRAC-1:0] sum,
+  input  logic signed [DIN_INT+DIN_FRAC-1:0] din
+);
+endmodule
+module using_add;
+
+  localparam int DATA_INT = 4;
+  localparam int DATA_FRAC = 7;
+
+  localparam int SUM_INT = 5;
+  localparam int SUM_FRAC = 7;
+
+
+
+
+
+  logic signed [((DATA_INT) + (DATA_FRAC))-1:0] a;
+
+
+
+
+
+  logic signed [((SUM_INT) + (SUM_FRAC))-1:0] sum;
+
+  fixed_add1 #(
+
+  .SUM_INT(SUM_INT),
+  .SUM_FRAC(SUM_FRAC),
+
+  .DIN_INT(DATA_INT),
+  .DIN_FRAC(DATA_FRAC))
+  u_add_sum (
+    .sum(sum),
+    .din(a)
+  );
+endmodule
+)";
+
+    auto tree = SyntaxTree::fromText(text);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+}
