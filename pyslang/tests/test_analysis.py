@@ -13,7 +13,6 @@ from pyslang.ast import (
     Compilation,
     EvalContext,
     ExpressionStatement,
-    LSPUtilities,
     ProceduralBlockSymbol,
     ValuePath,
 )
@@ -164,7 +163,7 @@ endmodule
     assert "x" in assigned_vars
 
 
-def test_lsp_utilities_stringify():
+def test_value_path_stringify():
 
     tree = SyntaxTree.fromText("""
 module m;
@@ -207,7 +206,7 @@ endmodule
             assert s.toString(ec) == "arr[3]"
 
 
-def test_lsp_utilities_visit_lsps():
+def test_value_path_visit_paths():
 
     tree = SyntaxTree.fromText("""
 module m;
@@ -237,16 +236,16 @@ endmodule
     stmt = outer_body.body
     assert stmt is not None
 
-    lsps_found = []
+    values_found = []
 
-    def on_lsp(symbol, lsp_expr, is_lvalue):
-        lsps_found.append((symbol.name, is_lvalue))
+    def on_path(path):
+        values_found.append(path.rootSymbol.name)
 
     if isinstance(stmt, ExpressionStatement):
-        LSPUtilities.visitLSPs(stmt.expr, compilation, on_lsp, is_lvalue=True)
+        ValuePath.visitPaths(stmt.expr, EvalContext(root), on_path)
 
-    assert "a" in {name for name, _ in lsps_found}, "Should find 'a' as lvalue"
-    assert "b" in {name for name, _ in lsps_found}, "Should find 'b' as rvalue"
+    assert "a" in values_found
+    assert "b" in values_found
 
 
 def test_driver_kind_enum():
@@ -279,8 +278,8 @@ endmodule
     assert driver.flags == DriverFlags["None"]
 
 
-def test_lsp_utilities_get_bounds():
-    """Test LSPUtilities.getBounds returns correct bit ranges"""
+def test_value_path_bounds():
+    """Test value path bounds return correct bit ranges"""
 
     tree = SyntaxTree.fromText("""
 module m;
@@ -318,12 +317,9 @@ endmodule
             assert proc_block is not None
 
             flow = FlowAnalysis(proc_block)
-            bounds = LSPUtilities.getBounds(driver.lsp, flow.evalContext)
-            # getBounds returns (lower_bound, upper_bound) for the bit range
-            if bounds is not None:
-                lower, upper = bounds
-                assert lower == 8, f"Expected lower bound 8, got {lower}"
-                assert upper == 15, f"Expected upper bound 15, got {upper}"
+            lower, upper = ValuePath(driver.lsp, flow.evalContext).lspBounds
+            assert lower == 8, f"Expected lower bound 8, got {lower}"
+            assert upper == 15, f"Expected upper bound 15, got {upper}"
 
 
 def test_flow_analysis_loop_callbacks():

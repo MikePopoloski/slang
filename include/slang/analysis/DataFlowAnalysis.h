@@ -188,7 +188,6 @@ protected:
             switch (elem.kind) {
                 case ExpressionKind::NamedValue:
                 case ExpressionKind::HierarchicalValue:
-                    // Already handled by noteReference above.
                     break;
                 case ExpressionKind::Call:
                 case ExpressionKind::Concatenation: {

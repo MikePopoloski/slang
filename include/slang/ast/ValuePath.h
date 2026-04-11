@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/util/Function.h"
 #include "slang/util/Iterator.h"
 #include "slang/util/Util.h"
 
@@ -66,6 +67,16 @@ public:
 
     /// Constructs a new value path from a path expression.
     ValuePath(const Expression& expr, EvalContext& evalContext);
+
+    /// Visits all value paths in the provided arbitrary expression,
+    /// invoking the callback for each one.
+    ///
+    /// If @a skipSelectors is true this function won't visit expressions inside
+    /// selectors, such as `a` and `b` in `foo[a:b]`. It also won't visit the
+    /// lhs of class and virtual interface handle accesses.
+    static void visitPaths(const Expression& expr, EvalContext& evalContext,
+                           function_ref<void(const ValuePath&)> callback,
+                           bool skipSelectors = false);
 
     /// Returns a new path that represents the current path with all dynamic components
     /// removed, such that the resulting path is just the longest static prefix.

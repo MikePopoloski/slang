@@ -12,7 +12,7 @@
 #include "slang/analysis/DFAResults.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
-#include "slang/ast/LSPUtilities.h"
+#include "slang/ast/ValuePath.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 
 namespace slang::analysis {
@@ -127,9 +127,8 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             }
 
             auto reportInferredDiag = [&](DiagCode code, const Expression& expr) {
-                FormatBuffer buffer;
-                LSPUtilities::stringifyLSP(expr, evalContext, buffer);
-                context.addDiag(procedure, code, expr.sourceRange) << buffer.str();
+                ValuePath path(expr, evalContext);
+                context.addDiag(procedure, code, expr.sourceRange) << path.toString(evalContext);
             };
 
             if (procKind == ProceduralBlockKind::AlwaysComb) {
@@ -423,11 +422,12 @@ void AnalyzedProcedure::buildSensitivityList(AnalysisContext& context, DFAResult
 
         SmallMap<const ValueSymbol*, SymbolBitMap, 2> signals;
         auto handleEvent = [&](const SignalEventControl& sec) {
-            LSPUtilities::visitLSPs(
-                sec.expr, evalContext, [&](const ValueSymbol& symbol, const Expression& lsp, bool) {
-                    if (auto bounds = LSPUtilities::getBounds(lsp, evalContext, symbol.getType()))
-                        signals[&symbol].unionWith(*bounds, {}, dfa.getBitMapAllocator());
-                });
+            ValuePath::visitPaths(sec.expr, evalContext, [&](const ValuePath& path) {
+                if (path.rootSymbol && path.lsp) {
+                    signals[path.rootSymbol].unionWith(path.lspBounds, {},
+                                                       dfa.getBitMapAllocator());
+                }
+            });
         };
 
         if (timing.kind == TimingControlKind::SignalEvent) {

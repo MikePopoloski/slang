@@ -217,15 +217,26 @@ void registerAST(py::module_& m) {
         .def_readonly("fullExpr", &ValuePath::fullExpr)
         .def_readonly("lsp", &ValuePath::lsp)
         .def_readonly("lspBounds", &ValuePath::lspBounds)
+        .def_property_readonly("empty", &ValuePath::empty)
+        .def_property_readonly("isFullyStatic", &ValuePath::isFullyStatic)
         .def("shrinkToLSP", &ValuePath::shrinkToLSP)
-        .def("toString", &ValuePath::toString)
+        .def("toString", &ValuePath::toString, "evalContext"_a)
         // .def(py::self == py::self)
         // .def(py::self != py::self)
         // .def(py::hash(py::self))
         .def(
             "__iter__",
             [](const ValuePath& self) { return py::make_iterator(self.begin(), self.end()); },
-            py::keep_alive<0, 1>());
+            py::keep_alive<0, 1>())
+        .def_static(
+            "visitPaths",
+            [](const Expression& expr, EvalContext& evalContext, py::function callback,
+               bool skipSelectors) {
+                ValuePath::visitPaths(
+                    expr, evalContext, [&callback](const ValuePath& path) { callback(path); },
+                    skipSelectors);
+            },
+            "expr"_a, "evalContext"_a, "callback"_a, "skipSelectors"_a = false);
 
     py::classh<Pattern>(m, "Pattern")
         .def_readonly("kind", &Pattern::kind)

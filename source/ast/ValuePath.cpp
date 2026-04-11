@@ -7,16 +7,10 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/ValuePath.h"
 
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/TypeProvider.h"
-#include "slang/ast/expressions/CallExpression.h"
-#include "slang/ast/expressions/MiscExpressions.h"
-#include "slang/ast/expressions/OperatorExpressions.h"
-#include "slang/ast/expressions/SelectExpressions.h"
-#include "slang/ast/symbols/ClassSymbols.h"
-#include "slang/ast/symbols/VariableSymbols.h"
-#include "slang/ast/types/Type.h"
 #include "slang/text/FormatBuffer.h"
 
 namespace slang::ast {
@@ -99,6 +93,80 @@ static std::optional<BitRange> computeBounds(SmallVector<const Expression*>& pat
     return result;
 }
 
+template<typename T>
+concept IsSelectExpr =
+    IsAnyOf<T, ElementSelectExpression, RangeSelectExpression, MemberAccessExpression,
+            HierarchicalValueExpression, NamedValueExpression>;
+
+struct PathVisitor {
+    EvalContext& evalCtx;
+    function_ref<void(const ValuePath&)> cb;
+    bool skipSelectors;
+
+    PathVisitor(EvalContext& evalCtx, function_ref<void(const ValuePath&)> cb, bool skipSelectors) :
+        evalCtx(evalCtx), cb(cb), skipSelectors(skipSelectors) {}
+
+    template<typename T>
+        requires(std::is_base_of_v<Expression, T> && !IsSelectExpr<T>)
+    void visit(const T& expr) {
+        if constexpr (std::is_same_v<T, Expression>) {
+            // We don't have a concrete type, we need to dispatch.
+            expr.visit(*this);
+        }
+        else if constexpr (requires { expr.visitExprs(*this); }) {
+            expr.visitExprs(*this);
+        }
+    }
+
+    template<typename T>
+        requires(IsSelectExpr<T>)
+    void visit(const T& expr) {
+        ValuePath path(expr, evalCtx);
+        cb(path);
+
+        // if we're skipping selectors we should exit early because
+        // we will never want to see anything further.
+        if (skipSelectors)
+            return;
+
+        for (auto& elem : path) {
+            switch (elem.kind) {
+                case ExpressionKind::NamedValue:
+                case ExpressionKind::HierarchicalValue:
+                    break;
+                case ExpressionKind::Call:
+                case ExpressionKind::Concatenation:
+                    visit(elem);
+                    break;
+                case ExpressionKind::ElementSelect:
+                    visit(elem.as<ElementSelectExpression>().selector());
+                    break;
+                case ExpressionKind::RangeSelect: {
+                    auto& rs = elem.as<RangeSelectExpression>();
+                    visit(rs.left());
+                    visit(rs.right());
+                    break;
+                }
+                case ExpressionKind::MemberAccess: {
+                    // If this is a static property it's the end of the path but we
+                    // want to keep going anyway to visit other selectors.
+                    auto& mae = elem.as<MemberAccessExpression>();
+                    if (isStaticProp(mae.member))
+                        visit(mae.value());
+                    break;
+                }
+                default:
+                    SLANG_UNREACHABLE;
+            }
+        }
+    }
+
+    void visit(const Pattern&) {}
+    void visit(const TimingControl&) {}
+    void visit(const Constraint&) {}
+    void visit(const AssertionExpr&) {}
+};
+
 ValuePath::ValuePath(const Expression& initialExpr, EvalContext& evalContext) {
     // Conversions are not part of a value path but we look through
     // them here during construction for convenience.
@@ -176,6 +244,12 @@ ValuePath::ValuePath(const Expression& initialExpr, EvalContext& evalContext) {
         else
             lsp = nullptr;
     }
+}
+
+void ValuePath::visitPaths(const Expression& expr, EvalContext& evalContext,
+                           function_ref<void(const ValuePath&)> callback, bool skipSelectors) {
+    PathVisitor visitor(evalContext, callback, skipSelectors);
+    expr.visit(visitor);
 }
 
 ValuePath ValuePath::shrinkToLSP() const {
