@@ -32,7 +32,7 @@ class ValueSymbol;
 /// Leading elements of the path that are statically known form a "static prefix".
 /// The longest such prefix is the "longest static prefix" which the LRM uses
 /// as a way to specify legal and illegal conditions for assignments.
-class ValuePath {
+class SLANG_EXPORT ValuePath {
 public:
     /// The root of the path.
     ///
