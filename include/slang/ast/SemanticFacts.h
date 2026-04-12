@@ -94,6 +94,10 @@ SLANG_ENUM(ForwardTypeRestriction, FTR)
 SLANG_ENUM(CaseStatementCondition, CASE_CONDITION)
 #undef CASE_CONDITION
 
+#define RANGE(x) x(Simple) x(IndexedUp) x(IndexedDown)
+SLANG_ENUM(RangeSelectionKind, RANGE)
+#undef RANGE
+
 /// A set of flags that control how assignments are checked.
 enum class SLANG_EXPORT AssignFlags : uint8_t {
     /// No special assignment behavior specified.
@@ -165,6 +169,9 @@ public:
 
     /// Gets the human-friendly string name of the given forward type restriction kind.
     static std::string_view getTypeRestrictionText(ForwardTypeRestriction typeRestriction);
+
+    /// Gets the string representing the operator used for given range selection kind.
+    static std::string_view getRangeSelectOpText(RangeSelectionKind kind);
 
     /// Populates the given timescale object with the appropriate values specified by
     /// the given syntax node. Reports errors if needed.

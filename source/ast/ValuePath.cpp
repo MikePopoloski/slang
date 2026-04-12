@@ -11,6 +11,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/TypeProvider.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/text/FormatBuffer.h"
 
 namespace slang::ast {
@@ -394,6 +395,24 @@ ValuePath ValuePath::retarget(BumpAllocator& alloc, EvalContext& evalContext,
     return ValuePath(newExpr, evalContext);
 }
 
+bool ValuePath::overlaps(const ValuePath& other) const {
+    if (empty() || other.empty())
+        return empty() && other.empty();
+
+    if (rootSymbol != other.rootSymbol)
+        return false;
+
+    if (lsp && other.lsp) {
+        if (lspBounds.first > other.lspBounds.second || lspBounds.second < other.lspBounds.first)
+            return false;
+
+        if (isFullyStatic() && other.isFullyStatic())
+            return true;
+    }
+
+    return fullExpr->isEquivalentTo(*other.fullExpr);
+}
+
 static void doStringify(const Expression& expr, EvalContext& evalContext, FormatBuffer& buffer) {
     switch (expr.kind) {
         case ExpressionKind::ElementSelect: {
@@ -401,8 +420,11 @@ static void doStringify(const Expression& expr, EvalContext& evalContext, Format
             doStringify(select.value(), evalContext, buffer);
             if (auto cv = select.selector().eval(evalContext))
                 buffer.format("[{}]", cv.toString());
-            else
-                buffer.append("[...]");
+            else {
+                buffer.append("[");
+                doStringify(select.selector(), evalContext, buffer);
+                buffer.append("]");
+            }
             break;
         }
         case ExpressionKind::RangeSelect: {
@@ -411,10 +433,16 @@ static void doStringify(const Expression& expr, EvalContext& evalContext, Format
 
             auto left = select.left().eval(evalContext);
             auto right = select.right().eval(evalContext);
+            auto rangeOp = SemanticFacts::getRangeSelectOpText(select.getSelectionKind());
             if (left && right)
-                buffer.format("[{}:{}]", left.toString(), right.toString());
-            else
-                buffer.append("[...]");
+                buffer.format("[{}{}{}]", left.toString(), rangeOp, right.toString());
+            else {
+                buffer.append("[");
+                doStringify(select.left(), evalContext, buffer);
+                buffer.append(rangeOp);
+                doStringify(select.right(), evalContext, buffer);
+                buffer.append("]");
+            }
             break;
         }
         case ExpressionKind::MemberAccess: {
@@ -448,11 +476,26 @@ static void doStringify(const Expression& expr, EvalContext& evalContext, Format
             }
             break;
         }
-        case ExpressionKind::Call:
-            buffer.format("{}(...)", expr.as<CallExpression>().getSubroutineName());
+        case ExpressionKind::Call: {
+            auto& call = expr.as<CallExpression>();
+            buffer.format("{}(", call.getSubroutineName());
+            if (!call.arguments().empty()) {
+                for (auto arg : call.arguments()) {
+                    doStringify(*arg, evalContext, buffer);
+                    buffer.append(", ");
+                }
+                buffer.pop_back();
+                buffer.pop_back();
+            }
+            buffer.append(")");
             break;
+        }
         default:
-            SLANG_UNREACHABLE;
+            if (expr.syntax)
+                buffer.append(expr.syntax->toString());
+            else
+                buffer.append("...");
+            break;
     }
 }
 

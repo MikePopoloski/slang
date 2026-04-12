@@ -221,9 +221,7 @@ void registerAST(py::module_& m) {
         .def_property_readonly("isFullyStatic", &ValuePath::isFullyStatic)
         .def("shrinkToLSP", &ValuePath::shrinkToLSP)
         .def("toString", &ValuePath::toString, "evalContext"_a)
-        // .def(py::self == py::self)
-        // .def(py::self != py::self)
-        // .def(py::hash(py::self))
+        .def("overlaps", &ValuePath::overlaps, "other"_a)
         .def(
             "__iter__",
             [](const ValuePath& self) { return py::make_iterator(self.begin(), self.end()); },

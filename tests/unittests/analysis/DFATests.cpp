@@ -976,16 +976,17 @@ endmodule
     AnalysisManager analysisManager;
 
     auto diags = analyze(code, compilation, analysisManager);
-    REQUIRE(diags.size() == 9);
-    CHECK(diags[0].code == diag::ReadWriteExpr);
-    CHECK(diags[1].code == diag::MultiWriteExpr);
-    CHECK(diags[2].code == diag::ReadWriteExpr);
+    REQUIRE(diags.size() == 10);
+    CHECK(diags[0].code == diag::MultiWriteExpr);
+    CHECK(diags[1].code == diag::ReadWriteExpr);
+    CHECK(diags[2].code == diag::MultiWriteExpr);
     CHECK(diags[3].code == diag::ReadWriteExpr);
     CHECK(diags[4].code == diag::ReadWriteExpr);
     CHECK(diags[5].code == diag::ReadWriteExpr);
-    CHECK(diags[6].code == diag::MultiWriteExpr);
-    CHECK(diags[7].code == diag::ReadWriteExpr);
+    CHECK(diags[6].code == diag::ReadWriteExpr);
+    CHECK(diags[7].code == diag::MultiWriteExpr);
     CHECK(diags[8].code == diag::ReadWriteExpr);
+    CHECK(diags[9].code == diag::ReadWriteExpr);
 }
 
 TEST_CASE("DFA unsequenced expression corner cases") {
@@ -1015,6 +1016,33 @@ endmodule
 
     auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("DFA unsequenced expression dynamic selects") {
+    auto& code = R"(
+module m;
+    struct { logic a, b; } s[2];
+    logic d[];
+    int i;
+
+    initial begin
+        {d[0], d[1]} = 2;
+        i = s[i].a++ + s[i].b++;
+
+        // These should still error.
+        {d[0], d[0]} = 2;
+        i = s[i].a++ + s[i].a++;
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MultiWriteExpr);
+    CHECK(diags[1].code == diag::MultiWriteExpr);
 }
 
 TEST_CASE("Fork loop var: basic for loop with join_none") {

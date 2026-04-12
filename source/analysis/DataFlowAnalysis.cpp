@@ -7,7 +7,6 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/DataFlowAnalysis.h"
 
-#include "slang/ast/LSPUtilities.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 
 namespace slang::analysis {
@@ -28,31 +27,27 @@ void ExpressionSequenceChecker::clear() {
 
     seqTree.clear();
     seqTree.push_back(0);
-    currRegion = 0;
-
-    for (auto& [symbol, map] : trackedUses)
-        map.clear(context->taggedLSPAlloc);
     trackedUses.clear();
+    currRegion = 0;
 }
 
-void ExpressionSequenceChecker::noteUse(const ValueSymbol& symbol, DriverBitRange bounds,
-                                        const Expression& lsp, bool isLValue) {
+void ExpressionSequenceChecker::noteUse(const ValuePath& path, bool isLValue) {
     if (!isEnabled())
         return;
 
     // If this is an lvalue and we're currently buffering lvalue writes we
     // should simply save it and move on.
     if (isLValue && currFrame) {
-        currFrame->lvals.push_back({&symbol, bounds, &lsp});
+        currFrame->lvals.push_back(path);
 
         // If lvalues also count as rvalue usages in this frame
         // we should register that now.
         if (currFrame->isAlsoRVal)
-            checkUsage(symbol, bounds, lsp, /* isLValue */ false);
+            checkUsage(path, /* isLValue */ false);
     }
     else {
         // Otherwise just check the usage.
-        checkUsage(symbol, bounds, lsp, isLValue);
+        checkUsage(path, isLValue);
     }
 }
 
@@ -61,51 +56,34 @@ void ExpressionSequenceChecker::applyPendingLValues() {
         return;
 
     SLANG_ASSERT(currFrame);
-    for (auto& [symbol, bounds, lsp] : currFrame->lvals)
-        checkUsage(*symbol, bounds, *lsp, true);
+    for (auto& path : currFrame->lvals)
+        checkUsage(path, true);
 }
 
-void ExpressionSequenceChecker::checkUsage(const ValueSymbol& symbol, DriverBitRange bounds,
-                                           const Expression& lsp, bool isMod) {
-    struct Tag {
-        uint32_t seq : 30;
-        bool isMod : 1;
-        bool warned : 1;
-    };
-
-    // We can't just use std::bit_cast here because MSVC is garbage.
-    auto toTag = [](uint32_t i) {
-        return Tag{.seq = i & 0x3FFFFFFF, .isMod = bool((i >> 30) & 0x1), .warned = bool(i >> 31)};
-    };
-    auto fromTag = [](Tag t) {
-        return t.seq | (t.isMod ? (1u << 30) : 0u) | (t.warned ? (1u << 31) : 0u);
-    };
+void ExpressionSequenceChecker::checkUsage(const ValuePath& path, bool isMod) {
+    SLANG_ASSERT(path.rootSymbol && path.fullExpr);
 
     // Loop over all existing uses of this object and see if they conflict,
-    // i.e. with two writes or a read+write of the same symbol / LSP.
+    // i.e. with two writes or a read+write of the same symbol path.
     bool warned = false;
-    auto& map = trackedUses[&symbol];
-    auto end = map.end();
-    for (auto it = map.find(bounds); it != end; ++it) {
-        const Tag tag = toTag((*it).second);
-        if (tag.warned)
-            return;
+    auto& vec = trackedUses[path.rootSymbol];
+    for (auto& [prevPath, tag] : vec) {
+        if (prevPath.overlaps(path)) {
+            if (tag.warned)
+                return;
 
-        if ((isMod || tag.isMod) && isUnsequenced(tag.seq)) {
-            FormatBuffer buffer;
-            LSPUtilities::stringifyLSP(lsp, base.getEvalContext(), buffer);
+            if ((isMod || tag.isMod) && isUnsequenced(tag.seq)) {
+                auto code = (isMod && tag.isMod) ? diag::MultiWriteExpr : diag::ReadWriteExpr;
+                context->addDiag(base.rootSymbol, code, path.fullExpr->sourceRange)
+                    << path.toString(base.getEvalContext()) << prevPath.fullExpr->sourceRange;
 
-            auto code = (isMod && tag.isMod) ? diag::MultiWriteExpr : diag::ReadWriteExpr;
-            context->addDiag(base.rootSymbol, code, lsp.sourceRange)
-                << buffer.str() << (*it).first->sourceRange;
-
-            warned = true;
-            break;
+                warned = true;
+                break;
+            }
         }
     }
 
-    Tag newTag{.seq = currRegion, .isMod = isMod, .warned = warned};
-    map.insert(bounds, {&lsp, fromTag(newTag)}, context->taggedLSPAlloc);
+    vec.emplace_back(path, Tag{.seq = currRegion, .isMod = isMod, .warned = warned});
 }
 
 bool ExpressionSequenceChecker::isUnsequenced(uint32_t seq) {

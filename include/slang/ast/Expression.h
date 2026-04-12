@@ -69,10 +69,6 @@ enum class VariableFlags : uint16_t;
 SLANG_ENUM(ExpressionKind, EXPRESSION)
 #undef EXPRESSION
 
-#define RANGE(x) x(Simple) x(IndexedUp) x(IndexedDown)
-SLANG_ENUM(RangeSelectionKind, RANGE)
-#undef RANGE
-
 // clang-format off
 #define CK(x) \
     x(Implicit) \

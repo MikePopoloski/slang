@@ -272,6 +272,18 @@ std::string_view SemanticFacts::getTypeRestrictionText(ForwardTypeRestriction ty
     }
 }
 
+std::string_view SemanticFacts::getRangeSelectOpText(RangeSelectionKind kind) {
+    switch (kind) {
+        case RangeSelectionKind::Simple:
+            return ":"sv;
+        case RangeSelectionKind::IndexedUp:
+            return "+:"sv;
+        case RangeSelectionKind::IndexedDown:
+            return "-:"sv;
+    }
+    SLANG_UNREACHABLE;
+}
+
 void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
                                       const TimeUnitsDeclarationSyntax& syntax,
                                       std::optional<SourceRange>& unitsRange,

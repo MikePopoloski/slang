@@ -29,8 +29,7 @@ public:
 
     void clear();
 
-    void noteUse(const ValueSymbol& symbol, DriverBitRange bounds, const Expression& lsp,
-                 bool isLValue);
+    void noteUse(const ValuePath& path, bool isLValue);
 
     // Sequence regions form a tree, with child regions being unsequenced
     // with respect to their parents, and sequenced with respect to their
@@ -63,7 +62,7 @@ public:
         }
 
         ExpressionSequenceChecker& parent;
-        SmallVector<std::tuple<const ValueSymbol*, DriverBitRange, const Expression*>> lvals;
+        SmallVector<ValuePath> lvals;
         LValueFrame* prevFrame;
         uint32_t readRegion;
         uint32_t writeRegion;
@@ -89,8 +88,7 @@ private:
     friend struct LValueFrame;
 
     void applyPendingLValues();
-    void checkUsage(const ValueSymbol& symbol, DriverBitRange bounds, const Expression& lsp,
-                    bool isMod);
+    void checkUsage(const ValuePath& path, bool isMod);
     bool isUnsequenced(uint32_t seq);
     uint32_t representative(uint32_t seq);
 
@@ -104,8 +102,15 @@ private:
         SeqRegion(uint32_t parent) : parent(parent), merged(false) {}
     };
 
+    //  A value stored alongside each usage to indicate which sequence region it came from.
+    struct Tag {
+        uint32_t seq : 30;
+        bool isMod : 1;
+        bool warned : 1;
+    };
+
     SmallVector<SeqRegion> seqTree;
-    flat_hash_map<const ValueSymbol*, TaggedLSPMap> trackedUses;
+    flat_hash_map<const ValueSymbol*, SmallVector<std::pair<ValuePath, Tag>, 2>> trackedUses;
 };
 
 template<typename T>
@@ -601,7 +606,7 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValuePath& initialP
     if (!currState.reachable)
         return;
 
-    auto path = initialPath.shrinkToLSP();
+    auto path = initialPath;
     if (this->inUnrolledForLoop) {
         // During unrolled for loop evaluation the LSPs we evaluate can depend
         // on otherwise non-constant values, so we need to clone the LSP tree
@@ -612,10 +617,10 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValuePath& initialP
     if (path.empty() || !path.lsp || !path.rootSymbol)
         return;
 
+    sequenceChecker.noteUse(path, isLValue);
+
     auto& symbol = *path.rootSymbol;
     auto bounds = path.lspBounds;
-    sequenceChecker.noteUse(symbol, bounds, *path.lsp, isLValue);
-
     if (isLValue) {
         auto [it, inserted] = symbolToSlot.try_emplace(&symbol, (uint32_t)lvalues.size());
         if (inserted) {

@@ -97,14 +97,11 @@ public:
     /// Returns true if the path is fully static (i.e. has no dynamic components).
     [[nodiscard]] bool isFullyStatic() const { return fullExpr == lsp; }
 
+    /// Returns true if this path overlaps @a other.
+    [[nodiscard]] bool overlaps(const ValuePath& other) const;
+
     /// Returns a humany-friendly string representation of the path.
     [[nodiscard]] std::string toString(EvalContext& evalContext) const;
-
-    /// Hashes the path.
-    [[nodiscard]] size_t hash() const;
-
-    /// Equality operator.
-    bool operator==(const ValuePath& other) const;
 
     /// An iterator for components of the path.
     class iterator : public iterator_facade<iterator> {
@@ -136,12 +133,3 @@ public:
 };
 
 } // namespace slang::ast
-
-namespace std {
-
-template<>
-struct hash<slang::ast::ValuePath> {
-    size_t operator()(const slang::ast::ValuePath& vp) const { return vp.hash(); }
-};
-
-} // namespace std
