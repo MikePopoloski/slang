@@ -286,13 +286,12 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("baseConstructorCall", &ClassType::getBaseConstructorCall)
         .def_property_readonly("constructor", &ClassType::getConstructor)
         .def_property_readonly("firstForwardDecl", &ClassType::getFirstForwardDecl)
-        .def_property_readonly("properties",
-             [](const ClassType& self) {
-                 py::list result;
-                 for (auto& prop : self.properties())
-                     result.append(py::cast(&prop));
-                 return result;
-             });
+        .def_property_readonly("properties", [](const ClassType& self) {
+            py::list result;
+            for (auto& prop : self.properties())
+                result.append(py::cast(&prop));
+            return result;
+        });
 
     py::classh<GenericClassDefSymbol, Symbol>(m, "GenericClassDefSymbol")
         .def_readonly("isInterface", &GenericClassDefSymbol::isInterface)

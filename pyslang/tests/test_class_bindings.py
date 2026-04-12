@@ -17,12 +17,21 @@ def _compile(code):
 
 
 def _find_class(comp, name="Foo"):
-    return next((m for cu in comp.getRoot().compilationUnits for m in cu 
-                 if m.kind == SymbolKind.ClassType and m.name == name), None)
+    return next(
+        (
+            m
+            for cu in comp.getRoot().compilationUnits
+            for m in cu
+            if m.kind == SymbolKind.ClassType and m.name == name
+        ),
+        None,
+    )
 
 
 def _find_method(cls, name):
-    return next((m for m in cls if m.kind == SymbolKind.Subroutine and m.name == name), None)
+    return next(
+        (m for m in cls if m.kind == SymbolKind.Subroutine and m.name == name), None
+    )
 
 
 def test_subroutine_thisvar_class_methods():
@@ -79,9 +88,11 @@ def test_subroutine_thisvar_free_function():
         initial $display("%0d", add(1, 2));
     endmodule
     """)
-    found = any(m.kind == SymbolKind.Subroutine and m.name == "add" and m.thisVar is None
-                for inst in comp.getRoot().topInstances
-                for m in inst.body)
+    found = any(
+        m.kind == SymbolKind.Subroutine and m.name == "add" and m.thisVar is None
+        for inst in comp.getRoot().topInstances
+        for m in inst.body
+    )
     assert found, "free function 'add' not found"
 
 
@@ -130,7 +141,11 @@ def test_subroutine_return_val_var():
             elif m.name == "also_nothing":
                 assert m.returnValVar is None
                 checked.add("also_nothing")
-    assert checked == {"add", "do_nothing", "also_nothing"}, f"not all subroutines found, got: {checked}"
+    assert checked == {
+        "add",
+        "do_nothing",
+        "also_nothing",
+    }, f"not all subroutines found, got: {checked}"
 
 
 def test_classtype_properties():
