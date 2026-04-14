@@ -22,6 +22,7 @@ class Expression;
 class Statement;
 class Symbol;
 class TimingControl;
+class ValuePath;
 class ValueSymbol;
 
 } // namespace slang::ast
@@ -71,10 +72,9 @@ public:
     }
 
     /// Determines whether the given subset of the symbol (via the provided
-    /// longest static prefix expression) is referenced anywhere in
-    /// the procedure, either as an lvalue or an rvalue.
-    bool isReferenced(ast::EvalContext& evalContext, const ast::ValueSymbol& symbol,
-                      const ast::Expression& lsp) const;
+    /// value path) is referenced anywhere in the procedure, either as an
+    /// lvalue or an rvalue.
+    bool isReferenced(const ast::ValuePath& path) const;
 
     /// Gets the inferred clock for the procedure, if one exists.
     const ast::TimingControl* inferClock(AnalysisContext& context, const ast::Symbol& symbol,

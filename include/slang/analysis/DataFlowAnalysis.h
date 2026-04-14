@@ -194,12 +194,6 @@ protected:
                 case ExpressionKind::NamedValue:
                 case ExpressionKind::HierarchicalValue:
                     break;
-                case ExpressionKind::Call:
-                case ExpressionKind::Concatenation: {
-                    auto guard = clearLValFlag();
-                    this->visit(elem);
-                    break;
-                }
                 case ExpressionKind::ElementSelect: {
                     // Visit just the selector.
                     auto guard = clearLValFlag();
@@ -229,8 +223,11 @@ protected:
                     }
                     break;
                 }
-                default:
-                    SLANG_UNREACHABLE;
+                default: {
+                    auto guard = clearLValFlag();
+                    this->visit(elem);
+                    break;
+                }
             }
         }
 

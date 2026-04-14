@@ -62,7 +62,6 @@ target_sources(
           HierarchicalReference.cpp
           InstanceCacheKey.cpp
           Lookup.cpp
-          LSPUtilities.cpp
           LValue.cpp
           OpaqueInstancePath.cpp
           Patterns.cpp

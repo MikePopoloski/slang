@@ -16,21 +16,6 @@
 
 namespace slang::ast {
 
-static bool isPartOfPath(ExpressionKind kind) {
-    switch (kind) {
-        case ExpressionKind::NamedValue:
-        case ExpressionKind::HierarchicalValue:
-        case ExpressionKind::Call:
-        case ExpressionKind::Concatenation:
-        case ExpressionKind::ElementSelect:
-        case ExpressionKind::RangeSelect:
-        case ExpressionKind::MemberAccess:
-            return true;
-        default:
-            return false;
-    }
-}
-
 static bool isSelectExpr(ExpressionKind kind) {
     switch (kind) {
         case ExpressionKind::ElementSelect:
@@ -125,19 +110,25 @@ struct PathVisitor {
         ValuePath path(expr, evalCtx);
         cb(path);
 
-        // if we're skipping selectors we should exit early because
-        // we will never want to see anything further.
-        if (skipSelectors)
+        if (skipSelectors) {
+            // if we're skipping selectors we will skip to the root
+            // and potentially visit that.
+            const Expression* last = nullptr;
+            for (auto& elem : path)
+                last = &elem;
+
+            SLANG_ASSERT(last);
+            SLANG_ASSERT(!isSelectExpr(last->kind));
+            if (!ValueExpressionBase::isKind(last->kind)) {
+                visit(*last);
+            }
             return;
+        }
 
         for (auto& elem : path) {
             switch (elem.kind) {
                 case ExpressionKind::NamedValue:
                 case ExpressionKind::HierarchicalValue:
-                    break;
-                case ExpressionKind::Call:
-                case ExpressionKind::Concatenation:
-                    visit(elem);
                     break;
                 case ExpressionKind::ElementSelect:
                     visit(elem.as<ElementSelectExpression>().selector());
@@ -157,7 +148,8 @@ struct PathVisitor {
                     break;
                 }
                 default:
-                    SLANG_UNREACHABLE;
+                    visit(elem);
+                    break;
             }
         }
     }
@@ -172,9 +164,6 @@ ValuePath::ValuePath(const Expression& initialExpr, EvalContext& evalContext) {
     // Conversions are not part of a value path but we look through
     // them here during construction for convenience.
     auto& unwrapped = initialExpr.unwrapImplicitConversions();
-    if (!isPartOfPath(unwrapped.kind))
-        return;
-
     fullExpr = &unwrapped;
 
     SmallVector<const Expression*> path;
@@ -203,12 +192,6 @@ ValuePath::ValuePath(const Expression& initialExpr, EvalContext& evalContext) {
                 if (!lsp)
                     lsp = &elem;
                 break;
-            case ExpressionKind::Call:
-            case ExpressionKind::Concatenation:
-                // This is the root but we have no LSP.
-                rootType = elem.type;
-                lsp = nullptr;
-                break;
             case ExpressionKind::ElementSelect:
                 noteSelect(elem, elem.as<ElementSelectExpression>().isConstantSelect(evalContext));
                 break;
@@ -233,7 +216,10 @@ ValuePath::ValuePath(const Expression& initialExpr, EvalContext& evalContext) {
                 break;
             }
             default:
-                SLANG_UNREACHABLE;
+                // This is the root but we have no LSP.
+                rootType = elem.type;
+                lsp = nullptr;
+                break;
         }
     }
 
@@ -388,6 +374,8 @@ ValuePath ValuePath::retarget(BumpAllocator& alloc, EvalContext& evalContext,
     if (isFullyStatic()) {
         ValuePath result = *this;
         result.lsp = result.fullExpr = &newExpr;
+        result.rootSymbol = &target;
+        result.rootType = &target.getType();
         return result;
     }
 
@@ -506,6 +494,172 @@ std::string ValuePath::toString(EvalContext& evalContext) const {
     FormatBuffer buffer;
     doStringify(*fullExpr, evalContext, buffer);
     return buffer.str();
+}
+
+static void getComponents(const ValuePath& path, SmallVector<const Expression*>& components) {
+    for (auto& elem : path)
+        components.push_back(&elem);
+
+    // Don't include the root.
+    components.pop_back();
+}
+
+static Expression* glueConnExpr(BumpAllocator& alloc, EvalContext& evalContext, size_t startIndex,
+                                Expression* expr, SmallVector<const Expression*>& lspPath) {
+    // First, replicate all of the selects for unpacked types. The only way that
+    // types can mismatch here is for fixed size arrays, which can have differing
+    // ranges, so translate those along the way.
+    size_t index = startIndex;
+    for (; index < lspPath.size(); index++) {
+        auto& ct = expr->type->getCanonicalType();
+        if (ct.isIntegral())
+            break;
+
+        auto elem = lspPath[lspPath.size() - 1 - index];
+        if (elem->kind == ExpressionKind::MemberAccess) {
+            auto& ma = elem->as<MemberAccessExpression>();
+            expr = alloc.emplace<MemberAccessExpression>(*ma.type, *expr, ma.member,
+                                                         ma.sourceRange);
+            continue;
+        }
+
+        auto targetDim = ct.getFixedRange();
+        auto translateIndex = [&](int32_t index) {
+            if (targetDim.isLittleEndian())
+                return targetDim.upper() - index;
+            else
+                return targetDim.lower() + index;
+        };
+
+        auto selection = elem->evalSelector(evalContext, /* enforceBounds */ true);
+        SLANG_ASSERT(selection);
+
+        selection->left = translateIndex(selection->left);
+        selection->right = translateIndex(selection->right);
+
+        if (elem->kind == ExpressionKind::ElementSelect) {
+            expr = &ElementSelectExpression::fromConstant(alloc, *expr, selection->lower(),
+                                                          evalContext.astCtx);
+        }
+        else {
+            expr = &RangeSelectExpression::fromConstant(alloc, *expr, *selection,
+                                                        evalContext.astCtx);
+        }
+    }
+
+    // For remaining integral path components, compute the bounds and then
+    // recreate a corresponding select tree that achieves those same bounds.
+    if (index < lspPath.size()) {
+        auto bounds = computeBounds(lspPath, index, evalContext, *expr->type);
+        SLANG_ASSERT(bounds);
+
+        // Note that this can't overflow here because it's a packed type
+        // so the total width is bounded.
+        ConstantRange range{int32_t(bounds->second), int32_t(bounds->first)};
+        expr = &Expression::buildPackedSelectTree(alloc, *expr, range, evalContext.astCtx);
+    }
+
+    return expr;
+}
+
+static bool expandRefPortConn(BumpAllocator& alloc, EvalContext& evalContext, const ValuePath& path,
+                              const Expression& externalConn, const Expression* internalConn,
+                              function_ref<void(const ValuePath&)> callback) {
+    if (externalConn.bad() || (internalConn && internalConn->bad()))
+        return true;
+
+    SmallVector<const Expression*> pathElems;
+    getComponents(path, pathElems);
+
+    size_t elemsToRemove = 0;
+    if (internalConn) {
+        SmallVector<const Expression*> internalPath;
+        getComponents(ValuePath(*internalConn, evalContext), internalPath);
+
+        // Remove the common prefix from the lsp path -- the remainder is the portion
+        // of the expression that applies on top of the external connection. Note that
+        // the paths are in reverse order so we need to walk backwards.
+        while (elemsToRemove < internalPath.size() && elemsToRemove < pathElems.size()) {
+            auto l = internalPath[internalPath.size() - 1 - elemsToRemove];
+            auto r = pathElems[pathElems.size() - 1 - elemsToRemove];
+            if (!l->isEquivalentTo(*r)) {
+                // This port is not applicable because the internal connection
+                // doesn't match the lsp and so assignments don't affect it.
+                return false;
+            }
+            elemsToRemove++;
+        }
+    }
+
+    if (elemsToRemove == pathElems.size()) {
+        // The entire lsp is covered by the internal connection, so the external
+        // connection is the relevant expression.
+        ValuePath::visitPaths(externalConn, evalContext, callback, /* skipSelectors */ true);
+    }
+    else {
+        // The external connection is only partially covered by the LSP. We need to
+        // glue the uncovered portion of the LSP onto the external connection.
+        // The const_cast here is okay because we never mutate anything during analysis.
+        auto newExpr = glueConnExpr(alloc, evalContext, elemsToRemove,
+                                    const_cast<Expression*>(&externalConn), pathElems);
+        ValuePath::visitPaths(*newExpr, evalContext, callback, /* skipSelectors */ true);
+    }
+    return true;
+}
+
+static void expandModportConn(BumpAllocator& alloc, EvalContext& evalContext, const ValuePath& path,
+                              const Expression& internalConn,
+                              function_ref<void(const ValuePath&)> callback) {
+    SmallVector<const Expression*> components;
+    getComponents(path, components);
+
+    // We need to glue the uncovered portion of the LSP onto the external connection.
+    // The const_cast here is okay because we never mutate anything during analysis.
+    auto newExpr = glueConnExpr(alloc, evalContext, 0, const_cast<Expression*>(&internalConn),
+                                components);
+    ValuePath::visitPaths(*newExpr, evalContext, callback, /* skipSelectors */ true);
+}
+
+void ValuePath::expandIndirectRefs(BumpAllocator& alloc, EvalContext& evalContext,
+                                   function_ref<void(const ValuePath&)> callback) const {
+    if (empty() || !rootSymbol || !lsp) {
+        callback(*this);
+        return;
+    }
+
+    if (auto mpp = rootSymbol->as_if<ModportPortSymbol>()) {
+        if (auto expr = mpp->getConnectionExpr(); expr && !expr->bad())
+            expandModportConn(alloc, evalContext, *this, *expr, callback);
+        return;
+    }
+
+    // If this symbol is connected to a ref port we need to chop off
+    // the common part of the connection expression and glue the remainder
+    // onto the target of the connection.
+    bool anyRefPorts = false;
+    for (auto backref = rootSymbol->getFirstPortBackref(); backref;
+         backref = backref->getNextBackreference()) {
+        auto& port = *backref->port;
+        if (port.direction == ArgumentDirection::Ref) {
+            auto scope = rootSymbol->getParentScope();
+            SLANG_ASSERT(scope);
+
+            auto inst = scope->asSymbol().as<InstanceBodySymbol>().parentInstance;
+            SLANG_ASSERT(inst);
+
+            if (auto conn = inst->getPortConnection(port)) {
+                if (auto expr = conn->getExpression()) {
+                    anyRefPorts |= expandRefPortConn(alloc, evalContext, *this, *expr,
+                                                     port.getInternalExpr(), callback);
+                }
+            }
+        }
+    }
+
+    if (!anyRefPorts) {
+        // No ref ports or modports involved, so just invoke the callback directly.
+        callback(*this);
+    }
 }
 
 void ValuePath::iterator::increment() {

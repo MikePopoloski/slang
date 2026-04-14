@@ -9,13 +9,12 @@
 
 #include <vector>
 
+#include "slang/ast/ValuePath.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"
 
 namespace slang {
-
 class BumpAllocator;
-
 }
 
 namespace slang::ast {
@@ -28,12 +27,6 @@ class ValueSymbol;
 } // namespace slang::ast
 
 namespace slang::analysis {
-
-class ValueDriver;
-
-using DriverBitRange = std::pair<uint64_t, uint64_t>;
-using DriverList = std::vector<std::pair<const ValueDriver*, DriverBitRange>>;
-using SymbolDriverListPair = std::pair<const ast::ValueSymbol*, DriverList>;
 
 /// Specifies possible containing symbol kinds for value drivers.
 enum class DriverSource : uint8_t {
@@ -87,8 +80,10 @@ SLANG_BITMASK(DriverFlags, ViaIndirectPort)
 /// to some range of its type.
 class SLANG_EXPORT ValueDriver {
 public:
-    /// The longest static prefix expression that drives the value.
-    not_null<const ast::Expression*> lsp;
+    /// The target value and sub-path being driven.
+    ///
+    /// @note @a path.rootSymbol and @a path.lsp will be non-null for all value drivers.
+    ast::ValuePath path;
 
     /// The symbol that contains the driver expression.
     not_null<const ast::Symbol*> containingSymbol;
@@ -103,13 +98,13 @@ public:
     DriverSource source;
 
     /// Constructs a new ValueDriver instance.
-    static ValueDriver* create(BumpAllocator& alloc, DriverKind kind, const ast::Expression& lsp,
+    static ValueDriver* create(BumpAllocator& alloc, DriverKind kind, const ast::ValuePath& path,
                                const ast::Symbol& containingSymbol, bitmask<DriverFlags> flags,
                                const SourceRange* overrideRange = nullptr);
 
     /// Constructs a new ValueDriver instance.
-    static ValueDriver* create(BumpAllocator& alloc, const ValueDriver& copyFrom,
-                               const ast::ValueSymbol& newTarget);
+    static ValueDriver* create(BumpAllocator& alloc, ast::EvalContext& evalContext,
+                               const ValueDriver& copyFrom, const ast::ValueSymbol& newTarget);
 
     /// Indicates whether the driver is for an input port.
     bool isInputPort() const { return flags.has(DriverFlags::InputPort); }
@@ -136,7 +131,7 @@ public:
     const SourceRange* getOverrideRange() const;
 
 private:
-    ValueDriver(DriverKind kind, const ast::Expression& lsp, const ast::Symbol& containingSymbol,
+    ValueDriver(DriverKind kind, const ast::ValuePath& path, const ast::Symbol& containingSymbol,
                 bitmask<DriverFlags> flags);
 };
 

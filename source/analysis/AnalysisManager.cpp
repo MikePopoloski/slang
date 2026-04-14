@@ -153,7 +153,7 @@ void AnalysisManager::analyzeCheckerInstance(const CheckerInstanceSymbol& inst,
 
 void AnalysisManager::getFunctionValUses(const CallExpression& expr, const Symbol& containingSymbol,
                                          function_ref<bool(const SubroutineSymbol&)> visitPredicate,
-                                         SmallVectorBase<SymbolDriverListPair>& drivers,
+                                         SmallVectorBase<const ValueDriver*>& drivers,
                                          SmallVectorBase<ReadRange>* reads) {
     if (expr.isSystemCall() || expr.thisClass() ||
         expr.getSubroutineKind() != SubroutineKind::Function) {
@@ -198,20 +198,17 @@ void AnalysisManager::getFunctionValUses(const CallExpression& expr, const Symbo
         return scope == &subroutine;
     };
 
-    for (auto& [valueSym, driverList] : funcDrivers) {
+    for (auto driver : funcDrivers) {
         // The user can disable this inlining of drivers for function locals via a flag.
-        if (hasFlag(AnalysisFlags::AllowMultiDrivenLocals) && isLocal(*valueSym))
+        auto& valueSym = *driver->path.rootSymbol;
+        if (hasFlag(AnalysisFlags::AllowMultiDrivenLocals) && isLocal(valueSym))
             continue;
 
-        DriverList perSymbol;
-        for (auto& [driver, bounds] : driverList) {
-            auto newDriver = ValueDriver::create(context.alloc, driver->kind, *driver->lsp,
-                                                 containingSymbol, DriverFlags::None,
-                                                 &expr.sourceRange);
-            perSymbol.emplace_back(newDriver, bounds);
-        }
+        auto newDriver = ValueDriver::create(context.alloc, driver->kind, driver->path,
+                                             containingSymbol, DriverFlags::None,
+                                             &expr.sourceRange);
 
-        drivers.emplace_back(valueSym, std::move(perSymbol));
+        drivers.push_back(newDriver);
     }
 
     // Optionally collect reads from the function body.
@@ -271,7 +268,7 @@ void AnalysisManager::analyzeNonProceduralExprs(const Expression& expr,
     expr.visit(visitor);
 }
 
-DriverList AnalysisManager::getDrivers(const ValueSymbol& symbol) const {
+std::vector<const ValueDriver*> AnalysisManager::getDrivers(const ValueSymbol& symbol) const {
     return driverTracker.getDrivers(symbol);
 }
 
@@ -446,7 +443,7 @@ void AnalysisManager::NonProceduralExprVisitor::visitCall(const CallExpression& 
             ClockInference::checkSampledValueFuncs(state.context, containingSymbol, expr);
     }
 
-    SmallVector<SymbolDriverListPair, 2> drivers;
+    SmallVector<const ValueDriver*, 2> drivers;
     manager.getFunctionValUses(
         expr, containingSymbol,
         [&](const SubroutineSymbol& sub) { return manager.visitedNonProcCalls.insert(&sub); },

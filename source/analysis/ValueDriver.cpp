@@ -7,7 +7,6 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/ValueDriver.h"
 
-#include "slang/ast/LSPUtilities.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 
 namespace slang::analysis {
@@ -16,7 +15,7 @@ using namespace ast;
 
 static_assert(std::is_trivially_destructible_v<ValueDriver>);
 
-ValueDriver* ValueDriver::create(BumpAllocator& alloc, DriverKind kind, const ast::Expression& lsp,
+ValueDriver* ValueDriver::create(BumpAllocator& alloc, DriverKind kind, const ValuePath& path,
                                  const ast::Symbol& containingSymbol, bitmask<DriverFlags> flags,
                                  const SourceRange* overrideRange) {
     size_t size = sizeof(ValueDriver);
@@ -26,7 +25,7 @@ ValueDriver* ValueDriver::create(BumpAllocator& alloc, DriverKind kind, const as
     }
 
     auto result = new (alloc.allocate(size, alignof(ValueDriver)))
-        ValueDriver(kind, lsp, containingSymbol, flags);
+        ValueDriver(kind, path, containingSymbol, flags);
 
     if (overrideRange)
         memcpy((void*)(result + 1), overrideRange, sizeof(SourceRange));
@@ -34,25 +33,25 @@ ValueDriver* ValueDriver::create(BumpAllocator& alloc, DriverKind kind, const as
     return result;
 }
 
-ValueDriver* ValueDriver::create(BumpAllocator& alloc, const ValueDriver& copyFrom,
-                                 const ValueSymbol& newTarget) {
-    size_t size = sizeof(ValueDriver);
-    const bool hasOverrideRange = copyFrom.flags.has(DriverFlags::HasOverrideRange);
-    if (hasOverrideRange)
-        size += sizeof(SourceRange);
+ValueDriver* ValueDriver::create(BumpAllocator& alloc, EvalContext& evalContext,
+                                 const ValueDriver& copyFrom, const ValueSymbol& newTarget) {
+    auto newPath = copyFrom.path.retarget(alloc, evalContext, newTarget);
+    auto result = create(alloc, copyFrom.kind, newPath, *copyFrom.containingSymbol, copyFrom.flags,
+                         copyFrom.getOverrideRange());
 
-    auto result = new (alloc.allocate(size, alignof(ValueDriver))) ValueDriver(copyFrom);
-    if (hasOverrideRange)
-        memcpy((void*)(result + 1), copyFrom.getOverrideRange(), sizeof(SourceRange));
-
-    result->lsp = &LSPUtilities::retargetLSP(alloc, *result->lsp, newTarget);
+    // The source is inferred during construction but the driver we're copying from
+    // may have a different source that can't otherwise be inferred, so just copy
+    // over whatever the constructor set for us.
+    result->source = copyFrom.source;
 
     return result;
 }
 
-ValueDriver::ValueDriver(DriverKind kind, const Expression& lsp, const Symbol& containingSymbol,
+ValueDriver::ValueDriver(DriverKind kind, const ValuePath& path, const Symbol& containingSymbol,
                          bitmask<DriverFlags> flags) :
-    lsp(&lsp), containingSymbol(&containingSymbol), flags(flags), kind(kind) {
+    path(path), containingSymbol(&containingSymbol), flags(flags), kind(kind) {
+
+    SLANG_ASSERT(!path.empty() && path.lsp && path.rootSymbol);
 
     switch (containingSymbol.kind) {
         case SymbolKind::ProceduralBlock:
@@ -71,7 +70,7 @@ ValueDriver::ValueDriver(DriverKind kind, const Expression& lsp, const Symbol& c
 SourceRange ValueDriver::getSourceRange() const {
     if (auto overrideRange = getOverrideRange())
         return *overrideRange;
-    return lsp->sourceRange;
+    return path.fullExpr->sourceRange;
 }
 
 const SourceRange* ValueDriver::getOverrideRange() const {

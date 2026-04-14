@@ -136,7 +136,7 @@ public:
     void analyze(const ast::Compilation& compilation);
 
     /// Returns all of the known drivers for the given symbol.
-    DriverList getDrivers(const ast::ValueSymbol& symbol) const;
+    std::vector<const ValueDriver*> getDrivers(const ast::ValueSymbol& symbol) const;
 
     /// Return the driver state tracked per canonical instance.
     std::optional<InstanceDriverState> getInstanceDriverState(
@@ -207,7 +207,7 @@ private:
 
     void getFunctionValUses(const ast::CallExpression& expr, const ast::Symbol& containingSymbol,
                             function_ref<bool(const ast::SubroutineSymbol&)> visitPredicate,
-                            SmallVectorBase<SymbolDriverListPair>& drivers,
+                            SmallVectorBase<const ValueDriver*>& drivers,
                             SmallVectorBase<ReadRange>* reads);
 
     void getTaskTimingControls(const ast::CallExpression& expr,

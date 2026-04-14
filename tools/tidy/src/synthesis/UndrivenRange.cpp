@@ -6,6 +6,7 @@
 #include "fmt/ranges.h"
 
 #include "slang/analysis/AnalysisManager.h"
+#include "slang/analysis/ValueDriver.h"
 #include "slang/syntax/AllSyntax.h"
 
 using namespace slang;
@@ -58,7 +59,8 @@ struct UndrivenRangeVisitor : public TidyVisitor,
                 return;
             }
 
-            for (auto [driver, bounds] : drivers) {
+            for (auto driver : drivers) {
+                auto bounds = driver->path.lspBounds;
                 if (bounds.first + start > current) {
                     undriven.push_back({current, (int)bounds.first + start - 1});
                 }

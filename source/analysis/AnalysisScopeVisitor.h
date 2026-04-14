@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/analysis/ValueDriver.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/diagnostics/AnalysisDiags.h"
@@ -204,7 +205,7 @@ struct AnalysisScopeVisitor {
                 auto drivers = manager.getDrivers(*args[0]);
                 if (!drivers.empty()) {
                     auto& diag = context.addDiag(symbol, diag::NTResolveArgModify,
-                                                 drivers[0].first->getSourceRange());
+                                                 drivers[0]->getSourceRange());
                     diag << symbol.name << args[0]->name;
                     diag.addNote(diag::NoteReferencedHere, symbol.location);
                 }

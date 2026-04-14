@@ -7,6 +7,7 @@
 #include "fmt/color.h"
 
 #include "slang/analysis/AnalysisManager.h"
+#include "slang/analysis/ValueDriver.h"
 #include "slang/syntax/AllSyntax.h"
 
 using namespace slang;
@@ -106,11 +107,10 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::All
         if (symbol.lifetime == VariableLifetime::Automatic)
             return;
 
-        auto firstDriver = drivers[0].first;
-        if (firstDriver && firstDriver->source == DriverSource::AlwaysFF) {
+        if (drivers[0] && drivers[0]->source == DriverSource::AlwaysFF) {
             auto& configs = config.getCheckConfigs();
             AlwaysFFVisitor visitor(symbol.name, configs.resetName, configs.resetIsActiveHigh);
-            firstDriver->containingSymbol->visit(visitor);
+            drivers[0]->containingSymbol->visit(visitor);
             if (visitor.hasError()) {
                 diags.add(diag::RegisterNotAssignedOnReset,
                           visitor.getErrorLocation().value_or(symbol.location))

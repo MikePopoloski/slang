@@ -9,9 +9,10 @@
 
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/AnalyzedProcedure.h"
+#include "slang/analysis/ValueDriver.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
-#include "slang/ast/LSPUtilities.h"
+#include "slang/ast/ValuePath.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 
@@ -98,16 +99,13 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc, cons
 }
 
 void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
-                        std::span<const SymbolDriverListPair> symbolDriverList) {
+                        std::span<const ValueDriver* const> drivers) {
     SmallVector<HierPortDriver> hierPortDrivers;
-    for (auto& [valueSym, drivers] : symbolDriverList) {
+    for (auto driver : drivers) {
         auto updateFunc = [&](auto& elem) {
-            for (auto& [driver, bounds] : drivers) {
-                addDriver(context, driverAlloc, *elem.first, elem.second, *driver, bounds,
-                          hierPortDrivers);
-            }
+            addDriver(context, driverAlloc, elem.second, *driver, hierPortDrivers);
         };
-        symbolDrivers.try_emplace_and_visit(valueSym, updateFunc, updateFunc);
+        symbolDrivers.try_emplace_and_visit(driver->path.rootSymbol, updateFunc, updateFunc);
     }
 
     for (auto& hpd : hierPortDrivers)
@@ -135,20 +133,18 @@ void DriverTracker::noteNonCanonicalInstance(AnalysisContext& context, DriverAll
 
 void DriverTracker::propagateIndirectDrivers(AnalysisContext& context, DriverAlloc& driverAlloc) {
     while (true) {
-        concurrent_map<const ValueSymbol*, DriverList> localCopy;
+        concurrent_map<const ValueSymbol*, std::vector<const ValueDriver*>> localCopy;
         std::swap(indirectDrivers, localCopy);
         if (localCopy.empty())
             break;
 
         localCopy.cvisit_all([&](auto& item) {
             SmallVector<HierPortDriver> hierPortDrivers;
-            for (auto& [original, _] : item.second) {
+            for (auto original : item.second) {
                 EvalContext evalCtx(*original->containingSymbol);
-                LSPUtilities::expandIndirectLSPs(
-                    context.alloc, *original->lsp, evalCtx,
-                    [&](const ValueSymbol& symbol, const Expression& lsp, bool isLValue) {
-                        // If this is not an lvalue, we don't care about it.
-                        if (!isLValue)
+                original->path.expandIndirectRefs(
+                    context.alloc, evalCtx, [&](const ValuePath& path) {
+                        if (!path.rootSymbol || !path.lsp)
                             return;
 
                         // If the LSP maps to the same symbol as the original driver,
@@ -156,18 +152,22 @@ void DriverTracker::propagateIndirectDrivers(AnalysisContext& context, DriverAll
                         // this is a ref port and `expandIndirectLSPs` determined that
                         // the driver doesn't actually apply to the port due to a
                         // non-overlapping internal connection expression.
-                        if (&symbol == item.first) {
-                            SLANG_ASSERT(symbol.isConnectedToRefPort());
+                        if (path.rootSymbol == item.first) {
+                            SLANG_ASSERT(path.rootSymbol->isConnectedToRefPort());
                             return;
                         }
 
                         auto ogRange = original->getSourceRange();
                         auto newDriver = ValueDriver::create(
-                            context.alloc, original->kind, lsp, *original->containingSymbol,
+                            context.alloc, original->kind, path, *original->containingSymbol,
                             original->flags | DriverFlags::ViaIndirectPort, &ogRange);
 
-                        addFromLSP(context, driverAlloc, *newDriver, symbol, evalCtx,
-                                   hierPortDrivers);
+                        auto updateFunc = [&](auto& elem) {
+                            addDriver(context, driverAlloc, elem.second, *newDriver,
+                                      hierPortDrivers);
+                        };
+                        symbolDrivers.try_emplace_and_visit(path.rootSymbol, updateFunc,
+                                                            updateFunc);
                     });
             }
 
@@ -182,40 +182,32 @@ void DriverTracker::addDrivers(AnalysisContext& context, DriverAlloc& driverAllo
                                bitmask<DriverFlags> driverFlags, const Symbol& containingSymbol) {
     EvalContext evalCtx(containingSymbol);
     SmallVector<HierPortDriver> hierPortDrivers;
-    LSPUtilities::visitLSPs(
-        expr, evalCtx, [&](const ValueSymbol& symbol, const Expression& lsp, bool isLValue) {
-            // If this is not an lvalue, we don't care about it.
-            if (!isLValue)
+
+    ValuePath::visitPaths(
+        expr, evalCtx,
+        [&](const ValuePath& path) {
+            if (!path.rootSymbol || !path.lsp)
                 return;
 
-            auto driver = ValueDriver::create(context.alloc, driverKind, lsp, containingSymbol,
+            auto driver = ValueDriver::create(context.alloc, driverKind, path, containingSymbol,
                                               driverFlags);
 
-            addFromLSP(context, driverAlloc, *driver, symbol, evalCtx, hierPortDrivers);
-        });
+            auto updateFunc = [&](auto& elem) {
+                addDriver(context, driverAlloc, elem.second, *driver, hierPortDrivers);
+            };
+            symbolDrivers.try_emplace_and_visit(path.rootSymbol, updateFunc, updateFunc);
+        },
+        /* skipSelectors */ true);
 
     for (auto& hpd : hierPortDrivers)
         noteHierPortDriver(context, driverAlloc, hpd);
 }
 
-void DriverTracker::addFromLSP(AnalysisContext& context, DriverAlloc& driverAlloc,
-                               const ValueDriver& driver, const ValueSymbol& symbol,
-                               EvalContext& evalCtx, SmallVector<HierPortDriver>& hierPortDrivers) {
-    auto bounds = LSPUtilities::getBounds(*driver.lsp, evalCtx, symbol.getType());
-    if (!bounds)
-        return;
-
-    auto updateFunc = [&](auto& elem) {
-        addDriver(context, driverAlloc, *elem.first, elem.second, driver, *bounds, hierPortDrivers);
-    };
-    symbolDrivers.try_emplace_and_visit(&symbol, updateFunc, updateFunc);
-}
-
-DriverList DriverTracker::getDrivers(const ValueSymbol& symbol) const {
-    DriverList drivers;
+std::vector<const ValueDriver*> DriverTracker::getDrivers(const ValueSymbol& symbol) const {
+    std::vector<const ValueDriver*> drivers;
     symbolDrivers.cvisit(&symbol, [&drivers](auto& item) {
         for (auto it = item.second.begin(); it != item.second.end(); ++it)
-            drivers.emplace_back(*it, it.bounds());
+            drivers.push_back(*it);
     });
     return drivers;
 }
@@ -226,13 +218,6 @@ std::optional<InstanceDriverState> DriverTracker::getInstanceState(
     std::optional<InstanceDriverState> state;
     instanceMap.cvisit(&symbol, [&state](auto& item) { state = item.second; });
     return state;
-}
-
-static std::string getLSPName(const ValueSymbol& symbol, const ValueDriver& driver) {
-    FormatBuffer buf;
-    EvalContext evalContext(symbol);
-    LSPUtilities::stringifyLSP(*driver.lsp, evalContext, buf);
-    return buf.str();
 }
 
 static bool handleOverlap(AnalysisContext& context, const ValueSymbol& symbol,
@@ -314,7 +299,9 @@ static bool handleOverlap(AnalysisContext& context, const ValueSymbol& symbol,
 
     auto secondRange = second->getSourceRange();
     auto& diag = context.addDiag(symbol, code, secondRange);
-    diag << getLSPName(symbol, *second);
+
+    EvalContext evalCtx(symbol);
+    diag << second->path.toString(evalCtx);
 
     if (bothProcedural) {
         auto pbk = static_cast<ProceduralBlockKind>(second->source);
@@ -327,11 +314,11 @@ static bool handleOverlap(AnalysisContext& context, const ValueSymbol& symbol,
 
     SourceLocation overrideLoc;
     auto addOriginalNote = [&](const ValueDriver& driver) {
-        auto startLoc = driver.lsp->sourceRange.start();
+        auto startLoc = driver.path.lsp->sourceRange.start();
         if (driver.flags.has(DriverFlags::HasOverrideRange) && startLoc != overrideLoc) {
             auto code = driver.flags.has(DriverFlags::ViaIndirectPort) ? diag::NotePortConnHere
                                                                        : diag::NoteOriginalAssign;
-            diag.addNote(code, driver.lsp->sourceRange);
+            diag.addNote(code, driver.path.lsp->sourceRange);
             overrideLoc = startLoc;
         }
     };
@@ -356,9 +343,10 @@ static bool handleOverlap(AnalysisContext& context, const ValueSymbol& symbol,
 }
 
 void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
-                              const ValueSymbol& symbol, SymbolDriverMap& driverMap,
-                              const ValueDriver& driver, DriverBitRange bounds,
+                              SymbolDriverMap& driverMap, const ValueDriver& driver,
                               SmallVector<HierPortDriver>& hierPortDrivers) {
+    auto& symbol = *driver.path.rootSymbol;
+    auto bounds = driver.path.lspBounds;
     auto scope = symbol.getParentScope();
     SLANG_ASSERT(scope);
 
@@ -366,18 +354,17 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
     // note that fact as it represents a side effect for the instance that
     // is not captured in the port connections.
     if (!driver.flags.has(DriverFlags::FromSideEffect)) {
-        LSPUtilities::visitComponents(
-            *driver.lsp, /* includeRoot */ true, [&](const Expression& expr) {
-                if (expr.kind == ExpressionKind::HierarchicalValue) {
-                    auto& ref = expr.as<HierarchicalValueExpression>().ref;
-                    if (ref.isViaIfacePort())
-                        hierPortDrivers.push_back({&driver, &symbol, &ref});
-                }
-            });
+        for (auto& elem : driver.path) {
+            if (elem.kind == ExpressionKind::HierarchicalValue) {
+                auto& ref = elem.as<HierarchicalValueExpression>().ref;
+                if (ref.isViaIfacePort())
+                    hierPortDrivers.push_back({&driver, &ref});
+            }
+        }
     }
 
     // Keep track of "indirect" drivers separately so we can revisit them at the end of analysis.
-    auto indirectUpdater = [&](auto& item) { item.second.emplace_back(&driver, bounds); };
+    auto indirectUpdater = [&](auto& item) { item.second.push_back(&driver); };
     if (symbol.kind == SymbolKind::ModportPort) {
         indirectDrivers.try_emplace_and_visit(&symbol, indirectUpdater, indirectUpdater);
 
@@ -393,7 +380,7 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
         if (!driver.flags.has(DriverFlags::FromSideEffect)) {
             // Ref port drivers are side effects that need to be applied to
             // non-canonical instances.
-            hierPortDrivers.push_back({&driver, &symbol, nullptr});
+            hierPortDrivers.push_back({&driver, nullptr});
         }
 
         // For ref ports we will continue on and do normal overlap checking,
@@ -408,11 +395,12 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
             auto& valExpr = *context.alloc.emplace<NamedValueExpression>(
                 symbol, SourceRange{symbol.location, symbol.location + symbol.name.length()});
 
-            DriverBitRange initBounds{0, symbol.getType().getSelectableWidth() - 1};
-            auto initDriver = ValueDriver::create(context.alloc, driverKind, valExpr,
-                                                  scope->asSymbol(), DriverFlags::Initializer);
+            EvalContext evalCtx(symbol);
+            auto initDriver = ValueDriver::create(context.alloc, driverKind,
+                                                  ValuePath(valExpr, evalCtx), scope->asSymbol(),
+                                                  DriverFlags::Initializer);
 
-            driverMap.insert(initBounds, initDriver, driverAlloc);
+            driverMap.insert(initDriver->path.lspBounds, initDriver, driverAlloc);
         };
 
         switch (symbol.kind) {
@@ -551,7 +539,7 @@ void DriverTracker::noteHierPortDriver(AnalysisContext& context, DriverAlloc& dr
         // Must be a ref port target. Note that we don't have to go recursively up
         // the hierarchy here because we register these as "indirect drivers" which
         // will be applied recursively at the end of analysis.
-        auto scope = hierPortDriver.target->getParentScope();
+        auto scope = hierPortDriver.driver->path.rootSymbol->getParentScope();
         SLANG_ASSERT(scope);
 
         auto& symbol = scope->asSymbol();
@@ -677,28 +665,23 @@ static const Symbol* retargetIfacePort(const HierarchicalReference& ref,
 void DriverTracker::applyInstanceSideEffect(AnalysisContext& context, DriverAlloc& driverAlloc,
                                             const HierPortDriver& hierPortDriver,
                                             const InstanceSymbol& instance) {
-    auto newDriverAndBounds = [&](const ValueSymbol& newTarget)
-        -> std::pair<ValueDriver*, std::optional<DriverBitRange>> {
-        auto driver = ValueDriver::create(context.alloc, *hierPortDriver.driver, newTarget);
+    auto newDriver = [&](const ValueSymbol& newTarget) {
+        EvalContext evalCtx(instance);
+        auto driver = ValueDriver::create(context.alloc, evalCtx, *hierPortDriver.driver,
+                                          newTarget);
         driver->containingSymbol = &instance;
         driver->flags |= DriverFlags::FromSideEffect;
-
-        EvalContext evalCtx(instance);
-        auto bounds = LSPUtilities::getBounds(*driver->lsp, evalCtx, newTarget.getType());
-        return {driver, bounds};
+        return driver;
     };
 
     if (hierPortDriver.ref) {
         auto& ref = *hierPortDriver.ref;
         if (auto target = retargetIfacePort(ref, instance)) {
             auto& valueSym = target->as<ValueSymbol>();
-            auto [driver, bounds] = newDriverAndBounds(valueSym);
-            if (!bounds)
-                return;
-
+            auto driver = newDriver(valueSym);
             auto updateFunc = [&](auto& elem) {
                 SmallVector<HierPortDriver> unused;
-                addDriver(context, driverAlloc, *elem.first, elem.second, *driver, *bounds, unused);
+                addDriver(context, driverAlloc, elem.second, *driver, unused);
             };
             symbolDrivers.try_emplace_and_visit(&valueSym, updateFunc, updateFunc);
         }
@@ -706,13 +689,11 @@ void DriverTracker::applyInstanceSideEffect(AnalysisContext& context, DriverAllo
     else {
         // Not an interface port, so must be a ref port. Find ourselves in the new
         // instance body and assign an indirect driver, which we'll propagate later.
-        if (auto newTarget = instance.body.find(hierPortDriver.target->name)) {
+        auto& oldTarget = *hierPortDriver.driver->path.rootSymbol;
+        if (auto newTarget = instance.body.find(oldTarget.name)) {
             auto& valueSym = newTarget->as<ValueSymbol>();
-            auto [driver, bounds] = newDriverAndBounds(valueSym);
-            if (!bounds)
-                return;
-
-            auto updater = [&](auto& item) { item.second.emplace_back(driver, *bounds); };
+            auto driver = newDriver(valueSym);
+            auto updater = [&](auto& item) { item.second.push_back(driver); };
             indirectDrivers.try_emplace_and_visit(&valueSym, updater, updater);
         }
     }

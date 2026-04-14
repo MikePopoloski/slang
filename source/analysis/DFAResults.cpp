@@ -10,7 +10,7 @@
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/ClockInference.h"
 #include "slang/ast/ASTVisitor.h"
-#include "slang/ast/LSPUtilities.h"
+#include "slang/ast/ValuePath.h"
 
 namespace slang::analysis {
 
@@ -20,23 +20,24 @@ DFAResults::DFAResults(AnalysisContext& context, const SmallVectorBase<SymbolBit
     bitMapAllocator(context.alloc), lspMapAllocator(context.alloc), stateRef(&stateRef) {
 }
 
-bool DFAResults::isReferenced(EvalContext& evalContext, const ValueSymbol& symbol,
-                              const Expression& lsp) const {
-    auto bounds = LSPUtilities::getBounds(lsp, evalContext, symbol.getType());
-    if (!bounds)
-        return isReferenced(symbol);
+bool DFAResults::isReferenced(const ValuePath& path) const {
+    if (path.empty() || !path.rootSymbol)
+        return false;
+
+    if (!path.lsp)
+        return isReferenced(*path.rootSymbol);
 
     {
-        auto it = symbolToSlot.find(&symbol);
+        auto it = symbolToSlot.find(path.rootSymbol);
         if (it != symbolToSlot.end()) {
             auto& symbolState = lvalues[it->second];
-            if (symbolState.assigned.find(*bounds) != symbolState.assigned.end())
+            if (symbolState.assigned.find(path.lspBounds) != symbolState.assigned.end())
                 return true;
         }
     }
     {
-        auto it = rvalues.find(&symbol);
-        if (it != rvalues.end() && it->second.find(*bounds) != it->second.end())
+        auto it = rvalues.find(path.rootSymbol);
+        if (it != rvalues.end() && it->second.find(path.lspBounds) != it->second.end())
             return true;
     }
 
@@ -206,11 +207,11 @@ const TimingControl* DFAResults::inferClock(AnalysisContext& context, const Symb
             // This is a valid clock if every term in the expression is
             // unused elsewhere in the procedure.
             bool referenced = false;
-            LSPUtilities::visitLSPs(timing.expr, evalContext,
-                                    [&](const ValueSymbol& symbol, const Expression& lsp, bool) {
-                                        if (isReferenced(evalContext, symbol, lsp))
-                                            referenced = true;
-                                    });
+            ValuePath::visitPaths(timing.expr, evalContext, [&](const ValuePath& path) {
+                if (isReferenced(path))
+                    referenced = true;
+            });
+
             if (!referenced) {
                 if (inferredClock)
                     return false;

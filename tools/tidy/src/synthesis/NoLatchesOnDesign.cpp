@@ -6,6 +6,7 @@
 #include "fmt/color.h"
 
 #include "slang/analysis/AnalysisManager.h"
+#include "slang/analysis/ValueDriver.h"
 #include "slang/syntax/AllSyntax.h"
 
 using namespace slang;
@@ -26,8 +27,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::Sta
         if (drivers.empty())
             return;
 
-        auto firstDriver = drivers[0].first;
-        if (firstDriver && firstDriver->source == DriverSource::AlwaysLatch) {
+        if (drivers[0] && drivers[0]->source == DriverSource::AlwaysLatch) {
             diags.add(diag::NoLatchesOnDesign, symbol.location);
         }
     }

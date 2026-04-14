@@ -8,20 +8,20 @@
 #pragma once
 
 #include <span>
-#include <vector>
 
 #include "slang/analysis/AnalyzedAssertion.h"
-#include "slang/analysis/ValueDriver.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
 namespace slang::ast {
 
 class CallExpression;
+class EvalContext;
 class Statement;
 class SubroutineSymbol;
 class Symbol;
 class TimingControl;
+class ValueSymbol;
 
 } // namespace slang::ast
 
@@ -29,6 +29,7 @@ namespace slang::analysis {
 
 class AnalysisContext;
 class DFAResults;
+class ValueDriver;
 
 /// A bit range read from a symbol within a procedure.
 struct ReadRange {
@@ -36,7 +37,7 @@ struct ReadRange {
     not_null<const ast::ValueSymbol*> symbol;
 
     /// The bit range of the symbol being read.
-    DriverBitRange bitRange;
+    std::pair<uint64_t, uint64_t> bitRange;
 };
 
 /// Describes the effective sensitivity list for a SystemVerilog procedure.
@@ -102,7 +103,7 @@ public:
     const ast::TimingControl* getInferredClock() const { return inferredClock; }
 
     /// Gets all of the drivers in the procedure.
-    std::span<const SymbolDriverListPair> getDrivers() const { return drivers; }
+    std::span<const ValueDriver* const> getDrivers() const { return drivers; }
 
     /// Gets all of the subroutine calls in the procedure.
     std::span<const ast::CallExpression* const> getCallExpressions() const {
@@ -135,10 +136,10 @@ public:
 private:
     void buildSensitivityList(AnalysisContext& context, DFAResults& analysis,
                               ast::EvalContext& evalContext,
-                              std::span<const SymbolDriverListPair> funcDrivers);
+                              std::span<const ValueDriver* const> funcDrivers);
 
     const ast::TimingControl* inferredClock = nullptr;
-    SmallVector<SymbolDriverListPair, 2> drivers;
+    SmallVector<const ValueDriver*, 2> drivers;
     SensitivityList sensitivityList;
     SmallVector<const ast::CallExpression*, 2> callExpressions;
     SmallVector<const ast::Statement*, 2> timingControls;

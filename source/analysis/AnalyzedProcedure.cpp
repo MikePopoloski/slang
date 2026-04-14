@@ -10,6 +10,7 @@
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/ClockInference.h"
 #include "slang/analysis/DFAResults.h"
+#include "slang/analysis/ValueDriver.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/ValuePath.h"
@@ -185,15 +186,12 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
                 continue;
         }
 
-        DriverList perSymbol;
         for (auto it = lvalue.assigned.begin(); it != lvalue.assigned.end(); ++it) {
-            auto bounds = it.bounds();
-            auto driver = ValueDriver::create(context.alloc, driverKind, **it, analyzedSymbol,
+            ValuePath path(**it, evalContext);
+            auto driver = ValueDriver::create(context.alloc, driverKind, path, analyzedSymbol,
                                               DriverFlags::None);
-            perSymbol.emplace_back(driver, bounds);
+            drivers.push_back(driver);
         }
-
-        drivers.emplace_back(&symbol, std::move(perSymbol));
     }
 
     // Drivers from invoked functions also get added to the procedure,
@@ -244,7 +242,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
 
 void AnalyzedProcedure::buildSensitivityList(AnalysisContext& context, DFAResults& dfa,
                                              EvalContext& evalContext,
-                                             std::span<const SymbolDriverListPair> funcDrivers) {
+                                             std::span<const ValueDriver* const> funcDrivers) {
     // Returns true if a symbol is declared within the procedure and
     // should therefore be excluded from the sensitivity list.
     auto isLocal = [&](const ValueSymbol& sym) {
@@ -316,10 +314,9 @@ void AnalyzedProcedure::buildSensitivityList(AnalysisContext& context, DFAResult
         // after we linearized it, but function calls in always_**
         // blocks should be rare anyway.
         SmallMap<const ValueSymbol*, SymbolBitMap, 2> funcDrivenMap;
-        for (auto& [sym, driverList] : funcDrivers) {
-            auto& map = funcDrivenMap[sym];
-            for (auto& [driver, bounds] : driverList)
-                map.unionWith(bounds.first, bounds.second, {}, dfa.getBitMapAllocator());
+        for (auto driver : funcDrivers) {
+            auto& map = funcDrivenMap[driver->path.rootSymbol];
+            map.unionWith(driver->path.lspBounds, {}, dfa.getBitMapAllocator());
         }
 
         // Merge in the local DFA ranges for each symbol that also has

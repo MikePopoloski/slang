@@ -226,6 +226,14 @@ void registerAST(py::module_& m) {
             "__iter__",
             [](const ValuePath& self) { return py::make_iterator(self.begin(), self.end()); },
             py::keep_alive<0, 1>())
+        .def(
+            "expandIndirectRefs",
+            [](const ValuePath& self, BumpAllocator& alloc, EvalContext& evalContext,
+               py::function callback) {
+                self.expandIndirectRefs(alloc, evalContext,
+                                        [&callback](const ValuePath& path) { callback(path); });
+            },
+            "alloc"_a, "evalContext"_a, "callback"_a)
         .def_static(
             "visitPaths",
             [](const Expression& expr, EvalContext& evalContext, py::function callback,

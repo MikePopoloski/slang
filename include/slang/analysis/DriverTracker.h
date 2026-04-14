@@ -7,7 +7,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/analysis/ValueDriver.h"
 #include "slang/util/ConcurrentMap.h"
 #include "slang/util/IntervalMap.h"
 
@@ -22,6 +21,7 @@ class InstanceSymbol;
 class PortConnection;
 class PortSymbol;
 class Symbol;
+class ValueSymbol;
 
 } // namespace slang::ast
 
@@ -29,6 +29,11 @@ namespace slang::analysis {
 
 class AnalysisContext;
 class AnalyzedProcedure;
+class ValueDriver;
+
+enum class DriverFlags : uint8_t;
+enum class DriverKind : uint8_t;
+enum class DriverSource : uint8_t;
 
 /// State tracked per canonical instance.
 struct SLANG_EXPORT InstanceDriverState {
@@ -37,9 +42,6 @@ struct SLANG_EXPORT InstanceDriverState {
     struct HierPortDriver {
         /// The driver that was applied to the interface or ref port.
         not_null<const ValueDriver*> driver;
-
-        /// The original target of the driver.
-        not_null<const ast::ValueSymbol*> target;
 
         /// If this was an interface port driver, the hierarchical reference
         /// that describes how the driver was applied. Otherwise nullptr.
@@ -79,7 +81,7 @@ public:
 
     /// Adds the given drivers to the tracker.
     void add(AnalysisContext& context, DriverAlloc& driverAlloc,
-             std::span<const SymbolDriverListPair> drivers);
+             std::span<const ValueDriver* const> drivers);
 
     /// Records the existence of a non-canonical instance, which may imply that
     /// additional drivers should be applied based on the canonical instance.
@@ -91,7 +93,7 @@ public:
     void propagateIndirectDrivers(AnalysisContext& context, DriverAlloc& driverAlloc);
 
     /// Returns all of the tracked drivers for the given symbol.
-    DriverList getDrivers(const ast::ValueSymbol& symbol) const;
+    std::vector<const ValueDriver*> getDrivers(const ast::ValueSymbol& symbol) const;
 
     /// Return the state tracked per canonical instance.
     std::optional<InstanceDriverState> getInstanceState(
@@ -100,10 +102,8 @@ public:
 private:
     using HierPortDriver = InstanceDriverState::HierPortDriver;
 
-    void addDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
-                   const ast::ValueSymbol& symbol, SymbolDriverMap& driverMap,
-                   const ValueDriver& driver, DriverBitRange bounds,
-                   SmallVector<HierPortDriver>& hierPortDrivers);
+    void addDriver(AnalysisContext& context, DriverAlloc& driverAlloc, SymbolDriverMap& driverMap,
+                   const ValueDriver& driver, SmallVector<HierPortDriver>& hierPortDrivers);
     void noteHierPortDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
                             const HierPortDriver& hierPortDriver);
     void applyInstanceSideEffect(AnalysisContext& context, DriverAlloc& driverAlloc,
@@ -113,15 +113,11 @@ private:
                     DriverKind driverKind, bitmask<DriverFlags> driverFlags,
                     const ast::Symbol& containingSymbol);
 
-    void addFromLSP(AnalysisContext& context, DriverAlloc& driverAlloc, const ValueDriver& driver,
-                    const ast::ValueSymbol& symbol, ast::EvalContext& evalCtx,
-                    SmallVector<HierPortDriver>& hierPortDrivers);
-
     void checkNetCollapsing(AnalysisContext& context, const ast::PortConnection& conn);
 
     concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
     concurrent_map<const ast::InstanceBodySymbol*, InstanceDriverState> instanceMap;
-    concurrent_map<const ast::ValueSymbol*, DriverList> indirectDrivers;
+    concurrent_map<const ast::ValueSymbol*, std::vector<const ValueDriver*>> indirectDrivers;
 };
 
 } // namespace slang::analysis

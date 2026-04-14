@@ -103,6 +103,12 @@ public:
     /// Returns a humany-friendly string representation of the path.
     [[nodiscard]] std::string toString(EvalContext& evalContext) const;
 
+    /// Expands indirect references (via explicit modport port and ref port connections)
+    /// and visits the resulting paths with the provided callback. If this path does not
+    /// contain such references, the callback will be invoked once with *this.
+    void expandIndirectRefs(BumpAllocator& alloc, EvalContext& evalContext,
+                            function_ref<void(const ValuePath&)> callback) const;
+
     /// An iterator for components of the path.
     class iterator : public iterator_facade<iterator> {
     public:

@@ -15,20 +15,6 @@ static std::string pathStr(Compilation& compilation, std::string_view instPath) 
     return ValuePath(*inst.getPortConnections()[0]->getExpression(), evalCtx).toString(evalCtx);
 }
 
-TEST_CASE("ValuePath toString - empty path returns empty string") {
-    // A literal is not part of a value path, so the resulting path is empty.
-    auto tree = SyntaxTree::fromText(R"(
-module m(input logic a); endmodule
-module top;
-    m inst(.a(1'b1));
-endmodule
-)");
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-    CHECK(pathStr(compilation, "top.inst") == "");
-}
-
 TEST_CASE("ValuePath toString - named value") {
     auto tree = SyntaxTree::fromText(R"(
 module m(input logic a); endmodule

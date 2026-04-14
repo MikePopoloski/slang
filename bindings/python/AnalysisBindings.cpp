@@ -212,7 +212,7 @@ void registerAnalysis(py::module_& m, py::module_& ast) {
         .def_readonly("procedures", &AnalyzedScope::procedures);
 
     py::classh<ValueDriver>(m, "ValueDriver")
-        .def_readonly("lsp", &ValueDriver::lsp)
+        .def_readonly("path", &ValueDriver::path)
         .def_readonly("containingSymbol", &ValueDriver::containingSymbol)
         .def_readonly("flags", &ValueDriver::flags)
         .def_readonly("kind", &ValueDriver::kind)
