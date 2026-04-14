@@ -61,12 +61,12 @@ void ExpressionSequenceChecker::applyPendingLValues() {
 }
 
 void ExpressionSequenceChecker::checkUsage(const ValuePath& path, bool isMod) {
-    SLANG_ASSERT(path.rootSymbol && path.fullExpr);
+    SLANG_ASSERT(path.rootSymbol());
 
     // Loop over all existing uses of this object and see if they conflict,
     // i.e. with two writes or a read+write of the same symbol path.
     bool warned = false;
-    auto& vec = trackedUses[path.rootSymbol];
+    auto& vec = trackedUses[path.rootSymbol()];
     for (auto& [prevPath, tag] : vec) {
         if (prevPath.overlaps(path)) {
             if (tag.warned)

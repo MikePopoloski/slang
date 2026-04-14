@@ -51,7 +51,7 @@ ValueDriver::ValueDriver(DriverKind kind, const ValuePath& path, const Symbol& c
                          bitmask<DriverFlags> flags) :
     path(path), containingSymbol(&containingSymbol), flags(flags), kind(kind) {
 
-    SLANG_ASSERT(!path.empty() && path.lsp && path.rootSymbol);
+    SLANG_ASSERT(path.lsp && path.rootSymbol());
 
     switch (containingSymbol.kind) {
         case SymbolKind::ProceduralBlock:

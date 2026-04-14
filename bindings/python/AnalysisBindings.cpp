@@ -217,6 +217,8 @@ void registerAnalysis(py::module_& m, py::module_& ast) {
         .def_readonly("flags", &ValueDriver::flags)
         .def_readonly("kind", &ValueDriver::kind)
         .def_readonly("source", &ValueDriver::source)
+        .def_property_readonly("symbol", &ValueDriver::getSymbol)
+        .def_property_readonly("bounds", &ValueDriver::getBounds)
         .def_property_readonly("sourceRange", &ValueDriver::getSourceRange)
         .def_property_readonly("overrideRange", &ValueDriver::getOverrideRange)
         .def_property_readonly("isInputPort", &ValueDriver::isInputPort)

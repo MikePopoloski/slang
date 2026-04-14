@@ -106,6 +106,12 @@ public:
     static ValueDriver* create(BumpAllocator& alloc, ast::EvalContext& evalContext,
                                const ValueDriver& copyFrom, const ast::ValueSymbol& newTarget);
 
+    /// Gets the symbol that is assigned to by this driver.
+    const ast::ValueSymbol& getSymbol() const { return *path.rootSymbol(); }
+
+    /// Gets the bit range assigned to by this driver.
+    std::pair<uint64_t, uint64_t> getBounds() const { return path.lspBounds; }
+
     /// Indicates whether the driver is for an input port.
     bool isInputPort() const { return flags.has(DriverFlags::InputPort); }
 

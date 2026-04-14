@@ -21,14 +21,14 @@ DFAResults::DFAResults(AnalysisContext& context, const SmallVectorBase<SymbolBit
 }
 
 bool DFAResults::isReferenced(const ValuePath& path) const {
-    if (path.empty() || !path.rootSymbol)
+    auto symbol = path.rootSymbol();
+    if (!symbol)
         return false;
 
-    if (!path.lsp)
-        return isReferenced(*path.rootSymbol);
+    SLANG_ASSERT(path.lsp);
 
     {
-        auto it = symbolToSlot.find(path.rootSymbol);
+        auto it = symbolToSlot.find(symbol);
         if (it != symbolToSlot.end()) {
             auto& symbolState = lvalues[it->second];
             if (symbolState.assigned.find(path.lspBounds) != symbolState.assigned.end())
@@ -36,7 +36,7 @@ bool DFAResults::isReferenced(const ValuePath& path) const {
         }
     }
     {
-        auto it = rvalues.find(path.rootSymbol);
+        auto it = rvalues.find(symbol);
         if (it != rvalues.end() && it->second.find(path.lspBounds) != it->second.end())
             return true;
     }

@@ -315,8 +315,8 @@ void AnalyzedProcedure::buildSensitivityList(AnalysisContext& context, DFAResult
         // blocks should be rare anyway.
         SmallMap<const ValueSymbol*, SymbolBitMap, 2> funcDrivenMap;
         for (auto driver : funcDrivers) {
-            auto& map = funcDrivenMap[driver->path.rootSymbol];
-            map.unionWith(driver->path.lspBounds, {}, dfa.getBitMapAllocator());
+            auto& map = funcDrivenMap[&driver->getSymbol()];
+            map.unionWith(driver->getBounds(), {}, dfa.getBitMapAllocator());
         }
 
         // Merge in the local DFA ranges for each symbol that also has
@@ -420,9 +420,9 @@ void AnalyzedProcedure::buildSensitivityList(AnalysisContext& context, DFAResult
         SmallMap<const ValueSymbol*, SymbolBitMap, 2> signals;
         auto handleEvent = [&](const SignalEventControl& sec) {
             ValuePath::visitPaths(sec.expr, evalContext, [&](const ValuePath& path) {
-                if (path.rootSymbol && path.lsp) {
-                    signals[path.rootSymbol].unionWith(path.lspBounds, {},
-                                                       dfa.getBitMapAllocator());
+                if (path.lsp) {
+                    signals[path.rootSymbol()].unionWith(path.lspBounds, {},
+                                                         dfa.getBitMapAllocator());
                 }
             });
         };

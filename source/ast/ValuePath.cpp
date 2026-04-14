@@ -111,16 +111,10 @@ struct PathVisitor {
         cb(path);
 
         if (skipSelectors) {
-            // if we're skipping selectors we will skip to the root
-            // and potentially visit that.
-            const Expression* last = nullptr;
-            for (auto& elem : path)
-                last = &elem;
-
-            SLANG_ASSERT(last);
-            SLANG_ASSERT(!isSelectExpr(last->kind));
-            if (!ValueExpressionBase::isKind(last->kind)) {
-                visit(*last);
+            SLANG_ASSERT(path.rootExpr);
+            SLANG_ASSERT(!isSelectExpr(path.rootExpr->kind));
+            if (!ValueExpressionBase::isKind(path.rootExpr->kind)) {
+                visit(*path.rootExpr);
             }
             return;
         }
@@ -183,12 +177,9 @@ ValuePath::ValuePath(const Expression& initialExpr, EvalContext& evalContext) {
         switch (elem.kind) {
             case ExpressionKind::NamedValue:
             case ExpressionKind::HierarchicalValue:
-                // This is the root.
-                rootType = elem.type;
-                rootSymbol = &elem.as<ValueExpressionBase>().symbol;
-
                 // If we reached a root named value without having a static prefix,
                 // this reference *is* the static prefix.
+                rootExpr = &elem;
                 if (!lsp)
                     lsp = &elem;
                 break;
@@ -202,10 +193,8 @@ ValuePath::ValuePath(const Expression& initialExpr, EvalContext& evalContext) {
                 // It's possible this is an access to a static class member,
                 // in which case this is actually the root of the path.
                 auto& mae = elem.as<MemberAccessExpression>();
-                if (auto prop = mae.member.as_if<ClassPropertySymbol>();
-                    prop && prop->lifetime == VariableLifetime::Static) {
-                    rootType = elem.type;
-                    rootSymbol = prop;
+                if (isStaticProp(mae.member)) {
+                    rootExpr = &elem;
                     if (!lsp)
                         lsp = &elem;
                 }
@@ -217,15 +206,17 @@ ValuePath::ValuePath(const Expression& initialExpr, EvalContext& evalContext) {
             }
             default:
                 // This is the root but we have no LSP.
-                rootType = elem.type;
+                rootExpr = &elem;
                 lsp = nullptr;
                 break;
         }
     }
 
-    SLANG_ASSERT(rootType);
+    SLANG_ASSERT(rootExpr);
     if (lsp) {
-        auto bounds = computeBounds(path, 0, evalContext, *rootType);
+        SLANG_ASSERT(rootSymbol());
+
+        auto bounds = computeBounds(path, 0, evalContext, *rootExpr->type);
         if (bounds)
             lspBounds = *bounds;
         else
@@ -239,16 +230,19 @@ void ValuePath::visitPaths(const Expression& expr, EvalContext& evalContext,
     expr.visit(visitor);
 }
 
-ValuePath ValuePath::shrinkToLSP() const {
-    ValuePath result;
-    result.fullExpr = lsp;
-    result.lsp = lsp;
-    result.lspBounds = lspBounds;
-    if (result.fullExpr) {
-        result.rootSymbol = rootSymbol;
-        result.rootType = rootType;
+const ValueSymbol* ValuePath::rootSymbol() const {
+    if (rootExpr) {
+        switch (rootExpr->kind) {
+            case ExpressionKind::NamedValue:
+            case ExpressionKind::HierarchicalValue:
+                return &rootExpr->as<ValueExpressionBase>().symbol;
+            case ExpressionKind::MemberAccess:
+                return &rootExpr->as<MemberAccessExpression>().member.as<ClassPropertySymbol>();
+            default:
+                break;
+        }
     }
-    return result;
+    return nullptr;
 }
 
 static const Expression& doClone(BumpAllocator& alloc, const Expression& expr,
@@ -369,25 +363,14 @@ static const Expression& doRetarget(BumpAllocator& alloc, const Expression& expr
 ValuePath ValuePath::retarget(BumpAllocator& alloc, EvalContext& evalContext,
                               const ValueSymbol& target) const {
     SLANG_ASSERT(!empty());
-
-    auto& newExpr = doRetarget(alloc, *fullExpr, target);
-    if (isFullyStatic()) {
-        ValuePath result = *this;
-        result.lsp = result.fullExpr = &newExpr;
-        result.rootSymbol = &target;
-        result.rootType = &target.getType();
-        return result;
-    }
-
-    // We have dynamic components, so recompute the lsp properly.
-    return ValuePath(newExpr, evalContext);
+    return ValuePath(doRetarget(alloc, *fullExpr, target), evalContext);
 }
 
 bool ValuePath::overlaps(const ValuePath& other) const {
     if (empty() || other.empty())
-        return empty() && other.empty();
+        return false;
 
-    if (rootSymbol != other.rootSymbol)
+    if (rootSymbol() != other.rootSymbol())
         return false;
 
     if (lsp && other.lsp) {
@@ -622,12 +605,15 @@ static void expandModportConn(BumpAllocator& alloc, EvalContext& evalContext, co
 
 void ValuePath::expandIndirectRefs(BumpAllocator& alloc, EvalContext& evalContext,
                                    function_ref<void(const ValuePath&)> callback) const {
-    if (empty() || !rootSymbol || !lsp) {
+    if (!lsp) {
         callback(*this);
         return;
     }
 
-    if (auto mpp = rootSymbol->as_if<ModportPortSymbol>()) {
+    auto symbol = rootSymbol();
+    SLANG_ASSERT(symbol);
+
+    if (auto mpp = symbol->as_if<ModportPortSymbol>()) {
         if (auto expr = mpp->getConnectionExpr(); expr && !expr->bad())
             expandModportConn(alloc, evalContext, *this, *expr, callback);
         return;
@@ -637,11 +623,11 @@ void ValuePath::expandIndirectRefs(BumpAllocator& alloc, EvalContext& evalContex
     // the common part of the connection expression and glue the remainder
     // onto the target of the connection.
     bool anyRefPorts = false;
-    for (auto backref = rootSymbol->getFirstPortBackref(); backref;
+    for (auto backref = symbol->getFirstPortBackref(); backref;
          backref = backref->getNextBackreference()) {
         auto& port = *backref->port;
         if (port.direction == ArgumentDirection::Ref) {
-            auto scope = rootSymbol->getParentScope();
+            auto scope = symbol->getParentScope();
             SLANG_ASSERT(scope);
 
             auto inst = scope->asSymbol().as<InstanceBodySymbol>().parentInstance;

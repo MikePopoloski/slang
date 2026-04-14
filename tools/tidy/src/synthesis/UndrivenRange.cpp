@@ -60,7 +60,7 @@ struct UndrivenRangeVisitor : public TidyVisitor,
             }
 
             for (auto driver : drivers) {
-                auto bounds = driver->path.lspBounds;
+                auto bounds = driver->getBounds();
                 if (bounds.first + start > current) {
                     undriven.push_back({current, (int)bounds.first + start - 1});
                 }

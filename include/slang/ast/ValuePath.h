@@ -36,27 +36,14 @@ class ValueSymbol;
 class SLANG_EXPORT ValuePath {
 public:
     /// The root of the path.
-    ///
-    /// Note that it is possible for @a rootSymbol to be nullptr but @a fullExpr to be
-    /// non-null, in cases like selects of a concat: `{a, b}[0]` and selects of a function
-    /// call result: `foo().bar`. Note that such a path is not considered a static prefix.
-    const ValueSymbol* rootSymbol = nullptr;
-
-    /// The type of the root of the path.
-    ///
-    /// This will be non-null if @a fullExpr is non-null, even if @a rootSymbol is
-    /// otherwise null due to a path selecting from a concat.
-    const Type* rootType = nullptr;
+    const Expression* rootExpr = nullptr;
 
     /// The full expression representing the path.
-    ///
-    /// This can be nullptr if, for example, shrinkToLSP() is called
-    /// on a path that does not have a static prefix.
     const Expression* fullExpr = nullptr;
 
     /// The portion of the path that is the longest static prefix, if any.
     ///
-    /// This can be nullptr if there are no static prefixes of the path.
+    /// This can be nullptr if there is no static prefix of the path.
     const Expression* lsp = nullptr;
 
     /// If the path has a longest static prefix, the bit range selected by that prefix.
@@ -78,21 +65,11 @@ public:
                            function_ref<void(const ValuePath&)> callback,
                            bool skipSelectors = false);
 
-    /// Returns a new path that represents the current path with all dynamic components
-    /// removed, such that the resulting path is just the longest static prefix.
-    [[nodiscard]] ValuePath shrinkToLSP() const;
-
-    /// Clones the path into a new one that represents the same path but with all constant
-    /// select expressions baked into constants in the expression tree.
-    [[nodiscard]] ValuePath clone(BumpAllocator& alloc, EvalContext& evalContext) const;
-
-    /// Retargets the value path to a new root. The new target must have the same type
-    /// as the existing root type. The path cannot be empty.
-    [[nodiscard]] ValuePath retarget(BumpAllocator& alloc, EvalContext& evalContext,
-                                     const ValueSymbol& target) const;
+    /// Gets the value symbol at the root of the path, if there is one.
+    [[nodiscard]] const ValueSymbol* rootSymbol() const;
 
     /// Returns true if the path is empty, meaning it has no root or path components.
-    [[nodiscard]] bool empty() const { return !rootType || !fullExpr; }
+    [[nodiscard]] bool empty() const { return fullExpr == nullptr; }
 
     /// Returns true if the path is fully static (i.e. has no dynamic components).
     [[nodiscard]] bool isFullyStatic() const { return fullExpr == lsp; }
@@ -102,6 +79,15 @@ public:
 
     /// Returns a humany-friendly string representation of the path.
     [[nodiscard]] std::string toString(EvalContext& evalContext) const;
+
+    /// Clones the path into a new one that represents the same path but with all constant
+    /// select expressions baked into constants in the expression tree.
+    [[nodiscard]] ValuePath clone(BumpAllocator& alloc, EvalContext& evalContext) const;
+
+    /// Retargets the value path to a new root. The new target must have the same type
+    /// as the existing root type. The path cannot be empty.
+    [[nodiscard]] ValuePath retarget(BumpAllocator& alloc, EvalContext& evalContext,
+                                     const ValueSymbol& target) const;
 
     /// Expands indirect references (via explicit modport port and ref port connections)
     /// and visits the resulting paths with the provided callback. If this path does not

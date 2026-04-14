@@ -611,12 +611,12 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValuePath& initialP
         path = path.clone(context.alloc, this->getEvalContext());
     }
 
-    if (path.empty() || !path.lsp || !path.rootSymbol)
+    if (!path.lsp)
         return;
 
     sequenceChecker.noteUse(path, isLValue);
 
-    auto& symbol = *path.rootSymbol;
+    auto& symbol = *path.rootSymbol();
     auto bounds = path.lspBounds;
     if (isLValue) {
         auto [it, inserted] = symbolToSlot.try_emplace(&symbol, (uint32_t)lvalues.size());

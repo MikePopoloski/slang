@@ -200,8 +200,7 @@ void AnalysisManager::getFunctionValUses(const CallExpression& expr, const Symbo
 
     for (auto driver : funcDrivers) {
         // The user can disable this inlining of drivers for function locals via a flag.
-        auto& valueSym = *driver->path.rootSymbol;
-        if (hasFlag(AnalysisFlags::AllowMultiDrivenLocals) && isLocal(valueSym))
+        if (hasFlag(AnalysisFlags::AllowMultiDrivenLocals) && isLocal(driver->getSymbol()))
             continue;
 
         auto newDriver = ValueDriver::create(context.alloc, driver->kind, driver->path,
