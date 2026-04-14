@@ -29,6 +29,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 #pragma once
 
+#include <atomic>
 #include <bit>
 #include <cassert>
 #include <climits>
@@ -10413,8 +10414,6 @@ struct version<boost::unordered::detail::serialization_version<T> >
 
 #ifndef BOOST_UNORDERED_DETAIL_FOA_CONCURRENT_TABLE_HPP
 #define BOOST_UNORDERED_DETAIL_FOA_CONCURRENT_TABLE_HPP
-
-#include <atomic>
 
 #ifndef BOOST_UNORDERED_DISABLE_PARALLEL_ALGORITHMS
 #if defined(BOOST_UNORDERED_ENABLE_PARALLEL_ALGORITHMS)|| \
