@@ -199,11 +199,8 @@ endmodule
     ec = EvalContext(root)
 
     assert len(drivers) >= 1
-    for driver_tuple in drivers:
-        driver = driver_tuple[0]
-        if driver.lsp is not None:
-            s = ValuePath(driver.lsp, ec)
-            assert s.toString(ec) == "arr[3]"
+    for driver in drivers:
+        assert driver.path.toString(ec) == "arr[3]"
 
 
 def test_value_path_visit_paths():
@@ -272,7 +269,7 @@ endmodule
     drivers = am.getDrivers(c)
     assert len(drivers) == 1
 
-    driver = drivers[0][0]
+    driver = drivers[0]
     assert driver.kind == DriverKind.Continuous
     assert driver.source == DriverSource.Other
     assert driver.flags == DriverFlags["None"]
@@ -304,22 +301,10 @@ endmodule
     data_drivers = am.getDrivers(data)
     assert len(data_drivers) >= 1
 
-    for driver_tuple in data_drivers:
-        driver = driver_tuple[0]
-        if driver.lsp is not None:
-            # finds procedural block to get eval context
-            m = root.lookupName("m")
-            proc_block = None
-            for member in m.body:
-                if isinstance(member, ProceduralBlockSymbol):
-                    proc_block = member
-                    break
-            assert proc_block is not None
-
-            flow = FlowAnalysis(proc_block)
-            lower, upper = ValuePath(driver.lsp, flow.evalContext).lspBounds
-            assert lower == 8, f"Expected lower bound 8, got {lower}"
-            assert upper == 15, f"Expected upper bound 15, got {upper}"
+    for driver in data_drivers:
+        lower, upper = driver.bounds
+        assert lower == 8, f"Expected lower bound 8, got {lower}"
+        assert upper == 15, f"Expected upper bound 15, got {upper}"
 
 
 def test_flow_analysis_loop_callbacks():
