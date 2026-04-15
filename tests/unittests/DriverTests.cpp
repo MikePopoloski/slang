@@ -1667,3 +1667,56 @@ endmodule
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("cross-ident-in-binsof"));
 }
+
+TEST_CASE("Driver EmptyArgNotAllowed -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // A trailing comma producing an empty argument is not permitted by the LRM.
+    // In strict mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m;
+    initial begin
+        int x = 5;
+        string s;
+        s = $sformatf("value=%0d", x,);
+        $display(s);
+    end
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("empty-arg-not-allowed"));
+}
+
+TEST_CASE("Driver EmptyArgNotAllowed -- warning in VCS compat mode") {
+    auto guard = OS::captureOutput();
+
+    // VCS accepts empty arguments; --compat=vcs downgrades to warning.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=vcs"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m;
+    initial begin
+        int x = 5;
+        string s;
+        s = $sformatf("value=%0d", x,);
+        $display(s);
+    end
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("empty-arg-not-allowed"));
+}

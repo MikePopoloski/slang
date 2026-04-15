@@ -1979,6 +1979,20 @@ module m;
 endmodule
 ```
 
+-Wempty-arg-not-allowed
+The LRM does not permit empty arguments (e.g., a trailing comma) in system function calls.
+Some tools accept them anyway, so the error can be downgraded for compatibility.
+```
+module m;
+    initial begin
+        int x = 5;
+        string s;
+        s = $sformatf("value=%0d", x,);
+        $display(s);
+    end
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste
