@@ -2031,6 +2031,21 @@ module m;
 endmodule
 ```
 
+-Wstring-in-constraint
+The LRM does not permit string sub-expressions in constraint expressions.
+Some tools accept string equality comparisons inside constraint if-conditions as an extension.
+ The error can be downgraded for compatibility.
+```
+class RegField;
+  rand logic [7:0] value;
+  string name_str;
+  function string get_name(); return name_str; endfunction
+  constraint c_by_name {
+    if (get_name() == "special") value inside {[1:10]};
+  }
+endclass
+```
+
 @category Macros
 
 -Wignored-macro-paste
