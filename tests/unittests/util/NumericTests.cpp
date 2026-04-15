@@ -245,6 +245,14 @@ TEST_CASE("SVInt to string (and back)") {
     CHECK("4'bzzzz"_si.toString(LiteralBase::Hex, false) == "z");
     CHECK("4'bzz1z"_si.toString(LiteralBase::Hex, false) == "Z");
 
+    // Uniform unknown abbreviation: all-X or all-Z values should use a single character
+    // in binary/octal/hex output rather than repeating the character N times.
+    CHECK(SVInt::createFillX(32, true).toString() == "32'sdx");
+    CHECK(SVInt::createFillX(32, false).toString() == "32'dx");
+    CHECK(SVInt::createFillZ(32, true).toString() == "32'sdz");
+    // Mixed unknowns are not abbreviated
+    CHECK("12'b101x101z1"_si.toString() == "12'b101x101z1");
+
     // Make sure leading x round trips correctly.
     auto str = "8'b0x"_si.toString(SVInt::MAX_BITS, true);
     CHECK(str == SVInt::fromString(str).toString());

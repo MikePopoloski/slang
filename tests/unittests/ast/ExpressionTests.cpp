@@ -4203,3 +4203,21 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::RangeOOB);
 }
+
+TEST_CASE("Indexing with unknowns has reasonable diagnostic printing") {
+    auto tree = SyntaxTree::fromText(R"(
+logic [7:0] a;
+logic b = a['dx];
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter({diag::StaticInitValue});
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:3:13: warning: cannot refer to element 32'dx of 'logic[7:0]' [-Windex-oob]
+logic b = a['dx];
+            ^~~
+)");
+}
