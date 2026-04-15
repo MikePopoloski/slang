@@ -207,6 +207,15 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
             return *result;
         }
 
+        // Non-standard: VCS allows implicit assignment between different specializations
+        // of the same parameterized class (covariant class handles). Class handles are
+        // plain pointers at runtime so this is safe to permit with a diagnostic.
+        if (type.isSameGenericClass(*rt)) {
+            context.addDiag(diag::ParamClassCovariance, assignmentRange) << *rt << type;
+            return *comp.emplace<ConversionExpression>(type, ConversionKind::Implicit,
+                                                       *result, result->sourceRange);
+        }
+
         DiagCode code = diag::BadAssignment;
         if (!context.flags.has(ASTFlags::OutputArg) &&
             (type.isCastCompatible(*rt) || type.isBitstreamCastable(*rt))) {

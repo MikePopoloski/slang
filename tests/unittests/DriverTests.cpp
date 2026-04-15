@@ -1778,3 +1778,61 @@ TEST_CASE("Driver NonstandardConstraintBlock -- warning in VCS compat mode") {
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("nonstandard-constraint-block"));
 }
+
+TEST_CASE("Driver ParamClassCovariance -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // LRM §6.22.3: different specializations of the same generic class are not
+    // assignment-compatible. In strict mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+class Base; endclass
+class Callback #(type T = Base);
+  T obj;
+endclass
+class Handler #(type T = Base);
+  function void store(Callback #(T) cb);
+    Callback #(Base) b;
+    b = cb;
+  endfunction
+endclass
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("param-class-covariance"));
+}
+
+TEST_CASE("Driver ParamClassCovariance -- warning in VCS compat mode") {
+    auto guard = OS::captureOutput();
+
+    // VCS issues a warning (not an error) for covariant class handle assignment;
+    // --compat=vcs keeps the diagnostic as a warning rather than promoting it to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=vcs"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+class Base; endclass
+class Callback #(type T = Base);
+  T obj;
+endclass
+class Handler #(type T = Base);
+  function void store(Callback #(T) cb);
+    Callback #(Base) b;
+    b = cb;
+  endfunction
+endclass
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("param-class-covariance"));
+}

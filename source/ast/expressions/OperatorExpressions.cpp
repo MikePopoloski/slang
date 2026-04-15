@@ -911,6 +911,13 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                     good = true;
                     result->type = &compilation.getBitType();
                 }
+                else if (lt->isClass() && lt->isSameGenericClass(*rt)) {
+                    // Non-standard: VCS allows comparing handles of different specializations
+                    // of the same parameterized class.
+                    context.addDiag(diag::ParamClassCovariance, opRange) << *lt << *rt;
+                    good = true;
+                    result->type = &compilation.getBitType();
+                }
                 else if ((lt->isCHandle() || lt->isNull()) && (rt->isCHandle() || rt->isNull())) {
                     good = true;
                     result->type = &compilation.getBitType();

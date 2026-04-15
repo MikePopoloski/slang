@@ -736,6 +736,16 @@ bool Type::implements(const Type& ifaceClass) const {
     return false;
 }
 
+bool Type::isSameGenericClass(const Type& other) const {
+    const Type* l = &getCanonicalType();
+    const Type* r = &other.getCanonicalType();
+    if (!l->isClass() || !r->isClass())
+        return false;
+
+    auto* lg = l->as<ClassType>().genericClass;
+    return lg && lg == r->as<ClassType>().genericClass;
+}
+
 bool Type::isIdenticalStructUnion(const Type& rhs) const {
     const Type& lt = getCanonicalType();
     const Type& rt = rhs.getCanonicalType();

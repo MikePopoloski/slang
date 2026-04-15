@@ -2006,6 +2006,22 @@ module m;
 endmodule
 ```
 
+-Wparam-class-covariance
+The LRM (§6.22.3) does not allow implicit assignment between different specializations
+of the same parameterized class. Some tools allow this covariant handle assignment
+anyway, so the error can be downgraded for compatibility.
+```
+class Base; endclass
+class Callback #(type T = Base);
+  T obj;
+endclass
+module m;
+  Callback #(Base) b;
+  Callback #(int) cb;
+  initial b = cb;
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste

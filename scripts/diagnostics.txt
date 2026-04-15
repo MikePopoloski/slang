@@ -758,6 +758,7 @@ error VirtualIfaceDefparam "interface instance cannot be assigned to a virtual i
 error VirtualIfaceConfigRule "interface instance cannot be assigned to a virtual interface because it is the target of config rule"
 error MultipleDefaultDistWeight "'default' cannot be used more than once in dist item list"
 error DistRealRangeWeight "'dist' for a range of real values must include an explicit weight and must use the ':/' operator"
+warning param-class-covariance ParamClassCovariance "implicit conversion between specializations {} and {} of the same parameterized class is not permitted by LRM §6.22.3"
 warning empty-arg-not-allowed EmptyArgNotAllowed "empty argument not allowed"
 warning cross-ident-in-binsof CrossIdentInBinsof "binsof target '{}' is a cross coverpoint; only regular coverpoints and coverpoint bins are valid per LRM 19.6"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
@@ -1305,7 +1306,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   initializer-required package-import-in-class foreach-call-expr nonstandard-hierarchical-cross
                   nonstandard-inside nonstandard-bare-assoc-pattern literal-leading-underscore ref-arg-automatic
                   string-int-concat range-select-reversed clockvar-target-assign
-                  cross-ident-in-binsof empty-arg-not-allowed nonstandard-constraint-block }
+                  cross-ident-in-binsof empty-arg-not-allowed nonstandard-constraint-block
+                  param-class-covariance }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

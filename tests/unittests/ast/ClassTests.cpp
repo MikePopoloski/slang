@@ -3886,7 +3886,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::BadAssignment);
+    CHECK(diags[0].code == diag::ParamClassCovariance);
 }
 
 TEST_CASE("Complex base classes with generic param regress -- GH #1666") {
