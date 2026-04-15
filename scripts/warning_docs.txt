@@ -2019,6 +2019,18 @@ task automatic run(ref bit flag);
 endtask
 ```
 
+-Wcannot-index-scalar
+The LRM does not define a bit-select on a scalar (single-bit) type. Some tools
+allow this as an extension, treating the result as the scalar's element type,
+so the error can be downgraded for compatibility.
+```
+module m;
+  bit flag;
+  int i = 0;
+  initial if (flag[i]) $display("set");
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste
