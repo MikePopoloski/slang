@@ -398,7 +398,6 @@ error VirtualKindMismatch "mismatch between 'function' and 'task' declared in su
 error VirtualVisibilityMismatch "virtual method '{}' is '{}' but declared '{}' in superclass method"
 error VirtualReturnMismatch "return type {} of virtual method '{}' does not match {} declared in its superclass"
 error VirtualArgCountMismatch "virtual method '{}' has different number of arguments from its superclass method"
-error VirtualArgNameMismatch "virtual method argument name '{}' doesn't match '{}' given in its superclass method"
 error VirtualArgTypeMismatch "virtual method argument '{}' is of type {} which differs from {} given in its superclass method"
 error VirtualArgNoParentDefault "virtual method argument '{}' provides a default value but its superclass method argument does not"
 error VirtualArgNoDerivedDefault "virtual method argument '{}' does not provide a default value but its superclass method argument does"
@@ -555,6 +554,7 @@ error BiDiSwitchNetTypes "bidirectional switch cannot connect nets of two differ
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"
+warning virtual-arg-name-mismatch VirtualArgNameMismatch "virtual method argument name '{}' doesn't match '{}' given in its superclass method"
 warning warning-task WarningTask "$warning encountered{}"
 note InfoTask "$info encountered{}"
 note NoteComparisonReduces "comparison reduces to ({} {} {})"
@@ -1310,7 +1310,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   string-int-concat range-select-reversed clockvar-target-assign
                   cross-ident-in-binsof empty-arg-not-allowed nonstandard-constraint-block
                   param-class-covariance port-arg-redeclared ref-arg-in-fork-join
-                  cannot-index-scalar string-in-constraint }
+                  cannot-index-scalar string-in-constraint virtual-arg-name-mismatch }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
