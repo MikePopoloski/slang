@@ -1944,3 +1944,58 @@ endclass
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("ref-arg-in-fork-join"));
 }
+
+TEST_CASE("Driver CannotIndexScalar -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // The LRM does not define a bit-select on a scalar type.
+    // In strict mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module scalar_bit_indexed;
+  bit flag;
+  int i;
+  initial begin
+    i = 0;
+    if (flag[i]) $display("set");
+  end
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("cannot-index-scalar"));
+}
+
+TEST_CASE("Driver CannotIndexScalar -- warning in VCS compat mode") {
+    auto guard = OS::captureOutput();
+
+    // VCS issues a warning (not an error) for bit-select on a scalar;
+    // --compat=vcs keeps the diagnostic as a warning rather than promoting it to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=vcs"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module scalar_bit_indexed;
+  bit flag;
+  int i;
+  initial begin
+    i = 0;
+    if (flag[i]) $display("set");
+  end
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("cannot-index-scalar"));
+}
+

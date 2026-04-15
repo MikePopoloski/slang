@@ -55,9 +55,11 @@ static const Type& getIndexedType(TTypeProvider& typeProvider, const ASTContext&
         return typeProvider.getErrorType();
     }
     else if (ct.isScalar()) {
+        // Non-standard: VCS allows bit-select on a scalar; the result is the scalar's element
+        // type. The diagnostic can be downgraded for compatibility.
         auto& diag = context.addDiag(diag::CannotIndexScalar, exprRange);
         diag << valueRange;
-        return typeProvider.getErrorType();
+        return ct.isFourState() ? typeProvider.getLogicType() : typeProvider.getBitType();
     }
     else if (ct.isFourState()) {
         return typeProvider.getLogicType();
