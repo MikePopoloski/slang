@@ -17,6 +17,10 @@ static bool stdoutContains(std::string_view text) {
     return OS::capturedStdout.find(text) != std::string::npos;
 }
 
+static bool stderrContains(std::string_view text) {
+    return OS::capturedStderr.find(text) != std::string::npos;
+}
+
 TEST_CASE("Driver basic") {
     Driver driver;
     driver.addStandardArgs();
@@ -466,4 +470,65 @@ TEST_CASE("Driver NonstandardConstraintBlock -- warning in compat mode") {
     CHECK(driver.runFullCompilation());
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("nonstandard-constraint-block"));
+}
+
+TEST_CASE("Driver generic class uninstantiated body -- no diagnostic for same-class assignments") {
+    auto guard = OS::captureOutput();
+
+    // In an uninstantiated generic class body T is a formal type parameter; Callback#(T)
+    // and Callback#(Base) appear as different types but may be identical once the class is
+    // instantiated with T=Base. Slang should compile cleanly with no errors or warnings.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+class Base; endclass
+class Callback #(type T = Base);
+  T obj;
+endclass
+class Handler #(type T = Base);
+  function void store(Callback #(T) cb);
+    Callback #(Base) b;
+    b = cb;
+  endfunction
+  function bit compare_callback(Callback #(T) cb);
+    Callback #(Base) b;
+    return (b == cb);
+  endfunction
+endclass
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded: 0 errors"));
+}
+
+TEST_CASE("Driver generic class concrete specialization with different types is an error") {
+    auto guard = OS::captureOutput();
+
+    // When both class handles are concrete specializations (T fully resolved to a type
+    // different from Base), the assignment is genuinely incompatible and must remain an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+class Base; endclass
+class Derived extends Base; endclass
+class Callback #(type T = Base);
+  T obj;
+endclass
+module m;
+  Callback #(Derived) cd;
+  Callback #(Base) cb;
+  initial cb = cd;
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
 }

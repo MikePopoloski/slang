@@ -911,6 +911,13 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                     good = true;
                     result->type = &compilation.getBitType();
                 }
+                else if (lt->isClass() && lt->isSameGenericClass(*rt)) {
+                    // In an uninstantiated generic class body T is still a formal parameter,
+                    // so the comparison is silently allowed; concrete instantiations with an
+                    // incompatible T will fail the surrounding checks.
+                    good = true;
+                    result->type = &compilation.getBitType();
+                }
                 else if ((lt->isCHandle() || lt->isNull()) && (rt->isCHandle() || rt->isNull())) {
                     good = true;
                     result->type = &compilation.getBitType();
