@@ -142,6 +142,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::RefArgAutomaticFunc,
                  diag::RangeSelectReversed,
                  diag::ClockVarTargetAssign,
+                 diag::CrossIdentInBinsof,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }

@@ -1087,6 +1087,12 @@ BinsSelectExpr& ConditionBinsSelectExpr::fromSyntax(const BinsSelectConditionExp
         return badExpr(comp, nullptr);
 
     auto sym = nameExpr.getSymbolReference();
+    if (sym && sym->kind == SymbolKind::CoverCross) {
+        auto& diag = context.addDiag(diag::CrossIdentInBinsof, syntax.name->sourceRange());
+        diag << sym->name;
+        diag.addNote(diag::NoteDeclarationHere, sym->location);
+        return badExpr(comp, nullptr);
+    }
     if (!sym || (sym->kind != SymbolKind::Coverpoint &&
                  (sym->kind != SymbolKind::CoverageBin ||
                   sym->getParentScope()->asSymbol().kind != SymbolKind::Coverpoint))) {

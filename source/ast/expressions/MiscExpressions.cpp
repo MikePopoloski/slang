@@ -148,7 +148,8 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
     if (!symbol.isValue()) {
         if ((symbol.kind == SymbolKind::ClockingBlock && flags.has(ASTFlags::AllowClockingBlock)) ||
             (symbol.kind == SymbolKind::ConstraintBlock && constraintAllowed) ||
-            (symbol.kind == SymbolKind::Coverpoint && flags.has(ASTFlags::AllowCoverpoint))) {
+            ((symbol.kind == SymbolKind::Coverpoint || symbol.kind == SymbolKind::CoverCross) &&
+             flags.has(ASTFlags::AllowCoverpoint))) {
             // Special case for event expressions and constraint block built-in methods.
             return *comp.emplace<ArbitrarySymbolExpression>(*context.scope, symbol,
                                                             comp.getVoidType(), hierRef,

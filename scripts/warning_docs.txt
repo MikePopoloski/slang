@@ -1959,6 +1959,26 @@ module m(input clk);
 endmodule
 ```
 
+-Wcross-ident-in-binsof
+LRM §19.6 defines `bins_expression` as either a `variable_identifier` or a
+`cover_point_identifier` with an optional `bin_identifier`; a cross identifier is not a
+valid `bins_expression` argument to `binsof()`. Some tools accept it anyway, so the error
+can be downgraded for compatibility.
+```
+module m;
+    logic clk, a, b;
+    covergroup cg @(posedge clk);
+        cp_a : coverpoint a { bins zero = {0}; bins one = {1}; }
+        cp_b : coverpoint b { bins zero = {0}; bins one = {1}; }
+        cp_cross : cross cp_a, cp_b;
+        cp_nested : cross cp_cross, cp_b {
+            bins c = binsof(cp_cross);
+        }
+    endgroup
+    cg cg_inst = new();
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste
