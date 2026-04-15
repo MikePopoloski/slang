@@ -1999,3 +1999,56 @@ endmodule
     CHECK(stderrContains("cannot-index-scalar"));
 }
 
+TEST_CASE("Driver StringConstraintExpr -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // LRM §18.5 does not permit string sub-expressions in constraint expressions.
+    // In strict mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+class RegField;
+  rand logic [7:0] value;
+  string name_str;
+  function string get_name(); return name_str; endfunction
+  constraint c_by_name {
+    if (get_name() == "special") value inside {[1:10]};
+  }
+endclass
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("string-in-constraint"));
+}
+
+TEST_CASE("Driver StringConstraintExpr -- warning in VCS compat mode") {
+    auto guard = OS::captureOutput();
+
+    // VCS accepts string equality in constraint if-conditions with a warning;
+    // --compat=vcs keeps the diagnostic as a warning rather than promoting it to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=vcs"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+class RegField;
+  rand logic [7:0] value;
+  string name_str;
+  function string get_name(); return name_str; endfunction
+  constraint c_by_name {
+    if (get_name() == "special") value inside {[1:10]};
+  }
+endclass
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("string-in-constraint"));
+}
