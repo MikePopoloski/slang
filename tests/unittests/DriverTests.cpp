@@ -754,6 +754,20 @@ TEST_CASE("Driver checking for infinite library map includes") {
     CHECK(stderrContains("includes itself recursively"));
 }
 
+TEST_CASE("Driver error on file matching multiple libraries") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo --libmap \"{0}twolibs.map\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(!driver.parseAllSources());
+    CHECK(stderrContains("matches multiple libraries"));
+}
+
 TEST_CASE("Driver separate unit listing") {
     auto guard = OS::captureOutput();
 

@@ -545,7 +545,11 @@ void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax, const f
 SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, const Bag& optionBag,
                                                     const SourceOptions& srcOptions,
                                                     uint64_t fileSortKey) {
-    // TODO: error if secondLib is set
+    if (entry.secondLib) {
+        errors.emplace_back(fmt::format("'{}': file matches multiple libraries ('{}' and '{}')",
+                                        getU8Str(entry.path), entry.library->name,
+                                        entry.secondLib->name));
+    }
 
     SourceManager::BufferOrError buffer;
     if (entry.preloadedBuffer)
