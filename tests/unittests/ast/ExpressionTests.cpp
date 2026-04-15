@@ -602,9 +602,10 @@ TEST_CASE("Crazy long hex literal") {
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::ConstantConversion);
-    CHECK(diags[1].code == diag::LiteralSizeTooLarge);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::SignConversion);
+    CHECK(diags[1].code == diag::WidthTruncate);
+    CHECK(diags[2].code == diag::LiteralSizeTooLarge);
 }
 #endif
 
