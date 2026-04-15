@@ -1992,6 +1992,19 @@ module m;
 endmodule
 ```
 
+-Wport-arg-redeclared
+The LRM does not allow a local variable inside a task or function body to redeclare
+a port argument with the same name. Some tools allow this pattern with a warning,
+so the error can be downgraded for compatibility.
+```
+class C;
+  task write(output int result);
+    int result;     // redeclares port argument
+    result = 1;
+  endtask
+endclass
+```
+
 @category Macros
 
 -Wignored-macro-paste

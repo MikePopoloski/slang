@@ -144,6 +144,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::ClockVarTargetAssign,
                  diag::CrossIdentInBinsof,
                  diag::NonstandardConstraintBlock,
+                 diag::PortArgRedeclared,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }
