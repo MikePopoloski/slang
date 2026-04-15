@@ -1836,3 +1836,55 @@ endclass
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("param-class-covariance"));
 }
+
+TEST_CASE("Driver PortArgRedeclared -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // The LRM does not allow a local variable to redeclare a port argument.
+    // In strict mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(
+        driver.sourceManager.assignText("test.sv", R"(
+class Cfg;
+  task cntx_alloc(int req_cbb, output int selected_cntx);
+    int selected_cntx;
+    selected_cntx = req_cbb + 1;
+  endtask
+endclass
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("port-arg-redeclared"));
+}
+
+TEST_CASE("Driver PortArgRedeclared -- warning in VCS compat mode") {
+    auto guard = OS::captureOutput();
+
+    // VCS issues a warning (not an error) for local variables redeclaring a port argument;
+    // --compat=vcs keeps the diagnostic as a warning rather than promoting it to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=vcs"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(
+        driver.sourceManager.assignText("test.sv", R"(
+class Cfg;
+  task cntx_alloc(int req_cbb, output int selected_cntx);
+    int selected_cntx;
+    selected_cntx = req_cbb + 1;
+  endtask
+endclass
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("port-arg-redeclared"));
+}

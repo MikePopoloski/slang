@@ -1020,6 +1020,7 @@ error HierarchicalFromPackage "cannot use hierarchical reference from within a p
 error CompilationUnitFromPackage "cannot reference compilation unit item from within a package"
 error InvalidHierarchicalIfacePortConn "cannot connect interface port hierarchically through a generate block or instance array"
 error UnnamedGenerateReference "cannot reference unnamed generate block via external name '{}' (use --allow-genblk-reference to allow this)"
+warning port-arg-redeclared PortArgRedeclared "local variable '{}' redeclares a port argument with the same name"
 warning unknown-sys-name UnknownSystemName "unknown system name '{}'"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 warning duplicate-definition DuplicateDefinition "duplicate definition of '{}'"
@@ -1307,7 +1308,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   nonstandard-inside nonstandard-bare-assoc-pattern literal-leading-underscore ref-arg-automatic
                   string-int-concat range-select-reversed clockvar-target-assign
                   cross-ident-in-binsof empty-arg-not-allowed nonstandard-constraint-block
-                  param-class-covariance }
+                  param-class-covariance port-arg-redeclared }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

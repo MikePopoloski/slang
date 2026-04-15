@@ -784,7 +784,15 @@ void Scope::handleNameConflict(const Symbol& member) const {
 
 void Scope::reportNameConflict(const Symbol& member, const Symbol& existing) const {
     Diagnostic* diag;
-    if (existing.isValue() && member.isValue()) {
+
+    // Non-standard: VCS allows a local variable to redeclare a port argument with the
+    // same name. Use a dedicated (softer) diagnostic so it can be downgraded in compat mode.
+    if ((existing.kind == SymbolKind::FormalArgument && member.kind == SymbolKind::Variable) ||
+        (existing.kind == SymbolKind::Variable && member.kind == SymbolKind::FormalArgument)) {
+        diag = &addDiag(diag::PortArgRedeclared, member.location);
+        (*diag) << member.name;
+    }
+    else if (existing.isValue() && member.isValue()) {
         const Type& memberType = member.as<ValueSymbol>().getType();
         const Type& existingType = existing.as<ValueSymbol>().getType();
 
