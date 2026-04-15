@@ -99,9 +99,9 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         else if (flags.has(ASTFlags::ForkJoinAnyNone) && !var.flags.has(VariableFlags::RefStatic) &&
                  symbol.kind == SymbolKind::FormalArgument &&
                  symbol.as<FormalArgumentSymbol>().direction == ArgumentDirection::Ref) {
-            // Can't refer to ref args in fork-join_any/none
+            // Can't refer to ref args in fork-join_any/none per LRM.
+            // Non-standard: VCS allows this, so the diagnostic can be downgraded.
             context.addDiag(diag::RefArgForkJoin, sourceRange) << symbol.name;
-            return badExpr(comp, nullptr);
         }
     }
     else if (symbol.kind == SymbolKind::ConstraintBlock) {
