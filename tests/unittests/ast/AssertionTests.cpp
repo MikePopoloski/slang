@@ -126,7 +126,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 21);
-    CHECK(diags[0].code == diag::AssertionExprType);
+    CHECK(diags[0].code == diag::UnpackedInAssertExpr);
     CHECK(diags[1].code == diag::IncDecNotAllowed);
     CHECK(diags[2].code == diag::CHandleInAssertion);
     CHECK(diags[3].code == diag::ClassMemberInAssertion);
@@ -1849,5 +1849,5 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::AssertionExprType);
+    CHECK(diags[0].code == diag::UnpackedInAssertExpr);
 }

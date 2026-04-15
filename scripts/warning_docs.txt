@@ -2091,6 +2091,18 @@ class RegField;
 endclass
 ```
 
+-Wunpacked-in-assert-expr
+LRM §16.6 requires concurrent assertion expression types to be cast compatible
+with an integral type. Unpacked arrays do not meet this requirement. Some tools
+accept unpacked array expressions in concurrent assertions with only a warning,
+so the error can be downgraded for compatibility.
+```
+module m(input logic clk);
+  int arr[4];
+  assert property (@(posedge clk) arr);
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste

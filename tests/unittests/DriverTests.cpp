@@ -2108,3 +2108,52 @@ endclass
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("virtual-arg-name-mismatch"));
 }
+
+TEST_CASE("Driver UnpackedInAssertExpr -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // LRM §16.6 requires concurrent assertion expression types to be cast compatible
+    // with an integral type; unpacked arrays do not satisfy this. In strict mode slang
+    // promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(
+        driver.sourceManager.assignText("test.sv", R"(
+module m(input logic clk);
+  int arr[4];
+  assert property (@(posedge clk) arr);
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("unpacked-in-assert-expr"));
+}
+
+TEST_CASE("Driver UnpackedInAssertExpr -- warning in VCS compat mode") {
+    auto guard = OS::captureOutput();
+
+    // VCS issues a warning (not an error) for unpacked arrays in concurrent assertion
+    // expressions; --compat=vcs keeps the diagnostic as a warning rather than an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=vcs"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(
+        driver.sourceManager.assignText("test.sv", R"(
+module m(input logic clk);
+  int arr[4];
+  assert property (@(posedge clk) arr);
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("unpacked-in-assert-expr"));
+}

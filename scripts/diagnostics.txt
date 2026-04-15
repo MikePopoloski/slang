@@ -899,6 +899,7 @@ error ConcurrentAssertNotInProc "concurrent assertion statements may only appear
 error ImmediateAssertNotInProc "immediate assertion statements may only appear in procedural contexts"
 error CheckerNotInProc "procedural checkers may only appear in always and initial blocks"
 error CheckerInForkJoin "checkers cannot be instantiated inside fork-join blocks"
+warning unpacked-in-assert-expr UnpackedInAssertExpr "expression of type {} is not valid in concurrent assertions; type must be cast compatible with an integral type"
 warning string-in-constraint StringConstraintExpr "'string' type is not valid in a constraint expression; string equality in constraint if-conditions is not defined by LRM §18.5"
 warning case-default CaseDefault "'{}' missing 'default' label"
 warning case-redundant-default CaseRedundantDefault "'{}' marked '{}' has 'default' label"
@@ -1310,7 +1311,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   string-int-concat range-select-reversed clockvar-target-assign
                   cross-ident-in-binsof empty-arg-not-allowed nonstandard-constraint-block
                   param-class-covariance port-arg-redeclared ref-arg-in-fork-join
-                  cannot-index-scalar string-in-constraint virtual-arg-name-mismatch }
+                  cannot-index-scalar string-in-constraint virtual-arg-name-mismatch
+                  unpacked-in-assert-expr }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

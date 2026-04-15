@@ -83,6 +83,13 @@ static const Expression& bindExpr(const ExpressionSyntax& syntax, const ASTConte
     if (expr.kind != ExpressionKind::Dist) {
         if (!expr.type->isValidForSequence()) {
             auto& comp = context.getCompilation();
+            // Non-standard: VCS accepts unpacked arrays in concurrent assertion expressions
+            // with a warning. Use a dedicated (softer) diagnostic so it can be downgraded
+            // in compat mode. The expression is kept valid so elaboration can continue.
+            if (expr.type->getCanonicalType().isUnpackedArray()) {
+                context.addDiag(diag::UnpackedInAssertExpr, expr.sourceRange) << *expr.type;
+                return expr;
+            }
             context.addDiag(diag::AssertionExprType, expr.sourceRange) << *expr.type;
             return *comp.emplace<InvalidExpression>(&expr, comp.getErrorType());
         }
