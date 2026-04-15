@@ -344,3 +344,70 @@ endmodule
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("clockvar-target-assign"));
 }
+
+TEST_CASE("Driver CrossIdentInBinsof -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // According to the LRM cross_identifier is not a valid bins_expression.
+    // In strict mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m;
+    logic clk, a, b, c;
+    covergroup cg @(posedge clk);
+        cp_a : coverpoint a { bins zero = {0}; bins one = {1}; }
+        cp_b : coverpoint b { bins zero = {0}; bins one = {1}; }
+        cp_c : coverpoint c { bins zero = {0}; bins one = {1}; }
+        cp_a_cross_b : cross cp_a, cp_b {
+            bins both_one = binsof(cp_a.one) && binsof(cp_b.one);
+        }
+        cp_nested : cross cp_a_cross_b, cp_c {
+            bins with_c = binsof(cp_a_cross_b) && binsof(cp_c.one);
+        }
+    endgroup
+    cg cg_inst = new();
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("cross-ident-in-binsof"));
+}
+
+TEST_CASE("Driver CrossIdentInBinsof -- warning in compat mode") {
+    auto guard = OS::captureOutput();
+
+    // Some tools accept cross identifiers in binsof(); --compat=all downgrades to warning.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=all"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m;
+    logic clk, a, b, c;
+    covergroup cg @(posedge clk);
+        cp_a : coverpoint a { bins zero = {0}; bins one = {1}; }
+        cp_b : coverpoint b { bins zero = {0}; bins one = {1}; }
+        cp_c : coverpoint c { bins zero = {0}; bins one = {1}; }
+        cp_a_cross_b : cross cp_a, cp_b {
+            bins both_one = binsof(cp_a.one) && binsof(cp_b.one);
+        }
+        cp_nested : cross cp_a_cross_b, cp_c {
+            bins with_c = binsof(cp_a_cross_b) && binsof(cp_c.one);
+        }
+    endgroup
+    cg cg_inst = new();
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("cross-ident-in-binsof"));
+}
