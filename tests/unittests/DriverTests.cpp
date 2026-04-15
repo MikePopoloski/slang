@@ -1720,3 +1720,61 @@ endmodule
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("empty-arg-not-allowed"));
 }
+
+TEST_CASE("Driver NonstandardConstraintBlock -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // LRM §18.5: braced constraint_set is not valid as a top-level constraint item.
+    // In strict mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(
+        driver.sourceManager.assignText("test.sv", R"(
+`define CREATE_VSEQ(SEQ_NAME, CONSTRAINTS) \
+  class SEQ_NAME; \
+    rand int x; \
+    constraint c { CONSTRAINTS } \
+  endclass : SEQ_NAME
+
+`CREATE_VSEQ(my_vseq, {
+    x inside {0, 1};
+})
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("nonstandard-constraint-block"));
+}
+
+TEST_CASE("Driver NonstandardConstraintBlock -- warning in VCS compat mode") {
+    auto guard = OS::captureOutput();
+
+    // VCS accepts nested constraint blocks with a warning; --compat=vcs keeps the
+    // diagnostic as a warning (build succeeds, diagnostic still visible).
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=vcs"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(
+        driver.sourceManager.assignText("test.sv", R"(
+`define CREATE_VSEQ(SEQ_NAME, CONSTRAINTS) \
+  class SEQ_NAME; \
+    rand int x; \
+    constraint c { CONSTRAINTS } \
+  endclass : SEQ_NAME
+
+`CREATE_VSEQ(my_vseq, {
+    x inside {0, 1};
+})
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("nonstandard-constraint-block"));
+}
