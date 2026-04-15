@@ -47,7 +47,7 @@ endmodule
 [93mTop level design units:
 [0m    m
 
-[0;36m../test2.sv[0m:[1;36m4:12[0m: [1;31merror: [0m[1;37minvalid operands to binary expression ('<unnamed unpacked struct>' and 'int')[0m
+[0;36m../test2.sv[0m:[1;36m4:12[0m: [1;31merror: [0m[1;37minvalid operands to binary expression ('struct{logic a}' and 'int')[0m
         int i = s + 1;
 [1;32m                ~ ^ ~[0m
 

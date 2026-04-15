@@ -85,10 +85,30 @@ void TypePrinter::visit(const EnumType& type, std::string_view overrideName) {
 
         if (!type.name.empty())
             buffer->append(type.name);
-        else if (overrideName.empty())
-            buffer->append("<unnamed enum>");
-        else
+        else if (!overrideName.empty())
             buffer->append(overrideName);
+        else {
+            buffer->append("enum{");
+
+            const size_t startSize = buffer->size();
+            bool first = true;
+            for (const auto& member : type.values()) {
+                const size_t entryStart = buffer->size();
+                if (!first)
+                    buffer->append(", ");
+
+                buffer->append(member.name);
+                if (buffer->size() - startSize > options.friendlyMemberCharLimit) {
+                    buffer->resize(entryStart);
+                    if (!first)
+                        buffer->append(", ");
+                    buffer->append("...");
+                    break;
+                }
+                first = false;
+            }
+            buffer->append("}");
+        }
     }
     else {
         if (options.enumsAsLinks) {
@@ -151,8 +171,12 @@ void TypePrinter::visit(const PackedStructType& type, std::string_view overrideN
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         printScope(type.getParentScope());
 
-        if (overrideName.empty())
-            buffer->append("<unnamed packed struct>");
+        if (overrideName.empty()) {
+            buffer->append("struct packed");
+            if (type.isSigned)
+                buffer->append(" signed");
+            appendFriendlyMembers(type);
+        }
         else
             buffer->append(overrideName);
     }
@@ -178,8 +202,12 @@ void TypePrinter::visit(const PackedUnionType& type, std::string_view overrideNa
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         printScope(type.getParentScope());
 
-        if (overrideName.empty())
-            buffer->append("<unnamed packed union>");
+        if (overrideName.empty()) {
+            buffer->append("union packed");
+            if (type.isSigned)
+                buffer->append(" signed");
+            appendFriendlyMembers(type);
+        }
         else
             buffer->append(overrideName);
     }
@@ -205,79 +233,33 @@ void TypePrinter::visit(const PackedUnionType& type, std::string_view overrideNa
 }
 
 void TypePrinter::visit(const FixedSizeUnpackedArrayType& type, std::string_view) {
-    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        buffer->append("unpacked array ");
-        if (!type.range.isDescending() && type.range.lower() == 0)
-            buffer->format("[{}]", type.range.width());
-        else
-            buffer->format("[{}:{}]", type.range.left, type.range.right);
-
-        buffer->append(" of ");
-        type.elementType.visit(*this, ""sv);
-    }
-    else {
-        printUnpackedArray(type);
-    }
+    printUnpackedArray(type);
 }
 
 void TypePrinter::visit(const DynamicArrayType& type, std::string_view) {
-    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        buffer->append("dynamic array of ");
-        type.elementType.visit(*this, ""sv);
-    }
-    else {
-        printUnpackedArray(type);
-    }
+    printUnpackedArray(type);
 }
 
 void TypePrinter::visit(const DPIOpenArrayType& type, std::string_view) {
-    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        if (type.isPacked) {
-            type.elementType.visit(*this, ""sv);
-            buffer->append("[]");
-        }
-        else {
-            buffer->append("unpacked array [] of ");
-            type.elementType.visit(*this, ""sv);
-        }
-    }
-    else {
-        printUnpackedArray(type);
-    }
+    printUnpackedArray(type);
 }
 
 void TypePrinter::visit(const AssociativeArrayType& type, std::string_view) {
-    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        buffer->append("associative array [");
-        if (type.indexType)
-            type.indexType->visit(*this, ""sv);
-        else
-            buffer->append("*");
-
-        buffer->append("] of ");
-        type.elementType.visit(*this, ""sv);
-    }
-    else {
-        printUnpackedArray(type);
-    }
+    printUnpackedArray(type);
 }
 
 void TypePrinter::visit(const QueueType& type, std::string_view) {
-    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        buffer->append("queue of ");
-        type.elementType.visit(*this, ""sv);
-    }
-    else {
-        printUnpackedArray(type);
-    }
+    printUnpackedArray(type);
 }
 
 void TypePrinter::visit(const UnpackedStructType& type, std::string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         printScope(type.getParentScope());
 
-        if (overrideName.empty())
-            buffer->append("<unnamed unpacked struct>");
+        if (overrideName.empty()) {
+            buffer->append("struct");
+            appendFriendlyMembers(type);
+        }
         else
             buffer->append(overrideName);
     }
@@ -300,8 +282,10 @@ void TypePrinter::visit(const UnpackedUnionType& type, std::string_view override
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         printScope(type.getParentScope());
 
-        if (overrideName.empty())
-            buffer->append("<unnamed unpacked union>");
+        if (overrideName.empty()) {
+            buffer->append("union");
+            appendFriendlyMembers(type);
+        }
         else
             buffer->append(overrideName);
     }
@@ -431,6 +415,31 @@ void TypePrinter::visit(const ErrorType&, std::string_view) {
     buffer->append("<error>");
 }
 
+void TypePrinter::appendFriendlyMembers(const Scope& scope) {
+    buffer->append("{");
+    const size_t startSize = buffer->size();
+    bool first = true;
+
+    for (auto& member : scope.members()) {
+        const size_t entryStart = buffer->size();
+        if (!first)
+            buffer->append(", ");
+
+        member.as<VariableSymbol>().getType().visit(*this, ""sv);
+        buffer->format(" {}", member.name);
+
+        if (buffer->size() - startSize > options.friendlyMemberCharLimit) {
+            buffer->resize(entryStart);
+            if (!first)
+                buffer->append(", ");
+            buffer->append("...");
+            break;
+        }
+        first = false;
+    }
+    buffer->append("}");
+}
+
 void TypePrinter::appendMembers(const Scope& scope) {
     buffer->append("{");
     for (auto& member : scope.members()) {
@@ -482,7 +491,13 @@ void TypePrinter::printUnpackedArrayDim(const Type& type) {
     switch (type.kind) {
         case SymbolKind::FixedSizeUnpackedArrayType: {
             auto& at = type.as<FixedSizeUnpackedArrayType>();
-            buffer->format("[{}:{}]", at.range.left, at.range.right);
+            if (!at.range.isDescending() && at.range.left == 0 &&
+                options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
+                buffer->format("[{}]", at.range.right + 1);
+            }
+            else {
+                buffer->format("[{}:{}]", at.range.left, at.range.right);
+            }
             break;
         }
         case SymbolKind::DynamicArrayType:

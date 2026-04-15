@@ -12,6 +12,7 @@
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
+#include "slang/ast/types/TypePrinter.h"
 #include "slang/syntax/AllSyntax.h"
 
 TEST_CASE("Enum declaration") {
@@ -330,6 +331,79 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Friendly struct/union name printing") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct packed { logic a; int b; } ps;
+
+    struct packed signed { logic [3:0] x; logic y; } sps;
+
+    union packed { logic [7:0] u8; logic [3:0][1:0] pair; } pu;
+
+    struct { int i; real r; } us;
+
+    union { int i; real r; } uu;
+
+    typedef struct packed { logic b; } my_t;
+    my_t named;
+
+    struct { struct { int x; int y; } inner; int z; } nested;
+
+    struct {
+        int f0[]; int f1[$]; int f2[*]; int f3[int]; int f4[4];
+        int f5; int f6; int f7; int f8; int f9;
+    } wide;
+
+    enum logic [1:0] { FOO, BAR, BAZ } ue;
+
+    typedef enum { X, Y } my_enum_t;
+    my_enum_t named_enum;
+
+    enum { E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13, E14, E15 } wide_enum;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    TypePrinter printer;
+    printer.options.addSingleQuotes = true;
+    printer.options.anonymousTypeStyle = TypePrintingOptions::FriendlyName;
+    printer.options.elideScopeNames = true;
+
+    auto& m = compilation.getRoot().find<InstanceSymbol>("m").body;
+    auto typeStr = [&](std::string_view name) {
+        printer.clear();
+        printer.append(m.find<VariableSymbol>(name).getType());
+        return printer.toString();
+    };
+
+    CHECK(typeStr("ps") == "'struct packed{logic a, int b}'");
+
+    CHECK(typeStr("sps") == "'struct packed signed{logic[3:0] x, logic y}'");
+
+    CHECK(typeStr("pu") == "'union packed{logic[7:0] u8, logic[3:0][1:0] pair}'");
+
+    CHECK(typeStr("us") == "'struct{int i, real r}'");
+
+    CHECK(typeStr("uu") == "'union{int i, real r}'");
+
+    CHECK(typeStr("named") == "'my_t'");
+
+    CHECK(typeStr("nested") == "'struct{struct{int x, int y} inner, int z}'");
+
+    CHECK(typeStr("wide") ==
+          "'struct{int$[] f0, int$[$] f1, int$[*] f2, int$[int] f3, int$[4] f4, ...}'");
+
+    CHECK(typeStr("ue") == "'enum{FOO, BAR, BAZ}'");
+
+    CHECK(typeStr("named_enum") == "'my_enum_t'");
+
+    CHECK(typeStr("wide_enum") ==
+          "'enum{E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13, ...}'");
+}
+
 TEST_CASE("Typedefs") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
@@ -630,7 +704,7 @@ source:4:14: error: 72'hffffffffffffffffff is out of allowed range (-2147483648 
 source:5:14: error: value must be positive
            i[0]);
              ^
-source:7:27: error: packed members must be of integral type (not 'unpacked array [3] of logic')
+source:7:27: error: packed members must be of integral type (not 'logic$[3]')
     struct packed { logic j[3]; } foo;
                           ^~~~
 )");
@@ -659,7 +733,7 @@ endmodule
 source:6:11: error: value of type 'blah' (aka 'asdf') cannot be assigned to type 'int'
     int i = b;
           ^ ~
-source:11:15: error: value of type 'test2' (aka 'unpacked array [3] of logic[3:0]') cannot be assigned to type 'chandle'
+source:11:15: error: value of type 'test2' (aka 'logic[3:0]$[3]') cannot be assigned to type 'chandle'
     chandle j = t;
               ^ ~
 )");

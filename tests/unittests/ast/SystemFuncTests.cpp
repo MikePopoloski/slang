@@ -2348,7 +2348,7 @@ source:3:5: note: $info encountered: 3
 source:8:34: error: no argument provided for '%d' format specifier
         s = $sformatf("""\t\n %d \x250d \1 \xf""", a);
                                  ^~~~~~
-source:8:52: error: value of type 'dynamic array of int' is invalid for '%d' format specifier
+source:8:52: error: value of type 'int$[]' is invalid for '%d' format specifier
         s = $sformatf("""\t\n %d \x250d \1 \xf""", a);
                               ~~                   ^
 source:11:1: error: no argument provided for '%d' format specifier

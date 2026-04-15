@@ -479,7 +479,7 @@ source:4:14: note: expanded here
 source:11:62: note: expanded here
         assert property (a ##1 b ##[+] c ##[*] d ##[1:5] e & r);
                                                              ^
-source:25:21: error: invalid operands to binary expression ('queue of int' and 'int')
+source:25:21: error: invalid operands to binary expression ('int$[$]' and 'int')
         int j = foo + r;
                 ~~~ ^ ~
 source:20:11: note: while expanding checker 'f'
