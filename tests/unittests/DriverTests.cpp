@@ -411,3 +411,59 @@ endmodule
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("cross-ident-in-binsof"));
 }
+
+TEST_CASE("Driver NonstandardConstraintBlock -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // According to the LRM braced constraint_set is not valid as a top-level constraint item.
+    // In strict mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+`define CREATE_VSEQ(SEQ_NAME, CONSTRAINTS) \
+  class SEQ_NAME; \
+    rand int x; \
+    constraint c { CONSTRAINTS } \
+  endclass : SEQ_NAME
+
+`CREATE_VSEQ(my_vseq, {
+    x inside {0, 1};
+})
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("nonstandard-constraint-block"));
+}
+
+TEST_CASE("Driver NonstandardConstraintBlock -- warning in compat mode") {
+    auto guard = OS::captureOutput();
+
+    // Some tools accept nested constraint blocks with a warning; --compat=all keeps the
+    // diagnostic as a warning (build succeeds, diagnostic still visible).
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=all"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+`define CREATE_VSEQ(SEQ_NAME, CONSTRAINTS) \
+  class SEQ_NAME; \
+    rand int x; \
+    constraint c { CONSTRAINTS } \
+  endclass : SEQ_NAME
+
+`CREATE_VSEQ(my_vseq, {
+    x inside {0, 1};
+})
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("nonstandard-constraint-block"));
+}

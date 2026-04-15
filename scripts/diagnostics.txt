@@ -315,6 +315,7 @@ warning foreach-call-expr ForeachCallExpr "foreach array expression is not a nam
 warning lifetime-prototype LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
 warning nonstandard-dist NonstandardDist "use of parentheses around 'dist' expression is non-standard"
 warning nonstandard-inside NonstandardInside "use of 'inside' without braces is non-standard"
+warning nonstandard-constraint-block NonstandardConstraintBlock "nested constraint block used as a constraint item is not permitted by the LRM"
 warning empty-body EmptyBody "{} has empty body (put the semicolon on a separate line to silence this warning)"
 warning dangling-else DanglingElse "ambiguous dangling 'else'; add begin/end to clarify which 'if' the 'else' belongs to"
 note NoteMatchingIf "'if' statement here"
@@ -1304,7 +1305,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   initializer-required package-import-in-class foreach-call-expr nonstandard-hierarchical-cross
                   nonstandard-inside nonstandard-bare-assoc-pattern literal-leading-underscore ref-arg-automatic
                   string-int-concat range-select-reversed clockvar-target-assign
-                  cross-ident-in-binsof }
+                  cross-ident-in-binsof nonstandard-constraint-block }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

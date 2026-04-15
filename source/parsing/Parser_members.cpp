@@ -2306,13 +2306,13 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
             // Ambiguity here: an open brace could either be the start of a constraint block
             // or the start of a concatenation expression. Descend into the expression until
             // we can find out for sure one way or the other.
-            if (allowBlock) {
-                uint32_t index = 1;
-                if (peek(1).kind == TokenKind::CloseBrace ||
-                    !scanTypePart<isNotInConcatenationExpr>(index, TokenKind::OpenBrace,
-                                                            TokenKind::CloseBrace)) {
-                    return &parseConstraintBlock(false);
-                }
+            uint32_t index = 1;
+            if (peek(1).kind == TokenKind::CloseBrace ||
+                !scanTypePart<isNotInConcatenationExpr>(index, TokenKind::OpenBrace,
+                                                        TokenKind::CloseBrace)) {
+                if (!allowBlock)
+                    addDiag(diag::NonstandardConstraintBlock, peek().location());
+                return &parseConstraintBlock(false);
             }
             break;
         }
