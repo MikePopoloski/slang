@@ -245,3 +245,56 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstraintSolveCycle);
 }
+
+TEST_CASE("Constraint cycle with class suboject paths") {
+    auto& code = R"(
+class A;
+    rand int value;
+endclass
+
+class B;
+    A a;
+
+    function new();
+        a = new();
+    endfunction
+endclass
+
+class C1;
+    B b;
+    function new();
+        b = new();
+    endfunction
+endclass
+
+class C2;
+    B b;
+    function new();
+        b = new();
+    endfunction
+endclass
+
+class D;
+    rand int y;
+    rand C1 c1;
+    rand C2 c2;
+
+    constraint noncircular {
+        solve c1.b.a.value before y;
+        solve y before c2.b.a.value;
+    }
+
+    constraint circular {
+        solve c1.b.a.value before y;
+        solve y before c1.b.a.value;
+    }
+
+endclass
+)";
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstraintSolveCycle);
+}
