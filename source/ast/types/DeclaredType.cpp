@@ -296,7 +296,12 @@ void DeclaredType::checkType(const ASTContext& context) const {
                 context.addDiag(diag::InvalidDPIArgType, parent.location) << *type;
             break;
         case uint32_t(DeclaredTypeFlags::RequireSequenceType):
-            if (!type->isValidForSequence())
+            // LRM 16.10: the data type shall be one of the types allowed within assertions
+            // as defined in 16.6. LRM 16.6 requires types to be cast compatible with an
+            // integral type. Per LRM 6.22.4 + 6.24.3, bit-stream types (including unpacked
+            // arrays/structs of integral types) have defined explicit casting rules to/from
+            // integral types and therefore satisfy the cast-compatibility requirement.
+            if (!type->isValidForSequence() && !type->isBitstreamType())
                 context.addDiag(diag::AssertionExprType, parent.location) << *type;
             break;
         case uint32_t(DeclaredTypeFlags::CoverageType):
