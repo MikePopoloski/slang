@@ -2031,6 +2031,21 @@ module m;
 endmodule
 ```
 
+-Wvirtual-arg-name-mismatch
+The LRM requires virtual method overrides to use identical argument names to
+their superclass declaration. Some tools issue only a warning for this mismatch,
+so the error can be downgraded for compatibility.
+```
+class Base;
+  virtual task run(int count);
+  endtask
+endclass
+class Derived extends Base;
+  virtual task run(int n);  // 'n' != 'count'
+  endtask
+endclass
+```
+
 -Wstring-in-constraint
 The LRM does not permit string sub-expressions in constraint expressions.
 Some tools accept string equality comparisons inside constraint if-conditions as an extension.

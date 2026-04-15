@@ -746,3 +746,57 @@ endclass
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("string-in-constraint"));
 }
+
+TEST_CASE("Driver VirtualArgNameMismatch -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // The LRM requires virtual overrides to use identical argument names.
+    // In strict mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+class Base;
+  virtual task run(int count);
+  endtask
+endclass
+class Derived extends Base;
+  virtual task run(int n);
+  endtask
+endclass
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("virtual-arg-name-mismatch"));
+}
+
+TEST_CASE("Driver VirtualArgNameMismatch -- warning in compat mode") {
+    auto guard = OS::captureOutput();
+
+    // Some tools issue a warning (not an error) for mismatched virtual override argument names;
+    // --compat=all keeps the diagnostic as a warning rather than promoting it to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=all"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+class Base;
+  virtual task run(int count);
+  endtask
+endclass
+class Derived extends Base;
+  virtual task run(int n);
+  endtask
+endclass
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("virtual-arg-name-mismatch"));
+}
