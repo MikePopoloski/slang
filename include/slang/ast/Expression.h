@@ -235,7 +235,7 @@ public:
     /// Builds a tree of select expressions to map down to the target flattened bit range.
     ///
     /// @note The expression must be of integral type and the flatRange must be in
-    ///       canonical (little-endian) format.
+    ///       canonical (descending) format.
     static Expression& buildPackedSelectTree(const TypeProvider& typeProvider, Expression& expr,
                                              ConstantRange flatRange, const ASTContext& context);
 

@@ -207,7 +207,7 @@ void TypePrinter::visit(const PackedUnionType& type, std::string_view overrideNa
 void TypePrinter::visit(const FixedSizeUnpackedArrayType& type, std::string_view) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         buffer->append("unpacked array ");
-        if (!type.range.isLittleEndian() && type.range.lower() == 0)
+        if (!type.range.isDescending() && type.range.lower() == 0)
             buffer->format("[{}]", type.range.width());
         else
             buffer->format("[{}:{}]", type.range.left, type.range.right);

@@ -535,7 +535,7 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
                     inferValue(ev, member->sourceRange());
             }
 
-            bool down = dim.range.isLittleEndian();
+            bool down = dim.range.isDescending();
             while (index != dim.range.right) {
                 index = down ? index - 1 : index + 1;
 

@@ -509,18 +509,18 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, const ConstantValue
             elements = cv.elements();
 
         ConstantRange range;
-        bool isLittleEndian;
+        bool isDescending;
         if (dim.range) {
             range = *dim.range;
-            isLittleEndian = range.isLittleEndian();
+            isDescending = range.isDescending();
         }
         else {
             range = {0, int32_t(elements.size()) - 1};
-            isLittleEndian = false;
+            isDescending = false;
         }
 
-        for (int32_t i = range.left; isLittleEndian ? i >= range.right : i <= range.right;
-             isLittleEndian ? i-- : i++) {
+        for (int32_t i = range.left; isDescending ? i >= range.right : i <= range.right;
+             isDescending ? i-- : i++) {
 
             *local = SVInt(32, uint64_t(i), true);
 

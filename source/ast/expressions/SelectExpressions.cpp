@@ -515,7 +515,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
             if (checkRangeOverflow(selectionRange, context, errorRange))
                 return badExpr(comp, result);
 
-            if (selectionRange.isLittleEndian() != valueRange.isLittleEndian() &&
+            if (selectionRange.isDescending() != valueRange.isDescending() &&
                 selectionRange.width() > 1 && valueRange.width() > 1) {
                 if (!context.inUnevaluatedBranch()) {
                     auto& diag = context.addDiag(diag::RangeSelectReversed, errorRange);
@@ -543,9 +543,9 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
                     return badExpr(comp, result);
                 }
 
-                auto range =
-                    ConstantRange::getIndexedRange(*index, *rv, valueRange.isLittleEndian(),
-                                                   selectionKind == RangeSelectionKind::IndexedUp);
+                auto range = ConstantRange::getIndexedRange(*index, *rv, valueRange.isDescending(),
+                                                            selectionKind ==
+                                                                RangeSelectionKind::IndexedUp);
                 if (!range) {
                     context.addDiag(diag::RangeWidthOverflow, errorRange);
                     return badExpr(comp, result);
@@ -558,7 +558,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
                 // Otherwise, the resulting range will start with the fixed lower bound of the type.
                 int32_t l = selectionKind == RangeSelectionKind::IndexedUp ? valueRange.lower()
                                                                            : valueRange.upper();
-                auto range = ConstantRange::getIndexedRange(l, *rv, valueRange.isLittleEndian(),
+                auto range = ConstantRange::getIndexedRange(l, *rv, valueRange.isDescending(),
                                                             selectionKind ==
                                                                 RangeSelectionKind::IndexedUp);
                 if (!range) {
@@ -589,8 +589,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
     }
     else {
         // Otherwise, this is a dynamic array so we can't validate much. We should check that
-        // the selection endianness is correct for simple ranges -- dynamic arrays only
-        // permit big endian [0..N] ordering.
+        // the selection order is correct for simple ranges -- dynamic arrays only permit
+        // ascending [0..N] ordering.
         ConstantRange selectionRange;
         if (selectionKind == RangeSelectionKind::Simple) {
             std::optional<int32_t> lv = context.evalInteger(left);
@@ -598,7 +598,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
                 return badExpr(comp, result);
 
             selectionRange = {*lv, *rv};
-            if (selectionRange.isLittleEndian() && selectionRange.width() > 1) {
+            if (selectionRange.isDescending() && selectionRange.width() > 1) {
                 if (!context.inUnevaluatedBranch()) {
                     auto& diag = context.addDiag(diag::RangeSelectReversed, errorRange);
                     diag << selectionRange.left << selectionRange.right;
@@ -643,13 +643,13 @@ Expression& RangeSelectExpression::fromConstant(const TypeProvider& typeProvider
 
     const auto valueRange = valueType.getFixedRange();
     if (selectionKind != RangeSelectionKind::Simple) {
-        range = ConstantRange::getIndexedRange(range.left, range.right, valueRange.isLittleEndian(),
+        range = ConstantRange::getIndexedRange(range.left, range.right, valueRange.isDescending(),
                                                selectionKind == RangeSelectionKind::IndexedUp)
                     .value();
     }
 
     // This method is only called on expressions with a fixed range type.
-    SLANG_ASSERT(range.isLittleEndian() == valueRange.isLittleEndian());
+    SLANG_ASSERT(range.isDescending() == valueRange.isDescending());
     SLANG_ASSERT(valueType.hasFixedRange());
 
     if (valueType.isUnpackedArray()) {
@@ -677,9 +677,9 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
     if (!range)
         return nullptr;
 
-    // If this is a queue, we didn't verify the endianness of the selection.
+    // If this is a queue, we didn't verify the ordering of the selection.
     // Check if it's reversed here and issue a warning if so.
-    if (value().type->isQueue() && range->isLittleEndian() && range->left != range->right) {
+    if (value().type->isQueue() && range->isDescending() && range->left != range->right) {
         context.addDiag(diag::ConstEvalQueueRange, sourceRange) << range->left << range->right;
         return value().type->getDefaultValue();
     }
@@ -742,11 +742,11 @@ std::optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& conte
             return std::nullopt;
     }
     else {
-        bool isLittleEndian = false;
+        bool isDescending = false;
         if (valueType.hasFixedRange())
-            isLittleEndian = valueType.getFixedRange().isLittleEndian();
+            isDescending = valueType.getFixedRange().isDescending();
 
-        auto range = ConstantRange::getIndexedRange(*li, *ri, isLittleEndian,
+        auto range = ConstantRange::getIndexedRange(*li, *ri, isDescending,
                                                     selectionKind == RangeSelectionKind::IndexedUp);
         if (!range) {
             context.addDiag(diag::RangeWidthOverflow, sourceRange);

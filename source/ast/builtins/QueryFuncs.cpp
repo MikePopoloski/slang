@@ -486,7 +486,7 @@ ConstantValue IncrementFunction::eval(EvalContext& context, const Args& args, So
     if (dim.isDynamic || dim.indexType)
         return SVInt(32, uint64_t(-1), true);
 
-    return SVInt(32, uint64_t(dim.range.isLittleEndian() ? 1 : -1), true);
+    return SVInt(32, uint64_t(dim.range.isDescending() ? 1 : -1), true);
 }
 
 class ArrayDimensionFunction : public SystemSubroutine {

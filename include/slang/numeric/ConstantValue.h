@@ -342,14 +342,15 @@ struct SLANG_EXPORT ConstantRange {
     /// the bounds are specified.
     int32_t upper() const { return std::max(left, right); }
 
-    /// "Little endian" bit order is when the msb is >= the lsb.
-    bool isLittleEndian() const { return left >= right; }
+    /// Descending bit order is when the msb is >= the lsb (sometimes referred
+    /// to as "little endian" bit range).
+    bool isDescending() const { return left >= right; }
 
     /// Reverses the bit ordering of the range.
     [[nodiscard]] ConstantRange reverse() const { return {right, left}; }
 
     /// Selects a subrange of this range, correctly handling both forms of
-    /// bit endianness. This will assert that the given subrange is not wider.
+    /// range ordering. This will assert that the given subrange is not wider.
     [[nodiscard]] ConstantRange subrange(ConstantRange select) const;
 
     /// Return the intersection range with other.
@@ -372,7 +373,7 @@ struct SLANG_EXPORT ConstantRange {
 
     /// Creates a constant range based on a left / right value that is either indexed up
     /// or indexed down. This implements the SystemVerilog range operators of '+:' and '-:'
-    static std::optional<ConstantRange> getIndexedRange(int32_t l, int32_t r, bool littleEndian,
+    static std::optional<ConstantRange> getIndexedRange(int32_t l, int32_t r, bool descending,
                                                         bool indexedUp);
 
     std::string toString() const;

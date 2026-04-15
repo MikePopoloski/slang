@@ -508,7 +508,7 @@ static Expression* glueConnExpr(BumpAllocator& alloc, EvalContext& evalContext, 
 
         auto targetDim = ct.getFixedRange();
         auto translateIndex = [&](int32_t index) {
-            if (targetDim.isLittleEndian())
+            if (targetDim.isDescending())
                 return targetDim.upper() - index;
             else
                 return targetDim.lower() + index;

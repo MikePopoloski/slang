@@ -351,7 +351,7 @@ void registerNumeric(py::module_& m) {
         .def_property_readonly("width", &ConstantRange::width)
         .def_property_readonly("lower", &ConstantRange::lower)
         .def_property_readonly("upper", &ConstantRange::upper)
-        .def_property_readonly("isLittleEndian", &ConstantRange::isLittleEndian)
+        .def_property_readonly("isDescending", &ConstantRange::isDescending)
         .def("reverse", &ConstantRange::reverse)
         .def("subrange", &ConstantRange::subrange)
         .def("translateIndex", &ConstantRange::translateIndex)

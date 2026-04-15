@@ -612,7 +612,7 @@ endmodule
     CHECK((it++)->code == diag::UndeclaredIdentifier);
     CHECK((it++)->code == diag::SelectAfterRangeSelect);
     CHECK((it++)->code == diag::UndeclaredIdentifier);
-    CHECK((it++)->code == diag::InstanceArrayEndianMismatch);
+    CHECK((it++)->code == diag::InstanceArrayOrderMismatch);
     CHECK((it++)->code == diag::ValueMustBePositive);
     CHECK((it++)->code == diag::BadInstanceArrayRange);
     CHECK((it++)->code == diag::RangeWidthOverflow);

@@ -37,7 +37,7 @@ using namespace syntax;
 
 Expression& Expression::buildPackedSelectTree(const TypeProvider& typeProvider, Expression& expr,
                                               ConstantRange flatRange, const ASTContext& context) {
-    SLANG_ASSERT(flatRange.isLittleEndian());
+    SLANG_ASSERT(flatRange.isDescending());
 
     // If the range covers the entire type, just return the expression itself
     auto& type = *expr.type;
@@ -92,8 +92,8 @@ Expression& Expression::buildPackedSelectTree(const TypeProvider& typeProvider, 
 
         auto getIndex = [&](int32_t logicalIndex) {
             // logicalIndex is 0-based from the LSB end (flattened order)
-            return arrRange.isLittleEndian() ? arrRange.right + logicalIndex
-                                             : arrRange.right - logicalIndex;
+            return arrRange.isDescending() ? arrRange.right + logicalIndex
+                                           : arrRange.right - logicalIndex;
         };
 
         if (leftElem == rightElem) {
@@ -204,7 +204,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
             // range. Otherwise instance index zero should map to the upper
             // bound of the array's range.
             int32_t index = int32_t(arrayPath[i]);
-            if (unpackedDims[i].isLittleEndian() != instanceDims[i].isLittleEndian())
+            if (unpackedDims[i].isDescending() != instanceDims[i].isDescending())
                 index = unpackedDims[i].upper() - index;
             else
                 index = unpackedDims[i].lower() + index;
@@ -276,7 +276,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
             offset *= int32_t(instanceDims[i - 1].width());
 
         uint32_t index = arrayPath[i];
-        if (!instanceDims[i].isLittleEndian())
+        if (!instanceDims[i].isDescending())
             index = instanceDims[i].width() - index - 1;
 
         offset += int32_t(index);

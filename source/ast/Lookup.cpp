@@ -1318,8 +1318,8 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
     ConstantRange selRange;
     if (syntax.kind == SyntaxKind::SimpleRangeSelect) {
         selRange = {*left, *right};
-        if (selRange.isLittleEndian() != array.range.isLittleEndian() && selRange.width() > 1) {
-            auto& diag = result.addDiag(*context.scope, diag::InstanceArrayEndianMismatch,
+        if (selRange.isDescending() != array.range.isDescending() && selRange.width() > 1) {
+            auto& diag = result.addDiag(*context.scope, diag::InstanceArrayOrderMismatch,
                                         syntax.sourceRange());
             diag << selRange.left << selRange.right;
             diag << array.range.left << array.range.right;
@@ -1332,7 +1332,7 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
             return nullptr;
         }
 
-        auto range = ConstantRange::getIndexedRange(*left, *right, array.range.isLittleEndian(),
+        auto range = ConstantRange::getIndexedRange(*left, *right, array.range.isDescending(),
                                                     syntax.kind ==
                                                         SyntaxKind::AscendingRangeSelect);
         if (!range) {
@@ -1359,7 +1359,7 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
     auto elems = array.elements.subspan(size_t(begin), size_t(end - begin) + 1);
 
     ConstantRange newRange{int32_t(selRange.width()) - 1, 0};
-    if (!selRange.isLittleEndian())
+    if (!selRange.isDescending())
         newRange = newRange.reverse();
 
     // Create a placeholder array symbol that will hold this new sliced array.

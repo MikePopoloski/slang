@@ -3929,7 +3929,7 @@ endmodule
     CHECK(diags[1].code == diag::NestedBlockComment);
 }
 
-TEST_CASE("Endianness mismatch error suppressed in untaken conditionals") {
+TEST_CASE("Range order mismatch error suppressed in untaken conditionals") {
     auto tree = SyntaxTree::fromText(R"(
 module test #(
     parameter int DELAY = 1

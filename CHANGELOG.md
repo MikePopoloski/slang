@@ -80,7 +80,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   * Improved determination of whether a `for` loop is guaranteed to execute at least once, in cases where step or stop condition expressions are omitted
   * Conditional expressions that have a known ambiguous `x` condition are now modeled correctly
 * Added AST serialization for default disable directives and default / global clocking block modifiers
-* The error issued for incorrect range select endianness is now suppressed inside conditional blocks that are statically known to be untaken
+* The error issued for incorrect range select ordering is now suppressed inside conditional blocks that are statically known to be untaken
 * Tweaked the behavior of how `--allow-use-before-declare` works when there are matching declarations in outer scopes, to better match other tools (thanks to @mampcs)
 * The parser will now perform typo correction when looking for a keyword and finding a closely named identifier instead
 * Dotted lookups will now perform typo correction and provide a note when a closely named member is found

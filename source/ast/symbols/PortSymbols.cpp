@@ -1204,7 +1204,7 @@ private:
 
         SmallVector<const Symbol*> newElems;
         auto& arr = sym->as<InstanceArraySymbol>();
-        if (arr.range.isLittleEndian() != portDims[0].isLittleEndian()) {
+        if (arr.range.isDescending() != portDims[0].isDescending()) {
             for (auto elem : std::views::reverse(arr.elements))
                 newElems.push_back(rewireIfaceArrayIndices(elem, name, loc, subPortDims));
         }
@@ -1299,7 +1299,7 @@ private:
                 // are in reversed order we need to reverse our index here.
                 auto& array = symbol->as<InstanceArraySymbol>();
                 size_t index = instance.arrayPath[i];
-                if (instanceDims[i].isLittleEndian() != array.range.isLittleEndian())
+                if (instanceDims[i].isDescending() != array.range.isDescending())
                     index = array.elements.size() - index - 1;
 
                 symbol = array.elements[index];
