@@ -159,6 +159,11 @@ struct SLANG_EXPORT CompilationOptions {
     /// before abbreviating them.
     uint32_t maxConstexprBacktrace = 10;
 
+    /// The maximum number of bits that a single constant value can occupy
+    /// during constant evaluation. This limit exists to prevent out-of-memory
+    /// crashes from trivially constructing huge arrays in constant functions.
+    uint64_t maxConstantSize = 8 * 1024 * 1024;
+
     /// The maximum number of iterations to try to resolve defparams before
     /// giving up due to potentially cyclic dependencies in parameter values.
     uint32_t maxDefParamSteps = 128;

@@ -857,6 +857,105 @@ endmodule
     CHECK(diags[0].code == diag::ConstEvalExceededMaxSteps);
 }
 
+TEST_CASE("Consteval - max value size via variable decl") {
+    auto tree = SyntaxTree::fromText(R"(
+function automatic int foo;
+    int arr[1000];
+    return arr[0];
+endfunction
+module m;
+    localparam int i = foo();
+endmodule
+)");
+
+    CompilationOptions co;
+    co.maxConstantSize = 100; // 100 bits, a 1000-int array is far larger
+
+    Compilation compilation(co);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalExceededMaxSize);
+}
+
+TEST_CASE("Consteval - max value size via new []") {
+    auto tree = SyntaxTree::fromText(R"(
+function automatic int foo;
+    automatic int arr[] = new[1000];
+    return arr[0];
+endfunction
+module m;
+    localparam int i = foo();
+endmodule
+)");
+
+    CompilationOptions co;
+    co.maxConstantSize = 100;
+
+    Compilation compilation(co);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalExceededMaxSize);
+}
+
+TEST_CASE("Consteval - max value size via queue push_back") {
+    auto tree = SyntaxTree::fromText(R"(
+function automatic int foo;
+    int q[$];
+    for (int i = 0; i < 100; i++)
+        q.push_back(i);
+    return q[0];
+endfunction
+module m;
+    localparam int i = foo();
+endmodule
+)");
+
+    CompilationOptions co;
+    co.maxConstantSize = 100;
+
+    Compilation compilation(co);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalExceededMaxSize);
+}
+
+TEST_CASE("Consteval - max value size via operators / expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+function automatic int f1;
+    logic [31:0][999:0] arr1;
+    logic [31:0][999:0] arr2;
+    return int'({arr1, arr2});
+endfunction
+
+function automatic int f2;
+    logic [31:0][499:0] arr1;
+    return int'({8 {arr1}});
+endfunction
+
+module m;
+    localparam int i = f1();
+    localparam int j = f2();
+endmodule
+)");
+
+    CompilationOptions co;
+    co.maxConstantSize = 8 * 4000;
+
+    Compilation compilation(co);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConstEvalExceededMaxSize);
+    CHECK(diags[1].code == diag::ConstEvalExceededMaxSize);
+}
+
 TEST_CASE("Consteval - enum used in constant function") {
     auto tree = SyntaxTree::fromText(R"(
 typedef enum { A, B } e_t;

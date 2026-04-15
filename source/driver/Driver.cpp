@@ -172,6 +172,10 @@ void Driver::addStandardArgs() {
                 "Maximum number of steps that can occur during constant "
                 "evaluation before giving up",
                 "<steps>");
+    cmdLine.add("--max-constant-size", options.maxConstantSize,
+                "Maximum number of bits a single constant value can occupy during "
+                "constant evaluation before giving up",
+                "<bits>");
     cmdLine.add("--constexpr-backtrace-limit", options.maxConstexprBacktrace,
                 "Maximum number of frames to show when printing a constant evaluation "
                 "backtrace; the rest will be abbreviated",
@@ -1139,6 +1143,8 @@ void Driver::addCompilationOptions(Bag& bag) const {
         coptions.maxConstexprDepth = *options.maxConstexprDepth;
     if (options.maxConstexprSteps.has_value())
         coptions.maxConstexprSteps = *options.maxConstexprSteps;
+    if (options.maxConstantSize.has_value())
+        coptions.maxConstantSize = *options.maxConstantSize;
     if (options.maxConstexprBacktrace.has_value())
         coptions.maxConstexprBacktrace = *options.maxConstexprBacktrace;
     if (options.maxInstanceArray.has_value())

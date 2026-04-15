@@ -28,7 +28,8 @@ struct Expression::EvalVisitor {
         if (expr.getConstant())
             return *expr.getConstant();
 
-        if (expr.bad()) {
+        if (expr.bad() ||
+            !context.checkBitCount(expr.type->getBitstreamWidth(), expr.sourceRange)) {
             if (context.cacheResults()) {
                 SLANG_ASSERT(!context.getCompilation().isFrozen());
                 expr.constant = &ConstantValue::Invalid;

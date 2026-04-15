@@ -810,6 +810,10 @@ public:
             q.push_back(std::move(cv));
 
         q.resizeToBound();
+
+        if (!context.checkMaxValue(*target, args[0]->sourceRange))
+            return nullptr;
+
         return NullConstant;
     }
 
@@ -870,6 +874,10 @@ public:
 
         q.insert(q.begin() + *index, std::move(cv));
         q.resizeToBound();
+
+        if (!context.checkMaxValue(*target, args[0]->sourceRange))
+            return nullptr;
+
         return NullConstant;
     }
 };

@@ -444,6 +444,12 @@ Set the maximum number of steps that can occur during constant evaluation
 before giving up. Used to detect infinite constant evaluation loops.
 The default is 1000000.
 
+`--max-constant-size <bits>`
+
+Set the maximum number of bits that a single constant value can occupy during
+constant evaluation. Used to prevent out-of-memory crashes from trivially
+constructing huge arrays in constant functions. The default is 8Mbits.
+
 `--constexpr-backtrace-limit <limit>`
 
 Set the maximum number of frames to show when printing a constant evaluation

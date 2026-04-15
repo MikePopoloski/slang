@@ -487,7 +487,6 @@ uint64_t ConstantValue::getBitstreamWidth() const {
     // Note that we don't have to worry about overflow in this
     // method because we have an artificial limit on how
     // large constant values are allowed to be.
-    // TODO: actually implement the mentioned limit
     if (isInteger())
         return integer().getBitWidth();
 

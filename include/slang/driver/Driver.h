@@ -229,6 +229,10 @@ public:
         /// before abbreviating them.
         std::optional<uint32_t> maxConstexprBacktrace;
 
+        /// The maximum number of bits a single constant value can occupy before
+        /// an error is issued to prevent out-of-memory crashes.
+        std::optional<uint64_t> maxConstantSize;
+
         /// The maximum number of instances allowed in a single instance array.
         std::optional<uint32_t> maxInstanceArray;
 

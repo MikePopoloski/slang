@@ -101,6 +101,15 @@ public:
     /// a single constant function for too long.
     [[nodiscard]] bool step(SourceLocation loc);
 
+    /// Checks whether a computed bit count exceeds the configured constant value size limit.
+    /// If the limit is exceeded, a diagnostic is issued and false is returned.
+    /// Use this before allocating a large value to prevent out-of-memory crashes.
+    [[nodiscard]] bool checkBitCount(uint64_t bits, SourceRange range);
+
+    /// Checks whether the given constant value exceeds the configured maximum size limit.
+    /// If the limit is exceeded, a diagnostic is issued and false is returned.
+    [[nodiscard]] bool checkMaxValue(const ConstantValue& val, SourceRange range);
+
     /// Returns true if the context is currently within a function call, and false if
     /// this is a top-level expression.
     bool inFunction() const { return !stack.empty(); }

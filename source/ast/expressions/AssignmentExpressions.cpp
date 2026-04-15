@@ -545,6 +545,14 @@ ConstantValue NewArrayExpression::evalImpl(EvalContext& context) const {
     }
 
     size_t count = size_t(*size);
+    auto elemType = type->getArrayElementType();
+    SLANG_ASSERT(elemType);
+
+    // Make sure this array won't exceed our max constant size.
+    auto totalBits = checkedMulU64(count, elemType->getBitstreamWidth()).value_or(UINT64_MAX);
+    if (!context.checkBitCount(totalBits, sizeExpr().sourceRange))
+        return nullptr;
+
     size_t index = 0;
     std::vector<ConstantValue> result(count);
 
@@ -564,7 +572,7 @@ ConstantValue NewArrayExpression::evalImpl(EvalContext& context) const {
     // with a default setter -- we should use that default setter value for all default
     // inserted elements. This isn't described in the LRM anywhere but all commercial
     // tools do the same thing.
-    ConstantValue def = type->getArrayElementType()->getDefaultValue();
+    ConstantValue def = elemType->getDefaultValue();
     if (initExpr() && initExpr()->kind == ExpressionKind::StructuredAssignmentPattern) {
         auto& sap = initExpr()->as<StructuredAssignmentPatternExpression>();
         if (sap.defaultSetter) {

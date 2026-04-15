@@ -61,6 +61,10 @@ void DisableStatement::serializeTo(ASTSerializer& serializer) const {
 }
 
 ER VariableDeclStatement::evalImpl(EvalContext& context) const {
+    // Check the size limit up front to avoid running out of memory on huge variables.
+    if (!context.checkBitCount(symbol.getType().getBitstreamWidth(), sourceRange))
+        return ER::Fail;
+
     // Figure out the initial value for the variable.
     ConstantValue initial;
     if (auto initializer = symbol.getInitializer()) {
