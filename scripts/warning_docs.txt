@@ -2005,6 +2005,20 @@ class C;
 endclass
 ```
 
+-Wref-arg-in-fork-join
+The LRM prohibits referencing a 'ref' argument inside a fork-join_any or
+fork-join_none block. Some tools allow this anyway, so the error can be
+downgraded for compatibility.
+```
+task automatic run(ref bit flag);
+  fork
+    begin
+      wait(flag == 1);
+    end
+  join_any
+endtask
+```
+
 @category Macros
 
 -Wignored-macro-paste

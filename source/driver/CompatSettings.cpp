@@ -145,6 +145,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::CrossIdentInBinsof,
                  diag::NonstandardConstraintBlock,
                  diag::PortArgRedeclared,
+                 diag::RefArgForkJoin,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }

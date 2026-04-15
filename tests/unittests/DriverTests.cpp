@@ -582,3 +582,59 @@ endclass
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("port-arg-redeclared"));
 }
+
+TEST_CASE("Driver RefArgForkJoin -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // The LRM prohibits referencing a 'ref' argument inside fork-join_any/none.
+    // In strict mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+class TimerTask;
+  task run_timer(ref bit restart);
+    fork
+      begin
+        wait(restart == 1);
+      end
+    join_any
+  endtask
+endclass
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("ref-arg-in-fork-join"));
+}
+
+TEST_CASE("Driver RefArgForkJoin -- warning in compat mode") {
+    auto guard = OS::captureOutput();
+
+    // Some tools issue a warning (not an error) for ref arguments inside fork-join_any/none;
+    // --compat=all keeps the diagnostic as a warning rather than promoting it to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=all"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+class TimerTask;
+  task run_timer(ref bit restart);
+    fork
+      begin
+        wait(restart == 1);
+      end
+    join_any
+  endtask
+endclass
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("ref-arg-in-fork-join"));
+}
