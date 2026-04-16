@@ -149,6 +149,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::CannotIndexScalar,
                  diag::StringConstraintExpr,
                  diag::VirtualArgNameMismatch,
+                 diag::ParameterDoesNotExist,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }

@@ -343,7 +343,6 @@ error ParamHasNoValue "instance of '{}' does not provide a value for parameter '
 error TooManyParamAssignments "too many parameter assignments given for '{}' ({} given, expected {})"
 error AssignedToLocalPortParam "can't assign a value to a localparam"
 error AssignedToLocalBodyParam "can't assign a value to a localparam (parameters in the body of a module are implicitly local when you have a parameter port list)"
-error ParameterDoesNotExist "parameter '{}' does not exist in '{}'"
 error BadTypeParamExpr "invalid initializer for type parameter '{}'"
 error PortTypeNotInterfaceOrData "port type '{}' is neither an interface nor a data type"
 error VarWithInterfacePort "'var' keyword may not be used with an interface port"
@@ -554,6 +553,7 @@ error BiDiSwitchNetTypes "bidirectional switch cannot connect nets of two differ
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"
+warning undefined-param-override ParameterDoesNotExist "parameter '{}' does not exist in '{}'"
 warning virtual-arg-name-mismatch VirtualArgNameMismatch "virtual method argument name '{}' doesn't match '{}' given in its superclass method"
 warning warning-task WarningTask "$warning encountered{}"
 note InfoTask "$info encountered{}"
@@ -1309,7 +1309,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   string-int-concat range-select-reversed clockvar-target-assign
                   cross-ident-in-binsof nonstandard-constraint-block port-arg-redeclared
                   ref-arg-in-fork-join cannot-index-scalar string-in-constraint
-                  virtual-arg-name-mismatch }
+                  virtual-arg-name-mismatch undefined-param-override }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

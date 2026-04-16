@@ -2031,6 +2031,21 @@ module m;
 endmodule
 ```
 
+-Wundefined-param-override
+The LRM does not define the behavior when a named parameter override refers to a
+parameter that does not exist in the instantiated module. Some vendor tools
+issue only a warning and silently ignore the override, so the error can be
+downgraded for compatibility.
+```
+module bot(input clk);
+  parameter TYPE = 0;
+endmodule
+
+module top;
+  bot #(.TYPE(1), .WIDTH(1)) b(clk);  // WIDTH does not exist in bot
+endmodule
+```
+
 -Wvirtual-arg-name-mismatch
 The LRM requires virtual method overrides to use identical argument names to
 their superclass declaration. Some tools issue only a warning for this mismatch,
