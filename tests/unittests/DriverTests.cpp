@@ -2157,3 +2157,59 @@ endmodule
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("unpacked-in-assert-expr"));
 }
+
+TEST_CASE("Driver ParameterDoesNotExist -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // LRM §23.10 does not define behavior when a named parameter override refers
+    // to a parameter that does not exist in the instantiated module. In strict
+    // mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module bot(input clk);
+  parameter TYPE = 0;
+endmodule
+
+module top;
+  logic clk;
+  bot #(.TYPE(1), .WIDTH(1)) b(clk);
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("undefined-param-override"));
+}
+
+TEST_CASE("Driver ParameterDoesNotExist -- warning in VCS compat mode") {
+    auto guard = OS::captureOutput();
+
+    // VCS issues a warning (not an error) when a named parameter override refers
+    // to a non-existent parameter and silently ignores the override;
+    // --compat=vcs keeps the diagnostic as a warning rather than an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=vcs"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module bot(input clk);
+  parameter TYPE = 0;
+endmodule
+
+module top;
+  logic clk;
+  bot #(.TYPE(1), .WIDTH(1)) b(clk);
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("undefined-param-override"));
+}
