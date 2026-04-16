@@ -1293,6 +1293,41 @@ endclass
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Interface class compatibility through abstract base class") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class FullInterface;
+    pure virtual function bit funcA();
+    pure virtual function bit funcB();
+endclass
+
+virtual class PartialImpl implements FullInterface;
+    virtual function bit funcA();
+        return 1;
+    endfunction
+    pure virtual function bit funcB();
+endclass
+
+class CompleteImpl extends PartialImpl;
+    virtual function bit funcB();
+        return 1;
+    endfunction
+endclass
+
+module test;
+    FullInterface fi;
+    CompleteImpl ci;
+    initial begin
+        ci = new();
+        fi = ci;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Interface class errors") {
     auto tree = SyntaxTree::fromText(R"(
 interface class I;

@@ -720,9 +720,17 @@ bool Type::implements(const Type& ifaceClass) const {
     if (!c->isClass())
         return false;
 
-    for (auto iface : c->as<ClassType>().getImplementedInterfaces()) {
-        if (iface->isMatching(ifaceClass))
-            return true;
+    const ClassType* cls = &c->as<ClassType>();
+    while (cls) {
+        for (auto iface : cls->getImplementedInterfaces()) {
+            if (iface->isMatching(ifaceClass))
+                return true;
+        }
+
+        auto base = cls->getBaseClass();
+        if (!base || base->isError())
+            break;
+        cls = &base->getCanonicalType().as<ClassType>();
     }
 
     return false;
