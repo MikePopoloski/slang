@@ -1183,7 +1183,6 @@ error NTResolveArgModify "resolution function for nettype '{}' cannot modify its
 error MultipleUWireDrivers "'uwire' net '{}' cannot have multiple drivers"
 error MultipleUDNTDrivers "net '{}' with user-defined nettype '{}' cannot have multiple drivers because it does not specify a resolution function"
 error InputPortAssign "cannot assign to input port '{}'"
-error ClockVarTargetAssign "cannot write to '{}' with a continuous assignment since it's associated with an output clocking signal"
 error AlwaysWithoutTimingControl "'always' procedure does not advance time and so will create a simulation deadlock"
 error AssertionLocalUnassigned "cannot reference local variable '{}' because it is unassigned at this point in the sequence"
 error AssertionFormalUnassigned "output formal argument '{}' is not definitely assigned at the end of the sequence"
@@ -1195,6 +1194,7 @@ error MismatchedUserDefPortConn "user-defined nettype '{}' on one side of this c
 error MismatchedUserDefPortDir "user-defined nettype '{}' on one side of this connection means that the port must have 'input' or 'output' direction"
 error UserDefPortTwoSided "user-defined nettype '{}' of the port does not match '{}' of the connection"
 error UserDefPortMixedConcat "cannot mix and match nets with user-defined nettypes in port concatenation (see '{}' and '{}')"
+warning clockvar-target-assign ClockVarTargetAssign "cannot write to '{}' with a continuous assignment since it's associated with an output clocking signal"
 note NoteRequiredHere "required here"
 note NoteClockHere "clock here"
 note NotePortConnHere "from port connection here"
@@ -1302,7 +1302,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
                   initializer-required package-import-in-class foreach-call-expr nonstandard-hierarchical-cross
                   nonstandard-inside nonstandard-bare-assoc-pattern literal-leading-underscore ref-arg-automatic
-                  string-int-concat range-select-reversed }
+                  string-int-concat range-select-reversed clockvar-target-assign }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

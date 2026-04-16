@@ -1548,3 +1548,55 @@ TEST_CASE("Driver file preprocess with source info") {
     CHECK(contains(output, "mod1.sv:1\nmodule mod1"));
     CHECK(contains(output, "test.sv:15\n"));
 }
+
+TEST_CASE("Driver ClockVarTargetAssign -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // LRM §14.16 prohibits continuous assignments to output clockvars.
+    // In strict (default) mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m(input clk);
+    int j;
+    assign j = 1;
+    clocking cb @(posedge clk);
+        output j;
+    endclocking
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("clockvar-target-assign"));
+}
+
+TEST_CASE("Driver ClockVarTargetAssign -- warning in VCS compat mode") {
+    auto guard = OS::captureOutput();
+
+    // VCS accepts continuous assignments to output clockvars; in --compat=vcs
+    // slang should downgrade the diagnostic from error to warning.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=vcs"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m(input clk);
+    int j;
+    assign j = 1;
+    clocking cb @(posedge clk);
+        output j;
+    endclocking
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("clockvar-target-assign"));
+}
