@@ -2231,6 +2231,41 @@ endmodule
     CHECK(diags[0].code == diag::ConcurrentAssertNotInProc);
 }
 
+TEST_CASE("Immediate assertions not allowed at module level -- GH #1789") {
+    auto tree = SyntaxTree::fromText(R"(
+module foo;
+    wire b;
+    assert(b);
+    assume(b);
+    cover(b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ImmediateAssertNotInProc);
+    CHECK(diags[1].code == diag::ImmediateAssertNotInProc);
+    CHECK(diags[2].code == diag::ImmediateAssertNotInProc);
+}
+
+TEST_CASE("Deferred assertions allowed at module level") {
+    auto tree = SyntaxTree::fromText(R"(
+module foo;
+    wire b;
+    assert #0 (b);
+    assume #0 (b);
+    cover #0 (b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Non-blocking intra-assignment delays are allowed in always_comb") {
     auto tree = SyntaxTree::fromText(R"(
 module M;

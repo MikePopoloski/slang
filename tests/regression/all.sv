@@ -194,7 +194,7 @@ macromodule m3;
 
     assertion0: assert #0 (1 == 1) else $display("Hello!");
     assertion1: assume final (2 != 1) else $display("Hello!");
-    cover (2 != 1);
+    cover #0 (2 != 1);
 
     if (1) begin
         logic a,b,c,d,e,f;

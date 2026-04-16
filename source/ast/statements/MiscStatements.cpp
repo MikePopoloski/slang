@@ -237,7 +237,19 @@ Statement& ImmediateAssertionStatement::fromSyntax(Compilation& compilation,
                                                    const ImmediateAssertionStatementSyntax& syntax,
                                                    const ASTContext& context,
                                                    StatementContext& stmtCtx) {
-    AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
+    const bool isDeferred = syntax.delay != nullptr;
+    if (!isDeferred) {
+        // Immediate (non-deferred) assertions require a procedural context.
+        // The isFromAssertion flag identifies synthetic procedural blocks created for
+        // module-level assertion members, which are not valid for immediate assertions.
+        auto proc = context.getProceduralBlock();
+        bool inRealProcBlock = proc && !proc->isFromAssertion;
+        if (!context.scope->isProceduralContext() && !inRealProcBlock) {
+            context.addDiag(diag::ImmediateAssertNotInProc, syntax.sourceRange());
+            return badStmt(compilation, nullptr);
+        }
+    }
+
     auto& cond = Expression::bind(*syntax.expr->expression, context);
     bool bad = cond.bad();
 
@@ -254,13 +266,13 @@ Statement& ImmediateAssertionStatement::fromSyntax(Compilation& compilation,
                                    context, stmtCtx);
     }
 
-    bool isDeferred = syntax.delay != nullptr;
     bool isFinal = false;
     if (isDeferred)
         isFinal = syntax.delay->finalKeyword.valid();
 
-    bool isCover = assertKind == AssertionKind::CoverProperty ||
-                   assertKind == AssertionKind::CoverSequence;
+    AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
+    const bool isCover = assertKind == AssertionKind::CoverProperty ||
+                         assertKind == AssertionKind::CoverSequence;
     if (isCover && ifFalse) {
         context.addDiag(diag::CoverStmtNoFail, syntax.action->elseClause->sourceRange());
         bad = true;
