@@ -1731,8 +1731,7 @@ TEST_CASE("Driver NonstandardConstraintBlock -- error in strict mode") {
 
     const char* argv[] = {"testfoo"};
     CHECK(driver.parseCommandLine(1, argv));
-    driver.sourceLoader.addBuffer(
-        driver.sourceManager.assignText("test.sv", R"(
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
 `define CREATE_VSEQ(SEQ_NAME, CONSTRAINTS) \
   class SEQ_NAME; \
     rand int x; \
@@ -1760,8 +1759,7 @@ TEST_CASE("Driver NonstandardConstraintBlock -- warning in VCS compat mode") {
 
     const char* argv[] = {"testfoo", "--compat=vcs"};
     CHECK(driver.parseCommandLine(2, argv));
-    driver.sourceLoader.addBuffer(
-        driver.sourceManager.assignText("test.sv", R"(
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
 `define CREATE_VSEQ(SEQ_NAME, CONSTRAINTS) \
   class SEQ_NAME; \
     rand int x; \
@@ -1847,8 +1845,7 @@ TEST_CASE("Driver PortArgRedeclared -- error in strict mode") {
 
     const char* argv[] = {"testfoo"};
     CHECK(driver.parseCommandLine(1, argv));
-    driver.sourceLoader.addBuffer(
-        driver.sourceManager.assignText("test.sv", R"(
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
 class Cfg;
   task cntx_alloc(int req_cbb, output int selected_cntx);
     int selected_cntx;
@@ -1873,8 +1870,7 @@ TEST_CASE("Driver PortArgRedeclared -- warning in VCS compat mode") {
 
     const char* argv[] = {"testfoo", "--compat=vcs"};
     CHECK(driver.parseCommandLine(2, argv));
-    driver.sourceLoader.addBuffer(
-        driver.sourceManager.assignText("test.sv", R"(
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
 class Cfg;
   task cntx_alloc(int req_cbb, output int selected_cntx);
     int selected_cntx;
@@ -2063,8 +2059,7 @@ TEST_CASE("Driver VirtualArgNameMismatch -- error in strict mode") {
 
     const char* argv[] = {"testfoo"};
     CHECK(driver.parseCommandLine(1, argv));
-    driver.sourceLoader.addBuffer(
-        driver.sourceManager.assignText("test.sv", R"(
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
 class Base;
   virtual task run(int count);
   endtask
@@ -2091,8 +2086,7 @@ TEST_CASE("Driver VirtualArgNameMismatch -- warning in VCS compat mode") {
 
     const char* argv[] = {"testfoo", "--compat=vcs"};
     CHECK(driver.parseCommandLine(2, argv));
-    driver.sourceLoader.addBuffer(
-        driver.sourceManager.assignText("test.sv", R"(
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
 class Base;
   virtual task run(int count);
   endtask
@@ -2120,8 +2114,7 @@ TEST_CASE("Driver UnpackedInAssertExpr -- error in strict mode") {
 
     const char* argv[] = {"testfoo"};
     CHECK(driver.parseCommandLine(1, argv));
-    driver.sourceLoader.addBuffer(
-        driver.sourceManager.assignText("test.sv", R"(
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
 module m(input logic clk);
   int arr[4];
   assert property (@(posedge clk) arr);
@@ -2144,8 +2137,7 @@ TEST_CASE("Driver UnpackedInAssertExpr -- warning in VCS compat mode") {
 
     const char* argv[] = {"testfoo", "--compat=vcs"};
     CHECK(driver.parseCommandLine(2, argv));
-    driver.sourceLoader.addBuffer(
-        driver.sourceManager.assignText("test.sv", R"(
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
 module m(input logic clk);
   int arr[4];
   assert property (@(posedge clk) arr);

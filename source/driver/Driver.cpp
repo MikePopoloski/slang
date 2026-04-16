@@ -1090,8 +1090,8 @@ void Driver::addParseOptions(Bag& bag) const {
     soptions.singleUnit = options.singleUnit == true;
     soptions.onlyLint = options.lintMode();
     soptions.librariesInheritMacros = options.librariesInheritMacros == true;
-    soptions.libsInOwnUnitInSingleUnitMode =
-        options.libsInOwnUnit == true || options.compat == CompatMode::Vcs;
+    soptions.libsInOwnUnitInSingleUnitMode = options.libsInOwnUnit == true ||
+                                             options.compat == CompatMode::Vcs;
 
     PreprocessorOptions ppoptions;
     ppoptions.predefines = options.defines;

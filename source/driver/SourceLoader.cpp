@@ -275,8 +275,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         // Parse each named-library group that was deferred due to single-unit mode
         // into its own tree, preserving the per-library boundary.
         for (auto& [lib, buffers] : singleUnitLibBuffers) {
-            auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, optionBag,
-                                                inheritedMacros);
+            auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, optionBag, inheritedMacros);
             tree->isLibraryUnit = true;
             syntaxTrees.emplace_back(std::move(tree));
         }
