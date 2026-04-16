@@ -1945,6 +1945,20 @@ module m;
 endmodule
 ```
 
+-Wclockvar-target-assign
+The LRM explicitly prohibits writing to a variable with a continuous assignment when
+it is associated with an output clockvar. Some tools accept this construct with a warning,
+so the error can be downgraded for compatibility.
+```
+module m(input clk);
+    int j;
+    assign j = 1;
+    clocking cb @(posedge clk);
+        output j;
+    endclocking
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste

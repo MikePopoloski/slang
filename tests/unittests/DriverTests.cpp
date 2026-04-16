@@ -292,3 +292,55 @@ TEST_CASE("Driver single-unit gives library files their own tree") {
     CHECK(defaultUnits == 1);
     CHECK(libraryUnits == 1);
 }
+
+TEST_CASE("Driver ClockVarTargetAssign -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // The LRM prohibits continuous assignments to output clockvars.
+    // In strict (default) mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m(input clk);
+    int j;
+    assign j = 1;
+    clocking cb @(posedge clk);
+        output j;
+    endclocking
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("clockvar-target-assign"));
+}
+
+TEST_CASE("Driver ClockVarTargetAssign -- warning in compat mode") {
+    auto guard = OS::captureOutput();
+
+    // Some tools accept continuous assignments to output clockvars; in --compat=all
+    // slang should downgrade the diagnostic from error to warning.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=all"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m(input clk);
+    int j;
+    assign j = 1;
+    clocking cb @(posedge clk);
+        output j;
+    endclocking
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("clockvar-target-assign"));
+}
