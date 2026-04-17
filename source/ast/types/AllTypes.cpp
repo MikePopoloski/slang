@@ -336,6 +336,12 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
     SVInt allOnes(bitWidth, 0, cb->isSigned());
     allOnes.setAllOnes();
 
+    // The maximum value that can be incremented without overflow depends on signedness.
+    // For unsigned types this is all-ones (e.g. 0xFF); for signed types it is the
+    // largest positive value (e.g. 0x7F), since incrementing it wraps to the most
+    // negative value.
+    SVInt maxVal = cb->isSigned() ? allOnes.lshr(1) : allOnes;
+
     SVInt one(bitWidth, 1, cb->isSigned());
     ConstantValue previous;
     SourceRange previousRange;
@@ -453,7 +459,7 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
                 previous = nullptr;
                 return;
             }
-            else if (prev == allOnes) {
+            else if (prev == maxVal) {
                 auto& diag = context.addDiag(diag::EnumValueOverflow, loc);
                 diag << prev << *base << previousRange;
                 previous = nullptr;

@@ -150,6 +150,33 @@ endmodule
     CHECK(diags[10].code == diag::EnumIncrementUnknown);
 }
 
+TEST_CASE("Enum signed overflow check") {
+    // Regression test: signed enum with previous value == -1 should not trigger overflow.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum int { A = -1, B, C } e1;
+    enum int { D = 2147483647, E } e2;  // max int, next should overflow
+    enum byte { F = 126, G, H } e3;    // 126->127->overflow
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& root = compilation.getRoot();
+    auto& m = root.lookupName<InstanceSymbol>("m");
+
+    auto& e1 = m.body.lookupName<EnumValueSymbol>("B");
+    CHECK(e1.getValue().integer() == 0);
+    auto& e1c = m.body.lookupName<EnumValueSymbol>("C");
+    CHECK(e1c.getValue().integer() == 1);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::EnumValueOverflow);
+    CHECK(diags[1].code == diag::EnumValueOverflow);
+}
+
 TEST_CASE("Enum value count limit") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
