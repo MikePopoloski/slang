@@ -744,6 +744,11 @@ FunctionPortListSyntax* Parser::parseFunctionPortList(bitmask<FunctionOptions> o
     return &factory.functionPortList(openParen, buffer.copy(alloc), closeParen);
 }
 
+FunctionPrototypeSyntax& Parser::parseFunctionPrototype() {
+    return parseFunctionPrototype(SyntaxKind::Unknown, FunctionOptions::AllowImplicitReturn |
+                                                           FunctionOptions::IsPrototype);
+}
+
 FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
                                                         bitmask<FunctionOptions> options,
                                                         bool* isConstructor) {

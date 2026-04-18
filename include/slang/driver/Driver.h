@@ -54,6 +54,8 @@ enum class AnalysisFlags;
 
 namespace slang::driver {
 
+class UserDefinedSubroutine;
+
 /// Flags that control output behavior when running the preprocessor directly.
 enum class SLANG_EXPORT PreprocessOutputFlags {
     /// No flags specified.
@@ -496,6 +498,7 @@ private:
     std::vector<std::tuple<std::string_view, std::string_view, std::string_view>>
         translateOffFormats;
     std::unique_ptr<JsonWriter> jsonWriter;
+    std::vector<std::shared_ptr<UserDefinedSubroutine>> userDefinedSubroutines;
 };
 
 } // namespace slang::driver

@@ -157,6 +157,7 @@ public:
     syntax::ClassDeclarationSyntax& parseClass();
     syntax::MemberSyntax* parseSingleMember(syntax::SyntaxKind parentKind);
     syntax::NameSyntax& parseName();
+    syntax::FunctionPrototypeSyntax& parseFunctionPrototype();
 
     /// Generalized node parse function that tries to figure out what we're
     /// looking at and parse that specifically. A normal batch compile won't call

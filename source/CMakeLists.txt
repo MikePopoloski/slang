@@ -79,6 +79,7 @@ add_library(
   diagnostics/Diagnostics.cpp
   diagnostics/JsonDiagnosticClient.cpp
   diagnostics/TextDiagnosticClient.cpp
+  driver/UserDefinedSubroutine.cpp
   driver/CompatSettings.cpp
   driver/Driver.cpp
   driver/SourceLoader.cpp

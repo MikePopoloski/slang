@@ -18,6 +18,7 @@
 #include "slang/diagnostics/JsonDiagnosticClient.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/SourceLoader.h"
+#include "slang/driver/UserDefinedSubroutine.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
@@ -266,6 +267,22 @@ void Driver::addStandardArgs() {
                 "<library>", CommandLineFlags::CommaList);
     cmdLine.add("--defaultLibName", options.defaultLibName, "Sets the name of the default library",
                 "<name>");
+    cmdLine.add(
+        "--define-system-task",
+        [this](std::string_view arg) {
+            auto result = UserDefinedSubroutine::create(arg, sourceManager);
+            if (!result)
+                return result.error();
+
+            userDefinedSubroutines.emplace_back(std::move(*result));
+            return ""s;
+        },
+        "Define a custom system task or function. The subroutine name must start with '$'. "
+        "Optionally include a port list and, for functions, a return type using standard "
+        "SystemVerilog syntax (e.g. 'function int $my_func(int a, string b)'). "
+        "If neither a port list nor a return type is specified the subroutine accepts "
+        "any number of arguments and is treated as a task.",
+        "<prototype>");
 
     // Diagnostics control
     cmdLine.add("-W", options.warningOptions, "Control the specified warning", "<warning>");
@@ -1208,6 +1225,8 @@ std::unique_ptr<Compilation> Driver::createCompilation() {
         compilation->addSyntaxTree(tree);
     for (auto& tree : syntaxTrees)
         compilation->addSyntaxTree(tree);
+    for (auto& subroutine : userDefinedSubroutines)
+        compilation->addSystemSubroutine(subroutine);
 
     return compilation;
 }

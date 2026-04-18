@@ -1483,3 +1483,117 @@ TEST_CASE("Driver file preprocess with source info") {
     CHECK(contains(output, "mod1.sv:1\nmodule mod1"));
     CHECK(contains(output, "test.sv:15\n"));
 }
+
+TEST_CASE("Driver define-system-task command line parsing") {
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = "testfoo --define-system-task $my_task "
+                "--define-system-task \"function int $my_func(output int a)\""sv;
+    CHECK(driver.parseCommandLine(args));
+
+    auto tree = SyntaxTree::fromText(
+        "module m; initial begin int a; $my_task(); void'($my_func(a)); end endmodule\n",
+        driver.sourceManager, "source"sv);
+    driver.syntaxTrees.push_back(tree);
+
+    auto compilation = driver.createCompilation();
+    auto diags = compilation->getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    CHECK(diags.empty());
+}
+
+TEST_CASE("Driver define-system-task any-args") {
+    Driver driver;
+    driver.addStandardArgs();
+    CHECK(driver.parseCommandLine("testfoo --define-system-task $my_task"sv));
+
+    auto tree = SyntaxTree::fromText("module m; initial $my_task(1, \"hello\", 3.14); endmodule\n",
+                                     driver.sourceManager, "source"sv);
+    driver.syntaxTrees.push_back(tree);
+
+    auto compilation = driver.createCompilation();
+    auto diags = compilation->getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    CHECK(diags.empty());
+}
+
+TEST_CASE("Driver define-system-task typed args task") {
+    Driver driver;
+    driver.addStandardArgs();
+    CHECK(driver.parseCommandLine(
+        "testfoo --define-system-task \"task $my_task(int a, string b)\""sv));
+
+    auto tree = SyntaxTree::fromText("module m; initial $my_task(42, \"hello\"); endmodule\n",
+                                     driver.sourceManager, "source"sv);
+    driver.syntaxTrees.push_back(tree);
+
+    auto compilation = driver.createCompilation();
+    auto diags = compilation->getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    CHECK(diags.empty());
+}
+
+TEST_CASE("Driver define-system-task function with return type") {
+    Driver driver;
+    driver.addStandardArgs();
+    CHECK(
+        driver.parseCommandLine("testfoo --define-system-task \"function int $my_func(int a)\""sv));
+
+    auto tree =
+        SyntaxTree::fromText("module m; initial begin int x; x = $my_func(1); end endmodule\n",
+                             driver.sourceManager, "source"sv);
+    driver.syntaxTrees.push_back(tree);
+
+    auto compilation = driver.createCompilation();
+    auto diags = compilation->getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    CHECK(diags.empty());
+}
+
+TEST_CASE("Driver define-system-task wrong arg count") {
+    Driver driver;
+    driver.addStandardArgs();
+    CHECK(driver.parseCommandLine("testfoo --define-system-task \"  task $my_task(int a); \""sv));
+
+    auto tree = SyntaxTree::fromText("module m; initial $my_task(1, 2); endmodule\n",
+                                     driver.sourceManager, "source"sv);
+    driver.syntaxTrees.push_back(tree);
+
+    auto compilation = driver.createCompilation();
+    auto diags = compilation->getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::TooManyArguments);
+}
+
+TEST_CASE("Driver define-system-task invalid prototype") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+    CHECK(!driver.parseCommandLine("testfoo --define-system-task \"$my_task garbage_token\""sv));
+
+    CHECK(stderrContains(
+        "'$my_task garbage_token': failed to parse as a system task or function prototype"));
+}
+
+TEST_CASE("Driver define-system-task missing dollar sign") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+    CHECK(!driver.parseCommandLine("testfoo --define-system-task \"task my_task\""sv));
+
+    CHECK(stderrContains("subroutine name must start with '$'"));
+}
+
+TEST_CASE("Driver define-system-task no-args function") {
+    Driver driver;
+    driver.addStandardArgs();
+    CHECK(driver.parseCommandLine("testfoo --define-system-task \"function $my_func\""sv));
+
+    auto tree =
+        SyntaxTree::fromText("module m; initial begin logic x; x = $my_func(); end endmodule\n",
+                             driver.sourceManager, "source"sv);
+    driver.syntaxTrees.push_back(tree);
+
+    auto compilation = driver.createCompilation();
+    auto diags = compilation->getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    CHECK(diags.empty());
+}
