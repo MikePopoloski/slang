@@ -166,6 +166,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "WASI")
+  # mimalloc is incompatible with WASM
+  set(SLANG_USE_MIMALLOC OFF)
+
   add_compile_options(-fno-exceptions)
 
   add_compile_definitions(_WASI_EMULATED_SIGNAL)
