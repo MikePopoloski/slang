@@ -10,6 +10,7 @@
 // CHECK: "severity": "warning"
 // CHECK: no top-level modules found in design
 // CHECK: missing-top
+// CHECK: symbolPath
 
 // RUN: %slang --libmap %data/infinite.map 2>&1 || true
 // CHECK: error: library map{{.*}}includes itself recursively
