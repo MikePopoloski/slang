@@ -856,3 +856,95 @@ endmodule
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("undefined-param-override"));
 }
+
+TEST_CASE("Driver Redefinition -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // The LRM requires unique identifiers within a scope.
+    // In strict mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m;
+  int i;
+  int i;
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("redefinition"));
+}
+
+TEST_CASE("Driver Redefinition -- warning in compat mode") {
+    auto guard = OS::captureOutput();
+
+    // Some vendor tools issue a warning (not an error) for duplicate declarations;
+    // --compat=all keeps the diagnostic as a warning rather than promoting it to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=all"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m;
+  int i;
+  int i;
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("redefinition"));
+}
+
+TEST_CASE("Driver RedefinitionDifferentType -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // The LRM requires unique identifiers within a scope.
+    // In strict mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m;
+  int i;
+  bit [3:0] i;
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("redefinition-different-type"));
+}
+
+TEST_CASE("Driver RedefinitionDifferentType -- warning in compat mode") {
+    auto guard = OS::captureOutput();
+
+    // Some vendor tools issue a warning (not an error) for a redeclaration with a different type;
+    // --compat=all keeps the diagnostic as a warning rather than promoting it to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=all"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m;
+  int i;
+  bit [3:0] i;
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("redefinition-different-type"));
+}

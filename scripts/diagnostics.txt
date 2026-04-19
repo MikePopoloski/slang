@@ -953,8 +953,8 @@ error TypeRefVoid "cannot create a type reference to the 'void' type"
 warning enum-range EnumRangeLiteral "enum element ranges must be integer literals"
 
 subsystem Lookup
-error Redefinition "redefinition of '{}'"
-error RedefinitionDifferentType "redefinition of '{}' with a different type: {} vs {}"
+warning redefinition Redefinition "redefinition of '{}'"
+warning redefinition-different-type RedefinitionDifferentType "redefinition of '{}' with a different type: {} vs {}"
 error AmbiguousWildcardImport "multiple imports found for identifier '{}'"
 note NoteImportedFrom "imported from here"
 note NoteDidYouMean "did you mean '{}'?"
@@ -1309,7 +1309,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   string-int-concat range-select-reversed clockvar-target-assign
                   cross-ident-in-binsof nonstandard-constraint-block port-arg-redeclared
                   ref-arg-in-fork-join cannot-index-scalar string-in-constraint
-                  virtual-arg-name-mismatch undefined-param-override }
+                  virtual-arg-name-mismatch undefined-param-override redefinition
+                  redefinition-different-type }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

@@ -2061,6 +2061,28 @@ class Derived extends Base;
 endclass
 ```
 
+-Wredefinition
+The LRM requires every identifier in a scope to have a unique definition.
+Some tools issue only a warning when a name is declared more than once in the
+same scope, so the error can be downgraded for compatibility.
+```
+module m;
+  int i;
+  int i;  // duplicate declaration
+endmodule
+```
+
+-Wredefinition-different-type
+The LRM requires every identifier in a scope to have a unique definition.
+Some tools issue only a warning when a name is re-declared with a different type
+in the same scope, so the error can be downgraded for compatibility.
+```
+module m;
+  int i;
+  bit [3:0] i;  // redeclared with a different type
+endmodule
+```
+
 -Wstring-in-constraint
 The LRM does not permit string sub-expressions in constraint expressions.
 Some tools accept string equality comparisons inside constraint if-conditions as an extension.
