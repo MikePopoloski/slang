@@ -526,6 +526,15 @@ def run_test(
             slang_is_cmdline=slang_is_cmdline,
             user_defines=user_defines,
         )
+        if os.name == "nt":
+            # cmd.exe does not interpret single quotes as quoting characters;
+            # they are passed literally to the child process.  Convert
+            # 'arg' -> "arg" so that grouped arguments work on Windows.
+            cmd = re.sub(
+                r"'([^']*)'",
+                lambda m: '"' + m.group(1).replace('"', '\\"') + '"',
+                cmd,
+            )
         if verbose:
             print(f"  $ {cmd}")
         try:
@@ -546,8 +555,14 @@ def run_test(
             )
 
         combined_output += proc.stdout
-        if proc.returncode != 0 and not parsed.xfail and not ignore_exit:
+        if proc.returncode != 0 and not ignore_exit:
             elapsed = time.monotonic() - start
+            if parsed.xfail:
+                return TestResult(
+                    path=parsed.path,
+                    status="XFAIL",
+                    elapsed=elapsed,
+                )
             msg = f"command exited with code {proc.returncode}\n  command: {cmd}"
             if proc.stderr:
                 stderr_preview = "\n".join(
@@ -560,12 +575,6 @@ def run_test(
                 elapsed=elapsed,
                 message=msg,
                 output=combined_output,
-            )
-        elif proc.returncode != 0:
-            return TestResult(
-                path=parsed.path,
-                status="XFAIL",
-                elapsed=time.monotonic() - start,
             )
 
     # --- Run CHECK directives -------------------------------------------------
@@ -719,13 +728,13 @@ def load_lit_conf(directory: Path) -> dict:
                 # Normalise any absolute path that may contain .. segments.
                 if "=" in value:
                     k, _, v = value.partition("=")
-                    if v.startswith("/"):
+                    if os.path.isabs(v):
                         v = os.path.normpath(v)
                     value = f"{k}={v}"
                 result["defines"].append(value)
             elif line.startswith("slang "):
                 slang_val = line[len("slang ") :].strip()
-                if slang_val.startswith("/"):
+                if os.path.isabs(slang_val):
                     slang_val = os.path.normpath(slang_val)
                 result["slang"] = slang_val
             else:
