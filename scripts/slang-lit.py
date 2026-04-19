@@ -93,6 +93,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 
+
+def _quote_arg(value: str) -> str:
+    """Quote a shell argument for the current platform shell."""
+    if os.name == "nt":
+        return subprocess.list2cmdline([value])
+    return shlex.quote(value)
+
+
 # ---------------------------------------------------------------------------
 # Color helpers
 # ---------------------------------------------------------------------------
@@ -178,6 +186,7 @@ def expand_substitutions(
     tmp_file: Path,
     tmp_dir: Path,
     slang_path: str,
+    slang_is_cmdline: bool,
     user_defines: dict[str, str] | None = None,
 ) -> str:
     """Replace %s, %t, %T, %slang, and user-defined %KEY substitutions in a RUN-line command."""
@@ -185,11 +194,13 @@ def expand_substitutions(
     # values cannot accidentally match built-in tokens like %s or %t.
     if user_defines:
         for key, value in user_defines.items():
-            command = command.replace(f"%{key}", shlex.quote(value))
-    command = command.replace("%slang", shlex.quote(slang_path))
-    command = command.replace("%s", shlex.quote(str(source_path)))
-    command = command.replace("%t", shlex.quote(str(tmp_file)))
-    command = command.replace("%T", shlex.quote(str(tmp_dir)))
+            command = command.replace(f"%{key}", _quote_arg(value))
+    command = command.replace(
+        "%slang", slang_path if slang_is_cmdline else _quote_arg(slang_path)
+    )
+    command = command.replace("%s", _quote_arg(str(source_path)))
+    command = command.replace("%t", _quote_arg(str(tmp_file)))
+    command = command.replace("%T", _quote_arg(str(tmp_dir)))
     return command
 
 
@@ -466,6 +477,7 @@ def run_test(
     parsed: ParsedTest,
     *,
     slang_path: str,
+    slang_is_cmdline: bool,
     tmp_dir: Path,
     verbose: bool,
     available_features: set[str],
@@ -498,14 +510,31 @@ def run_test(
     # --- Execute RUN commands -------------------------------------------------
     combined_output = ""
     for run_cmd in parsed.run_lines:
+        ignore_exit = False
+        if re.search(r"\|\|\s*true\s*$", run_cmd):
+            # Keep tests portable across shells where `true` may not exist
+            # (notably cmd.exe on Windows).
+            run_cmd = re.sub(r"\s*\|\|\s*true\s*$", "", run_cmd)
+            ignore_exit = True
+
         cmd = expand_substitutions(
             run_cmd,
             source_path=parsed.path.resolve(),
             tmp_file=tmp_file,
             tmp_dir=tmp_dir,
             slang_path=slang_path,
+            slang_is_cmdline=slang_is_cmdline,
             user_defines=user_defines,
         )
+        if os.name == "nt":
+            # cmd.exe does not interpret single quotes as quoting characters;
+            # they are passed literally to the child process.  Convert
+            # 'arg' -> "arg" so that grouped arguments work on Windows.
+            cmd = re.sub(
+                r"'([^']*)'",
+                lambda m: '"' + m.group(1).replace('"', '\\"') + '"',
+                cmd,
+            )
         if verbose:
             print(f"  $ {cmd}")
         try:
@@ -526,8 +555,14 @@ def run_test(
             )
 
         combined_output += proc.stdout
-        if proc.returncode != 0 and not parsed.xfail:
+        if proc.returncode != 0 and not ignore_exit:
             elapsed = time.monotonic() - start
+            if parsed.xfail:
+                return TestResult(
+                    path=parsed.path,
+                    status="XFAIL",
+                    elapsed=elapsed,
+                )
             msg = f"command exited with code {proc.returncode}\n  command: {cmd}"
             if proc.stderr:
                 stderr_preview = "\n".join(
@@ -540,12 +575,6 @@ def run_test(
                 elapsed=elapsed,
                 message=msg,
                 output=combined_output,
-            )
-        elif proc.returncode != 0:
-            return TestResult(
-                path=parsed.path,
-                status="XFAIL",
-                elapsed=time.monotonic() - start,
             )
 
     # --- Run CHECK directives -------------------------------------------------
@@ -631,6 +660,10 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 def find_slang(hint: str | None = None) -> str:
     """Return a path to the slang binary, or raise SystemExit."""
     if hint:
+        # Allow passing a full command line, for example a wasm launcher plus
+        # path to binary.
+        if any(ch.isspace() for ch in hint.strip()):
+            return hint
         if shutil.which(hint):
             return hint
         if Path(hint).is_file():
@@ -650,11 +683,12 @@ def find_slang(hint: str | None = None) -> str:
     best: tuple[float, Path] | None = None
     if build_root.is_dir():
         for entry in build_root.iterdir():
-            candidate = entry / "bin" / "slang"
-            if candidate.is_file():
-                mtime = candidate.stat().st_mtime
-                if best is None or mtime > best[0]:
-                    best = (mtime, candidate)
+            for candidate_name in ("slang", "slang.exe"):
+                candidate = entry / "bin" / candidate_name
+                if candidate.is_file():
+                    mtime = candidate.stat().st_mtime
+                    if best is None or mtime > best[0]:
+                        best = (mtime, candidate)
     if best is not None:
         return str(best[1])
 
@@ -694,13 +728,13 @@ def load_lit_conf(directory: Path) -> dict:
                 # Normalise any absolute path that may contain .. segments.
                 if "=" in value:
                     k, _, v = value.partition("=")
-                    if v.startswith("/"):
+                    if os.path.isabs(v):
                         v = os.path.normpath(v)
                     value = f"{k}={v}"
                 result["defines"].append(value)
             elif line.startswith("slang "):
                 slang_val = line[len("slang ") :].strip()
-                if slang_val.startswith("/"):
+                if os.path.isabs(slang_val):
                     slang_val = os.path.normpath(slang_val)
                 result["slang"] = slang_val
             else:
@@ -709,6 +743,40 @@ def load_lit_conf(directory: Path) -> dict:
                     file=sys.stderr,
                 )
     return result
+
+
+def maybe_wrap_wasm_launcher(slang_bin: str) -> tuple[str, bool]:
+    """Return (command, is_cmdline) and auto-wrap wasm binaries via wasmtime."""
+    p = Path(slang_bin)
+    if not p.is_file():
+        return slang_bin, False
+
+    try:
+        with p.open("rb") as fh:
+            magic = fh.read(4)
+    except OSError:
+        return slang_bin, False
+
+    if magic != b"\0asm":
+        return slang_bin, False
+
+    wasmtime = shutil.which("wasmtime")
+    if not wasmtime:
+        return slang_bin, False
+
+    tests_dir = (_SCRIPT_DIR.parent / "tests").resolve()
+    cmd = " ".join(
+        [
+            _quote_arg(wasmtime),
+            "run",
+            "-S",
+            "threads",
+            "--dir=/",
+            f"--dir={_quote_arg(str(tests_dir))}::tests",
+            _quote_arg(str(p.resolve())),
+        ]
+    )
+    return cmd, True
 
 
 # ---------------------------------------------------------------------------
@@ -778,6 +846,7 @@ def main(argv: list[str] | None = None) -> int:
             conf_slang = conf["slang"]
 
     slang_bin = find_slang(args.slang or conf_slang)
+    slang_cmd, slang_is_cmdline = maybe_wrap_wasm_launcher(slang_bin)
 
     # Parse --define KEY=VALUE arguments into a substitution dict.
     # Conf-file defines provide defaults; CLI --define overrides them.
@@ -831,7 +900,7 @@ def main(argv: list[str] | None = None) -> int:
     total = len(parsed_tests)
     width = len(str(total))
 
-    print(f"Running {total} test{'s' if total != 1 else ''} with {slang_bin}\n")
+    print(f"Running {total} test{'s' if total != 1 else ''} with {slang_cmd}\n")
 
     with tempfile.TemporaryDirectory(prefix="slang_lit_") as tmpdir:
         tmp_dir = Path(tmpdir)
@@ -839,7 +908,8 @@ def main(argv: list[str] | None = None) -> int:
         def _run(pt: ParsedTest) -> TestResult:
             return run_test(
                 pt,
-                slang_path=slang_bin,
+                slang_path=slang_cmd,
+                slang_is_cmdline=slang_is_cmdline,
                 tmp_dir=tmp_dir,
                 verbose=args.verbose,
                 available_features=available_features,
@@ -858,7 +928,8 @@ def main(argv: list[str] | None = None) -> int:
             for pt in parsed_tests:
                 r = run_test(
                     pt,
-                    slang_path=slang_bin,
+                    slang_path=slang_cmd,
+                    slang_is_cmdline=slang_is_cmdline,
                     tmp_dir=tmp_dir,
                     verbose=args.verbose,
                     available_features=available_features,
