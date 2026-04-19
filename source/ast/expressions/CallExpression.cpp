@@ -613,6 +613,13 @@ Expression& CallExpression::createSystemCall(
                             buffer.push_back(compilation.emplace<EmptyArgumentExpression>(
                                 compilation.getVoidType(), actualArgs[i]->sourceRange()));
                         }
+                        else if (subroutine.allowEmptyArgumentInCompatMode(index) &&
+                                 compilation.hasFlag(CompilationFlags::AllowSFormatfEmptyArg)) {
+                            argContext.addDiag(diag::EmptyArgNotAllowed,
+                                               actualArgs[i]->sourceRange());
+                            buffer.push_back(compilation.emplace<EmptyArgumentExpression>(
+                                compilation.getVoidType(), actualArgs[i]->sourceRange()));
+                        }
                         else {
                             argContext.addDiag(diag::EmptyArgNotAllowed,
                                                actualArgs[i]->sourceRange());

@@ -254,6 +254,9 @@ void Driver::addStandardArgs() {
                 "primitive at the root scope within the same library when the conflicting "
                 "definition comes from a library file (-v / --libfile); the first definition "
                 "is kept and subsequent library-file redefinitions are silently discarded");
+    addCompFlag(CompilationFlags::AllowSFormatfEmptyArg, "--allow-sformatf-empty-arg",
+                "Allow $sformatf (and related functions) to accept a trailing comma that "
+                "produces an empty argument, matching the behavior of some other tools");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "

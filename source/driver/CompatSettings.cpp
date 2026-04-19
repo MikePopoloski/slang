@@ -36,7 +36,8 @@ using namespace analysis;
     CompilationFlags::AllowSelfDeterminedStreamConcat, \
     CompilationFlags::AllowMergingAnsiPorts, \
     CompilationFlags::AllowArrayConcatAssignPattern, \
-    CompilationFlags::AllowLibModuleRedefinition
+    CompilationFlags::AllowLibModuleRedefinition, \
+    CompilationFlags::AllowSFormatfEmptyArg
 
 static constexpr CompilationFlags vcsCompFlags[] = {VCS_COMP_FLAGS};
 static constexpr CompilationFlags allCompFlags[] = {
@@ -152,6 +153,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::ParameterDoesNotExist,
                  diag::Redefinition,
                  diag::RedefinitionDifferentType,
+                 diag::EmptyArgNotAllowed,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }

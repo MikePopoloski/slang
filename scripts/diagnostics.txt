@@ -640,7 +640,7 @@ error AssignmentPatternNoMember "member '{}' is not covered by any assignment pa
 error AssignmentPatternMissingElements "not all elements of array are covered by an assignment pattern key"
 error AssignmentPatternDynamicType "assignment patterns for dynamic arrays, associative arrays, and queues cannot have type keys"
 error AssignmentPatternAssociativeType "assignment pattern for associative array must specify key:value pairs"
-error EmptyArgNotAllowed "empty argument not allowed"
+warning empty-arg-not-allowed EmptyArgNotAllowed "empty argument not allowed"
 error NamedArgNotAllowed "named argument not allowed"
 error DuplicateArgAssignment "duplicate assignment for argument '{}'"
 error MixingOrderedAndNamedArgs "ordered arguments are not allowed after named arguments"
@@ -1310,7 +1310,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   cross-ident-in-binsof nonstandard-constraint-block port-arg-redeclared
                   ref-arg-in-fork-join cannot-index-scalar string-in-constraint
                   virtual-arg-name-mismatch undefined-param-override redefinition
-                  redefinition-different-type }
+                  redefinition-different-type empty-arg-not-allowed }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

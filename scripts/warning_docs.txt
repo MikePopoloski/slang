@@ -2897,3 +2897,9 @@ endmodule
 
 -Winvalid-source-encoding
 <ignored>
+
+-Wempty-arg-not-allowed
+An empty argument was passed to a system function that does not accept empty
+arguments. In VCS compatibility mode this is downgraded to a warning so that
+$sformatf calls with a trailing comma (produced by certain macro expansions)
+are tolerated.

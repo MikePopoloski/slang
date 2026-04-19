@@ -948,3 +948,51 @@ endmodule
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stderrContains("redefinition-different-type"));
 }
+
+TEST_CASE("Driver EmptyArgNotAllowed -- error in strict mode") {
+    auto guard = OS::captureOutput();
+
+    // Some vendor tools allow a trailing comma in $sformatf (and related functions),
+    // producing an empty argument. In strict mode slang promotes the diagnostic to an error.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m;
+    string s;
+    int x = 5;
+    initial s = $sformatf("value=%0d", x,);
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.runFullCompilation());
+    CHECK(stdoutContains("Build failed"));
+    CHECK(stderrContains("empty-arg-not-allowed"));
+}
+
+TEST_CASE("Driver EmptyArgNotAllowed -- warning in compat mode") {
+    auto guard = OS::captureOutput();
+
+    // Some vendor tools allow a trailing comma in $sformatf (and related functions),
+    // producing an empty argument; --compat=all keeps the diagnostic as a warning.
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--compat=all"};
+    CHECK(driver.parseCommandLine(2, argv));
+    driver.sourceLoader.addBuffer(driver.sourceManager.assignText("test.sv", R"(
+module m;
+    string s;
+    int x = 5;
+    initial s = $sformatf("value=%0d", x,);
+endmodule
+)"));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.runFullCompilation());
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stderrContains("empty-arg-not-allowed"));
+}

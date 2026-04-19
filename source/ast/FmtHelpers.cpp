@@ -189,6 +189,10 @@ bool FmtHelpers::checkSFormatArgs(const ASTContext& context, const Args& args) {
     if (!checkFormatString(context, arg->as<StringLiteral>(), argIt, args.end()))
         return false;
 
+    // Skip trailing empty arguments (already diagnosed separately by the caller).
+    while (argIt != args.end() && (*argIt)->kind == ExpressionKind::EmptyArgument)
+        ++argIt;
+
     // Leftover arguments are invalid (all must be consumed by the format string).
     if (argIt != args.end()) {
         context.addDiag(diag::FormatTooManyArgs, (*argIt)->sourceRange);
@@ -243,10 +247,7 @@ std::optional<std::string> FmtHelpers::formatArgs(std::string_view formatString,
 
             auto arg = *argIt++;
             if (arg->kind == ExpressionKind::EmptyArgument) {
-                // Empty arguments aren't allowed for format args.
-                context.addDiag(diag::FormatEmptyArg, formatExpr.sourceRange)
-                    << spec << formatExpr.sourceRange;
-                ok = false;
+                result.push_back(' ');
                 return;
             }
 

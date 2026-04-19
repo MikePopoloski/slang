@@ -67,6 +67,10 @@ public:
     /// passed for the given argument index.
     virtual bool allowEmptyArgument(size_t) const { return false; }
 
+    /// @returns true if the subroutine allows an empty argument to be passed
+    /// for the given argument index when compiling in a compatibility mode.
+    virtual bool allowEmptyArgumentInCompatMode(size_t) const { return false; }
+
     /// @returns true if the subroutine allows a clocking event to be
     /// passed for the given argument index.
     virtual bool allowClockingArgument(size_t) const { return false; }
