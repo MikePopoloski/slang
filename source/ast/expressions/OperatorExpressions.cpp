@@ -1455,6 +1455,12 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
         rightFlags |= ASTFlags::AllowUnboundedLiteral;
     }
 
+    // Pass through the flag allowing streaming operators.
+    if (context.flags.has(ASTFlags::StreamingAllowed)) {
+        leftFlags |= ASTFlags::StreamingAllowed;
+        rightFlags |= ASTFlags::StreamingAllowed;
+    }
+
     auto& left = create(comp, *syntax.left, trueContext, leftFlags, assignmentTarget);
     auto& right = create(comp, *syntax.right, context, rightFlags, assignmentTarget);
     bad |= left.bad() || right.bad();
@@ -1466,44 +1472,49 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
     if (rt->isUnbounded())
         rt = &comp.getIntType();
 
+    // If a branch is a streaming concatenation (void type), substitute the assignment
+    // target or the other branch's type for the purpose of type unification. The actual
+    // conversion of the streaming branch happens below via convertAssignment.
+    const bool leftIsStreaming = left.kind == ExpressionKind::Streaming && lt->isVoid();
+    const bool rightIsStreaming = right.kind == ExpressionKind::Streaming && rt->isVoid();
+    if (leftIsStreaming)
+        lt = assignmentTarget ? assignmentTarget : rt;
+    if (rightIsStreaming)
+        rt = assignmentTarget ? assignmentTarget : lt;
+
     // Force four-state return type for ambiguous condition case.
     const Type* resultType = OpInfo::binaryType(comp, lt, rt, isFourState);
-    auto result = comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp),
-                                                      syntax.question.location(), left, right,
-                                                      syntax.sourceRange(), isConst, isTrue);
-    if (bad)
-        return badExpr(comp, result);
 
     // If both sides of the expression are numeric, we've already determined the correct
     // result type. Otherwise, follow the rules in [11.14.11].
     bool good = true;
     if (!lt->isNumeric() || !rt->isNumeric()) {
         if (lt->isNull() && rt->isNull()) {
-            result->type = &comp.getNullType();
+            resultType = &comp.getNullType();
         }
         else if (lt->isClass() || rt->isClass() || lt->isCHandle() || rt->isCHandle() ||
                  lt->isEvent() || rt->isEvent() || lt->isVirtualInterface() ||
                  rt->isVirtualInterface() || lt->isCovergroup() || rt->isCovergroup()) {
             if (lt->isNull())
-                result->type = rt;
+                resultType = rt;
             else if (rt->isNull())
-                result->type = lt;
+                resultType = lt;
             else if (rt->isAssignmentCompatible(*lt))
-                result->type = rt;
+                resultType = rt;
             else if (lt->isAssignmentCompatible(*rt))
-                result->type = lt;
+                resultType = lt;
             else if (auto common = Type::getCommonBase(*lt, *rt))
-                result->type = common;
+                resultType = common;
             else if (lt->isEquivalent(*rt))
-                result->type = lt;
+                resultType = lt;
             else
                 good = false;
         }
         else if (lt->isEquivalent(*rt)) {
-            result->type = lt;
+            resultType = lt;
         }
         else if (left.isImplicitString() && right.isImplicitString()) {
-            result->type = &comp.getStringType();
+            resultType = &comp.getStringType();
         }
         else {
             good = false;
@@ -1515,8 +1526,31 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
         diag << *lt << *rt;
         diag << left.sourceRange;
         diag << right.sourceRange;
-        return badExpr(comp, result);
+        return badExpr(comp, comp.emplace<ConditionalExpression>(
+                                  *resultType, conditions.copy(comp), syntax.question.location(),
+                                  left, right, syntax.sourceRange(), isConst, isTrue));
     }
+
+    // Convert streaming concat branches to the result type before building the node.
+    Expression* leftExpr = &left;
+    Expression* rightExpr = &right;
+    if (!bad) {
+        if (leftIsStreaming) {
+            leftExpr = &convertAssignment(trueContext, *resultType, left, left.sourceRange);
+            bad |= leftExpr->bad();
+        }
+        if (rightIsStreaming) {
+            rightExpr = &convertAssignment(context, *resultType, right, right.sourceRange);
+            bad |= rightExpr->bad();
+        }
+    }
+
+    auto result = comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp),
+                                                      syntax.question.location(), *leftExpr,
+                                                      *rightExpr, syntax.sourceRange(), isConst,
+                                                      isTrue);
+    if (bad)
+        return badExpr(comp, result);
 
     // Warn about cases where a conditional expression and a binary operator
     // are mixed in a way that suggests the user mixed up the precedence order.
