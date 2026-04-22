@@ -1075,7 +1075,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ExpectedVariableAssignment);
-    CHECK(diags[1].code == diag::MaxInstanceDepthExceeded);
+    CHECK(diags[1].code == diag::InfinitelyRecursiveHierarchy);
 }
 
 TEST_CASE("Top level program") {
@@ -1450,6 +1450,40 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::InfoTask);
     CHECK(diags[1].code == diag::InfoTask);
+}
+
+TEST_CASE("Instance targeted bind reaches otherwise unreachable subtree") {
+    auto tree = SyntaxTree::fromText(R"(
+module leaf #(parameter int p = 0);
+    if (p) begin : blk
+        $info("Hello");
+    end
+endmodule
+
+module bound;
+    leaf l();
+    defparam l.p = 1;
+endmodule
+
+module b;
+endmodule
+
+module a;
+    b b1();
+endmodule
+
+module top;
+    a a1();
+    bind top.a1.b1 bound bound1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfoTask);
 }
 
 TEST_CASE("Extern module missing impl errors") {

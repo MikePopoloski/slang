@@ -1313,3 +1313,85 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::WarningTask);
 }
+
+TEST_CASE("Config cell override keeps subtree active for defparams") {
+    auto tree = SyntaxTree::fromText(R"(
+module leaf #(parameter int p = 0);
+    if (p) begin : blk
+        $info("Hello");
+    end
+endmodule
+
+module b_alt;
+    leaf l();
+    defparam l.p = 1;
+endmodule
+
+module b;
+endmodule
+
+module a;
+    b b1();
+endmodule
+
+module top;
+    a a1();
+endmodule
+
+config cfg1;
+    design top;
+    cell b use b_alt;
+endconfig
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfoTask);
+}
+
+TEST_CASE("Config instance override keeps subtree active for defparams") {
+    auto tree = SyntaxTree::fromText(R"(
+module leaf #(parameter int p = 0);
+    if (p) begin : blk
+        $info("Hello");
+    end
+endmodule
+
+module b_alt;
+    leaf l();
+    defparam l.p = 1;
+endmodule
+
+module b;
+endmodule
+
+module a;
+    b b1();
+endmodule
+
+module top;
+    a a1();
+endmodule
+
+config cfg1;
+    design top;
+    instance top.a1.b1 use b_alt;
+endconfig
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfoTask);
+}

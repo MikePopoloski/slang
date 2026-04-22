@@ -56,6 +56,7 @@ target_sources(
           Bitstream.cpp
           Compilation.cpp
           Constraints.cpp
+          DefParamResolver.cpp
           EvalContext.cpp
           Expression.cpp
           FmtHelpers.cpp
