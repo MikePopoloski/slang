@@ -1485,6 +1485,13 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
     // Force four-state return type for ambiguous condition case.
     const Type* resultType = OpInfo::binaryType(comp, lt, rt, isFourState);
 
+    // If either branch already has an error, skip type unification.
+    if (bad) {
+        return badExpr(comp, comp.emplace<ConditionalExpression>(
+                                  *resultType, conditions.copy(comp), syntax.question.location(),
+                                  left, right, syntax.sourceRange(), isConst, isTrue));
+    }
+
     // If both sides of the expression are numeric, we've already determined the correct
     // result type. Otherwise, follow the rules in [11.14.11].
     bool good = true;
