@@ -1668,8 +1668,7 @@ module sub(input byte b);
     }
 
     std::string legal[] = {
-        "int a = 0; byte b[4] = {<<3{a}};",
-        "int a; byte b[4]; assign {<<3{b}} = a;",
+        "int a = 0; byte b[4] = {<<3{a}};", "int a; byte b[4]; assign {<<3{b}} = a;",
         "int a; byte b[4]; assign {<<3{b}} = {<<5{a}};",
         "byte b[4] = '{default:0}; int a = int'({<<3{b}}) + 5;",
         "shortint a = 0; byte b[2] = '{default:0}; int c = {<<3{a, {<<5{b}}}};",

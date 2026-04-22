@@ -1526,9 +1526,10 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
         diag << *lt << *rt;
         diag << left.sourceRange;
         diag << right.sourceRange;
-        return badExpr(comp, comp.emplace<ConditionalExpression>(
-                                  *resultType, conditions.copy(comp), syntax.question.location(),
-                                  left, right, syntax.sourceRange(), isConst, isTrue));
+        return badExpr(comp,
+                       comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp),
+                                                           syntax.question.location(), left, right,
+                                                           syntax.sourceRange(), isConst, isTrue));
     }
 
     // Convert streaming concat branches to the result type before building the node.
