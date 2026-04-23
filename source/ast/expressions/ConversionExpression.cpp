@@ -178,11 +178,11 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
         }
 
         if (expr.kind == ExpressionKind::Streaming) {
+            // This path is reached only when streaming is used in a self-determined context
+            // (AllowSelfDeterminedStreamConcat mode) where no assignmentTarget was available
+            // to pre-convert in fromSyntax. Validate and wrap as a streaming conversion.
             if (Bitstream::canBeSource(type, expr.as<StreamingConcatenationExpression>(),
                                        assignmentRange, context)) {
-                // Add an implicit bit-stream casting otherwise types are not assignment compatible.
-                // The size rule is not identical to explicit bit-stream casting so a different
-                // ConversionKind is used.
                 result = comp.emplace<ConversionExpression>(type, ConversionKind::StreamingConcat,
                                                             *result, result->sourceRange);
                 selfDetermined(context, result);
@@ -296,7 +296,8 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
             return badExpr(comp, nullptr);
         }
 
-        operand = &create(comp, *syntax.right, context, ASTFlags::StreamingAllowed, type);
+        operand = &create(comp, *syntax.right, context,
+                          ASTFlags::StreamingAllowed | ASTFlags::BitstreamCast, type);
         if (operand->bad())
             return badExpr(comp, nullptr);
     }

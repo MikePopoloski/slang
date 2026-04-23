@@ -909,7 +909,8 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             break;
         case SyntaxKind::StreamingConcatenationExpression:
             result = &StreamingConcatenationExpression::fromSyntax(
-                compilation, syntax.as<StreamingConcatenationExpressionSyntax>(), context);
+                compilation, syntax.as<StreamingConcatenationExpressionSyntax>(), context,
+                assignmentTarget);
             break;
         case SyntaxKind::ElementSelectExpression:
             result = &bindSelectExpression(compilation, syntax.as<ElementSelectExpressionSyntax>(),

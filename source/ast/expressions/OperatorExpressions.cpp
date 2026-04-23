@@ -1455,7 +1455,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
         rightFlags |= ASTFlags::AllowUnboundedLiteral;
     }
 
-    // Pass through the flag allowing streaming operators.
+    // Pass through the flag allowing streaming operators as branches.
     if (context.flags.has(ASTFlags::StreamingAllowed)) {
         leftFlags |= ASTFlags::StreamingAllowed;
         rightFlags |= ASTFlags::StreamingAllowed;
@@ -1471,16 +1471,6 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
         lt = &comp.getIntType();
     if (rt->isUnbounded())
         rt = &comp.getIntType();
-
-    // If a branch is a streaming concatenation (void type), substitute the assignment
-    // target or the other branch's type for the purpose of type unification. The actual
-    // conversion of the streaming branch happens below via convertAssignment.
-    const bool leftIsStreaming = left.kind == ExpressionKind::Streaming && lt->isVoid();
-    const bool rightIsStreaming = right.kind == ExpressionKind::Streaming && rt->isVoid();
-    if (leftIsStreaming)
-        lt = assignmentTarget ? assignmentTarget : rt;
-    if (rightIsStreaming)
-        rt = assignmentTarget ? assignmentTarget : lt;
 
     // Force four-state return type for ambiguous condition case.
     const Type* resultType = OpInfo::binaryType(comp, lt, rt, isFourState);
@@ -1540,24 +1530,9 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
                                                            syntax.sourceRange(), isConst, isTrue));
     }
 
-    // Convert streaming concat branches to the result type before building the node.
-    Expression* leftExpr = &left;
-    Expression* rightExpr = &right;
-    if (!bad) {
-        if (leftIsStreaming) {
-            leftExpr = &convertAssignment(trueContext, *resultType, left, left.sourceRange);
-            bad |= leftExpr->bad();
-        }
-        if (rightIsStreaming) {
-            rightExpr = &convertAssignment(context, *resultType, right, right.sourceRange);
-            bad |= rightExpr->bad();
-        }
-    }
-
     auto result = comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp),
-                                                      syntax.question.location(), *leftExpr,
-                                                      *rightExpr, syntax.sourceRange(), isConst,
-                                                      isTrue);
+                                                      syntax.question.location(), left, right,
+                                                      syntax.sourceRange(), isConst, isTrue);
     if (bad)
         return badExpr(comp, result);
 
@@ -2299,7 +2274,7 @@ void ReplicationExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& StreamingConcatenationExpression::fromSyntax(
     Compilation& comp, const StreamingConcatenationExpressionSyntax& syntax,
-    const ASTContext& context) {
+    const ASTContext& context, const Type* assignmentTarget) {
 
     const bool isDestination = context.flags.has(ASTFlags::LValue);
     const bool isRightToLeft = syntax.operatorToken.kind == TokenKind::LeftShift;
@@ -2434,22 +2409,33 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         buffer.push_back({&arg, withExpr, constantWithWidth});
     }
 
-    // So normally the type of a streaming concatenation is never inspected,
-    // since it can only be used in assignments and there is explicit handling
-    // of these expressions there. We use a void type for the result to represent
-    // this (also because otherwise what type can we use for e.g. non fixed-size
-    // streams). However, in VCS compat mode the error about requiring an assignment
-    // context can be silenced, so we need to come up with a real result type here,
-    // which we do by converting to a packed bit vector of bitstream width.
     auto& result = *comp.emplace<StreamingConcatenationExpression>(
         comp.getVoidType(), sliceSize, bitstreamWidth, buffer.ccopy(comp), syntax.sourceRange());
 
     if (!context.flags.has(ASTFlags::StreamingAllowed)) {
-        // Cap the width so we don't overflow. The conversion will error for us
-        // since the target width will be less than the source width.
+        // VCS compat mode: the error about requiring an assignment context can be silenced,
+        // so produce a real result type by converting to a packed bit vector of bitstream width.
+        // Cap the width so we don't overflow; the conversion will error for width mismatch.
         auto width = std::min(bitstreamWidth, (uint64_t)SVInt::MAX_BITS);
         auto& type = comp.getType(bitwidth_t(width), IntegralFlags::FourState);
         return convertAssignment(context, type, result, result.sourceRange);
+    }
+
+    // When the assignment target type is known (and not void — which happens when LHS is also a
+    // streaming concat), validate widths and wrap in a StreamingConcat conversion so the expression
+    // carries the target type directly, avoiding void-type special casing elsewhere.
+    // In explicit bitstream cast context the outer ConversionExpression::fromSyntax already
+    // handles validation and wrapping via isBitstreamCast, so skip pre-conversion here.
+    if (!isDestination && assignmentTarget && !assignmentTarget->isVoid() &&
+        !assignmentTarget->isError() && !context.flags.has(ASTFlags::BitstreamCast)) {
+        if (!Bitstream::canBeSource(*assignmentTarget, result, result.sourceRange, context)) {
+            return badResult();
+        }
+        Expression* conv = comp.emplace<ConversionExpression>(*assignmentTarget,
+                                                              ConversionKind::StreamingConcat,
+                                                              result, result.sourceRange);
+        selfDetermined(context, conv);
+        return *conv;
     }
 
     return result;
