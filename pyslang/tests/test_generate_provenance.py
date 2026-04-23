@@ -20,8 +20,7 @@ def _compile(code):
 
 
 def test_if_generate_provenance():
-    comp = _compile(
-        """
+    comp = _compile("""
 module Top #(parameter int MODE = 1)();
     if (MODE == 1) begin : if_true
         int a;
@@ -30,8 +29,7 @@ module Top #(parameter int MODE = 1)();
         int b;
     end
 endmodule
-"""
-    )
+""")
 
     root = comp.getRoot()
     if_true = root.lookupName("Top.if_true")
@@ -57,8 +55,7 @@ endmodule
 
 def test_directly_nested_if_generate_preserves_structure():
     # Inner if is unbracketed; LRM flattens it into the outer scope.
-    comp = _compile(
-        """
+    comp = _compile("""
 module Top #(parameter int A = 1, parameter int B = 1)();
     if (A == 1)
         if (B == 1) begin : t
@@ -68,8 +65,7 @@ module Top #(parameter int A = 1, parameter int B = 1)();
             int y;
         end
 endmodule
-"""
-    )
+""")
 
     root = comp.getRoot()
     t = root.lookupName("Top.t")
@@ -87,8 +83,7 @@ endmodule
 
 
 def test_case_generate_provenance():
-    comp = _compile(
-        """
+    comp = _compile("""
 module Top #(parameter int MODE = 1)();
     case (MODE)
         1, 2: begin : case_item_lo
@@ -99,8 +94,7 @@ module Top #(parameter int MODE = 1)();
         end
     endcase
 endmodule
-"""
-    )
+""")
 
     root = comp.getRoot()
     case_item = root.lookupName("Top.case_item_lo")
@@ -115,16 +109,14 @@ endmodule
 
 
 def test_loop_generate_provenance():
-    comp = _compile(
-        """
+    comp = _compile("""
 module Top;
     genvar g;
     for (g = 0; g < 3; g = g + 1) begin : arr
         int e;
     end
 endmodule
-"""
-    )
+""")
 
     arr = comp.getRoot().lookupName("Top.arr")
     assert isinstance(arr, GenerateBlockArraySymbol)
@@ -141,15 +133,13 @@ endmodule
 
 
 def test_loop_generate_inline_genvar():
-    comp = _compile(
-        """
+    comp = _compile("""
 module Top;
     for (genvar i = 0; i < 2; i = i + 1) begin : arr
         int x;
     end
 endmodule
-"""
-    )
+""")
 
     arr = comp.getRoot().lookupName("Top.arr")
     assert arr.genvar is not None
