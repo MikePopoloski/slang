@@ -232,6 +232,216 @@ endmodule
     compilation.getRoot().lookupName<GenerateBlockSymbol>("Top.u2");
 }
 
+TEST_CASE("Generate construct provenance is preserved") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top #(parameter int MODE = 1, parameter int N = 3)();
+    // if-generate
+    if (MODE == 1) begin : if_true
+        int a;
+    end
+    else begin : if_false
+        int b;
+    end
+
+    // case-generate
+    case (MODE)
+        1, 2: begin : case_item_lo
+            int c;
+        end
+        default: begin : case_default
+            int d;
+        end
+    endcase
+
+    // loop-generate with external genvar
+    genvar g;
+    for (g = 0; g < N; g = g + 1) begin : loop_arr
+        int e;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+
+    // if-generate
+    auto& ifTrue = root.lookupName<GenerateBlockSymbol>("Top.if_true");
+    auto& ifFalse = root.lookupName<GenerateBlockSymbol>("Top.if_false");
+    CHECK(ifTrue.branchKind == GenerateBranchKind::IfTrue);
+    CHECK(ifFalse.branchKind == GenerateBranchKind::IfFalse);
+    CHECK(!ifTrue.isUninstantiated);
+    CHECK(ifFalse.isUninstantiated);
+    REQUIRE(ifTrue.conditionExpression != nullptr);
+    CHECK(ifTrue.conditionExpression == ifFalse.conditionExpression);
+    CHECK(ifTrue.caseItemExpressions.empty());
+    REQUIRE(ifTrue.generateConstructSyntax != nullptr);
+    CHECK(ifTrue.generateConstructSyntax->kind == SyntaxKind::IfGenerate);
+    CHECK(ifTrue.generateConstructSyntax == ifFalse.generateConstructSyntax);
+
+    // case-generate
+    auto& caseItem = root.lookupName<GenerateBlockSymbol>("Top.case_item_lo");
+    auto& caseDefault = root.lookupName<GenerateBlockSymbol>("Top.case_default");
+    CHECK(caseItem.branchKind == GenerateBranchKind::CaseItem);
+    CHECK(caseDefault.branchKind == GenerateBranchKind::CaseDefault);
+    REQUIRE(caseItem.conditionExpression != nullptr);
+    CHECK(caseItem.conditionExpression == caseDefault.conditionExpression);
+    CHECK(caseItem.caseItemExpressions.size() == 2);
+    CHECK(caseDefault.caseItemExpressions.empty());
+    REQUIRE(caseItem.generateConstructSyntax != nullptr);
+    CHECK(caseItem.generateConstructSyntax->kind == SyntaxKind::CaseGenerate);
+    CHECK(caseItem.generateConstructSyntax == caseDefault.generateConstructSyntax);
+
+    // loop-generate: the array's getSyntax() returns the LoopGenerateSyntax
+    // directly; each entry block points back to that same construct.
+    auto& loopArr = root.lookupName<GenerateBlockArraySymbol>("Top.loop_arr");
+    CHECK(loopArr.initialExpression != nullptr);
+    CHECK(loopArr.stopExpression != nullptr);
+    CHECK(loopArr.iterExpression != nullptr);
+    REQUIRE(loopArr.genvar != nullptr);
+    CHECK(loopArr.genvar->kind == SymbolKind::Genvar);
+    CHECK(loopArr.genvar->name == "g");
+    REQUIRE(loopArr.getSyntax() != nullptr);
+    CHECK(loopArr.getSyntax()->kind == SyntaxKind::LoopGenerate);
+    CHECK(loopArr.entries.size() == 3);
+    for (auto entry : loopArr.entries) {
+        CHECK(entry->branchKind == GenerateBranchKind::LoopIteration);
+        CHECK(entry->generateConstructSyntax == loopArr.getSyntax());
+    }
+}
+
+TEST_CASE("Generate provenance for nested if-in-if with begin/end") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top #(parameter int A = 1, parameter int B = 1)();
+    if (A == 1) begin : outer
+        if (B == 1) begin : inner
+            int x;
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& outer = root.lookupName<GenerateBlockSymbol>("Top.outer");
+    auto& inner = root.lookupName<GenerateBlockSymbol>("Top.outer.inner");
+
+    REQUIRE(outer.generateConstructSyntax != nullptr);
+    REQUIRE(inner.generateConstructSyntax != nullptr);
+    CHECK(outer.generateConstructSyntax->kind == SyntaxKind::IfGenerate);
+    CHECK(inner.generateConstructSyntax->kind == SyntaxKind::IfGenerate);
+    CHECK(outer.generateConstructSyntax != inner.generateConstructSyntax);
+
+    CHECK(outer.branchKind == GenerateBranchKind::IfTrue);
+    CHECK(inner.branchKind == GenerateBranchKind::IfTrue);
+    REQUIRE(outer.conditionExpression != nullptr);
+    REQUIRE(inner.conditionExpression != nullptr);
+    CHECK(outer.conditionExpression != inner.conditionExpression);
+}
+
+TEST_CASE("Generate provenance for directly-nested if-in-if") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top #(parameter int A = 1, parameter int B = 1)();
+    if (A == 1)
+        if (B == 1) begin : t
+            int x;
+        end
+        else begin : f
+            int y;
+        end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& t = root.lookupName<GenerateBlockSymbol>("Top.t");
+    auto& f = root.lookupName<GenerateBlockSymbol>("Top.f");
+
+    REQUIRE(t.generateConstructSyntax != nullptr);
+    REQUIRE(f.generateConstructSyntax != nullptr);
+    CHECK(t.generateConstructSyntax->kind == SyntaxKind::IfGenerate);
+    CHECK(t.generateConstructSyntax == f.generateConstructSyntax);
+
+    CHECK(t.branchKind == GenerateBranchKind::IfTrue);
+    CHECK(f.branchKind == GenerateBranchKind::IfFalse);
+    REQUIRE(t.conditionExpression != nullptr);
+    CHECK(t.conditionExpression == f.conditionExpression);
+
+    // Outer construct reachable via syntax-parent walk.
+    auto* innerIf = t.generateConstructSyntax;
+    auto* outerIf = innerIf->parent;
+    REQUIRE(outerIf != nullptr);
+    CHECK(outerIf->kind == SyntaxKind::IfGenerate);
+    CHECK(outerIf != innerIf);
+}
+
+TEST_CASE("Generate provenance for case inside if") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top #(parameter int A = 1, parameter int MODE = 1)();
+    if (A == 1) begin : wrapper
+        case (MODE)
+            1, 2: begin : m1 end
+            default: begin : md end
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& wrapper = root.lookupName<GenerateBlockSymbol>("Top.wrapper");
+    auto& m1 = root.lookupName<GenerateBlockSymbol>("Top.wrapper.m1");
+    auto& md = root.lookupName<GenerateBlockSymbol>("Top.wrapper.md");
+
+    CHECK(wrapper.branchKind == GenerateBranchKind::IfTrue);
+    REQUIRE(wrapper.generateConstructSyntax != nullptr);
+    CHECK(wrapper.generateConstructSyntax->kind == SyntaxKind::IfGenerate);
+
+    CHECK(m1.branchKind == GenerateBranchKind::CaseItem);
+    CHECK(md.branchKind == GenerateBranchKind::CaseDefault);
+    REQUIRE(m1.generateConstructSyntax != nullptr);
+    CHECK(m1.generateConstructSyntax->kind == SyntaxKind::CaseGenerate);
+    CHECK(m1.generateConstructSyntax == md.generateConstructSyntax);
+
+    // Walk up to the enclosing if-generate.
+    auto* cur = m1.generateConstructSyntax->parent;
+    while (cur && cur->kind != SyntaxKind::IfGenerate)
+        cur = cur->parent;
+    REQUIRE(cur != nullptr);
+    CHECK(cur == wrapper.generateConstructSyntax);
+}
+
+TEST_CASE("Generate provenance with inline genvar") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+    for (genvar i = 0; i < 2; i = i + 1) begin : arr
+        int x;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& arr = compilation.getRoot().lookupName<GenerateBlockArraySymbol>("Top.arr");
+    REQUIRE(arr.genvar != nullptr);
+    CHECK(arr.genvar->kind == SymbolKind::Genvar);
+    CHECK(arr.genvar->name == "i");
+    CHECK(arr.entries.size() == 2);
+}
+
 TEST_CASE("Program instantiation") {
     auto tree = SyntaxTree::fromText(R"(
 program p1 #(parameter int foo)

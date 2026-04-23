@@ -457,16 +457,26 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("body", &ProceduralBlockSymbol::getBody)
         .def_property_readonly("blocks", &ProceduralBlockSymbol::getBlocks);
 
+    EXPOSE_ENUM(m, GenerateBranchKind);
+
     py::classh<GenerateBlockSymbol, Symbol, Scope>(m, "GenerateBlockSymbol")
         .def_readonly("constructIndex", &GenerateBlockSymbol::constructIndex)
         .def_readonly("isUninstantiated", &GenerateBlockSymbol::isUninstantiated)
         .def_readonly("arrayIndex", &GenerateBlockSymbol::arrayIndex)
+        .def_readonly("branchKind", &GenerateBlockSymbol::branchKind)
+        .def_readonly("generateConstructSyntax", &GenerateBlockSymbol::generateConstructSyntax)
+        .def_readonly("conditionExpression", &GenerateBlockSymbol::conditionExpression)
+        .def_readonly("caseItemExpressions", &GenerateBlockSymbol::caseItemExpressions)
         .def_property_readonly("externalName", &GenerateBlockSymbol::getExternalName);
 
     py::classh<GenerateBlockArraySymbol, Symbol, Scope>(m, "GenerateBlockArraySymbol")
         .def_readonly("constructIndex", &GenerateBlockArraySymbol::constructIndex)
         .def_readonly("entries", &GenerateBlockArraySymbol::entries)
         .def_readonly("valid", &GenerateBlockArraySymbol::valid)
+        .def_readonly("initialExpression", &GenerateBlockArraySymbol::initialExpression)
+        .def_readonly("stopExpression", &GenerateBlockArraySymbol::stopExpression)
+        .def_readonly("iterExpression", &GenerateBlockArraySymbol::iterExpression)
+        .def_readonly("genvar", &GenerateBlockArraySymbol::genvar)
         .def_property_readonly("externalName", &GenerateBlockArraySymbol::getExternalName);
 
     py::classh<EmptyMemberSymbol, Symbol>(m, "EmptyMemberSymbol");

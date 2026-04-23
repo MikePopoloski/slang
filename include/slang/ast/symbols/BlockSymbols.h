@@ -15,6 +15,15 @@
 
 namespace slang::ast {
 
+class Expression;
+
+/// Indicates which branch of a conditional or loop generate construct
+/// produced a given GenerateBlockSymbol.
+#define GENERATE_BRANCH_KIND(x) \
+    x(IfTrue) x(IfFalse) x(CaseItem) x(CaseDefault) x(LoopIteration) x(IllegalUnconditional)
+SLANG_ENUM(GenerateBranchKind, GENERATE_BRANCH_KIND)
+#undef GENERATE_BRANCH_KIND
+
 /// Represents a statement block, either sequential or parallel.
 class SLANG_EXPORT StatementBlockSymbol final : public Symbol, public Scope {
 public:
@@ -122,6 +131,20 @@ public:
     bool isUnnamed = false;
     const SVInt* arrayIndex = nullptr;
 
+    /// Indicates which branch of the originating generate construct produced
+    /// this block.
+    GenerateBranchKind branchKind = GenerateBranchKind::IllegalUnconditional;
+
+    /// Originating generate construct; always an IfGenerateSyntax,
+    /// CaseGenerateSyntax, or LoopGenerateSyntax when non-null.
+    const syntax::SyntaxNode* generateConstructSyntax = nullptr;
+
+    /// Bound condition of the enclosing if- or case-generate, if any.
+    const Expression* conditionExpression = nullptr;
+
+    /// Bound case-item label expressions for case-generate blocks.
+    std::span<const Expression* const> caseItemExpressions;
+
     GenerateBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                         uint32_t constructIndex, bool isUninstantiated) :
         Symbol(SymbolKind::GenerateBlock, name, loc), Scope(compilation, this),
@@ -154,6 +177,20 @@ public:
     uint32_t constructIndex;
     bool valid = false;
     bool isUnnamed = false;
+
+    /// Bound initializer expression of the enclosing loop-generate.
+    const Expression* initialExpression = nullptr;
+
+    /// Bound stop expression of the enclosing loop-generate.
+    const Expression* stopExpression = nullptr;
+
+    /// Bound iteration expression of the enclosing loop-generate.
+    const Expression* iterExpression = nullptr;
+
+    /// Canonical genvar symbol for this loop. For an inline genvar this is a
+    /// fabricated symbol held as a member of this array; for an external
+    /// genvar it resolves to the declaration in an enclosing scope.
+    const Symbol* genvar = nullptr;
 
     GenerateBlockArraySymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                              uint32_t constructIndex) :
