@@ -160,7 +160,7 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer,
     }
     else if (current->kind == SymbolKind::GenerateBlock) {
         auto& block = current->as<GenerateBlockSymbol>();
-        if (auto index = block.arrayIndex) {
+        if (auto index = block.getArrayIndex()) {
             buffer.append("[");
             buffer.append(index->toString(LiteralBase::Decimal, false));
             buffer.append("]");

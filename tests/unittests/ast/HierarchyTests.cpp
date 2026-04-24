@@ -11,6 +11,19 @@
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/text/SourceManager.h"
 
+// Walks up from a generate block to the enclosing if/case/loop-generate node.
+// Needed because if-else and case arms sit under an intermediate
+// ElseClause / StandardCaseItem / DefaultCaseItem syntax node.
+static const SyntaxNode* constructOf(const GenerateBlockSymbol& block) {
+    auto s = block.getSyntax();
+    auto p = s ? s->parent : nullptr;
+    while (p && p->kind != SyntaxKind::IfGenerate && p->kind != SyntaxKind::CaseGenerate &&
+           p->kind != SyntaxKind::LoopGenerate) {
+        p = p->parent;
+    }
+    return p;
+}
+
 TEST_CASE("Finding top level") {
     auto file1 = SyntaxTree::fromText(
         "module A; endmodule\nmodule B; A a(); endmodule\nmodule C; endmodule");
@@ -274,28 +287,31 @@ endmodule
     CHECK(ifFalse.branchKind == GenerateBranchKind::IfFalse);
     CHECK(!ifTrue.isUninstantiated);
     CHECK(ifFalse.isUninstantiated);
-    REQUIRE(ifTrue.conditionExpression != nullptr);
-    CHECK(ifTrue.conditionExpression == ifFalse.conditionExpression);
+    REQUIRE(ifTrue.getConditionExpression() != nullptr);
+    CHECK(ifTrue.getConditionExpression() == ifFalse.getConditionExpression());
     CHECK(ifTrue.caseItemExpressions.empty());
-    REQUIRE(ifTrue.generateConstructSyntax != nullptr);
-    CHECK(ifTrue.generateConstructSyntax->kind == SyntaxKind::IfGenerate);
-    CHECK(ifTrue.generateConstructSyntax == ifFalse.generateConstructSyntax);
+    CHECK(ifTrue.getArrayIndex() == nullptr);
+    REQUIRE(constructOf(ifTrue) != nullptr);
+    CHECK(constructOf(ifTrue)->kind == SyntaxKind::IfGenerate);
+    CHECK(constructOf(ifTrue) == constructOf(ifFalse));
 
     // case-generate
     auto& caseItem = root.lookupName<GenerateBlockSymbol>("Top.case_item_lo");
     auto& caseDefault = root.lookupName<GenerateBlockSymbol>("Top.case_default");
     CHECK(caseItem.branchKind == GenerateBranchKind::CaseItem);
     CHECK(caseDefault.branchKind == GenerateBranchKind::CaseDefault);
-    REQUIRE(caseItem.conditionExpression != nullptr);
-    CHECK(caseItem.conditionExpression == caseDefault.conditionExpression);
+    REQUIRE(caseItem.getConditionExpression() != nullptr);
+    CHECK(caseItem.getConditionExpression() == caseDefault.getConditionExpression());
     CHECK(caseItem.caseItemExpressions.size() == 2);
     CHECK(caseDefault.caseItemExpressions.empty());
-    REQUIRE(caseItem.generateConstructSyntax != nullptr);
-    CHECK(caseItem.generateConstructSyntax->kind == SyntaxKind::CaseGenerate);
-    CHECK(caseItem.generateConstructSyntax == caseDefault.generateConstructSyntax);
+    CHECK(caseItem.getArrayIndex() == nullptr);
+    REQUIRE(constructOf(caseItem) != nullptr);
+    CHECK(constructOf(caseItem)->kind == SyntaxKind::CaseGenerate);
+    CHECK(constructOf(caseItem) == constructOf(caseDefault));
 
     // loop-generate: the array's getSyntax() returns the LoopGenerateSyntax
-    // directly; each entry block points back to that same construct.
+    // directly; each entry block's getSyntax()->parent walks up to that same
+    // construct.
     auto& loopArr = root.lookupName<GenerateBlockArraySymbol>("Top.loop_arr");
     CHECK(loopArr.initialExpression != nullptr);
     CHECK(loopArr.stopExpression != nullptr);
@@ -308,7 +324,9 @@ endmodule
     CHECK(loopArr.entries.size() == 3);
     for (auto entry : loopArr.entries) {
         CHECK(entry->branchKind == GenerateBranchKind::LoopIteration);
-        CHECK(entry->generateConstructSyntax == loopArr.getSyntax());
+        CHECK(constructOf(*entry) == loopArr.getSyntax());
+        CHECK(entry->getArrayIndex() != nullptr);
+        CHECK(entry->getConditionExpression() == nullptr);
     }
 }
 
@@ -331,17 +349,19 @@ endmodule
     auto& outer = root.lookupName<GenerateBlockSymbol>("Top.outer");
     auto& inner = root.lookupName<GenerateBlockSymbol>("Top.outer.inner");
 
-    REQUIRE(outer.generateConstructSyntax != nullptr);
-    REQUIRE(inner.generateConstructSyntax != nullptr);
-    CHECK(outer.generateConstructSyntax->kind == SyntaxKind::IfGenerate);
-    CHECK(inner.generateConstructSyntax->kind == SyntaxKind::IfGenerate);
-    CHECK(outer.generateConstructSyntax != inner.generateConstructSyntax);
+    auto* outerConstruct = constructOf(outer);
+    auto* innerConstruct = constructOf(inner);
+    REQUIRE(outerConstruct != nullptr);
+    REQUIRE(innerConstruct != nullptr);
+    CHECK(outerConstruct->kind == SyntaxKind::IfGenerate);
+    CHECK(innerConstruct->kind == SyntaxKind::IfGenerate);
+    CHECK(outerConstruct != innerConstruct);
 
     CHECK(outer.branchKind == GenerateBranchKind::IfTrue);
     CHECK(inner.branchKind == GenerateBranchKind::IfTrue);
-    REQUIRE(outer.conditionExpression != nullptr);
-    REQUIRE(inner.conditionExpression != nullptr);
-    CHECK(outer.conditionExpression != inner.conditionExpression);
+    REQUIRE(outer.getConditionExpression() != nullptr);
+    REQUIRE(inner.getConditionExpression() != nullptr);
+    CHECK(outer.getConditionExpression() != inner.getConditionExpression());
 }
 
 TEST_CASE("Generate provenance for directly-nested if-in-if") {
@@ -365,21 +385,21 @@ endmodule
     auto& t = root.lookupName<GenerateBlockSymbol>("Top.t");
     auto& f = root.lookupName<GenerateBlockSymbol>("Top.f");
 
-    REQUIRE(t.generateConstructSyntax != nullptr);
-    REQUIRE(f.generateConstructSyntax != nullptr);
-    CHECK(t.generateConstructSyntax->kind == SyntaxKind::IfGenerate);
-    CHECK(t.generateConstructSyntax == f.generateConstructSyntax);
+    auto* innerIf = constructOf(t);
+    REQUIRE(innerIf != nullptr);
+    CHECK(innerIf->kind == SyntaxKind::IfGenerate);
+    CHECK(innerIf == constructOf(f));
 
     CHECK(t.branchKind == GenerateBranchKind::IfTrue);
     CHECK(f.branchKind == GenerateBranchKind::IfFalse);
-    REQUIRE(t.conditionExpression != nullptr);
-    CHECK(t.conditionExpression == f.conditionExpression);
+    REQUIRE(t.getConditionExpression() != nullptr);
+    CHECK(t.getConditionExpression() == f.getConditionExpression());
 
-    // Outer construct reachable via syntax-parent walk.
-    auto* innerIf = t.generateConstructSyntax;
+    // The directly-nested outer construct is reachable by continuing the walk.
     auto* outerIf = innerIf->parent;
+    while (outerIf && outerIf->kind != SyntaxKind::IfGenerate)
+        outerIf = outerIf->parent;
     REQUIRE(outerIf != nullptr);
-    CHECK(outerIf->kind == SyntaxKind::IfGenerate);
     CHECK(outerIf != innerIf);
 }
 
@@ -405,21 +425,23 @@ endmodule
     auto& md = root.lookupName<GenerateBlockSymbol>("Top.wrapper.md");
 
     CHECK(wrapper.branchKind == GenerateBranchKind::IfTrue);
-    REQUIRE(wrapper.generateConstructSyntax != nullptr);
-    CHECK(wrapper.generateConstructSyntax->kind == SyntaxKind::IfGenerate);
+    auto* wrapperConstruct = constructOf(wrapper);
+    REQUIRE(wrapperConstruct != nullptr);
+    CHECK(wrapperConstruct->kind == SyntaxKind::IfGenerate);
 
     CHECK(m1.branchKind == GenerateBranchKind::CaseItem);
     CHECK(md.branchKind == GenerateBranchKind::CaseDefault);
-    REQUIRE(m1.generateConstructSyntax != nullptr);
-    CHECK(m1.generateConstructSyntax->kind == SyntaxKind::CaseGenerate);
-    CHECK(m1.generateConstructSyntax == md.generateConstructSyntax);
+    auto* m1Construct = constructOf(m1);
+    REQUIRE(m1Construct != nullptr);
+    CHECK(m1Construct->kind == SyntaxKind::CaseGenerate);
+    CHECK(m1Construct == constructOf(md));
 
-    // Walk up to the enclosing if-generate.
-    auto* cur = m1.generateConstructSyntax->parent;
+    // Walk up from the inner case-generate to the enclosing if-generate.
+    auto* cur = m1Construct->parent;
     while (cur && cur->kind != SyntaxKind::IfGenerate)
         cur = cur->parent;
     REQUIRE(cur != nullptr);
-    CHECK(cur == wrapper.generateConstructSyntax);
+    CHECK(cur == wrapperConstruct);
 }
 
 TEST_CASE("Generate provenance with inline genvar") {

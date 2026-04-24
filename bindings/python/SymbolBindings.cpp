@@ -462,11 +462,11 @@ void registerSymbols(py::module_& m) {
     py::classh<GenerateBlockSymbol, Symbol, Scope>(m, "GenerateBlockSymbol")
         .def_readonly("constructIndex", &GenerateBlockSymbol::constructIndex)
         .def_readonly("isUninstantiated", &GenerateBlockSymbol::isUninstantiated)
-        .def_readonly("arrayIndex", &GenerateBlockSymbol::arrayIndex)
         .def_readonly("branchKind", &GenerateBlockSymbol::branchKind)
-        .def_readonly("generateConstructSyntax", &GenerateBlockSymbol::generateConstructSyntax)
-        .def_readonly("conditionExpression", &GenerateBlockSymbol::conditionExpression)
         .def_readonly("caseItemExpressions", &GenerateBlockSymbol::caseItemExpressions)
+        .def_property_readonly("arrayIndex", &GenerateBlockSymbol::getArrayIndex)
+        .def_property_readonly("conditionExpression",
+                               &GenerateBlockSymbol::getConditionExpression)
         .def_property_readonly("externalName", &GenerateBlockSymbol::getExternalName);
 
     py::classh<GenerateBlockArraySymbol, Symbol, Scope>(m, "GenerateBlockArraySymbol")

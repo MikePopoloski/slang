@@ -19,6 +19,19 @@ def _compile(code):
     return comp
 
 
+_CONSTRUCT_KINDS = {SyntaxKind.IfGenerate, SyntaxKind.CaseGenerate, SyntaxKind.LoopGenerate}
+
+
+def _construct_of(block):
+    # Walks up through any ElseClause / StandardCaseItem / DefaultCaseItem
+    # wrapper to the enclosing if/case/loop-generate node.
+    syntax = block.syntax
+    node = syntax.parent if syntax is not None else None
+    while node is not None and node.kind not in _CONSTRUCT_KINDS:
+        node = node.parent
+    return node
+
+
 def test_if_generate_provenance():
     comp = _compile("""
 module Top #(parameter int MODE = 1)();
@@ -47,10 +60,15 @@ endmodule
     # Both arms share the same bound condition object.
     assert if_true.conditionExpression is if_false.conditionExpression
     assert len(if_true.caseItemExpressions) == 0
+    # Conditional branches never expose a loop index.
+    assert if_true.arrayIndex is None
+    assert if_false.arrayIndex is None
 
-    assert if_true.generateConstructSyntax is not None
-    assert if_true.generateConstructSyntax.kind == SyntaxKind.IfGenerate
-    assert if_true.generateConstructSyntax is if_false.generateConstructSyntax
+    true_construct = _construct_of(if_true)
+    false_construct = _construct_of(if_false)
+    assert true_construct is not None
+    assert true_construct.kind == SyntaxKind.IfGenerate
+    assert true_construct is false_construct
 
 
 def test_directly_nested_if_generate_preserves_structure():
@@ -71,15 +89,17 @@ endmodule
     t = root.lookupName("Top.t")
     f = root.lookupName("Top.f")
 
-    assert t.generateConstructSyntax is not None
-    assert t.generateConstructSyntax.kind == SyntaxKind.IfGenerate
-    assert t.generateConstructSyntax is f.generateConstructSyntax
+    inner_if = _construct_of(t)
+    assert inner_if is not None
+    assert inner_if.kind == SyntaxKind.IfGenerate
+    assert inner_if is _construct_of(f)
 
-    # Outer construct reachable via syntax-parent walk.
-    outer = t.generateConstructSyntax.parent
+    # The directly-nested outer construct is reachable by continuing the walk.
+    outer = inner_if.parent
+    while outer is not None and outer.kind != SyntaxKind.IfGenerate:
+        outer = outer.parent
     assert outer is not None
-    assert outer.kind == SyntaxKind.IfGenerate
-    assert outer is not t.generateConstructSyntax
+    assert outer is not inner_if
 
 
 def test_case_generate_provenance():
@@ -106,6 +126,12 @@ endmodule
     assert case_item.conditionExpression is case_default.conditionExpression
     assert len(case_item.caseItemExpressions) == 2
     assert len(case_default.caseItemExpressions) == 0
+    assert case_item.arrayIndex is None
+
+    case_construct = _construct_of(case_item)
+    assert case_construct is not None
+    assert case_construct.kind == SyntaxKind.CaseGenerate
+    assert case_construct is _construct_of(case_default)
 
 
 def test_loop_generate_provenance():
@@ -127,9 +153,17 @@ endmodule
     assert arr.genvar.kind == SymbolKind.Genvar
     assert arr.genvar.name == "g"
 
+    # The loop array's own syntax is the LoopGenerateSyntax directly.
+    assert arr.syntax is not None
+    assert arr.syntax.kind == SyntaxKind.LoopGenerate
+
     assert len(arr.entries) == 3
     for entry in arr.entries:
         assert entry.branchKind == GenerateBranchKind.LoopIteration
+        assert entry.arrayIndex is not None
+        assert entry.conditionExpression is None
+        # Each entry's syntax parent walks back to the LoopGenerateSyntax.
+        assert _construct_of(entry) is arr.syntax
 
 
 def test_loop_generate_inline_genvar():

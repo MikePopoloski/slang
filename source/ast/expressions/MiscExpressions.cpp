@@ -37,7 +37,7 @@ static std::string_view getNonValueName(const Symbol& symbol) {
         auto sym = &symbol;
         while (sym->kind == SymbolKind::GenerateBlock) {
             auto& block = sym->as<GenerateBlockSymbol>();
-            if (!block.arrayIndex)
+            if (!block.getArrayIndex())
                 return sym->name;
 
             auto scope = block.getParentScope();

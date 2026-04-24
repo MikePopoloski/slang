@@ -1288,7 +1288,7 @@ static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSynt
 
         int32_t idx = 0;
         for (auto entry : array.entries) {
-            if (entry->arrayIndex && *entry->arrayIndex == *index) {
+            if (auto entryIdx = entry->getArrayIndex(); entryIdx && *entryIdx == *index) {
                 result.path.emplace_back(*entry, idx);
                 return entry;
             }
