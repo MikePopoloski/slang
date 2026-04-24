@@ -15,6 +15,7 @@
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CheckerSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/PortSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
@@ -417,10 +418,31 @@ void ASTContext::noteReference(const ValueSymbol& symbol, bool isDottedAccess) c
         }
 
         auto& comp = getCompilation();
-        comp.noteReference(*syntax, isLValue);
+        auto mark = [&](const syntax::SyntaxNode& node) {
+            comp.noteReference(node, isLValue);
+            if (isLValue && flags.has(ASTFlags::LAndRValue))
+                comp.noteReference(node, /* isLValue */ false);
+        };
 
-        if (isLValue && flags.has(ASTFlags::LAndRValue))
-            comp.noteReference(*syntax, /* isLValue */ false);
+        mark(*syntax);
+
+        // Modport ports are aliases for interface members; references to the
+        // facade should also count as references to the connected value(s).
+        if (auto mpp = symbol.as_if<ModportPortSymbol>()) {
+            if (mpp->internalSymbol) {
+                if (auto underlying = mpp->internalSymbol->getSyntax())
+                    mark(*underlying);
+            }
+            else if (mpp->explicitConnection) {
+                mpp->explicitConnection->visitSymbolReferences(
+                    [&](const Expression&, const Symbol& s) {
+                        if (!s.isValue())
+                            return;
+                        if (auto underlying = s.getSyntax())
+                            mark(*underlying);
+                    });
+            }
+        }
     }
 }
 

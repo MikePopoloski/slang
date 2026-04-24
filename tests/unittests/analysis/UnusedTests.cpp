@@ -27,22 +27,18 @@ Diagnostics analyze(const std::string& text, Compilation& compilation) {
 TEST_CASE("Inout ports are treated as readers and writers") {
     auto& text = R"(
 interface I;
-    wire integer i;
-    modport m(inout i);
+    wire integer a;
+    modport m(inout a);
 endinterface
 
-module m(inout wire a);
-    wire local_a;
-    pullup(local_a);
-    tranif1(a, local_a, 1'b1);
+module user(I.m iface);
+    assign iface.a = 32'd1;
+    initial $display(iface.a);
 endmodule
 
 module top;
     I i();
-
-    wire a;
-    m m1(.*);
-    m m2(.*);
+    user u(i);
 endmodule
 )";
 
@@ -193,9 +189,21 @@ interface I(input clk);
     modport n(output baz);
 endinterface
 
+module i_reader(I.m intf, output logic obs);
+    assign obs = intf.clk & intf.baz;
+endmodule
+
+module i_writer(I.n intf);
+    assign intf.baz = 1'b0;
+endmodule
+
 module m(output v);
     wire clk = 1;
     I i(clk);
+    logic rd_obs;
+    i_reader ir(i, rd_obs);
+    i_writer iw(i);
+    initial $display(rd_obs);
 
     int x,z;
     if (0) begin : blk1
@@ -293,6 +301,50 @@ endmodule
     Compilation compilation;
     auto diags = analyze(text, compilation);
     CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Undriven net via unused modport writer") {
+    auto& text = R"(
+interface status_if;
+    wire status;
+    modport reader(input status);
+    modport writer(output status);
+endinterface
+
+module status_consumer(status_if.reader intf, output wire observed_status);
+    assign observed_status = intf.status;
+endmodule
+
+module top;
+    status_if intf();
+    wire observed_status;
+    status_consumer u(.intf(intf), .observed_status(observed_status));
+    initial $display(observed_status);
+endmodule
+)";
+
+    Compilation compilation;
+    auto diags = analyze(text, compilation);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndrivenNet);
+}
+
+TEST_CASE("Explicit modport output does not mask unused variable") {
+    auto& text = R"(
+interface I;
+    logic a;
+    modport m(output .x(a));
+endinterface
+
+module top;
+    I i();
+endmodule
+)";
+
+    Compilation compilation;
+    auto diags = analyze(text, compilation);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnusedVariable);
 }
 
 TEST_CASE("Ref args are considered used") {
