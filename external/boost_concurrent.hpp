@@ -193,7 +193,7 @@
 #define BOOST_HAS_SCHED_YIELD
 #endif
 // Copyright 2005-2009 Daniel James.
-// Copyright 2021, 2022 Peter Dimov.
+// Copyright 2021, 2022, 2025 Peter Dimov.
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
@@ -221,6 +221,8 @@ template<class It> std::size_t hash_range( It, It );
 
 template<class It> void hash_unordered_range( std::size_t&, It, It );
 template<class It> std::size_t hash_unordered_range( It, It );
+
+template<class Hash> struct hash_is_avalanching;
 
 } // namespace boost
 
@@ -299,7 +301,7 @@ namespace boost {
 // Same format as BOOST_VERSION:
 //   major * 100000 + minor * 100 + patch
 
-#define BOOST_MP11_VERSION 108800
+#define BOOST_MP11_VERSION 109100
 
 #endif // #ifndef BOOST_MP11_VERSION_HPP_INCLUDED
 #ifndef BOOST_MP11_DETAIL_CONFIG_HPP_INCLUDED
@@ -3828,7 +3830,7 @@ template<template<class...> class L, class T1, class T2, class T3, class T4, cla
 
 } // namespace detail
 
-template<class L, class V, template<class...> class F> using mp_reverse_fold = typename detail::mp_reverse_fold_impl<L, V, F>::type;
+template<class L, class V, template<class...> class F> using mp_reverse_fold = typename detail::mp_reverse_fold_impl<mp_rename<L, mp_list>, V, F>::type;
 template<class L, class V, class Q> using mp_reverse_fold_q = mp_reverse_fold<L, V, Q::template fn>;
 
 // mp_unique<L>
@@ -5386,6 +5388,7 @@ boost
         {
         class error_info_base;
         struct type_info_;
+        class encoder;
 
         struct
         error_info_container
@@ -5396,6 +5399,7 @@ boost
             virtual void add_ref() const = 0;
             virtual bool release() const = 0;
             virtual refcount_ptr<exception_detail::error_info_container> clone() const = 0;
+            virtual void serialize_to( encoder & ) const { }
 
             protected:
 
@@ -5437,6 +5441,9 @@ boost
         char const * get_diagnostic_information( exception const &, char const * );
 
         void copy_boost_exception( exception *, exception const * );
+
+        template <class Encoder>
+        void serialize_diagnostic_information_to_impl_( exception const *, std::exception const *, Encoder & );
 
         template <class E,class Tag,class T>
         E const & set_info( E const &, error_info<Tag,T> const & );
@@ -5532,6 +5539,7 @@ boost
         friend struct exception_detail::set_info_rv<throw_line>;
         friend struct exception_detail::set_info_rv<throw_column>;
         friend void exception_detail::copy_boost_exception( exception *, exception const * );
+        template <class Encoder> friend void exception_detail::serialize_diagnostic_information_to_impl_( exception const *, std::exception const *, Encoder & );
 #endif
         mutable exception_detail::refcount_ptr<exception_detail::error_info_container> data_;
         mutable char const * throw_function_;
@@ -6210,6 +6218,61 @@ struct bad_archive_exception:std::runtime_error
 }
 
 #endif
+// Copyright 2025 Joaquin M Lopez Munoz.
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
+
+#ifndef BOOST_HASH_HASH_IS_AVALANCHING_HPP_INCLUDED
+#define BOOST_HASH_HASH_IS_AVALANCHING_HPP_INCLUDED
+
+namespace boost
+{
+namespace hash_detail
+{
+
+template<class... Ts> struct make_void
+{
+    using type = void;
+};
+
+template<class... Ts> using void_t = typename make_void<Ts...>::type;
+
+template<class IsAvalanching> struct avalanching_value
+{
+    static constexpr bool value = IsAvalanching::value;
+};
+
+// may be explicitly marked as BOOST_DEPRECATED in the future
+template<> struct avalanching_value<void>
+{
+    static constexpr bool value = true;
+};
+
+template<class Hash, class = void> struct hash_is_avalanching_impl: std::false_type
+{
+};
+
+template<class Hash> struct hash_is_avalanching_impl<Hash, void_t<typename Hash::is_avalanching> >:
+    std::integral_constant<bool, avalanching_value<typename Hash::is_avalanching>::value>
+{
+};
+
+template<class Hash>
+struct hash_is_avalanching_impl<Hash, typename std::enable_if< ((void)Hash::is_avalanching, true) >::type>
+{
+  // Hash::is_avalanching is not a type: we don't define value to produce
+  // a compile error downstream
+};
+
+} // namespace hash_detail
+
+template<class Hash> struct hash_is_avalanching: hash_detail::hash_is_avalanching_impl<Hash>::type
+{
+};
+
+} // namespace boost
+
+#endif // #ifndef BOOST_HASH_HASH_IS_AVALANCHING_HPP_INCLUDED
 /*
 Copyright 2018 Glen Joseph Fernandes
 (glenjofe@gmail.com)
@@ -6579,82 +6642,14 @@ inline std::size_t mulx( std::size_t x ) noexcept
 } // namespace boost
 
 #endif // #ifndef BOOST_UNORDERED_DETAIL_MULX_HPP
-/* Hash function characterization.
- *
- * Copyright 2022-2024 Joaquin M Lopez Munoz.
- * Distributed under the Boost Software License, Version 1.0.
- * (See accompanying file LICENSE_1_0.txt or copy at
- * http://www.boost.org/LICENSE_1_0.txt)
- *
- * See https://www.boost.org/libs/unordered for library home page.
- */
-
-#ifndef BOOST_UNORDERED_HASH_TRAITS_HPP
-#define BOOST_UNORDERED_HASH_TRAITS_HPP
-
-namespace boost{
-namespace unordered{
-
-namespace detail{
-
-template<typename Hash,typename=void>
-struct hash_is_avalanching_impl:std::false_type{};
-
-template<typename IsAvalanching>
-struct avalanching_value
-{
-  static constexpr bool value=IsAvalanching::value;
-};
-
-/* may be explicitly marked as BOOST_DEPRECATED in the future */
-template<> struct avalanching_value<void>
-{
-  static constexpr bool value=true;
-};
-
-template<typename Hash>
-struct hash_is_avalanching_impl<
-  Hash,
-  boost::unordered::detail::void_t<typename Hash::is_avalanching>
->:std::integral_constant<
-  bool,
-  avalanching_value<typename Hash::is_avalanching>::value
->{};
-
-template<typename Hash>
-struct hash_is_avalanching_impl<
-  Hash,
-  typename std::enable_if<((void)Hash::is_avalanching,true)>::type
->{};
-
-}
-
-/* Each trait can be partially specialized by users for concrete hash functions
- * when actual characterization differs from default.
- */
-
-/* hash_is_avalanching<Hash>::value is:
- *   - false if Hash::is_avalanching is not present.
- *   - Hash::is_avalanching::value if this is present and constexpr-convertible
- *     to a bool.
- *   - true if Hash::is_avalanching is void (deprecated).
- *   - ill-formed otherwise.
- */
-template<typename Hash>
-struct hash_is_avalanching: detail::hash_is_avalanching_impl<Hash>::type{};
-
-}
-}
-
-#endif
-// Copyright 2024 Braden Ganetsky
+// Copyright 2024-2026 Braden Ganetsky
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
-// Generated on 2024-08-25T17:48:54
+// Generated on 2026-01-24T00:34:53
 
-#ifndef BOOST_UNORDERED_UNORDERED_PRINTERS_HPP
-#define BOOST_UNORDERED_UNORDERED_PRINTERS_HPP
+#ifndef BOOST_UNORDERED_DETAIL_UNORDERED_PRINTERS_HPP
+#define BOOST_UNORDERED_DETAIL_UNORDERED_PRINTERS_HPP
 
 #ifndef BOOST_ALL_NO_EMBEDDED_GDB_SCRIPTS
 #ifdef __ELF__
@@ -6663,7 +6658,7 @@ struct hash_is_avalanching: detail::hash_is_avalanching_impl<Hash>::type{};
 #pragma clang diagnostic ignored "-Woverlength-strings"
 #endif
 __asm__(".pushsection \".debug_gdb_scripts\", \"MS\",%progbits,1\n"
-        ".ascii \"\\4gdb.inlined-script.BOOST_UNORDERED_UNORDERED_PRINTERS_HPP\\n\"\n"
+        ".ascii \"\\4gdb.inlined-script.BOOST_UNORDERED_DETAIL_UNORDERED_PRINTERS_HPP\\n\"\n"
         ".ascii \"import gdb.printing\\n\"\n"
         ".ascii \"import gdb.xmethod\\n\"\n"
         ".ascii \"import re\\n\"\n"
@@ -6678,8 +6673,14 @@ __asm__(".pushsection \".debug_gdb_scripts\", \"MS\",%progbits,1\n"
         ".ascii \"            return n\\n\"\n"
 
         ".ascii \"    def maybe_unwrap_foa_element(e):\\n\"\n"
-        ".ascii \"        if f\\\"{e.type.strip_typedefs()}\\\".startswith(\\\"boost::unordered::detail::foa::element_type<\\\"):\\n\"\n"
-        ".ascii \"            return e[\\\"p\\\"]\\n\"\n"
+        ".ascii \"        # Sometimes the complex typedefs can't be resolved through a pointer\\n\"\n"
+        ".ascii \"        if e.type.strip_typedefs().code == gdb.TYPE_CODE_PTR:\\n\"\n"
+        ".ascii \"            foa_element = e.dereference()\\n\"\n"
+        ".ascii \"        else:\\n\"\n"
+        ".ascii \"            foa_element = e\\n\"\n"
+
+        ".ascii \"        if f\\\"{foa_element.type.strip_typedefs()}\\\".startswith(\\\"boost::unordered::detail::foa::element_type<\\\"):\\n\"\n"
+        ".ascii \"            return foa_element[\\\"p\\\"]\\n\"\n"
         ".ascii \"        else:\\n\"\n"
         ".ascii \"            return e\\n\"\n"
 
@@ -6707,14 +6708,15 @@ __asm__(".pushsection \".debug_gdb_scripts\", \"MS\",%progbits,1\n"
 
         ".ascii \"class BoostUnorderedFcaPrinter:\\n\"\n"
         ".ascii \"    def __init__(self, val):\\n\"\n"
-        ".ascii \"        self.val = BoostUnorderedHelpers.maybe_unwrap_reference(val)\\n\"\n"
-        ".ascii \"        self.name = f\\\"{self.val.type.strip_typedefs()}\\\".split(\\\"<\\\")[0]\\n\"\n"
+        ".ascii \"        val = BoostUnorderedHelpers.maybe_unwrap_reference(val)\\n\"\n"
+        ".ascii \"        self.table = val[\\\"table_\\\"]\\n\"\n"
+        ".ascii \"        self.name = f\\\"{val.type.strip_typedefs()}\\\".split(\\\"<\\\")[0]\\n\"\n"
         ".ascii \"        self.name = self.name.replace(\\\"boost::unordered::\\\", \\\"boost::\\\")\\n\"\n"
         ".ascii \"        self.is_map = self.name.endswith(\\\"map\\\")\\n\"\n"
-        ".ascii \"        self.cpo = BoostUnorderedPointerCustomizationPoint(self.val[\\\"table_\\\"][\\\"buckets_\\\"][\\\"buckets\\\"])\\n\"\n"
+        ".ascii \"        self.cpo = BoostUnorderedPointerCustomizationPoint(self.table[\\\"buckets_\\\"][\\\"buckets\\\"])\\n\"\n"
 
         ".ascii \"    def to_string(self):\\n\"\n"
-        ".ascii \"        size = self.val[\\\"table_\\\"][\\\"size_\\\"]\\n\"\n"
+        ".ascii \"        size = self.table[\\\"size_\\\"]\\n\"\n"
         ".ascii \"        return f\\\"{self.name} with {size} elements\\\"\\n\"\n"
 
         ".ascii \"    def display_hint(self):\\n\"\n"
@@ -6722,7 +6724,7 @@ __asm__(".pushsection \".debug_gdb_scripts\", \"MS\",%progbits,1\n"
 
         ".ascii \"    def children(self):\\n\"\n"
         ".ascii \"        def generator():\\n\"\n"
-        ".ascii \"            grouped_buckets = self.val[\\\"table_\\\"][\\\"buckets_\\\"]\\n\"\n"
+        ".ascii \"            grouped_buckets = self.table[\\\"buckets_\\\"]\\n\"\n"
 
         ".ascii \"            size = grouped_buckets[\\\"size_\\\"]\\n\"\n"
         ".ascii \"            buckets = grouped_buckets[\\\"buckets\\\"]\\n\"\n"
@@ -6816,14 +6818,20 @@ __asm__(".pushsection \".debug_gdb_scripts\", \"MS\",%progbits,1\n"
 
         ".ascii \"class BoostUnorderedFoaPrinter:\\n\"\n"
         ".ascii \"    def __init__(self, val):\\n\"\n"
-        ".ascii \"        self.val = BoostUnorderedHelpers.maybe_unwrap_reference(val)\\n\"\n"
-        ".ascii \"        self.name = f\\\"{self.val.type.strip_typedefs()}\\\".split(\\\"<\\\")[0]\\n\"\n"
+        ".ascii \"        val = BoostUnorderedHelpers.maybe_unwrap_reference(val)\\n\"\n"
+        ".ascii \"        self.table = val[\\\"table_\\\"]\\n\"\n"
+        ".ascii \"        self.name = f\\\"{val.type.strip_typedefs()}\\\".split(\\\"<\\\")[0]\\n\"\n"
         ".ascii \"        self.name = self.name.replace(\\\"boost::unordered::\\\", \\\"boost::\\\")\\n\"\n"
         ".ascii \"        self.is_map = self.name.endswith(\\\"map\\\")\\n\"\n"
-        ".ascii \"        self.cpo = BoostUnorderedPointerCustomizationPoint(self.val[\\\"table_\\\"][\\\"arrays\\\"][\\\"groups_\\\"])\\n\"\n"
+        ".ascii \"        self.cpo = BoostUnorderedPointerCustomizationPoint(self.table[\\\"arrays\\\"][\\\"groups_\\\"])\\n\"\n"
+        ".ascii \"        self.groups = self.cpo.to_address(self.table[\\\"arrays\\\"][\\\"groups_\\\"])\\n\"\n"
+        ".ascii \"        self.elements = self.cpo.to_address(self.table[\\\"arrays\\\"][\\\"elements_\\\"])\\n\"\n"
+
+        ".ascii \"        self.N = 15 # `self.groups.dereference()[\\\"N\\\"]` may be optimized out\\n\"\n"
+        ".ascii \"        self.sentinel_ = 1 # `self.groups.dereference()[\\\"sentinel_\\\"]` may be optimized out\\n\"\n"
 
         ".ascii \"    def to_string(self):\\n\"\n"
-        ".ascii \"        size = BoostUnorderedHelpers.maybe_unwrap_atomic(self.val[\\\"table_\\\"][\\\"size_ctrl\\\"][\\\"size\\\"])\\n\"\n"
+        ".ascii \"        size = BoostUnorderedHelpers.maybe_unwrap_atomic(self.table[\\\"size_ctrl\\\"][\\\"size\\\"])\\n\"\n"
         ".ascii \"        return f\\\"{self.name} with {size} elements\\\"\\n\"\n"
 
         ".ascii \"    def display_hint(self):\\n\"\n"
@@ -6853,30 +6861,21 @@ __asm__(".pushsection \".debug_gdb_scripts\", \"MS\",%progbits,1\n"
         ".ascii \"        m = group[\\\"m\\\"]\\n\"\n"
         ".ascii \"        at = lambda b: BoostUnorderedHelpers.maybe_unwrap_atomic(m[b][\\\"n\\\"])\\n\"\n"
 
-        ".ascii \"        N = group[\\\"N\\\"]\\n\"\n"
-        ".ascii \"        sentinel_ = group[\\\"sentinel_\\\"]\\n\"\n"
         ".ascii \"        if self.is_regular_layout(group):\\n\"\n"
-        ".ascii \"            return pos == N-1 and at(N-1) == sentinel_\\n\"\n"
+        ".ascii \"            return pos == self.N-1 and at(self.N-1) == self.sentinel_\\n\"\n"
         ".ascii \"        else:\\n\"\n"
-        ".ascii \"            return pos == N-1 and (at(0) & 0x4000400040004000) == 0x4000 and (at(1) & 0x4000400040004000) == 0\\n\"\n"
+        ".ascii \"            return pos == self.N-1 and (at(0) & 0x4000400040004000) == 0x4000 and (at(1) & 0x4000400040004000) == 0\\n\"\n"
 
         ".ascii \"    def children(self):\\n\"\n"
         ".ascii \"        def generator():\\n\"\n"
-        ".ascii \"            table = self.val[\\\"table_\\\"]\\n\"\n"
-        ".ascii \"            groups = self.cpo.to_address(table[\\\"arrays\\\"][\\\"groups_\\\"])\\n\"\n"
-        ".ascii \"            elements = self.cpo.to_address(table[\\\"arrays\\\"][\\\"elements_\\\"])\\n\"\n"
-
-        ".ascii \"            pc_ = groups.cast(gdb.lookup_type(\\\"unsigned char\\\").pointer())\\n\"\n"
-        ".ascii \"            p_ = elements\\n\"\n"
+        ".ascii \"            pc_ = self.groups.cast(gdb.lookup_type(\\\"unsigned char\\\").pointer())\\n\"\n"
+        ".ascii \"            p_ = self.elements\\n\"\n"
         ".ascii \"            first_time = True\\n\"\n"
-        ".ascii \"            mask = 0\\n\"\n"
-        ".ascii \"            n0 = 0\\n\"\n"
-        ".ascii \"            n = 0\\n\"\n"
 
         ".ascii \"            count = 0\\n\"\n"
         ".ascii \"            while p_ != 0:\\n\"\n"
         ".ascii \"                # This if block mirrors the condition in the begin() call\\n\"\n"
-        ".ascii \"                if (not first_time) or (self.match_occupied(groups.dereference()) & 1):\\n\"\n"
+        ".ascii \"                if (not first_time) or (self.match_occupied(self.groups.dereference()) & 1):\\n\"\n"
         ".ascii \"                    pointer = BoostUnorderedHelpers.maybe_unwrap_foa_element(p_)\\n\"\n"
         ".ascii \"                    value = self.cpo.to_address(pointer).dereference()\\n\"\n"
         ".ascii \"                    if self.is_map:\\n\"\n"
@@ -6890,17 +6889,17 @@ __asm__(".pushsection \".debug_gdb_scripts\", \"MS\",%progbits,1\n"
         ".ascii \"                    count += 1\\n\"\n"
         ".ascii \"                first_time = False\\n\"\n"
 
-        ".ascii \"                n0 = pc_.cast(gdb.lookup_type(\\\"uintptr_t\\\")) % groups.dereference().type.sizeof\\n\"\n"
+        ".ascii \"                n0 = pc_.cast(gdb.lookup_type(\\\"uintptr_t\\\")) % self.groups.dereference().type.sizeof\\n\"\n"
         ".ascii \"                pc_ = self.cpo.next(pc_, -n0)\\n\"\n"
 
-        ".ascii \"                mask = (self.match_occupied(pc_.cast(groups.type).dereference()) >> (n0+1)) << (n0+1)\\n\"\n"
+        ".ascii \"                mask = (self.match_occupied(pc_.cast(self.groups.type).dereference()) >> (n0+1)) << (n0+1)\\n\"\n"
         ".ascii \"                while mask == 0:\\n\"\n"
-        ".ascii \"                    pc_ = self.cpo.next(pc_, groups.dereference().type.sizeof)\\n\"\n"
-        ".ascii \"                    p_ = self.cpo.next(p_, groups.dereference()[\\\"N\\\"])\\n\"\n"
-        ".ascii \"                    mask = self.match_occupied(pc_.cast(groups.type).dereference())\\n\"\n"
+        ".ascii \"                    pc_ = self.cpo.next(pc_, self.groups.dereference().type.sizeof)\\n\"\n"
+        ".ascii \"                    p_ = self.cpo.next(p_, self.N)\\n\"\n"
+        ".ascii \"                    mask = self.match_occupied(pc_.cast(self.groups.type).dereference())\\n\"\n"
 
         ".ascii \"                n = BoostUnorderedHelpers.countr_zero(mask)\\n\"\n"
-        ".ascii \"                if self.is_sentinel(pc_.cast(groups.type).dereference(), n):\\n\"\n"
+        ".ascii \"                if self.is_sentinel(pc_.cast(self.groups.type).dereference(), n):\\n\"\n"
         ".ascii \"                    p_ = 0\\n\"\n"
         ".ascii \"                else:\\n\"\n"
         ".ascii \"                    pc_ = self.cpo.next(pc_, n)\\n\"\n"
@@ -7056,7 +7055,7 @@ __asm__(".pushsection \".debug_gdb_scripts\", \"MS\",%progbits,1\n"
 #endif // defined(__ELF__)
 #endif // !defined(BOOST_ALL_NO_EMBEDDED_GDB_SCRIPTS)
 
-#endif // !defined(BOOST_UNORDERED_UNORDERED_PRINTERS_HPP)
+#endif // !defined(BOOST_UNORDERED_DETAIL_UNORDERED_PRINTERS_HPP)
 #ifndef BOOST_CORE_DETAIL_SP_THREAD_PAUSE_HPP_INCLUDED
 #define BOOST_CORE_DETAIL_SP_THREAD_PAUSE_HPP_INCLUDED
 
@@ -7143,8 +7142,6 @@ BOOST_FORCEINLINE void sp_thread_pause() noexcept
 // Distributed under the Boost Software License, Version 1.0
 // https://www.boost.org/LICENSE_1_0.txt
 
-#    if defined(_WIN32) || defined(__WIN32__) || defined(__CYGWIN__)
-
 #ifdef  BOOST_USE_WINDOWS_H
 # include <windows.h>
 #endif
@@ -7156,7 +7153,7 @@ namespace core
 namespace detail
 {
 
-#ifndef  BOOST_USE_WINDOWS_H
+#if !defined(BOOST_USE_WINDOWS_H) && (defined(_WIN32) || defined(__WIN32__) || defined(__CYGWIN__))
 
 #if defined(__clang__) && defined(__x86_64__)
 // clang x64 warns that __stdcall is ignored
@@ -7180,8 +7177,6 @@ extern "C" __declspec(dllimport) int BOOST_CORE_SP_STDCALL SwitchToThread();
 } // namespace detail
 } // namespace core
 } // namespace boost
-
-#endif
 
 #endif // #ifndef BOOST_CORE_DETAIL_SP_WIN32_SLEEP_HPP_INCLUDED
 #ifndef BOOST_CORE_DETAIL_SP_THREAD_YIELD_HPP_INCLUDED
@@ -7792,7 +7787,7 @@ using concurrent_cumulative_stats=cumulative_stats<N>;
 #undef BOOST_UNORDERED_DETAIL_RESTORE_WSHADOW
 /* Common base for Boost.Unordered open-addressing tables.
  *
- * Copyright 2022-2024 Joaquin M Lopez Munoz.
+ * Copyright 2022-2025 Joaquin M Lopez Munoz.
  * Copyright 2023 Christian Mazakas.
  * Copyright 2024 Braden Ganetsky.
  * Distributed under the Boost Software License, Version 1.0.
@@ -8685,6 +8680,8 @@ inline unsigned int unchecked_countr_zero(int x)
   unsigned long r;
   _BitScanForward(&r,(unsigned long)x);
   return (unsigned int)r;
+#elif defined(BOOST_GCC)||defined(BOOST_CLANG)
+  return (unsigned int)__builtin_ctz((unsigned int)x);
 #else
   BOOST_UNORDERED_ASSUME(x!=0);
   return (unsigned int)std::countr_zero((unsigned int)x);
@@ -9178,7 +9175,7 @@ public:
   using size_policy=pow2_size_policy;
   using prober=pow2_quadratic_prober;
   using mix_policy=typename std::conditional<
-    hash_is_avalanching<Hash>::value,
+    boost::hash_is_avalanching<Hash>::value,
     no_mix,
     mulx_mix
   >::type;
@@ -13506,7 +13503,7 @@ std::size_t>::type
 
 #endif // #ifndef BOOST_HASH_DETAIL_HASH_RANGE_HPP
 // Copyright 2005-2014 Daniel James.
-// Copyright 2021, 2022 Peter Dimov.
+// Copyright 2021, 2022, 2025 Peter Dimov.
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
@@ -14022,19 +14019,15 @@ namespace boost
 
 #endif
 
-    // boost::unordered::hash_is_avalanching
+    // hash_is_avalanching
 
-    namespace unordered
-    {
-        template<class T> struct hash_is_avalanching;
-        template<class Ch> struct hash_is_avalanching< boost::hash< std::basic_string<Ch> > >: std::is_integral<Ch> {};
+    template<class Ch> struct hash_is_avalanching< boost::hash< std::basic_string<Ch> > >: std::is_integral<Ch> {};
 
 #ifndef BOOST_NO_CXX17_HDR_STRING_VIEW
 
-        template<class Ch> struct hash_is_avalanching< boost::hash< std::basic_string_view<Ch> > >: std::is_integral<Ch> {};
+    template<class Ch> struct hash_is_avalanching< boost::hash< std::basic_string_view<Ch> > >: std::is_integral<Ch> {};
 
 #endif
-    } // namespace unordered
 
 } // namespace boost
 
@@ -14042,7 +14035,8 @@ namespace boost
 /* Fast open-addressing concurrent hashset.
  *
  * Copyright 2023 Christian Mazakas.
- * Copyright 2023-2024 Joaquin M Lopez Munoz.
+ * Copyright 2023-2026 Joaquin M Lopez Munoz.
+ * Copyright 2026 Braden Ganetsky
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -14215,9 +14209,10 @@ namespace boost {
       {
       }
 
-      template <bool avoid_explicit_instantiation = true>
+      template <typename Key2,
+        typename std::enable_if<std::is_same<Key, Key2>::value, int>::type = 0>
       concurrent_flat_set(
-        unordered_flat_set<Key, Hash, Pred, Allocator>&& other)
+        unordered_flat_set<Key2, Hash, Pred, Allocator>&& other)
           : table_(std::move(other.table_))
       {
       }
@@ -14457,8 +14452,8 @@ namespace boost {
       size_type insert(InputIterator begin, InputIterator end)
       {
         size_type count_elements = 0;
-        for (auto pos = begin; pos != end; ++pos, ++count_elements) {
-          table_.emplace(*pos);
+        for (auto pos = begin; pos != end; ++pos) {
+          if (table_.emplace(*pos)) ++count_elements;
         }
         return count_elements;
       }
@@ -15139,7 +15134,8 @@ namespace boost {
 /* Fast open-addressing concurrent hashmap.
  *
  * Copyright 2023 Christian Mazakas.
- * Copyright 2023-2024 Joaquin M Lopez Munoz.
+ * Copyright 2023-2026 Joaquin M Lopez Munoz.
+ * Copyright 2026 Braden Ganetsky
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -15315,9 +15311,10 @@ namespace boost {
       {
       }
 
-      template <bool avoid_explicit_instantiation = true>
+      template <typename Key2,
+        typename std::enable_if<std::is_same<Key, Key2>::value, int>::type = 0>
       concurrent_flat_map(
-        unordered_flat_map<Key, T, Hash, Pred, Allocator>&& other)
+        unordered_flat_map<Key2, T, Hash, Pred, Allocator>&& other)
           : table_(std::move(other.table_))
       {
       }
@@ -15548,8 +15545,8 @@ namespace boost {
       size_type insert(InputIterator begin, InputIterator end)
       {
         size_type count_elements = 0;
-        for (auto pos = begin; pos != end; ++pos, ++count_elements) {
-          table_.emplace(*pos);
+        for (auto pos = begin; pos != end; ++pos) {
+          if (table_.emplace(*pos)) ++count_elements;
         }
         return count_elements;
       }
