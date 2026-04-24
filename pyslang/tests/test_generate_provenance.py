@@ -19,7 +19,11 @@ def _compile(code):
     return comp
 
 
-_CONSTRUCT_KINDS = {SyntaxKind.IfGenerate, SyntaxKind.CaseGenerate, SyntaxKind.LoopGenerate}
+_CONSTRUCT_KINDS = {
+    SyntaxKind.IfGenerate,
+    SyntaxKind.CaseGenerate,
+    SyntaxKind.LoopGenerate,
+}
 
 
 def _construct_of(block):
