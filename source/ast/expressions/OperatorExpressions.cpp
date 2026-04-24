@@ -1474,45 +1474,42 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
 
     // Force four-state return type for ambiguous condition case.
     const Type* resultType = OpInfo::binaryType(comp, lt, rt, isFourState);
-
-    // If either branch already has an error, skip type unification.
-    if (bad) {
-        return badExpr(comp,
-                       comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp),
-                                                           syntax.question.location(), left, right,
-                                                           syntax.sourceRange(), isConst, isTrue));
-    }
+    auto result = comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp),
+                                                      syntax.question.location(), left, right,
+                                                      syntax.sourceRange(), isConst, isTrue);
+    if (bad)
+        return badExpr(comp, result);
 
     // If both sides of the expression are numeric, we've already determined the correct
     // result type. Otherwise, follow the rules in [11.14.11].
     bool good = true;
     if (!lt->isNumeric() || !rt->isNumeric()) {
         if (lt->isNull() && rt->isNull()) {
-            resultType = &comp.getNullType();
+            result->type = &comp.getNullType();
         }
         else if (lt->isClass() || rt->isClass() || lt->isCHandle() || rt->isCHandle() ||
                  lt->isEvent() || rt->isEvent() || lt->isVirtualInterface() ||
                  rt->isVirtualInterface() || lt->isCovergroup() || rt->isCovergroup()) {
             if (lt->isNull())
-                resultType = rt;
+                result->type = rt;
             else if (rt->isNull())
-                resultType = lt;
+                result->type = lt;
             else if (rt->isAssignmentCompatible(*lt))
-                resultType = rt;
+                result->type = rt;
             else if (lt->isAssignmentCompatible(*rt))
-                resultType = lt;
+                result->type = lt;
             else if (auto common = Type::getCommonBase(*lt, *rt))
-                resultType = common;
+                result->type = common;
             else if (lt->isEquivalent(*rt))
-                resultType = lt;
+                result->type = lt;
             else
                 good = false;
         }
         else if (lt->isEquivalent(*rt)) {
-            resultType = lt;
+            result->type = lt;
         }
         else if (left.isImplicitString() && right.isImplicitString()) {
-            resultType = &comp.getStringType();
+            result->type = &comp.getStringType();
         }
         else {
             good = false;
@@ -1524,17 +1521,8 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
         diag << *lt << *rt;
         diag << left.sourceRange;
         diag << right.sourceRange;
-        return badExpr(comp,
-                       comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp),
-                                                           syntax.question.location(), left, right,
-                                                           syntax.sourceRange(), isConst, isTrue));
-    }
-
-    auto result = comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp),
-                                                      syntax.question.location(), left, right,
-                                                      syntax.sourceRange(), isConst, isTrue);
-    if (bad)
         return badExpr(comp, result);
+    }
 
     // Warn about cases where a conditional expression and a binary operator
     // are mixed in a way that suggests the user mixed up the precedence order.
@@ -2412,26 +2400,24 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     auto& result = *comp.emplace<StreamingConcatenationExpression>(
         comp.getVoidType(), sliceSize, bitstreamWidth, buffer.ccopy(comp), syntax.sourceRange());
 
+    // In VCS compat mode the error about requiring an assignment context can be silenced,
+    // so we need a real target type. Use a packed bit vector of the bitstream width.
+    // Cap the width so we don't overflow; canBeSource below will error if target < source.
+    const Type* effectiveTarget = assignmentTarget;
     if (!context.flags.has(ASTFlags::StreamingAllowed)) {
-        // VCS compat mode: the error about requiring an assignment context can be silenced,
-        // so produce a real result type by converting to a packed bit vector of bitstream width.
-        // Cap the width so we don't overflow; the conversion will error for width mismatch.
         auto width = std::min(bitstreamWidth, (uint64_t)SVInt::MAX_BITS);
-        auto& type = comp.getType(bitwidth_t(width), IntegralFlags::FourState);
-        return convertAssignment(context, type, result, result.sourceRange);
+        effectiveTarget = &comp.getType(bitwidth_t(width), IntegralFlags::FourState);
     }
 
     // When the assignment target type is known (and not void — which happens when LHS is also a
     // streaming concat), validate widths and wrap in a StreamingConcat conversion so the expression
     // carries the target type directly, avoiding void-type special casing elsewhere.
-    // In explicit bitstream cast context the outer ConversionExpression::fromSyntax already
-    // handles validation and wrapping via isBitstreamCast, so skip pre-conversion here.
-    if (!isDestination && assignmentTarget && !assignmentTarget->isVoid() &&
-        !assignmentTarget->isError() && !context.flags.has(ASTFlags::BitstreamCast)) {
-        if (!Bitstream::canBeSource(*assignmentTarget, result, result.sourceRange, context)) {
+    if (!isDestination && effectiveTarget && !effectiveTarget->isVoid() &&
+        !effectiveTarget->isError()) {
+        if (!Bitstream::canBeSource(*effectiveTarget, result, result.sourceRange, context)) {
             return badResult();
         }
-        Expression* conv = comp.emplace<ConversionExpression>(*assignmentTarget,
+        Expression* conv = comp.emplace<ConversionExpression>(*effectiveTarget,
                                                               ConversionKind::StreamingConcat,
                                                               result, result.sourceRange);
         selfDetermined(context, conv);

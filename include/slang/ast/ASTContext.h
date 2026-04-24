@@ -184,13 +184,8 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
 
     /// AST binding is for a wildcard port connection.
     WildcardPortConn = 1ull << 42,
-
-    /// AST binding is for the operand of an explicit bitstream cast expression.
-    /// Used to distinguish bitstream cast semantics from assignment semantics when
-    /// binding a streaming concatenation with a known target type.
-    BitstreamCast = 1ull << 43,
 };
-SLANG_BITMASK(ASTFlags, BitstreamCast)
+SLANG_BITMASK(ASTFlags, WildcardPortConn)
 
 /// Various flags that can be applied to a constant expression evaluation.
 enum class SLANG_EXPORT EvalFlags : uint8_t {
