@@ -287,8 +287,8 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
         // For other operands (e.g. assignment patterns), assignmentTarget is needed for type
         // deduction. The cast syntax wraps the operand in ParenthesizedExpressionSyntax, so
         // check the inner expression kind.
-        const bool isStreamingOperand =
-            syntax.right->expression->kind == SyntaxKind::StreamingConcatenationExpression;
+        const bool isStreamingOperand = syntax.right->expression->kind ==
+                                        SyntaxKind::StreamingConcatenationExpression;
         operand = &create(comp, *syntax.right, context, ASTFlags::StreamingAllowed,
                           isStreamingOperand ? nullptr : type);
         if (operand->bad())
