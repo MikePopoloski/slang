@@ -446,4 +446,17 @@ void AnalyzedProcedure::buildSensitivityList(AnalysisContext& context, DFAResult
     sensitivityList.kind = SensitivityList::Kind::Dynamic;
 }
 
+size_t AnalyzedProcedure::getMemoryUsage() const {
+    size_t size = sizeof(AnalyzedProcedure);
+    size += sizeof(void*) * drivers.capacity();
+    size += sizeof(void*) * callExpressions.capacity();
+    size += sizeof(void*) * timingControls.capacity();
+    size += sizeof(ReadRange) * readSet.capacity();
+    size += sizeof(ReadRange) * sensitivityList.reads.capacity();
+    size += sizeof(ImplicitEventReadSet) * implicitEventReadSets.capacity();
+    for (auto& set : implicitEventReadSets)
+        size += sizeof(ReadRange) * set.reads.capacity();
+    return size;
+}
+
 } // namespace slang::analysis

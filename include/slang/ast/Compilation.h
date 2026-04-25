@@ -362,6 +362,11 @@ public:
     /// because of it.
     bool hasFatalErrors() const { return sawFatalError; }
 
+    /// Returns the total number of bytes allocated for AST nodes and related structures.
+    /// This includes the main bump allocator as well as specialized allocators for types
+    /// that require non-trivial destruction.
+    size_t getTotalBytesAllocated() const;
+
     /// @}
     /// @name Utility and convenience methods
     /// @{

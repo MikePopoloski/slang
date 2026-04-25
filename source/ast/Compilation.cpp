@@ -1627,6 +1627,16 @@ void Compilation::elaborate() {
     unreferencedDefs = std::move(newUnreferencedDefs);
 }
 
+size_t Compilation::getTotalBytesAllocated() const {
+    return BumpAllocator::getTotalBytesAllocated() + symbolMapAllocator.getTotalBytesAllocated() +
+           pointerMapAllocator.getTotalBytesAllocated() +
+           constantAllocator.getTotalBytesAllocated() +
+           genericClassAllocator.getTotalBytesAllocated() +
+           assertionDetailsAllocator.getTotalBytesAllocated() +
+           configBlockAllocator.getTotalBytesAllocated() +
+           wildcardImportAllocator.getTotalBytesAllocated();
+}
+
 const Diagnostics& Compilation::getParseDiagnostics() {
     if (cachedParseDiagnostics)
         return *cachedParseDiagnostics;

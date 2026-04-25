@@ -14,6 +14,7 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
+#include "slang/driver/MemoryStats.h"
 #include "slang/syntax/CSTSerializer.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/Json.h"
@@ -243,6 +244,13 @@ int driverMain(int argc, TArgs argv) {
                            "to the given file as JSON, or '-' for stdout",
                            "<path>");
 
+        std::optional<std::string> memoryStats;
+        driver.cmdLine.add(
+            "--memory-stats", memoryStats,
+            "Print a detailed breakdown of memory usage by category "
+            "(source files, CST, AST, analysis) to the given file, or '-' for stdout",
+            "<path>");
+
         if (!driver.parseCommandLine(argc, argv))
             return 1;
 
@@ -314,8 +322,13 @@ int driverMain(int argc, TArgs argv) {
                 printCSTJson(driver, *cstJsonFile, cstJsonMode.value_or(CSTJsonMode::Full));
             }
 
-            if (onlyParse == true)
+            if (onlyParse == true) {
+                if (memoryStats) {
+                    printMemoryStats(*memoryStats, driver.sourceManager, driver.syntaxTrees,
+                                     nullptr, nullptr);
+                }
                 return ok && driver.reportParseDiags();
+            }
 
             std::unique_ptr<Compilation> compilation;
             {
@@ -324,12 +337,18 @@ int driverMain(int argc, TArgs argv) {
                 driver.reportCompilation(*compilation, quiet == true);
             }
 
+            std::unique_ptr<analysis::AnalysisManager> analysisManager;
             if (!disableAnalysis.value_or(false)) {
                 TimeTraceScope timeScope("semanticAnalysis"sv, ""sv);
-                driver.runAnalysis(*compilation);
+                analysisManager = driver.runAnalysis(*compilation);
             }
 
             ok &= driver.reportDiagnostics(quiet == true);
+
+            if (memoryStats) {
+                printMemoryStats(*memoryStats, driver.sourceManager, driver.syntaxTrees,
+                                 compilation.get(), analysisManager.get());
+            }
 
             if (astJsonFile) {
                 TimeTraceScope timeScope("astSerialization"sv, ""sv);

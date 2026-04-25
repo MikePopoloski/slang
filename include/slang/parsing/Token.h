@@ -182,6 +182,9 @@ public:
     /// This is detected by examining the leading trivia of this token for newlines.
     bool isOnSameLine() const;
 
+    /// Gets the allocated size of this token, in bytes (not including its trivia).
+    size_t getSizeInBytes() const;
+
     bool valid() const { return hasInfoPtr || kind != TokenKind::Unknown; }
     explicit operator bool() const { return valid(); }
 

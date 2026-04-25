@@ -565,6 +565,18 @@ std::vector<BufferID> SourceManager::getAllBuffers() const {
     return result;
 }
 
+size_t SourceManager::getMemoryUsage() const {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    size_t total = 0;
+    for (auto& [path, entry] : lookupCache) {
+        if (entry.first) {
+            total += entry.first->mem.capacity();
+            total += entry.first->lineOffsets.capacity() * sizeof(size_t);
+        }
+    }
+    return total;
+}
+
 template<IsLock TLock>
 SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer, TLock&) {
     if (!buffer || buffer.getId() >= bufferEntries.size())

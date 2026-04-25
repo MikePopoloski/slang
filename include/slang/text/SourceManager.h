@@ -275,6 +275,10 @@ public:
     /// source manager.
     std::vector<BufferID> getAllBuffers() const;
 
+    /// Returns the total bytes consumed by all loaded source files:
+    /// raw file content plus any cached line-offset tables.
+    size_t getMemoryUsage() const;
+
 private:
     // Stores information specified in a `line directive, which alters the
     // line number and file name that we report in diagnostics.

@@ -290,6 +290,44 @@ Diagnostics AnalysisManager::getDiagnostics() {
     return diagMap.coalesce(sourceManager);
 }
 
+AnalysisManager::Stats AnalysisManager::getStats() const {
+    Stats stats;
+    for (auto& state : workerStates) {
+        stats.memoryUsage += state.context.alloc.getTotalBytesAllocated();
+        stats.memoryUsage += state.scopeAlloc.getTotalBytesAllocated();
+    }
+
+    auto mapBytes = [](const auto& m) {
+        return m.size() * sizeof(typename std::remove_reference_t<decltype(m)>::value_type);
+    };
+    stats.memoryUsage += mapBytes(analyzedScopes);
+    stats.memoryUsage += mapBytes(analyzedSubroutines);
+    stats.memoryUsage += mapBytes(analyzedAssertions);
+    stats.memoryUsage += mapBytes(visitedNonProcCalls);
+
+    stats.numScopes = analyzedScopes.size();
+    stats.numProcedures = analyzedSubroutines.size();
+
+    analyzedAssertions.visit_all([&](const auto& e) {
+        stats.numAssertions += e.second.size();
+        stats.memoryUsage += e.second.capacity() * sizeof(AnalyzedAssertion);
+    });
+
+    analyzedSubroutines.visit_all(
+        [&](auto& item) { stats.memoryUsage += item.second->getMemoryUsage(); });
+
+    analyzedScopes.visit_all([&](auto& item) {
+        if (item.second) {
+            auto& scope = *item.second.value();
+            stats.numProcedures += scope.procedures.size();
+            for (auto& proc : scope.procedures)
+                stats.memoryUsage += proc.getMemoryUsage();
+        }
+    });
+
+    return stats;
+}
+
 const AnalyzedScope& AnalysisManager::analyzeScopeBlocking(
     const Scope& scope, const AnalyzedProcedure* parentProcedure) {
 

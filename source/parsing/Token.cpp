@@ -55,6 +55,28 @@ static constexpr size_t getExtraSize(TokenKind kind) {
     return (size + align - 1) & ~(align - 1);
 }
 
+static bool needsRawText(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Unknown:
+        case TokenKind::Identifier:
+        case TokenKind::SystemIdentifier:
+        case TokenKind::IncludeFileName:
+        case TokenKind::StringLiteral:
+        case TokenKind::IntegerLiteral:
+        case TokenKind::IntegerBase:
+        case TokenKind::UnbasedUnsizedLiteral:
+        case TokenKind::RealLiteral:
+        case TokenKind::TimeLiteral:
+        case TokenKind::Directive:
+        case TokenKind::MacroUsage:
+        case TokenKind::EmptyMacroArgument:
+        case TokenKind::LineContinuation:
+            return true;
+        default:
+            return false;
+    }
+}
+
 void NumericTokenFlags::set(LiteralBase base_, bool isSigned_) {
     raw |= uint8_t(base_);
     raw |= uint8_t(isSigned_) << 2;
@@ -434,6 +456,22 @@ bool Token::isOnSameLine() const {
     return kind != TokenKind::EndOfFile;
 }
 
+size_t Token::getSizeInBytes() const {
+    size_t result = sizeof(Token);
+    if (hasInfoPtr) {
+        result += sizeof(Info) + getExtraSize(kind);
+        if (triviaCountSmall > 0) {
+            result += sizeof(Trivia*);
+            if (triviaCountSmall > MaxTriviaSmallCount)
+                result += sizeof(size_t);
+        }
+
+        if (needsRawText(kind))
+            result += sizeof(const char*);
+    }
+    return result;
+}
+
 Token Token::withTrivia(BumpAllocator& alloc, std::span<Trivia const> trivia) const {
     return clone(alloc, trivia, rawText(), location());
 }
@@ -480,28 +518,6 @@ Token Token::deepClone(BumpAllocator& alloc) const {
     for (const auto& t : trivia())
         triviaBuffer.push_back(t.clone(alloc, true));
     return clone(alloc, triviaBuffer.copy(alloc), rawText(), location());
-}
-
-static bool needsRawText(TokenKind kind) {
-    switch (kind) {
-        case TokenKind::Unknown:
-        case TokenKind::Identifier:
-        case TokenKind::SystemIdentifier:
-        case TokenKind::IncludeFileName:
-        case TokenKind::StringLiteral:
-        case TokenKind::IntegerLiteral:
-        case TokenKind::IntegerBase:
-        case TokenKind::UnbasedUnsizedLiteral:
-        case TokenKind::RealLiteral:
-        case TokenKind::TimeLiteral:
-        case TokenKind::Directive:
-        case TokenKind::MacroUsage:
-        case TokenKind::EmptyMacroArgument:
-        case TokenKind::LineContinuation:
-            return true;
-        default:
-            return false;
-    }
 }
 
 void Token::init(BumpAllocator& alloc, TokenKind kind_, std::span<Trivia const> trivia,

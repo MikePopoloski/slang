@@ -155,6 +155,24 @@ public:
     /// Returns all analyzed assertions for the given symbol.
     std::vector<const AnalyzedAssertion*> getAnalyzedAssertions(const ast::Symbol& symbol) const;
 
+    /// A collection of stats related to analysis.
+    struct Stats {
+        /// An estimate of the number of bytes allocated during analysis.
+        size_t memoryUsage = 0;
+
+        /// The number of procedures analyzed.
+        size_t numProcedures = 0;
+
+        /// The number of assertions analyzed.
+        size_t numAssertions = 0;
+
+        /// The number of scopes analyzed.
+        size_t numScopes = 0;
+    };
+
+    /// Returns various statistics about the analysis.
+    Stats getStats() const;
+
     /// Analyzes the non-procedural expressions in the given symbol.
     template<std::derived_from<ast::Symbol> TSymbol>
     void analyzeNonProceduralExprs(const TSymbol& symbol) {

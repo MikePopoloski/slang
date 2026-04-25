@@ -79,10 +79,11 @@ add_library(
   diagnostics/Diagnostics.cpp
   diagnostics/JsonDiagnosticClient.cpp
   diagnostics/TextDiagnosticClient.cpp
-  driver/UserDefinedSubroutine.cpp
   driver/CompatSettings.cpp
   driver/Driver.cpp
+  driver/MemoryStats.cpp
   driver/SourceLoader.cpp
+  driver/UserDefinedSubroutine.cpp
   numeric/ConstantValue.cpp
   numeric/SVInt.cpp
   numeric/Time.cpp

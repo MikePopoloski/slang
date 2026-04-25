@@ -832,4 +832,10 @@ Print high-level timing summary stats to the given file, or stdout if the path i
 The format is a small JSON blob with keys for timing different stages of compilation, in microseconds.
 Peak process memory usage, in bytes, is also included.
 
+`--memory-stats <path>`
+
+Print a detailed breakdown of memory usage by category to the given file, or stdout if the path is '-'.
+The output is a text document containing memory usage (in bytes) for each major compilation phase:
+source files, the concrete syntax tree (CST), the abstract syntax tree (AST), and analysis.
+
 */

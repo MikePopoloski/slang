@@ -26,7 +26,8 @@ BumpAllocator::~BumpAllocator() {
 }
 
 BumpAllocator::BumpAllocator(BumpAllocator&& other) noexcept :
-    head(std::exchange(other.head, nullptr)), endPtr(other.endPtr) {
+    head(std::exchange(other.head, nullptr)), endPtr(other.endPtr),
+    totalBytesAllocated(std::exchange(other.totalBytesAllocated, 0)) {
 }
 
 BumpAllocator& BumpAllocator::operator=(BumpAllocator&& other) noexcept {
@@ -48,6 +49,7 @@ void BumpAllocator::steal(BumpAllocator&& other) {
 
     seg->prev = head->prev;
     head->prev = std::exchange(other.head, nullptr);
+    totalBytesAllocated += std::exchange(other.totalBytesAllocated, 0);
 }
 
 byte* BumpAllocator::allocateSlow(size_t size, size_t alignment) {
@@ -68,6 +70,7 @@ BumpAllocator::Segment* BumpAllocator::allocSegment(Segment* prev, size_t size) 
     auto seg = (Segment*)::operator new(size);
     seg->prev = prev;
     seg->current = (byte*)seg + sizeof(Segment);
+    totalBytesAllocated += size;
     return seg;
 }
 

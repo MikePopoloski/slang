@@ -133,6 +133,9 @@ public:
     /// Gets the effective sensitivity list for this procedure.
     const SensitivityList& getSensitivityList() const { return sensitivityList; }
 
+    /// Returns an estimate of the memory used to represent this procedure.
+    size_t getMemoryUsage() const;
+
 private:
     void buildSensitivityList(AnalysisContext& context, DFAResults& analysis,
                               ast::EvalContext& evalContext,

@@ -53,6 +53,9 @@ public:
         return base;
     }
 
+    /// Returns the total number of bytes that have been allocated through this allocator.
+    size_t getTotalBytesAllocated() const { return totalBytesAllocated; }
+
     /// Copies the contents of the given span into a new memory region
     /// allocated and owned by this allocator and returns a span pointing to it.
     template<typename T>
@@ -104,6 +107,7 @@ protected:
 
     Segment* head;
     byte* endPtr;
+    size_t totalBytesAllocated = 0;
 #if SLANG_ASSERT_ENABLED
     bool frozen = false;
 #endif
@@ -112,13 +116,12 @@ protected:
 
     // Slow path handling of allocation.
     byte* allocateSlow(size_t size, size_t alignment);
+    Segment* allocSegment(Segment* prev, size_t size);
 
     static byte* alignPtr(byte* ptr, size_t alignment) {
         return reinterpret_cast<byte*>((reinterpret_cast<uintptr_t>(ptr) + alignment - 1) &
                                        ~(alignment - 1));
     }
-
-    static Segment* allocSegment(Segment* prev, size_t size);
 };
 
 /// A strongly-typed version of the BumpAllocator, which has the additional
