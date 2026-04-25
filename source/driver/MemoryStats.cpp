@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <fmt/format.h>
 #include <fstream>
+#include <iostream>
 
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/ast/ASTVisitor.h"
