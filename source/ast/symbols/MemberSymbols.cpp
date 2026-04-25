@@ -227,8 +227,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
 ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext,
                                                  ArgumentDirection direction,
                                                  const ModportExplicitPortSyntax& syntax) {
-    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural |
-                                                  ASTFlags::NoReference);
+    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural | ASTFlags::NoReference);
     auto& comp = context.getCompilation();
     auto name = syntax.name;
     auto result = comp.emplace<ModportPortSymbol>(name.valueText(), name.location(), direction);
