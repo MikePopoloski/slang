@@ -1580,6 +1580,7 @@ TEST_CASE("Streaming operators") {
         {"int a; int b = {>>{a}} + 2;", diag::BadStreamContext},
         {"shortint a,b; int c = {{>>{a}}, b};", diag::BadStreamContext},
         {"int a,b; always_comb {>>{a}} += b;", diag::BadStreamContext},
+        {"int a,b; int c = a ? {>>{a}} + 2 : b;", diag::BadStreamContext},
         {"int a; int b = {<< string {a}};", diag::BadStreamSlice},
         {"typedef bit t[]; int a; int b = {<<t{a}};", diag::BadStreamSlice},
         {"int a, c; int b = {<< c {a}};", diag::ConstEvalNonConstVariable},
@@ -1667,8 +1668,7 @@ module sub(input byte b);
     }
 
     std::string legal[] = {
-        "int a = 0; byte b[4] = {<<3{a}};",
-        "int a; byte b[4]; assign {<<3{b}} = a;",
+        "int a = 0; byte b[4] = {<<3{a}};", "int a; byte b[4]; assign {<<3{b}} = a;",
         "int a; byte b[4]; assign {<<3{b}} = {<<5{a}};",
         "byte b[4] = '{default:0}; int a = int'({<<3{b}}) + 5;",
         "shortint a = 0; byte b[2] = '{default:0}; int c = {<<3{a, {<<5{b}}}};",
@@ -1676,6 +1676,12 @@ module sub(input byte b);
         "struct{bit a[];int b;}a;struct {byte a[];bit b;}b;assign{<<{a}}={>>{b}};",
         "struct{bit a[];int b;}a;int b;assign {>>{a}} = {<<{b}};",
         "localparam int p = {<<{6}}; enum {a={>>{2}},b={<<{p}}, c} t;",
+
+        // Streaming operator as a branch of a conditional (ternary) expression
+        "wire c; assign c = c ? {<<8{c & c}} : c;",
+        "bit s; int a; byte b[4]; assign b = s ? b : {<<3{a}};",
+        "bit s; int a; byte b[4]; assign b = s ? {<<3{a}} : b;",
+        "bit s; int a; byte b[4]; assign b = s ? {<<2{a}} : {<<3{a}};",
 
         R"(
     bit [0:1] c [2:0];

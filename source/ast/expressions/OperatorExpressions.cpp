@@ -1455,6 +1455,12 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
         rightFlags |= ASTFlags::AllowUnboundedLiteral;
     }
 
+    // Pass through the flag allowing streaming operators as branches.
+    if (context.flags.has(ASTFlags::StreamingAllowed)) {
+        leftFlags |= ASTFlags::StreamingAllowed;
+        rightFlags |= ASTFlags::StreamingAllowed;
+    }
+
     auto& left = create(comp, *syntax.left, trueContext, leftFlags, assignmentTarget);
     auto& right = create(comp, *syntax.right, context, rightFlags, assignmentTarget);
     bad |= left.bad() || right.bad();
@@ -2256,7 +2262,7 @@ void ReplicationExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& StreamingConcatenationExpression::fromSyntax(
     Compilation& comp, const StreamingConcatenationExpressionSyntax& syntax,
-    const ASTContext& context) {
+    const ASTContext& context, const Type* assignmentTarget) {
 
     const bool isDestination = context.flags.has(ASTFlags::LValue);
     const bool isRightToLeft = syntax.operatorToken.kind == TokenKind::LeftShift;
@@ -2391,22 +2397,31 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         buffer.push_back({&arg, withExpr, constantWithWidth});
     }
 
-    // So normally the type of a streaming concatenation is never inspected,
-    // since it can only be used in assignments and there is explicit handling
-    // of these expressions there. We use a void type for the result to represent
-    // this (also because otherwise what type can we use for e.g. non fixed-size
-    // streams). However, in VCS compat mode the error about requiring an assignment
-    // context can be silenced, so we need to come up with a real result type here,
-    // which we do by converting to a packed bit vector of bitstream width.
     auto& result = *comp.emplace<StreamingConcatenationExpression>(
         comp.getVoidType(), sliceSize, bitstreamWidth, buffer.ccopy(comp), syntax.sourceRange());
 
+    // In VCS compat mode the error about requiring an assignment context can be silenced,
+    // so we need a real target type. Use a packed bit vector of the bitstream width.
+    // Cap the width so we don't overflow; canBeSource below will error if target < source.
+    const Type* effectiveTarget = assignmentTarget;
     if (!context.flags.has(ASTFlags::StreamingAllowed)) {
-        // Cap the width so we don't overflow. The conversion will error for us
-        // since the target width will be less than the source width.
         auto width = std::min(bitstreamWidth, (uint64_t)SVInt::MAX_BITS);
-        auto& type = comp.getType(bitwidth_t(width), IntegralFlags::FourState);
-        return convertAssignment(context, type, result, result.sourceRange);
+        effectiveTarget = &comp.getType(bitwidth_t(width), IntegralFlags::FourState);
+    }
+
+    // When the assignment target type is known (and not void — which happens when LHS is also a
+    // streaming concat), validate widths and wrap in a StreamingConcat conversion so the expression
+    // carries the target type directly, avoiding void-type special casing elsewhere.
+    if (!isDestination && effectiveTarget && !effectiveTarget->isVoid() &&
+        !effectiveTarget->isError()) {
+        if (!Bitstream::canBeSource(*effectiveTarget, result, result.sourceRange, context)) {
+            return badResult();
+        }
+        Expression* conv = comp.emplace<ConversionExpression>(*effectiveTarget,
+                                                              ConversionKind::StreamingConcat,
+                                                              result, result.sourceRange);
+        selfDetermined(context, conv);
+        return *conv;
     }
 
     return result;
