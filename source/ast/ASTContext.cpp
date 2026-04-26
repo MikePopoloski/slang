@@ -418,28 +418,23 @@ void ASTContext::noteReference(const ValueSymbol& symbol, bool isDottedAccess) c
         }
 
         auto& comp = getCompilation();
-        auto mark = [&](const syntax::SyntaxNode& node) {
-            comp.noteReference(node, isLValue);
-            if (isLValue && flags.has(ASTFlags::LAndRValue))
-                comp.noteReference(node, /* isLValue */ false);
-        };
+        comp.noteReference(*syntax, isLValue);
 
-        mark(*syntax);
+        if (isLValue && flags.has(ASTFlags::LAndRValue))
+            comp.noteReference(*syntax, /* isLValue */ false);
 
         // Modport ports are aliases for interface members; references to the
-        // facade should also count as references to the connected value(s).
+        // facade also count as references to the connected value(s).
         if (auto mpp = symbol.as_if<ModportPortSymbol>()) {
-            if (mpp->internalSymbol) {
-                if (auto underlying = mpp->internalSymbol->getSyntax())
-                    mark(*underlying);
+            if (auto internal = mpp->internalSymbol) {
+                if (auto value = internal->as_if<ValueSymbol>())
+                    noteReference(*value, /* isDottedAccess */ false);
             }
             else if (mpp->explicitConnection) {
                 mpp->explicitConnection->visitSymbolReferences(
                     [&](const Expression&, const Symbol& s) {
-                        if (!s.isValue())
-                            return;
-                        if (auto underlying = s.getSyntax())
-                            mark(*underlying);
+                        if (auto value = s.as_if<ValueSymbol>())
+                            noteReference(*value, /* isDottedAccess */ false);
                     });
             }
         }

@@ -26,19 +26,16 @@ Diagnostics analyze(const std::string& text, Compilation& compilation) {
 
 TEST_CASE("Inout ports are treated as readers and writers") {
     auto& text = R"(
-interface I;
-    wire integer a;
-    modport m(inout a);
-endinterface
-
-module user(I.m iface);
-    assign iface.a = 32'd1;
-    initial $display(iface.a);
+module m(inout wire a);
+    wire local_a;
+    pullup(local_a);
+    tranif1(a, local_a, 1'b1);
 endmodule
 
 module top;
-    I i();
-    user u(i);
+    wire a;
+    m m1(.*);
+    m m2(.*);
 endmodule
 )";
 
@@ -345,6 +342,31 @@ endmodule
     auto diags = analyze(text, compilation);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UnusedVariable);
+}
+
+TEST_CASE("Modport facade forwards reads and writes to underlying signal") {
+    auto& text = R"(
+interface I;
+    wire a;
+    modport m(inout a);
+endinterface
+
+module user(I.m iface, output wire b);
+    assign iface.a = 1'b1;
+    assign b = iface.a;
+endmodule
+
+module top;
+    I i();
+    wire b;
+    user u(i, b);
+    initial $display(b);
+endmodule
+)";
+
+    Compilation compilation;
+    auto diags = analyze(text, compilation);
+    CHECK_DIAGS_EMPTY;
 }
 
 TEST_CASE("Ref args are considered used") {
