@@ -1,11 +1,13 @@
 name: "Python Dist"
 description: "Build and upload Python distributions to PyPI"
 
-on:
-  workflow_dispatch:
-  release:
-    types:
-      - published
+# Disabled for fork - uncomment to re-enable
+on: []
+# on:
+#   workflow_dispatch:
+#   release:
+#     types:
+#       - published
 
 jobs:
   build_sdist:

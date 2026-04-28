@@ -1,0 +1,97 @@
+name: Nightly Release
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Runs at 2 AM UTC daily
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  nightly-build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2.22
+        with:
+          key: nightly-ubuntu-24.04
+
+      - name: Check for new commits since last nightly release
+        id: check
+        if: github.event_name == 'schedule'
+        run: |
+          LAST_RELEASE=$(gh release view nightly --json createdAt -q .createdAt 2>/dev/null || echo "1970-01-01T00:00:00Z")
+          COMMITS_SINCE=$(git log --since="$LAST_RELEASE" --oneline | wc -l)
+          echo "commits=$COMMITS_SINCE" >> $GITHUB_OUTPUT
+          echo "Found $COMMITS_SINCE commits since last nightly release"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure CMake
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.commits > 0
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DSLANG_CI_BUILD=ON
+
+      - name: Build
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.commits > 0
+        run: cmake --build build -j
+
+      - name: Run tests
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.commits > 0
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package artifacts
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.commits > 0
+        run: |
+          mkdir -p artifacts/bin artifacts/lib
+          # Copy binaries
+          if [ -d build/bin ]; then
+            cp -r build/bin/* artifacts/bin/ 2>/dev/null || true
+          fi
+          # Copy libraries
+          if [ -d build/lib ]; then
+            cp -r build/lib/* artifacts/lib/ 2>/dev/null || true
+          fi
+          # Verify we have artifacts
+          if [ -z "$(ls -A artifacts/bin)" ] && [ -z "$(ls -A artifacts/lib)" ]; then
+            echo "Error: No artifacts found to package"
+            exit 1
+          fi
+          tar -czf slang-nightly-ubuntu-24.04.tar.gz -C artifacts .
+
+      - name: Delete old nightly release
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.commits > 0
+        run: |
+          gh release delete nightly --yes 2>/dev/null || true
+          git push origin :refs/tags/nightly 2>/dev/null || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get commit info
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.commits > 0
+        id: commit
+        run: |
+          echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "message=$(git log -1 --pretty=%B | head -1)" >> $GITHUB_OUTPUT
+          echo "date=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+
+      - name: Create new nightly release
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.commits > 0
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: Nightly Build
+          prerelease: true
+          body: |
+            Automated nightly build from the latest commit on master.
+
+            **Commit:** [${{ steps.commit.outputs.short_sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) - ${{ steps.commit.outputs.message }}
+            **Build Date:** ${{ steps.commit.outputs.date }}
+
+            This release is automatically updated and may be unstable.
+          files: |
+            slang-nightly-ubuntu-24.04.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
