@@ -105,7 +105,7 @@ add_library(
   syntax/SyntaxNode.cpp
   syntax/SyntaxPrinter.cpp
   syntax/SyntaxTree.cpp
-  syntax/SyntaxVisitor.cpp
+  syntax/SyntaxRewriter.cpp
   text/CharInfo.cpp
   text/Glob.cpp
   text/Json.cpp

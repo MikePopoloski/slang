@@ -1,11 +1,11 @@
 //------------------------------------------------------------------------------
-// SyntaxVisitor.cpp
-// Syntax tree visitor support
+// SyntaxRewriter.cpp
+// Syntax tree rewriter support
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/syntax/SyntaxVisitor.h"
+#include "slang/syntax/SyntaxRewriter.h"
 
 #include <variant>
 

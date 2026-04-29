@@ -12,8 +12,8 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxPrinter.h"
+#include "slang/syntax/SyntaxRewriter.h"
 #include "slang/syntax/SyntaxTree.h"
-#include "slang/syntax/SyntaxVisitor.h"
 
 class SemanticModel {
 public:
