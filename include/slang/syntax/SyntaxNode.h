@@ -7,8 +7,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <cstring>
 #include <string>
-#include <variant>
 
 #include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxKind.h"
@@ -20,55 +20,81 @@ namespace slang::syntax {
 
 class SyntaxNode;
 
-/// A token pointer or a syntax node.
-struct SLANG_EXPORT PtrTokenOrSyntax : public std::variant<parsing::Token*, SyntaxNode*> {
-    using Base = std::variant<parsing::Token*, SyntaxNode*>;
-    PtrTokenOrSyntax(parsing::Token* token) : Base(token) {}
-    PtrTokenOrSyntax(SyntaxNode* node) : Base(node) {}
-    PtrTokenOrSyntax(nullptr_t) : Base((parsing::Token*)nullptr) {}
+/// A token pointer or a syntax node pointer.
+struct SLANG_EXPORT PtrTokenOrSyntax {
+    PtrTokenOrSyntax(parsing::Token* token) :
+        value(reinterpret_cast<uintptr_t>(token) | TokenTag) {}
+    PtrTokenOrSyntax(SyntaxNode* node) : value(reinterpret_cast<uintptr_t>(node)) {}
+    PtrTokenOrSyntax(nullptr_t) : value(TokenTag) {}
 
     /// @return true if the object is a token.
-    bool isToken() const { return this->index() == 0; }
+    bool isToken() const { return (value & TokenTag) != 0; }
 
     /// @return true if the object is a syntax node.
-    bool isNode() const { return this->index() == 1; }
+    bool isNode() const { return !isToken(); }
 
-    /// Gets access to the object as a token (throwing an exception
-    /// if it's not actually a token).
-    parsing::Token* token() const { return std::get<0>(*this); }
+    /// Gets access to the object as a token (asserting if it's not actually a token).
+    parsing::Token* token() const {
+        SLANG_ASSERT(isToken());
+        return reinterpret_cast<parsing::Token*>(value & ~TokenTag);
+    }
 
-    /// Gets access to the object as a syntax node (throwing an exception
-    /// if it's not actually a syntax node).
-    SyntaxNode* node() const { return std::get<1>(*this); }
+    /// Gets access to the object as a syntax node (asserting if it's not actually a node).
+    SyntaxNode* node() const {
+        SLANG_ASSERT(isNode());
+        return reinterpret_cast<SyntaxNode*>(value);
+    }
 
     /// Gets the source range for the token or syntax node or NoLocation if it
     /// points to nullptr.
     SourceRange range() const;
+
+private:
+    static constexpr uintptr_t TokenTag = 0x1u;
+    uintptr_t value;
 };
 
 /// A token or a constant syntax node.
-struct SLANG_EXPORT ConstTokenOrSyntax : public std::variant<parsing::Token, const SyntaxNode*> {
-    using Base = std::variant<parsing::Token, const SyntaxNode*>;
-    ConstTokenOrSyntax(parsing::Token token) : Base(token) {}
-    ConstTokenOrSyntax(const SyntaxNode* node) : Base(node) {}
-    ConstTokenOrSyntax(nullptr_t) : Base(parsing::Token()) {}
+struct SLANG_EXPORT ConstTokenOrSyntax {
+    ConstTokenOrSyntax(parsing::Token token) : storage(token) {}
+    ConstTokenOrSyntax(const SyntaxNode* node) {
+        // Zero the storage so that the Token-tag bit is clear.
+        // The pointer is shifted down by 1 to guarantee that the
+        // top bit is clear, which is where the token tag bit is set.
+        std::memset(&storage, 0, sizeof(storage));
+        storage.nodePtr = reinterpret_cast<uintptr_t>(node) >> 1;
+    }
+    ConstTokenOrSyntax(nullptr_t) : storage(parsing::Token()) {}
 
     /// @return true if the object is a token.
-    bool isToken() const { return this->index() == 0; }
+    bool isToken() const { return parsing::Token::storageHasTokenTag(&storage); }
 
     /// @return true if the object is a syntax node.
-    bool isNode() const { return this->index() == 1; }
+    bool isNode() const { return !isToken(); }
 
-    /// Gets access to the object as a token (throwing an exception
-    /// if it's not actually a token).
-    parsing::Token token() const { return std::get<0>(*this); }
+    /// Gets access to the object as a token (asserting if it's not actually a token).
+    parsing::Token token() const {
+        SLANG_ASSERT(isToken());
+        return storage.tok;
+    }
 
-    /// Gets access to the object as a syntax node (throwing an exception
-    /// if it's not actually a syntax node).
-    const SyntaxNode* node() const { return std::get<1>(*this); }
+    /// Gets access to the object as a syntax node (asserting if it's not actually a node).
+    const SyntaxNode* node() const {
+        SLANG_ASSERT(isNode());
+        return reinterpret_cast<const SyntaxNode*>(storage.nodePtr << 1);
+    }
 
     /// Gets the source range for the token or syntax node.
     SourceRange range() const;
+
+protected:
+    union Storage {
+        parsing::Token tok;
+        uintptr_t nodePtr;
+
+        Storage(parsing::Token t) : tok(t) {}
+        Storage() : tok() {}
+    } storage;
 };
 
 /// A token or a syntax node.
@@ -77,12 +103,17 @@ struct SLANG_EXPORT TokenOrSyntax : public ConstTokenOrSyntax {
     TokenOrSyntax(SyntaxNode* node) : ConstTokenOrSyntax(node) {}
     TokenOrSyntax(nullptr_t) : ConstTokenOrSyntax(parsing::Token()) {}
 
-    /// Gets access to the object as a syntax node (throwing an exception
-    /// if it's not actually a syntax node).
+    /// Gets access to the object as a syntax node (asserting if it's not actually a node).
     SyntaxNode* node() const {
         // const_cast is safe because we only could have constructed this
         // object with a non-const pointer.
-        return const_cast<SyntaxNode*>(std::get<1>(*this));
+        return const_cast<SyntaxNode*>(ConstTokenOrSyntax::node());
+    }
+
+    /// Gets a mutable pointer to the stored token (asserting if it's not actually a token).
+    parsing::Token* tokenPtr() {
+        SLANG_ASSERT(isToken());
+        return &storage.tok;
     }
 };
 
@@ -446,7 +477,7 @@ public:
         if (elements[index].isNode())
             return elements[index].node();
         else
-            return &(std::get<parsing::Token>(elements[index]));
+            return elements[index].tokenPtr();
     }
 
     /// Replaces the i-th item with @a child.

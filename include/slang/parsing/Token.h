@@ -205,6 +205,15 @@ public:
     static Token createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual,
                                 TokenKind expected, Token lastConsumed, Token matchingDelim);
 
+    /// Returns true if the bytes at @a storage (which must be at least
+    /// sizeof(Token) bytes) appear to contain a Token (rather than a pointer).
+    static bool storageHasTokenTag(const void* storage) {
+        uint32_t marker;
+        std::memcpy(&marker, static_cast<const std::byte*>(storage) + RawLenAndExtraOffset,
+                    sizeof(marker));
+        return (marker & TokenTag) != 0;
+    }
+
 private:
     struct Info;
 
@@ -225,10 +234,13 @@ private:
     NumericTokenFlags numFlags;
 
     // This is the length of the raw text string, stored in the Info block,
-    // if we have one. Also for some kinds we pack some data into the upper
-    // 16 bits. We know in those cases that the raw length can't possibly
-    // be long enough to need those extra bits.
-    uint32_t rawLenAndExtra = 0;
+    // if we have one. Also for some kinds we pack some data into bits 16-30.
+    // We know in those cases that the raw length can't possibly be long
+    // enough to need those extra bits. The top bit (TokenTag) is always set
+    // on a valid Token; it is reserved so that a Token can be distinguished
+    // from a pointer when both are stored in the same union
+    // (see syntax::ConstTokenOrSyntax).
+    uint32_t rawLenAndExtra = TokenTag;
 
     // Tokens have an info block unless they have no trivia, no raw text,
     // and no other extra info to carry. In that case we just store the
@@ -243,6 +255,16 @@ private:
     // cases with more, triviaCountSmall gets set to all 1's and the real count is
     // included in the info structure.
     static constexpr int MaxTriviaSmallCount = (1 << 4) - 2;
+
+    // Reserved bit pattern in rawLenAndExtra that is always set on a
+    // constructed Token. This allows a Token to be distinguished from a
+    // pointer when both occupy the same memory in a union.
+    static constexpr uint32_t TokenTag = 0x80000000u;
+
+    // Byte offset of the rawLenAndExtra field within Token. The actual
+    // field offset is verified to equal this constant via a runtime
+    // assertion in init().
+    static constexpr size_t RawLenAndExtraOffset = 4;
 };
 
 static_assert(std::is_trivially_copyable_v<Token>);

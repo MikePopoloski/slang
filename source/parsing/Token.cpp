@@ -239,6 +239,7 @@ Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivi
     SLANG_ASSERT(rawText.length() < UINT16_MAX);
     uint32_t val = 0;
     memcpy(&val, &directive, sizeof(directive));
+    SLANG_ASSERT(val < (1u << 15));
     rawLenAndExtra |= val << 16;
 }
 
@@ -250,6 +251,7 @@ Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivi
     SLANG_ASSERT(rawText.length() < UINT16_MAX);
     uint32_t val = 0;
     memcpy(&val, &systemName, sizeof(systemName));
+    SLANG_ASSERT(val < (1u << 15));
     rawLenAndExtra |= val << 16;
 }
 
@@ -343,7 +345,7 @@ std::string_view Token::rawText() const {
         case TokenKind::TimeLiteral:
         case TokenKind::EmptyMacroArgument:
         case TokenKind::LineContinuation:
-            return getRaw(rawLenAndExtra);
+            return getRaw(rawLenAndExtra & ~TokenTag);
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::Directive:
         case TokenKind::MacroUsage:
@@ -351,7 +353,7 @@ std::string_view Token::rawText() const {
             return getRaw(rawLenAndExtra & 0xffff);
         case TokenKind::Unknown:
             if (hasInfoPtr && info)
-                return getRaw(rawLenAndExtra);
+                return getRaw(rawLenAndExtra & ~TokenTag);
             return "";
         case TokenKind::Placeholder:
         case TokenKind::EndOfFile:
@@ -417,7 +419,7 @@ NumericTokenFlags Token::numericFlags() const {
 SyntaxKind Token::directiveKind() const {
     SLANG_ASSERT(kind == TokenKind::Directive || kind == TokenKind::MacroUsage);
     SyntaxKind result;
-    uint32_t val = rawLenAndExtra >> 16;
+    uint32_t val = (rawLenAndExtra >> 16) & 0x7fff;
     memcpy(reinterpret_cast<byte*>(&result), &val, sizeof(result));
     return result;
 }
@@ -425,7 +427,7 @@ SyntaxKind Token::directiveKind() const {
 KnownSystemName Token::systemName() const {
     SLANG_ASSERT(kind == TokenKind::SystemIdentifier);
     KnownSystemName result;
-    uint32_t val = rawLenAndExtra >> 16;
+    uint32_t val = (rawLenAndExtra >> 16) & 0x7fff;
     memcpy(reinterpret_cast<byte*>(&result), &val, sizeof(result));
     return result;
 }
@@ -499,7 +501,7 @@ Token Token::clone(BumpAllocator& alloc, std::span<Trivia const> trivia, std::st
         case TokenKind::MacroUsage:
         case TokenKind::SystemIdentifier:
             SLANG_ASSERT(rawText.length() < UINT16_MAX);
-            result.rawLenAndExtra = (rawLenAndExtra & 0xffff0000) | result.rawLenAndExtra;
+            result.rawLenAndExtra = (rawLenAndExtra & 0x7fff0000) | result.rawLenAndExtra;
             break;
         default:
             break;
@@ -527,7 +529,10 @@ void Token::init(BumpAllocator& alloc, TokenKind kind_, std::span<Trivia const> 
     triviaCountSmall = 0;
     reserved = 0;
     numFlags.raw = 0;
-    rawLenAndExtra = uint32_t(rawText.size());
+    rawLenAndExtra = uint32_t(rawText.size()) | TokenTag;
+    SLANG_ASSERT(reinterpret_cast<const std::byte*>(&rawLenAndExtra) -
+                     reinterpret_cast<const std::byte*>(this) ==
+                 RawLenAndExtraOffset);
 
     size_t extra = getExtraSize(kind);
     SLANG_ASSERT(extra % alignof(void*) == 0);
