@@ -17,7 +17,7 @@
 // ElseClause / StandardCaseItem / DefaultCaseItem syntax node.
 static const SyntaxNode* constructOf(const GenerateBlockSymbol& block) {
     auto s = block.getSyntax();
-    auto p = s ? s->parent : nullptr;
+    const SyntaxNode* p = s ? s->parent : nullptr;
     while (p && p->kind != SyntaxKind::IfGenerate && p->kind != SyntaxKind::CaseGenerate &&
            p->kind != SyntaxKind::LoopGenerate) {
         p = p->parent;
@@ -401,7 +401,7 @@ endmodule
     CHECK(t.getConditionExpression() == f.getConditionExpression());
 
     // The directly-nested outer construct is reachable by continuing the walk.
-    auto* outerIf = innerIf->parent;
+    const SyntaxNode* outerIf = innerIf->parent;
     while (outerIf && outerIf->kind != SyntaxKind::IfGenerate)
         outerIf = outerIf->parent;
     REQUIRE(outerIf != nullptr);
@@ -442,7 +442,7 @@ endmodule
     CHECK(m1Construct == constructOf(md));
 
     // Walk up from the inner case-generate to the enclosing if-generate.
-    auto* cur = m1Construct->parent;
+    const SyntaxNode* cur = m1Construct->parent;
     while (cur && cur->kind != SyntaxKind::IfGenerate)
         cur = cur->parent;
     REQUIRE(cur != nullptr);
