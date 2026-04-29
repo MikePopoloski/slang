@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: Chaitanya Sharma
 # SPDX-License-Identifier: MIT
 
-import pytest
 from pyslang.parsing import TokenKind, TriviaKind
 from pyslang.syntax import (
     SyntaxFactory,

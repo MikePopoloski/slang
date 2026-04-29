@@ -2,8 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import json
-from functools import cache
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List
 
 from pyslang.parsing import TokenKind, TriviaKind
 from pyslang.syntax import CSTJsonMode, SyntaxKind, SyntaxTree
@@ -229,9 +228,9 @@ def test_cst_json():
 
             # Verify tree has correct root structure
             assert "kind" in json_data, f"Tree JSON missing 'kind' for mode {mode}"
-            assert (
-                json_data["kind"] == "SyntaxTree"
-            ), f"Tree kind should be 'SyntaxTree' for mode {mode}"
+            assert json_data["kind"] == "SyntaxTree", (
+                f"Tree kind should be 'SyntaxTree' for mode {mode}"
+            )
             assert "root" in json_data, f"Tree JSON missing 'root' for mode {mode}"
 
             # Run the validator
@@ -244,9 +243,9 @@ def test_cst_json():
                 )
 
             # Verify that the root node matches the tree's root serialization
-            assert json_data["root"] == to_dict(
-                tree.root, mode
-            ), f"Tree root does not match node serialization for {test_code} in {mode}"
+            assert json_data["root"] == to_dict(tree.root, mode), (
+                f"Tree root does not match node serialization for {test_code} in {mode}"
+            )
 
 
 def _collect_trivia_kinds(node: Any) -> set:
@@ -282,18 +281,18 @@ def test_no_whitespace_filters_whitespace():
     assert "EndOfLine" in full_kinds, "Full mode should have EndOfLine trivia"
 
     # NoWhitespace mode must not contain Whitespace or EndOfLine
-    assert (
-        "Whitespace" not in nows_kinds
-    ), "NoWhitespace mode should not have Whitespace trivia"
-    assert (
-        "EndOfLine" not in nows_kinds
-    ), "NoWhitespace mode should not have EndOfLine trivia"
+    assert "Whitespace" not in nows_kinds, (
+        "NoWhitespace mode should not have Whitespace trivia"
+    )
+    assert "EndOfLine" not in nows_kinds, (
+        "NoWhitespace mode should not have EndOfLine trivia"
+    )
 
     # Comment trivia should be preserved in NoWhitespace mode
     assert "LineComment" in full_kinds, "Full mode should have LineComment trivia"
-    assert (
-        "LineComment" in nows_kinds
-    ), "NoWhitespace mode should preserve LineComment trivia"
+    assert "LineComment" in nows_kinds, (
+        "NoWhitespace mode should preserve LineComment trivia"
+    )
 
 
 def test_no_whitespace_vs_full_structure():
@@ -313,11 +312,11 @@ def test_no_whitespace_vs_full_structure():
     nows_kinds = _collect_trivia_kinds(nows_data)
 
     # All trivia kinds in NoWhitespace should also appear in Full
-    assert (
-        nows_kinds <= full_kinds
-    ), f"NoWhitespace has unexpected trivia kinds: {nows_kinds - full_kinds}"
+    assert nows_kinds <= full_kinds, (
+        f"NoWhitespace has unexpected trivia kinds: {nows_kinds - full_kinds}"
+    )
 
     # Block comment should be preserved
-    assert (
-        "BlockComment" in nows_kinds
-    ), "NoWhitespace mode should preserve BlockComment trivia"
+    assert "BlockComment" in nows_kinds, (
+        "NoWhitespace mode should preserve BlockComment trivia"
+    )

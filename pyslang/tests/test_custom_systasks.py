@@ -54,8 +54,11 @@ def test_custom_systasks():
 
     diags = c.getAllDiagnostics()
     report = DiagnosticEngine.reportAll(c.sourceManager, diags)
-    assert ("\n" + report) == """
+    assert (
+        ("\n" + report)
+        == """
 source:8:5: note: $info encountered: bar:52
     $info("bar:%0d", $bar(42));
     ^
 """
+    )

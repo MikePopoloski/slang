@@ -36,12 +36,12 @@ def test_rewriter_handler_function_called_with_right_args():
 
     assert result.validate()
 
-    assert (
-        handler_tracker["call_count"] > 0
-    ), "Handler should have been called at least once"
-    assert (
-        handler_tracker["call_count"] >= 4
-    ), "Handler should have been called at least 4 times"
+    assert handler_tracker["call_count"] > 0, (
+        "Handler should have been called at least once"
+    )
+    assert handler_tracker["call_count"] >= 4, (
+        "Handler should have been called at least 4 times"
+    )
 
 
 def test_rewriter_with_no_changes():
@@ -110,9 +110,9 @@ def test_rewriter_remove():
                     check_func_called["remove_match_count"] += 1
                     rewriter.remove(node)
 
-    assert (
-        check_func_called["called"] is False
-    ), "Handler should not have been called yet"
+    assert check_func_called["called"] is False, (
+        "Handler should not have been called yet"
+    )
 
     result = rewrite(input_tree, remove_int_var)
     assert check_func_called["called"] is True, "Handler should have been called"
@@ -120,12 +120,12 @@ def test_rewriter_remove():
     assert result.validate()
     assert check_func_called["data_decl_count"] == 2
     assert check_func_called["subnode_count"] > 0
-    assert (
-        check_func_called["remove_match_count"] == 1
-    ), "Handler should have removed one match"
-    assert (
-        result.root.isEquivalentTo(input_tree.root) is False
-    ), "input_tree should be modified"
+    assert check_func_called["remove_match_count"] == 1, (
+        "Handler should have removed one match"
+    )
+    assert result.root.isEquivalentTo(input_tree.root) is False, (
+        "input_tree should be modified"
+    )
     assert result.root.isEquivalentTo(expected.root) is True
 
 
@@ -172,12 +172,12 @@ def test_rewriter_insert_after_with_new_declaration_outside():
     assert result.validate()
     assert check_func_called["called"] is True, "Handler should have been called"
     assert check_func_called["data_decl_count"] == 1
-    assert (
-        check_func_called["insertion_point_match_count"] == 1
-    ), "Handler should have inserted one match"
-    assert (
-        result.root.isEquivalentTo(input_tree.root) is False
-    ), "input_tree should be modified"
+    assert check_func_called["insertion_point_match_count"] == 1, (
+        "Handler should have inserted one match"
+    )
+    assert result.root.isEquivalentTo(input_tree.root) is False, (
+        "input_tree should be modified"
+    )
     assert result.root.isEquivalentTo(expected.root) is True
     assert (
         input_tree.root.isEquivalentTo(
@@ -233,12 +233,12 @@ def test_rewriter_insert_after_with_new_declaration_inside():
     assert result.validate()
     assert check_func_called["called"] is True, "Handler should have been called"
     assert check_func_called["data_decl_count"] == 1
-    assert (
-        check_func_called["insertion_point_match_count"] == 1
-    ), "Handler should have inserted one match"
-    assert (
-        result.root.isEquivalentTo(input_tree.root) is False
-    ), "input_tree should be modified"
+    assert check_func_called["insertion_point_match_count"] == 1, (
+        "Handler should have inserted one match"
+    )
+    assert result.root.isEquivalentTo(input_tree.root) is False, (
+        "input_tree should be modified"
+    )
     assert result.root.isEquivalentTo(expected.root) is True
 
 
@@ -290,12 +290,12 @@ def test_rewriter_replace():
     assert check_func_called["called"] is True, "Handler should have been called"
     assert check_func_called["data_decl_count"] == 2
     assert check_func_called["subnode_count"] > 0
-    assert (
-        check_func_called["replacement_point_match_count"] == 1
-    ), "Handler should have replaced one match"
-    assert (
-        result.root.isEquivalentTo(input_tree.root) is False
-    ), "input_tree should be modified"
+    assert check_func_called["replacement_point_match_count"] == 1, (
+        "Handler should have replaced one match"
+    )
+    assert result.root.isEquivalentTo(input_tree.root) is False, (
+        "input_tree should be modified"
+    )
     assert result.root.isEquivalentTo(expected.root) is True
     assert (
         input_tree.root.isEquivalentTo(
@@ -379,15 +379,15 @@ def test_rewriter_nested():
     assert result is not None
     assert result.validate()
     assert check_func_called["called"] is True, "Handler should have been called"
-    assert (
-        check_func_called["remove_match_count"] == 1
-    ), "Handler should have removed one match"
-    assert (
-        check_func_called["insert_match_count"] >= 1
-    ), "Handler should have inserted one match"
-    assert (
-        result.root.isEquivalentTo(input_tree.root) is False
-    ), "input_tree should be modified"
+    assert check_func_called["remove_match_count"] == 1, (
+        "Handler should have removed one match"
+    )
+    assert check_func_called["insert_match_count"] >= 1, (
+        "Handler should have inserted one match"
+    )
+    assert result.root.isEquivalentTo(input_tree.root) is False, (
+        "input_tree should be modified"
+    )
 
     def clean_whitespace(s: str) -> str:
         s = re.sub(r"\s+", " ", s).strip()

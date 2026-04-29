@@ -98,12 +98,12 @@ endmodule
     flow.run(proc_block.body)
     assert len(assignments) == 4  # a = 1, b = a + 2, c = b, c = 0
     assert len(conditionals) == 1  # if (a > 0)
-    assert "a" in [
-        ref.symbol.name for ref in var_refs
-    ], "Should reference 'a' in condition and RHS"
-    assert "b" in [
-        ref.symbol.name for ref in var_refs
-    ], "Should reference 'b' in RHS of c=b"
+    assert "a" in [ref.symbol.name for ref in var_refs], (
+        "Should reference 'a' in condition and RHS"
+    )
+    assert "b" in [ref.symbol.name for ref in var_refs], (
+        "Should reference 'b' in RHS of c=b"
+    )
 
     assert not flow.bad
 

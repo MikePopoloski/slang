@@ -120,9 +120,7 @@ def createheader(path, subsys, diags):
 
 namespace slang::diag {{
 
-""".format(
-        subsys, subsys
-    )
+""".format(subsys, subsys)
 
     index = 0
     for d in sorted(diags):
@@ -455,7 +453,7 @@ def checkDiags(path, diags):
         for file in glob.glob(path + "/**/*." + ext, recursive=True):
             with open(file, "r") as f:
                 text = f.read()
-                diags = [d for d in diags if not ("::" + d) in text]
+                diags = [d for d in diags if ("::" + d) not in text]
     return diags
 
 
