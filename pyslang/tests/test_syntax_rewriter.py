@@ -90,8 +90,8 @@ def test_rewriter_remove():
 
     check_func_called = {
         "called": False,
-        "SyntaxList_count": 0,
-        "SyntaxList_subnode_count": 0,
+        "data_decl_count": 0,
+        "subnode_count": 0,
         "remove_match_count": 0,
     }
 
@@ -102,13 +102,10 @@ def test_rewriter_remove():
         check_func_called["called"] = True
 
         if node.kind == SyntaxKind.DataDeclaration:
-            if node[0].kind == SyntaxKind.SyntaxList:
-                check_func_called["SyntaxList_count"] += 1
-            else:
-                return  # Go onto the next node.
+            check_func_called["data_decl_count"] += 1
 
             for subnode in node:
-                check_func_called["SyntaxList_subnode_count"] += 1
+                check_func_called["subnode_count"] += 1
                 if subnode.kind == SyntaxKind.IntType:
                     check_func_called["remove_match_count"] += 1
                     rewriter.remove(node)
@@ -121,8 +118,8 @@ def test_rewriter_remove():
     assert check_func_called["called"] is True, "Handler should have been called"
     assert result is not None
     assert result.validate()
-    assert check_func_called["SyntaxList_count"] == 2
-    assert check_func_called["SyntaxList_subnode_count"] == 10
+    assert check_func_called["data_decl_count"] == 2
+    assert check_func_called["subnode_count"] > 0
     assert (
         check_func_called["remove_match_count"] == 1
     ), "Handler should have removed one match"
@@ -151,8 +148,7 @@ def test_rewriter_insert_after_with_new_declaration_outside():
 
     check_func_called = {
         "called": False,
-        "SyntaxList_count": 0,
-        "SyntaxList_subnode_count": 0,
+        "data_decl_count": 0,
         "insertion_point_match_count": 0,
     }
 
@@ -166,17 +162,16 @@ def test_rewriter_insert_after_with_new_declaration_outside():
         check_func_called["called"] = True
 
         if node.kind == SyntaxKind.DataDeclaration:
-            if node[0].kind == SyntaxKind.SyntaxList:
-                check_func_called["SyntaxList_count"] += 1
+            check_func_called["data_decl_count"] += 1
 
-                rewriter.insertAfter(node, new_decl)
-                check_func_called["insertion_point_match_count"] += 1
+            rewriter.insertAfter(node, new_decl)
+            check_func_called["insertion_point_match_count"] += 1
 
     result = rewrite(input_tree, insert_logic_var)
     assert result is not None
     assert result.validate()
     assert check_func_called["called"] is True, "Handler should have been called"
-    assert check_func_called["SyntaxList_count"] == 1
+    assert check_func_called["data_decl_count"] == 1
     assert (
         check_func_called["insertion_point_match_count"] == 1
     ), "Handler should have inserted one match"
@@ -213,8 +208,7 @@ def test_rewriter_insert_after_with_new_declaration_inside():
 
     check_func_called = {
         "called": False,
-        "SyntaxList_count": 0,
-        "SyntaxList_subnode_count": 0,
+        "data_decl_count": 0,
         "insertion_point_match_count": 0,
     }
 
@@ -225,21 +219,20 @@ def test_rewriter_insert_after_with_new_declaration_inside():
         check_func_called["called"] = True
 
         if node.kind == SyntaxKind.DataDeclaration:
-            if node[0].kind == SyntaxKind.SyntaxList:
-                check_func_called["SyntaxList_count"] += 1
+            check_func_called["data_decl_count"] += 1
 
-                # Create new variable declaration to insert.
-                # This test is special because `new_decl` is constructed inside this handler function!
-                new_decl = SyntaxTree.fromText("logic j;", "new.sv").root
+            # Create new variable declaration to insert.
+            # This test is special because `new_decl` is constructed inside this handler function!
+            new_decl = SyntaxTree.fromText("logic j;", "new.sv").root
 
-                rewriter.insertAfter(node, new_decl)
-                check_func_called["insertion_point_match_count"] += 1
+            rewriter.insertAfter(node, new_decl)
+            check_func_called["insertion_point_match_count"] += 1
 
     result = rewrite(input_tree, insert_logic_var)
     assert result is not None
     assert result.validate()
     assert check_func_called["called"] is True, "Handler should have been called"
-    assert check_func_called["SyntaxList_count"] == 1
+    assert check_func_called["data_decl_count"] == 1
     assert (
         check_func_called["insertion_point_match_count"] == 1
     ), "Handler should have inserted one match"
@@ -269,8 +262,8 @@ def test_rewriter_replace():
 
     check_func_called = {
         "called": False,
-        "SyntaxList_count": 0,
-        "SyntaxList_subnode_count": 0,
+        "data_decl_count": 0,
+        "subnode_count": 0,
         "replacement_point_match_count": 0,
     }
 
@@ -280,24 +273,23 @@ def test_rewriter_replace():
         assert isinstance(rewriter, SyntaxRewriter)
         check_func_called["called"] = True
         if node.kind == SyntaxKind.DataDeclaration:
-            if node[0].kind == SyntaxKind.SyntaxList:
-                check_func_called["SyntaxList_count"] += 1
+            check_func_called["data_decl_count"] += 1
 
-                for subnode in node:
-                    check_func_called["SyntaxList_subnode_count"] += 1
-                    if subnode.kind == SyntaxKind.IntType:
-                        check_func_called["replacement_point_match_count"] += 1
+            for subnode in node:
+                check_func_called["subnode_count"] += 1
+                if subnode.kind == SyntaxKind.IntType:
+                    check_func_called["replacement_point_match_count"] += 1
 
-                        # Create new variable declaration to insert.
-                        new_decl = SyntaxTree.fromText("logic j;", "new.sv").root
+                    # Create new variable declaration to insert.
+                    new_decl = SyntaxTree.fromText("logic j;", "new.sv").root
 
-                        rewriter.replace(node, new_decl)
+                    rewriter.replace(node, new_decl)
 
     result = rewrite(input_tree, replace_int_var)
     assert result.validate()
     assert check_func_called["called"] is True, "Handler should have been called"
-    assert check_func_called["SyntaxList_count"] == 2
-    assert check_func_called["SyntaxList_subnode_count"] == 10
+    assert check_func_called["data_decl_count"] == 2
+    assert check_func_called["subnode_count"] > 0
     assert (
         check_func_called["replacement_point_match_count"] == 1
     ), "Handler should have replaced one match"
@@ -369,12 +361,8 @@ def test_rewriter_nested():
             )
 
             for subnode in node:
-                if subnode.kind == SyntaxKind.SeparatedList:
-                    print(
-                        f"SeparatedList #{check_func_called['insert_match_count']} found: {list(subnode)}"
-                    )
-
-                    token = subnode[0][0]
+                if subnode.kind == SyntaxKind.Declarator:
+                    token = subnode[0]
                     assert isinstance(token, Token)
                     assert token.kind == TokenKind.Identifier
 

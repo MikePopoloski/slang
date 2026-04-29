@@ -125,8 +125,8 @@ struct SLANG_EXPORT TokenReplaceChange {
 
 using InsertChangeMap = flat_hash_map<const SyntaxNode*, std::vector<SyntaxChange>>;
 using ModifyChangeMap = flat_hash_map<const SyntaxNode*, std::variant<RemoveChange, ReplaceChange>>;
-using ListChangeMap = flat_hash_map<const SyntaxNode*, std::vector<SyntaxChange>>;
-using TokenModifyChangeMap = flat_hash_map<std::pair<const SyntaxNode*, size_t>,
+using ListChangeMap = flat_hash_map<const void*, std::vector<SyntaxChange>>;
+using TokenModifyChangeMap = flat_hash_map<std::pair<const void*, size_t>,
                                            std::variant<TokenRemoveChange, TokenReplaceChange>>;
 
 struct SLANG_EXPORT ChangeCollection {
@@ -204,16 +204,29 @@ protected:
         if (auto [_, ok] = commits.removeOrReplace.emplace(&oldNode,
                                                            detail::RemoveChange{&oldNode, nullptr});
             !ok) {
-            SLANG_THROW(std::logic_error("Node only permit one remove/replace operation"));
+            SLANG_THROW(std::logic_error("Nodes only permit one remove/replace operation"));
         }
     }
 
     /// Remove a token at the given index within the specified node.
     void removeToken(const SyntaxNode& node, size_t index, bool preserveTrivia = false) {
         if (auto [_, ok] = commits.tokenRemoveOrReplace.emplace(
-                std::make_pair(&node, index), detail::TokenRemoveChange{preserveTrivia});
+                std::make_pair(static_cast<const void*>(&node), index),
+                detail::TokenRemoveChange{preserveTrivia});
             !ok) {
-            SLANG_THROW(std::logic_error("Token only permit one remove/replace operation"));
+            SLANG_THROW(std::logic_error("Tokens only permit one remove/replace operation"));
+        }
+    }
+
+    /// Remove a token at the given index within the specified list.
+    template<typename TList>
+        requires is_syntax_list_v<TList>
+    void removeToken(const TList& list, size_t index, bool preserveTrivia = false) {
+        if (auto [_, ok] = commits.tokenRemoveOrReplace.emplace(
+                std::make_pair(static_cast<const void*>(&list), index),
+                detail::TokenRemoveChange{preserveTrivia});
+            !ok) {
+            SLANG_THROW(std::logic_error("Tokens only permit one remove/replace operation"));
         }
     }
 
@@ -229,7 +242,7 @@ protected:
         if (auto [_, ok] = commits.removeOrReplace.emplace(
                 &oldNode, detail::ReplaceChange{&oldNode, &newNode});
             !ok) {
-            SLANG_THROW(std::logic_error("Node only permit one remove/replace operation"));
+            SLANG_THROW(std::logic_error("Nodes only permit one remove/replace operation"));
         }
     }
 
@@ -249,9 +262,39 @@ protected:
         }
 
         if (auto [_, ok] = commits.tokenRemoveOrReplace.emplace(
-                std::make_pair(&node, index), detail::TokenReplaceChange{newToken});
+                std::make_pair(static_cast<const void*>(&node), index),
+                detail::TokenReplaceChange{newToken});
             !ok) {
-            SLANG_THROW(std::logic_error("Token only permit one remove/replace operation"));
+            SLANG_THROW(std::logic_error("Tokens only permit one remove/replace operation"));
+        }
+    }
+
+    /// Replace a token at the given index within the specified list.
+    template<typename TList>
+        requires is_syntax_list_v<TList>
+    void replaceToken(const TList& list, size_t index, Token newToken,
+                      bool preserveTrivia = false) {
+        if (preserveTrivia) {
+            if (index < list.getChildCount()) {
+                auto child = list.getChild(index);
+                if (child.isToken()) {
+                    auto oldTok = child.token();
+                    if (!oldTok.trivia().empty()) {
+                        SmallVector<parsing::Trivia, 8> triviaBuffer(oldTok.trivia().size(),
+                                                                     UninitializedTag());
+                        for (const auto& t : oldTok.trivia())
+                            triviaBuffer.push_back(t.clone(alloc, true));
+                        newToken = newToken.withTrivia(alloc, triviaBuffer.copy(alloc));
+                    }
+                }
+            }
+        }
+
+        if (auto [_, ok] = commits.tokenRemoveOrReplace.emplace(
+                std::make_pair(static_cast<const void*>(&list), index),
+                detail::TokenReplaceChange{newToken});
+            !ok) {
+            SLANG_THROW(std::logic_error("Tokens only permit one remove/replace operation"));
         }
     }
 
@@ -266,13 +309,19 @@ protected:
     }
 
     /// Insert @a newNode at the front of @a list in the rewritten tree.
-    void insertAtFront(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
-        commits.listInsertAtFront[&list].push_back({&list, &newNode, separator});
+    template<typename TList>
+        requires is_syntax_list_v<TList>
+    void insertAtFront(const TList& list, SyntaxNode& newNode, Token separator = {}) {
+        commits.listInsertAtFront[static_cast<const void*>(&list)].push_back(
+            {nullptr, &newNode, separator});
     }
 
     /// Insert @a newNode at the back of @a list in the rewritten tree.
-    void insertAtBack(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
-        commits.listInsertAtBack[&list].push_back({&list, &newNode, separator});
+    template<typename TList>
+        requires is_syntax_list_v<TList>
+    void insertAtBack(const TList& list, SyntaxNode& newNode, Token separator = {}) {
+        commits.listInsertAtBack[static_cast<const void*>(&list)].push_back(
+            {nullptr, &newNode, separator});
     }
 
     Token makeToken(parsing::TokenKind kind, std::string_view text,

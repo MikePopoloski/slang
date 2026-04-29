@@ -51,10 +51,6 @@ struct CSTJsonVisitor {
 
             writer.endObject();
         }
-        else if constexpr (std::is_same_v<T, SyntaxListBase>) {
-            // The child class's handlers should be called
-            SLANG_UNREACHABLE;
-        }
         else {
             static_assert(always_false<T>::value, "Unhandled syntax node type in CSTJsonVisitor");
         }
@@ -136,7 +132,14 @@ struct CSTJsonVisitor {
             return;
 
         writer.writeProperty(name);
-        writeChildren(separatedList);
+        writer.startArray();
+        for (const auto& ele : separatedList.elems()) {
+            if (ele.isToken())
+                writeTokenValue(ele.token());
+            else if (ele.node())
+                ele.node()->visit(*this);
+        }
+        writer.endArray();
     }
 
     void writeTrivia(parsing::Trivia trivia) {

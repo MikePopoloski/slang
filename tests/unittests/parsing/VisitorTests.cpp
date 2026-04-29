@@ -1052,9 +1052,6 @@ TEST_CASE("SyntaxTree/Compilation Invariant Checking") {
     auto validateParents = [](const syntax::SyntaxTree& tree) {
         bool valid = true;
         tree.root().visit(AllSyntaxVisitor([&](const SyntaxNode& node) {
-            if (node.kind == SyntaxKind::SyntaxList || node.kind == SyntaxKind::SeparatedList)
-                return;
-
             for (size_t i = 0; i < node.getChildCount(); i++) {
                 auto child = node.childNode(i);
                 if (!child)

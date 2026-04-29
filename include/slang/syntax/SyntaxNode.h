@@ -303,117 +303,103 @@ private:
     mutable PointerIntPair<const SyntaxNode*, 1, 1, bool> node;
 };
 
-#if defined(__GNUC__)
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
-#endif
-
-/// A base class for syntax nodes that represent a list of items.
-class SLANG_EXPORT SyntaxListBase : public SyntaxNode {
-public:
-    /// Gets the number of child items in the node.
-    size_t getChildCount() const { return childCount; }
-
-    /// Gets the child (token or node) at the given index.
-    virtual TokenOrSyntax getChild(size_t index) = 0;
-
-    /// Gets the child (token or node) at the given index.
-    virtual ConstTokenOrSyntax getChild(size_t index) const = 0;
-
-    // Gets the child pointer (token or node) at given index.
-    virtual PtrTokenOrSyntax getChildPtr(size_t index) = 0;
-
-    /// Sets the child (token or node) at the given index.
-    virtual void setChild(size_t index, TokenOrSyntax child) = 0;
-
-    /// Clones the list into a new node using the provided allocator.
-    virtual SyntaxListBase* clone(BumpAllocator& alloc) const = 0;
-
-    /// Overwrites all children with the new set of provided @a children (and making
-    /// a copy with the provided allocator).
-    virtual void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) = 0;
-
-    static bool isKind(SyntaxKind kind);
-
-    static bool isChildOptional(size_t index);
-
-protected:
-    SyntaxListBase(SyntaxKind kind, size_t childCount) : SyntaxNode(kind), childCount(childCount) {}
-
-    size_t childCount;
-};
-
-/// A syntax node that represents a list of child syntax nodes.
+/// A container of syntax nodes.
 template<typename T>
-class SLANG_EXPORT SyntaxList : public SyntaxListBase, public std::span<T*> {
+class SLANG_EXPORT SyntaxList : public std::span<T*> {
 public:
     SyntaxList(nullptr_t) : SyntaxList(std::span<T*>()) {}
-    SyntaxList(std::span<T*> elements) :
-        SyntaxListBase(SyntaxKind::SyntaxList, elements.size()), std::span<T*>(elements) {}
+    SyntaxList(std::span<T*> elements) : std::span<T*>(elements) {}
 
-private:
-    TokenOrSyntax getChild(size_t index) final { return (*this)[index]; }
-    ConstTokenOrSyntax getChild(size_t index) const final { return (*this)[index]; }
-    PtrTokenOrSyntax getChildPtr(size_t index) final { return (*this)[index]; };
+    /// Number of child items the list contributes to its parent's flattened
+    /// child index space.
+    size_t getChildCount() const { return this->size(); }
 
-    void setChild(size_t index, TokenOrSyntax child) final {
-        (*this)[index] = &child.node()->as<T>();
-    }
+    /// Gets the i-th element as a (Const)TokenOrSyntax.
+    TokenOrSyntax getChild(size_t index) { return (*this)[index]; }
+    ConstTokenOrSyntax getChild(size_t index) const { return (*this)[index]; }
+    PtrTokenOrSyntax getChildPtr(size_t index) { return (*this)[index]; }
 
-    SyntaxListBase* clone(BumpAllocator& alloc) const final {
-        return alloc.emplace<SyntaxList<T>>(*this);
-    }
+    /// Replaces the i-th element with @a child.
+    void setChild(size_t index, TokenOrSyntax child) { (*this)[index] = &child.node()->as<T>(); }
 
-    void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) final {
+    /// Replaces the entire span with the provided @a children, copying the
+    /// resulting buffer into @a alloc.
+    void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) {
         SmallVector<T*> buffer(children.size(), UninitializedTag());
         for (auto& t : children)
             buffer.push_back(&t.node()->as<T>());
 
         *this = buffer.copy(alloc);
-        childCount = buffer.size();
+    }
+
+    /// Compute the SourceRange spanning all the elements of this list. If
+    /// the list is empty, returns an empty default SourceRange.
+    SourceRange sourceRange() const {
+        if (this->empty())
+            return {};
+
+        auto f = this->front()->getFirstToken();
+        auto l = this->back()->getLastToken();
+        return SourceRange(f.location(), l.location() + l.rawText().length());
     }
 };
 
 template<typename T>
 SyntaxList<T>* deepClone(const SyntaxList<T>& node, BumpAllocator& alloc) {
     SmallVector<T*> buffer(node.size(), UninitializedTag());
-    for (auto& t : node)
+    for (auto t : node)
         buffer.push_back(deepClone(*t, alloc));
 
     return alloc.emplace<SyntaxList<T>>(buffer.copy(alloc));
 }
 
-/// A syntax node that represents a list of child tokens.
-class SLANG_EXPORT TokenList : public SyntaxListBase, public std::span<parsing::Token> {
+/// A container of tokens.
+class SLANG_EXPORT TokenList : public std::span<parsing::Token> {
 public:
-    TokenList(nullptr_t) : TokenList(std::span<Token>()) {}
-    TokenList(std::span<Token> elements) :
-        SyntaxListBase(SyntaxKind::TokenList, elements.size()), std::span<Token>(elements) {}
+    TokenList(nullptr_t) : TokenList(std::span<parsing::Token>()) {}
+    TokenList(std::span<parsing::Token> elements) : std::span<parsing::Token>(elements) {}
 
-private:
-    TokenOrSyntax getChild(size_t index) final { return (*this)[index]; }
-    ConstTokenOrSyntax getChild(size_t index) const final { return (*this)[index]; }
-    PtrTokenOrSyntax getChildPtr(size_t index) final { return &(*this)[index]; };
-    void setChild(size_t index, TokenOrSyntax child) final { (*this)[index] = child.token(); }
+    /// Number of child items the list contributes to its parent's flattened
+    /// child index space.
+    size_t getChildCount() const { return this->size(); }
 
-    SyntaxListBase* clone(BumpAllocator& alloc) const final {
-        return alloc.emplace<TokenList>(*this);
-    }
+    /// Gets the i-th token as a (Const)TokenOrSyntax.
+    TokenOrSyntax getChild(size_t index) { return (*this)[index]; }
+    ConstTokenOrSyntax getChild(size_t index) const { return (*this)[index]; }
+    PtrTokenOrSyntax getChildPtr(size_t index) { return &(*this)[index]; }
 
-    void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) final {
-        SmallVector<Token> buffer(children.size(), UninitializedTag());
+    /// Replaces the i-th token with @a child.
+    void setChild(size_t index, TokenOrSyntax child) { (*this)[index] = child.token(); }
+
+    /// Replaces the entire span with the provided @a children, copying the
+    /// resulting buffer into @a alloc.
+    void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) {
+        SmallVector<parsing::Token> buffer(children.size(), UninitializedTag());
         for (auto& t : children)
             buffer.push_back(t.token());
 
         *this = buffer.copy(alloc);
-        childCount = buffer.size();
+    }
+
+    /// Compute the SourceRange spanning all tokens of this list. If empty,
+    /// returns a default SourceRange.
+    SourceRange sourceRange() const {
+        if (empty())
+            return {};
+
+        auto f = front();
+        auto l = back();
+        return SourceRange(f.location(), l.location() + l.rawText().length());
     }
 };
 
-/// A syntax node that represents a token-separated list of child syntax nodes.
-/// The stored children are assumed to alternate between delimiters (such as a comma) and nodes.
+/// @brief A container of token-separated syntax nodes.
+///
+/// The stored elements alternate between delimiters (such as a
+/// comma) and nodes. Unlike SyntaxList, the elements span includes the
+/// separators interleaved with the nodes.
 template<typename T>
-class SLANG_EXPORT SeparatedSyntaxList : public SyntaxListBase {
+class SLANG_EXPORT SeparatedSyntaxList {
 public:
     /// An iterator that will iterate over just the nodes (and skip the delimiters) in the
     /// parent SeparatedSyntaxList.
@@ -447,8 +433,44 @@ public:
     using const_iterator = iterator_base<const T*>;
 
     SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(std::span<TokenOrSyntax>()) {}
-    SeparatedSyntaxList(std::span<TokenOrSyntax> elements) :
-        SyntaxListBase(SyntaxKind::SeparatedList, elements.size()), elements(elements) {}
+    SeparatedSyntaxList(std::span<TokenOrSyntax> elements) : elements(elements) {}
+
+    /// Number of items the list contributes to its parent's flattened
+    /// child index space (includes interleaved separators).
+    size_t getChildCount() const { return elements.size(); }
+
+    /// Gets the i-th item (token or node) from the underlying interleaved span.
+    TokenOrSyntax getChild(size_t index) { return elements[index]; }
+    ConstTokenOrSyntax getChild(size_t index) const { return elements[index]; }
+    PtrTokenOrSyntax getChildPtr(size_t index) {
+        if (elements[index].isNode())
+            return elements[index].node();
+        else
+            return &(std::get<parsing::Token>(elements[index]));
+    }
+
+    /// Replaces the i-th item with @a child.
+    void setChild(size_t index, TokenOrSyntax child) { elements[index] = child; }
+
+    /// Replaces the entire span with the provided @a children, copying the
+    /// resulting buffer into @a alloc.
+    void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) {
+        SmallVector<TokenOrSyntax> buffer(children.size(), UninitializedTag());
+        buffer.append_range(children);
+
+        elements = buffer.copy(alloc);
+    }
+
+    /// Compute the SourceRange spanning all elements of this list. If empty,
+    /// returns a default SourceRange.
+    SourceRange sourceRange() const {
+        if (elements.empty())
+            return {};
+
+        auto firstRange = elements.front().range();
+        auto lastRange = elements.back().range();
+        return SourceRange(firstRange.start(), lastRange.end());
+    }
 
     /// @return the elements of nodes in the list
     [[nodiscard]] std::span<const ConstTokenOrSyntax> elems() const {
@@ -483,34 +505,8 @@ public:
     const_iterator cend() const { return const_iterator(*this, size()); }
 
 private:
-    TokenOrSyntax getChild(size_t index) final { return elements[index]; }
-    ConstTokenOrSyntax getChild(size_t index) const final { return elements[index]; }
-    PtrTokenOrSyntax getChildPtr(size_t index) final {
-        if (elements[index].isNode())
-            return elements[index].node();
-        else
-            return &(std::get<parsing::Token>(elements[index]));
-    }
-    void setChild(size_t index, TokenOrSyntax child) final { elements[index] = child; }
-
-    SyntaxListBase* clone(BumpAllocator& alloc) const final {
-        return alloc.emplace<SeparatedSyntaxList<T>>(*this);
-    }
-
-    void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) final {
-        SmallVector<TokenOrSyntax> buffer(children.size(), UninitializedTag());
-        buffer.append_range(children);
-
-        elements = buffer.copy(alloc);
-        childCount = buffer.size();
-    }
-
     std::span<TokenOrSyntax> elements;
 };
-
-#if defined(__GNUC__)
-#    pragma GCC diagnostic pop
-#endif
 
 template<typename T>
 SeparatedSyntaxList<T>* deepClone(const SeparatedSyntaxList<T>& node, BumpAllocator& alloc) {
@@ -531,5 +527,22 @@ inline TokenList* deepClone(const TokenList& node, BumpAllocator& alloc) {
     }
     return alloc.emplace<TokenList>(buffer.copy(alloc));
 }
+
+/// Type trait that is true for the three syntax-list container types
+/// (`SyntaxList<T>`, `TokenList`, `SeparatedSyntaxList<T>`).
+template<typename T>
+struct is_syntax_list : std::false_type {};
+
+template<typename T>
+struct is_syntax_list<SyntaxList<T>> : std::true_type {};
+
+template<>
+struct is_syntax_list<TokenList> : std::true_type {};
+
+template<typename T>
+struct is_syntax_list<SeparatedSyntaxList<T>> : std::true_type {};
+
+template<typename T>
+inline constexpr bool is_syntax_list_v = is_syntax_list<T>::value;
 
 } // namespace slang::syntax

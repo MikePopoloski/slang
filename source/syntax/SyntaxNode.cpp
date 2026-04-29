@@ -263,20 +263,4 @@ bool SyntaxNode::isEquivalentTo(const SyntaxNode& other) const {
     return true;
 }
 
-bool SyntaxListBase::isKind(SyntaxKind kind) {
-    switch (kind) {
-        case SyntaxKind::SyntaxList:
-        case SyntaxKind::TokenList:
-        case SyntaxKind::SeparatedList:
-            return true;
-        default:
-            return false;
-    }
-}
-
-bool SyntaxListBase::isChildOptional(size_t index) {
-    (void)index;
-    return true;
-}
-
 } // namespace slang::syntax

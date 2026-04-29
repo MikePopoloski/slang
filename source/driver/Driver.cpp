@@ -803,7 +803,8 @@ void Driver::reportMacros(bool groupByFile) {
         if (!macro->body.empty() && macro->body[0].trivia().empty())
             printer.append(" "sv);
 
-        printer.print(macro->body);
+        for (auto t : macro->body)
+            printer.print(t);
 
         OS::print(fmt::format("{}\n", printer.str()));
     };

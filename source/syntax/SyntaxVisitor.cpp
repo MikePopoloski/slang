@@ -10,6 +10,7 @@
 #include <variant>
 
 #include "slang/parsing/Token.h"
+#include "slang/syntax/SyntaxListInfo.h"
 
 namespace {
 
@@ -39,94 +40,64 @@ struct CloneVisitor {
 #    pragma warning(push)
 #    pragma warning(disable : 4127) // conditional expression is constant
 #endif
+    // Clone the contents of one list-typed child slot, applying any pending
+    // edits (insertBefore/insertAfter on elements, replace/remove on elements,
+    // listInsertAtFront/listInsertAtBack on the list, and removeToken/
+    // replaceToken on separators). Writes the result into the destination
+    // list via the type-erased `resetAll` thunk in @a dstList. Returns the
+    // number of children written so the caller can advance its destination
+    // flat index.
     template<typename T>
-    SyntaxNode* visit(const T& node) {
-        T* cloned = clone(node, alloc);
-
-        constexpr bool IsList = std::is_same_v<T, SyntaxListBase>;
+    size_t cloneList(const T& srcNode, const ListChildInfo& srcList, const ListChildInfo& dstList) {
         SmallVector<TokenOrSyntax, 8> listBuffer;
         bool skipSeparator = false;
+        const void* listKey = srcList.listPtr;
 
-        if constexpr (IsList) {
-            if (auto it = commits.listInsertAtFront.find(&node);
-                it != commits.listInsertAtFront.end()) {
+        if (auto it = commits.listInsertAtFront.find(listKey);
+            it != commits.listInsertAtFront.end()) {
 
-                const SyntaxChange* lastChange = nullptr;
-                for (const auto& change : it->second) {
-                    if (!listBuffer.empty() && change.separator)
-                        listBuffer.push_back(change.separator);
-                    listBuffer.push_back(change.second);
-                    lastChange = &change;
-                }
-
-                if (lastChange && node.getChildCount() && lastChange->separator)
-                    listBuffer.push_back(lastChange->separator);
+            const SyntaxChange* lastChange = nullptr;
+            for (const auto& change : it->second) {
+                if (!listBuffer.empty() && change.separator)
+                    listBuffer.push_back(change.separator);
+                listBuffer.push_back(change.second);
+                lastChange = &change;
             }
+
+            if (lastChange && srcList.size && lastChange->separator)
+                listBuffer.push_back(lastChange->separator);
         }
 
-        for (size_t i = 0; i < node.getChildCount(); i++) {
-            auto child = node.childNode(i);
+        for (size_t i = 0; i < srcList.size; i++) {
+            ConstTokenOrSyntax origChild = srcNode.getChild(srcList.flatStart + i);
+            const SyntaxNode* child = origChild.isNode() ? origChild.node() : nullptr;
             if (!child) {
-                if constexpr (IsList) {
-                    if (auto it = commits.tokenRemoveOrReplace.find(std::make_pair(&node, i));
-                        it != commits.tokenRemoveOrReplace.end()) {
-                        if (auto replaceChange = std::get_if<TokenReplaceChange>(&it->second))
-                            listBuffer.push_back(replaceChange->newToken);
-                        else {
-                            auto* removeChange = std::get_if<TokenRemoveChange>(&it->second);
-                            if (removeChange && removeChange->preserveTrivia) {
-                                this->previousTrivia = copyTrivia(node.childToken(i).trivia());
-                            }
-                        }
-                    }
-                    else if (!skipSeparator) {
-                        if (this->previousTrivia.empty()) {
-                            listBuffer.push_back(node.childToken(i).deepClone(alloc));
-                        }
-                        else {
-                            listBuffer.push_back(node.childToken(i).deepClone(alloc).withTrivia(
-                                alloc, this->previousTrivia));
-                            this->previousTrivia = {};
-                        }
-                    }
-                    skipSeparator = false;
-                }
-                else {
-                    if (node.getChild(i).isToken()) { // check since it might be null node
-                        if (auto it = commits.tokenRemoveOrReplace.find(std::make_pair(&node, i));
-                            it != commits.tokenRemoveOrReplace.end()) {
-                            if (auto replaceChange = std::get_if<TokenReplaceChange>(&it->second)) {
-                                cloned->setChild(i, replaceChange->newToken);
-                            }
-                            else { // TokenRemoveChange
-                                auto* removeChange = std::get_if<TokenRemoveChange>(&it->second);
-                                if (removeChange && removeChange->preserveTrivia) {
-                                    this->previousTrivia = copyTrivia(node.childToken(i).trivia());
-                                }
-                                cloned->setChild(i, parsing::Token());
-                            }
-                        }
-                        else {
-                            if (this->previousTrivia.empty()) {
-                                cloned->setChild(i, node.childToken(i).deepClone(alloc));
-                            }
-                            else {
-                                cloned->setChild(i, node.childToken(i).deepClone(alloc).withTrivia(
-                                                        alloc, this->previousTrivia));
-                                this->previousTrivia = {};
-                            }
+                if (auto it = commits.tokenRemoveOrReplace.find(std::make_pair(listKey, i));
+                    it != commits.tokenRemoveOrReplace.end()) {
+                    if (auto replaceChange = std::get_if<TokenReplaceChange>(&it->second))
+                        listBuffer.push_back(replaceChange->newToken);
+                    else {
+                        auto removeChange = std::get_if<TokenRemoveChange>(&it->second);
+                        if (removeChange && removeChange->preserveTrivia) {
+                            this->previousTrivia = copyTrivia(origChild.token().trivia());
                         }
                     }
                 }
+                else if (!skipSeparator) {
+                    if (this->previousTrivia.empty()) {
+                        listBuffer.push_back(origChild.token().deepClone(alloc));
+                    }
+                    else {
+                        listBuffer.push_back(origChild.token().deepClone(alloc).withTrivia(
+                            alloc, this->previousTrivia));
+                        this->previousTrivia = {};
+                    }
+                }
+                skipSeparator = false;
                 continue;
             }
 
             if (auto it = commits.insertBefore.find(child); it != commits.insertBefore.end()) {
-                if (!IsList) {
-                    SLANG_THROW(std::logic_error(
-                        "Can't use insertBefore or insertAfter on a non-list node"));
-                }
-
                 for (const auto& change : it->second)
                     listBuffer.push_back(change.second);
             }
@@ -134,61 +105,141 @@ struct CloneVisitor {
             if (auto it = commits.removeOrReplace.find(child);
                 it != commits.removeOrReplace.end()) {
                 if (auto replaceChange = std::get_if<ReplaceChange>(&it->second)) {
-                    if constexpr (IsList)
-                        listBuffer.push_back(replaceChange->second);
-                    else
-                        cloned->setChild(i, replaceChange->second);
+                    listBuffer.push_back(replaceChange->second);
                 }
                 else {
-                    if constexpr (!IsList) {
-                        static SyntaxNode* emptyNode = nullptr;
-                        cloned->setChild(i, emptyNode);
-                    }
-                    else {
-                        skipSeparator = true; // remove separator related to removed node
-                    }
+                    skipSeparator = true; // remove separator related to removed node
                 }
             }
             else {
-                if constexpr (IsList) {
-                    listBuffer.push_back(child->visit(*this));
-                }
-                else {
-                    cloned->setChild(i, child->visit(*this));
-                }
+                listBuffer.push_back(child->visit(*this));
             }
 
             if (auto it = commits.insertAfter.find(child); it != commits.insertAfter.end()) {
-                if (!IsList) {
-                    SLANG_THROW(std::logic_error(
-                        "Can't use insertBefore or insertAfter on a non-list node"));
-                }
-
                 for (const auto& change : it->second)
                     listBuffer.push_back(change.second);
             }
         }
 
-        if constexpr (IsList) {
-            if (skipSeparator) {
-                // remove trailing sep if it wasn't there before transform
-                bool isClonedTrailing = !listBuffer.empty() && listBuffer.back().isToken();
-                bool isOriginalTrailing = node.getChildCount() &&
-                                          node.getChild(node.getChildCount() - 1).isToken();
-                if (isClonedTrailing && !isOriginalTrailing)
-                    listBuffer.pop_back();
-            }
-            if (auto it = commits.listInsertAtBack.find(&node);
-                it != commits.listInsertAtBack.end()) {
+        if (skipSeparator) {
+            // remove trailing sep if it wasn't there before transform
+            bool isClonedTrailing = !listBuffer.empty() && listBuffer.back().isToken();
+            bool isOriginalTrailing =
+                srcList.size && srcNode.getChild(srcList.flatStart + srcList.size - 1).isToken();
+            if (isClonedTrailing && !isOriginalTrailing)
+                listBuffer.pop_back();
+        }
 
-                for (const auto& change : it->second) {
-                    if (!listBuffer.empty() && change.separator)
-                        listBuffer.push_back(change.separator);
-                    listBuffer.push_back(change.second);
+        if (auto it = commits.listInsertAtBack.find(listKey);
+            it != commits.listInsertAtBack.end()) {
+
+            for (const auto& change : it->second) {
+                if (!listBuffer.empty() && change.separator)
+                    listBuffer.push_back(change.separator);
+                listBuffer.push_back(change.second);
+            }
+        }
+
+        dstList.resetAll(dstList.listPtr, alloc, listBuffer);
+        return listBuffer.size();
+    }
+
+    // Apply pending changes to a single non-list child slot of the given node / index,
+    // writing the result into `cloned` at flat index `dstIndex`. The two indices may differ
+    // when the parent has list members whose sizes change between source and destination.
+    template<typename T>
+    void cloneChild(const T& node, size_t srcIndex, T& cloned, size_t dstIndex) {
+        auto child = node.childNode(srcIndex);
+        if (!child) {
+            if (node.getChild(srcIndex).isToken()) {
+                if (auto it = commits.tokenRemoveOrReplace.find(
+                        std::make_pair(static_cast<const void*>(&node), srcIndex));
+                    it != commits.tokenRemoveOrReplace.end()) {
+                    if (auto replaceChange = std::get_if<TokenReplaceChange>(&it->second)) {
+                        cloned.setChild(dstIndex, replaceChange->newToken);
+                    }
+                    else {
+                        auto removeChange = std::get_if<TokenRemoveChange>(&it->second);
+                        if (removeChange && removeChange->preserveTrivia) {
+                            this->previousTrivia = copyTrivia(node.childToken(srcIndex).trivia());
+                        }
+                        cloned.setChild(dstIndex, parsing::Token());
+                    }
+                }
+                else {
+                    if (this->previousTrivia.empty()) {
+                        cloned.setChild(dstIndex, node.childToken(srcIndex).deepClone(alloc));
+                    }
+                    else {
+                        cloned.setChild(dstIndex,
+                                        node.childToken(srcIndex).deepClone(alloc).withTrivia(
+                                            alloc, this->previousTrivia));
+                        this->previousTrivia = {};
+                    }
                 }
             }
+            return;
+        }
 
-            cloned->resetAll(alloc, listBuffer);
+        if (auto it = commits.removeOrReplace.find(child); it != commits.removeOrReplace.end()) {
+            if (auto replaceChange = std::get_if<ReplaceChange>(&it->second)) {
+                cloned.setChild(dstIndex, replaceChange->second);
+            }
+            else {
+                static SyntaxNode* emptyNode = nullptr;
+                cloned.setChild(dstIndex, emptyNode);
+            }
+        }
+        else {
+            cloned.setChild(dstIndex, child->visit(*this));
+        }
+    }
+
+    // Convenience overload used by the simple flat-index path for parents
+    // without list members; here srcIndex == dstIndex.
+    template<typename T>
+    void cloneChild(const T& node, size_t i, T& cloned) {
+        cloneChild(node, i, cloned, i);
+    }
+
+    template<typename T>
+    SyntaxNode* visit(const T& node) {
+        T* cloned = clone(node, alloc);
+
+        // Discover any list-typed child slots so we can dispatch list-level
+        // edits via the rewriter machinery. Most node types have no lists,
+        // in which case we fall back to a simple flat-index walk.
+        SmallVector<ListChildInfo, 2> srcLists, dstLists;
+        getChildListInfo(const_cast<T&>(node), srcLists);
+        getChildListInfo(*cloned, dstLists);
+
+        if (srcLists.empty()) {
+            const size_t count = node.getChildCount();
+            for (size_t i = 0; i < count; i++)
+                cloneChild(node, i, *cloned);
+            return cloned;
+        }
+
+        // Walk children in source order so that pending trivia (e.g. from a
+        // token removal) can flow forward to the next token across list
+        // boundaries. The destination index can diverge from the source
+        // index when list sizes change due to inserts/removes.
+        const size_t srcCount = node.getChildCount();
+        size_t srcIdx = 0;
+        size_t dstIdx = 0;
+        size_t listIdx = 0;
+        while (srcIdx < srcCount) {
+            if (listIdx < srcLists.size() && srcLists[listIdx].flatStart == srcIdx) {
+                const size_t newDstSize = cloneList(node, srcLists[listIdx], dstLists[listIdx]);
+                srcIdx += srcLists[listIdx].size;
+                dstIdx += newDstSize;
+                ++listIdx;
+            }
+            else {
+                cloneChild(node, srcIdx, *cloned, dstIdx);
+                ++srcIdx;
+                ++dstIdx;
+            }
         }
 
         return cloned;
