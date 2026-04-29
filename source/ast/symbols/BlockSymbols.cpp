@@ -765,6 +765,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
     // If the loop initializer has a `genvar` keyword, we can use the name directly
     // Otherwise we need to do a lookup to make sure we have the actual genvar somewhere.
+    const Symbol* genvarSym = nullptr;
     if (!syntax.genvar) {
         auto symbol = Lookup::unqualifiedAt(*context.scope, genvar.valueText(),
                                             context.getLocation(), genvar.range());
@@ -779,14 +780,14 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         }
 
         comp.noteReference(*symbol);
-        result->genvar = symbol;
+        genvarSym = symbol;
     }
     else {
         // Fabricate a genvar symbol to live in this array since it was declared inline.
         auto genvarSymbol = comp.emplace<GenvarSymbol>(genvar.valueText(), genvar.location());
         genvarSymbol->setSyntax(*genvarSyntax);
         result->addMember(*genvarSymbol);
-        result->genvar = genvarSymbol;
+        genvarSym = genvarSymbol;
     }
 
     SmallVector<const GenerateBlockSymbol*> entries;
@@ -833,6 +834,12 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
     iterScope.setTemporaryParent(*context.scope, scopeIndex);
     iterScope.addMember(local);
+
+    if (genvarSym) {
+        if (auto sx = genvarSym->getSyntax())
+            local.setSyntax(*sx);
+    }
+    result->loopVariable = &local;
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
     ASTContext iterContext(iterScope, LookupLocation::max);
@@ -934,8 +941,8 @@ void GenerateBlockArraySymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("stopExpression", *stopExpression);
     if (iterExpression)
         serializer.write("iterExpression", *iterExpression);
-    if (genvar)
-        serializer.writeLink("genvar", *genvar);
+    if (loopVariable)
+        serializer.writeLink("loopVariable", *loopVariable);
 }
 
 } // namespace slang::ast

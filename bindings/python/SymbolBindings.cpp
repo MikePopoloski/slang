@@ -475,7 +475,7 @@ void registerSymbols(py::module_& m) {
         .def_readonly("initialExpression", &GenerateBlockArraySymbol::initialExpression)
         .def_readonly("stopExpression", &GenerateBlockArraySymbol::stopExpression)
         .def_readonly("iterExpression", &GenerateBlockArraySymbol::iterExpression)
-        .def_readonly("genvar", &GenerateBlockArraySymbol::genvar)
+        .def_readonly("loopVariable", &GenerateBlockArraySymbol::loopVariable)
         .def_property_readonly("externalName", &GenerateBlockArraySymbol::getExternalName);
 
     py::classh<EmptyMemberSymbol, Symbol>(m, "EmptyMemberSymbol");

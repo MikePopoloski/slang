@@ -153,9 +153,13 @@ endmodule
     assert arr.initialExpression is not None
     assert arr.stopExpression is not None
     assert arr.iterExpression is not None
-    assert arr.genvar is not None
-    assert arr.genvar.kind == SymbolKind.Genvar
-    assert arr.genvar.name == "g"
+    assert arr.loopVariable is not None
+    assert arr.loopVariable.kind == SymbolKind.Variable
+    assert arr.loopVariable.name == "g"
+    assert arr.loopVariable.syntax is not None
+    assert arr.loopVariable.syntax.kind == SyntaxKind.IdentifierName
+    assert arr.loopVariable.syntax.parent is not None
+    assert arr.loopVariable.syntax.parent.kind == SyntaxKind.GenvarDeclaration
 
     # The loop array's own syntax is the LoopGenerateSyntax directly.
     assert arr.syntax is not None
@@ -180,7 +184,11 @@ endmodule
 """)
 
     arr = comp.getRoot().lookupName("Top.arr")
-    assert arr.genvar is not None
-    assert arr.genvar.kind == SymbolKind.Genvar
-    assert arr.genvar.name == "i"
+    assert arr.loopVariable is not None
+    assert arr.loopVariable.kind == SymbolKind.Variable
+    assert arr.loopVariable.name == "i"
+    assert arr.loopVariable.syntax is not None
+    assert arr.loopVariable.syntax.kind == SyntaxKind.IdentifierName
+    # Fabricated node has no parent linkage in inline form.
+    assert arr.loopVariable.syntax.parent is None
     assert len(arr.entries) == 2

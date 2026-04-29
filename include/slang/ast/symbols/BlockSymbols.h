@@ -16,6 +16,7 @@
 namespace slang::ast {
 
 class Expression;
+class VariableSymbol;
 
 /// Indicates which branch of a conditional or loop generate construct
 /// produced a given GenerateBlockSymbol.
@@ -195,19 +196,17 @@ public:
     bool valid = false;
     bool isUnnamed = false;
 
-    /// Bound initializer expression of the enclosing loop-generate.
+    /// Initial value assigned to loopVariable.
     const Expression* initialExpression = nullptr;
 
-    /// Bound stop expression of the enclosing loop-generate.
+    /// Bound stop expression of the loop-generate.
     const Expression* stopExpression = nullptr;
 
-    /// Bound iteration expression of the enclosing loop-generate.
+    /// Bound iteration expression of the loop-generate.
     const Expression* iterExpression = nullptr;
 
-    /// Canonical genvar symbol for this loop. For an inline genvar this is a
-    /// fabricated symbol held as a member of this array; for an external
-    /// genvar it resolves to the declaration in an enclosing scope.
-    const Symbol* genvar = nullptr;
+    /// Loop variable used by the bound stop and iteration expressions.
+    const VariableSymbol* loopVariable = nullptr;
 
     GenerateBlockArraySymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                              uint32_t constructIndex) :

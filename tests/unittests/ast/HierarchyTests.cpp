@@ -9,6 +9,7 @@
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
 
 // Walks up from a generate block to the enclosing if/case/loop-generate node.
@@ -316,9 +317,13 @@ endmodule
     CHECK(loopArr.initialExpression != nullptr);
     CHECK(loopArr.stopExpression != nullptr);
     CHECK(loopArr.iterExpression != nullptr);
-    REQUIRE(loopArr.genvar != nullptr);
-    CHECK(loopArr.genvar->kind == SymbolKind::Genvar);
-    CHECK(loopArr.genvar->name == "g");
+    REQUIRE(loopArr.loopVariable != nullptr);
+    CHECK(loopArr.loopVariable->kind == SymbolKind::Variable);
+    CHECK(loopArr.loopVariable->name == "g");
+    REQUIRE(loopArr.loopVariable->getSyntax() != nullptr);
+    CHECK(loopArr.loopVariable->getSyntax()->kind == SyntaxKind::IdentifierName);
+    REQUIRE(loopArr.loopVariable->getSyntax()->parent != nullptr);
+    CHECK(loopArr.loopVariable->getSyntax()->parent->kind == SyntaxKind::GenvarDeclaration);
     REQUIRE(loopArr.getSyntax() != nullptr);
     CHECK(loopArr.getSyntax()->kind == SyntaxKind::LoopGenerate);
     CHECK(loopArr.entries.size() == 3);
@@ -458,10 +463,47 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& arr = compilation.getRoot().lookupName<GenerateBlockArraySymbol>("Top.arr");
-    REQUIRE(arr.genvar != nullptr);
-    CHECK(arr.genvar->kind == SymbolKind::Genvar);
-    CHECK(arr.genvar->name == "i");
+    REQUIRE(arr.loopVariable != nullptr);
+    CHECK(arr.loopVariable->kind == SymbolKind::Variable);
+    CHECK(arr.loopVariable->name == "i");
+    REQUIRE(arr.loopVariable->getSyntax() != nullptr);
+    CHECK(arr.loopVariable->getSyntax()->kind == SyntaxKind::IdentifierName);
+    // Inline form: fabricated IdentifierNameSyntax has no parent linkage.
+    CHECK(arr.loopVariable->getSyntax()->parent == nullptr);
+    // Source location matches the LoopGenerate identifier token.
+    REQUIRE(arr.getSyntax() != nullptr);
+    auto& loop = arr.getSyntax()->as<LoopGenerateSyntax>();
+    auto& idSyntax = arr.loopVariable->getSyntax()->as<IdentifierNameSyntax>();
+    CHECK(idSyntax.identifier.location() == loop.identifier.location());
     CHECK(arr.entries.size() == 2);
+}
+
+TEST_CASE("Loop-generate stop/iter expressions reference loopVariable") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+    genvar g;
+    for (g = 0; g < 3; g = g + 1) begin : arr
+        int e;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& arr = compilation.getRoot().lookupName<GenerateBlockArraySymbol>("Top.arr");
+    REQUIRE(arr.loopVariable != nullptr);
+    REQUIRE(arr.stopExpression != nullptr);
+    REQUIRE(arr.iterExpression != nullptr);
+
+    auto& stopSym =
+        arr.stopExpression->as<BinaryExpression>().left().as<NamedValueExpression>().symbol;
+    CHECK(&stopSym == arr.loopVariable);
+
+    auto& iterSym =
+        arr.iterExpression->as<AssignmentExpression>().left().as<NamedValueExpression>().symbol;
+    CHECK(&iterSym == arr.loopVariable);
 }
 
 TEST_CASE("Program instantiation") {
