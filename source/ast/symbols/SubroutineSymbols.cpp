@@ -690,8 +690,8 @@ bitmask<MethodFlags> SubroutineSymbol::buildArguments(
     bitmask<MethodFlags> resultFlags;
 
     for (auto portBase : syntax.ports) {
-        if (portBase->previewNode)
-            scope.addMembers(*portBase->previewNode);
+        if (auto preview = portBase->previewNode())
+            scope.addMembers(*preview);
 
         if (portBase->kind == SyntaxKind::DefaultFunctionPort) {
             lastDirection = ArgumentDirection::In;

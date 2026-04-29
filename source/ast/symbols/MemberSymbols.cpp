@@ -375,8 +375,8 @@ void ModportSymbol::fromSyntax(const ASTContext& context, const ModportDeclarati
                         modport->hasExports = true;
 
                     for (auto subPort : portList.ports) {
-                        if (subPort->previewNode)
-                            modport->addMembers(*subPort->previewNode);
+                        if (auto preview = subPort->previewNode())
+                            modport->addMembers(*preview);
 
                         switch (subPort->kind) {
                             case SyntaxKind::ModportNamedPort: {
@@ -1545,8 +1545,8 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
     std::optional<ArgumentDirection> lastDir;
 
     for (auto item : syntax.ports) {
-        if (item->previewNode)
-            scope.addMembers(*item->previewNode);
+        if (auto preview = item->previewNode())
+            scope.addMembers(*preview);
 
         auto port = comp.emplace<AssertionPortSymbol>(item->name.valueText(),
                                                       item->name.location());
@@ -1874,8 +1874,8 @@ RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(const Scope& scope,
     }
 
     for (auto rule : syntax.rules) {
-        if (rule->previewNode)
-            result->addMembers(*rule->previewNode);
+        if (auto preview = rule->previewNode())
+            result->addMembers(*preview);
 
         auto& ruleBlock = StatementBlockSymbol::fromSyntax(*result, *rule);
         result->addMember(ruleBlock);

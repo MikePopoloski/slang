@@ -869,8 +869,8 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
 
     SmallVector<FieldSymbol*> members;
     for (auto member : syntax.members) {
-        if (member->previewNode)
-            structType->addMembers(*member->previewNode);
+        if (auto preview = member->previewNode())
+            structType->addMembers(*preview);
 
         const Type& type = comp.getType(*member->type, context);
         structType->isFourState |= type.isFourState();
@@ -962,8 +962,8 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
     uint64_t bitstreamWidth = 0;
     SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {
-        if (member->previewNode)
-            result->addMembers(*member->previewNode);
+        if (auto preview = member->previewNode())
+            result->addMembers(*preview);
 
         RandMode randMode = RandMode::None;
         switch (member->randomQualifier.kind) {
@@ -1040,8 +1040,8 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
     ASTContext context(*unionType, LookupLocation::max, parentContext.flags);
 
     for (auto member : syntax.members) {
-        if (member->previewNode)
-            unionType->addMembers(*member->previewNode);
+        if (auto preview = member->previewNode())
+            unionType->addMembers(*preview);
 
         const Type& type = comp.getType(*member->type, context);
         unionType->isFourState |= type.isFourState();
@@ -1149,8 +1149,8 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
 
     SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {
-        if (member->previewNode)
-            result->addMembers(*member->previewNode);
+        if (auto preview = member->previewNode())
+            result->addMembers(*preview);
 
         for (auto decl : member->declarators) {
             auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),

@@ -611,8 +611,8 @@ std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
                 scope.addMembers(*item);
                 break;
             case SyntaxKind::PortDeclaration:
-                if (item->previewNode)
-                    scope.addMembers(*item->previewNode);
+                if (auto preview = item->previewNode())
+                    scope.addMembers(*preview);
 
                 if (scope.asSymbol().kind == SymbolKind::Subroutine) {
                     SmallVector<const FormalArgumentSymbol*> args;

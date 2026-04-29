@@ -13,8 +13,8 @@
 #include "slang/syntax/CSTSerializer.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxPrinter.h"
+#include "slang/syntax/SyntaxRewriter.h"
 #include "slang/syntax/SyntaxTree.h"
-#include "slang/syntax/SyntaxVisitor.h"
 #include "slang/text/Json.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/String.h"
@@ -118,11 +118,15 @@ public:
         this->insertAfter(node, cloneNode(newNode));
     }
 
-    void py_insertAtFront(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
+    template<typename TList>
+        requires syntax::is_syntax_list_v<TList>
+    void py_insertAtFront(const TList& list, SyntaxNode& newNode, Token separator = {}) {
         this->insertAtFront(list, cloneNode(newNode), separator);
     }
 
-    void py_insertAtBack(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
+    template<typename TList>
+        requires syntax::is_syntax_list_v<TList>
+    void py_insertAtBack(const TList& list, SyntaxNode& newNode, Token separator = {}) {
         this->insertAtBack(list, cloneNode(newNode), separator);
     }
 
@@ -398,7 +402,7 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
                 serializer.serialize(self);
                 return std::string(writer.view());
             },
-            py::arg("mode") = CSTJsonMode::Full,
+            "mode"_a = CSTJsonMode::Full,
             "Convert this syntax node to JSON string with optional formatting mode");
 
     py::classh<IncludeMetadata>(m, "IncludeMetadata")
@@ -490,7 +494,7 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
                 serializer.serialize(self);
                 return std::string(writer.view());
             },
-            py::arg("mode") = CSTJsonMode::Full,
+            "mode"_a = CSTJsonMode::Full,
             "Convert this syntax tree to JSON string with optional formatting mode");
 
     py::classh<CommentHandler> commentHandler(m, "CommentHandler");
@@ -568,45 +572,49 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
              "preserveTrivia"_a = false)
         .def("insertBefore", &PySyntaxRewriter::py_insertBefore)
         .def("insertAfter", &PySyntaxRewriter::py_insertAfter)
-        .def("insertAtFront", &PySyntaxRewriter::py_insertAtFront, py::arg("list"),
-             py::arg("newNode"), py::arg("separator") = Token())
-        .def("insertAtBack", &PySyntaxRewriter::py_insertAtBack, py::arg("list"),
-             py::arg("newNode"), py::arg("separator") = Token())
+        .def("insertAtFront", &PySyntaxRewriter::py_insertAtFront<SyntaxList<SyntaxNode>>, "list"_a,
+             "newNode"_a, "separator"_a = Token{})
+        .def("insertAtFront", &PySyntaxRewriter::py_insertAtFront<SeparatedSyntaxList<SyntaxNode>>,
+             "list"_a, "newNode"_a, "separator"_a = Token{})
+        .def("insertAtBack", &PySyntaxRewriter::py_insertAtBack<SyntaxList<SyntaxNode>>, "list"_a,
+             "newNode"_a, "separator"_a = Token{})
+        .def("insertAtBack", &PySyntaxRewriter::py_insertAtBack<SeparatedSyntaxList<SyntaxNode>>,
+             "list"_a, "newNode"_a, "separator"_a = Token{})
         .def_property_readonly("factory", &PySyntaxRewriter::getFactory,
                                "Get the SyntaxFactory for creating new syntax nodes")
         .def_property_readonly("alloc", &PySyntaxRewriter::getAllocator,
                                "Get the allocator for creating tokens and trivia")
-        .def("makeToken", &PySyntaxRewriter::py_makeToken, py::arg("kind"), py::arg("text"),
-             py::arg("trivia") = std::span<const Trivia>{},
+        .def("makeToken", &PySyntaxRewriter::py_makeToken, "kind"_a, "text"_a,
+             "trivia"_a = std::span<const Trivia>{},
              "Create a new token with the given kind and text")
-        .def("makeToken", &PySyntaxRewriter::py_makeTokenFromKind, py::arg("kind"),
-             py::arg("trivia") = std::span<const Trivia>{},
+        .def("makeToken", &PySyntaxRewriter::py_makeTokenFromKind, "kind"_a,
+             "trivia"_a = std::span<const Trivia>{},
              "Create a token with text inferred from kind (for keywords/punctuation)")
-        .def("makeId", &PySyntaxRewriter::py_makeId, py::arg("text"),
-             py::arg("trivia") = std::span<const Trivia>{}, "Create an identifier token")
+        .def("makeId", &PySyntaxRewriter::py_makeId, "text"_a,
+             "trivia"_a = std::span<const Trivia>{}, "Create an identifier token")
         .def("makeComma", &PySyntaxRewriter::py_makeComma, "Create a comma token")
-        .def("makeTrivia", &PySyntaxRewriter::py_makeTrivia, py::arg("kind"), py::arg("text"),
+        .def("makeTrivia", &PySyntaxRewriter::py_makeTrivia, "kind"_a, "text"_a,
              "Create a trivia with text allocated in the rewriter's allocator")
-        .def("clone", &PySyntaxRewriter::py_clone, byrefint, py::arg("node"),
+        .def("clone", &PySyntaxRewriter::py_clone, byrefint, "node"_a,
              "Create a shallow clone of the given syntax node")
-        .def("deepClone", &PySyntaxRewriter::py_deepClone, byrefint, py::arg("node"),
+        .def("deepClone", &PySyntaxRewriter::py_deepClone, byrefint, "node"_a,
              "Create a deep clone of the given syntax node and all its children")
-        .def("makeList", &PySyntaxRewriter::py_makeSyntaxListGeneric, byrefint, py::arg("items"),
+        .def("makeList", &PySyntaxRewriter::py_makeSyntaxListGeneric, byrefint, "items"_a,
              "Create a SyntaxList from a list of syntax nodes")
         .def("makeSeparatedList", &PySyntaxRewriter::py_makeSeparatedSyntaxListGeneric, byrefint,
-             py::arg("items"),
+             "items"_a,
              "Create a SeparatedSyntaxList from a list of syntax nodes and separator tokens")
-        .def("makeTokenList", &PySyntaxRewriter::py_makeTokenList, byrefint, py::arg("items"),
+        .def("makeTokenList", &PySyntaxRewriter::py_makeTokenList, byrefint, "items"_a,
              "Create a TokenList from a list of tokens");
 
-    m.def("rewrite", &pySyntaxRewrite, py::arg("tree"), py::arg("handler"));
+    m.def("rewrite", &pySyntaxRewrite, "tree"_a, "handler"_a);
 
     m.def(
         "clone",
         [](const SyntaxNode& node, BumpAllocator& alloc) {
             return slang::syntax::clone(node, alloc);
         },
-        byrefint, py::keep_alive<0, 2>(), py::arg("node"), py::arg("alloc"),
+        byrefint, py::keep_alive<0, 2>(), "node"_a, "alloc"_a,
         "Create a shallow clone of the given syntax node");
 
     m.def(
@@ -614,6 +622,6 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
         [](const SyntaxNode& node, BumpAllocator& alloc) {
             return slang::syntax::deepClone(node, alloc);
         },
-        byrefint, py::keep_alive<0, 2>(), py::arg("node"), py::arg("alloc"),
+        byrefint, py::keep_alive<0, 2>(), "node"_a, "alloc"_a,
         "Create a deep clone of the given syntax node and all its children");
 }

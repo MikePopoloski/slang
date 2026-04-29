@@ -88,7 +88,9 @@ def test_compilation():
     assert diags[1].code == Diags.ArithOpMismatch
 
     report = DiagnosticEngine.reportAll(comp.sourceManager, diags)
-    assert ("\n" + report) == """
+    assert (
+        ("\n" + report)
+        == """
 source:3:20: warning: implicit conversion truncates from 32 to 1 bits [-Wwidth-trunc]
     assign #2 o = (~i + 32'd1234);
                 ~  ^~~~~~~~~~~~~
@@ -96,6 +98,7 @@ source:3:23: warning: arithmetic between operands of different types ('logic' an
     assign #2 o = (~i + 32'd1234);
                    ~~ ^ ~~~~~~~~
 """
+    )
 
 
 def test_resolved_dpi_exports():
@@ -124,9 +127,11 @@ endmodule
 
 
 def test_include_metadata():
-    tree = SyntaxTree.fromText("""
+    tree = SyntaxTree.fromText(
+        """
     `include "{}/some_file.svh"
-    """.format(Path(__file__).parent))
+    """.format(Path(__file__).parent)
+    )
     includes = tree.getIncludeDirectives()
     assert len(includes) == 1
     assert includes[0].path.endswith("some_file.svh")

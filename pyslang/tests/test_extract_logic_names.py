@@ -101,9 +101,9 @@ def test_logic_declaration_extractor():
     expected_names = {"clk", "data", "enable", "state"}
     actual_names = set(extractor.logic_names)
 
-    assert (
-        actual_names == expected_names
-    ), f"Expected {expected_names}, got {actual_names}"
+    assert actual_names == expected_names, (
+        f"Expected {expected_names}, got {actual_names}"
+    )
 
 
 def test_extract_logic_declaration_names_function():
@@ -124,9 +124,9 @@ def test_extract_logic_declaration_names_function():
     expected_names = {"reset", "address", "valid"}
     actual_names = set(logic_names)
 
-    assert (
-        actual_names == expected_names
-    ), f"Expected {expected_names}, got {actual_names}"
+    assert actual_names == expected_names, (
+        f"Expected {expected_names}, got {actual_names}"
+    )
 
 
 def test_no_logic_declarations():
@@ -180,9 +180,9 @@ def test_complex_module_with_ports():
     }
     actual_names = set(logic_names)
 
-    assert (
-        actual_names == expected_names
-    ), f"Expected {expected_names}, got {actual_names}"
+    assert actual_names == expected_names, (
+        f"Expected {expected_names}, got {actual_names}"
+    )
 
 
 def test_logic_arrays_and_vectors():
@@ -209,6 +209,6 @@ def test_logic_arrays_and_vectors():
     }
     actual_names = set(logic_names)
 
-    assert (
-        actual_names == expected_names
-    ), f"Expected {expected_names}, got {actual_names}"
+    assert actual_names == expected_names, (
+        f"Expected {expected_names}, got {actual_names}"
+    )

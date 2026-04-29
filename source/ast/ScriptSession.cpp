@@ -50,8 +50,8 @@ ConstantValue ScriptSession::eval(std::string_view text) {
             scope.addMembers(node);
             return nullptr;
         case SyntaxKind::DataDeclaration: {
-            if (node.previewNode) {
-                scope.addMembers(*node.previewNode);
+            if (auto preview = node.previewNode()) {
+                scope.addMembers(*preview);
                 scope.getNameMap(); // force name map to be built
             }
 
@@ -75,8 +75,8 @@ ConstantValue ScriptSession::eval(std::string_view text) {
                 scope.addMembers(*member);
             return nullptr;
         default:
-            if (node.previewNode) {
-                scope.addMembers(*node.previewNode);
+            if (auto preview = node.previewNode()) {
+                scope.addMembers(*preview);
                 scope.getNameMap(); // force name map to be built
             }
 

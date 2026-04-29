@@ -192,8 +192,8 @@ void Scope::addDiags(const Diagnostics& diags) const {
 }
 
 void Scope::addMembers(const SyntaxNode& syntax) {
-    if (syntax.previewNode)
-        addMembers(*syntax.previewNode);
+    if (auto preview = syntax.previewNode())
+        addMembers(*preview);
 
     switch (syntax.kind) {
         case SyntaxKind::ModuleDeclaration:
