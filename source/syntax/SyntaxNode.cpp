@@ -55,6 +55,19 @@ SourceRange ConstTokenOrSyntax::range() const {
     return isNode() ? node()->sourceRange() : token().range();
 }
 
+void SyntaxNode::setPreviewNodeImpl(BumpAllocator& alloc, const SyntaxNode* node) {
+    if (parent.isTagged()) {
+        // We already have an indirection struct; just update the preview slot.
+        parent.getInfo()->previewNode = node;
+        return;
+    }
+
+    auto info = alloc.emplace<detail::SyntaxParentInfo>();
+    info->parent = parent.getRaw();
+    info->previewNode = node;
+    parent.setInfo(info);
+}
+
 std::string SyntaxNode::toString() const {
     return SyntaxPrinter().print(*this).str();
 }

@@ -481,7 +481,7 @@ MemberSyntax* Parser::parseSingleMember(SyntaxKind parentKind) {
 
     if (result) {
         checkMemberAllowed(*result, parentKind);
-        result->previewNode = std::exchange(previewNode, nullptr);
+        result->setPreviewNode(alloc, std::exchange(previewNode, nullptr));
     }
 
     return result;
@@ -505,7 +505,7 @@ std::span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken,
             members.push_back(member);
             errored = false;
 
-            member->previewNode = std::exchange(previewNode, nullptr);
+            member->setPreviewNode(alloc, std::exchange(previewNode, nullptr));
         }
         else {
             if (isCloseDelimOrKeyword(kind)) {
@@ -554,7 +554,7 @@ MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
         if (peek(TokenKind::FunctionKeyword) || peek(TokenKind::TaskKeyword)) {
             auto& proto = parseFunctionPrototype(SyntaxKind::Unknown, FunctionOptions::IsPrototype);
             auto& msp = factory.modportSubroutinePort(proto);
-            msp.previewNode = std::exchange(previewNode, nullptr);
+            msp.setPreviewNode(alloc, std::exchange(previewNode, nullptr));
             buffer.push_back(&msp);
         }
         else {
@@ -713,7 +713,7 @@ FunctionPortBaseSyntax& Parser::parseFunctionPort(bitmask<FunctionOptions> optio
 
     auto& result = factory.functionPort(attributes, constKeyword, direction, staticKeyword,
                                         varKeyword, dataType, *decl);
-    result.previewNode = std::exchange(previewNode, nullptr);
+    result.setPreviewNode(alloc, std::exchange(previewNode, nullptr));
     return result;
 }
 
@@ -2584,7 +2584,7 @@ AssertionItemPortSyntax& Parser::parseAssertionItemPort(SyntaxKind parentKind) {
 
     auto& result = factory.assertionItemPort(attributes, local, direction, *type, name, dimensions,
                                              defaultValue);
-    result.previewNode = std::exchange(previewNode, nullptr);
+    result.setPreviewNode(alloc, std::exchange(previewNode, nullptr));
     return result;
 }
 

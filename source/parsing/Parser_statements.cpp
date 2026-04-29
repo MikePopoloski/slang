@@ -368,7 +368,7 @@ SyntaxNode& Parser::parseForInitializer() {
         auto& decl = parseDeclarator(/* allowMinTypMax */ false,
                                      /* requireInitializers */ true);
         auto& result = factory.forVariableDeclaration(varKeyword, &type, decl);
-        result.previewNode = std::exchange(previewNode, nullptr);
+        result.setPreviewNode(alloc, std::exchange(previewNode, nullptr));
         return result;
     }
 
@@ -694,7 +694,7 @@ std::span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bo
         }
 
         if (newNode) {
-            newNode->previewNode = std::exchange(previewNode, nullptr);
+            newNode->setPreviewNode(alloc, std::exchange(previewNode, nullptr));
 
             // Check for misleading indentation: if the last statement in the buffer
             // is a single-statement loop/conditional, and the new statement is at the
@@ -1023,7 +1023,7 @@ StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, Att
     while (isPossibleDataType(peek().kind)) {
         auto curr = peek();
         productions.push_back(&parseProduction());
-        productions.back()->previewNode = std::exchange(previewNode, nullptr);
+        productions.back()->setPreviewNode(alloc, std::exchange(previewNode, nullptr));
 
         // If there are no consumed tokens then production was not parsed.
         if (curr == peek())
