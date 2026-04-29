@@ -703,7 +703,17 @@ bool Type::isDerivedFrom(const Type& base) const {
 
     while (d && d->isClass()) {
         d = d->as<ClassType>().getBaseClass();
+        if (!d)
+            break;
+
+        d = &d->getCanonicalType();
         if (d == b)
+            return true;
+
+        if (d->isClass() && b->isClass() && d->as<ClassType>().genericClass &&
+            d->as<ClassType>().genericClass == b->as<ClassType>().genericClass &&
+            ParameterSymbolBase::allMatching(d->as<ClassType>().genericParameters,
+                                             b->as<ClassType>().genericParameters))
             return true;
     }
 
