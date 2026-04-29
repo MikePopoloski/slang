@@ -2017,6 +2017,26 @@ endmodule
     CHECK(diags[7].code == diag::FormatTooManyArgs);
 }
 
+TEST_CASE("$sformatf trailing empty arg in compat mode") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    string s;
+    int x = 5;
+    initial s = $sformatf("value=%0d", x,);
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowSFormatfEmptyArg;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::EmptyArgNotAllowed);
+}
+
 TEST_CASE("Array reduction method errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

@@ -736,6 +736,25 @@ bool Type::implements(const Type& ifaceClass) const {
     return false;
 }
 
+bool Type::isSameGenericClass(const Type& other) const {
+    const Type* l = &getCanonicalType();
+    const Type* r = &other.getCanonicalType();
+    if (!l->isClass() || !r->isClass())
+        return false;
+
+    auto& lc = l->as<ClassType>();
+    auto& rc = r->as<ClassType>();
+    auto* lg = lc.genericClass;
+    if (!lg || lg != rc.genericClass)
+        return false;
+
+    // Only covariant assignment is possible when at least one side is an
+    // uninstantiated specialization (T is still a formal type parameter).
+    // Concrete specializations like Callback#(Derived) vs Callback#(Base) are
+    // genuinely type-incompatible and should not be silently accepted.
+    return lc.isUninstantiated || rc.isUninstantiated;
+}
+
 bool Type::isIdenticalStructUnion(const Type& rhs) const {
     const Type& lt = getCanonicalType();
     const Type& rt = rhs.getCanonicalType();

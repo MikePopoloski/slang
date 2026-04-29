@@ -87,7 +87,7 @@ endmodule
     CHECK(diags[2].code == diag::PortDeclDimensionsMismatch);
     CHECK(diags[3].code == diag::PortDeclDimensionsMismatch);
     CHECK(diags[4].code == diag::PortDeclDimensionsMismatch);
-    CHECK(diags[5].code == diag::RedefinitionDifferentType);
+    CHECK(diags[5].code == diag::PortArgRedeclared);
 }
 
 TEST_CASE("Various subroutine arg styles") {

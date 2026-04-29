@@ -1800,3 +1800,54 @@ endproperty
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::RecursiveDefinition);
 }
+
+TEST_CASE("Bit-stream types allowed as assertion local variable declarations") {
+    // LRM 16.10: assertion_variable_declaration types must be valid per 16.6.
+    // LRM 6.22.4 + 6.24.3: bit-stream types (including fixed unpacked arrays of
+    // integral types) have defined explicit casting rules to/from integral types
+    // and are therefore cast-compatible.  They should be accepted as local
+    // variable declarations in sequences and properties.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic clk;
+    sequence s;
+        // Fixed unpacked array of integral — bit-stream type, should be allowed
+        bit [11:0] ptr[2];
+        // Packed struct of integral — also a bit-stream type
+        struct packed { logic [7:0] a; logic [3:0] b; } ps;
+        // Plain integral — always allowed
+        int x;
+        1;
+    endsequence
+
+    property p;
+        bit [7:0] arr[4];
+        1;
+    endproperty
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Unpacked array still rejected as assertion sequence expression") {
+    // The widened bit-stream check applies only to local variable *declarations*
+    // (DeclaredType.cpp RequireSequenceType), not to using an array value
+    // directly as a sequence expression (isValidForSequence in AssertionExpr.cpp).
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a[];
+    logic b;
+    assert property (a ##1 b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssertionExprType);
+}

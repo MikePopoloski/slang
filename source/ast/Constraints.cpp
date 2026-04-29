@@ -300,6 +300,16 @@ private:
         if (!expr.type->isValidForRand(RandMode::Rand,
                                        context.getCompilation().languageVersion()) &&
             !expr.type->isUnbounded()) {
+            // Some tools allow 'string' expressions (typically equality comparisons)
+            // within constraint if-conditions. The LRM requires the predicate to be
+            // boolean-convertible but does not explicitly require all sub-expressions to be
+            // rand-valid types. Only emit the softer diagnostic when we are inside a
+            // sub-expression (e.g. a function call inside an if-condition comparison);
+            // a string value used directly as a top-level constraint expression is always wrong.
+            if (expr.type->isString() && !isTop) {
+                context.addDiag(diag::StringConstraintExpr, expr.sourceRange);
+                return true;
+            }
             context.addDiag(diag::InvalidConstraintExpr, expr.sourceRange) << *expr.type;
             return false;
         }

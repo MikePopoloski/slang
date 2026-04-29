@@ -193,6 +193,16 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
             return *result;
         }
 
+        // In an uninstantiated generic class body the type parameter T is not yet bound,
+        // so Callback#(T) and Callback#(Base) appear as different types even though they
+        // may become identical once the class is instantiated with T=Base.  Suppress the
+        // assignment error silently; concrete instantiations with an incompatible T will
+        // still be caught by the normal BadAssignment path below.
+        if (type.isSameGenericClass(*rt)) {
+            return *comp.emplace<ConversionExpression>(type, ConversionKind::Implicit, *result,
+                                                       result->sourceRange);
+        }
+
         DiagCode code = diag::BadAssignment;
         if (!context.flags.has(ASTFlags::OutputArg) &&
             (type.isCastCompatible(*rt) || type.isBitstreamCastable(*rt))) {

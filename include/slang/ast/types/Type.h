@@ -274,6 +274,11 @@ public:
     /// extends the given interface class type. Otherwise, returns false.
     bool implements(const Type& ifaceClass) const;
 
+    /// Returns true if this type and @a other are both uninstantiated specializations
+    /// of the same generic (parameterized) class. Used to suppress spurious type errors
+    /// in generic class bodies where type parameters are not yet bound to concrete types.
+    bool isSameGenericClass(const Type& other) const;
+
     /// Determines whether the given type is a struct or union type that is
     /// identical to this one, meaning they have the same fields with the
     /// same names and types in the same order.
