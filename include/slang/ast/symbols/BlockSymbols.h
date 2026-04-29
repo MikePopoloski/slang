@@ -15,6 +15,16 @@
 
 namespace slang::ast {
 
+class Expression;
+class VariableSymbol;
+
+/// Indicates which branch of a conditional or loop generate construct
+/// produced a given GenerateBlockSymbol.
+#define GENERATE_BRANCH_KIND(x) \
+    x(IfTrue) x(IfFalse) x(CaseItem) x(CaseDefault) x(LoopIteration) x(IllegalUnconditional)
+SLANG_ENUM_SIZED(GenerateBranchKind, uint8_t, GENERATE_BRANCH_KIND)
+#undef GENERATE_BRANCH_KIND
+
 /// Represents a statement block, either sequential or parallel.
 class SLANG_EXPORT StatementBlockSymbol final : public Symbol, public Scope {
 public:
@@ -118,15 +128,46 @@ private:
 class SLANG_EXPORT GenerateBlockSymbol final : public Symbol, public Scope {
 public:
     uint32_t constructIndex = 0;
+
+    /// Indicates which branch of the originating generate construct produced this block.
+    GenerateBranchKind branchKind = GenerateBranchKind::IllegalUnconditional;
+
     bool isUninstantiated = false;
     bool isUnnamed = false;
-    const SVInt* arrayIndex = nullptr;
+
+    /// Storage for either the loop iteration index or the bound if/case condition.
+    /// The active member is selected by branchKind.
+    union {
+        const SVInt* arrayIndex = nullptr;
+        const Expression* conditionExpression;
+    };
+
+    /// Bound case-item label expressions for case-generate blocks.
+    std::span<const Expression* const> caseItemExpressions = {};
 
     GenerateBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                         uint32_t constructIndex, bool isUninstantiated) :
         Symbol(SymbolKind::GenerateBlock, name, loc), Scope(compilation, this),
         constructIndex(constructIndex), isUninstantiated(isUninstantiated),
         isUnnamed(name.empty()) {}
+
+    /// Returns the loop-iteration index, or nullptr if this block is not a loop iteration.
+    const SVInt* getArrayIndex() const {
+        return branchKind == GenerateBranchKind::LoopIteration ? arrayIndex : nullptr;
+    }
+
+    /// Returns the bound if/case condition, or nullptr if this block is not a conditional branch.
+    const Expression* getConditionExpression() const {
+        switch (branchKind) {
+            case GenerateBranchKind::IfTrue:
+            case GenerateBranchKind::IfFalse:
+            case GenerateBranchKind::CaseItem:
+            case GenerateBranchKind::CaseDefault:
+                return conditionExpression;
+            default:
+                return nullptr;
+        }
+    }
 
     std::string getExternalName() const;
 
@@ -154,6 +195,18 @@ public:
     uint32_t constructIndex;
     bool valid = false;
     bool isUnnamed = false;
+
+    /// Initial value assigned to loopVariable.
+    const Expression* initialExpression = nullptr;
+
+    /// Bound stop expression of the loop-generate.
+    const Expression* stopExpression = nullptr;
+
+    /// Bound iteration expression of the loop-generate.
+    const Expression* iterExpression = nullptr;
+
+    /// Loop variable used by the bound stop and iteration expressions.
+    const VariableSymbol* loopVariable = nullptr;
 
     GenerateBlockArraySymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                              uint32_t constructIndex) :

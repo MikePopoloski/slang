@@ -9,7 +9,21 @@
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
+
+// Walks up from a generate block to the enclosing if/case/loop-generate node.
+// Needed because if-else and case arms sit under an intermediate
+// ElseClause / StandardCaseItem / DefaultCaseItem syntax node.
+static const SyntaxNode* constructOf(const GenerateBlockSymbol& block) {
+    auto s = block.getSyntax();
+    const SyntaxNode* p = s ? s->parent : nullptr;
+    while (p && p->kind != SyntaxKind::IfGenerate && p->kind != SyntaxKind::CaseGenerate &&
+           p->kind != SyntaxKind::LoopGenerate) {
+        p = p->parent;
+    }
+    return p;
+}
 
 TEST_CASE("Finding top level") {
     auto file1 = SyntaxTree::fromText(
@@ -230,6 +244,266 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     compilation.getRoot().lookupName<GenerateBlockSymbol>("Top.u2");
+}
+
+TEST_CASE("Generate construct provenance is preserved") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top #(parameter int MODE = 1, parameter int N = 3)();
+    // if-generate
+    if (MODE == 1) begin : if_true
+        int a;
+    end
+    else begin : if_false
+        int b;
+    end
+
+    // case-generate
+    case (MODE)
+        1, 2: begin : case_item_lo
+            int c;
+        end
+        default: begin : case_default
+            int d;
+        end
+    endcase
+
+    // loop-generate with external genvar
+    genvar g;
+    for (g = 0; g < N; g = g + 1) begin : loop_arr
+        int e;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+
+    // if-generate
+    auto& ifTrue = root.lookupName<GenerateBlockSymbol>("Top.if_true");
+    auto& ifFalse = root.lookupName<GenerateBlockSymbol>("Top.if_false");
+    CHECK(ifTrue.branchKind == GenerateBranchKind::IfTrue);
+    CHECK(ifFalse.branchKind == GenerateBranchKind::IfFalse);
+    CHECK(!ifTrue.isUninstantiated);
+    CHECK(ifFalse.isUninstantiated);
+    REQUIRE(ifTrue.getConditionExpression() != nullptr);
+    CHECK(ifTrue.getConditionExpression() == ifFalse.getConditionExpression());
+    CHECK(ifTrue.caseItemExpressions.empty());
+    CHECK(ifTrue.getArrayIndex() == nullptr);
+    REQUIRE(constructOf(ifTrue) != nullptr);
+    CHECK(constructOf(ifTrue)->kind == SyntaxKind::IfGenerate);
+    CHECK(constructOf(ifTrue) == constructOf(ifFalse));
+
+    // case-generate
+    auto& caseItem = root.lookupName<GenerateBlockSymbol>("Top.case_item_lo");
+    auto& caseDefault = root.lookupName<GenerateBlockSymbol>("Top.case_default");
+    CHECK(caseItem.branchKind == GenerateBranchKind::CaseItem);
+    CHECK(caseDefault.branchKind == GenerateBranchKind::CaseDefault);
+    REQUIRE(caseItem.getConditionExpression() != nullptr);
+    CHECK(caseItem.getConditionExpression() == caseDefault.getConditionExpression());
+    CHECK(caseItem.caseItemExpressions.size() == 2);
+    CHECK(caseDefault.caseItemExpressions.empty());
+    CHECK(caseItem.getArrayIndex() == nullptr);
+    REQUIRE(constructOf(caseItem) != nullptr);
+    CHECK(constructOf(caseItem)->kind == SyntaxKind::CaseGenerate);
+    CHECK(constructOf(caseItem) == constructOf(caseDefault));
+
+    // loop-generate: the array's getSyntax() returns the LoopGenerateSyntax
+    // directly; each entry block's getSyntax()->parent walks up to that same
+    // construct.
+    auto& loopArr = root.lookupName<GenerateBlockArraySymbol>("Top.loop_arr");
+    CHECK(loopArr.initialExpression != nullptr);
+    CHECK(loopArr.stopExpression != nullptr);
+    CHECK(loopArr.iterExpression != nullptr);
+    REQUIRE(loopArr.loopVariable != nullptr);
+    CHECK(loopArr.loopVariable->kind == SymbolKind::Variable);
+    CHECK(loopArr.loopVariable->name == "g");
+    REQUIRE(loopArr.loopVariable->getSyntax() != nullptr);
+    CHECK(loopArr.loopVariable->getSyntax()->kind == SyntaxKind::IdentifierName);
+    REQUIRE(loopArr.loopVariable->getSyntax()->parent != nullptr);
+    CHECK(loopArr.loopVariable->getSyntax()->parent->kind == SyntaxKind::GenvarDeclaration);
+    REQUIRE(loopArr.getSyntax() != nullptr);
+    CHECK(loopArr.getSyntax()->kind == SyntaxKind::LoopGenerate);
+    CHECK(loopArr.entries.size() == 3);
+    for (auto entry : loopArr.entries) {
+        CHECK(entry->branchKind == GenerateBranchKind::LoopIteration);
+        CHECK(constructOf(*entry) == loopArr.getSyntax());
+        CHECK(entry->getArrayIndex() != nullptr);
+        CHECK(entry->getConditionExpression() == nullptr);
+    }
+}
+
+TEST_CASE("Generate provenance for nested if-in-if with begin/end") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top #(parameter int A = 1, parameter int B = 1)();
+    if (A == 1) begin : outer
+        if (B == 1) begin : inner
+            int x;
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& outer = root.lookupName<GenerateBlockSymbol>("Top.outer");
+    auto& inner = root.lookupName<GenerateBlockSymbol>("Top.outer.inner");
+
+    auto* outerConstruct = constructOf(outer);
+    auto* innerConstruct = constructOf(inner);
+    REQUIRE(outerConstruct != nullptr);
+    REQUIRE(innerConstruct != nullptr);
+    CHECK(outerConstruct->kind == SyntaxKind::IfGenerate);
+    CHECK(innerConstruct->kind == SyntaxKind::IfGenerate);
+    CHECK(outerConstruct != innerConstruct);
+
+    CHECK(outer.branchKind == GenerateBranchKind::IfTrue);
+    CHECK(inner.branchKind == GenerateBranchKind::IfTrue);
+    REQUIRE(outer.getConditionExpression() != nullptr);
+    REQUIRE(inner.getConditionExpression() != nullptr);
+    CHECK(outer.getConditionExpression() != inner.getConditionExpression());
+}
+
+TEST_CASE("Generate provenance for directly-nested if-in-if") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top #(parameter int A = 1, parameter int B = 1)();
+    if (A == 1)
+        if (B == 1) begin : t
+            int x;
+        end
+        else begin : f
+            int y;
+        end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& t = root.lookupName<GenerateBlockSymbol>("Top.t");
+    auto& f = root.lookupName<GenerateBlockSymbol>("Top.f");
+
+    auto* innerIf = constructOf(t);
+    REQUIRE(innerIf != nullptr);
+    CHECK(innerIf->kind == SyntaxKind::IfGenerate);
+    CHECK(innerIf == constructOf(f));
+
+    CHECK(t.branchKind == GenerateBranchKind::IfTrue);
+    CHECK(f.branchKind == GenerateBranchKind::IfFalse);
+    REQUIRE(t.getConditionExpression() != nullptr);
+    CHECK(t.getConditionExpression() == f.getConditionExpression());
+
+    // The directly-nested outer construct is reachable by continuing the walk.
+    const SyntaxNode* outerIf = innerIf->parent;
+    while (outerIf && outerIf->kind != SyntaxKind::IfGenerate)
+        outerIf = outerIf->parent;
+    REQUIRE(outerIf != nullptr);
+    CHECK(outerIf != innerIf);
+}
+
+TEST_CASE("Generate provenance for case inside if") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top #(parameter int A = 1, parameter int MODE = 1)();
+    if (A == 1) begin : wrapper
+        case (MODE)
+            1, 2: begin : m1 end
+            default: begin : md end
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& wrapper = root.lookupName<GenerateBlockSymbol>("Top.wrapper");
+    auto& m1 = root.lookupName<GenerateBlockSymbol>("Top.wrapper.m1");
+    auto& md = root.lookupName<GenerateBlockSymbol>("Top.wrapper.md");
+
+    CHECK(wrapper.branchKind == GenerateBranchKind::IfTrue);
+    auto* wrapperConstruct = constructOf(wrapper);
+    REQUIRE(wrapperConstruct != nullptr);
+    CHECK(wrapperConstruct->kind == SyntaxKind::IfGenerate);
+
+    CHECK(m1.branchKind == GenerateBranchKind::CaseItem);
+    CHECK(md.branchKind == GenerateBranchKind::CaseDefault);
+    auto* m1Construct = constructOf(m1);
+    REQUIRE(m1Construct != nullptr);
+    CHECK(m1Construct->kind == SyntaxKind::CaseGenerate);
+    CHECK(m1Construct == constructOf(md));
+
+    // Walk up from the inner case-generate to the enclosing if-generate.
+    const SyntaxNode* cur = m1Construct->parent;
+    while (cur && cur->kind != SyntaxKind::IfGenerate)
+        cur = cur->parent;
+    REQUIRE(cur != nullptr);
+    CHECK(cur == wrapperConstruct);
+}
+
+TEST_CASE("Generate provenance with inline genvar") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+    for (genvar i = 0; i < 2; i = i + 1) begin : arr
+        int x;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& arr = compilation.getRoot().lookupName<GenerateBlockArraySymbol>("Top.arr");
+    REQUIRE(arr.loopVariable != nullptr);
+    CHECK(arr.loopVariable->kind == SymbolKind::Variable);
+    CHECK(arr.loopVariable->name == "i");
+    REQUIRE(arr.loopVariable->getSyntax() != nullptr);
+    CHECK(arr.loopVariable->getSyntax()->kind == SyntaxKind::IdentifierName);
+    // Inline form: fabricated IdentifierNameSyntax has no parent linkage.
+    CHECK(arr.loopVariable->getSyntax()->parent == nullptr);
+    // Source location matches the LoopGenerate identifier token.
+    REQUIRE(arr.getSyntax() != nullptr);
+    auto& loop = arr.getSyntax()->as<LoopGenerateSyntax>();
+    auto& idSyntax = arr.loopVariable->getSyntax()->as<IdentifierNameSyntax>();
+    CHECK(idSyntax.identifier.location() == loop.identifier.location());
+    CHECK(arr.entries.size() == 2);
+}
+
+TEST_CASE("Loop-generate stop/iter expressions reference loopVariable") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+    genvar g;
+    for (g = 0; g < 3; g = g + 1) begin : arr
+        int e;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& arr = compilation.getRoot().lookupName<GenerateBlockArraySymbol>("Top.arr");
+    REQUIRE(arr.loopVariable != nullptr);
+    REQUIRE(arr.stopExpression != nullptr);
+    REQUIRE(arr.iterExpression != nullptr);
+
+    auto& stopSym =
+        arr.stopExpression->as<BinaryExpression>().left().as<NamedValueExpression>().symbol;
+    CHECK(&stopSym == arr.loopVariable);
+
+    auto& iterSym =
+        arr.iterExpression->as<AssignmentExpression>().left().as<NamedValueExpression>().symbol;
+    CHECK(&iterSym == arr.loopVariable);
 }
 
 TEST_CASE("Program instantiation") {
