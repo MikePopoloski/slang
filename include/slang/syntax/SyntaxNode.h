@@ -67,10 +67,8 @@ private:
 struct SLANG_EXPORT ConstTokenOrSyntax {
     ConstTokenOrSyntax(parsing::Token token) : storage(token) {}
     ConstTokenOrSyntax(const SyntaxNode* node) {
-        // Zero the storage so that the Token-tag bit is clear.
         // The pointer is shifted down by 1 to guarantee that the
         // top bit is clear, which is where the token tag bit is set.
-        std::memset(&storage, 0, sizeof(storage));
         storage.nodePtr = reinterpret_cast<uintptr_t>(node) >> 1;
     }
     ConstTokenOrSyntax(nullptr_t) : storage(parsing::Token()) {}
@@ -98,11 +96,12 @@ struct SLANG_EXPORT ConstTokenOrSyntax {
 
 protected:
     union Storage {
+        byte empty[sizeof(parsing::Token)] = {};
         parsing::Token tok;
         uintptr_t nodePtr;
 
         Storage(parsing::Token t) : tok(t) {}
-        Storage() : tok() {}
+        Storage() {}
     } storage;
 };
 
