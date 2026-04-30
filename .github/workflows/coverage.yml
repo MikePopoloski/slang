@@ -34,7 +34,7 @@ jobs:
     - name: Process coverage info
       run: cmake --build build/ci-coverage -t coverage
     - name: Submit to codecov.io
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         files: build/ci-coverage/coverage.info
         plugins: noop

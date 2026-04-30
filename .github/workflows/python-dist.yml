@@ -19,7 +19,7 @@ jobs:
       run: pipx run build --sdist
     - name: Check metadata
       run: pipx run twine check dist/*
-    - uses: actions/upload-artifact@v6
+    - uses: actions/upload-artifact@v7
       with:
         path: dist/*.tar.gz
         name: artifact-sdist
@@ -42,7 +42,7 @@ jobs:
     - name: Verify clean directory
       run: git diff --exit-code
       shell: bash
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         path: wheelhouse/*.whl
         name: artifact-${{ matrix.os }}
@@ -55,7 +55,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-    - uses: actions/download-artifact@v6
+    - uses: actions/download-artifact@v8
       with:
         pattern: artifact-*
         path: dist
@@ -75,7 +75,7 @@ jobs:
       id-token: write
     if: github.event_name == 'workflow_dispatch'
     steps:
-    - uses: actions/download-artifact@v6
+    - uses: actions/download-artifact@v8
       with:
         pattern: artifact-*
         path: dist

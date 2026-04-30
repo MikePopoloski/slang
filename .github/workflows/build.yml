@@ -9,6 +9,8 @@ on:
 
 jobs:
   build:
+    env:
+      BUILD_FLAGS: -DSLANG_CI_BUILD=ON -DSLANG_INCLUDE_UVM_TEST=ON
     strategy:
       fail-fast: false
       matrix:
@@ -46,22 +48,29 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y g++-14 g++-11 clang-21 clang-tidy-21
     - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.22
+      uses: hendrikmuhs/ccache-action@v1.2.23
       with:
         key: ${{ matrix.preset }}
-    - uses: ilammy/msvc-dev-cmd@v1
-      if: matrix.os == 'windows-latest'
     - uses: konsumer/install-wasi-sdk@v1
       if: ${{ startsWith(matrix.preset, 'wasi-') }}
     - uses: bytecodealliance/actions/wasmtime/setup@v1
       if: ${{ startsWith(matrix.preset, 'wasi-') }}
-    - name: Configure
-      run: cmake --preset ${{ matrix.preset }} -DSLANG_CI_BUILD=ON -DSLANG_INCLUDE_UVM_TEST=ON
-      if: ${{ !startsWith(matrix.preset, 'wasi-') }}
-    - name: Configure
-      run: cmake -B build/${{ matrix.preset }} -DCMAKE_TOOLCHAIN_FILE=${WASI_SDK_PATH}/share/cmake/${{ matrix.preset }}.cmake -DSLANG_USE_THREADS=${{ contains(matrix.preset, 'pthread') && 'ON' || 'OFF' }} -DSLANG_CI_BUILD=ON -DSLANG_INCLUDE_UVM_TEST=ON
-      if: ${{ startsWith(matrix.preset, 'wasi-') }}
     - name: Build
-      run: cmake --build build/${{ matrix.preset }} -j8
+      if: ${{ !startsWith(matrix.preset, 'wasi-') && !startsWith(matrix.preset, 'win64') }}
+      run: |
+        cmake --preset ${{ matrix.preset }} $BUILD_FLAGS
+        cmake --build build/${{ matrix.preset }} -j8
+    - name: Build (Windows)
+      if: ${{ startsWith(matrix.preset, 'win64') }}
+      shell: cmd
+      run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        cmake --preset ${{ matrix.preset }} $BUILD_FLAGS
+        cmake --build build/${{ matrix.preset }} -j8
+    - name: Build (WASI)
+      if: ${{ startsWith(matrix.preset, 'wasi-') }}
+      run: |
+        cmake -B build/${{ matrix.preset }} -DCMAKE_TOOLCHAIN_FILE=${WASI_SDK_PATH}/share/cmake/${{ matrix.preset }}.cmake -DSLANG_USE_THREADS=${{ contains(matrix.preset, 'pthread') && 'ON' || 'OFF' }} $BUILD_FLAGS
+        cmake --build build/${{ matrix.preset }} -j8
     - name: Run tests
       run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure --no-tests=error -j8

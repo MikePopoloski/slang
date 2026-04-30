@@ -29,7 +29,7 @@ jobs:
       run: |
         tar -czvf slang.tar.gz build/docs build/bin/slang
     - name: Upload artifact for preview
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: slang-docs
         path: slang.tar.gz
