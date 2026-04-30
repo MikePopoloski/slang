@@ -116,7 +116,7 @@ CheckerSymbol& CheckerSymbol::fromSyntax(const Scope& scope,
 
 namespace {
 
-using DimIterator = SyntaxList<VariableDimensionSyntax>::iterator;
+using DimIterator = SyntaxList<VariableDimensionSyntax>::const_iterator;
 
 Symbol* recurseCheckerArray(Compilation& comp, const CheckerSymbol& checker,
                             const HierarchicalInstanceSyntax& instance, const ASTContext& context,

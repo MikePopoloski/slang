@@ -133,7 +133,8 @@ struct CSTJsonVisitor {
 
         writer.writeProperty(name);
         writer.startArray();
-        for (const auto& ele : separatedList.elems()) {
+        for (size_t i = 0, count = separatedList.getChildCount(); i < count; i++) {
+            auto ele = separatedList.getChild(i);
             if (ele.isToken())
                 writeTokenValue(ele.token());
             else if (ele.node())

@@ -47,7 +47,7 @@ struct SLANG_EXPORT ListChildInfo {
     ListChildInfo(TList& list, size_t start) :
         listPtr(&list), flatStart(start), size(list.getChildCount()),
         resetAll([](void* listPtr, BumpAllocator& alloc, std::span<const TokenOrSyntax> children) {
-            static_cast<TList*>(listPtr)->resetAll(alloc, children);
+            *static_cast<TList*>(listPtr) = TList(alloc, children);
         }) {}
 };
 

@@ -320,7 +320,8 @@ struct type_caster<SeparatedSyntaxList<T>>
     }
 
     static void appendCast(list& result, const SeparatedSyntaxList<T>& src) {
-        for (const auto& ele : src.elems()) {
+        for (size_t i = 0, count = src.getChildCount(); i < count; i++) {
+            auto ele = src.getChild(i);
             if (ele.isToken()) {
                 result.append(reinterpret_borrow<object>(
                     type_caster<Token>::cast(ele.token(), return_value_policy::copy, handle())));

@@ -428,69 +428,92 @@ private:
     mutable PointerIntPair<const SyntaxNode*, 1, 1, bool> node;
 };
 
-/// @brief Common base for the three syntax-list container types.
-///
-/// All three (`SyntaxList<T>`, `TokenList`, `SeparatedSyntaxList<T>`)
-/// share the same single-pointer representation: when non-empty, the
-/// pointer references storage of the form `[size_t header][Element...]`,
-/// so the element count can be recovered from the slot just before
-/// the data pointer. An empty list is represented by a null pointer.
+/// Common base for the three syntax-list container types.
 template<typename Derived, typename Element>
 class SyntaxListBase {
 public:
-    SyntaxListBase() : data_(nullptr) {}
-    SyntaxListBase(nullptr_t) : data_(nullptr) {}
-
-    /// Constructs the list by copying the elements of @a src into storage
-    /// allocated from @a alloc. The element type of the source range
-    /// must be `Element`.
-    template<std::ranges::contiguous_range R>
-        requires std::same_as<std::ranges::range_value_t<R>, Element>
-    SyntaxListBase(BumpAllocator& alloc, const R& src) : data_(allocate<Element>(alloc, src)) {}
+    SyntaxListBase() {}
+    SyntaxListBase(nullptr_t) {}
 
     /// @return true if the list is empty, false otherwise.
-    [[nodiscard]] bool empty() const noexcept { return data_ == nullptr; }
-
-    /// @return a pointer to the underlying element array (or nullptr if empty).
-    [[nodiscard]] Element* data() const noexcept { return data_; }
+    [[nodiscard]] bool empty() const noexcept { return raw_ == 0; }
 
 protected:
-    /// @return the raw count of stored elements (for `SeparatedSyntaxList`
-    /// this includes interleaved separators).
-    [[nodiscard]] size_t rawSize() const noexcept {
-        return data_ ? *(reinterpret_cast<const size_t*>(data_) - 1) : 0;
+    static constexpr uintptr_t TagMask = 0x3;
+
+    /// @return the encoding tag for a non-empty list.
+    [[nodiscard]] uintptr_t tag() const noexcept { return raw_ & TagMask; }
+
+    /// @return the masked-off pointer bits (only meaningful when raw_ != 0).
+    [[nodiscard]] uintptr_t rawPtrBits() const noexcept { return raw_ & ~TagMask; }
+
+    /// @return the size encoded in the header preceding the storage at
+    /// @a ptrBits. The caller must ensure that @a ptrBits actually points
+    /// at a headered block.
+    [[nodiscard]] static size_t headeredSize(uintptr_t ptrBits) noexcept {
+        return *(reinterpret_cast<const size_t*>(ptrBits) - 1);
     }
 
-    Element* data_;
+    /// Allocates a contiguous block of @a count elements (no header) and
+    /// returns the resulting (untagged) raw pointer.
+    static uintptr_t allocateContiguous(BumpAllocator& alloc, std::span<const Element> elements) {
+        SLANG_ASSERT(!elements.empty());
+        const size_t n = elements.size();
+        std::byte* mem = alloc.allocate(n * sizeof(Element), alignof(Element));
+        Element* dest = reinterpret_cast<Element*>(mem);
+        std::ranges::uninitialized_copy(elements.begin(), elements.end(), dest, dest + n);
+        return reinterpret_cast<uintptr_t>(dest);
+    }
 
-private:
-    template<typename T, std::ranges::contiguous_range R>
-        requires std::same_as<std::ranges::range_value_t<R>, T>
-    static T* allocate(BumpAllocator& alloc, const R& src) {
-        std::span<const T> elements(src);
-        if (elements.empty())
-            return nullptr;
-
-        static_assert(alignof(T) <= alignof(size_t),
+    /// Allocates a `[size_t header][N elements]` block and returns the
+    /// resulting (untagged) raw pointer to the elements.
+    static uintptr_t allocateHeadered(BumpAllocator& alloc, std::span<const Element> elements) {
+        SLANG_ASSERT(!elements.empty());
+        static_assert(alignof(Element) <= alignof(size_t),
                       "Syntax list storage assumes element alignment fits within "
                       "the inline size header alignment");
 
         constexpr size_t headerSize = sizeof(size_t);
         const size_t len = elements.size();
-        const size_t bytes = headerSize + len * sizeof(T);
-
+        const size_t bytes = headerSize + len * sizeof(Element);
         std::byte* mem = alloc.allocate(bytes, alignof(size_t));
         *reinterpret_cast<size_t*>(mem) = len;
-
-        T* dest = reinterpret_cast<T*>(mem + headerSize);
+        Element* dest = reinterpret_cast<Element*>(mem + headerSize);
         std::ranges::uninitialized_copy(elements.begin(), elements.end(), dest, dest + len);
-        return dest;
+        return reinterpret_cast<uintptr_t>(dest);
     }
+
+    /// All three derived classes (SyntaxList, TokenList, SeparatedSyntaxList)
+    /// share the same single-pointer representation: a tagged `uintptr_t` in `raw_`.
+    /// The encoding scheme uses the low two bits of `raw_` to distinguish small-list
+    /// optimizations from a "headered" allocation of the form `[size_t header][N elements...]`,
+    /// where the size lives in the slot just before the data pointer.
+    ///
+    /// `SyntaxList` exploits the fact that its element type is itself a pointer; a one-element
+    /// list stores the single `T*` value directly in `raw_` with no allocation at all, in which
+    /// case `&raw_` reinterpreted as `T**` is a valid one-element span/iterator. To keep that
+    /// direct encoding tag-free, SyntaxList uses tag `01` for headered and tag `10` for
+    /// two-element.The other two list types whose elements aren't pointers keep the simpler
+    /// "tag `00` = headered" encoding.
+    ///
+    /// `raw_ == 0` always means empty (no allocation).
+    ///
+    /// An empty list costs only `sizeof(void*)`, and small lists save the `size_t` header
+    /// allocation. Single-element `SyntaxList<T>` saves any heap allocation entirely.
+    uintptr_t raw_ = 0;
 };
 
 /// A container of syntax nodes.
 template<typename T>
 class SLANG_EXPORT SyntaxList : public SyntaxListBase<SyntaxList<T>, T*> {
+    // Tag bit meaning:
+    //   raw_ == 0             : empty
+    //   tag 00 (raw_ != 0)    : 1-element direct
+    //   tag TagHeadered (01)  : >= 3 elements, headered allocation
+    //   tag TagSmall2 (10)    : 2-element heap (no header)
+    static constexpr uintptr_t TagHeadered = 0x1;
+    static constexpr uintptr_t TagSmall2 = 0x2;
+
 public:
     using Base = SyntaxListBase<SyntaxList<T>, T*>;
     using value_type = T*;
@@ -503,38 +526,83 @@ public:
     using size_type = size_t;
 
     using Base::Base;
-    using Base::data;
-    using Base::data_;
     using Base::empty;
 
-    /// @return the number of elements in the list.
-    [[nodiscard]] size_t size() const noexcept { return this->rawSize(); }
+    /// Constructs a list by copying the elements of @a src into storage allocated
+    /// from @a alloc. The element type of the source range must be `T*`.
+    template<std::ranges::contiguous_range R>
+        requires std::same_as<std::ranges::range_value_t<R>, T*>
+    SyntaxList(BumpAllocator& alloc, const R& src) {
+        std::span<T* const> elements(src);
+        switch (elements.size()) {
+            case 0:
+                this->raw_ = 0;
+                break;
+            case 1:
+                this->raw_ = reinterpret_cast<uintptr_t>(elements[0]);
+                SLANG_ASSERT((this->raw_ & this->TagMask) == 0);
+                break;
+            case 2:
+                this->raw_ = this->allocateContiguous(alloc, src) | TagSmall2;
+                break;
+            default:
+                this->raw_ = this->allocateHeadered(alloc, src) | TagHeadered;
+                break;
+        }
+    }
 
+    /// Constructs a syntax list from a span of TokenOrSyntax elements.
+    /// Every such element must actually be a syntax node of the correct concrete type.
+    SyntaxList(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) {
+        SmallVector<T*> buffer(children.size(), UninitializedTag());
+        for (auto& t : children)
+            buffer.push_back(&t.node()->as<T>());
+        *this = SyntaxList<T>(alloc, buffer);
+    }
+
+    /// @return the number of elements in the list.
+    [[nodiscard]] size_t size() const noexcept {
+        if (this->raw_ == 0)
+            return 0;
+        switch (this->tag()) {
+            case 0:
+                // Direct 1-element encoding.
+                return 1;
+            case TagHeadered:
+                return Base::headeredSize(this->rawPtrBits());
+            case TagSmall2:
+                return 2;
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
+
+    /// @return a reference to the i-th element.
+    const T* operator[](size_t index) const {
+        SLANG_ASSERT(index < size());
+        return data()[index];
+    }
     T*& operator[](size_t index) {
         SLANG_ASSERT(index < size());
-        return data_[index];
-    }
-    T* const& operator[](size_t index) const {
-        SLANG_ASSERT(index < size());
-        return data_[index];
+        return data()[index];
     }
 
-    T** begin() const noexcept { return data_; }
-    T** end() const noexcept { return data_ + size(); }
-
-    T* front() const {
+    const T* front() const {
         SLANG_ASSERT(!empty());
-        return data_[0];
+        return (*this)[0];
     }
 
-    T* back() const {
+    const T* back() const {
         SLANG_ASSERT(!empty());
-        return data_[size() - 1];
+        return (*this)[size() - 1];
     }
+
+    const_iterator begin() const noexcept { return this->empty() ? nullptr : data(); }
+    const_iterator end() const noexcept { return this->empty() ? nullptr : data() + size(); }
 
     /// @return the elements as a `std::span`.
-    operator std::span<T*>() const noexcept {
-        return data_ ? std::span<T*>(data_, size()) : std::span<T*>();
+    operator std::span<const T* const>() const noexcept {
+        return this->empty() ? std::span<T* const>() : std::span<T* const>(data(), size());
     }
 
     /// Number of child items the list contributes to its parent's flattened
@@ -547,16 +615,10 @@ public:
     PtrTokenOrSyntax getChildPtr(size_t index) { return (*this)[index]; }
 
     /// Replaces the i-th element with @a child.
-    void setChild(size_t index, TokenOrSyntax child) { (*this)[index] = &child.node()->as<T>(); }
-
-    /// Replaces the entire span with the provided @a children, copying the
-    /// resulting buffer into @a alloc.
-    void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) {
-        SmallVector<T*> buffer(children.size(), UninitializedTag());
-        for (auto& t : children)
-            buffer.push_back(&t.node()->as<T>());
-
-        *this = SyntaxList<T>(alloc, buffer);
+    void setChild(size_t index, TokenOrSyntax child) {
+        T* node = &child.node()->as<T>();
+        SLANG_ASSERT((reinterpret_cast<uintptr_t>(node) & this->TagMask) == 0);
+        (*this)[index] = node;
     }
 
     /// Compute the SourceRange spanning all the elements of this list. If
@@ -568,6 +630,13 @@ public:
         auto f = this->front()->getFirstToken();
         auto l = this->back()->getLastToken();
         return SourceRange(f.location(), l.location() + l.rawText().length());
+    }
+
+private:
+    T** data() const noexcept {
+        if (this->tag() == 0)
+            return reinterpret_cast<T**>(const_cast<uintptr_t*>(&this->raw_));
+        return reinterpret_cast<T**>(this->rawPtrBits());
     }
 };
 
@@ -582,6 +651,14 @@ SyntaxList<T>* deepClone(const SyntaxList<T>& node, BumpAllocator& alloc) {
 
 /// A container of tokens.
 class SLANG_EXPORT TokenList : public SyntaxListBase<TokenList, parsing::Token> {
+    // Tag bit meaning:
+    //   raw_ == 0          : empty
+    //   tag 00 (raw_ != 0) : headered allocation (size in header)
+    //   tag TagSmall1 (01) : 1-element heap, no header
+    //   tag TagSmall2 (10) : 2-element heap, no header
+    static constexpr uintptr_t TagSmall1 = 0x1;
+    static constexpr uintptr_t TagSmall2 = 0x2;
+
 public:
     using Token = parsing::Token;
     using Base = SyntaxListBase<TokenList, Token>;
@@ -595,43 +672,76 @@ public:
     using size_type = size_t;
 
     using Base::Base;
-    using Base::data;
-    using Base::data_;
     using Base::empty;
 
+    /// Constructs a token list by copying the elements of @a src into storage
+    /// allocated from @a alloc. The element type of the source range must
+    /// be `parsing::Token`.
+    template<std::ranges::contiguous_range R>
+        requires std::same_as<std::ranges::range_value_t<R>, Token>
+    TokenList(BumpAllocator& alloc, const R& src) {
+        std::span<const Token> elements(src);
+        switch (elements.size()) {
+            case 0:
+                this->raw_ = 0;
+                break;
+            case 1:
+                this->raw_ = this->allocateContiguous(alloc, src) | TagSmall1;
+                break;
+            case 2:
+                this->raw_ = this->allocateContiguous(alloc, src) | TagSmall2;
+                break;
+            default:
+                this->raw_ = this->allocateHeadered(alloc, src);
+                break;
+        }
+    }
+
+    /// Constructs a token list from a span of TokenOrSyntax elements.
+    /// Every such element must actually be a token.
+    TokenList(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) {
+        SmallVector<Token> buffer(children.size(), UninitializedTag());
+        for (auto& t : children)
+            buffer.push_back(t.token());
+        *this = TokenList(alloc, buffer);
+    }
+
     /// @return the number of elements in the list.
-    [[nodiscard]] size_t size() const noexcept { return this->rawSize(); }
+    [[nodiscard]] size_t size() const noexcept {
+        if (this->raw_ == 0)
+            return 0;
+        switch (this->tag()) {
+            case 0:
+                return Base::headeredSize(this->rawPtrBits());
+            case TagSmall1:
+                return 1;
+            case TagSmall2:
+                return 2;
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
 
     Token& operator[](size_t index) {
         SLANG_ASSERT(index < size());
-        return data_[index];
+        return data()[index];
     }
     const Token& operator[](size_t index) const {
         SLANG_ASSERT(index < size());
-        return data_[index];
+        return data()[index];
     }
 
-    Token* begin() const noexcept { return data_; }
-    Token* end() const noexcept { return data_ + size(); }
+    Token* begin() const noexcept { return data(); }
+    Token* end() const noexcept { return data() + size(); }
 
     Token& front() const {
         SLANG_ASSERT(!empty());
-        return data_[0];
+        return data()[0];
     }
 
     Token& back() const {
         SLANG_ASSERT(!empty());
-        return data_[size() - 1];
-    }
-
-    /// @return the elements as a `std::span`.
-    operator std::span<Token>() const noexcept {
-        return data_ ? std::span<Token>(data_, size()) : std::span<Token>();
-    }
-
-    /// @return the elements as a `std::span`.
-    operator std::span<const Token>() const noexcept {
-        return data_ ? std::span<const Token>(data_, size()) : std::span<const Token>();
+        return data()[size() - 1];
     }
 
     /// Number of child items the list contributes to its parent's flattened
@@ -646,16 +756,6 @@ public:
     /// Replaces the i-th token with @a child.
     void setChild(size_t index, TokenOrSyntax child) { (*this)[index] = child.token(); }
 
-    /// Replaces the entire span with the provided @a children, copying the
-    /// resulting buffer into @a alloc.
-    void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) {
-        SmallVector<Token> buffer(children.size(), UninitializedTag());
-        for (auto& t : children)
-            buffer.push_back(t.token());
-
-        *this = TokenList(alloc, buffer);
-    }
-
     /// Compute the SourceRange spanning all tokens of this list. If empty,
     /// returns a default SourceRange.
     SourceRange sourceRange() const {
@@ -666,6 +766,9 @@ public:
         auto l = back();
         return SourceRange(f.location(), l.location() + l.rawText().length());
     }
+
+private:
+    Token* data() const noexcept { return reinterpret_cast<Token*>(this->rawPtrBits()); }
 };
 
 /// @brief A container of token-separated syntax nodes.
@@ -675,6 +778,15 @@ public:
 template<typename T>
 class SLANG_EXPORT SeparatedSyntaxList
     : public SyntaxListBase<SeparatedSyntaxList<T>, TokenOrSyntax> {
+
+    // Tag bit encoding:
+    //   raw_ == 0          : empty
+    //   tag 00 (raw_ != 0) : 1-element direct
+    //   tag TagHeadered    : headered allocation (raw size in header)
+    //   tag TagSmall2      : 2 raw elements heap, no header
+    static constexpr uintptr_t TagHeadered = 0x1;
+    static constexpr uintptr_t TagSmall2 = 0x2;
+
 public:
     using Base = SyntaxListBase<SeparatedSyntaxList<T>, TokenOrSyntax>;
 
@@ -710,34 +822,68 @@ public:
     using const_iterator = iterator_base<const T*>;
 
     using Base::Base;
-    using Base::data;
-    using Base::data_;
     using Base::empty;
+
+    /// Constructs a separated list by copying the elements of @a src into
+    /// storage allocated from @a alloc. The element type of the source range
+    /// must be `TokenOrSyntax`.
+    template<std::ranges::contiguous_range R>
+        requires std::same_as<std::ranges::range_value_t<R>, TokenOrSyntax>
+    SeparatedSyntaxList(BumpAllocator& alloc, const R& src) {
+        std::span<const TokenOrSyntax> elements(src);
+        switch (elements.size()) {
+            case 0:
+                this->raw_ = 0;
+                break;
+            case 1: {
+                // Direct: raw_ stores the single T* value verbatim.
+                // A 1-element separated list always holds a node (no
+                // trailing separator), so this is unambiguous.
+                T* node = &elements[0].node()->template as<T>();
+                this->raw_ = reinterpret_cast<uintptr_t>(node);
+                SLANG_ASSERT((this->raw_ & this->TagMask) == 0);
+                break;
+            }
+            case 2:
+                this->raw_ = this->allocateContiguous(alloc, src) | TagSmall2;
+                break;
+            default:
+                this->raw_ = this->allocateHeadered(alloc, src) | TagHeadered;
+                break;
+        }
+    }
 
     /// Number of items the list contributes to its parent's flattened
     /// child index space (includes interleaved separators).
-    size_t getChildCount() const { return this->rawSize(); }
+    size_t getChildCount() const { return rawSize(); }
 
     /// Gets the i-th item (token or node) from the underlying interleaved span.
-    TokenOrSyntax getChild(size_t index) { return data_[index]; }
-    ConstTokenOrSyntax getChild(size_t index) const { return data_[index]; }
+    TokenOrSyntax getChild(size_t index) { return rawElem(index); }
+    ConstTokenOrSyntax getChild(size_t index) const { return rawElem(index); }
     PtrTokenOrSyntax getChildPtr(size_t index) {
-        if (data_[index].isNode())
-            return data_[index].node();
+        if (this->tag() == 0) {
+            // Direct 1-element encoding: raw_ holds a node pointer.
+            SLANG_ASSERT(index == 0);
+            return reinterpret_cast<SyntaxNode*>(this->raw_);
+        }
+        TokenOrSyntax* slot = &rawElemsPtr()[index];
+        if (slot->isNode())
+            return slot->node();
         else
-            return data_[index].tokenPtr();
+            return slot->tokenPtr();
     }
 
     /// Replaces the i-th item with @a child.
-    void setChild(size_t index, TokenOrSyntax child) { data_[index] = child; }
-
-    /// Replaces the entire span with the provided @a children, copying the
-    /// resulting buffer into @a alloc.
-    void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) {
-        SmallVector<TokenOrSyntax> buffer(children.size(), UninitializedTag());
-        buffer.append_range(children);
-
-        *this = SeparatedSyntaxList<T>(alloc, buffer);
+    void setChild(size_t index, TokenOrSyntax child) {
+        if (this->tag() == 0) {
+            SLANG_ASSERT(index == 0);
+            SLANG_ASSERT(child.isNode());
+            T* node = &child.node()->template as<T>();
+            SLANG_ASSERT((reinterpret_cast<uintptr_t>(node) & this->TagMask) == 0);
+            this->raw_ = reinterpret_cast<uintptr_t>(node);
+            return;
+        }
+        rawElemsPtr()[index] = child;
     }
 
     /// Compute the SourceRange spanning all elements of this list. If empty,
@@ -746,34 +892,28 @@ public:
         if (empty())
             return {};
 
-        auto firstRange = data_[0].range();
-        auto lastRange = data_[this->rawSize() - 1].range();
+        auto firstRange = rawElem(0).range();
+        auto lastRange = rawElem(rawSize() - 1).range();
         return SourceRange(firstRange.start(), lastRange.end());
     }
 
-    /// @return the elements of nodes in the list
-    [[nodiscard]] std::span<const ConstTokenOrSyntax> elems() const {
-        return std::span<const ConstTokenOrSyntax>(static_cast<ConstTokenOrSyntax*>(data_),
-                                                   this->rawSize());
-    }
-
-    /// @return the elements of nodes in the list
-    [[nodiscard]] std::span<TokenOrSyntax> elems() {
-        return data_ ? std::span<TokenOrSyntax>(data_, this->rawSize())
-                     : std::span<TokenOrSyntax>();
-    }
-
     /// @return the number of nodes in the list (doesn't include delimiter tokens in the count).
-    [[nodiscard]] size_t size() const noexcept { return (this->rawSize() + 1) / 2; }
+    [[nodiscard]] size_t size() const noexcept { return (rawSize() + 1) / 2; }
 
     const T* operator[](size_t index) const {
-        index <<= 1;
-        return &data_[index].node()->template as<T>();
+        if (this->tag() == 0) {
+            SLANG_ASSERT(index == 0);
+            return reinterpret_cast<const T*>(this->raw_);
+        }
+        return &rawElemsPtr()[index << 1].node()->template as<T>();
     }
 
     T* operator[](size_t index) {
-        index <<= 1;
-        return &data_[index].node()->template as<T>();
+        if (this->tag() == 0) {
+            SLANG_ASSERT(index == 0);
+            return reinterpret_cast<T*>(this->raw_);
+        }
+        return &rawElemsPtr()[index << 1].node()->template as<T>();
     }
 
     iterator begin() { return iterator(*this, 0); }
@@ -782,12 +922,44 @@ public:
     const_iterator end() const { return cend(); }
     const_iterator cbegin() const { return const_iterator(*this, 0); }
     const_iterator cend() const { return const_iterator(*this, size()); }
+
+private:
+    size_t rawSize() const noexcept {
+        if (this->raw_ == 0)
+            return 0;
+        switch (this->tag()) {
+            case 0:
+                // Direct 1-element encoding.
+                return 1;
+            case TagHeadered:
+                return Base::headeredSize(this->rawPtrBits());
+            case TagSmall2:
+                return 2;
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
+
+    TokenOrSyntax rawElem(size_t index) const noexcept {
+        if (this->tag() == 0) {
+            // Direct 1-element encoding: raw_ holds a node pointer.
+            SLANG_ASSERT(index == 0);
+            return TokenOrSyntax(reinterpret_cast<SyntaxNode*>(this->raw_));
+        }
+        return rawElemsPtr()[index];
+    }
+
+    TokenOrSyntax* rawElemsPtr() const noexcept {
+        SLANG_ASSERT(this->tag() != 0);
+        return reinterpret_cast<TokenOrSyntax*>(this->rawPtrBits());
+    }
 };
 
 template<typename T>
 SeparatedSyntaxList<T>* deepClone(const SeparatedSyntaxList<T>& node, BumpAllocator& alloc) {
     SmallVector<TokenOrSyntax> buffer(node.size(), UninitializedTag());
-    for (const auto& ele : node.elems()) {
+    for (size_t i = 0, count = node.getChildCount(); i < count; i++) {
+        auto ele = node.getChild(i);
         if (ele.isToken())
             buffer.push_back(ele.token().deepClone(alloc));
         else

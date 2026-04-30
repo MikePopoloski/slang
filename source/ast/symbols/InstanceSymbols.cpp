@@ -91,7 +91,7 @@ public:
     const NetType& netType;
 
 private:
-    using DimIterator = SyntaxList<VariableDimensionSyntax>::iterator;
+    using DimIterator = SyntaxList<VariableDimensionSyntax>::const_iterator;
 
     Compilation& comp;
     const ASTContext& context;
@@ -1451,7 +1451,7 @@ PrimitiveInstanceSymbol* createPrimInst(Compilation& compilation, const Scope& s
     return result;
 }
 
-using DimIterator = SyntaxList<VariableDimensionSyntax>::iterator;
+using DimIterator = SyntaxList<VariableDimensionSyntax>::const_iterator;
 
 Symbol* recursePrimArray(Compilation& comp, const PrimitiveSymbol& primitive,
                          const HierarchicalInstanceSyntax& instance, const ASTContext& context,
