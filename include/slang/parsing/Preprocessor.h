@@ -413,7 +413,7 @@ private:
 
         syntax::MacroActualArgumentSyntax* parseActualArgument();
         syntax::MacroFormalArgumentSyntax* parseFormalArgument();
-        std::span<Token> parseTokenList(bool allowNewlines);
+        syntax::TokenList parseTokenList(bool allowNewlines);
 
         Token peek();
         Token consume();

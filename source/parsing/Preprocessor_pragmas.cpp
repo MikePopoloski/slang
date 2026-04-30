@@ -117,7 +117,10 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
                                            lastToken, Token());
     }
 
-    return {alloc.emplace<ParenPragmaExpressionSyntax>(openParen, values.copy(alloc), closeParen),
+    return {alloc.emplace<ParenPragmaExpressionSyntax>(
+                openParen,
+                syntax::SeparatedSyntaxList<syntax::PragmaExpressionSyntax>(alloc, values),
+                closeParen),
             ok};
 }
 

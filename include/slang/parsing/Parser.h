@@ -176,7 +176,7 @@ private:
     using NameOptions = detail::NameOptions;
     using TypeOptions = detail::TypeOptions;
     using FunctionOptions = detail::FunctionOptions;
-    using AttrList = std::span<syntax::AttributeInstanceSyntax*>;
+    using AttrList = syntax::SyntaxList<syntax::AttributeInstanceSyntax>;
 
     // ---- Recursive-descent parsing routines, by syntax type ----
 
@@ -243,7 +243,7 @@ private:
     syntax::EventTriggerStatementSyntax& parseEventTriggerStatement(syntax::NamedLabelSyntax* label, AttrList attributes);
     Token parseSigning();
     syntax::VariableDimensionSyntax* parseDimension();
-    std::span<syntax::VariableDimensionSyntax*> parseDimensionList();
+    syntax::SyntaxList<syntax::VariableDimensionSyntax> parseDimensionList();
     syntax::StructUnionTypeSyntax& parseStructUnion(syntax::SyntaxKind syntaxKind);
     syntax::EnumTypeSyntax& parseEnum();
     syntax::DataTypeSyntax& parseDataType(bitmask<TypeOptions> options = {});
@@ -268,7 +268,7 @@ private:
     syntax::PortHeaderSyntax& parsePortHeader(Token constKeyword, Token direction);
     syntax::PortDeclarationSyntax& parsePortDeclaration(AttrList attributes);
     syntax::TimeUnitsDeclarationSyntax& parseTimeUnitsDeclaration(AttrList attributes);
-    std::span<syntax::PackageImportDeclarationSyntax*> parsePackageImports();
+    syntax::SyntaxList<syntax::PackageImportDeclarationSyntax> parsePackageImports();
     syntax::PackageImportDeclarationSyntax& parseImportDeclaration(AttrList attributes);
     syntax::MemberSyntax& parseExportDeclaration(AttrList attributes);
     syntax::PackageImportItemSyntax& parsePackageImportItem();
@@ -305,9 +305,9 @@ private:
     syntax::FunctionPortListSyntax* parseFunctionPortList(bitmask<FunctionOptions> options);
     syntax::FunctionPrototypeSyntax& parseFunctionPrototype(syntax::SyntaxKind parentKind, bitmask<FunctionOptions> options, bool* isConstructor = nullptr);
     syntax::FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, syntax::SyntaxKind functionKind, TokenKind endKind, syntax::SyntaxKind parentKind, bitmask<FunctionOptions> options = {});
-    std::span<syntax::ClassSpecifierSyntax*> parseClassSpecifierList(bool allowSpecifiers);
+    syntax::SyntaxList<syntax::ClassSpecifierSyntax> parseClassSpecifierList(bool allowSpecifiers);
     Token parseLifetime();
-    std::span<syntax::SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end, bool inConstructor);
+    syntax::SyntaxList<syntax::SyntaxNode> parseBlockItems(TokenKind endKind, Token& end, bool inConstructor);
     syntax::GenvarDeclarationSyntax& parseGenvarDeclaration(AttrList attributes);
     syntax::LoopGenerateSyntax& parseLoopGenerateConstruct(AttrList attributes);
     syntax::IfGenerateSyntax& parseIfGenerateConstruct(AttrList attributes);
@@ -331,7 +331,7 @@ private:
     syntax::MemberSyntax* parseCoverCrossMember();
     syntax::BinsSelectExpressionSyntax& parseBinsSelectPrimary();
     syntax::BinsSelectExpressionSyntax& parseBinsSelectExpression();
-    syntax::MemberSyntax& parseConstraint(AttrList attributes, std::span<Token> qualifiers, bool hasBaseClass);
+    syntax::MemberSyntax& parseConstraint(AttrList attributes, const syntax::TokenList& qualifiers, bool hasBaseClass);
     syntax::ConstraintBlockSyntax& parseConstraintBlock(bool isTopLevel);
     syntax::ConstraintItemSyntax* parseConstraintItem(bool allowBlock, bool isTopLevel);
     syntax::DistConstraintListSyntax& parseDistConstraintList();
@@ -389,21 +389,22 @@ private:
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>
-    std::span<syntax::TokenOrSyntax> parseDeclarators(TokenKind endKind, Token& end,
-                                                      bool allowMinTypMax = false,
-                                                      bool requireInitializers = false);
-    std::span<syntax::TokenOrSyntax> parseDeclarators(Token& semi, bool allowMinTypMax = false,
-                                                      bool requireInitializers = false);
+    syntax::SeparatedSyntaxList<syntax::DeclaratorSyntax> parseDeclarators(
+        TokenKind endKind, Token& end, bool allowMinTypMax = false,
+        bool requireInitializers = false);
+    syntax::SeparatedSyntaxList<syntax::DeclaratorSyntax> parseDeclarators(
+        Token& semi, bool allowMinTypMax = false, bool requireInitializers = false);
 
     template<typename TMember, typename TParseFunc>
-    std::span<TMember*> parseMemberList(TokenKind endKind, Token& endToken,
-                                        syntax::SyntaxKind parentKind, TParseFunc&& parseFunc);
+    syntax::SyntaxList<TMember> parseMemberList(TokenKind endKind, Token& endToken,
+                                                syntax::SyntaxKind parentKind,
+                                                TParseFunc&& parseFunc);
 
     template<typename IsItemFunc, typename ParseItemFunc>
     bool parseCaseItems(TokenKind caseKind, SmallVectorBase<syntax::CaseItemSyntax*>& itemBuffer,
                         IsItemFunc&& isItem, ParseItemFunc&& parseItem);
 
-    std::span<syntax::TokenOrSyntax> parsePathTerminals();
+    syntax::SeparatedSyntaxList<syntax::NameSyntax> parsePathTerminals();
 
     void checkClassQualifiers(std::span<const Token> qualifiers, bool isConstraint);
     Token parseDPISpecString();

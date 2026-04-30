@@ -349,14 +349,14 @@ ExpressionSyntax& Parser::parseInsideExpression(ExpressionSyntax& expr) {
                                            rhs.getLastToken().location());
     SmallVector<TokenOrSyntax, 2> items;
     items.push_back(&rhs);
-    auto& list = factory.rangeList(openBrace, items.copy(alloc), closeBrace);
+    auto& list = factory.rangeList(openBrace, {alloc, items}, closeBrace);
     return factory.insideExpression(expr, inside, list);
 }
 
 RangeListSyntax& Parser::parseRangeList() {
     Token openBrace;
     Token closeBrace;
-    std::span<TokenOrSyntax> list;
+    SeparatedSyntaxList<ExpressionSyntax> list;
 
     parseList<isPossibleValueRangeElement, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBrace, list, closeBrace,
@@ -398,7 +398,7 @@ ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace,
         // brace
         buffer.push_back(first);
         if (peek(TokenKind::CloseBrace))
-            return factory.concatenationExpression(openBrace, buffer.copy(alloc), consume());
+            return factory.concatenationExpression(openBrace, {alloc, buffer}, consume());
 
         buffer.push_back(expect(TokenKind::Comma));
     }
@@ -407,7 +407,7 @@ ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace,
     parseList<isPossibleExpressionOrComma, isEndOfBracedList>(
         buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::False,
         diag::ExpectedExpression, [this] { return &parseExpression(); });
-    return factory.concatenationExpression(openBrace, buffer.copy(alloc), closeBrace);
+    return factory.concatenationExpression(openBrace, {alloc, buffer}, closeBrace);
 }
 
 StreamingConcatenationExpressionSyntax& Parser::parseStreamConcatenation(Token openBrace) {
@@ -418,7 +418,7 @@ StreamingConcatenationExpressionSyntax& Parser::parseStreamConcatenation(Token o
 
     Token openBraceInner;
     Token closeBraceInner;
-    std::span<TokenOrSyntax> list;
+    SeparatedSyntaxList<StreamExpressionSyntax> list;
 
     parseList<isPossibleExpressionOrComma, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBraceInner, list,
@@ -454,7 +454,8 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
         // This is an empty pattern -- we'll just warn and continue on.
         addDiag(diag::EmptyAssignmentPattern, openBrace.location());
 
-        auto pattern = &factory.simpleAssignmentPattern(openBrace, std::span<TokenOrSyntax>{},
+        auto pattern = &factory.simpleAssignmentPattern(openBrace,
+                                                        SeparatedSyntaxList<ExpressionSyntax>{},
                                                         consume());
         return factory.assignmentPatternExpression(type, *pattern);
     }
@@ -481,8 +482,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 closeBrace = expect(TokenKind::CloseBrace);
             }
 
-            pattern = &factory.structuredAssignmentPattern(openBrace, buffer.copy(alloc),
-                                                           closeBrace);
+            pattern = &factory.structuredAssignmentPattern(openBrace, {alloc, buffer}, closeBrace);
             break;
         case TokenKind::OpenBrace: {
             auto innerOpenBrace = consume();
@@ -491,7 +491,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::True,
                 diag::ExpectedExpression, [this] { return &parseExpression(); });
             pattern = &factory.replicatedAssignmentPattern(openBrace, *firstExpr, innerOpenBrace,
-                                                           buffer.copy(alloc), closeBrace,
+                                                           {alloc, buffer}, closeBrace,
                                                            expect(TokenKind::CloseBrace));
             break;
         }
@@ -502,12 +502,12 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
             parseList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::True,
                 diag::ExpectedExpression, [this] { return &parseExpression(); });
-            pattern = &factory.simpleAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
+            pattern = &factory.simpleAssignmentPattern(openBrace, {alloc, buffer}, closeBrace);
             break;
         case TokenKind::CloseBrace:
             buffer.push_back(firstExpr);
             closeBrace = consume();
-            pattern = &factory.simpleAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
+            pattern = &factory.simpleAssignmentPattern(openBrace, {alloc, buffer}, closeBrace);
             break;
         default:
             // This is an error case; let the list handling code get us out of it.
@@ -517,7 +517,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
             parseList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::False,
                 diag::ExpectedExpression, [this] { return &parseExpression(); });
-            pattern = &factory.simpleAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
+            pattern = &factory.simpleAssignmentPattern(openBrace, {alloc, buffer}, closeBrace);
             break;
     }
     SLANG_ASSERT(pattern);
@@ -557,7 +557,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternFromBrace(
         closeBrace = expect(TokenKind::CloseBrace);
     }
 
-    auto& pattern = factory.structuredAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
+    auto& pattern = factory.structuredAssignmentPattern(openBrace, {alloc, buffer}, closeBrace);
     return factory.assignmentPatternExpression(nullptr, pattern);
 }
 
@@ -949,7 +949,7 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
                 if (buffer.empty())
                     return factory.identifierName(identifier);
 
-                return factory.identifierSelectName(identifier, buffer.copy(alloc));
+                return factory.identifierSelectName(identifier, {alloc, buffer});
             }
             else {
                 SmallVector<ElementSelectSyntax*> buffer;
@@ -960,13 +960,13 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
                         if (buffer.empty())
                             return factory.identifierName(identifier);
                         else
-                            return factory.identifierSelectName(identifier, buffer.copy(alloc));
+                            return factory.identifierSelectName(identifier, {alloc, buffer});
                     }
 
                     buffer.push_back(&parseElementSelect());
                 } while (peek(TokenKind::OpenBracket));
 
-                return factory.identifierSelectName(identifier, buffer.copy(alloc));
+                return factory.identifierSelectName(identifier, {alloc, buffer});
             }
         }
         default: {
@@ -983,7 +983,7 @@ ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
 
     Token openParen;
     Token closeParen;
-    std::span<TokenOrSyntax> list;
+    SeparatedSyntaxList<ParamAssignmentSyntax> list;
     parseList<isPossibleParamAssignment, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, list,
         closeParen, RequireItems::False, diag::ExpectedArgument,
@@ -1011,7 +1011,7 @@ ParamAssignmentSyntax& Parser::parseParamValue() {
 ArgumentListSyntax& Parser::parseArgumentList() {
     Token openParen;
     Token closeParen;
-    std::span<TokenOrSyntax> list;
+    SeparatedSyntaxList<ArgumentSyntax> list;
 
     parseList<isPossibleArgument, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, list,
@@ -1084,7 +1084,7 @@ PatternSyntax& Parser::parsePattern() {
                     });
             }
 
-            return factory.structurePattern(openBrace, buffer.copy(alloc), closeBrace);
+            return factory.structurePattern(openBrace, {alloc, buffer}, closeBrace);
         }
         default:
             break;
@@ -1123,7 +1123,7 @@ ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& 
         end = expect(endKind);
     }
 
-    return factory.conditionalPredicate(buffer.copy(alloc));
+    return factory.conditionalPredicate({alloc, buffer});
 }
 
 ConditionalPatternSyntax& Parser::parseConditionalPattern() {
@@ -1356,7 +1356,7 @@ ExpressionSyntax& Parser::parseArrayOrRandomizeMethod(ExpressionSyntax& expr) {
     ParenExpressionListSyntax* args = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
         Token openParen, closeParen;
-        std::span<TokenOrSyntax> items;
+        SeparatedSyntaxList<ExpressionSyntax> items;
         parseList<isPossibleExpressionOrComma, isEndOfParenList>(
             TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen,
             items, closeParen, RequireItems::False, diag::ExpectedExpression,
@@ -1450,7 +1450,7 @@ SequenceExprSyntax& Parser::parseDelayedSequenceExpr(SequenceExprSyntax* first) 
 
     } while (peek(TokenKind::DoubleHash));
 
-    return factory.delayedSequenceExpr(first, elements.copy(alloc));
+    return factory.delayedSequenceExpr(first, {alloc, elements});
 }
 
 static bool isBinaryOrPostfixExpression(TokenKind kind) {
@@ -1490,7 +1490,7 @@ SequenceMatchListSyntax* Parser::parseSequenceMatchList(Token& closeParen) {
     }
 
     Token comma;
-    std::span<TokenOrSyntax> list;
+    SeparatedSyntaxList<PropertyExprSyntax> list;
     parseList<isPossibleArgument, isEndOfParenList>(TokenKind::Comma, TokenKind::CloseParenthesis,
                                                     TokenKind::Comma, comma, list, closeParen,
                                                     RequireItems::True, diag::ExpectedExpression,
@@ -1681,7 +1681,7 @@ PropertyExprSyntax& Parser::parseCasePropertyExpr() {
             auto& expr = parsePropertyExpr(0);
             auto semi = expect(TokenKind::Semicolon);
             itemBuffer.push_back(
-                &factory.standardPropertyCaseItem(buffer.copy(alloc), colon, expr, semi));
+                &factory.standardPropertyCaseItem({alloc, buffer}, colon, expr, semi));
         }
         else {
             break;
@@ -1692,8 +1692,8 @@ PropertyExprSyntax& Parser::parseCasePropertyExpr() {
         addDiag(diag::CaseStatementEmpty, keyword.location()) << "case"sv;
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
-    return factory.casePropertyExpr(keyword, openParen, condition, closeParen,
-                                    itemBuffer.copy(alloc), endcase);
+    return factory.casePropertyExpr(keyword, openParen, condition, closeParen, {alloc, itemBuffer},
+                                    endcase);
 }
 
 PropertyExprSyntax& Parser::parsePropertyPrimary() {

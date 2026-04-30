@@ -18,6 +18,7 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/syntax/SyntaxNode.h"
+#include "slang/util/BumpAllocator.h"
 #include "slang/util/Enum.h"
 #include "slang/util/Hash.h"
 #include "slang/util/ScopeGuard.h"
@@ -229,7 +230,10 @@ public:
 template<typename Derived, typename ListType, typename Element>
 struct syntax_list_caster_base {
 protected:
-    std::vector<Element> storage;
+    // BumpAllocator that backs the wrapped list's storage. Owned by this
+    // caster; the wrapped list remains valid for the duration of the
+    // binding call.
+    slang::BumpAllocator alloc;
     std::optional<ListType> value;
 
 public:
@@ -237,13 +241,14 @@ public:
         if (!isinstance<sequence>(src))
             return false;
         sequence seq = reinterpret_borrow<sequence>(src);
-        storage.clear();
-        storage.reserve(len(seq));
+
+        std::vector<Element> vec;
+        vec.reserve(len(seq));
         for (auto item : seq) {
-            if (!Derived::loadElement(item, storage))
+            if (!Derived::loadElement(item, vec))
                 return false;
         }
-        value.emplace(std::span<Element>(storage.data(), storage.size()));
+        value.emplace(alloc, vec);
         return true;
     }
 

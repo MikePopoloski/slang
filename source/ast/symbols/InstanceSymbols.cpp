@@ -91,7 +91,7 @@ public:
     const NetType& netType;
 
 private:
-    using DimIterator = std::span<VariableDimensionSyntax*>::iterator;
+    using DimIterator = SyntaxList<VariableDimensionSyntax>::iterator;
 
     Compilation& comp;
     const ASTContext& context;
@@ -429,16 +429,16 @@ Symbol& InstanceSymbol::createDefaultNested(const Scope& scope,
     SmallVector<TokenOrSyntax, 4> instances;
     auto& header = *syntax.header;
     auto loc = header.name.location();
-    auto instName = comp.emplace<InstanceNameSyntax>(header.name,
-                                                     std::span<VariableDimensionSyntax*>());
+    auto instName = comp.emplace<InstanceNameSyntax>(header.name, nullptr);
     auto instance = comp.emplace<HierarchicalInstanceSyntax>(
-        instName, missing(TokenKind::OpenParenthesis, loc), std::span<TokenOrSyntax>(),
+        instName, missing(TokenKind::OpenParenthesis, loc), nullptr,
         missing(TokenKind::CloseParenthesis, loc));
 
     instances.push_back(instance);
 
     auto instantiation = comp.emplace<HierarchyInstantiationSyntax>(
-        std::span<AttributeInstanceSyntax*>(), header.name, nullptr, instances.copy(comp),
+        nullptr, header.name, nullptr,
+        syntax::SeparatedSyntaxList<syntax::HierarchicalInstanceSyntax>(comp, instances),
         header.semi);
 
     ASTContext context(scope, LookupLocation::max);
@@ -745,15 +745,16 @@ void InstanceSymbol::fromFixupSyntax(Compilation& comp, const DefinitionSymbol& 
 
         auto instName = comp.emplace<InstanceNameSyntax>(decl->name, decl->dimensions);
         auto instance = comp.emplace<HierarchicalInstanceSyntax>(
-            instName, missing(TokenKind::OpenParenthesis, loc), std::span<TokenOrSyntax>(),
+            instName, missing(TokenKind::OpenParenthesis, loc), nullptr,
             missing(TokenKind::CloseParenthesis, loc));
 
         instances.push_back(instance);
     }
 
     auto instantiation = comp.emplace<HierarchyInstantiationSyntax>(
-        std::span<AttributeInstanceSyntax*>(), syntax.type->getFirstToken(), nullptr,
-        instances.copy(comp), syntax.semi);
+        nullptr, syntax.type->getFirstToken(), nullptr,
+        syntax::SeparatedSyntaxList<syntax::HierarchicalInstanceSyntax>(comp, instances),
+        syntax.semi);
 
     SmallVector<const Symbol*> implicitNets;
     fromSyntax(comp, *instantiation, context, results, implicitNets);
@@ -1450,7 +1451,7 @@ PrimitiveInstanceSymbol* createPrimInst(Compilation& compilation, const Scope& s
     return result;
 }
 
-using DimIterator = std::span<VariableDimensionSyntax*>::iterator;
+using DimIterator = SyntaxList<VariableDimensionSyntax>::iterator;
 
 Symbol* recursePrimArray(Compilation& comp, const PrimitiveSymbol& primitive,
                          const HierarchicalInstanceSyntax& instance, const ASTContext& context,
@@ -1611,7 +1612,7 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
                 auto pvas = comp.emplace<ParameterValueAssignmentSyntax>(
                     delaySyntax.hash,
                     missing(TokenKind::OpenParenthesis, delayVal.getFirstToken().location()),
-                    parameters.copy(comp),
+                    syntax::SeparatedSyntaxList<syntax::ParamAssignmentSyntax>(comp, parameters),
                     missing(TokenKind::CloseParenthesis, delayVal.getLastToken().location()));
 
                 // Rebuild the instance list. The const_casts are fine because
@@ -1627,7 +1628,10 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
                 }
 
                 auto instantiation = comp.emplace<HierarchyInstantiationSyntax>(
-                    syntax.attributes, syntax.type, pvas, instanceBuf.copy(comp), syntax.semi);
+                    syntax.attributes, syntax.type, pvas,
+                    syntax::SeparatedSyntaxList<syntax::HierarchicalInstanceSyntax>(comp,
+                                                                                    instanceBuf),
+                    syntax.semi);
                 InstanceSymbol::fromSyntax(comp, *instantiation, context, results, implicitNets);
                 return;
             }

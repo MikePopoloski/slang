@@ -296,7 +296,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrLis
                         buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
                         diag::ExpectedValueRangeElement,
                         [this] { return &parseValueRangeElement(); });
-                    return &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement());
+                    return &factory.standardCaseItem({alloc, buffer}, colon, parseStatement());
                 });
             break;
         default:
@@ -310,7 +310,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrLis
                     parseList<isPossibleExpressionOrComma, isEndOfCaseItem>(
                         buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
                         diag::ExpectedExpression, [this] { return &parseExpression(); });
-                    return &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement());
+                    return &factory.standardCaseItem({alloc, buffer}, colon, parseStatement());
                 });
             break;
     }
@@ -322,7 +322,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrLis
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
     return factory.caseStatement(label, attributes, uniqueOrPriority, caseKeyword, openParen,
-                                 caseExpr, closeParen, matchesOrInside, itemBuffer.copy(alloc),
+                                 caseExpr, closeParen, matchesOrInside, {alloc, itemBuffer},
                                  endcase);
 }
 
@@ -423,9 +423,8 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
 
     checkEmptyBody(body, closeParen, "for loop"sv);
 
-    return factory.forLoopStatement(label, attributes, forKeyword, openParen,
-                                    initializers.copy(alloc), semi1, stopExpr, semi2,
-                                    steps.copy(alloc), closeParen, body);
+    return factory.forLoopStatement(label, attributes, forKeyword, openParen, {alloc, initializers},
+                                    semi1, stopExpr, semi2, {alloc, steps}, closeParen, body);
 }
 
 NameSyntax& Parser::parseForeachLoopVariable() {
@@ -445,7 +444,7 @@ ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
     else if (!NameSyntax::isKind(arrayName.kind))
         addDiag(diag::ForeachCallExpr, arrayName.sourceRange());
 
-    std::span<TokenOrSyntax> list;
+    SeparatedSyntaxList<NameSyntax> list;
     Token openBracket;
     Token closeBracket;
     parseList<isIdentifierOrComma, isEndOfBracketedList>(
@@ -659,7 +658,7 @@ NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
     return nullptr;
 }
 
-std::span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bool inConstructor) {
+SyntaxList<SyntaxNode> Parser::parseBlockItems(TokenKind endKind, Token& end, bool inConstructor) {
     SmallVector<SyntaxNode*, 16> buffer;
     auto kind = peek().kind;
     bool errored = false;
@@ -730,7 +729,7 @@ std::span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bo
         end = expect(endKind);
     }
 
-    return buffer.copy(alloc);
+    return SyntaxList<SyntaxNode>(alloc, buffer);
 }
 
 BlockStatementSyntax& Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind,
@@ -774,7 +773,7 @@ WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(NamedLabelSyntax* labe
                                                      RequireItems::True, diag::ExpectedIdentifier,
                                                      [this] { return &parseName(); });
 
-    return factory.waitOrderStatement(label, attributes, keyword, openParen, buffer.copy(alloc),
+    return factory.waitOrderStatement(label, attributes, keyword, openParen, {alloc, buffer},
                                       closeParen, parseActionBlock());
 }
 
@@ -797,7 +796,7 @@ RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
     }
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
-    return factory.randCaseStatement(label, attributes, randCase, itemBuffer.copy(alloc), endcase);
+    return factory.randCaseStatement(label, attributes, randCase, {alloc, itemBuffer}, endcase);
 }
 
 EventTriggerStatementSyntax& Parser::parseEventTriggerStatement(NamedLabelSyntax* label,
@@ -884,8 +883,7 @@ RsCaseSyntax& Parser::parseRsCase() {
 
             auto& item = parseRsProdItem();
             auto semi = expect(TokenKind::Semicolon);
-            itemBuffer.push_back(
-                &factory.standardRsCaseItem(buffer.copy(alloc), colon, item, semi));
+            itemBuffer.push_back(&factory.standardRsCaseItem({alloc, buffer}, colon, item, semi));
         }
         else {
             break;
@@ -896,8 +894,7 @@ RsCaseSyntax& Parser::parseRsCase() {
         addDiag(diag::CaseStatementEmpty, keyword.location()) << "case"sv;
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
-    return factory.rsCase(keyword, openParen, condition, closeParen, itemBuffer.copy(alloc),
-                          endcase);
+    return factory.rsCase(keyword, openParen, condition, closeParen, {alloc, itemBuffer}, endcase);
 }
 
 RsProdSyntax* Parser::parseRsProd() {
@@ -986,7 +983,7 @@ RsRuleSyntax& Parser::parseRsRule() {
         weightClause = &factory.rsWeightClause(colonEqual, weight, codeBlock);
     }
 
-    return factory.rsRule(randJoin, prods.copy(alloc), weightClause);
+    return factory.rsRule(randJoin, {alloc, prods}, weightClause);
 }
 
 ProductionSyntax& Parser::parseProduction() {
@@ -1010,7 +1007,7 @@ ProductionSyntax& Parser::parseProduction() {
                                              RequireItems::True, diag::ExpectedRsRule,
                                              [this] { return &parseRsRule(); });
 
-    return factory.production(dataType, name, ports, colon, buffer.copy(alloc), semi);
+    return factory.production(dataType, name, ports, colon, {alloc, buffer}, semi);
 }
 
 StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, AttrList attributes) {
@@ -1035,7 +1032,7 @@ StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, Att
 
     auto endsequence = expect(TokenKind::EndSequenceKeyword);
     return factory.randSequenceStatement(label, attributes, keyword, openParen, firstProd,
-                                         closeParen, productions.copy(alloc), endsequence);
+                                         closeParen, {alloc, productions}, endsequence);
 }
 
 StatementSyntax& Parser::parseCheckerStatement(NamedLabelSyntax* label, AttrList attributes) {

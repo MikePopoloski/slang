@@ -119,13 +119,13 @@ public:
     }
 
     template<typename TList>
-        requires syntax::is_syntax_list_v<TList>
+        requires is_syntax_list_v<TList>
     void py_insertAtFront(const TList& list, SyntaxNode& newNode, Token separator = {}) {
         this->insertAtFront(list, cloneNode(newNode), separator);
     }
 
     template<typename TList>
-        requires syntax::is_syntax_list_v<TList>
+        requires is_syntax_list_v<TList>
     void py_insertAtBack(const TList& list, SyntaxNode& newNode, Token separator = {}) {
         this->insertAtBack(list, cloneNode(newNode), separator);
     }
@@ -159,11 +159,9 @@ public:
         return Trivia(kind, toStringView(alloc.copyFrom(std::span(text))));
     }
 
-    SyntaxNode* py_clone(const SyntaxNode& node) { return slang::syntax::clone(node, this->alloc); }
+    SyntaxNode* py_clone(const SyntaxNode& node) { return clone(node, this->alloc); }
 
-    SyntaxNode* py_deepClone(const SyntaxNode& node) {
-        return slang::syntax::deepClone(node, this->alloc);
-    }
+    SyntaxNode* py_deepClone(const SyntaxNode& node) { return deepClone(node, this->alloc); }
 
     template<typename T>
     SyntaxList<T>& py_makeSyntaxList(py::list items) {
@@ -171,7 +169,7 @@ public:
         for (auto item : items) {
             buffer.push_back(&cloneNode(item.cast<T&>()));
         }
-        return *alloc.emplace<SyntaxList<T>>(buffer.copy(alloc));
+        return *alloc.emplace<SyntaxList<T>>(alloc, buffer);
     }
 
     SyntaxList<SyntaxNode>& py_makeSyntaxListGeneric(py::list items) {
@@ -190,7 +188,7 @@ public:
                 buffer.push_back(&cloneNode(item.cast<SyntaxNode&>()));
             }
         }
-        return *alloc.emplace<SeparatedSyntaxList<T>>(buffer.copy(alloc));
+        return *alloc.emplace<SeparatedSyntaxList<T>>(alloc, buffer);
     }
 
     SeparatedSyntaxList<SyntaxNode>& py_makeSeparatedSyntaxListGeneric(py::list items) {
@@ -202,15 +200,13 @@ public:
         for (auto item : items) {
             buffer.push_back(item.cast<Token>());
         }
-        return *alloc.emplace<TokenList>(buffer.copy(alloc));
+        return *alloc.emplace<TokenList>(alloc, buffer);
     }
 
 private:
     pybind11::function handler;
 
-    SyntaxNode& cloneNode(const SyntaxNode& node) {
-        return *slang::syntax::deepClone(node, this->alloc);
-    }
+    SyntaxNode& cloneNode(const SyntaxNode& node) { return *deepClone(node, this->alloc); }
 };
 
 std::shared_ptr<SyntaxTree> pySyntaxRewrite(const std::shared_ptr<SyntaxTree>& tree,
@@ -611,18 +607,13 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
     m.def("rewrite", &pySyntaxRewrite, "tree"_a, "handler"_a);
 
     m.def(
-        "clone",
-        [](const SyntaxNode& node, BumpAllocator& alloc) {
-            return slang::syntax::clone(node, alloc);
-        },
+        "clone", [](const SyntaxNode& node, BumpAllocator& alloc) { return clone(node, alloc); },
         byrefint, py::keep_alive<0, 2>(), "node"_a, "alloc"_a,
         "Create a shallow clone of the given syntax node");
 
     m.def(
         "deepClone",
-        [](const SyntaxNode& node, BumpAllocator& alloc) {
-            return slang::syntax::deepClone(node, alloc);
-        },
+        [](const SyntaxNode& node, BumpAllocator& alloc) { return deepClone(node, alloc); },
         byrefint, py::keep_alive<0, 2>(), "node"_a, "alloc"_a,
         "Create a deep clone of the given syntax node and all its children");
 }

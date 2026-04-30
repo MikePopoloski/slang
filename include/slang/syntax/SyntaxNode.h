@@ -8,6 +8,8 @@
 #pragma once
 
 #include <cstring>
+#include <ranges>
+#include <span>
 #include <string>
 
 #include "slang/parsing/Token.h"
@@ -426,12 +428,114 @@ private:
     mutable PointerIntPair<const SyntaxNode*, 1, 1, bool> node;
 };
 
+/// @brief Common base for the three syntax-list container types.
+///
+/// All three (`SyntaxList<T>`, `TokenList`, `SeparatedSyntaxList<T>`)
+/// share the same single-pointer representation: when non-empty, the
+/// pointer references storage of the form `[size_t header][Element...]`,
+/// so the element count can be recovered from the slot just before
+/// the data pointer. An empty list is represented by a null pointer.
+template<typename Derived, typename Element>
+class SyntaxListBase {
+public:
+    SyntaxListBase() : data_(nullptr) {}
+    SyntaxListBase(nullptr_t) : data_(nullptr) {}
+
+    /// Constructs the list by copying the elements of @a src into storage
+    /// allocated from @a alloc. The element type of the source range
+    /// must be `Element`.
+    template<std::ranges::contiguous_range R>
+        requires std::same_as<std::ranges::range_value_t<R>, Element>
+    SyntaxListBase(BumpAllocator& alloc, const R& src) : data_(allocate<Element>(alloc, src)) {}
+
+    /// @return true if the list is empty, false otherwise.
+    [[nodiscard]] bool empty() const noexcept { return data_ == nullptr; }
+
+    /// @return a pointer to the underlying element array (or nullptr if empty).
+    [[nodiscard]] Element* data() const noexcept { return data_; }
+
+protected:
+    /// @return the raw count of stored elements (for `SeparatedSyntaxList`
+    /// this includes interleaved separators).
+    [[nodiscard]] size_t rawSize() const noexcept {
+        return data_ ? *(reinterpret_cast<const size_t*>(data_) - 1) : 0;
+    }
+
+    Element* data_;
+
+private:
+    template<typename T, std::ranges::contiguous_range R>
+        requires std::same_as<std::ranges::range_value_t<R>, T>
+    static T* allocate(BumpAllocator& alloc, const R& src) {
+        std::span<const T> elements(src);
+        if (elements.empty())
+            return nullptr;
+
+        static_assert(alignof(T) <= alignof(size_t),
+                      "Syntax list storage assumes element alignment fits within "
+                      "the inline size header alignment");
+
+        constexpr size_t headerSize = sizeof(size_t);
+        const size_t len = elements.size();
+        const size_t bytes = headerSize + len * sizeof(T);
+
+        std::byte* mem = alloc.allocate(bytes, alignof(size_t));
+        *reinterpret_cast<size_t*>(mem) = len;
+
+        T* dest = reinterpret_cast<T*>(mem + headerSize);
+        std::ranges::uninitialized_copy(elements.begin(), elements.end(), dest, dest + len);
+        return dest;
+    }
+};
+
 /// A container of syntax nodes.
 template<typename T>
-class SLANG_EXPORT SyntaxList : public std::span<T*> {
+class SLANG_EXPORT SyntaxList : public SyntaxListBase<SyntaxList<T>, T*> {
 public:
-    SyntaxList(nullptr_t) : SyntaxList(std::span<T*>()) {}
-    SyntaxList(std::span<T*> elements) : std::span<T*>(elements) {}
+    using Base = SyntaxListBase<SyntaxList<T>, T*>;
+    using value_type = T*;
+    using reference = T*&;
+    using const_reference = T* const&;
+    using pointer = T**;
+    using const_pointer = T* const*;
+    using iterator = T**;
+    using const_iterator = T* const*;
+    using size_type = size_t;
+
+    using Base::Base;
+    using Base::data;
+    using Base::data_;
+    using Base::empty;
+
+    /// @return the number of elements in the list.
+    [[nodiscard]] size_t size() const noexcept { return this->rawSize(); }
+
+    T*& operator[](size_t index) {
+        SLANG_ASSERT(index < size());
+        return data_[index];
+    }
+    T* const& operator[](size_t index) const {
+        SLANG_ASSERT(index < size());
+        return data_[index];
+    }
+
+    T** begin() const noexcept { return data_; }
+    T** end() const noexcept { return data_ + size(); }
+
+    T* front() const {
+        SLANG_ASSERT(!empty());
+        return data_[0];
+    }
+
+    T* back() const {
+        SLANG_ASSERT(!empty());
+        return data_[size() - 1];
+    }
+
+    /// @return the elements as a `std::span`.
+    operator std::span<T*>() const noexcept {
+        return data_ ? std::span<T*>(data_, size()) : std::span<T*>();
+    }
 
     /// Number of child items the list contributes to its parent's flattened
     /// child index space.
@@ -452,7 +556,7 @@ public:
         for (auto& t : children)
             buffer.push_back(&t.node()->as<T>());
 
-        *this = buffer.copy(alloc);
+        *this = SyntaxList<T>(alloc, buffer);
     }
 
     /// Compute the SourceRange spanning all the elements of this list. If
@@ -473,14 +577,62 @@ SyntaxList<T>* deepClone(const SyntaxList<T>& node, BumpAllocator& alloc) {
     for (auto t : node)
         buffer.push_back(deepClone(*t, alloc));
 
-    return alloc.emplace<SyntaxList<T>>(buffer.copy(alloc));
+    return alloc.emplace<SyntaxList<T>>(alloc, buffer);
 }
 
 /// A container of tokens.
-class SLANG_EXPORT TokenList : public std::span<parsing::Token> {
+class SLANG_EXPORT TokenList : public SyntaxListBase<TokenList, parsing::Token> {
 public:
-    TokenList(nullptr_t) : TokenList(std::span<parsing::Token>()) {}
-    TokenList(std::span<parsing::Token> elements) : std::span<parsing::Token>(elements) {}
+    using Token = parsing::Token;
+    using Base = SyntaxListBase<TokenList, Token>;
+    using value_type = Token;
+    using reference = Token&;
+    using const_reference = const Token&;
+    using pointer = Token*;
+    using const_pointer = const Token*;
+    using iterator = Token*;
+    using const_iterator = const Token*;
+    using size_type = size_t;
+
+    using Base::Base;
+    using Base::data;
+    using Base::data_;
+    using Base::empty;
+
+    /// @return the number of elements in the list.
+    [[nodiscard]] size_t size() const noexcept { return this->rawSize(); }
+
+    Token& operator[](size_t index) {
+        SLANG_ASSERT(index < size());
+        return data_[index];
+    }
+    const Token& operator[](size_t index) const {
+        SLANG_ASSERT(index < size());
+        return data_[index];
+    }
+
+    Token* begin() const noexcept { return data_; }
+    Token* end() const noexcept { return data_ + size(); }
+
+    Token& front() const {
+        SLANG_ASSERT(!empty());
+        return data_[0];
+    }
+
+    Token& back() const {
+        SLANG_ASSERT(!empty());
+        return data_[size() - 1];
+    }
+
+    /// @return the elements as a `std::span`.
+    operator std::span<Token>() const noexcept {
+        return data_ ? std::span<Token>(data_, size()) : std::span<Token>();
+    }
+
+    /// @return the elements as a `std::span`.
+    operator std::span<const Token>() const noexcept {
+        return data_ ? std::span<const Token>(data_, size()) : std::span<const Token>();
+    }
 
     /// Number of child items the list contributes to its parent's flattened
     /// child index space.
@@ -497,11 +649,11 @@ public:
     /// Replaces the entire span with the provided @a children, copying the
     /// resulting buffer into @a alloc.
     void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) {
-        SmallVector<parsing::Token> buffer(children.size(), UninitializedTag());
+        SmallVector<Token> buffer(children.size(), UninitializedTag());
         for (auto& t : children)
             buffer.push_back(t.token());
 
-        *this = buffer.copy(alloc);
+        *this = TokenList(alloc, buffer);
     }
 
     /// Compute the SourceRange spanning all tokens of this list. If empty,
@@ -519,11 +671,13 @@ public:
 /// @brief A container of token-separated syntax nodes.
 ///
 /// The stored elements alternate between delimiters (such as a
-/// comma) and nodes. Unlike SyntaxList, the elements span includes the
-/// separators interleaved with the nodes.
+/// comma) and nodes.
 template<typename T>
-class SLANG_EXPORT SeparatedSyntaxList {
+class SLANG_EXPORT SeparatedSyntaxList
+    : public SyntaxListBase<SeparatedSyntaxList<T>, TokenOrSyntax> {
 public:
+    using Base = SyntaxListBase<SeparatedSyntaxList<T>, TokenOrSyntax>;
+
     /// An iterator that will iterate over just the nodes (and skip the delimiters) in the
     /// parent SeparatedSyntaxList.
     template<typename U>
@@ -555,25 +709,27 @@ public:
     using iterator = iterator_base<T*>;
     using const_iterator = iterator_base<const T*>;
 
-    SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(std::span<TokenOrSyntax>()) {}
-    SeparatedSyntaxList(std::span<TokenOrSyntax> elements) : elements(elements) {}
+    using Base::Base;
+    using Base::data;
+    using Base::data_;
+    using Base::empty;
 
     /// Number of items the list contributes to its parent's flattened
     /// child index space (includes interleaved separators).
-    size_t getChildCount() const { return elements.size(); }
+    size_t getChildCount() const { return this->rawSize(); }
 
     /// Gets the i-th item (token or node) from the underlying interleaved span.
-    TokenOrSyntax getChild(size_t index) { return elements[index]; }
-    ConstTokenOrSyntax getChild(size_t index) const { return elements[index]; }
+    TokenOrSyntax getChild(size_t index) { return data_[index]; }
+    ConstTokenOrSyntax getChild(size_t index) const { return data_[index]; }
     PtrTokenOrSyntax getChildPtr(size_t index) {
-        if (elements[index].isNode())
-            return elements[index].node();
+        if (data_[index].isNode())
+            return data_[index].node();
         else
-            return elements[index].tokenPtr();
+            return data_[index].tokenPtr();
     }
 
     /// Replaces the i-th item with @a child.
-    void setChild(size_t index, TokenOrSyntax child) { elements[index] = child; }
+    void setChild(size_t index, TokenOrSyntax child) { data_[index] = child; }
 
     /// Replaces the entire span with the provided @a children, copying the
     /// resulting buffer into @a alloc.
@@ -581,43 +737,43 @@ public:
         SmallVector<TokenOrSyntax> buffer(children.size(), UninitializedTag());
         buffer.append_range(children);
 
-        elements = buffer.copy(alloc);
+        *this = SeparatedSyntaxList<T>(alloc, buffer);
     }
 
     /// Compute the SourceRange spanning all elements of this list. If empty,
     /// returns a default SourceRange.
     SourceRange sourceRange() const {
-        if (elements.empty())
+        if (empty())
             return {};
 
-        auto firstRange = elements.front().range();
-        auto lastRange = elements.back().range();
+        auto firstRange = data_[0].range();
+        auto lastRange = data_[this->rawSize() - 1].range();
         return SourceRange(firstRange.start(), lastRange.end());
     }
 
     /// @return the elements of nodes in the list
     [[nodiscard]] std::span<const ConstTokenOrSyntax> elems() const {
-        return std::span<const ConstTokenOrSyntax>(
-            static_cast<ConstTokenOrSyntax*>(elements.data()), elements.size());
+        return std::span<const ConstTokenOrSyntax>(static_cast<ConstTokenOrSyntax*>(data_),
+                                                   this->rawSize());
     }
 
     /// @return the elements of nodes in the list
-    [[nodiscard]] std::span<TokenOrSyntax> elems() { return elements; }
-
-    /// @return true if the list is empty, and false if it has elements.
-    [[nodiscard]] bool empty() const { return elements.empty(); }
+    [[nodiscard]] std::span<TokenOrSyntax> elems() {
+        return data_ ? std::span<TokenOrSyntax>(data_, this->rawSize())
+                     : std::span<TokenOrSyntax>();
+    }
 
     /// @return the number of nodes in the list (doesn't include delimiter tokens in the count).
-    [[nodiscard]] size_t size() const noexcept { return (elements.size() + 1) / 2; }
+    [[nodiscard]] size_t size() const noexcept { return (this->rawSize() + 1) / 2; }
 
     const T* operator[](size_t index) const {
         index <<= 1;
-        return &elements[index].node()->template as<T>();
+        return &data_[index].node()->template as<T>();
     }
 
     T* operator[](size_t index) {
         index <<= 1;
-        return &elements[index].node()->template as<T>();
+        return &data_[index].node()->template as<T>();
     }
 
     iterator begin() { return iterator(*this, 0); }
@@ -626,9 +782,6 @@ public:
     const_iterator end() const { return cend(); }
     const_iterator cbegin() const { return const_iterator(*this, 0); }
     const_iterator cend() const { return const_iterator(*this, size()); }
-
-private:
-    std::span<TokenOrSyntax> elements;
 };
 
 template<typename T>
@@ -640,7 +793,7 @@ SeparatedSyntaxList<T>* deepClone(const SeparatedSyntaxList<T>& node, BumpAlloca
         else
             buffer.push_back(static_cast<T*>(deepClone(*ele.node(), alloc)));
     }
-    return alloc.emplace<SeparatedSyntaxList<T>>(buffer.copy(alloc));
+    return alloc.emplace<SeparatedSyntaxList<T>>(alloc, buffer);
 }
 
 inline TokenList* deepClone(const TokenList& node, BumpAllocator& alloc) {
@@ -648,7 +801,7 @@ inline TokenList* deepClone(const TokenList& node, BumpAllocator& alloc) {
     for (const auto& ele : node) {
         buffer.push_back(ele.deepClone(alloc));
     }
-    return alloc.emplace<TokenList>(buffer.copy(alloc));
+    return alloc.emplace<TokenList>(alloc, buffer);
 }
 
 /// Type trait that is true for the three syntax-list container types
