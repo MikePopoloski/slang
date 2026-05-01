@@ -469,16 +469,21 @@ protected:
     /// resulting (untagged) raw pointer to the elements.
     static uintptr_t allocateHeadered(BumpAllocator& alloc, std::span<const Element> elements) {
         SLANG_ASSERT(!elements.empty());
-        static_assert(alignof(Element) <= alignof(size_t),
-                      "Syntax list storage assumes element alignment fits within "
-                      "the inline size header alignment");
 
+        // The size header lives in the size_t-sized slot immediately before `dest`.
+        // When alignof(Element) exceeds sizeof(size_t) (e.g. 8-byte Token alignment on
+        // WASM where size_t is 4 bytes), pad the prefix up to alignof(Element) so the
+        // returned pointer remains correctly aligned for Element while still leaving a
+        // size_t-aligned header slot at `dest - 1`.
         constexpr size_t headerSize = sizeof(size_t);
+        constexpr size_t prefix = std::max(headerSize, alignof(Element));
+        constexpr size_t allocAlign = std::max(alignof(Element), alignof(size_t));
+
         const size_t len = elements.size();
-        const size_t bytes = headerSize + len * sizeof(Element);
-        std::byte* mem = alloc.allocate(bytes, alignof(size_t));
-        *reinterpret_cast<size_t*>(mem) = len;
-        Element* dest = reinterpret_cast<Element*>(mem + headerSize);
+        const size_t bytes = prefix + len * sizeof(Element);
+        std::byte* mem = alloc.allocate(bytes, allocAlign);
+        Element* dest = reinterpret_cast<Element*>(mem + prefix);
+        *(reinterpret_cast<size_t*>(dest) - 1) = len;
         std::ranges::uninitialized_copy(elements.begin(), elements.end(), dest, dest + len);
         return reinterpret_cast<uintptr_t>(dest);
     }
