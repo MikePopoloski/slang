@@ -65,7 +65,7 @@ jobs:
       shell: cmd
       run: |
         call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-        cmake --preset ${{ matrix.preset }} $BUILD_FLAGS
+        cmake --preset ${{ matrix.preset }} ${{ env.BUILD_FLAGS }}
         cmake --build build/${{ matrix.preset }} -j8
     - name: Build (WASI)
       if: ${{ startsWith(matrix.preset, 'wasi-') }}
