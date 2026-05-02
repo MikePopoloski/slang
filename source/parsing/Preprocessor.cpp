@@ -400,7 +400,7 @@ Token Preprocessor::handleDirectives(Token token) {
                     addDiag(diag::MisplacedDirectiveChar, token.location());
 
                 trivia.append_range(token.trivia());
-                return token.withTrivia(alloc, trivia.copy(alloc));
+                return token.withTrivia(alloc, trivia);
             }
             case TokenKind::Directive: {
                 // Cancel header guard detection when the directive isn't the one
@@ -535,7 +535,7 @@ Token Preprocessor::handleDirectives(Token token) {
                     }
                 }
                 trivia.append_range(token.trivia());
-                return token.withTrivia(alloc, trivia.copy(alloc));
+                return token.withTrivia(alloc, trivia);
         }
 
         token = nextRaw();
@@ -603,7 +603,7 @@ Token Preprocessor::nextRaw() {
     if (trivia.empty() || trivia.back().kind != TriviaKind::EndOfLine)
         trivia.push_back(Trivia(TriviaKind::EndOfLine, ""sv));
 
-    return token.withTrivia(alloc, trivia.copy(alloc));
+    return token.withTrivia(alloc, trivia);
 }
 
 Trivia Preprocessor::handleIncludeDirective(Token directive) {
@@ -626,7 +626,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
                     SmallVector<Trivia, 4> trivia;
                     trivia.push_back(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
                     trivia.append_range(fileName.trivia());
-                    fileName = fileName.withTrivia(alloc, trivia.copy(alloc));
+                    fileName = fileName.withTrivia(alloc, trivia);
                 }
                 break;
             }
@@ -980,7 +980,7 @@ Trivia Preprocessor::parseBranchDirective(Token directive,
                     }
                 }
 
-                currentToken = token.withTrivia(alloc, trivia.copy(alloc));
+                currentToken = token.withTrivia(alloc, trivia);
                 break;
             }
             scratchTokenBuffer.push_back(token);

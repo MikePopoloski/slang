@@ -119,8 +119,8 @@ public:
                 auto loc = syntheticComment.location();
                 finishSyntheticComment();
 
-                dest.push_back(Token(pp.alloc, TokenKind::EmptyMacroArgument,
-                                     emptyArgTrivia.copy(pp.alloc), ""sv, loc));
+                dest.push_back(
+                    Token(pp.alloc, TokenKind::EmptyMacroArgument, emptyArgTrivia, ""sv, loc));
             }
             else {
                 pp.addDiag(diag::ExpectedMacroCommentEnd, syntheticComment.location());
@@ -131,8 +131,8 @@ public:
             // can be properly consumed by the outer expansion context (e.g. spacing
             // that terminates an escaped identifier formed via token paste).
             auto loc = dest.back().location() + dest.back().rawText().length();
-            dest.push_back(Token(pp.alloc, TokenKind::EmptyMacroArgument,
-                                 emptyArgTrivia.copy(pp.alloc), ""sv, loc));
+            dest.push_back(
+                Token(pp.alloc, TokenKind::EmptyMacroArgument, emptyArgTrivia, ""sv, loc));
         }
 
         return anyNewMacros;
@@ -246,7 +246,7 @@ private:
 
         if (!emptyArgTrivia.empty()) {
             emptyArgTrivia.append_range(token.trivia());
-            token = token.withTrivia(pp.alloc, emptyArgTrivia.copy(pp.alloc));
+            token = token.withTrivia(pp.alloc, emptyArgTrivia);
             emptyArgTrivia.clear();
         }
 
@@ -674,8 +674,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
                     triviaBuf.emplace_back(TriviaKind::Whitespace, " "sv);
 
                     auto loc = splits.back().location() + splits.back().rawText().length();
-                    Token empty(alloc, TokenKind::EmptyMacroArgument, triviaBuf.copy(alloc), ""sv,
-                                loc);
+                    Token empty(alloc, TokenKind::EmptyMacroArgument, triviaBuf, ""sv, loc);
 
                     if (!handleToken(empty))
                         return false;
@@ -733,8 +732,7 @@ void Preprocessor::MacroExpansion::append(Token token, SourceLocation location,
         newTrivia.append_range(token.trivia());
         newTrivia.push_back(Trivia(TriviaKind::EndOfLine, token.rawText().substr(1)));
 
-        dest.push_back(
-            Token(alloc, TokenKind::EmptyMacroArgument, newTrivia.copy(alloc), "", location));
+        dest.push_back(Token(alloc, TokenKind::EmptyMacroArgument, newTrivia, "", location));
     }
     else {
         dest.push_back(token.withLocation(alloc, location));

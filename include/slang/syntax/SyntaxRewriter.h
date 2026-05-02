@@ -172,7 +172,7 @@ protected:
                                                                  UninitializedTag());
                     for (const auto& t : oldTok.trivia())
                         triviaBuffer.push_back(t.clone(alloc, true));
-                    newToken = newToken.withTrivia(alloc, triviaBuffer.copy(alloc));
+                    newToken = newToken.withTrivia(alloc, triviaBuffer);
                 }
             }
         }
@@ -200,7 +200,7 @@ protected:
                                                                      UninitializedTag());
                         for (const auto& t : oldTok.trivia())
                             triviaBuffer.push_back(t.clone(alloc, true));
-                        newToken = newToken.withTrivia(alloc, triviaBuffer.copy(alloc));
+                        newToken = newToken.withTrivia(alloc, triviaBuffer);
                     }
                 }
             }

@@ -323,12 +323,6 @@ std::string_view Token::rawText() const {
 
     auto getRaw = [this](uint32_t length) {
         byte* ptr = getInfo().extra() + getExtraSize(kind);
-        if (triviaCountSmall != 0) {
-            ptr += sizeof(const Trivia*);
-            if (triviaCountSmall == MaxTriviaSmallCount + 1)
-                ptr += sizeof(size_t);
-        }
-
         const char* raw;
         memcpy(reinterpret_cast<void*>(&raw), ptr, sizeof(raw));
         return std::string_view(raw, length);
@@ -375,17 +369,20 @@ std::span<Trivia const> Token::trivia() const {
     if (triviaCountSmall == 0)
         return {};
 
-    const Trivia* trivia;
     byte* ptr = getInfo().extra() + getExtraSize(kind);
-    memcpy(reinterpret_cast<void*>(&trivia), ptr, sizeof(trivia));
+    if (needsRawText(kind))
+        ptr += sizeof(const char*);
 
+    size_t count;
     if (triviaCountSmall == MaxTriviaSmallCount + 1) {
-        size_t size;
-        memcpy(&size, ptr + sizeof(trivia), sizeof(size_t));
-        return {trivia, size};
+        memcpy(&count, ptr, sizeof(size_t));
+        ptr += sizeof(size_t);
+    }
+    else {
+        count = triviaCountSmall;
     }
 
-    return {trivia, triviaCountSmall};
+    return {reinterpret_cast<const Trivia*>(ptr), count};
 }
 
 std::string Token::toString() const {
@@ -462,14 +459,17 @@ size_t Token::getSizeInBytes() const {
     size_t result = sizeof(Token);
     if (hasInfoPtr) {
         result += sizeof(Info) + getExtraSize(kind);
-        if (triviaCountSmall > 0) {
-            result += sizeof(Trivia*);
-            if (triviaCountSmall > MaxTriviaSmallCount)
-                result += sizeof(size_t);
-        }
-
         if (needsRawText(kind))
             result += sizeof(const char*);
+
+        if (triviaCountSmall > 0) {
+            size_t count = triviaCountSmall;
+            if (triviaCountSmall > MaxTriviaSmallCount) {
+                result += sizeof(size_t);
+                count = trivia().size();
+            }
+            result += count * sizeof(Trivia);
+        }
     }
     return result;
 }
@@ -519,7 +519,7 @@ Token Token::deepClone(BumpAllocator& alloc) const {
     SmallVector<Trivia> triviaBuffer(trivia().size(), UninitializedTag());
     for (const auto& t : trivia())
         triviaBuffer.push_back(t.clone(alloc, true));
-    return clone(alloc, triviaBuffer.copy(alloc), rawText(), location());
+    return clone(alloc, triviaBuffer, rawText(), location());
 }
 
 void Token::init(BumpAllocator& alloc, TokenKind kind_, std::span<Trivia const> trivia,
@@ -529,7 +529,6 @@ void Token::init(BumpAllocator& alloc, TokenKind kind_, std::span<Trivia const> 
     triviaCountSmall = 0;
     reserved = 0;
     numFlags.raw = 0;
-    rawLenAndExtra = uint32_t(rawText.size()) | TokenTag;
     SLANG_ASSERT(reinterpret_cast<const std::byte*>(&rawLenAndExtra) -
                      reinterpret_cast<const std::byte*>(this) ==
                  RawLenAndExtraOffset);
@@ -538,8 +537,11 @@ void Token::init(BumpAllocator& alloc, TokenKind kind_, std::span<Trivia const> 
     SLANG_ASSERT(extra % alignof(void*) == 0);
 
     size_t size = sizeof(Info) + extra;
+    const bool needsRaw = needsRawText(kind);
+    if (needsRaw)
+        size += sizeof(const char*);
+
     if (!trivia.empty()) {
-        size += sizeof(Trivia*);
         if (trivia.size() > MaxTriviaSmallCount) {
             size += sizeof(size_t);
             triviaCountSmall = MaxTriviaSmallCount + 1;
@@ -547,13 +549,10 @@ void Token::init(BumpAllocator& alloc, TokenKind kind_, std::span<Trivia const> 
         else {
             triviaCountSmall = uint8_t(trivia.size());
         }
+        size += trivia.size() * sizeof(Trivia);
     }
 
-    const bool needsRaw = needsRawText(kind);
-    if (needsRaw)
-        size += sizeof(const char*);
-
-    if (size == sizeof(Info)) {
+    if (!extra && !needsRaw && trivia.empty()) {
         hasInfoPtr = false;
         nonInfoLoc = location;
         return;
@@ -564,21 +563,21 @@ void Token::init(BumpAllocator& alloc, TokenKind kind_, std::span<Trivia const> 
     hasInfoPtr = true;
 
     byte* dest = info->extra() + extra;
-    if (!trivia.empty()) {
-        const Trivia* triviaPtr = trivia.data();
-        memcpy(dest, reinterpret_cast<const void*>(&triviaPtr), sizeof(triviaPtr));
-        dest += sizeof(triviaPtr);
-
-        if (trivia.size() > MaxTriviaSmallCount) {
-            size = trivia.size();
-            memcpy(dest, &size, sizeof(size_t));
-            dest += sizeof(size_t);
-        }
-    }
-
     if (needsRaw) {
+        rawLenAndExtra = uint32_t(rawText.size()) | TokenTag;
+
         auto dataPtr = rawText.data();
         memcpy(dest, reinterpret_cast<const void*>(&dataPtr), sizeof(dataPtr));
+        dest += sizeof(dataPtr);
+    }
+
+    if (!trivia.empty()) {
+        if (trivia.size() > MaxTriviaSmallCount) {
+            size_t cnt = trivia.size();
+            memcpy(dest, &cnt, sizeof(size_t));
+            dest += sizeof(size_t);
+        }
+        memcpy(dest, trivia.data(), trivia.size() * sizeof(Trivia));
     }
 }
 

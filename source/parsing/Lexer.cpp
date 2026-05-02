@@ -252,8 +252,7 @@ Token Lexer::lex(KeywordVersion keywordVersion) {
         sourceBuffer = sourceEnd - 1;
 
         triviaBuffer.push_back(Trivia(TriviaKind::DisabledText, lexeme()));
-        return Token(alloc, TokenKind::Unknown, triviaBuffer.copy(alloc), token.rawText(),
-                     token.location());
+        return Token(alloc, TokenKind::Unknown, triviaBuffer, token.rawText(), token.location());
     }
 
     return token;
@@ -1697,8 +1696,7 @@ void Lexer::scanDisabledRegion(std::string_view firstWord, std::string_view seco
 template<typename... Args>
 Token Lexer::create(TokenKind kind, Args&&... args) {
     SourceLocation location(bufferId, size_t(marker - originalBegin));
-    return Token(alloc, kind, triviaBuffer.copy(alloc), lexeme(), location,
-                 std::forward<Args>(args)...);
+    return Token(alloc, kind, triviaBuffer, lexeme(), location, std::forward<Args>(args)...);
 }
 
 void Lexer::addTrivia(TriviaKind kind) {

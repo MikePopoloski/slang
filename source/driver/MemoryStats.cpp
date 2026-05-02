@@ -67,16 +67,16 @@ struct CSTStatsVisitor : public SyntaxVisitor<CSTStatsVisitor> {
         // Attribute each direct child token (and its trivia) to this node kind.
         for (uint32_t i = 0; i < node.getChildCount(); i++) {
             if (auto tok = node.childToken(i)) {
-                auto tokenBytes = tok.getSizeInBytes();
-                e.tokenBytes += tokenBytes;
-                totalTokenBytes += tokenBytes;
-                totalTokenCount++;
-
                 auto trivia = tok.trivia();
                 auto triviaBytes = trivia.size() * sizeof(Trivia);
                 e.triviaBytes += triviaBytes;
                 totalTriviaBytes += triviaBytes;
                 totalTriviaCount += trivia.size();
+
+                auto tokenBytes = tok.getSizeInBytes() - triviaBytes;
+                e.tokenBytes += tokenBytes;
+                totalTokenBytes += tokenBytes;
+                totalTokenCount++;
             }
         }
 

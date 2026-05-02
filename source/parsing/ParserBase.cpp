@@ -27,7 +27,7 @@ void ParserBase::prependSkippedTokens(Token& token) {
     buffer.push_back(Trivia{TriviaKind::SkippedTokens, skippedTokens.copy(alloc)});
     buffer.append_range(token.trivia());
 
-    token = token.withTrivia(alloc, buffer.copy(alloc));
+    token = token.withTrivia(alloc, buffer);
     skippedTokens.clear();
 }
 
