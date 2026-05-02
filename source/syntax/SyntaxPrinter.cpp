@@ -85,14 +85,14 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
             // Exclude any trivia that is from a preprocessed location based on our flags.
             // In order to know that we need to skip over any trivia that is implicitly
             // located relative to something ahead of it (a directive or the token itself).
-            SmallVector<const Trivia*> pending;
+            SmallVector<Trivia> pending;
             for (const auto& trivia : token.trivia()) {
-                pending.push_back(&trivia);
+                pending.push_back(trivia);
                 auto loc = trivia.getExplicitLocation();
                 if (loc) {
                     if (shouldPrint(*loc)) {
-                        for (auto t : pending)
-                            print(*t);
+                        for (auto& t : pending)
+                            print(t);
                     }
                     else {
                         // If this is a directive or skipped trivia we may still
@@ -109,8 +109,8 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
             }
 
             if (!excluded) {
-                for (auto t : pending)
-                    print(*t);
+                for (auto& t : pending)
+                    print(t);
             }
         }
     }
