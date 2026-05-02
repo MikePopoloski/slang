@@ -137,6 +137,11 @@ public:
     /// The type of symbol.
     SymbolKind kind;
 
+private:
+    // This is here to avoid extra padding.
+    mutable SymbolIndex indexInScope{0};
+
+public:
     /// The name of the symbol; if the symbol does not have a name,
     /// this will be an empty string.
     std::string_view name;
@@ -298,7 +303,6 @@ private:
     // determine ordering during lookups) will be set here.
     mutable const Scope* parentScope = nullptr;
     mutable const Symbol* nextInScope = nullptr;
-    mutable SymbolIndex indexInScope{0};
 
     const syntax::SyntaxNode* originatingSyntax = nullptr;
 };
