@@ -290,7 +290,11 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
         .def_property_readonly("isMissing", &Token::isMissing)
         .def_property_readonly("range", &Token::range)
         .def_property_readonly("location", &Token::location)
-        .def_property_readonly("trivia", &Token::trivia)
+        .def_property_readonly("trivia",
+                               [](const Token& t) {
+                                   auto view = t.trivia();
+                                   return std::vector<Trivia>(view.begin(), view.end());
+                               })
         .def_property_readonly("valueText", &Token::valueText)
         .def_property_readonly("rawText", &Token::rawText)
         .def_property_readonly("isOnSameLine", &Token::isOnSameLine)

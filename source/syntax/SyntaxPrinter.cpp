@@ -134,7 +134,7 @@ SyntaxPrinter& SyntaxPrinter::print(const SyntaxNode& node) {
 
 SyntaxPrinter& SyntaxPrinter::printLeadingComments(const SyntaxNode& node) {
     auto triviaSpan = node.getFirstToken().trivia();
-    using Iterator = std::span<const Trivia>::iterator;
+    using Iterator = decltype(triviaSpan)::iterator;
     std::optional<Iterator> lastComment;
     std::optional<Iterator> leadingCommentStart;
 

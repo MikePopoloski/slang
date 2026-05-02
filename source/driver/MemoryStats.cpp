@@ -56,6 +56,13 @@ struct CSTStatsVisitor : public SyntaxVisitor<CSTStatsVisitor> {
     size_t totalTriviaCount = 0;
     size_t totalTriviaBytes = 0;
 
+    // Bucket for every token whose trivia is between 1 and 3 elements long
+    // and* not currently captured by the inline-trivia optimization. The bucket
+    // key is a compact textual signature describing the kinds of the trivia,
+    // so we can spot common patterns that would benefit from new inline encodings.
+    flat_hash_map<std::string, size_t> nonInlineTriviaBuckets;
+    size_t nonInlineEligibleTokens = 0;
+
     template<typename T>
     void handle(const T& node) {
         auto& e = syntaxKinds[node.kind];
@@ -68,19 +75,67 @@ struct CSTStatsVisitor : public SyntaxVisitor<CSTStatsVisitor> {
         for (uint32_t i = 0; i < node.getChildCount(); i++) {
             if (auto tok = node.childToken(i)) {
                 auto trivia = tok.trivia();
-                auto triviaBytes = trivia.size() * sizeof(Trivia);
+                size_t triviaBytes = tok.getTriviaSizeInBytes();
                 e.triviaBytes += triviaBytes;
                 totalTriviaBytes += triviaBytes;
                 totalTriviaCount += trivia.size();
 
-                auto tokenBytes = tok.getSizeInBytes() - triviaBytes;
+                size_t tokenBytes = tok.getSizeInBytes() - triviaBytes;
                 e.tokenBytes += tokenBytes;
                 totalTokenBytes += tokenBytes;
                 totalTokenCount++;
+
+                if (!tok.hasInlinedTrivia() && trivia.size() >= 1 && trivia.size() <= 3) {
+                    nonInlineEligibleTokens++;
+                    nonInlineTriviaBuckets[describeTriviaRun(trivia)]++;
+                }
             }
         }
 
         visitDefault(node);
+    }
+
+    static std::string describeTriviaRun(TriviaView trivia) {
+        std::string result;
+        bool first = true;
+        for (auto& t : trivia) {
+            if (!first)
+                result += " + ";
+            first = false;
+            result += describeTrivia(t);
+        }
+        return result;
+    }
+
+    static std::string describeTrivia(const Trivia& t) {
+        auto raw = t.getRawText();
+        switch (t.kind) {
+            case TriviaKind::Whitespace: {
+                bool allSpaces = !raw.empty();
+                bool allTabs = !raw.empty();
+                for (char c : raw) {
+                    if (c != ' ')
+                        allSpaces = false;
+                    if (c != '\t')
+                        allTabs = false;
+                }
+                if (allSpaces)
+                    return fmt::format("WS(spaces:{})", raw.size());
+                if (allTabs)
+                    return fmt::format("WS(tabs:{})", raw.size());
+                return fmt::format("WS(mixed:{})", raw.size());
+            }
+            case TriviaKind::EndOfLine:
+                if (raw == "\n")
+                    return "EOL(\\n)";
+                if (raw == "\r\n")
+                    return "EOL(\\r\\n)";
+                if (raw == "\r")
+                    return "EOL(\\r)";
+                return fmt::format("EOL(other:{})", raw.size());
+            default:
+                return std::string(toString(t.kind));
+        }
     }
 };
 
@@ -213,6 +268,30 @@ void printMemoryStats(const std::string& fileName, const SourceManager& sourceMa
                         formatBytes(cstVisitor.totalTriviaBytes));
     *out << "\n";
     printTable(*out, cstVisitor.syntaxKinds, "  Syntax node breakdown:", true);
+
+    if (!cstVisitor.nonInlineTriviaBuckets.empty()) {
+        std::vector<std::pair<std::string, size_t>> entries(
+            cstVisitor.nonInlineTriviaBuckets.begin(), cstVisitor.nonInlineTriviaBuckets.end());
+        std::sort(entries.begin(), entries.end(),
+                  [](const auto& a, const auto& b) { return a.second > b.second; });
+
+        *out << "  Non-inlined trivia patterns (1..3 trivia per token):\n";
+        *out << fmt::format("  Total tokens analyzed: {} (showing top {} buckets)\n",
+                            cstVisitor.nonInlineEligibleTokens,
+                            std::min<size_t>(entries.size(), 20));
+        *out << fmt::format("  {:<60}  {:>10}  {:>8}\n", "Pattern", "Count", "Pct");
+        *out << fmt::format("  {:-<60}  {:-<10}  {:-<8}\n", "", "", "");
+        size_t shown = 0;
+        for (auto& [pattern, count] : entries) {
+            if (shown++ >= 20)
+                break;
+            double pct = cstVisitor.nonInlineEligibleTokens
+                             ? (double(count) * 100.0 / double(cstVisitor.nonInlineEligibleTokens))
+                             : 0.0;
+            *out << fmt::format("  {:<60}  {:>10}  {:>7.2f}%\n", pattern, count, pct);
+        }
+        *out << "\n";
+    }
 
     if (compilation) {
         *out << "AST\n";

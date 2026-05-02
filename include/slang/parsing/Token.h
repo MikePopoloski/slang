@@ -7,6 +7,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <array>
+#include <ranges>
+
 #include "slang/numeric/SVInt.h"
 #include "slang/numeric/Time.h"
 #include "slang/parsing/KnownSystemName.h"
@@ -121,6 +124,117 @@ public:
     Trivia clone(BumpAllocator& alloc, bool deep = false) const;
 };
 
+/// A lightweight view over a sequence of Trivia objects associated with a Token.
+///
+/// Most of the time the view simply wraps an externally stored contiguous buffer
+/// of Trivia (i.e. the buffer that lives in a Token's heap-allocated info block).
+/// However, certain very common single-trivia cases (a short whitespace run or a
+/// newline) are encoded directly into free bits of the parent Token, in which
+/// case the view materializes a synthesized Trivia on the fly. That synthesized
+/// Trivia is stored inside the view itself so iteration can return references
+/// into the view's own storage.
+///
+/// This type models `std::ranges::view` so it can be used with the standard
+/// ranges library (e.g. piped through `std::views::filter`). Iterators returned
+/// by `begin()`/`end()` reference the view object itself; do not move or destroy
+/// the view while iterators into it are still in use.
+class SLANG_EXPORT TriviaView : public std::ranges::view_interface<TriviaView> {
+public:
+    using value_type = Trivia;
+    using element_type = const Trivia;
+    using size_type = size_t;
+    using difference_type = std::ptrdiff_t;
+
+    /// Constructs an empty view.
+    TriviaView() noexcept = default;
+
+    /// Constructs a view over an externally stored contiguous range of Trivia.
+    template<std::ranges::contiguous_range R>
+        requires std::same_as<std::remove_cvref_t<std::ranges::range_value_t<R>>, Trivia> &&
+                     (!std::same_as<std::remove_cvref_t<R>, TriviaView>)
+    TriviaView(R&& range) noexcept :
+        externPtr(std::ranges::data(range)), count(std::ranges::size(range)) {}
+
+    /// Constructs a view from a span of Trivia.
+    TriviaView(std::span<const Trivia> span) noexcept :
+        externPtr(span.data()), count(span.size()) {}
+
+    /// Copy/move constructors fix up the inline storage pointer for views that
+    /// hold a synthesized Trivia.
+    TriviaView(const TriviaView& other) noexcept { copyFrom(other); }
+    TriviaView(TriviaView&& other) noexcept { copyFrom(other); }
+    TriviaView& operator=(const TriviaView& other) noexcept {
+        if (this != &other)
+            copyFrom(other);
+        return *this;
+    }
+    TriviaView& operator=(TriviaView&& other) noexcept {
+        if (this != &other)
+            copyFrom(other);
+        return *this;
+    }
+
+    /// Constructs a view containing one or two inline Trivia. The trivia are
+    /// held by value inside the view; iterators reference them directly.
+    static TriviaView makeInline(const Trivia* src, size_t n) noexcept {
+        SLANG_ASSERT(n >= 1 && n <= 2);
+        TriviaView v;
+        for (size_t i = 0; i < n; ++i)
+            v.inlineStorage[i] = src[i];
+        v.externPtr = nullptr;
+        v.count = n;
+        return v;
+    }
+
+    /// Number of Trivia elements in the view.
+    size_t size() const noexcept { return count; }
+
+    /// True if the view is empty.
+    bool empty() const noexcept { return count == 0; }
+
+    /// Pointer to the underlying contiguous buffer. For inline views this points
+    /// at the view's internal storage; for external views it points at the
+    /// originally referenced buffer. Only valid while the view is alive.
+    const Trivia* data() const noexcept { return externPtr ? externPtr : inlineStorage.data(); }
+
+    const Trivia& operator[](size_t i) const noexcept {
+        SLANG_ASSERT(i < count);
+        return data()[i];
+    }
+
+    const Trivia& front() const noexcept { return (*this)[0]; }
+    const Trivia& back() const noexcept { return (*this)[count - 1]; }
+
+    using iterator = const Trivia*;
+    using const_iterator = const Trivia*;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+    iterator begin() const noexcept { return data(); }
+    iterator end() const noexcept { return data() + count; }
+    reverse_iterator rbegin() const noexcept { return reverse_iterator(end()); }
+    reverse_iterator rend() const noexcept { return reverse_iterator(begin()); }
+
+private:
+    void copyFrom(const TriviaView& other) noexcept {
+        if (other.externPtr) {
+            externPtr = other.externPtr;
+        }
+        else {
+            inlineStorage = other.inlineStorage;
+            externPtr = nullptr;
+        }
+        count = other.count;
+    }
+
+    // When externPtr is non-null, the view aliases an external buffer of `count` Trivia.
+    // When externPtr is null and count > 0, `inlineStorage` holds the trivia.
+    // When count == 0, the view is empty (both pointer and storage are unused).
+    const Trivia* externPtr = nullptr;
+    size_t count = 0;
+    std::array<Trivia, 2> inlineStorage;
+};
+
 /// Represents a single lexed token, including leading trivia, original location, token kind,
 /// and any related information derived from the token itself (such as the lexeme).
 ///
@@ -134,30 +248,29 @@ public:
     TokenKind kind;
 
     Token();
-    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-          std::string_view rawText, SourceLocation location);
-    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-          std::string_view rawText, SourceLocation location, std::string_view strText);
-    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-          std::string_view rawText, SourceLocation location, syntax::SyntaxKind directive);
-    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-          std::string_view rawText, SourceLocation location, KnownSystemName systemName);
-    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-          std::string_view rawText, SourceLocation location, logic_t bit);
-    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-          std::string_view rawText, SourceLocation location, const SVInt& value);
-    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-          std::string_view rawText, SourceLocation location, double value, bool outOfRange,
-          std::optional<TimeUnit> timeUnit);
-    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-          std::string_view rawText, SourceLocation location, LiteralBase base, bool isSigned);
+    Token(BumpAllocator& alloc, TokenKind kind, const TriviaView& trivia, std::string_view rawText,
+          SourceLocation location);
+    Token(BumpAllocator& alloc, TokenKind kind, const TriviaView& trivia, std::string_view rawText,
+          SourceLocation location, std::string_view strText);
+    Token(BumpAllocator& alloc, TokenKind kind, const TriviaView& trivia, std::string_view rawText,
+          SourceLocation location, syntax::SyntaxKind directive);
+    Token(BumpAllocator& alloc, TokenKind kind, const TriviaView& trivia, std::string_view rawText,
+          SourceLocation location, KnownSystemName systemName);
+    Token(BumpAllocator& alloc, TokenKind kind, const TriviaView& trivia, std::string_view rawText,
+          SourceLocation location, logic_t bit);
+    Token(BumpAllocator& alloc, TokenKind kind, const TriviaView& trivia, std::string_view rawText,
+          SourceLocation location, const SVInt& value);
+    Token(BumpAllocator& alloc, TokenKind kind, const TriviaView& trivia, std::string_view rawText,
+          SourceLocation location, double value, bool outOfRange, std::optional<TimeUnit> timeUnit);
+    Token(BumpAllocator& alloc, TokenKind kind, const TriviaView& trivia, std::string_view rawText,
+          SourceLocation location, LiteralBase base, bool isSigned);
 
     /// A missing token was expected and inserted by the parser at a given point.
     bool isMissing() const { return missing; }
 
     SourceRange range() const;
     SourceLocation location() const;
-    std::span<Trivia const> trivia() const;
+    TriviaView trivia() const;
 
     /// Value text is the "nice" lexed version of certain tokens;
     /// for example, in string literals, escape sequences are converted appropriately.
@@ -182,22 +295,36 @@ public:
     /// This is detected by examining the leading trivia of this token for newlines.
     bool isOnSameLine() const;
 
-    /// Gets the allocated size of this token, in bytes (not including its trivia).
+    /// Returns true if this token's trivia (if any) is encoded inline within
+    /// the token's own bits, requiring no separate allocation in the info block.
+    bool hasInlinedTrivia() const { return hasInlineTrivia; }
+
+    /// Gets the number of bytes in the info block used to store this token's
+    /// trivia, including any overflow count header. Returns 0 when the trivia
+    /// is empty or encoded inline.
+    size_t getTriviaSizeInBytes() const;
+
+    /// Gets the allocated size of this token, in bytes, including its trivia.
     size_t getSizeInBytes() const;
 
     bool valid() const { return hasInfoPtr || kind != TokenKind::Unknown; }
     explicit operator bool() const { return valid(); }
 
     bool operator==(const Token& other) const {
-        return kind == other.kind &&
-               (hasInfoPtr ? info == other.info : nonInfoLoc == other.nonInfoLoc);
+        if (kind != other.kind)
+            return false;
+        if (hasInlineTrivia != other.hasInlineTrivia)
+            return false;
+        if (hasInlineTrivia && triviaCountSmall != other.triviaCountSmall)
+            return false;
+        return hasInfoPtr ? info == other.info : nonInfoLoc == other.nonInfoLoc;
     }
 
     /// Modification methods to make it easier to deal with immutable tokens.
-    [[nodiscard]] Token withTrivia(BumpAllocator& alloc, std::span<Trivia const> trivia) const;
+    [[nodiscard]] Token withTrivia(BumpAllocator& alloc, const TriviaView& trivia) const;
     [[nodiscard]] Token withLocation(BumpAllocator& alloc, SourceLocation location) const;
     [[nodiscard]] Token withRawText(BumpAllocator& alloc, std::string_view rawText) const;
-    [[nodiscard]] Token clone(BumpAllocator& alloc, std::span<Trivia const> trivia,
+    [[nodiscard]] Token clone(BumpAllocator& alloc, const TriviaView& trivia,
                               std::string_view rawText, SourceLocation location) const;
     [[nodiscard]] Token deepClone(BumpAllocator& alloc) const;
 
@@ -217,7 +344,7 @@ public:
 private:
     struct Info;
 
-    void init(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+    void init(BumpAllocator& alloc, TokenKind kind, const TriviaView& trivia,
               std::string_view rawText, SourceLocation location);
 
     Info& getInfo() const {
@@ -229,8 +356,21 @@ private:
     // would otherwise go unused. The rest is stored in the info block.
     bool missing : 1;
     bool hasInfoPtr : 1;
-    uint8_t triviaCountSmall : 4;
-    uint8_t reserved : 2;
+
+    // When set, the token has 1 or 2 trivia elements encoded directly into
+    // `triviaCountSmall` (interpreted as an inline-trivia code) rather than
+    // stored in the info block.
+    bool hasInlineTrivia : 1;
+
+    // When `hasInlineTrivia` is false: a small count of trivia elements stored
+    // in the info block (0 means no trivia; values 1..MaxTriviaSmallCount give
+    // the count directly; MaxTriviaSmallCount+1 is the overflow indicator that
+    // means the real count is stored in the info block).
+    //
+    // When `hasInlineTrivia` is true: a 5-bit code identifying the inline
+    // trivia (one or two elements). See encodeInlineTrivia/decodeInlineTrivia.
+    uint8_t triviaCountSmall : 5;
+
     NumericTokenFlags numFlags;
 
     // This is the length of the raw text string, stored in the Info block,
@@ -254,7 +394,7 @@ private:
     // this token has. This is enough space for the vast majority of tokens, but for
     // cases with more, triviaCountSmall gets set to all 1's and the real count is
     // included in the info structure.
-    static constexpr int MaxTriviaSmallCount = (1 << 4) - 2;
+    static constexpr int MaxTriviaSmallCount = (1 << 5) - 2;
 
     // Reserved bit pattern in rawLenAndExtra that is always set on a
     // constructed Token. This allows a Token to be distinguished from a
