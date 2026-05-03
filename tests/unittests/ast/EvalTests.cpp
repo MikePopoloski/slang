@@ -2701,3 +2701,23 @@ endfunction
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Eval scalar bit select") {
+    // Bit-select of a scalar type is nonstandard but permitted as a warning.
+    // Verify constant evaluation returns correct values.
+    ScriptSession session;
+    session.eval("logic p = 1'b1;");
+    CHECK(session.eval("p[0]").integer() == 1);
+
+    session.eval("logic q = 1'bx;");
+    CHECK(session.eval("q[0]").integer().hasUnknown());
+
+    session.eval("bit b = 1'b1;");
+    CHECK(session.eval("b[0]").integer() == 1);
+
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::CannotIndexScalar);
+    CHECK(diags[1].code == diag::CannotIndexScalar);
+    CHECK(diags[2].code == diag::CannotIndexScalar);
+}

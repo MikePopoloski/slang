@@ -855,3 +855,30 @@ endmodule
     CHECK(diags[2].code == diag::CoverCrossSelectNotAllowed);
     CHECK(diags[3].code == diag::CoverCrossSelectNotAllowed);
 }
+
+TEST_CASE("Cross identifier in binsof -- strict mode error") {
+    // LRM §19.6 Syntax 19-4: bins_expression only allows variable_identifier or
+    // cover_point_identifier[.bin_identifier]; a cross_identifier is not valid.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic clk, a, b, c;
+    covergroup cg @(posedge clk);
+        cp_a : coverpoint a { bins zero = {0}; bins one = {1}; }
+        cp_b : coverpoint b { bins zero = {0}; bins one = {1}; }
+        cp_c : coverpoint c { bins zero = {0}; bins one = {1}; }
+        cp_a_cross_b : cross cp_a, cp_b;
+        cp_nested : cross cp_a_cross_b, cp_c {
+            bins with_c = binsof(cp_a_cross_b) && binsof(cp_c.one);
+        }
+    endgroup
+    cg cg_inst = new();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CrossIdentInBinsof);
+}
