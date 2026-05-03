@@ -2008,13 +2008,30 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::FormatNoArgument);
-    CHECK(diags[1].code == diag::EmptyArgNotAllowed);
+    CHECK(diags[1].code == diag::InfoTask);
     CHECK(diags[2].code == diag::InfoTask);
     CHECK(diags[3].code == diag::FormatTooManyArgs);
     CHECK(diags[4].code == diag::FormatMismatchedType);
     CHECK(diags[5].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[6].code == diag::UnknownFormatSpecifier);
     CHECK(diags[7].code == diag::FormatTooManyArgs);
+}
+
+TEST_CASE("$sformatf trailing empty arg") {
+    // $sformat[f] silently tolerates a trailing empty argument (some tools produce
+    // them via macro expansion); no diagnostic is emitted.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    string s;
+    int x = 5;
+    initial s = $sformatf("value=%0d", x,);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Array reduction method errors") {

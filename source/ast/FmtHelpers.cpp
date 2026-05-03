@@ -136,10 +136,10 @@ static bool checkFormatString(const ASTContext& context, const StringLiteral& ar
 
             auto arg = *argIt++;
             if (arg->kind == ExpressionKind::EmptyArgument) {
-                // Empty arguments aren't allowed for format args.
+                // Empty arguments aren't allowed for format args; emit a warning so
+                // suppressible-mode users can opt in to tolerating it.
                 context.addDiag(diag::FormatEmptyArg, arg->sourceRange)
                     << spec << getRange(offset, len);
-                ok = false;
                 return;
             }
 
@@ -190,6 +190,11 @@ bool FmtHelpers::checkSFormatArgs(const ASTContext& context, const Args& args) {
         return false;
 
     // Leftover arguments are invalid (all must be consumed by the format string).
+    // Trailing empty arguments (produced by stray commas, which some tools accept)
+    // are silently tolerated here.
+    while (argIt != args.end() && (*argIt)->kind == ExpressionKind::EmptyArgument)
+        ++argIt;
+
     if (argIt != args.end()) {
         context.addDiag(diag::FormatTooManyArgs, (*argIt)->sourceRange);
         return false;
@@ -243,10 +248,9 @@ std::optional<std::string> FmtHelpers::formatArgs(std::string_view formatString,
 
             auto arg = *argIt++;
             if (arg->kind == ExpressionKind::EmptyArgument) {
-                // Empty arguments aren't allowed for format args.
-                context.addDiag(diag::FormatEmptyArg, formatExpr.sourceRange)
-                    << spec << formatExpr.sourceRange;
-                ok = false;
+                // Empty arguments are diagnosed separately at bind time;
+                // substitute a single space so the format string can still be rendered.
+                result.push_back(' ');
                 return;
             }
 
