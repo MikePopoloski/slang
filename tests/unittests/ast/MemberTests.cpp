@@ -2043,22 +2043,22 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 22);
+    REQUIRE(diags.size() == 24);
     CHECK(diags[0].code == diag::MultipleNetAlias);
-    CHECK(diags[1].code == diag::NetAliasSelf);
+    CHECK(diags[1].code == diag::MultipleNetAlias);
     CHECK(diags[2].code == diag::NetAliasSelf);
     CHECK(diags[3].code == diag::MultipleNetAlias);
-    CHECK(diags[4].code == diag::MultipleNetAlias);
+    CHECK(diags[4].code == diag::NetAliasSelf);
     CHECK(diags[5].code == diag::NetAliasSelf);
     CHECK(diags[6].code == diag::NetAliasSelf);
     CHECK(diags[7].code == diag::NetAliasSelf);
-    CHECK(diags[8].code == diag::MultipleNetAlias);
+    CHECK(diags[8].code == diag::NetAliasSelf);
     CHECK(diags[9].code == diag::MultipleNetAlias);
-    CHECK(diags[10].code == diag::NetAliasSelf);
+    CHECK(diags[10].code == diag::MultipleNetAlias);
     CHECK(diags[11].code == diag::MultipleNetAlias);
-    CHECK(diags[12].code == diag::MultipleNetAlias);
+    CHECK(diags[12].code == diag::NetAliasSelf);
     CHECK(diags[13].code == diag::MultipleNetAlias);
-    CHECK(diags[14].code == diag::MultipleNetAlias);
+    CHECK(diags[14].code == diag::NetAliasSelf);
     CHECK(diags[15].code == diag::MultipleNetAlias);
     CHECK(diags[16].code == diag::MultipleNetAlias);
     CHECK(diags[17].code == diag::MultipleNetAlias);
@@ -2066,6 +2066,8 @@ endmodule
     CHECK(diags[19].code == diag::MultipleNetAlias);
     CHECK(diags[20].code == diag::MultipleNetAlias);
     CHECK(diags[21].code == diag::MultipleNetAlias);
+    CHECK(diags[22].code == diag::MultipleNetAlias);
+    CHECK(diags[23].code == diag::MultipleNetAlias);
 }
 
 TEST_CASE("Action block parsing regress GH #911") {

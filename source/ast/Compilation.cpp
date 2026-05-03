@@ -1294,7 +1294,7 @@ void Compilation::noteNetAlias(const Scope& scope, const Symbol& firstSym, Alias
     const Symbol* b = &secondSym;
     const Expression* firstExprPtr = &firstExpr;
     const Expression* secondExprPtr = &secondExpr;
-    if (a > b) {
+    if (b->isDeclaredBefore(*a).value_or(false)) {
         std::swap(a, b);
         std::swap(firstRange, secondRange);
         std::swap(firstExprPtr, secondExprPtr);
