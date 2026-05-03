@@ -506,24 +506,35 @@ size_t SyntaxNode::getChildCount() const {
         if not list_members:
             continue
 
-        cppf.write("        case SyntaxKind::{}: {{\n".format(k))
-        cppf.write("            auto& self = static_cast<{}&>(node);\n".format(v))
-        cppf.write("            size_t flatStart = 0;\n")
-        for m in ti.combinedMembers:
-            mtype, mname = m[0], m[1]
-            if (
+        def is_list(mtype):
+            return (
                 mtype.startswith("SyntaxList<")
                 or mtype.startswith("SeparatedSyntaxList<")
                 or mtype == "TokenList"
-            ):
+            )
+
+        # Find index of last list member; we don't need to advance flatStart past it.
+        last_list_idx = max(
+            i for i, m in enumerate(ti.combinedMembers) if is_list(m[0])
+        )
+
+        cppf.write("        case SyntaxKind::{}: {{\n".format(k))
+        cppf.write("            auto& self = static_cast<{}&>(node);\n".format(v))
+        cppf.write("            size_t flatStart = 0;\n")
+        for i, m in enumerate(ti.combinedMembers[: last_list_idx + 1]):
+            mtype, mname = m[0], m[1]
+            if is_list(mtype):
                 cppf.write(
                     "            out.push_back({{self.{0}, flatStart}});\n".format(
                         mname
                     )
                 )
-                cppf.write(
-                    "            flatStart += self.{0}.getChildCount();\n".format(mname)
-                )
+                if i != last_list_idx:
+                    cppf.write(
+                        "            flatStart += self.{0}.getChildCount();\n".format(
+                            mname
+                        )
+                    )
             else:
                 cppf.write("            ++flatStart;\n")
         cppf.write("            return;\n")
