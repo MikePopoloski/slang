@@ -216,6 +216,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
     std::vector<SourceBuffer> deferredLibBuffers;
     std::span<const DefineDirectiveSyntax* const> inheritedMacros;
     flat_hash_map<const UnitEntry*, std::vector<SourceBuffer>> unitToBufferMap;
+    flat_hash_map<const SourceLibrary*, std::vector<SourceBuffer>> singleUnitLibBuffers;
 
     const size_t fileEntryCount = fileEntries.size();
     syntaxTrees.reserve(fileEntryCount);
@@ -236,6 +237,8 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
                 auto [buffer, isDeferredLib] = std::get<1>(result);
                 if (isDeferredLib)
                     deferredLibBuffers.push_back(buffer);
+                else if (buffer.library)
+                    singleUnitLibBuffers[buffer.library].push_back(buffer);
                 else
                     singleUnitBuffers.push_back(buffer);
                 break;
@@ -256,15 +259,23 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         }
     };
 
-    auto parseSingleUnit = [&](std::span<const SourceBuffer> buffers) {
+    auto parseSingleUnit = [&] {
         // If we waited to parse direct buffers due to wanting a single unit, parse that unit now.
-        if (!buffers.empty()) {
-            auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, optionBag);
+        if (!singleUnitBuffers.empty()) {
+            auto tree = SyntaxTree::fromBuffers(singleUnitBuffers, sourceManager, optionBag);
             if (srcOptions.onlyLint)
                 tree->isLibraryUnit = true;
 
             syntaxTrees.emplace_back(std::move(tree));
             inheritedMacros = syntaxTrees.back()->getDefinedMacros();
+        }
+
+        // Parse each named-library group that was deferred due to single-unit mode
+        // into its own tree, preserving the per-library boundary.
+        for (auto& [lib, buffers] : singleUnitLibBuffers) {
+            auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, optionBag, inheritedMacros);
+            tree->isLibraryUnit = true;
+            syntaxTrees.emplace_back(std::move(tree));
         }
     };
 
@@ -297,7 +308,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         for (auto&& result : loadResults)
             handleLoadResult(std::move(result));
 
-        parseSingleUnit(singleUnitBuffers);
+        parseSingleUnit();
 
         // Parse separate unit groups into their own syntax trees.
         if (!unitToBufferMap.empty()) {
@@ -336,7 +347,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         for (auto& entry : fileEntries)
             handleLoadResult(loadAndParse(entry, optionBag, srcOptions));
 
-        parseSingleUnit(singleUnitBuffers);
+        parseSingleUnit();
 
         // Parse separate unit groups into their own syntax trees.
         if (!unitToBufferMap.empty()) {

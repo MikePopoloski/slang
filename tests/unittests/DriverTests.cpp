@@ -263,3 +263,32 @@ TEST_CASE("Driver customize default lib name") {
     CHECK(units[0]->getSourceLibrary()->name == "blah");
     CHECK(units[1]->getSourceLibrary()->name == "blah");
 }
+
+TEST_CASE("Driver single-unit gives library files their own tree") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo --single-unit "
+                            "\"{0}libsplit_top.sv\" \"{0}libsplit_lib.sv\" "
+                            "--libmap \"{0}libsplit.map\"",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.reportParseDiags());
+
+    REQUIRE(driver.syntaxTrees.size() == 2);
+
+    int defaultUnits = 0, libraryUnits = 0;
+    for (auto& tree : driver.syntaxTrees) {
+        if (tree->isLibraryUnit)
+            ++libraryUnits;
+        else
+            ++defaultUnits;
+    }
+    CHECK(defaultUnits == 1);
+    CHECK(libraryUnits == 1);
+}
