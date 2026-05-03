@@ -1800,3 +1800,46 @@ endproperty
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::RecursiveDefinition);
 }
+
+TEST_CASE("Bit-stream types allowed as assertion local variable declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic clk;
+    sequence s;
+        // Fixed unpacked array of integral - bit-stream type, should be allowed
+        bit [11:0] ptr[2];
+        // Packed struct of integral - also a bit-stream type
+        struct packed { logic [7:0] a; logic [3:0] b; } ps;
+        // Plain integral - always allowed
+        int x;
+        1;
+    endsequence
+
+    property p;
+        bit [7:0] arr[4];
+        1;
+    endproperty
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Unpacked array rejected as assertion sequence expression") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a[];
+    logic b;
+    assert property (a ##1 b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssertionExprType);
+}

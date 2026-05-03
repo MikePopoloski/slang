@@ -2409,7 +2409,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         effectiveTarget = &comp.getType(bitwidth_t(width), IntegralFlags::FourState);
     }
 
-    // When the assignment target type is known (and not void — which happens when LHS is also a
+    // When the assignment target type is known (and not void - which happens when LHS is also a
     // streaming concat), validate widths and wrap in a StreamingConcat conversion so the expression
     // carries the target type directly, avoiding void-type special casing elsewhere.
     if (!isDestination && effectiveTarget && !effectiveTarget->isVoid() &&
