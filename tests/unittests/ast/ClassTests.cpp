@@ -3889,6 +3889,88 @@ endmodule
     CHECK(diags[0].code == diag::BadAssignment);
 }
 
+TEST_CASE("Generic class uninstantiated body -- no diagnostic for same-class assignments") {
+    auto tree = SyntaxTree::fromText(R"(
+class Base; endclass
+class Callback #(type T = Base);
+  T obj;
+endclass
+class Handler #(type T = Base);
+  function void store(Callback #(T) cb);
+    Callback #(Base) b;
+    b = cb;
+  endfunction
+  function bit compare_callback(Callback #(T) cb);
+    Callback #(Base) b;
+    return (b == cb);
+  endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Parameterized class base upcast with unbound generic params") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    class cb_base #(type T = int);
+    endclass
+
+    class ev_cls #(type T = int);
+        typedef cb_base#(T) cb_type;
+
+        function void add_callback(cb_type cb);
+        endfunction
+
+        function void add_direct(cb_base#(T) cb);
+        endfunction
+    endclass
+
+    class veto_cb extends cb_base#(int);
+    endclass
+
+    initial begin
+        ev_cls#(int) ev;
+        veto_cb cb;
+        ev = new;
+        cb = new;
+        ev.add_callback(cb);
+        ev.add_direct(cb);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Generic class concrete specialization with different types is an error") {
+    // Both class handles are concrete specializations with T fully resolved
+    // to different types, so the assignment is incompatible.
+    auto tree = SyntaxTree::fromText(R"(
+class Base; endclass
+class Derived extends Base; endclass
+class Callback #(type T = Base);
+  T obj;
+endclass
+module m;
+  Callback #(Derived) cd;
+  Callback #(Base) cb;
+  initial cb = cd;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadAssignment);
+}
+
 TEST_CASE("Complex base classes with generic param regress -- GH #1666") {
     auto tree = SyntaxTree::fromText(R"(
 package P;

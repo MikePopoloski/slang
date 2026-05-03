@@ -1074,7 +1074,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
             }
             else {
                 auto& tps = sym.as<TypeParameterSymbol>();
-                typeParams.push_back(&tps.targetType.getType());
+                typeParams.push_back(&tps.targetType.getType().getCanonicalType());
             }
         }
     }

@@ -591,6 +591,26 @@ bool Type::isEquivalent(const Type& rhs) const {
     return false;
 }
 
+static bool isSameUnboundGenericClass(const Type& left, const Type& right) {
+    // In an uninstantiated generic class body, type parameters are not yet bound,
+    // so two specializations of the same generic class (e.g. Callback#(T) and
+    // Callback#(Base)) appear as different types but may become identical once the
+    // class is instantiated with a particular T. Treat them as assignment compatible
+    // so we don't emit spurious errors; concrete specializations of incompatible
+    // types will not be uninstantiated and will continue to be reported normally.
+    auto& lt = left.getCanonicalType();
+    auto& rt = right.getCanonicalType();
+    if (lt.isClass() && rt.isClass()) {
+        auto& lc = lt.as<ClassType>();
+        auto& rc = rt.as<ClassType>();
+        if (lc.genericClass && lc.genericClass == rc.genericClass &&
+            (lc.isUninstantiated || rc.isUninstantiated)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool Type::isAssignmentCompatible(const Type& rhs) const {
     // See [6.22.3] for Assignment Compatible
     const Type* l = &getCanonicalType();
@@ -635,6 +655,9 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
         // Classes can also be assigned to interface classes that they implement.
         if (r->implements(*l))
             return true;
+
+        if (r->isClass())
+            return isSameUnboundGenericClass(*l, *r);
     }
 
     if (l->isVirtualInterface()) {
@@ -703,7 +726,7 @@ bool Type::isDerivedFrom(const Type& base) const {
 
     while (d && d->isClass()) {
         d = d->as<ClassType>().getBaseClass();
-        if (d == b)
+        if (d == b || (d && isSameUnboundGenericClass(*d, *b)))
             return true;
     }
 
