@@ -35,6 +35,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Dynamic array `new` expressions can now have a structured assignment pattern initializer expression
 * Immediate assertions are now correctly disallowed in non-procedural contexts
 * Streaming operators are now allowed as branches of conditional (ternary) expressions (thanks to @likeamahoney)
+* In single-unit mode, named library files still result in their own compilation units (each one a single unit), to better match how other tools partition compilation units when libraries are involved
+* Assertion local variables can now be declared with any bitstream type, not just the types allowed in sequences
+* Invalid nested constraint blocks can now be allowed via `-Wnonstandard-constraint-block`
+* String format functions can now allow empty arguments and unused trailing arguments via `-Wformat-empty-arg` and `-Wformat-too-many-args`
+* The error for trying to override a parameter that doesn't exist is now downgradeable via `-Wundefined-param-override`
+* The error for mismatching virtual method argument names is now downgradeable via `-Wvirtual-arg-name-mismatch`
+* The error for indexing a single bit type is now downgradeable via `-Wcannot-index-scalar`
+* The error for using a ref arg in a fork-join block is now downgradeable via `-Wref-arg-in-fork-join`
+* The error for referencing a cover cross in a `binsof` expression is now downgradeable via `-Wcross-ident-in-binsof`
+* The error for using a `string` type in constraint expressions is now downgradeable via `-Wstring-in-constraint`
+* The error for redefining a symbol with the same name in the same scope is now downgradeable via `-Wredefinition` and `-Wredefinition-different-type`
+* The error for assigning to the target of a clocking variable is now downgradeable via `-Wclockvar-target-assign`
 
 ### Notable Breaking Changes
 * pyslang bindings are now separated into submodules matching the C++ API namespaces, which will require adding imports to your existing scripts to make them continue to run
@@ -98,12 +110,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Dotted lookups will now perform typo correction and provide a note when a closely named member is found
 * The SyntaxRewriter API has gained support for rewriting individual tokens (thanks to @ilthraim)
 * Source location and context are now included when reporting errors in command files and compilation unit listings
-* Made several tweaks to decrease parser memory usage
+* Made many changes to optimize memory usage -- syntax trees are now significantly more compact, leading to a 20-30% decrease in memory usage for large designs
 * Renamed ConstantRange::isLittleEndian -> isDescending, cleaned up a few other uses of the term 'endian' when refering to bit range ordering
 * slang now properly reports an error if a source file maps to more than one source library with equal priority
 * Made several improvements to how type names are rendered in diagnostic output
 * Improved how large bit vectors that are all Xs or Zs are rendered in diagnostic output
 * defparam and bind resolution now has a prepass that helps filter out irrelevant portions of the design, to optimize performance and memory usage
+* Ports on interfaces that were only referenced by unused modports will now trigger `-Wunused-port` warnings (thanks to @hankhsu1996)
 
 ### Fixes
 * Fixed an issue where comments immediately preceeding a disabled `` `endif `` directive could erroneously show up in preprocessed output
@@ -149,6 +162,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a spurious error issued for range selects of single-bit packed arrays
 * Fixed AST JSON serialization with `--ast-json-detailed-types` to not recursively serialize the same class definition (thanks to @usfkotb)
 * Fixed a bug in type compatibility checking for classes that implement interfaces indirectly via a base class
+* Fixed a bug in type compatibility checking for unbound / uninstantiated instances of generic classes
 * Fixed a bug in enum member overflow checking when the enum base type is signed
 
 ### Tools & Bindings
