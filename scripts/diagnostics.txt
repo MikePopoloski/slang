@@ -1033,8 +1033,8 @@ error FormatSpecifierNotFloat "floating point format specifier options used on n
 error FormatUnspecifiedType "cannot format values of type {} without a specification string"
 error FormatMismatchedType "value of type {} is invalid for '%{}' format specifier"
 error FormatNoArgument "no argument provided for '%{}' format specifier"
-error FormatEmptyArg "empty argument not allowed -- expecting value for '%{}' format specifier"
-error FormatTooManyArgs "too many arguments provided for format string"
+warning format-empty-arg FormatEmptyArg "empty argument not allowed -- expecting value for '%{}' format specifier"
+warning format-too-many-args FormatTooManyArgs "too many arguments provided for format string"
 error InvalidStringArg "value of type {} is not a valid string argument"
 error ArrayMethodIntegral "array method '{}' can only be called on unpacked arrays of integral values"
 error ArrayMethodComparable "array method '{}' can only be called on unpacked arrays of comparable values"
@@ -1303,7 +1303,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
                   initializer-required package-import-in-class foreach-call-expr nonstandard-hierarchical-cross
                   nonstandard-inside nonstandard-bare-assoc-pattern literal-leading-underscore ref-arg-automatic
-                  string-int-concat range-select-reversed nonstandard-constraint-block }
+                  string-int-concat range-select-reversed nonstandard-constraint-block format-empty-arg
+                  format-too-many-args }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

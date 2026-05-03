@@ -2008,7 +2008,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::FormatNoArgument);
-    CHECK(diags[1].code == diag::EmptyArgNotAllowed);
+    CHECK(diags[1].code == diag::InfoTask);
     CHECK(diags[2].code == diag::InfoTask);
     CHECK(diags[3].code == diag::FormatTooManyArgs);
     CHECK(diags[4].code == diag::FormatMismatchedType);

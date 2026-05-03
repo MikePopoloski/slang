@@ -1958,6 +1958,30 @@ module m;
 endmodule
 ```
 
+-Wformat-empty-arg
+An empty argument (produced by a trailing or stray comma) was passed to a string
+formatting function in a position where the format string expects a value. Some tools
+accept this and substitute a blank, so the diagnostic is a suppressible warning.
+```
+module m;
+    string s;
+    int x = 5;
+    initial s = $sformatf("value=%0d", );
+endmodule
+```
+
+-Wformat-too-many-args
+More arguments were provided to a string formatting function than the format string
+consumed. Some tools accept this and silently ignore the extra arguments, so the
+diagnostic is a suppressible warning.
+```
+module m;
+    string s;
+    int x = 5;
+    initial s = $sformatf("value=%0d", x, x);
+endmodule
+```
+
 @category Macros
 
 -Wignored-macro-paste

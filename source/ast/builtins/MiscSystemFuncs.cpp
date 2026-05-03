@@ -27,6 +27,10 @@ public:
     SFormatFunction(KnownSystemName knownNameId, bool isNonStandard) :
         SystemSubroutine(knownNameId, SubroutineKind::Function), isNonStandard(isNonStandard) {}
 
+    // Some tools accept empty arguments to $sformat[f]; we accept them at bind
+    // time and emit a suppressible warning when the format string is checked.
+    bool allowEmptyArgument(size_t argIndex) const final { return argIndex >= 1; }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
