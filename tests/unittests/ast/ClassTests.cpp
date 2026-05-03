@@ -3889,6 +3889,56 @@ endmodule
     CHECK(diags[0].code == diag::BadAssignment);
 }
 
+TEST_CASE("Generic class uninstantiated body -- no diagnostic for same-class assignments") {
+    // In an uninstantiated generic class body T is a formal type parameter; Callback#(T)
+    // and Callback#(Base) appear as different types but are identical once the class is
+    // instantiated with T=Base. The compilation should be clean.
+    auto tree = SyntaxTree::fromText(R"(
+class Base; endclass
+class Callback #(type T = Base);
+  T obj;
+endclass
+class Handler #(type T = Base);
+  function void store(Callback #(T) cb);
+    Callback #(Base) b;
+    b = cb;
+  endfunction
+  function bit compare_callback(Callback #(T) cb);
+    Callback #(Base) b;
+    return (b == cb);
+  endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Generic class concrete specialization with different types is an error") {
+    // Both class handles are concrete specializations with T fully resolved
+    // to different types, so the assignment is incompatible.
+    auto tree = SyntaxTree::fromText(R"(
+class Base; endclass
+class Derived extends Base; endclass
+class Callback #(type T = Base);
+  T obj;
+endclass
+module m;
+  Callback #(Derived) cd;
+  Callback #(Base) cb;
+  initial cb = cd;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadAssignment);
+}
+
 TEST_CASE("Complex base classes with generic param regress -- GH #1666") {
     auto tree = SyntaxTree::fromText(R"(
 package P;

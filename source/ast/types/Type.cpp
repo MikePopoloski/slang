@@ -635,6 +635,21 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
         // Classes can also be assigned to interface classes that they implement.
         if (r->implements(*l))
             return true;
+
+        // In an uninstantiated generic class body, type parameters are not yet bound,
+        // so two specializations of the same generic class (e.g. Callback#(T) and
+        // Callback#(Base)) appear as different types but may become identical once the
+        // class is instantiated with a particular T. Treat them as assignment compatible
+        // so we don't emit spurious errors; concrete specializations of incompatible
+        // types will not be uninstantiated and will continue to be reported normally.
+        if (r->isClass()) {
+            auto& lc = l->as<ClassType>();
+            auto& rc = r->as<ClassType>();
+            if (lc.genericClass && lc.genericClass == rc.genericClass &&
+                (lc.isUninstantiated || rc.isUninstantiated)) {
+                return true;
+            }
+        }
     }
 
     if (l->isVirtualInterface()) {
