@@ -1898,6 +1898,19 @@ module m;
 endmodule
 ```
 
+-Wnonstandard-constraint-block
+The LRM only permits a braced constraint block (`constraint_set`) as the body of a
+`foreach`, `if`, or `else` constraint expression. Using one directly as a top-level
+`constraint_block_item` is non-standard. This pattern commonly arises when a macro passes
+a constraint block including its outer braces as an argument. Some tools accept it anyway,
+so the error can be downgraded for compatibility.
+```
+class my_vseq;
+    rand int x;
+    constraint c { { x inside {0, 1}; } }
+endclass
+```
+
 -Wliteral-leading-underscore
 Vector literals are not allowed to have leading underscores in their digits but some
 tools allow them anyway, so the error can be downgraded for compatibility.
