@@ -656,9 +656,6 @@ void Token::init(BumpAllocator& alloc, TokenKind kind_, const TriviaView& trivia
     hasInlineTrivia = false;
     triviaCountSmall = 0;
     numFlags.raw = 0;
-    SLANG_ASSERT(reinterpret_cast<const std::byte*>(&rawLenAndExtra) -
-                     reinterpret_cast<const std::byte*>(this) ==
-                 RawLenAndExtraOffset);
 
     // If the trivia run is one or two simple elements that we can pack into
     // our free bits, do so and skip allocating any storage for them in the

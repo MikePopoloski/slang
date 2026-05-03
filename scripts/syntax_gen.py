@@ -607,20 +607,26 @@ size_t SyntaxNode::getChildCount() const {
                 # and decrement; for list members consume `size` slots and skip.
                 # Within a list, individual element slots are reported as
                 # optional (matches the legacy SyntaxListBase behavior).
-                for m in v.combinedMembers:
+                last_idx = len(v.combinedMembers) - 1
+                for i, m in enumerate(v.combinedMembers):
+                    is_last = i == last_idx
                     if is_list_member(m):
                         cppf.write(
                             "    if (index < {0}.getChildCount()) return true;\n".format(
                                 m[1]
                             )
                         )
-                        cppf.write("    index -= {0}.getChildCount();\n".format(m[1]))
+                        if not is_last:
+                            cppf.write(
+                                "    index -= {0}.getChildCount();\n".format(m[1])
+                            )
                     else:
                         if m[1] in v.optionalMembers:
                             cppf.write("    if (index == 0) return true;\n")
                         else:
                             cppf.write("    if (index == 0) return false;\n")
-                        cppf.write("    --index;\n")
+                        if not is_last:
+                            cppf.write("    --index;\n")
                 cppf.write("    return false;\n")
             cppf.write("}\n\n")
 
@@ -663,7 +669,9 @@ size_t SyntaxNode::getChildCount() const {
                     cppf.write("        default: return nullptr;\n")
                     cppf.write("    }\n")
                 else:
-                    for m in v.combinedMembers:
+                    last_idx = len(v.combinedMembers) - 1
+                    for i, m in enumerate(v.combinedMembers):
+                        is_last = i == last_idx
                         if is_list_member(m):
                             method = "getChildPtr" if returnPointer else "getChild"
                             cppf.write(
@@ -671,9 +679,10 @@ size_t SyntaxNode::getChildCount() const {
                                     m[1], method
                                 )
                             )
-                            cppf.write(
-                                "    index -= {0}.getChildCount();\n".format(m[1])
-                            )
+                            if not is_last:
+                                cppf.write(
+                                    "    index -= {0}.getChildCount();\n".format(m[1])
+                                )
                         else:
                             addr = ""
                             if returnPointer:
@@ -687,7 +696,8 @@ size_t SyntaxNode::getChildCount() const {
                                     addr, m[1], get
                                 )
                             )
-                            cppf.write("    --index;\n")
+                            if not is_last:
+                                cppf.write("    --index;\n")
                     cppf.write("    return nullptr;\n")
 
                 cppf.write("}\n\n")
@@ -719,35 +729,43 @@ size_t SyntaxNode::getChildCount() const {
                 cppf.write("        default: SLANG_UNREACHABLE;\n")
                 cppf.write("    }\n")
             else:
-                for m in v.combinedMembers:
+                last_idx = len(v.combinedMembers) - 1
+                for i, m in enumerate(v.combinedMembers):
+                    is_last = i == last_idx
                     if is_list_member(m):
                         cppf.write(
                             "    if (index < {0}.getChildCount()) {{ {0}.setChild(index, child); return; }}\n".format(
                                 m[1]
                             )
                         )
-                        cppf.write("    index -= {0}.getChildCount();\n".format(m[1]))
+                        if not is_last:
+                            cppf.write(
+                                "    index -= {0}.getChildCount();\n".format(m[1])
+                            )
                     elif m[0] == "Token":
                         cppf.write(
                             "    if (index == 0) {{ {} = child.token(); return; }}\n".format(
                                 m[1]
                             )
                         )
-                        cppf.write("    --index;\n")
+                        if not is_last:
+                            cppf.write("    --index;\n")
                     elif m[1] in v.pointerMembers:
                         cppf.write(
                             "    if (index == 0) {{ {} = child.node()->as<{}>(); return; }}\n".format(
                                 m[1], m[2]
                             )
                         )
-                        cppf.write("    --index;\n")
+                        if not is_last:
+                            cppf.write("    --index;\n")
                     else:
                         cppf.write(
                             "    if (index == 0) {{ {} = child.node() ? &child.node()->as<{}>() : nullptr; return; }}\n".format(
                                 m[1], m[2]
                             )
                         )
-                        cppf.write("    --index;\n")
+                        if not is_last:
+                            cppf.write("    --index;\n")
                 cppf.write("    SLANG_UNREACHABLE;\n")
             cppf.write("}\n\n")
 

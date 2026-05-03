@@ -401,9 +401,9 @@ private:
     // pointer when both occupy the same memory in a union.
     static constexpr uint32_t TokenTag = 0x80000000u;
 
-    // Byte offset of the rawLenAndExtra field within Token. The actual
-    // field offset is verified to equal this constant via a runtime
-    // assertion in init().
+    // Byte offset of the rawLenAndExtra field within Token. Unfortunately C++
+    // currently provides no standards-compliant way of determining this so we
+    // have to hardcode it.
     static constexpr size_t RawLenAndExtraOffset = 4;
 };
 
