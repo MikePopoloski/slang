@@ -141,6 +141,7 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::DigitsLeadingUnderscore,
                  diag::RefArgAutomaticFunc,
                  diag::RangeSelectReversed,
+                 diag::NonstandardConstraintBlock,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }
