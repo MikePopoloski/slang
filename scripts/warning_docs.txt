@@ -1970,6 +1970,133 @@ module m;
 endmodule
 ```
 
+-Wclockvar-target-assign
+The LRM explicitly prohibits writing to a variable with a continuous assignment when
+it is associated with an output clockvar. Some tools accept this construct with a warning,
+so the error can be downgraded for compatibility.
+```
+module m(input clk);
+    int j;
+    assign j = 1;
+    clocking cb @(posedge clk);
+        output j;
+    endclocking
+endmodule
+```
+
+-Wcross-ident-in-binsof
+The LRM defines `bins_expression` as either a `variable_identifier` or a
+`cover_point_identifier` with an optional `bin_identifier`; a cross identifier is not a
+valid `bins_expression` argument to `binsof()`. Some tools accept it anyway, so the error
+can be downgraded for compatibility.
+```
+module m;
+    logic clk, a, b;
+    covergroup cg @(posedge clk);
+        cp_a : coverpoint a { bins zero = {0}; bins one = {1}; }
+        cp_b : coverpoint b { bins zero = {0}; bins one = {1}; }
+        cp_cross : cross cp_a, cp_b;
+        cp_nested : cross cp_cross, cp_b {
+            bins c = binsof(cp_cross);
+        }
+    endgroup
+    cg cg_inst = new();
+endmodule
+```
+
+-Wref-arg-in-fork-join
+The LRM prohibits referencing a 'ref' argument inside a fork-join_any or
+fork-join_none block. Some tools allow this anyway, so the error can be
+downgraded for compatibility.
+```
+task automatic run(ref bit flag);
+  fork
+    begin
+      wait(flag == 1);
+    end
+  join_any
+endtask
+```
+
+-Wcannot-index-scalar
+The LRM does not define a bit-select on a scalar (single-bit) type. Some tools
+allow this as an extension, treating the result as the scalar's element type,
+so the error can be downgraded for compatibility.
+```
+module m;
+  bit flag;
+  int i = 0;
+  initial if (flag[i]) $display("set");
+endmodule
+```
+
+-Wundefined-param-override
+The LRM does not define the behavior when a named parameter override refers to a
+parameter that does not exist in the instantiated module. Some vendor tools
+issue only a warning and silently ignore the override, so the error can be
+downgraded for compatibility.
+```
+module bot(input clk);
+  parameter TYPE = 0;
+endmodule
+
+module top;
+  bot #(.TYPE(1), .WIDTH(1)) b(clk);  // WIDTH does not exist in bot
+endmodule
+```
+
+-Wvirtual-arg-name-mismatch
+The LRM requires virtual method overrides to use identical argument names to
+their superclass declaration. Some tools issue only a warning for this mismatch,
+so the error can be downgraded for compatibility.
+```
+class Base;
+  virtual task run(int count);
+  endtask
+endclass
+class Derived extends Base;
+  virtual task run(int n);  // 'n' != 'count'
+  endtask
+endclass
+```
+
+-Wredefinition
+The LRM requires every identifier in a scope to have a unique definition.
+Some tools issue only a warning when a name is declared more than once in the
+same scope, so the error can be downgraded for compatibility.
+```
+module m;
+  int i;
+  int i;  // duplicate declaration
+endmodule
+```
+
+-Wredefinition-different-type
+The LRM requires every identifier in a scope to have a unique definition.
+Some tools issue only a warning when a name is re-declared with a different type
+in the same scope, so the error can be downgraded for compatibility.
+```
+module m;
+  int i;
+  bit [3:0] i;  // redeclared with a different type
+endmodule
+```
+
+-Wstring-in-constraint
+The LRM does not permit string sub-expressions in constraint expressions.
+Some tools accept string equality comparisons inside constraint if-conditions as an extension.
+ The error can be downgraded for compatibility.
+```
+class RegField;
+  rand logic [7:0] value;
+  string name_str;
+  function string get_name(); return name_str; endfunction
+  constraint c_by_name {
+    if (get_name() == "special") value inside {[1:10]};
+  }
+endclass
+```
+
 @category Macros
 
 -Wignored-macro-paste

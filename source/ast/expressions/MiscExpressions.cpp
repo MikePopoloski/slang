@@ -99,9 +99,9 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         else if (flags.has(ASTFlags::ForkJoinAnyNone) && !var.flags.has(VariableFlags::RefStatic) &&
                  symbol.kind == SymbolKind::FormalArgument &&
                  symbol.as<FormalArgumentSymbol>().direction == ArgumentDirection::Ref) {
-            // Can't refer to ref args in fork-join_any/none
+            // Can't refer to ref args in fork-join_any/none per LRM.
+            // Some tools allow this, so the diagnostic can be downgraded.
             context.addDiag(diag::RefArgForkJoin, sourceRange) << symbol.name;
-            return badExpr(comp, nullptr);
         }
     }
     else if (symbol.kind == SymbolKind::ConstraintBlock) {
@@ -148,7 +148,8 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
     if (!symbol.isValue()) {
         if ((symbol.kind == SymbolKind::ClockingBlock && flags.has(ASTFlags::AllowClockingBlock)) ||
             (symbol.kind == SymbolKind::ConstraintBlock && constraintAllowed) ||
-            (symbol.kind == SymbolKind::Coverpoint && flags.has(ASTFlags::AllowCoverpoint))) {
+            ((symbol.kind == SymbolKind::Coverpoint || symbol.kind == SymbolKind::CoverCross) &&
+             flags.has(ASTFlags::AllowCoverpoint))) {
             // Special case for event expressions and constraint block built-in methods.
             return *comp.emplace<ArbitrarySymbolExpression>(*context.scope, symbol,
                                                             comp.getVoidType(), hierRef,

@@ -55,9 +55,11 @@ static const Type& getIndexedType(TTypeProvider& typeProvider, const ASTContext&
         return typeProvider.getErrorType();
     }
     else if (ct.isScalar()) {
+        // Some tools allow bit-select on a scalar; the result is the scalar's element
+        // type. The diagnostic can be downgraded for compatibility.
         auto& diag = context.addDiag(diag::CannotIndexScalar, exprRange);
         diag << valueRange;
-        return typeProvider.getErrorType();
+        return ct.isFourState() ? typeProvider.getLogicType() : typeProvider.getBitType();
     }
     else if (ct.isFourState()) {
         return typeProvider.getLogicType();
@@ -230,8 +232,11 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
         // For fixed types, we know we will always be in range, so just do the selection.
         if (valType.isUnpackedArray())
             return cv.elements()[size_t(range->left)];
-        else
-            return cv.integer().slice(range->left, range->right);
+        else {
+            cv = cv.integer().slice(range->left, range->right);
+            // Make sure sign and four-statedness are correct.
+            return cv.convertToInt(type->getBitWidth(), type->isSigned(), type->isFourState());
+        }
     }
 
     // Handling for associative arrays.

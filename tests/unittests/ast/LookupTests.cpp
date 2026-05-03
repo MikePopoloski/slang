@@ -2845,3 +2845,36 @@ endmodule
     CHECK(diags[0].code == diag::UnknownMember);
     CHECK(diags[0].notes.size() == 0);
 }
+
+TEST_CASE("Redefinition -- first definition wins") {
+    // When a name is redeclared (same or different type), the FIRST definition must win
+    // for all subsequent name lookups.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  int i = 5;
+  int i = 99;
+  bit [3:0] j;
+  bit [3:0] j = 4'b1010;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::Redefinition);
+    CHECK(diags[1].code == diag::Redefinition);
+
+    auto& body = compilation.getRoot().topInstances[0]->body;
+
+    // 'i' resolves to 'int' (first definition), not the second 'int i = 99'
+    auto& iSym = body.find<VariableSymbol>("i");
+    CHECK(iSym.getType().getBitWidth() == 32);
+    CHECK(iSym.getType().isSigned());
+
+    // 'j' resolves to the first 'bit [3:0] j' which has no initializer;
+    // the second definition's initializer must be ignored.
+    auto& jSym = body.find<VariableSymbol>("j");
+    CHECK(jSym.getInitializer() == nullptr);
+}

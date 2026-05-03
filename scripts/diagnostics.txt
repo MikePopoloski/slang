@@ -343,7 +343,6 @@ error ParamHasNoValue "instance of '{}' does not provide a value for parameter '
 error TooManyParamAssignments "too many parameter assignments given for '{}' ({} given, expected {})"
 error AssignedToLocalPortParam "can't assign a value to a localparam"
 error AssignedToLocalBodyParam "can't assign a value to a localparam (parameters in the body of a module are implicitly local when you have a parameter port list)"
-error ParameterDoesNotExist "parameter '{}' does not exist in '{}'"
 error BadTypeParamExpr "invalid initializer for type parameter '{}'"
 error PortTypeNotInterfaceOrData "port type '{}' is neither an interface nor a data type"
 error VarWithInterfacePort "'var' keyword may not be used with an interface port"
@@ -398,7 +397,6 @@ error VirtualKindMismatch "mismatch between 'function' and 'task' declared in su
 error VirtualVisibilityMismatch "virtual method '{}' is '{}' but declared '{}' in superclass method"
 error VirtualReturnMismatch "return type {} of virtual method '{}' does not match {} declared in its superclass"
 error VirtualArgCountMismatch "virtual method '{}' has different number of arguments from its superclass method"
-error VirtualArgNameMismatch "virtual method argument name '{}' doesn't match '{}' given in its superclass method"
 error VirtualArgTypeMismatch "virtual method argument '{}' is of type {} which differs from {} given in its superclass method"
 error VirtualArgNoParentDefault "virtual method argument '{}' provides a default value but its superclass method argument does not"
 error VirtualArgNoDerivedDefault "virtual method argument '{}' does not provide a default value but its superclass method argument does"
@@ -555,6 +553,8 @@ error BiDiSwitchNetTypes "bidirectional switch cannot connect nets of two differ
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"
+warning undefined-param-override ParameterDoesNotExist "parameter '{}' does not exist in '{}'"
+warning virtual-arg-name-mismatch VirtualArgNameMismatch "virtual method argument name '{}' doesn't match '{}' given in its superclass method"
 warning warning-task WarningTask "$warning encountered{}"
 note InfoTask "$info encountered{}"
 note NoteComparisonReduces "comparison reduces to ({} {} {})"
@@ -607,7 +607,6 @@ error BadCastType "invalid casting type {}"
 error BadSetMembershipType "invalid type {} for {} expression"
 error RangeWidthOverflow "select range overflows the bounds of a signed 32-bit integer"
 error RangeSelectAssociative "cannot take a slice of an associative array"
-error CannotIndexScalar "scalar type cannot be indexed"
 error ExprMustBeIntegral "expression type {} is not integral"
 error IndexValueInvalid "cannot refer to element {} of {}"
 error BadAssignment "value of type {} cannot be assigned to type {}"
@@ -739,7 +738,6 @@ error InterconnectReference "cannot reference interconnect net '{}' outside of a
 error GateUDNTConn "gate cannot connect to net '{}' with user-defined net type"
 error UserDefPartialDriver "net '{}' with user-defined nettype cannot be partially driven"
 error LocalVarEventExpr "local variable '{}' cannot be referenced in an event expression"
-error RefArgForkJoin "cannot refer to 'ref' argument '{}' inside fork-join_any or fork-join_none block"
 error PatternTaggedType "expected pattern type {} is not a tagged union"
 error PatternStructType "structure pattern type {} is not a struct"
 error PatternStructTooFew "structure pattern has too few members for target type {}"
@@ -759,6 +757,9 @@ error VirtualIfaceDefparam "interface instance cannot be assigned to a virtual i
 error VirtualIfaceConfigRule "interface instance cannot be assigned to a virtual interface because it is the target of config rule"
 error MultipleDefaultDistWeight "'default' cannot be used more than once in dist item list"
 error DistRealRangeWeight "'dist' for a range of real values must include an explicit weight and must use the ':/' operator"
+warning cannot-index-scalar CannotIndexScalar "scalar type cannot be indexed"
+warning ref-arg-in-fork-join RefArgForkJoin "cannot refer to 'ref' argument '{}' inside fork-join_any or fork-join_none block"
+warning cross-ident-in-binsof CrossIdentInBinsof "binsof target '{}' is a cross coverpoint; only regular coverpoints and coverpoint bins are valid per the LRM"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"
@@ -897,6 +898,7 @@ error ConcurrentAssertNotInProc "concurrent assertion statements may only appear
 error ImmediateAssertNotInProc "immediate assertion statements may only appear in procedural contexts"
 error CheckerNotInProc "procedural checkers may only appear in always and initial blocks"
 error CheckerInForkJoin "checkers cannot be instantiated inside fork-join blocks"
+warning string-in-constraint StringConstraintExpr "'string' type is not valid in a constraint expression"
 warning case-default CaseDefault "'{}' missing 'default' label"
 warning case-redundant-default CaseRedundantDefault "'{}' marked '{}' has 'default' label"
 warning case-wildcard-2state CaseWildcard2State "'{}' has two-state type so no wildcard matching will be performed"
@@ -951,8 +953,8 @@ error TypeRefVoid "cannot create a type reference to the 'void' type"
 warning enum-range EnumRangeLiteral "enum element ranges must be integer literals"
 
 subsystem Lookup
-error Redefinition "redefinition of '{}'"
-error RedefinitionDifferentType "redefinition of '{}' with a different type: {} vs {}"
+warning redefinition Redefinition "redefinition of '{}'"
+warning redefinition-different-type RedefinitionDifferentType "redefinition of '{}' with a different type: {} vs {}"
 error AmbiguousWildcardImport "multiple imports found for identifier '{}'"
 note NoteImportedFrom "imported from here"
 note NoteDidYouMean "did you mean '{}'?"
@@ -1184,7 +1186,6 @@ error NTResolveArgModify "resolution function for nettype '{}' cannot modify its
 error MultipleUWireDrivers "'uwire' net '{}' cannot have multiple drivers"
 error MultipleUDNTDrivers "net '{}' with user-defined nettype '{}' cannot have multiple drivers because it does not specify a resolution function"
 error InputPortAssign "cannot assign to input port '{}'"
-error ClockVarTargetAssign "cannot write to '{}' with a continuous assignment since it's associated with an output clocking signal"
 error AlwaysWithoutTimingControl "'always' procedure does not advance time and so will create a simulation deadlock"
 error AssertionLocalUnassigned "cannot reference local variable '{}' because it is unassigned at this point in the sequence"
 error AssertionFormalUnassigned "output formal argument '{}' is not definitely assigned at the end of the sequence"
@@ -1196,6 +1197,7 @@ error MismatchedUserDefPortConn "user-defined nettype '{}' on one side of this c
 error MismatchedUserDefPortDir "user-defined nettype '{}' on one side of this connection means that the port must have 'input' or 'output' direction"
 error UserDefPortTwoSided "user-defined nettype '{}' of the port does not match '{}' of the connection"
 error UserDefPortMixedConcat "cannot mix and match nets with user-defined nettypes in port concatenation (see '{}' and '{}')"
+warning clockvar-target-assign ClockVarTargetAssign "cannot write to '{}' with a continuous assignment since it's associated with an output clocking signal"
 note NoteRequiredHere "required here"
 note NoteClockHere "clock here"
 note NotePortConnHere "from port connection here"
@@ -1303,7 +1305,11 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
                   initializer-required package-import-in-class foreach-call-expr nonstandard-hierarchical-cross
                   nonstandard-inside nonstandard-bare-assoc-pattern literal-leading-underscore ref-arg-automatic
-                  string-int-concat range-select-reversed nonstandard-constraint-block format-empty-arg }
+                  string-int-concat range-select-reversed clockvar-target-assign
+                  cross-ident-in-binsof nonstandard-constraint-block
+                  ref-arg-in-fork-join cannot-index-scalar string-in-constraint
+                  virtual-arg-name-mismatch undefined-param-override redefinition
+                  redefinition-different-type format-empty-arg }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

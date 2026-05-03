@@ -141,7 +141,16 @@ void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
                  diag::DigitsLeadingUnderscore,
                  diag::RefArgAutomaticFunc,
                  diag::RangeSelectReversed,
+                 diag::ClockVarTargetAssign,
+                 diag::CrossIdentInBinsof,
                  diag::NonstandardConstraintBlock,
+                 diag::RefArgForkJoin,
+                 diag::CannotIndexScalar,
+                 diag::StringConstraintExpr,
+                 diag::VirtualArgNameMismatch,
+                 diag::ParameterDoesNotExist,
+                 diag::Redefinition,
+                 diag::RedefinitionDifferentType,
              }) {
             diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
         }

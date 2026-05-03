@@ -317,12 +317,27 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:6:26: error: scalar type cannot be indexed
+source:6:14: warning: initializer for static variable 'j' refers to 'b' which will not have a value at initialization time [-Wstatic-init-value]
+    int j = (b).c `PASS([1]);
+             ^
+source:5:23: note: declared here
+    struct { bit c; } b;
+                      ^
+source:6:14: warning: implicit conversion changes signedness from 'bit[31:0]' to 'int' [-Wsign-conversion]
+    int j = (b).c `PASS([1]);
+          ~  ^~~~~~~~~~~~~~~
+source:6:14: warning: implicit conversion expands from 1 to 32 bits [-Wwidth-expand]
+    int j = (b).c `PASS([1]);
+          ~  ^~~~~~~~~~~~~~~
+source:6:26: warning: scalar type cannot be indexed [-Wcannot-index-scalar]
     int j = (b).c `PASS([1]);
              ~~~~        ^
 source:2:20: note: expanded from macro 'PASS'
 `define PASS(asdf) asdf
                    ^~~~
+source:6:26: warning: cannot refer to element 1 of 'bit' [-Windex-oob]
+    int j = (b).c `PASS([1]);
+                         ^
 )");
 }
 
