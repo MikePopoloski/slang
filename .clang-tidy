@@ -18,6 +18,7 @@ Checks: >
     -modernize-use-ranges,
     -modernize-use-integer-sign-comparison,
     -modernize-concat-nested-namespaces,
+    -modernize-avoid-c-style-cast,
     -bugprone-suspicious-semicolon,
     -bugprone-branch-clone,
     -bugprone-sizeof-expression,
@@ -30,6 +31,9 @@ Checks: >
     -bugprone-suspicious-stringview-data-usage,
     -bugprone-return-const-ref-from-parameter,
     -bugprone-exception-escape,
+    -bugprone-std-namespace-modification,
+    -bugprone-throwing-static-initialization,
+    -bugprone-macro-parentheses,
     -clang-analyzer-cplusplus.NewDelete*,
     -clang-analyzer-cplusplus.InnerPointer,
     -clang-analyzer-core.NullDereference,
@@ -52,4 +56,5 @@ Checks: >
     -performance-enum-size,
     -portability-simd-intrinsics,
     -portability-template-virtual-member-function,
+    -portability-avoid-pragma-once,
     -performance-unnecessary-value-param
