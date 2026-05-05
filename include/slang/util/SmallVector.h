@@ -503,7 +503,7 @@ private:
     }
 
     template<typename... Args>
-    pointer emplaceRealloc(const pointer pos, Args&&... args);
+    pointer emplaceRealloc(pointer pos, Args&&... args);
 
     template<typename TVal>
     void resizeRealloc(size_type newSize, const TVal& val);
@@ -823,7 +823,7 @@ SmallVectorBase<T>& SmallVectorBase<T>::operator=(SmallVectorBase<T>&& rhs) {
 
 template<typename T>
 template<typename... Args>
-typename SmallVectorBase<T>::pointer SmallVectorBase<T>::emplaceRealloc(const pointer pos,
+typename SmallVectorBase<T>::pointer SmallVectorBase<T>::emplaceRealloc(pointer pos,
                                                                         Args&&... args) {
     if (len == max_size())
         detail::throwLengthError();

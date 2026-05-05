@@ -163,7 +163,7 @@ template<typename T>
     requires(!std::is_lvalue_reference_v<T>)
 constexpr arrow_proxy<std::remove_cvref_t<T>> arrow_helper(T&& t) noexcept(
     std::is_nothrow_move_constructible_v<std::remove_cvref_t<T>>) {
-    return {std::move(t)};
+    return {std::forward<T>(t)};
 }
 
 } // namespace detail
