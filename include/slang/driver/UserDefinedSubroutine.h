@@ -36,7 +36,7 @@ public:
     static nonstd::expected<std::shared_ptr<UserDefinedSubroutine>, std::string> create(
         std::string_view spec, SourceManager& sourceManager);
 
-    ~UserDefinedSubroutine();
+    ~UserDefinedSubroutine() override;
 
     const ast::Expression& bindArgument(size_t argIndex, const ast::ASTContext& context,
                                         const syntax::ExpressionSyntax& syntax,

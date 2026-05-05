@@ -75,7 +75,6 @@ public:
     static void checkSampledValueFuncs(AnalysisContext& context, const ast::Symbol& parentSymbol,
                                        const ast::TimingControl& timing);
 
-private:
     ClockInference() = delete;
 };
 

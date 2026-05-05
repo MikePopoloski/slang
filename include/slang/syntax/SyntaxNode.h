@@ -432,7 +432,7 @@ private:
 template<typename Derived, typename Element>
 class SyntaxListBase {
 public:
-    SyntaxListBase() {}
+    SyntaxListBase() = default;
     SyntaxListBase(nullptr_t) {}
 
     /// @return true if the list is empty, false otherwise.

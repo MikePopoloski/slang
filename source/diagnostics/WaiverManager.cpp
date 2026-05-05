@@ -28,7 +28,7 @@ namespace slang {
 struct WaiverLinePattern {
     boost::regex regex;
 
-    explicit WaiverLinePattern(boost::regex r) : regex(std::move(r)) {}
+    explicit WaiverLinePattern(const boost::regex& r) : regex(r) {}
 };
 
 // Rewrites '.' to '/' so glob wildcards behave correctly on hierarchical
@@ -209,7 +209,7 @@ std::string WaiverManager::loadFromFile(const fs::path& path,
             boost::regex compiled(regexStr, boost::regex::no_except);
             if (compiled.status() != 0)
                 return tomlErr(*entry, fmt::format("invalid regex '{}'", regexStr));
-            rule.linePattern = std::make_unique<WaiverLinePattern>(std::move(compiled));
+            rule.linePattern = std::make_unique<WaiverLinePattern>(compiled);
         }
 
         rules.emplace_back(std::move(rule));

@@ -91,7 +91,7 @@ protected:
     /// known token kinds. The point of wrapping it in a function is that if the starting
     /// token is missing, we don't even bother trying to parse the rest of the group.
     template<typename TParserFunc,
-             typename TResult = decltype(std::declval<typename std::decay<TParserFunc>::type&>()())>
+             typename TResult = decltype(std::declval<std::decay_t<TParserFunc>&>()())>
     std::tuple<Token, Token, TResult> parseGroupOrSkip(TokenKind startKind, TokenKind endKind,
                                                        TParserFunc&& parseItem) {
         Token start = expect(startKind);

@@ -27,9 +27,7 @@ public:
     PointerIntPair() = default;
     PointerIntPair(TPointer ptr, TInt intVal) { setBoth(ptr, intVal); }
 
-    TPointer getPointer() const {
-        return static_cast<TPointer>(reinterpret_cast<void*>(value & PointerMask));
-    }
+    TPointer getPointer() const { return reinterpret_cast<TPointer>(value & PointerMask); }
 
     TInt getInt() const { return TInt((value >> IntShift) & IntMask); }
 

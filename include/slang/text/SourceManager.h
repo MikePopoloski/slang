@@ -322,7 +322,7 @@ private:
         BufferKind bufferKind = BufferKind::DesignFile;
         std::vector<LineDirectiveInfo> lineDirectives;
 
-        FileInfo() {}
+        FileInfo() = default;
 
         FileInfo(FileData* data, const SourceLibrary* library, SourceLocation includedFrom,
                  uint64_t sortKey) :
@@ -348,7 +348,7 @@ private:
 
         std::string_view macroName;
 
-        ExpansionInfo() {}
+        ExpansionInfo() = default;
         ExpansionInfo(SourceLocation originalLoc, SourceRange expansionRange, bool isMacroArg) :
             originalLoc(originalLoc), expansionRange(expansionRange), isMacroArg(isMacroArg) {}
 

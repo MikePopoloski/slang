@@ -818,7 +818,7 @@ void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includ
         logic_t x = tmp != 0;
         while (x || x.isUnknown()) {
             if (bitsLeft < int(shiftAmount))
-                maskAmount = (1 << bitsLeft) - 1;
+                maskAmount = (1 << bitsLeft) - 1; // NOLINT(clang-analyzer-core.BitwiseShift)
 
             uint32_t digit = uint32_t(tmp.getRawData()[0]) & maskAmount;
             if (!tmp.unknownFlag)

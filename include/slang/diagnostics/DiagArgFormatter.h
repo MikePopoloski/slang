@@ -18,7 +18,7 @@ class Diagnostic;
 
 class SLANG_EXPORT DiagArgFormatter {
 public:
-    virtual ~DiagArgFormatter() {}
+    virtual ~DiagArgFormatter() = default;
 
     virtual void startMessage(const Diagnostic&) {}
     virtual std::string format(const std::any& arg) = 0;

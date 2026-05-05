@@ -80,8 +80,8 @@ namespace bitmask_detail {
 
 template<class T>
 struct underlying_type {
-    static_assert(std::is_enum<T>::value, "T is not a enum type");
-    using type = typename std::make_unsigned<typename std::underlying_type<T>::type>::type;
+    static_assert(std::is_enum_v<T>, "T is not a enum type");
+    using type = std::make_unsigned_t<std::underlying_type_t<T>>;
 };
 
 template<class T>
@@ -97,7 +97,7 @@ struct mask_from_max_element {
     // If you really have to define a bitmask that uses the highest bit of signed type (i.e. the
     // sign bit) then define the value mask rather than the max element.
     static_assert(max_element_value_ <=
-                      (std::numeric_limits<typename std::underlying_type<T>::type>::max() >> 1) + 1,
+                      (std::numeric_limits<std::underlying_type_t<T>>::max() >> 1) + 1,
                   "Max element is greater than the underlying type's highest bit");
 
     // `((value - 1) << 1) + 1` is used rather that simpler `(value << 1) - 1`

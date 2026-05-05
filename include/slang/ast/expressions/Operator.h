@@ -113,7 +113,6 @@ public:
     static ConstantValue eval(BinaryOperator op, const ConstantValue& cvl,
                               const ConstantValue& cvr);
 
-private:
     OpInfo() = delete;
 };
 
