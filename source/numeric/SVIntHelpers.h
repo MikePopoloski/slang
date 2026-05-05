@@ -40,6 +40,15 @@ static uint8_t subborrow64(uint8_t c, uint64_t a, uint64_t b, calc_out_t* out) {
 }
 #endif
 
+#if defined(_MSC_VER) && defined(_M_ARM64)
+#    include <intrin.h>
+
+uint64_t _umul128(uint64_t multiplier, uint64_t multiplicand, uint64_t* product_hi) {
+    *product_hi = __umulh(multiplier, multiplicand);
+    return multiplier * multiplicand;
+}
+#endif
+
 #if defined(_MSC_VER) && defined(_M_IX86)
 #    include <intrin.h>
 
