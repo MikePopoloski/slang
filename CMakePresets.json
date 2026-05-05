@@ -158,8 +158,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "g++-16",
-        "BUILD_SHARED_LIBS": "ON",
-        "SLANG_USE_CPPTRACE": "ON"
+        "BUILD_SHARED_LIBS": "ON"
       }
     },
     {
