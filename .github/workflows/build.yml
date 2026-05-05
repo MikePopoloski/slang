@@ -43,10 +43,10 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo add-apt-repository "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main"
+        sudo add-apt-repository "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main"
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt-get update
-        sudo apt-get install -y g++-14 g++-11 clang-21 clang-tidy-21
+        sudo apt-get install -y g++-16 g++-11 clang-22 clang-tidy-22
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
