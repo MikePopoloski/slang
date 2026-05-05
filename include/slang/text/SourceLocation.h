@@ -149,7 +149,7 @@ private:
 /// Combines a pair of source locations that denote a range of source text.
 class SLANG_EXPORT SourceRange {
 public:
-    SourceRange() {}
+    SourceRange() = default;
     SourceRange(SourceLocation startLoc, SourceLocation endLoc) :
         startLoc(startLoc), endLoc(endLoc) {}
 

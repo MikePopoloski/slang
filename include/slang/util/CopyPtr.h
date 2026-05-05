@@ -21,7 +21,7 @@ class CopyPtr {
 public:
     using pointer = T*;
 
-    CopyPtr() {}
+    CopyPtr() = default;
     CopyPtr(std::nullptr_t) {}
     ~CopyPtr() { delete ptr; }
 
