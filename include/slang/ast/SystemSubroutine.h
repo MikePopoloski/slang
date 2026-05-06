@@ -103,7 +103,7 @@ public:
 
 protected:
     /// Constructs a new system subroutine instance.
-    SystemSubroutine(const std::string& name, SubroutineKind kind) : name(name), kind(kind) {}
+    SystemSubroutine(std::string name, SubroutineKind kind) : name(std::move(name)), kind(kind) {}
 
     /// Constructs a new system subroutine instance.
     SystemSubroutine(KnownSystemName knownNameId, SubroutineKind kind) :

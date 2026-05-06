@@ -50,7 +50,7 @@ public:
     std::pair<uint64_t, uint64_t> lspBounds;
 
     /// Constructs an empty path.
-    ValuePath() {}
+    ValuePath() = default;
 
     /// Constructs a new value path from a path expression.
     ValuePath(const Expression& expr, EvalContext& evalContext);
