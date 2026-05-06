@@ -176,7 +176,7 @@ public:
         if (len == cap)
             return *emplaceRealloc(end(), std::forward<Args>(args)...);
 
-        new (end()) T(std::forward<Args>(args)...);
+        new (static_cast<void*>(end())) T(std::forward<Args>(args)...);
         len++;
         return back();
     }
@@ -465,7 +465,7 @@ protected:
     explicit SmallVectorBase(size_type capacity) noexcept : cap(capacity) {}
     ~SmallVectorBase() {
         if (!isSmall())
-            ::operator delete(data_);
+            ::operator delete(static_cast<void*>(data_));
     }
 
     SmallVectorBase& operator=(const SmallVectorBase& rhs);
@@ -499,7 +499,7 @@ private:
     void cleanup() {
         std::ranges::destroy(*this);
         if (!isSmall())
-            ::operator delete(data_);
+            ::operator delete(static_cast<void*>(data_));
     }
 
     template<typename... Args>
@@ -836,7 +836,7 @@ typename SmallVectorBase<T>::pointer SmallVectorBase<T>::emplaceRealloc(pointer 
     // so that we don't corrupt the new element if it relied on
     // existing elements we're about to move around.
     auto newPos = newData + offset;
-    new (newPos) T(std::forward<Args>(args)...);
+    new (static_cast<void*>(newPos)) T(std::forward<Args>(args)...);
 
     // Now move elements to the new memory.
     if (pos == end()) {
