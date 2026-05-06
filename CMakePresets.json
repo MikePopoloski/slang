@@ -69,6 +69,15 @@
       }
     },
     {
+      "name": "win64-arm-release",
+      "displayName": "Win64 ARM64 Release",
+      "inherits": "windows-release",
+      "architecture": {
+        "value": "arm64",
+        "strategy": "external"
+      }
+    },
+    {
       "name": "win64-debug-noexcept",
       "displayName": "Win64 Debug No Exceptions",
       "inherits": [
