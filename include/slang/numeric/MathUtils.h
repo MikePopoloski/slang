@@ -58,9 +58,13 @@ inline std::optional<uint32_t> checkedMulU32(uint32_t a, uint32_t b) {
 /// Performs a multiplication of two unsigned 64-bit integers and returns the
 /// result if it does not overflow. If it does, nullopt is returned instead.
 inline std::optional<uint64_t> checkedMulU64(uint64_t a, uint64_t b) {
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && defined(_M_X64)
     uint64_t high;
     auto result = _umul128(a, b, &high);
+    return high ? std::nullopt : std::make_optional(result);
+#elif defined(_MSC_VER) && defined(_M_ARM64)
+    uint64_t high = __umulh(a, b);
+    uint64_t result = a * b;
     return high ? std::nullopt : std::make_optional(result);
 #else
     uint64_t result;
