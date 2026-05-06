@@ -54,8 +54,7 @@ int main(int argc, char** argv) {
     }
 
     if (showVersion == true) {
-        printf("slang version %d.%d.%d+%s\n", VersionInfo::getMajor(), VersionInfo::getMinor(),
-               VersionInfo::getPatch(), std::string(VersionInfo::getHash()).c_str());
+        printf("slang version %s\n", VersionInfo::getVersionString().c_str());
         return 0;
     }
 

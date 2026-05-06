@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <string>
 #include <string_view>
 
 #include "slang/slang_export.h"
@@ -25,8 +26,16 @@ public:
     /// Gets the patch version number of the library.
     static int getPatch();
 
+    /// Gets the pre-release version segment of the library, or an empty
+    /// string if this is not a pre-release build.
+    static std::string_view getPrerelease();
+
     /// Gets a string describing the git hash of the library.
     static std::string_view getHash();
+
+    /// Gets the full version string of the library, formatted as
+    /// `major.minor.patch[-prerelease]+hash`.
+    static std::string getVersionString();
 };
 
 } // namespace slang

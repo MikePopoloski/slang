@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/util/VersionInfo.h"
 
+#include <fmt/format.h>
+
 using std::string_view;
 using namespace std::literals;
 
@@ -24,8 +26,18 @@ int VersionInfo::getPatch() {
     return @SLANG_VERSION_PATCH@;
 }
 
+string_view VersionInfo::getPrerelease() {
+    return "@SLANG_VERSION_PRERELEASE@"sv;
+}
+
 string_view VersionInfo::getHash() {
     return "@SLANG_VERSION_HASH@"sv;
+}
+
+std::string VersionInfo::getVersionString() {
+    auto prerelease = getPrerelease();
+    return fmt::format("{}.{}.{}{}{}+{}", getMajor(), getMinor(), getPatch(),
+                       prerelease.empty() ? "" : "-", prerelease, getHash());
 }
 
 }

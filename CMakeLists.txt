@@ -30,9 +30,19 @@ get_git_version(SLANG_VERSION_PATCH SLANG_VERSION_HASH)
 
 set(SLANG_VERSION_MAJOR 10)
 set(SLANG_VERSION_MINOR 0)
+set(SLANG_VERSION_PRERELEASE
+    ""
+    CACHE STRING "Optional pre-release version segment (e.g. 'rc1')")
 set(SLANG_VERSION_STRING
     "${SLANG_VERSION_MAJOR}.${SLANG_VERSION_MINOR}.${SLANG_VERSION_PATCH}")
-message(STATUS "slang version: ${SLANG_VERSION_STRING}+${SLANG_VERSION_HASH}")
+if(SLANG_VERSION_PRERELEASE)
+  set(SLANG_VERSION_FULL_STRING
+      "${SLANG_VERSION_STRING}-${SLANG_VERSION_PRERELEASE}+${SLANG_VERSION_HASH}"
+  )
+else()
+  set(SLANG_VERSION_FULL_STRING "${SLANG_VERSION_STRING}+${SLANG_VERSION_HASH}")
+endif()
+message(STATUS "slang version: ${SLANG_VERSION_FULL_STRING}")
 
 # Set the default build type if none is set explicitly, but only for
 # single-config generators.

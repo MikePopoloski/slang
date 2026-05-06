@@ -367,5 +367,7 @@ void registerUtil(py::module_& m) {
         .def_static("getMajor", &VersionInfo::getMajor)
         .def_static("getMinor", &VersionInfo::getMinor)
         .def_static("getPatch", &VersionInfo::getPatch)
-        .def_static("getHash", &VersionInfo::getHash);
+        .def_static("getPrerelease", &VersionInfo::getPrerelease)
+        .def_static("getHash", &VersionInfo::getHash)
+        .def_static("getVersionString", &VersionInfo::getVersionString);
 }

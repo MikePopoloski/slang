@@ -261,9 +261,7 @@ int driverMain(int argc, TArgs argv) {
         }
 
         if (showVersion == true) {
-            OS::print(fmt::format("slang version {}.{}.{}+{}\n", VersionInfo::getMajor(),
-                                  VersionInfo::getMinor(), VersionInfo::getPatch(),
-                                  VersionInfo::getHash()));
+            OS::print(fmt::format("slang version {}\n", VersionInfo::getVersionString()));
             return 0;
         }
 
