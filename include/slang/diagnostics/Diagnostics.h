@@ -208,8 +208,8 @@ public:
 
 class SLANG_EXPORT DiagGroup {
 public:
-    explicit DiagGroup(const std::string& name, const std::vector<DiagCode>& diags) :
-        name(name), diags(diags) {}
+    explicit DiagGroup(std::string name, const std::vector<DiagCode>& diags) :
+        name(std::move(name)), diags(diags) {}
 
     std::string_view getName() const { return name; }
     std::span<const DiagCode> getDiags() const { return diags; }

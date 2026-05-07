@@ -248,7 +248,7 @@ inline void hash_combine(size_t& seed, const T& v, Rest... rest) {
 
 namespace detail::hashing {
 
-template<typename Tuple, size_t Index = std::tuple_size<Tuple>::value - 1>
+template<typename Tuple, size_t Index = std::tuple_size_v<Tuple> - 1>
 struct HashValueImpl {
     static void apply(size_t& seed, const Tuple& tuple) {
         HashValueImpl<Tuple, Index - 1>::apply(seed, tuple);

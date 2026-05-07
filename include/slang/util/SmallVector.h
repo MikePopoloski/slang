@@ -176,7 +176,7 @@ public:
         if (len == cap)
             return *emplaceRealloc(end(), std::forward<Args>(args)...);
 
-        new (end()) T(std::forward<Args>(args)...);
+        new (static_cast<void*>(end())) T(std::forward<Args>(args)...);
         len++;
         return back();
     }
@@ -465,7 +465,7 @@ protected:
     explicit SmallVectorBase(size_type capacity) noexcept : cap(capacity) {}
     ~SmallVectorBase() {
         if (!isSmall())
-            ::operator delete(data_);
+            ::operator delete(static_cast<void*>(data_));
     }
 
     SmallVectorBase& operator=(const SmallVectorBase& rhs);
@@ -499,11 +499,11 @@ private:
     void cleanup() {
         std::ranges::destroy(*this);
         if (!isSmall())
-            ::operator delete(data_);
+            ::operator delete(static_cast<void*>(data_));
     }
 
     template<typename... Args>
-    pointer emplaceRealloc(const pointer pos, Args&&... args);
+    pointer emplaceRealloc(pointer pos, Args&&... args);
 
     template<typename TVal>
     void resizeRealloc(size_type newSize, const TVal& val);
@@ -823,7 +823,7 @@ SmallVectorBase<T>& SmallVectorBase<T>::operator=(SmallVectorBase<T>&& rhs) {
 
 template<typename T>
 template<typename... Args>
-typename SmallVectorBase<T>::pointer SmallVectorBase<T>::emplaceRealloc(const pointer pos,
+typename SmallVectorBase<T>::pointer SmallVectorBase<T>::emplaceRealloc(pointer pos,
                                                                         Args&&... args) {
     if (len == max_size())
         detail::throwLengthError();
@@ -836,7 +836,7 @@ typename SmallVectorBase<T>::pointer SmallVectorBase<T>::emplaceRealloc(const po
     // so that we don't corrupt the new element if it relied on
     // existing elements we're about to move around.
     auto newPos = newData + offset;
-    new (newPos) T(std::forward<Args>(args)...);
+    new (static_cast<void*>(newPos)) T(std::forward<Args>(args)...);
 
     // Now move elements to the new memory.
     if (pos == end()) {

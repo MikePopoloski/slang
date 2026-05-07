@@ -275,11 +275,11 @@ struct NodeImpl {
 // actual inserted intervals, sorted in order by their start values
 // (and then their end values if equal start values). The values array is
 // whatever value those entries map to, as given by the insert() call.
-template<typename TKey, typename TValue, uint32_t Capacity, bool _IsRoot>
+template<typename TKey, typename TValue, uint32_t Capacity, bool IsRootV>
 struct LeafNode : public NodeBase<interval<TKey>, TValue, Capacity>,
-                  public NodeImpl<TKey, LeafNode<TKey, TValue, Capacity, _IsRoot>> {
+                  public NodeImpl<TKey, LeafNode<TKey, TValue, Capacity, IsRootV>> {
     static constexpr bool IsLeaf = true;
-    static constexpr bool IsRoot = _IsRoot;
+    static constexpr bool IsRoot = IsRootV;
 
     const interval<TKey>& keyAt(uint32_t i) const { return this->first[i]; }
     interval<TKey>& keyAt(uint32_t i) { return this->first[i]; }
@@ -291,11 +291,11 @@ struct LeafNode : public NodeBase<interval<TKey>, TValue, Capacity>,
 };
 
 // Branch nodes store references to subtree nodes, all of the same height.
-template<typename TKey, uint32_t Capacity, bool _IsRoot>
+template<typename TKey, uint32_t Capacity, bool IsRootV>
 struct BranchNode : public NodeBase<NodeRef, interval<TKey>, Capacity>,
-                    public NodeImpl<TKey, BranchNode<TKey, Capacity, _IsRoot>> {
+                    public NodeImpl<TKey, BranchNode<TKey, Capacity, IsRootV>> {
     static constexpr bool IsLeaf = false;
-    static constexpr bool IsRoot = _IsRoot;
+    static constexpr bool IsRoot = IsRootV;
 
     const interval<TKey>& keyAt(uint32_t i) const { return this->second[i]; }
     interval<TKey>& keyAt(uint32_t i) { return this->second[i]; }
@@ -985,8 +985,8 @@ protected:
 
 namespace IntervalMapDetails {
 
-template<typename TKey, typename TValue, uint32_t Capacity, bool _IsRoot>
-uint32_t LeafNode<TKey, TValue, Capacity, _IsRoot>::insertFrom(uint32_t i, uint32_t size,
+template<typename TKey, typename TValue, uint32_t Capacity, bool IsRootV>
+uint32_t LeafNode<TKey, TValue, Capacity, IsRootV>::insertFrom(uint32_t i, uint32_t size,
                                                                const interval<TKey>& key,
                                                                const TValue& value) {
     SLANG_ASSERT(i <= size && size <= Capacity);

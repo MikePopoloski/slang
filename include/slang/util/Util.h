@@ -153,7 +153,7 @@ public:
 template<typename T>
 class not_null {
 public:
-    static_assert(std::is_assignable<T&, std::nullptr_t>::value, "T cannot be assigned nullptr.");
+    static_assert(std::is_assignable_v<T&, std::nullptr_t>, "T cannot be assigned nullptr.");
 
     template<std::convertible_to<T> U>
     constexpr not_null(U&& u) : ptr(std::forward<U>(u)) {
