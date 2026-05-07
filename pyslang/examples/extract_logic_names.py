@@ -16,13 +16,15 @@ all logic declarations found in the code.
 
 from typing import Union
 
+from pyslang import DiagnosticEngine, TextDiagnosticClient
 from pyslang.ast import Compilation, PackedArrayType, ScalarType, VariableSymbol
 from pyslang.parsing import Token
 from pyslang.syntax import SyntaxNode, SyntaxTree
 
 
 class LogicDeclarationExtractor:
-    """Visitor class to extract names of all logic declarations.
+    """
+    Visitor class to extract names of all logic declarations.
 
     This visitor traverses the AST and collects the names of all variables
     that are declared with the 'logic' type. It demonstrates how to:
@@ -36,7 +38,8 @@ class LogicDeclarationExtractor:
         self.logic_names = []
 
     def _is_logic_type(self, var_type) -> bool:
-        """Check if a type represents a logic type, including nested arrays.
+        """
+        Check if a type represents a logic type, including nested arrays.
 
         Args:
             var_type: The type to check (ScalarType or PackedArrayType)
@@ -57,7 +60,8 @@ class LogicDeclarationExtractor:
         return False
 
     def __call__(self, obj: Union[Token, SyntaxNode]) -> None:
-        """Visit method called for each node in the AST.
+        """
+        Visit method called for each node in the AST.
 
         Args:
             obj: The current AST node being visited. Can be a Token or SyntaxNode.
@@ -74,49 +78,51 @@ class LogicDeclarationExtractor:
 
 
 def extract_logic_declaration_names(systemverilog_code: str) -> list[str]:
-    """Extract logic declaration names from SystemVerilog code.
+    """
+    Extract logic declaration names from SystemVerilog code.
 
     Args:
         systemverilog_code: A string containing SystemVerilog source code.
 
     Returns:
         A list of strings containing the names of all logic declarations.
-
-    Raises:
-        Exception: If there are parsing errors or compilation issues.
     """
-    try:
-        # Parse the SystemVerilog code into a syntax tree
-        tree = SyntaxTree.fromText(systemverilog_code)
+    # Parse the SystemVerilog code into a syntax tree
+    tree = SyntaxTree.fromText(systemverilog_code)
 
-        # Create a compilation unit and add the syntax tree
-        compilation = Compilation()
-        compilation.addSyntaxTree(tree)
+    # Create a compilation unit and add the syntax tree
+    compilation = Compilation()
+    compilation.addSyntaxTree(tree)
 
-        # Check for any diagnostics (errors/warnings) during compilation
-        diagnostics = compilation.getAllDiagnostics()
-        if diagnostics:
-            error_messages = []
-            for diag in diagnostics:
-                if diag.isError():
-                    error_messages.append(str(diag))
-            if error_messages:
-                raise Exception(f"Compilation errors: {'; '.join(error_messages)}")
+    # Handle diagnostics.
+    diagnostics = compilation.getAllDiagnostics()
 
-        # Create our visitor to extract logic declaration names
-        extractor = LogicDeclarationExtractor()
+    diagClient = TextDiagnosticClient()
+    diagEngine = DiagnosticEngine(compilation.sourceManager)
+    diagEngine.addClient(diagClient)
 
-        # Visit all nodes in the compilation root
-        compilation.getRoot().visit(extractor)
+    has_error = False
+    for diag in diagnostics:
+        diagEngine.issue(diag)
+        has_error = diag.isError() or has_error
 
-        return extractor.logic_names
+    print(diagClient.getString())
 
-    except Exception as e:
-        raise Exception(f"Failed to extract logic declarations: {e}")
+    if has_error:
+        raise Exception("Compilation had errors")
+
+    # Create our visitor to extract logic declaration names
+    extractor = LogicDeclarationExtractor()
+
+    # Visit all nodes in the compilation root
+    compilation.getRoot().visit(extractor)
+
+    return extractor.logic_names
 
 
 def extract_logic_declarations_from_file(filepath: str) -> list[str]:
-    """Extract logic declaration names from a SystemVerilog file.
+    """
+    Extract logic declaration names from a SystemVerilog file.
 
     Args:
         filepath: Path to a SystemVerilog file.
@@ -124,14 +130,9 @@ def extract_logic_declarations_from_file(filepath: str) -> list[str]:
     Returns:
         A list of strings containing the names of all logic declarations.
     """
-    try:
-        with open(filepath, "r", encoding="utf-8") as file:
-            content = file.read()
-        return extract_logic_declaration_names(content)
-    except FileNotFoundError:
-        raise Exception(f"File not found: {filepath}")
-    except Exception as e:
-        raise Exception(f"Failed to process file {filepath}: {e}")
+    with open(filepath, "r", encoding="utf-8") as file:
+        content = file.read()
+    return extract_logic_declaration_names(content)
 
 
 def main():
