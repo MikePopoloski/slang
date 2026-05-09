@@ -126,7 +126,7 @@ function(get_git_head_revision _refspecvar _hashvar)
       PARENT_SCOPE)
 endfunction()
 
-function(get_git_version _patch _hash)
+function(get_git_version _patch _prerelease _hash)
   if(NOT GIT_FOUND)
     find_package(Git QUIET)
   endif()
@@ -134,6 +134,9 @@ function(get_git_version _patch _hash)
 
   set(${_patch}
       0
+      PARENT_SCOPE)
+  set(${_prerelease}
+      ""
       PARENT_SCOPE)
   set(${_hash}
       0
@@ -149,13 +152,24 @@ function(get_git_version _patch _hash)
     OUTPUT_VARIABLE _version_string
     ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+  set(local_prerelease "")
   if(${_version_string} MATCHES ".+-([0-9]+-g[0-9a-z]+).*")
-    string(REGEX REPLACE "^v?[0-9]+\\.[0-9]+-([0-9]+).*" "\\1" local_patch
-                         "${_version_string}")
-    string(REGEX REPLACE "^v?[0-9]+\\.[0-9]+-[0-9]+-g([0-9a-z]+).*" "\\1"
+    # The tag may include a prerelease suffix (e.g. v11.0rc1), so capture any
+    # non-dash characters between the major.minor version and the commit count
+    # produced by `git describe` as the prerelease segment.
+    string(REGEX REPLACE "^v?[0-9]+\\.[0-9]+([^-]*)-[0-9]+-g[0-9a-z]+.*" "\\1"
+                         local_prerelease "${_version_string}")
+    string(REGEX REPLACE "^v?[0-9]+\\.[0-9]+[^-]*-([0-9]+)-g[0-9a-z]+.*" "\\1"
+                         local_patch "${_version_string}")
+    string(REGEX REPLACE "^v?[0-9]+\\.[0-9]+[^-]*-[0-9]+-g([0-9a-z]+).*" "\\1"
                          local_hash "${_version_string}")
   else()
     set(local_patch 0)
+    # No additional commits since the tag; extract a prerelease suffix directly
+    # from the tag itself if present (e.g. v11.0rc1 or v11.0rc1-dirty).
+    if(${_version_string} MATCHES "^v?[0-9]+\\.[0-9]+([^-]+)")
+      set(local_prerelease "${CMAKE_MATCH_1}")
+    endif()
     execute_process(
       COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -165,6 +179,9 @@ function(get_git_version _patch _hash)
 
   set(${_patch}
       ${local_patch}
+      PARENT_SCOPE)
+  set(${_prerelease}
+      ${local_prerelease}
       PARENT_SCOPE)
   set(${_hash}
       ${local_hash}

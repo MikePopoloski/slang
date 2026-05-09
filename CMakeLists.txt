@@ -26,12 +26,12 @@ endif()
 # Determine our patch version by looking at git tags.
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 include(gitversion)
-get_git_version(SLANG_VERSION_PATCH SLANG_VERSION_HASH)
+get_git_version(SLANG_VERSION_PATCH SLANG_GIT_PRERELEASE SLANG_VERSION_HASH)
 
 set(SLANG_VERSION_MAJOR 10)
 set(SLANG_VERSION_MINOR 0)
 set(SLANG_VERSION_PRERELEASE
-    ""
+    "${SLANG_GIT_PRERELEASE}"
     CACHE STRING "Optional pre-release version segment (e.g. 'rc1')")
 set(SLANG_VERSION_STRING
     "${SLANG_VERSION_MAJOR}.${SLANG_VERSION_MINOR}.${SLANG_VERSION_PATCH}")
