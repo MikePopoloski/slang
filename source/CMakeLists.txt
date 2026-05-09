@@ -156,8 +156,7 @@ if(SLANG_USE_THREADS)
 endif()
 
 if(SLANG_USE_MIMALLOC)
-  target_link_libraries(slang_slang PUBLIC ${mimalloc_target})
-  target_compile_definitions(slang_slang PUBLIC SLANG_USE_MIMALLOC)
+  target_link_libraries(slang_slang PRIVATE ${mimalloc_target})
 endif()
 
 if(SLANG_USE_CPPTRACE)

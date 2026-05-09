@@ -9,10 +9,6 @@
 
 #include <fmt/core.h>
 
-#if defined(SLANG_USE_MIMALLOC)
-#    include <mimalloc-new-delete.h>
-#endif
-
 namespace slang::assert {
 
 [[noreturn]] void assertFailed(const char* expr, const std::source_location& location) {
