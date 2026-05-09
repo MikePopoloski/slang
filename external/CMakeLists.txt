@@ -93,6 +93,9 @@ if(SLANG_USE_MIMALLOC)
   set(MI_SKIP_COLLECT_ON_EXIT
       ON
       CACHE INTERNAL "")
+  set(MI_USE_CXX
+      ON
+      CACHE INTERNAL "")
 
   FetchContent_Declare(
     mimalloc
