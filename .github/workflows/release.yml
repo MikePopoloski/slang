@@ -14,6 +14,7 @@ jobs:
           fetch-depth: 0
       - name: Build
         run: |
+          git config --system --add safe.directory '*'
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_FLAGS="-static-libgcc -static-libstdc++" \
