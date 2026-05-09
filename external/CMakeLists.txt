@@ -81,9 +81,20 @@ if(SLANG_USE_MIMALLOC)
     set(find_pkg_args "FIND_PACKAGE_ARGS")
   endif()
 
-  set(MI_OVERRIDE
-      OFF
-      CACHE INTERNAL "")
+  # On macOS, mimalloc uses malloc-zone interposition (registered from a static
+  # constructor) to catch every malloc/free in the process, including those
+  # issued from system libraries (libc++, CoreFoundation, etc.). Without this,
+  # mixing the partial C++ new/delete override (mimalloc-new-delete.h) with
+  # system malloc/free can cause crashes.
+  if(APPLE)
+    set(MI_OVERRIDE
+        ON
+        CACHE INTERNAL "")
+  else()
+    set(MI_OVERRIDE
+        OFF
+        CACHE INTERNAL "")
+  endif()
   set(MI_BUILD_SHARED
       OFF
       CACHE INTERNAL "")
