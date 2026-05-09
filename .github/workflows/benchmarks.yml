@@ -21,7 +21,7 @@ jobs:
         key: benchmark-ubuntu
     - name: Configure and Build
       run: |
-        CXXFLAGS="-O3 -march=native" cmake -B build -DSLANG_INCLUDE_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=TRUE
+        CXXFLAGS="-O3 -march=x86-64-v3" cmake -B build -DSLANG_INCLUDE_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=TRUE
         cmake --build build -j8
     - name: Run and submit benchmarks
       run: |

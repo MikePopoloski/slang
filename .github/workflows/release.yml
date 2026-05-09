@@ -64,7 +64,6 @@ jobs:
       - name: Build
         run: |
           cmake -B build `
-            -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded `
             -DSLANG_INCLUDE_TESTS=OFF
