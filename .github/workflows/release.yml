@@ -1,0 +1,98 @@
+name: Release Binaries
+
+on:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: Linux (x86_64, manylinux_2_28)
+    runs-on: ubuntu-latest
+    container: quay.io/pypa/manylinux_2_28_x86_64
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Build
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_FLAGS="-static-libgcc -static-libstdc++" \
+            -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=TRUE \
+            -DSLANG_INCLUDE_TESTS=OFF
+          cmake --build build -j8
+      - name: Package
+        run: |
+          mkdir -p dist
+          tar -czvf dist/slang-linux-x86_64.tar.gz -C build/bin slang
+      - uses: actions/upload-artifact@v7
+        with:
+          name: artifact-linux
+          path: dist/slang-linux-x86_64.tar.gz
+
+  macos:
+    name: macOS (arm64)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Build
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+            -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=TRUE \
+            -DSLANG_INCLUDE_TESTS=OFF
+          cmake --build build -j8
+      - name: Package
+        run: |
+          mkdir -p dist
+          tar -czvf dist/slang-macos-arm64.tar.gz -C build/bin slang
+      - uses: actions/upload-artifact@v7
+        with:
+          name: artifact-macos
+          path: dist/slang-macos-arm64.tar.gz
+
+  windows:
+    name: Windows (x86_64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Build
+        run: |
+          cmake -B build `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded `
+            -DSLANG_INCLUDE_TESTS=OFF
+          cmake --build build -j8
+      - name: Package
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          Compress-Archive -Path build/bin/slang.exe -DestinationPath dist/slang-windows-x86_64.zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: artifact-windows
+          path: dist/slang-windows-x86_64.zip
+
+  upload:
+    name: Draft release
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: artifact-*
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v3
+        with:
+          draft: true
+          files: |
+            dist/slang-linux-x86_64.tar.gz
+            dist/slang-macos-arm64.tar.gz
+            dist/slang-windows-x86_64.zip
