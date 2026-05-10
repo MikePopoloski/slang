@@ -544,8 +544,10 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
     // For unreferenced definitions, go through and instantiate them with all empty
     // parameter values so that we get at least some semantic checking of the contents.
-    for (auto def : unreferencedDefs)
-        root->addMember(InstanceSymbol::createInvalid(*this, *def));
+    if (!hasFlag(CompilationFlags::IgnoreUninstantiatedModules)) {
+        for (auto def : unreferencedDefs)
+            root->addMember(InstanceSymbol::createInvalid(*this, *def));
+    }
 
     root->topInstances = topList.copy(*this);
     root->compilationUnits = compilationUnits;
