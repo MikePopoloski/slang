@@ -2750,3 +2750,21 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Ignore uninstantiated modules") {
+    auto tree = SyntaxTree::fromText(R"(
+module unused;
+  initial undeclared = 1; // normally an error
+endmodule
+
+module top;
+endmodule
+)");
+    CompilationOptions options;
+    options.flags |= CompilationFlags::IgnoreUninstantiatedModules;
+    options.topModules.insert("top");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
