@@ -143,7 +143,10 @@ diagnostic = "{}"
 
     auto captured = OS::capturedStdout;
     CHECK(captured.find("unused waiver") != std::string::npos);
-    CHECK(captured.find(waiverPath.string()) != std::string::npos);
+    // Match the filename only — Driver's CommandLineFlags::FilePath runs
+    // fs::weakly_canonical on the value, which on Windows can resolve 8.3
+    // short names so the stored path text won't match waiverPath.string().
+    CHECK(captured.find(waiverPath.filename().string()) != std::string::npos);
 
     std::filesystem::remove(waiverPath);
 }
