@@ -141,9 +141,9 @@ diagnostic = "{}"
     CHECK(driver.parseAllSources());
     CHECK(driver.runFullCompilation());
 
-    auto stdout = OS::capturedStdout;
-    CHECK(stdout.find("unused waiver") != std::string::npos);
-    CHECK(stdout.find(waiverPath.string()) != std::string::npos);
+    auto captured = OS::capturedStdout;
+    CHECK(captured.find("unused waiver") != std::string::npos);
+    CHECK(captured.find(waiverPath.string()) != std::string::npos);
 
     std::filesystem::remove(waiverPath);
 }
