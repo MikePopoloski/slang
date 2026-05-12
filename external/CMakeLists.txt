@@ -8,6 +8,7 @@ set(fmt_min_version "12.1")
 set(mimalloc_min_version "3.3")
 set(cpptrace_min_version "1.0")
 set(catch2_min_version "3.14")
+set(tomlplusplus_min_version "3.4")
 
 # --- fmt lib ---
 set(find_pkg_args "")
@@ -199,6 +200,38 @@ if(SLANG_INCLUDE_TESTS)
   endif()
 endif()
 
+# --- tomlplusplus ---
+# Always FetchContent rather than opportunistically picking up a system pkg:
+# distro tomlplusplus is typically built as a shared lib with TOML_HEADER_ONLY=0
+# and TOML_SHARED_LIB=1 baked into its imported target, which clashes with the
+# per-TU TOML_EXCEPTIONS=0 override that WaiverManager.cpp relies on. Fetching
+# the upstream subdir gives a header-only INTERFACE target everywhere.
+FetchContent_Declare(
+  tomlplusplus
+  GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
+  GIT_TAG v3.4.0
+  GIT_SHALLOW ON)
+FetchContent_MakeAvailable(tomlplusplus)
+
+if(NOT TARGET tomlplusplus::tomlplusplus)
+  message(
+    FATAL_ERROR
+      "Could not find tomlplusplus package, min version: ${tomlplusplus_min_version}"
+  )
+endif()
+
+if(tomlplusplus_FOUND)
+  get_target_property(TOMLPP_INC tomlplusplus::tomlplusplus
+                      INTERFACE_INCLUDE_DIRECTORIES)
+  message(STATUS "Found system tomlplusplus library: ${TOMLPP_INC}")
+else()
+  message(STATUS "Using remote tomlplusplus library")
+  if(IS_DIRECTORY "${tomlplusplus_SOURCE_DIR}")
+    set_property(DIRECTORY ${tomlplusplus_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL
+                                                               YES)
+  endif()
+endif()
+
 # --- install rules ---
 if(SLANG_INCLUDE_INSTALL)
   install(
@@ -246,6 +279,17 @@ if(SLANG_INCLUDE_INSTALL)
   if(SLANG_USE_THREADS)
     install(
       FILES ${PROJECT_SOURCE_DIR}/external/BS_thread_pool.hpp
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      COMPONENT slang_Development)
+  endif()
+
+  if(NOT tomlplusplus_FOUND)
+    install(
+      TARGETS tomlplusplus_tomlplusplus
+      EXPORT slangTargets
+      COMPONENT slang_Development)
+    install(
+      DIRECTORY ${tomlplusplus_SOURCE_DIR}/include/toml++
       DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
       COMPONENT slang_Development)
   endif()

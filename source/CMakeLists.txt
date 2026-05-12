@@ -79,6 +79,7 @@ add_library(
   diagnostics/Diagnostics.cpp
   diagnostics/JsonDiagnosticClient.cpp
   diagnostics/TextDiagnosticClient.cpp
+  diagnostics/WaiverManager.cpp
   driver/CompatSettings.cpp
   driver/Driver.cpp
   driver/MemoryStats.cpp
@@ -136,6 +137,15 @@ set_target_properties(
 target_compile_options(slang_slang PRIVATE ${SLANG_WARN_FLAGS})
 target_compile_definitions(slang_slang PUBLIC $<$<CONFIG:Debug>:SLANG_DEBUG>)
 
+# GCC's libstdc++ <regex> trips -Walloc-zero in _Executor::_M_lookahead (new
+# bool[__n]() with __n possibly zero). The diagnostic fires in a system header
+# during template instantiation, so source-level pragmas do not suppress it;
+# disable the warning for the only TU that uses std::regex_search.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set_source_files_properties(diagnostics/WaiverManager.cpp APPEND
+                              PROPERTIES COMPILE_OPTIONS "-Wno-alloc-zero")
+endif()
+
 # Include directories
 target_include_directories(
   slang_slang
@@ -148,6 +158,7 @@ target_include_directories(
 
 # Link libraries
 target_link_libraries(slang_slang PUBLIC fmt::fmt Boost::headers)
+target_link_libraries(slang_slang PRIVATE tomlplusplus::tomlplusplus)
 
 if(SLANG_USE_THREADS)
   find_package(Threads REQUIRED)
