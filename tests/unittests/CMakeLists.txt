@@ -48,6 +48,7 @@ add_executable(
   util/NumericTests.cpp
   util/SmallVectorTests.cpp
   util/UtilTests.cpp
+  diagnostics/WaiverTests.cpp
   DriverTests.cpp
   FileTests.cpp
   main.cpp

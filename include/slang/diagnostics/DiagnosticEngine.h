@@ -27,6 +27,7 @@ class Symbol;
 class DiagArgFormatter;
 class DiagnosticClient;
 class SourceManager;
+class WaiverManager;
 
 struct SLANG_EXPORT ReportedDiagnostic {
     const Diagnostic& originalDiagnostic;
@@ -171,6 +172,13 @@ public:
     /// This applies to all natural warnings, regardless of whether they've been upgraded
     /// to an error.
     std::error_code addIgnoreMacroPaths(std::string_view pattern);
+
+    /// Sets the waiver manager to use for suppressing diagnostics based on external
+    /// waiver file rules. The waiver manager should be loaded from a TOML file before
+    /// being set here.
+    void setWaiverManager(std::shared_ptr<WaiverManager> manager);
+    /// Gets the waiver manager, if configured.
+    [[nodiscard]] std::shared_ptr<WaiverManager> getWaiverManager() const { return waiverManager; }
 
     /// Sets a custom formatter function for the given type. This is used to
     /// provide formatting for diagnostic arguments of a custom type.
@@ -342,6 +350,9 @@ private:
     // A list of path patterns in which to suppress warnings.
     std::vector<std::filesystem::path> ignoreWarnPatterns;
     std::vector<std::filesystem::path> ignoreMacroWarnPatterns;
+
+    // Optional waiver manager for external waiver file support.
+    std::shared_ptr<WaiverManager> waiverManager;
 
     // A list of all registered clients that receive issued diagnostics.
     std::vector<std::shared_ptr<DiagnosticClient>> clients;

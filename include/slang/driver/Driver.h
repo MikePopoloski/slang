@@ -312,8 +312,14 @@ public:
         /// The maximum number of errors to print before giving up.
         std::optional<uint32_t> errorLimit;
 
+        /// If true, print unused waiver details after compilation.
+        std::optional<bool> printUnusedWaivers;
+
         /// A list of warning options that will be passed to the DiagnosticEngine.
         std::vector<std::string> warningOptions;
+
+        /// Optional paths to TOML files containing diagnostic waiver rules.
+        std::vector<std::string> waiverFiles;
 
         /// @}
         /// @name File lists

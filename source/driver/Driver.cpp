@@ -17,6 +17,7 @@
 #include "slang/diagnostics/DriverDiags.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
+#include "slang/diagnostics/WaiverManager.h"
 #include "slang/driver/SourceLoader.h"
 #include "slang/driver/UserDefinedSubroutine.h"
 #include "slang/parsing/Parser.h"
@@ -286,6 +287,9 @@ void Driver::addStandardArgs() {
 
     // Diagnostics control
     cmdLine.add("-W", options.warningOptions, "Control the specified warning", "<warning>");
+    cmdLine.add("--waiver-file", options.waiverFiles,
+                "Path to TOML file containing diagnostic waiver rules (repeatable)", "<file>",
+                CommandLineFlags::FilePath);
     cmdLine.add(
         "--color-diagnostics",
         [this](bool value) {
@@ -313,6 +317,8 @@ void Driver::addStandardArgs() {
     cmdLine.addEnum<ShowHierarchyPathOption, ShowHierarchyPathOption_traits>(
         "--diag-hierarchy", options.diagHierarchy, "Show hierarchy locations in diagnostic output",
         "always|never|auto");
+    cmdLine.add("--print-unused-waivers", options.printUnusedWaivers,
+                "Print detailed information about unused diagnostic waivers");
     cmdLine.add("--diag-json", options.diagJson,
                 "Dump all diagnostics in JSON format to the specified file, or '-' for stdout",
                 "<file>", CommandLineFlags::FilePath);
@@ -692,6 +698,21 @@ bool Driver::processOptions() {
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
     diagEngine.issue(optionDiags);
+
+    // Multiple --waiver-file flags are additive (no override). Must run after
+    // setWarningOptions so loadFromFile can resolve user-defined warning groups.
+    // Bail on first failure so partial rule state never reaches the engine.
+    if (!options.waiverFiles.empty()) {
+        auto waiverManager = std::make_shared<WaiverManager>();
+        std::string errors;
+        for (const auto& waiverPath : options.waiverFiles) {
+            if (!waiverManager->loadFromFile(waiverPath, diagEngine, errors)) {
+                OS::printE(fmt::format("Error loading waiver file '{}': {}\n", waiverPath, errors));
+                return false;
+            }
+        }
+        diagEngine.setWaiverManager(waiverManager);
+    }
 
     return true;
 }
@@ -1314,6 +1335,13 @@ bool Driver::reportDiagnostics(bool quiet) {
                               diagEngine.getNumErrors() == 1 ? "" : "s",
                               diagEngine.getNumWarnings(),
                               diagEngine.getNumWarnings() == 1 ? "" : "s"));
+    }
+
+    if (auto waiverManager = diagEngine.getWaiverManager()) {
+        bool showUnused = options.printUnusedWaivers.value_or(false);
+        auto summary = waiverManager->getSummary(showUnused);
+        if (!summary.empty())
+            OS::print(fmt::format("{}\n", summary));
     }
 
     return succeeded;
