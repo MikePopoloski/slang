@@ -247,14 +247,14 @@ public:
                      bitmask<LookupFlags> flags, LookupResult& result);
 
     /// Performs an unqualified lookup in this scope, then recursively up the parent
-    /// chain until we reach root or the symbol is found. No errors are reported if
-    /// no symbol can be found.
+    /// chain until we reach root or the symbol is found.
+    /// Does not report an error if the symbol is not found.
     static const Symbol* unqualified(const Scope& scope, std::string_view name,
                                      bitmask<LookupFlags> flags = LookupFlags::None);
 
     /// Performs an unqualified lookup in this scope, then recursively up the parent
-    /// chain until we reach root or the symbol is found. Reports an error if
-    /// the symbol is not found.
+    /// chain until we reach root or the symbol is found.
+    /// Reports an error if the symbol is not found.
     static const Symbol* unqualifiedAt(const Scope& scope, std::string_view name,
                                        LookupLocation location, SourceRange sourceRange,
                                        bitmask<LookupFlags> flags = LookupFlags::None);

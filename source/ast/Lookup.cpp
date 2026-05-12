@@ -1211,6 +1211,11 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
     }
 
     unwrapResult(scope, result);
+    if (!name.selectors.empty() && result.found &&
+        (result.found->kind == SymbolKind::InstanceArray ||
+         result.found->kind == SymbolKind::GenerateBlockArray)) {
+        result.path.emplace_back(*result.found);
+    }
     applySelectors(name, context, result);
     if (flags.has(LookupFlags::NoSelectors))
         result.errorIfSelectors(context);

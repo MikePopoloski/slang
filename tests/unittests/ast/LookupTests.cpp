@@ -2447,6 +2447,94 @@ endmodule
     CHECK(arr2.elements[1]->getHierarchicalPath() == "m.n1[2][5]");
 }
 
+TEST_CASE("Instance array select lookup path includes selected array once") {
+    auto tree = SyntaxTree::fromText(R"(
+module n;
+endmodule
+
+module m;
+    n n1[2] ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m").body;
+    ASTContext context(m, LookupLocation::max);
+
+    LookupResult result;
+    Lookup::name(compilation.parseName("n1[1]"), context, LookupFlags::None, result);
+
+    REQUIRE(result.found);
+    CHECK(result.found->kind == SymbolKind::Instance);
+    CHECK(!result.flags.has(LookupResultFlags::IsHierarchical));
+
+    REQUIRE(result.path.size() == 2);
+    CHECK(result.path[0].symbol->kind == SymbolKind::InstanceArray);
+    CHECK(result.path[0].symbol->name == "n1");
+    CHECK(result.path[1].symbol->kind == SymbolKind::Instance);
+
+    result.clear();
+    ASTContext rootContext(compilation.getRoot(), LookupLocation::max);
+    Lookup::name(compilation.parseName("m.n1[1]"), rootContext, LookupFlags::None, result);
+
+    REQUIRE(result.found);
+    CHECK(result.found->kind == SymbolKind::Instance);
+    CHECK(result.flags.has(LookupResultFlags::IsHierarchical));
+
+    REQUIRE(result.path.size() == 3);
+    CHECK(result.path[0].symbol->kind == SymbolKind::Instance);
+    CHECK(result.path[0].symbol->name == "m");
+    CHECK(result.path[1].symbol->kind == SymbolKind::InstanceArray);
+    CHECK(result.path[1].symbol->name == "n1");
+    CHECK(result.path[2].symbol->kind == SymbolKind::Instance);
+}
+
+TEST_CASE("Generate block array select lookup path includes selected array once") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    for (genvar i = 0; i < 2; i++) begin : g
+        logic foo;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m").body;
+    ASTContext context(m, LookupLocation::max);
+
+    LookupResult result;
+    Lookup::name(compilation.parseName("g[1]"), context, LookupFlags::None, result);
+
+    REQUIRE(result.found);
+    CHECK(result.found->kind == SymbolKind::GenerateBlock);
+    REQUIRE(result.path.size() == 2);
+    CHECK(result.path[0].symbol->kind == SymbolKind::GenerateBlockArray);
+    CHECK(result.path[0].symbol->name == "g");
+    CHECK(result.path[1].symbol->kind == SymbolKind::GenerateBlock);
+
+    result.clear();
+    ASTContext rootContext(compilation.getRoot(), LookupLocation::max);
+    Lookup::name(compilation.parseName("m.g[1].foo"), rootContext, LookupFlags::None, result);
+
+    REQUIRE(result.found);
+    CHECK(result.found->kind == SymbolKind::Variable);
+    CHECK(result.flags.has(LookupResultFlags::IsHierarchical));
+    REQUIRE(result.path.size() == 4);
+    CHECK(result.path[0].symbol->kind == SymbolKind::Instance);
+    CHECK(result.path[0].symbol->name == "m");
+    CHECK(result.path[1].symbol->kind == SymbolKind::GenerateBlockArray);
+    CHECK(result.path[1].symbol->name == "g");
+    CHECK(result.path[2].symbol->kind == SymbolKind::GenerateBlock);
+    CHECK(result.path[3].symbol->kind == SymbolKind::Variable);
+    CHECK(result.path[3].symbol->name == "foo");
+}
+
 TEST_CASE("Package export without corresponding candidate for import") {
     auto tree = SyntaxTree::fromText(R"(
 package P1;
