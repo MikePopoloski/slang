@@ -154,8 +154,7 @@ public:
     /// @param errors Output parameter for error messages (if any)
     /// @return true if the file was loaded successfully, false otherwise
     [[nodiscard]] bool loadFromFile(const std::filesystem::path& path,
-                                    const DiagnosticEngine& diagnosticEngine,
-                                    std::string& errors);
+                                    const DiagnosticEngine& diagnosticEngine, std::string& errors);
 
     /// Check if a diagnostic should be waived based on the loaded rules.
     /// Returns true on the FIRST rule that matches; later rules are not

@@ -24,7 +24,7 @@ namespace slang {
 /// Rewrite '.' to '/' so glob wildcards behave correctly on hierarchical
 /// paths. svGlobMatches is a path-aware glob matcher whose only separator
 /// is '/': '*' stops at '/' and '...' (the internal form of '**') is what
-/// recurses across '/'. 
+/// recurses across '/'.
 static std::string normalizeDotSep(std::string_view s) {
     std::string result(s);
     std::ranges::replace(result, '.', '/');
