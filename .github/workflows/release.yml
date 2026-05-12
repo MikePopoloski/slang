@@ -36,6 +36,7 @@ jobs:
   macos:
     name: macOS (arm64)
     runs-on: macos-latest
+    environment: release-macos
     steps:
       - uses: actions/checkout@v6
         with:
@@ -48,6 +49,15 @@ jobs:
             -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=TRUE \
             -DSLANG_INCLUDE_TESTS=OFF
           cmake --build build -j8
+      - name: Code sign and notarize
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          MACOS_NOTARIZATION_API_KEY: ${{ secrets.MACOS_NOTARIZATION_API_KEY }}
+          MACOS_NOTARIZATION_API_KEY_ID: ${{ secrets.MACOS_NOTARIZATION_API_KEY_ID }}
+          MACOS_NOTARIZATION_API_ISSUER_ID: ${{ secrets.MACOS_NOTARIZATION_API_ISSUER_ID }}
+        run: scripts/sign-macos.sh
       - name: Package
         run: |
           mkdir -p dist
@@ -60,6 +70,10 @@ jobs:
   windows:
     name: Windows (x86_64)
     runs-on: windows-latest
+    environment: release-windows
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v6
         with:
@@ -71,6 +85,23 @@ jobs:
             -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded `
             -DSLANG_INCLUDE_TESTS=OFF
           cmake --build build -j8
+      - name: Azure login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Sign binary
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_TRUSTED_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_TRUSTED_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.AZURE_TRUSTED_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\build\bin
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
       - name: Package
         run: |
           New-Item -ItemType Directory -Force -Path dist
