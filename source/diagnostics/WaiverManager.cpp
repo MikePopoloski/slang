@@ -441,8 +441,7 @@ std::string WaiverManager::getSummary(bool showUnused) const {
     if (unused == 0)
         return {};
 
-    std::string result = fmt::format("warning: {} unused waiver{}", unused,
-                                     unused == 1 ? "" : "s");
+    std::string result = fmt::format("warning: {} unused waiver{}", unused, unused == 1 ? "" : "s");
     if (!showUnused) {
         result += " (rerun with --print-unused-waivers to list)";
     }
