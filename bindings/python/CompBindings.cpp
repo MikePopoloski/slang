@@ -18,8 +18,54 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/ThreadPool.h"
 
 using namespace slang::driver;
+
+namespace {
+
+bool parseAllSourcesWithBufferChangeCB(Driver& self, py::object callback) {
+    if (callback.is_none())
+        return self.parseAllSources();
+
+    if (!self.threadPool) {
+        const auto numThreads = self.options.numThreads.value_or(0u);
+        if (numThreads != 1u)
+            self.threadPool = std::make_shared<ThreadPool>(numThreads);
+    }
+
+    auto bag = self.createParseOptionBag();
+    auto cb = callback.cast<py::function>();
+    auto& ppOptions = bag.insertOrGet<PreprocessorOptions>();
+
+    auto bufferChangeCB = [&cb](BufferID buffer, bool isBack, bool isSkip) {
+        py::gil_scoped_acquire acquire;
+        cb(buffer, isBack, isSkip);
+    };
+    ppOptions.bufferChangeCB = bufferChangeCB;
+
+    {
+        py::gil_scoped_release release;
+        self.syntaxTrees = self.sourceLoader.loadAndParseSources(bag, self.threadPool.get());
+    }
+
+    if (auto errors = self.sourceLoader.getErrors(); !errors.empty()) {
+        for (auto& err : errors)
+            self.printError(err);
+        return false;
+    }
+
+    auto pragmaDiags = self.diagEngine.setMappingsFromPragmas();
+    self.diagEngine.issue(pragmaDiags);
+
+    auto bufferDiags = self.diagEngine.setBufferWarningOptions(
+        self.sourceLoader.getBufferWarningOptions());
+    self.diagEngine.issue(bufferDiags);
+
+    return true;
+}
+
+} // namespace
 
 void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) {
     EXPOSE_ENUM(ast, VariableLifetime);
@@ -231,7 +277,11 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def("runPreprocessor", &Driver::runPreprocessor, "flags"_a)
         .def("reportMacros", &Driver::reportMacros, "groupByFile"_a = false)
         .def("optionallyWriteDepFiles", &Driver::optionallyWriteDepFiles)
-        .def("parseAllSources", &Driver::parseAllSources)
+        .def("parseAllSources", &parseAllSourcesWithBufferChangeCB,
+             "bufferChangeCB"_a = py::none(),
+             "Load and parse all sources. If bufferChangeCB is provided, it is called as "
+             "(buffer_id, is_back, is_skip) whenever the preprocessor enters or returns from "
+             "a source buffer.")
         .def("createOptionBag", &Driver::createOptionBag)
         .def("createCompilation", &Driver::createCompilation, py::keep_alive<0, 1>())
         .def("reportParseDiags", &Driver::reportParseDiags)
