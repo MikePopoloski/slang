@@ -201,17 +201,16 @@ if(SLANG_INCLUDE_TESTS)
 endif()
 
 # --- tomlplusplus ---
-set(find_pkg_args "")
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "FIND_PACKAGE_ARGS" "${tomlplusplus_min_version}")
-endif()
-
+# Always FetchContent rather than opportunistically picking up a system pkg:
+# distro tomlplusplus is typically built as a shared lib with TOML_HEADER_ONLY=0
+# and TOML_SHARED_LIB=1 baked into its imported target, which clashes with the
+# per-TU TOML_EXCEPTIONS=0 override that WaiverManager.cpp relies on. Fetching
+# the upstream subdir gives a header-only INTERFACE target everywhere.
 FetchContent_Declare(
   tomlplusplus
   GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
   GIT_TAG v3.4.0
-  GIT_SHALLOW ON
-  ${find_pkg_args})
+  GIT_SHALLOW ON)
 FetchContent_MakeAvailable(tomlplusplus)
 
 if(NOT TARGET tomlplusplus::tomlplusplus)
