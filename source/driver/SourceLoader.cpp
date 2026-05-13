@@ -13,6 +13,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/SmallVector.h"
 #include "slang/util/String.h"
 #include "slang/util/ThreadPool.h"
 
@@ -388,52 +389,52 @@ void SourceLoader::loadTrees(
     SyntaxTreeList& syntaxTrees, function_ref<SourceBuffer(std::string_view)> findBufferFunc,
     SourceManager& sourceManager, const Bag& optionBag,
     std::span<const syntax::DefineDirectiveSyntax* const> inheritedMacros) {
-    // If library directories are specified, see if we have any unknown instantiations
-    // or package names for which we should search for additional source files to load.
     flat_hash_set<std::string_view> knownNames;
+    flat_hash_set<std::string_view> missingNames;
+    SmallVector<std::string_view, 8> worklist;
+
     auto addKnownNames = [&](const std::shared_ptr<syntax::SyntaxTree>& tree) {
         auto& meta = tree->getMetadata();
-        meta.visitDeclaredSymbols([&](std::string_view name) { knownNames.emplace(name); });
-    };
-
-    auto findMissingNames = [&](const std::shared_ptr<syntax::SyntaxTree>& tree,
-                                flat_hash_set<std::string_view>& missing) {
-        auto& meta = tree->getMetadata();
-        meta.visitReferencedSymbols([&](std::string_view name) {
-            if (knownNames.find(name) == knownNames.end())
-                missing.emplace(name);
+        meta.visitDeclaredSymbols([&](std::string_view name) {
+            knownNames.emplace(name);
+            missingNames.erase(name);
         });
     };
 
+    auto findMissingNames = [&](const std::shared_ptr<syntax::SyntaxTree>& tree) {
+        auto& meta = tree->getMetadata();
+        meta.visitReferencedSymbols([&](std::string_view name) {
+            if (!knownNames.contains(name) && !missingNames.contains(name)) {
+                missingNames.emplace(name);
+                worklist.push_back(name);
+            }
+        });
+    };
+
+    // Initial pass: index existing trees and find what's missing
     for (auto& tree : syntaxTrees)
         addKnownNames(tree);
-
-    flat_hash_set<std::string_view> missingNames;
     for (auto& tree : syntaxTrees)
-        findMissingNames(tree, missingNames);
+        findMissingNames(tree);
 
-    // Keep loading new files as long as we are making forward progress.
-    flat_hash_set<std::string_view> nextMissingNames;
-    while (true) {
-        for (auto name : missingNames) {
-            auto buffer = findBufferFunc(name);
+    // Process the worklist until exhausted
+    while (!worklist.empty()) {
+        std::string_view name = worklist.back();
+        worklist.pop_back();
 
-            if (buffer) {
-                auto tree = syntax::SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
-                                                           inheritedMacros);
-                tree->isLibraryUnit = true;
-                syntaxTrees.emplace_back(tree);
+        if (knownNames.contains(name))
+            continue;
 
-                addKnownNames(tree);
-                findMissingNames(tree, nextMissingNames);
-            }
+        auto buffer = findBufferFunc(name);
+        if (buffer) {
+            auto tree = syntax::SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
+                                                       inheritedMacros);
+            tree->isLibraryUnit = true;
+            syntaxTrees.emplace_back(tree);
+
+            addKnownNames(tree);
+            findMissingNames(tree);
         }
-
-        if (nextMissingNames.empty())
-            break;
-
-        missingNames = std::move(nextMissingNames);
-        nextMissingNames = {};
     }
 }
 
