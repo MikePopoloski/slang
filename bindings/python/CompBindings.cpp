@@ -277,8 +277,7 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def("runPreprocessor", &Driver::runPreprocessor, "flags"_a)
         .def("reportMacros", &Driver::reportMacros, "groupByFile"_a = false)
         .def("optionallyWriteDepFiles", &Driver::optionallyWriteDepFiles)
-        .def("parseAllSources", &parseAllSourcesWithBufferChangeCB,
-             "bufferChangeCB"_a = py::none(),
+        .def("parseAllSources", &parseAllSourcesWithBufferChangeCB, "bufferChangeCB"_a = py::none(),
              "Load and parse all sources. If bufferChangeCB is provided, it is called as "
              "(buffer_id, is_back, is_skip) whenever the preprocessor enters or returns from "
              "a source buffer.")
