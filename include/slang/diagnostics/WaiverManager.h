@@ -64,6 +64,10 @@ struct WaiverRule {
     /// The path of the waiver file this rule was loaded from.
     std::filesystem::path sourceFile;
 
+    /// 1-based line in sourceFile where the [[waivers]] entry begins,
+    /// or 0 if the load source didn't carry position info.
+    uint32_t sourceLine = 0;
+
     /// For hier-scoped rules with a diagnostic filter: set when the named
     /// diagnostic was issued but had no symbol attached, so the rule could
     /// not match. This typically happens for parse/preprocess/lex diagnostics

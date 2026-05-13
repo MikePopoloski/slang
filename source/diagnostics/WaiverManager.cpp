@@ -154,6 +154,7 @@ bool WaiverManager::loadFromFile(const std::filesystem::path& path,
 
         WaiverRule rule;
         rule.sourceFile = path;
+        rule.sourceLine = entry->source().begin.line;
 
         if (hasFile) {
             rule.hierScope = false;
@@ -440,11 +441,12 @@ std::string WaiverManager::getSummary(bool showUnused) const {
     if (unused == 0)
         return {};
 
-    std::string result = fmt::format("warning: {} unused waiver{} (rerun with "
-                                     "--print-unused-waivers to list)",
-                                     unused, unused == 1 ? "" : "s");
-
-    if (showUnused) {
+    std::string result = fmt::format("warning: {} unused waiver{}", unused,
+                                     unused == 1 ? "" : "s");
+    if (!showUnused) {
+        result += " (rerun with --print-unused-waivers to list)";
+    }
+    else {
         // For each unused rule, pick the most specific reason we can. The cases
         // below are ordered "earliest predicate that failed" first, mirroring
         // shouldWaive's evaluation order: scope → diagnostic name → regex. If
@@ -453,8 +455,13 @@ std::string WaiverManager::getSummary(bool showUnused) const {
         result += "\nUnused waivers:";
         for (const auto& rule : rules) {
             if (rule.appliedCount == 0) {
-                auto file = rule.sourceFile.empty() ? std::string("<unknown>")
-                                                    : rule.sourceFile.string();
+                std::string file;
+                if (rule.sourceFile.empty())
+                    file = "<unknown>";
+                else if (rule.sourceLine > 0)
+                    file = fmt::format("{}:{}", rule.sourceFile.string(), rule.sourceLine);
+                else
+                    file = rule.sourceFile.string();
                 if (!rule.scopeMatched) {
                     if (rule.hierScope && rule.diagnosticSeenWithoutSymbol) {
                         result += fmt::format(
