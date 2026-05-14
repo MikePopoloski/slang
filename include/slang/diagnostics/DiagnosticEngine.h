@@ -173,10 +173,10 @@ public:
     /// to an error.
     std::error_code addIgnoreMacroPaths(std::string_view pattern);
 
-    /// Sets the waiver manager to use for suppressing diagnostics based on external
-    /// waiver file rules. The waiver manager should be loaded from a TOML file before
-    /// being set here.
+    /// Installs a waiver manager. Called by the driver when --waiver-file is
+    /// passed on the command line.
     void setWaiverManager(std::shared_ptr<WaiverManager> manager);
+    
     /// Gets the waiver manager, if configured.
     [[nodiscard]] std::shared_ptr<WaiverManager> getWaiverManager() const { return waiverManager; }
 
