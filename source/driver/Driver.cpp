@@ -1339,9 +1339,11 @@ bool Driver::reportDiagnostics(bool quiet) {
 
     if (auto waiverManager = diagEngine.getWaiverManager()) {
         bool showUnused = options.printUnusedWaivers.value_or(false);
-        auto summary = waiverManager->getSummary(showUnused);
-        if (!summary.empty())
-            OS::print(fmt::format("{}\n", summary));
+        if (!quiet || showUnused) {
+            auto summary = waiverManager->getSummary(showUnused);
+            if (!summary.empty())
+                OS::print(fmt::format("{}\n", summary));
+        }
     }
 
     return succeeded;
