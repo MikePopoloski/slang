@@ -142,8 +142,7 @@ file = "**/rtl/**"
 diagnostic = ["unused-variable", "width-trunc"]
 @endcode
 
-See @ref warning-ref for the full list of diagnostic names, or run
-`slang --help-diagnostics`.
+See @ref warning-ref for the full list of diagnostic names.
 
 @section waiver-werror Interaction with -Werror
 
