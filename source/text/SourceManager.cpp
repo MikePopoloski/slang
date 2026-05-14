@@ -357,6 +357,30 @@ std::string_view SourceManager::getSourceText(BufferID buffer) const {
     return std::string_view(fd->mem.data(), fd->mem.size());
 }
 
+std::string_view SourceManager::getSourceLine(SourceLocation location) const {
+    std::string_view text = getSourceText(location.buffer());
+    if (text.empty())
+        return {};
+
+    // Buffers always carry a trailing '\0' sentinel (see assignText); drop it
+    // so callers never see it as part of the line.
+    size_t end = text.size() - 1;
+
+    size_t offset = location.offset();
+    if (offset > end)
+        offset = end;
+
+    size_t lineStart = offset;
+    while (lineStart > 0 && text[lineStart - 1] != '\n')
+        lineStart--;
+
+    size_t lineEnd = offset;
+    while (lineEnd < end && text[lineEnd] != '\n' && text[lineEnd] != '\r')
+        lineEnd++;
+
+    return text.substr(lineStart, lineEnd - lineStart);
+}
+
 uint64_t SourceManager::getSortKey(BufferID buffer) const {
     std::shared_lock<std::shared_mutex> lock(mutex);
     auto info = getFileInfo(buffer, lock);

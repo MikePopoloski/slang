@@ -381,7 +381,7 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
 
         // Check regex filter
         if (rule.linePattern) {
-            std::string lineText = getLineText(location, sourceManager);
+            std::string_view lineText = getLineText(location, sourceManager);
             bool lineMatch = rule.matchesLineContent(lineText);
             if (waiverDebug) {
                 OS::printE(fmt::format("[waiver] rule {} regex lineMatch={} text=\"{}\"\n", idx,
@@ -403,33 +403,15 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
     return false;
 }
 
-std::string WaiverManager::getLineText(SourceLocation location,
-                                       const SourceManager& sourceManager) const {
+std::string_view WaiverManager::getLineText(SourceLocation location,
+                                            const SourceManager& sourceManager) const {
     // Returns the raw source line containing `location`, with no transformation:
     // tabs are not expanded, leading/trailing whitespace is preserved, and the
     // text is treated as raw bytes (UTF-8 sequences are passed through, not
-    // decoded). The returned string is what user-supplied regexes match against,
+    // decoded). The returned view is what user-supplied regexes match against,
     // so any user surprise about anchoring or character classes likely traces
     // back to that raw-bytes contract.
-    auto buffer = location.buffer();
-    if (!buffer)
-        return "";
-
-    std::string_view sourceText = sourceManager.getSourceText(buffer);
-    size_t offset = location.offset();
-
-    // Walk back to the previous '\n' (or start of buffer) to find line start.
-    size_t lineStart = offset;
-    while (lineStart > 0 && sourceText[lineStart - 1] != '\n')
-        lineStart--;
-
-    // Walk forward to '\n' or '\r' (handles both Unix and CRLF line endings).
-    size_t lineEnd = offset;
-    while (lineEnd < sourceText.size() && sourceText[lineEnd] != '\n' &&
-           sourceText[lineEnd] != '\r')
-        lineEnd++;
-
-    return std::string(sourceText.substr(lineStart, lineEnd - lineStart));
+    return sourceManager.getSourceLine(location);
 }
 
 size_t WaiverManager::getAppliedCount() const {

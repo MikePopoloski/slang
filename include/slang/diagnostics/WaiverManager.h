@@ -186,9 +186,10 @@ public:
 private:
     std::vector<WaiverRule> rules;
 
-    /// Helper to get the source line text at a given location
-    [[nodiscard]] std::string getLineText(SourceLocation location,
-                                          const SourceManager& sourceManager) const;
+    /// Helper to get the source line text at a given location. The returned
+    /// view is backed by @a sourceManager and is valid for as long as it is.
+    [[nodiscard]] std::string_view getLineText(SourceLocation location,
+                                               const SourceManager& sourceManager) const;
 };
 
 } // namespace slang
