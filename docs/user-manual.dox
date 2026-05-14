@@ -391,4 +391,9 @@ The possible comment directives are:
 slang can also be configured to skip over text enclosed in legacy style "translate_off" comment regions.
 See the `--translate-off-format` command line argument description for more details.
 
+@section diagnostic-waivers Diagnostic Waivers
+
+slang also supports external waiver files for suppressing diagnostics
+without modifying source. See @ref waivers.
+
 */
