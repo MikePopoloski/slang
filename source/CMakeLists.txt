@@ -137,12 +137,6 @@ set_target_properties(
 target_compile_options(slang_slang PRIVATE ${SLANG_WARN_FLAGS})
 target_compile_definitions(slang_slang PUBLIC $<$<CONFIG:Debug>:SLANG_DEBUG>)
 
-# Build toml++ in result-style mode so WaiverManager.cpp compiles in both
-# default and -fno-exceptions presets. Scoped to the only TU that includes
-# toml.h so the rest of slang_slang doesn't pay the redefine cost.
-set_source_files_properties(diagnostics/WaiverManager.cpp
-                            PROPERTIES COMPILE_DEFINITIONS TOML_EXCEPTIONS=0)
-
 # GCC's libstdc++ <regex> trips -Walloc-zero in _Executor::_M_lookahead (new
 # bool[__n]() with __n possibly zero). The diagnostic fires in a system header
 # during template instantiation, so source-level pragmas do not suppress it;

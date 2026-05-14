@@ -10,6 +10,10 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <ranges>
+
+// Disable exceptions in toml++ so slang still builds when configured without
+// exception support.
+#define TOML_EXCEPTIONS 0
 #include <toml++/toml.h>
 
 #include "slang/ast/Symbol.h"
