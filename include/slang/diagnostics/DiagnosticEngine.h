@@ -176,7 +176,7 @@ public:
     /// Installs a waiver manager. Called by the driver when --waiver-file is
     /// passed on the command line.
     void setWaiverManager(std::shared_ptr<WaiverManager> manager);
-    
+
     /// Gets the waiver manager, if configured.
     [[nodiscard]] std::shared_ptr<WaiverManager> getWaiverManager() const { return waiverManager; }
 
