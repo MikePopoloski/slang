@@ -5,6 +5,15 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#if defined(__GNUC__) && !defined(__clang__)
+// GCC spuriously warns about a zero-size allocation inside libstdc++'s <regex> 
+// headers when this file is built at -O2 or higher, see GCC PR 116332.
+// #pragma GCC diagnostic ignored "-Walloc-zero" around the call site doesn't 
+// help — the warning is emitted from an optimisation pass against the libstdc++
+// header location, outside any pragma scope at the call site.
+#    pragma GCC optimize("-O1")
+#endif
+
 #include "slang/diagnostics/WaiverManager.h"
 
 #include <fmt/format.h>
@@ -71,11 +80,6 @@ bool WaiverRule::matchesFile(const std::filesystem::path& filePath) const {
     return svGlobMatches(filePath.lexically_normal(), normalizedPattern);
 }
 
-// libstdc++'s <regex> headers trigger a false-positive -Walloc-zero under GCC.
-#if defined(__GNUC__) && !defined(__clang__)
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Walloc-zero"
-#endif
 bool WaiverRule::matchesLineContent(std::string_view lineContent) const {
     SLANG_ASSERT(linePattern);
 #if __cpp_exceptions
@@ -91,9 +95,6 @@ bool WaiverRule::matchesLineContent(std::string_view lineContent) const {
     return std::regex_search(lineContent.begin(), lineContent.end(), *linePattern);
 #endif
 }
-#if defined(__GNUC__) && !defined(__clang__)
-#    pragma GCC diagnostic pop
-#endif
 
 bool WaiverRule::matchesHier(std::string_view hierPath) const {
     return svGlobMatches(std::filesystem::path(normalizeDotSep(hierPath)), normalizedPattern);
