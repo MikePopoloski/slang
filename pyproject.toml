@@ -5,7 +5,7 @@
 
 [project]
 name = "pyslang"
-version = "11.0.0rc2"
+version = "11.0.0"
 description = "Python bindings for slang, a library for compiling SystemVerilog"
 readme = { file = "README.md", content-type = "text/markdown" }
 authors = [{ name = "Mike Popoloski" }]
