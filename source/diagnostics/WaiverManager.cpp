@@ -23,19 +23,31 @@ namespace slang {
 
 /// Rewrite '.' to '/' so glob wildcards behave correctly on hierarchical
 /// paths. svGlobMatches is a path-aware glob matcher whose only separator
-/// is '/': '*' stops at '/' and '...' (the internal form of '**') is what
-/// recurses across '/'.
+/// is '/': '*' stops at '/' and '...' is what recurses across '/'. A
+/// literal '...' run in the input is preserved verbatim so users can use
+/// the LRM-native recursive glob spelling in hier patterns.
 static std::string normalizeDotSep(std::string_view s) {
-    std::string result(s);
-    std::ranges::replace(result, '.', '/');
+    std::string result;
+    result.reserve(s.size());
+    for (size_t i = 0; i < s.size(); i++) {
+        if (s[i] == '.' && i + 2 < s.size() && s[i + 1] == '.' && s[i + 2] == '.') {
+            result += "...";
+            i += 2;
+        }
+        else if (s[i] == '.') {
+            result += '/';
+        }
+        else {
+            result += s[i];
+        }
+    }
     return result;
 }
 
 /// Convert user-facing '**' recursive glob syntax to the '...' syntax used
 /// internally by slang's svGlobMatches. We expose '**' to users because that
-/// matches widespread tooling convention (gitignore, rg, fd, etc.); slang's
-/// internal glob predates that and uses '...'. If svGlobMatches is ever
-/// taught to accept '**' directly, this whole helper can be deleted.
+/// matches widespread tooling convention (gitignore, rg, fd, etc.); '...' is
+/// accepted too as it's the LRM-native spelling used elsewhere in slang.
 static std::string convertDoubleStarToEllipsis(std::string_view s) {
     std::string result;
     result.reserve(s.size());
