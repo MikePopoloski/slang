@@ -137,15 +137,6 @@ set_target_properties(
 target_compile_options(slang_slang PRIVATE ${SLANG_WARN_FLAGS})
 target_compile_definitions(slang_slang PUBLIC $<$<CONFIG:Debug>:SLANG_DEBUG>)
 
-# GCC's libstdc++ <regex> trips -Walloc-zero in _Executor::_M_lookahead (new
-# bool[__n]() with __n possibly zero). The diagnostic fires in a system header
-# during template instantiation, so source-level pragmas do not suppress it;
-# disable the warning for the only TU that uses std::regex_search.
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set_source_files_properties(diagnostics/WaiverManager.cpp APPEND
-                              PROPERTIES COMPILE_OPTIONS "-Wno-alloc-zero")
-endif()
-
 # Include directories
 target_include_directories(
   slang_slang
