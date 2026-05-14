@@ -32,13 +32,13 @@ message(STATUS "Extension files found: ${EXT_FILES}")
 
 if(NOT EXT_FILES)
   message(WARNING "No C extension found at ${INSTALL_DIR}/pyslang.* "
-                  "— is the target installed before this script runs?")
+                  "- is the target installed before this script runs?")
   return()
 endif()
 
 if(NOT EXISTS "${INSTALL_DIR}/__init__.py")
   message(WARNING "__init__.py not found at ${INSTALL_DIR}/ "
-                  "— is it installed before this script runs?")
+                  "- is it installed before this script runs?")
   return()
 endif()
 

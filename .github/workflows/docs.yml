@@ -18,6 +18,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install jinja2 pygments docutils
+        sudo apt-get install -y graphviz
         wget --quiet https://sourceforge.net/projects/doxygen/files/rel-1.16.1/doxygen-1.16.1.linux.bin.tar.gz
         tar -xf doxygen-1.16.1.linux.bin.tar.gz
         cp doxygen-1.16.1/bin/doxygen /usr/local/bin

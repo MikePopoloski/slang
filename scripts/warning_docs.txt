@@ -1461,7 +1461,7 @@ endmodule
 ```
 
 -Wdynamic-cast-const
-A dynamic `$cast` call has a statically known result — it will always succeed or always
+A dynamic `$cast` call has a statically known result - it will always succeed or always
 fail regardless of any runtime state.
 \n\n
 If the cast always succeeds, you can replace it with a direct assignment or static cast instead.

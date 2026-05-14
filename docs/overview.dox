@@ -1,0 +1,223 @@
+/** @page overview Compilation Overview
+@brief An overview of slang's compilation stages and how to use them
+
+@tableofcontents
+
+slang is designed to be used as a library. Every stage of the compilation
+pipeline is a distinct, independently usable component; you only pay for what
+you need. This page describes each stage and shows how to combine them.
+
+@section pipeline-stages Pipeline Stages
+
+Stage | Class | Input | Output
+----- | ----- | ----- | ------
+Text | @ref slang::SourceManager "SourceManager" | File paths, in-memory text | `SourceBuffer` / `BufferID`
+Lexing | @ref slang::parsing::Lexer "Lexer" | `SourceBuffer` | `Token` stream (with `Trivia`)
+Preprocessing | @ref slang::parsing::Preprocessor "Preprocessor" | `Lexer` token stream | Expanded token stream
+Parsing | @ref slang::parsing::Parser "Parser" | `Preprocessor` token stream | `SyntaxNode` tree
+Syntax tree | @ref slang::syntax::SyntaxTree "SyntaxTree" | File path or source text | Owns Lexer+Preprocessor+Parser+tree
+Elaboration | @ref slang::ast::Compilation "Compilation" | One or more `SyntaxTree`s | Elaborated AST (`RootSymbol`, symbols, types, expressions)
+Analysis | @ref slang::analysis::AnalysisManager "AnalysisManager" | Finalized `Compilation` | Data-flow results, driver diagnostics, assertion analysis
+
+@subsection stage-text Text Layer
+
+@ref slang::SourceManager "SourceManager" is responsible for loading and
+storing all source code in memory. Everything else in the pipeline holds
+`string_view` references into this memory, so the `SourceManager` must outlive
+all parse trees and compiled results that depend on it. Source locations
+(@ref slang::SourceLocation "SourceLocation") are compact 8-byte values that
+reference a position within a `SourceBuffer`; the `SourceManager` can resolve
+them into file names, line numbers, and surrounding text for use in diagnostics.
+
+See @ref sourcemanagement for full details.
+
+@subsection stage-parse Parsing Layer
+
+The three classes - `Lexer`, `Preprocessor`, and `Parser` - form a pipeline:
+
+- **@ref slang::parsing::Lexer "Lexer"** converts a `SourceBuffer` into a stream
+  of `Token` objects. Each token carries the source text, location, and any
+  preceding *trivia* (whitespace, comments). Because trivia is attached to
+  tokens rather than discarded, the parse tree can round-trip back to the exact
+  original source text.
+
+- **@ref slang::parsing::Preprocessor "Preprocessor"** sits in front of the
+  `Lexer` and implements all SystemVerilog compiler directives: macro expansion
+  (`` `define `` / `` `undef ``), conditional compilation (`` `ifdef `` / `` `elsif ``
+  / `` `else `` / `` `endif ``), file inclusion (`` `include ``), and other
+  pragmas. It produces a clean token stream with all directives consumed.
+
+- **@ref slang::parsing::Parser "Parser"** is a hand-written, error-recovering
+  recursive-descent parser that consumes the preprocessed token stream and
+  builds a concrete syntax tree made of `SyntaxNode` subclasses. It is designed
+  to be robust: no matter how broken the source text, it will produce a tree
+  and continue parsing.
+
+@ref slang::syntax::SyntaxTree "SyntaxTree" is a high-level wrapper that owns
+all three layers and the resulting tree. For most use cases it is the only
+object you need from the parsing layer.
+
+See @ref parsing for full details.
+
+@subsection stage-elab Elaboration Layer
+
+@ref slang::ast::Compilation "Compilation" takes one or more `SyntaxTree`
+instances and performs *elaboration*: it resolves names, evaluates parameters,
+instantiates the module hierarchy, checks types, and builds the full abstract
+syntax tree. The elaborated AST is accessible via `Compilation::getRoot()`,
+which returns a `RootSymbol` from which the entire design hierarchy and all
+declared symbols can be reached.
+
+Compilation also accepts @ref slang::ast::CompilationOptions to control language version,
+compatibility flags, and other elaboration behaviour.
+
+@subsection stage-analysis Analysis Layer
+
+@ref slang::analysis::AnalysisManager "AnalysisManager" runs deeper analyses
+on the fully elaborated AST that are either too expensive to run during
+elaboration or that operate across the whole design:
+
+- **Driver tracking** - verifies that every net and variable is driven
+  consistently (no multiple drivers, no undriven outputs, etc.)
+- **Data-flow analysis** - tracks value flow through procedural blocks and
+  checks for issues such as partial assignments leading to inferred latches.
+- **Concurrent assertion analysis** - performs clock resolution and checks
+  local variable flow for correctness.
+
+`AnalysisManager` also supports listener callbacks for custom analyses:
+
+@code{.cpp}
+AnalysisManager am;
+am.addListener([](const AnalyzedProcedure& proc) {
+    // called for each analyzed procedural block
+});
+am.analyze(comp);
+@endcode
+
+@section diagnostics Diagnostics
+
+Every stage emits diagnostics through a shared
+@ref slang::DiagnosticEngine "DiagnosticEngine". You attach one or more
+`DiagnosticClient` implementations to it before running the pipeline, and all
+stages will route their errors and warnings through them automatically. Two
+clients are provided:
+
+- **@ref slang::TextDiagnosticClient "TextDiagnosticClient"** - colored,
+  human-readable terminal output (the same format the `slang` CLI tool uses).
+- **@ref slang::JsonDiagnosticClient "JsonDiagnosticClient"** - machine-readable
+  JSON output, suitable for editor integrations and automated pipelines.
+
+See @ref diagnostic-apis for full details.
+
+@section entry-points Entry Points
+
+The pipeline can be entered at any stage. Choose the lowest level you need.
+
+@subsection ep-syntax Syntax-only tools
+
+If you only need the parse tree - for example, to build a formatter,
+refactoring tool, or structural linter that does not need types - only the
+parsing layer is required.
+
+@code{.cpp}
+#include "slang/syntax/SyntaxTree.h"
+#include "slang/syntax/SyntaxVisitor.h"
+#include "slang/syntax/SyntaxPrinter.h"
+
+using namespace slang::syntax;
+
+// Parse from a file. A default SourceManager is used.
+auto treeOrErr = SyntaxTree::fromFile("input.sv");
+if (!treeOrErr) { /* handle OS error */ }
+auto& tree = *treeOrErr; // std::shared_ptr<SyntaxTree>
+
+// Traverse with a SyntaxVisitor.
+struct MyVisitor : public SyntaxVisitor<MyVisitor> {
+    void handle(const ModuleDeclarationSyntax& node) {
+        visitDefault(node);
+    }
+};
+MyVisitor visitor;
+tree->root().visit(visitor);
+
+// Print the tree back to source text.
+auto text = SyntaxPrinter::printFile(*tree);
+@endcode
+
+In this mode there is no `Compilation` and no name resolution.
+
+@subsection ep-semantic Semantic tools
+
+For tools that need types, resolved names, or the elaborated hierarchy (linters,
+synthesis frontends, code generators), add a `Compilation` on top.
+
+@code{.cpp}
+#include "slang/syntax/SyntaxTree.h"
+#include "slang/ast/Compilation.h"
+#include "slang/ast/ASTVisitor.h"
+#include "slang/diagnostics/DiagnosticEngine.h"
+#include "slang/diagnostics/TextDiagnosticClient.h"
+#include "slang/text/SourceManager.h"
+
+using namespace slang;
+using namespace slang::syntax;
+using namespace slang::ast;
+
+SourceManager sourceManager;
+
+auto treeOrErr = SyntaxTree::fromFile("input.sv", sourceManager);
+if (!treeOrErr) { /* handle OS error */ }
+
+Compilation comp;
+comp.addSyntaxTree(*treeOrErr);
+
+// Access the elaborated AST. Calling getRoot() finalizes elaboration.
+const RootSymbol& root = comp.getRoot();
+
+// Retrieve all elaboration diagnostics.
+const Diagnostics& diags = comp.getAllDiagnostics();
+
+// Format and print diagnostics to stderr.
+DiagnosticEngine diagEngine(sourceManager);
+auto client = std::make_shared<TextDiagnosticClient>();
+diagEngine.addClient(client);
+for (auto& diag : diags)
+    diagEngine.issue(diag);
+@endcode
+
+Multiple `SyntaxTree` instances can be added for multi-file designs.
+Cross-unit name resolution (packages, top-level modules, interfaces) is handled
+automatically.
+
+@subsection ep-analysis Full static analysis
+
+To run data-flow analysis, driver checking, and assertion analysis on top of
+a compiled design, add an `AnalysisManager`.
+
+@code{.cpp}
+#include "slang/analysis/AnalysisManager.h"
+
+using namespace slang::analysis;
+
+// Build and finalize the compilation first (see above).
+comp.getRoot(); // ensures elaboration is complete
+
+AnalysisManager am;
+am.analyze(comp);
+
+Diagnostics analysisDiags = am.getDiagnostics();
+for (auto& diag : analysisDiags)
+    diagEngine.issue(diag);
+@endcode
+
+@subsection ep-driver Driver (full CLI pipeline)
+
+The @ref slang::driver::Driver "Driver" class wraps all stages and handles
+command-line argument parsing, command files, library loading, parallel
+parsing, and output formatting. It is the entry point used by the `slang` CLI
+tool and is the easiest starting point for building a CLI tool that accepts the
+same inputs as `slang`.
+
+See @ref slang::driver::Driver "Driver" in the API reference for its interface.
+
+*/

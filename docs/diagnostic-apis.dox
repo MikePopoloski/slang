@@ -1,4 +1,4 @@
-/** @page diagnostics Diagnostics
+/** @page diagnostic-apis Diagnostic APIs
 @brief APIs that support issuing diagnostics
 
 @section diagnostic-class Diagnostic Class

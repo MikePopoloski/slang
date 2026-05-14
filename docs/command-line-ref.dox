@@ -301,7 +301,7 @@ are relative paths that need a root prepended depending on where the tools are i
 
 For example, if a file list contains the relative path `dir_a/mod_b.sv` and that path does not
 exist in the current working directory, slang will retry the lookup as `<prefix>/dir_a/mod_b.sv`.
-The prefix fallback is only attempted when the original path is not found — if the file exists
+The prefix fallback is only attempted when the original path is not found - if the file exists
 at the listed path, the prefix is never consulted.
 
 Multiple `--dir-prefix` options may be specified; they are tried in the order they appear on the

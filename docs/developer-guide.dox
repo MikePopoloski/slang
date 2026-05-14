@@ -11,9 +11,10 @@ This section gives an overview of the slang libraries and codebase,
 and serves as a starting point for learning to use it in your own projects.
 
 - @ref building - Instructions for obtaining and building the library
-- @ref commoncomp - Overview of shared code and practices used throughout the library
+- @ref overview - Overview of the various stages of compilation
+- @ref commoncomp - Brief tour of shared code and practices used throughout the library
 - @ref sourcemanagement - APIs for loading and managing source code for compilation
-- @ref diagnostics - APIs that support issuing diagnostics
+- @ref diagnostic-apis - APIs that support issuing diagnostics
 - @ref parsing - APIs for parsing SystemVerilog source code
 
 */

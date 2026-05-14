@@ -3,11 +3,27 @@
 
 @tableofcontents
 
+@section getting-the-binary Getting the Binary
+
+Pre-built binaries for Linux (x86_64), macOS (universal), and Windows (x86_64) are
+available on the [GitHub releases page](https://github.com/MikePopoloski/slang/releases).
+Download the archive for your platform, extract it, and place the `slang` (or `slang.exe`)
+binary somewhere on your `PATH`.
+
+Python users can instead install the `pyslang` package, which bundles the slang
+library and exposes it via Python bindings:
+
+@code{.ansi}
+pip install pyslang
+@endcode
+
+To build from source, see the @ref building page.
+
 @section quick-start Quick Start
 
-The `slang` binary runs a full compilation of given SystemVerilog source files.
-Eventually it will produce a full simulation binary as output, but for now it
-serves as a checker of source code syntax, types, and various language rules.
+The `slang` binary performs full compilation and static analysis of SystemVerilog
+source files. It parses, type-checks, and elaborates all language constructs,
+reporting errors, warnings, and other diagnostics.
 
 Running it on one or more valid SystemVerilog files will note the top level modules
 found, and will return zero:
@@ -54,6 +70,127 @@ endmodule
 [31mBuild failed: [0m1 error, 0 warnings
 @endcode
 
+slang should support any existing SystemVerilog codebase out of the box. If the slang fails on an existing design,
+it's likely that you're making use of non-standard features or extensions. You can start by cranking up compatibility
+options to the max via `--compat=all` and turning off all warnings with `-Wnone`. If that succeeds you can turn
+on and off individual comatibility options piecemeal until you end up with a reasonable set.
+
+If slang is unable to support your existing production codebase with any of the available compatibility options, open a
+feature request to get support added.
+
+@section common-options Common Options
+
+Besides passing a list of files to the tool, you may also want to provide other options like include directories,
+predefined macros, and warning settings. slang has many command line flags -- see the @ref command-line-ref for the
+full list.
+
+As an example:
+
+@code{.ansi}
+> slang myMod1.sv myMod2.sv -I/path/to/includes/ -DMY_MACRO=1 -Wextra -Wno-width-trunc
+@endcode
+
+slang also provides aliases for common options to increase compatibility with other EDA tools. The previous example
+could have been written:
+
+@code{.ansi}
+> slang myMod1.sv myMod2.sv +incdir+/path/to/includes/ +define+MY_MACRO=1 -Wextra -Wno-width-trunc
+@endcode
+
+@section serialization Serialization Output
+
+The slang tool can serialize parsed and elaborated SystemVerilog designs to JSON, for human inspection or
+for further processing by an external tool. As a simple example, take a simple D-flip flop:
+
+@code{.sv}
+module d_ff (input clk, rst, d, output logic q);
+	always_ff @(posedge clk) begin
+		if (!rst)
+			q <= 0;
+		else
+			q <= d;
+    end
+endmodule
+@endcode
+
+Runing with `--cst-json` will print the *concrete* syntax tree (also referred to as the "parse tree").
+This contains all of the information from the original source code, as it was typed by the user.
+A small snippet of the output from the above example:
+
+@code{.json}
+{
+  "syntaxTrees": [
+    {
+      "kind": "SyntaxTree",
+      "root": {
+        "kind": "CompilationUnit",
+        "members": [
+          {
+            "kind": "ModuleDeclaration",
+            "header": {
+              "kind": "ModuleHeader",
+              "moduleKeyword": {
+                "kind": "ModuleKeyword",
+                "text": "module"
+              },
+              "name": {
+                "kind": "Identifier",
+                "text": "d_ff",
+                "trivia": [
+                  {
+                    "kind": "Whitespace",
+                    "text": " "
+                  }
+                ]
+              },
+              "ports": {
+                "kind": "AnsiPortList",
+                "openParen": {
+                  "kind": "OpenParenthesis",
+                  "text": "(",
+                  "trivia": [
+                    {
+                      "kind": "Whitespace",
+                      "text": " "
+                    }
+                  ]
+                },
+@endcode
+
+Running with `--ast-json` will print the *abstract* syntax tree, which is after name resolution,
+type checking, constant evaluation, and design elaboration.
+
+@code{.json}
+{
+  "design": {
+    "name": "$root",
+    "kind": "Root",
+    "addr": 135861170870176,
+    "members": [
+      {
+        "name": "",
+        "kind": "CompilationUnit",
+        "addr": 6338665587152
+      },
+      {
+        "name": "d_ff",
+        "kind": "Instance",
+        "addr": 6338665587776,
+        "body": {
+          "name": "d_ff",
+          "kind": "InstanceBody",
+          "addr": 6338665587432,
+          "members": [
+            {
+              "name": "clk",
+              "kind": "Port",
+              "addr": 6338665587912,
+              "type": "logic",
+              "direction": "In",
+              "internalSymbol": "6338665588032 clk"
+            },
+@endcode
+
 @section file-patterns File Patterns
 
 All inputs to slang that accept a file path also accept a file "pattern", which is
@@ -70,6 +207,30 @@ Paths that end in a `/` include all the files in that directory, identical to \c
 @note File patterns provided on the command line will first be seen by your shell;
 be aware that it may be expanded before slang even sees it, which can cause
 unintuitive results.
+
+@section command-files Command Files
+
+Command files allow specifying tool options in standalone composable files instead of needing
+to pass all of them on the command line. One or more command files can be used by passing them
+via the -F or -f command line flags -- both flags function identically except in the
+treatment of file paths in the command file. -F files treat their paths as relative to the
+command file itself, where as -f files treat paths as relative to the current working directory.
+
+The format of a command file is straightforward; all text is treated as whitespace-delimited
+arguments, similarly to how they might be passed on the command line. Newlines are treated
+like any other form of whitespace. Some important features are as follows:
+
+-  Command files can contain comments. '#' starts a line comment that continues to the end of
+   the line, regardless of where the '#' occurs. '//' similarly starts a line comment, but only
+   if preceded by whitespace. '/&lowast;' and '&lowast;/' form a C-style multiline block comment.
+-  Single quotes and double quotes group text in a similar fashion to how they work in Bash
+   and other shells.
+-  The backslash character can be used to escape special characters and treat them like normal text.
+-  Environment variables in the command file are expanded. Variables can be specified in one of
+   three styles: $VAR, \$\(VAR), and ${VAR}.
+-  Command files can further include other command files by using -f or -F.
+-  Arguments set in a command file are overridden by anything set on the command line if they would
+   otherwise conflict.
 
 @section compilation-units Compilation Units
 
@@ -102,7 +263,7 @@ can be included in a design. All files are part of a source library -- if none i
 explicitly for a given file, that file will be part of the default library (named "work").
 
 Library files can be specified on the command line using the `-v` option, which accepts
-a file pattern and an optional library name. If the library name is ommitted, the file
+a file pattern and an optional library name. If the library name is omitted, the file
 is placed in the default library. For example:
 
 @code{.ansi}
@@ -154,30 +315,6 @@ and one of the provided extensions. If found, it will load that file as a
 library file and include it in the build. This process continues until all
 missing names are satisfied or all file names have been searched.
 
-@section command-files Command Files
-
-Command files allow specifying tool options in standalone composable files instead of needing
-to pass all of them on the command line. One or more command files can be used by passing them
-via the -F or -f command line flags -- both flags function identically except in the
-treatment of file paths in the command file. -F files treat their paths as relative to the
-command file itself, where as -f files treat paths as relative to the current working directory.
-
-The format of a command file is straightforward; all text is treated as whitespace-delimited
-arguments, similarly to how they might be passed on the command line. Newlines are treated
-like any other form of whitespace. Some important features are as follows:
-
--  Command files can contain comments. '#' starts a line comment that continues to the end of
-   the line, regardless of where the '#' occurs. '//' similarly starts a line comment, but only
-   if preceeded by whitespace. '/&lowast;' and '&lowast;/' form a C-style multiline block comment.
--  Single quotes and double quotes group text in a similar fashion to how they work in Bash
-   and other shells.
--  The backslash character can be used to escape special characters and treat them like normal text.
--  Environment variables in the command file are expanded. Variables can be specified in one of
-   three styles: $VAR, \$\(VAR), and ${VAR}.
--  Command files can further include other command files by using -f or -F.
--  Arguments set in a command file are overridden by anything set on the command line if they would
-   otherwise conflict.
-
 @section unit-listing Compilation Unit Listing
 
 Similar to command files, there exists another type of file called a "compilation unit listing"
@@ -206,7 +343,7 @@ quotes to specify the path.
 +define+<macro>=<value>[+<macro>=<value>...]
 ```
 
-Define \<macro\> to \<value\> (or `1` if \<value\> is ommitted) at the start of all source files.
+Define \<macro\> to \<value\> (or `1` if \<value\> is omitted) at the start of all source files.
 
 ```
 --library <library-name>
@@ -227,13 +364,13 @@ any matching global `-W` flags supplied on the command line.
 
 The following forms are supported:
 
-- `-W<name>` — enable the named warning or warning group
-- `-Wno-<name>` — disable the named warning or warning group
-- `-Werror=<name>` — promote the named warning or warning group to an error
-- `-Wno-error=<name>` — demote the named warning or warning group from an error back to a warning
-- `-Weverything` — enable all warnings for this unit
-- `-Wnone` — disable all warnings for this unit
-- `-Werror` — promote all active warnings to errors for this unit
+- `-W<name>` - enable the named warning or warning group
+- `-Wno-<name>` - disable the named warning or warning group
+- `-Werror=<name>` - promote the named warning or warning group to an error
+- `-Wno-error=<name>` - demote the named warning or warning group from an error back to a warning
+- `-Weverything` - enable all warnings for this unit
+- `-Wnone` - disable all warnings for this unit
+- `-Werror` - promote all active warnings to errors for this unit
 
 
 @section built-in-macros Built-in Macros
@@ -322,7 +459,7 @@ slang supports the following pragma directives as extensions to the base set spe
 `` `pragma once ``
 
 Files that contain this directive will not be included more than once into any given compilation unit,
-regardless of how many times they are specified via a \`include directive. This is analagous to the
+regardless of how many times they are specified via a \`include directive. This is analogous to the
 `#pragma once` directive supported widely by C++ compilers, and can replace the more traditional usage
 of preprocessor header guards via `` `ifdef ``.
 

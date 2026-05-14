@@ -40,7 +40,7 @@
 
 ##! M_LINKS_NAVBAR1 = \
 ##!  "user-manual command-line-ref language-support warning-ref tools" \
-##!  "developer-guide building commoncomp sourcemanagement diagnostics parsing"
+##!  "developer-guide building overview commoncomp sourcemanagement diagnostic-apis parsing"
 ##! M_LINKS_NAVBAR2 = \
 ##!  "api-reference namespaces annotated files" \
 ##!  "<a href="https://sv-lang.com/explore/">Try It</a>" \
@@ -79,7 +79,7 @@ PROJECT_NUMBER         =
 # for a project that appears at the top of each page and should give viewers a
 # quick idea about the purpose of the project. Keep the description short.
 
-PROJECT_BRIEF          = "C++ docs"
+PROJECT_BRIEF          = "Documentation"
 
 # With the PROJECT_LOGO tag one can specify a logo or an icon that is included
 # in the documentation. The maximum height of the logo should not exceed 55
@@ -2565,7 +2565,7 @@ HIDE_UNDOC_RELATIONS   = YES
 # set to NO
 # The default value is: NO.
 
-HAVE_DOT               = NO
+HAVE_DOT               = YES
 
 # The DOT_NUM_THREADS specifies the number of dot invocations Doxygen is allowed
 # to run in parallel. When set to 0 Doxygen will base this on the number of
