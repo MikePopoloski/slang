@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Compatibility
+### Notable Breaking Changes
+### New Features
+### Improvements
+### Fixes
+### Tools & Bindings
+
+
+## [v11.0] - 2026-05-14
+### Language Compatibility
 * Added a `--allow-virtual-iface-with-override` flag to allow interface instances that are bind/defparam targets to be assigned to virtual interfaces (thanks to @thomasnormal)
 * The error for invalid arguments to std::randomize has been made downgradeable via `-Wnonstandard-randomize` (thanks to @AndrewNolte)
 * Added support for conatenating strings with operator '+' (which will now issue `-Wnonstandard-string-concat`) (thanks to @AndrewNolte)
