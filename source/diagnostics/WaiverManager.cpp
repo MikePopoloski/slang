@@ -5,15 +5,6 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#if defined(__GNUC__) && !defined(__clang__)
-// GCC spuriously warns about a zero-size allocation inside libstdc++'s <regex>
-// headers when this file is built at -O2 or higher, see GCC PR 116332.
-// #pragma GCC diagnostic ignored "-Walloc-zero" around the call site doesn't
-// help — the warning is emitted from an optimisation pass against the libstdc++
-// header location, outside any pragma scope at the call site.
-#    pragma GCC optimize("-O1")
-#endif
-
 #include "slang/diagnostics/WaiverManager.h"
 
 #include <fmt/format.h>
