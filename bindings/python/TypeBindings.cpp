@@ -121,7 +121,7 @@ void registerTypes(py::module_& m) {
         .finalize();
 
     py::classh<TypePrintingOptions> typePrintingOptions(m, "TypePrintingOptions");
-    typePrintingOptions.def_readwrite("addSingleQuotes", &TypePrintingOptions::addSingleQuotes)
+    typePrintingOptions.def_readwrite("quoteChar", &TypePrintingOptions::quoteChar)
         .def_readwrite("elideScopeNames", &TypePrintingOptions::elideScopeNames)
         .def_readwrite("printAKA", &TypePrintingOptions::printAKA)
         .def_readwrite("anonymousTypeStyle", &TypePrintingOptions::anonymousTypeStyle)

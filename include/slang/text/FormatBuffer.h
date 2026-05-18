@@ -15,6 +15,7 @@ namespace slang {
 class FormatBuffer {
 public:
     void append(std::string_view str) { buf.append(str.data(), str.data() + str.size()); }
+    void append(char ch) { buf.push_back(ch); }
 
     void append(const fmt::text_style& style, std::string_view str) { format(style, "{}", str); }
 

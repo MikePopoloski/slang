@@ -395,7 +395,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     TypePrinter printer;
-    printer.options.addSingleQuotes = true;
+    printer.options.quoteChar = '\'';
     printer.options.anonymousTypeStyle = TypePrintingOptions::FriendlyName;
     printer.options.elideScopeNames = true;
 
