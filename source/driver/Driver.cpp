@@ -579,7 +579,7 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bo
     return true;
 }
 
-bool Driver::processOptions() {
+bool Driver::processOptions(bool checkFiles) {
     if (options.languageVersion.has_value()) {
         if (options.languageVersion == "1364-2005")
             languageVersion = LanguageVersion::v1364_2005;
@@ -665,7 +665,7 @@ bool Driver::processOptions() {
     if (!reportLoadErrors())
         return false;
 
-    if (!sourceLoader.hasFiles()) {
+    if (checkFiles && !sourceLoader.hasFiles()) {
         printError("no input files");
         return false;
     }

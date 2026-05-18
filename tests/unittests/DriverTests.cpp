@@ -27,6 +27,17 @@ TEST_CASE("Driver basic") {
     CHECK(driver.processOptions());
 }
 
+TEST_CASE("Driver processOptions can skip input file check") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo"};
+    CHECK(driver.parseCommandLine(1, argv));
+    CHECK(driver.processOptions(false));
+}
+
 TEST_CASE("Driver valid column unit") {
     Driver driver;
     driver.addStandardArgs();

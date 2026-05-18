@@ -227,7 +227,7 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
             "arg"_a, "parseOptions"_a = CommandLine::ParseOptions{})
         .def("processCommandFiles", &Driver::processCommandFiles, "fileName"_a, "makeRelative"_a,
              "separateUnit"_a)
-        .def("processOptions", &Driver::processOptions)
+        .def("processOptions", &Driver::processOptions, "checkFiles"_a = true)
         .def("runPreprocessor", &Driver::runPreprocessor, "flags"_a)
         .def("reportMacros", &Driver::reportMacros, "groupByFile"_a = false)
         .def("optionallyWriteDepFiles", &Driver::optionallyWriteDepFiles)
