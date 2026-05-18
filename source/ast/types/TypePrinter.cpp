@@ -56,6 +56,26 @@ void TypePrinter::append(const Type& type) {
 
     if (options.printAKA && type.kind == SymbolKind::TypeAlias)
         printAKA(type);
+
+    if (options.printIntegralRange) {
+        auto& canon = type.getCanonicalType();
+        switch (canon.kind) {
+            case SymbolKind::EnumType:
+            case SymbolKind::PackedStructType:
+            case SymbolKind::PackedUnionType: {
+                const auto& intType = canon.as<IntegralType>();
+                auto range = intType.getBitVectorRange();
+                auto arrKind = intType.isFourState ? "logic" : "bit";
+                buffer->append(" (");
+                maybeAddQuote();
+                buffer->format("{}[{}:{}]", arrKind, range.left, range.right);
+                maybeAddQuote();
+                buffer->append(")");
+            } break;
+            default:
+                break;
+        }
+    }
 }
 
 void TypePrinter::clear() {
