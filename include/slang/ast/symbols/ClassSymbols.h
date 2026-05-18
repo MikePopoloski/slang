@@ -278,6 +278,11 @@ public:
     /// Behavior is undefined if this generic class has already been instantiated and used.
     void addParameterDecl(const DefinitionSymbol::ParameterDecl& decl);
 
+    /// Gets the list of parameter declarations for this class.
+    std::span<const DefinitionSymbol::ParameterDecl> getParameterDecls() const {
+        return {paramDecls.data(), paramDecls.size()};
+    }
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static const Symbol& fromSyntax(const Scope& scope,
