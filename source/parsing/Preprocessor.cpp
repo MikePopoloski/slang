@@ -938,11 +938,13 @@ Trivia Preprocessor::parseBranchDirective(Token directive,
                                           bool taken) {
     scratchTokenBuffer.clear();
     if (!taken) {
-        // skip over everything until we find another conditional compilation directive
+        // Skip over everything until we find a sibling conditional directive
+        // (elsif, else, endif) at the same nesting level. Inner ifdef/endif
+        // pairs are included in the disabled tokens
+        int nestedDepth = 0;
         while (true) {
             auto token = nextRaw();
 
-            // EoF or conditional directive stops the skipping process
             bool done = false;
             if (token.kind == TokenKind::EndOfFile) {
                 done = true;
@@ -951,10 +953,18 @@ Trivia Preprocessor::parseBranchDirective(Token directive,
                 switch (token.directiveKind()) {
                     case SyntaxKind::IfDefDirective:
                     case SyntaxKind::IfNDefDirective:
+                        nestedDepth++;
+                        break;
+                    case SyntaxKind::EndIfDirective:
+                        if (nestedDepth > 0)
+                            nestedDepth--;
+                        else
+                            done = true;
+                        break;
                     case SyntaxKind::ElsIfDirective:
                     case SyntaxKind::ElseDirective:
-                    case SyntaxKind::EndIfDirective:
-                        done = true;
+                        if (nestedDepth == 0)
+                            done = true;
                         break;
                     default:
                         break;
