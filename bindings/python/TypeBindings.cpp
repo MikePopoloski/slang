@@ -127,6 +127,7 @@ void registerTypes(py::module_& m) {
         .def_readwrite("anonymousTypeStyle", &TypePrintingOptions::anonymousTypeStyle)
         .def_readwrite("skipScopedTypeNames", &TypePrintingOptions::skipScopedTypeNames)
         .def_readwrite("fullEnumType", &TypePrintingOptions::fullEnumType)
+        .def_readwrite("printIntegralRange", &TypePrintingOptions::printIntegralRange)
         .def_readwrite("skipTypeDefs", &TypePrintingOptions::skipTypeDefs);
 
     py::native_enum<TypePrintingOptions::AnonymousTypeStyle>(typePrintingOptions,

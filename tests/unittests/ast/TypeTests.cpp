@@ -431,6 +431,36 @@ endmodule
           "'enum{E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13, ...}'");
 }
 
+TEST_CASE("Type printer integral ranges") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum logic [2:0] { A, B } e;
+    struct packed { logic [3:0] a; bit b; } s;
+    union packed { logic [7:0] u; bit [7:0] v; } u;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    TypePrinter printer;
+    printer.options.printIntegralRange = true;
+    printer.options.anonymousTypeStyle = TypePrintingOptions::FriendlyName;
+    printer.options.elideScopeNames = true;
+
+    auto& m = compilation.getRoot().find<InstanceSymbol>("m").body;
+    auto typeStr = [&](std::string_view name) {
+        printer.clear();
+        printer.append(m.find<VariableSymbol>(name).getType());
+        return printer.toString();
+    };
+
+    CHECK(typeStr("e") == "enum{A, B} (logic[2:0])");
+    CHECK(typeStr("s") == "struct packed{logic[3:0] a, bit b} (logic[4:0])");
+    CHECK(typeStr("u") == "union packed{logic[7:0] u, bit[7:0] v} (logic[7:0])");
+}
+
 TEST_CASE("Typedefs") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
