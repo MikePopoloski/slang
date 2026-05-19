@@ -21,7 +21,7 @@ class CopyPtr {
 public:
     using pointer = T*;
 
-    CopyPtr() {}
+    CopyPtr() = default;
     CopyPtr(std::nullptr_t) {}
     ~CopyPtr() { delete ptr; }
 
@@ -34,7 +34,7 @@ public:
 
     template<typename U>
         requires std::is_convertible_v<U*, T*>
-    CopyPtr(U&& other) noexcept : ptr(new T(std::forward<U>(other))) {}
+    CopyPtr(U&& other) : ptr(new T(std::forward<U>(other))) {}
 
     T* get() { return ptr; }
     const T* get() const { return ptr; }

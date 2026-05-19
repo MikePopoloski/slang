@@ -152,7 +152,7 @@ public:
 class SLANG_EXPORT SVInt : SVIntStorage {
 public:
     /// Simple default constructor for convenience, results in a 1 bit zero value.
-    SVInt() {}
+    SVInt() = default;
 
     /// Construct from a single bit that can be unknown.
     explicit SVInt(logic_t bit) : SVIntStorage(1, false, bit.isUnknown()) {
