@@ -21,6 +21,7 @@
 #include "slang/util/Function.h"
 #include "slang/util/LanguageVersion.h"
 #include "slang/util/OS.h"
+#include "slang/util/ScopeGuard.h"
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -490,6 +491,37 @@ public:
     /// Sets whether terminal output should use color.
     void setTerminalColorsEnabled(bool enable);
 
+    /// Metadata collected while processing a command file.
+    struct SLANG_EXPORT CommandFileMetadata {
+        /// The raw -D defines contributed by the command file.
+        std::vector<std::string> defines;
+    };
+
+    /// Gets the map from command file to metadata collected while processing it.
+    /// Every processed command file has an entry, even if no metadata was collected.
+    const flat_hash_map<std::filesystem::path, CommandFileMetadata>& getCommandFileMetadata()
+        const {
+        return commandFileMetadata;
+    }
+
+    /// Temporarily sets the file used to attribute parsed options.
+    /// The returned guard will restore the previous command file when destroyed.
+    [[nodiscard]] auto setCurrentCommandFile(std::filesystem::path path) {
+        std::error_code ec;
+        auto canonicalPath = std::filesystem::weakly_canonical(path, ec);
+        if (!ec)
+            path = std::move(canonicalPath);
+
+        auto guard = ScopeGuard([this, savedCommandFile = std::exchange(
+                                           currentCommandFile, std::move(path))]() mutable {
+            currentCommandFile = std::move(savedCommandFile);
+        });
+        if (!currentCommandFile.empty())
+            commandFileMetadata.try_emplace(currentCommandFile);
+
+        return guard;
+    }
+
 private:
     bool parseUnitListing(const SourceBuffer& sourceBuffer);
     std::string parseMapKeywordVersion(std::string_view value);
@@ -500,7 +532,10 @@ private:
     bool reportLoadErrors();
 
     bool anyFailedLoads = false;
+
+    std::filesystem::path currentCommandFile;
     flat_hash_set<std::filesystem::path> activeCommandFiles;
+    flat_hash_map<std::filesystem::path, CommandFileMetadata> commandFileMetadata;
     std::vector<std::tuple<std::string_view, std::string_view, std::string_view>>
         translateOffFormats;
     std::unique_ptr<JsonWriter> jsonWriter;
