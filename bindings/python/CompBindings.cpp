@@ -209,8 +209,13 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .value("Default", LanguageVersion::Default)
         .finalize();
 
-    py::classh<Driver>(driver, "Driver")
+    py::classh<Driver> driverClass(driver, "Driver");
+
+    py::classh<Driver::CommandFileMetadata>(driverClass, "CommandFileMetadata")
         .def(py::init<>())
+        .def_readwrite("defines", &Driver::CommandFileMetadata::defines);
+
+    driverClass.def(py::init<>())
         .def_readonly("sourceManager", &Driver::sourceManager)
         .def_readonly("diagEngine", &Driver::diagEngine)
         .def_readonly("textDiagClient", &Driver::textDiagClient)
@@ -218,6 +223,7 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def_readonly("syntaxTrees", &Driver::syntaxTrees)
         .def_readwrite("languageVersion", &Driver::languageVersion)
         .def_property_readonly("analysisOptions", &Driver::getAnalysisOptions)
+        .def_property_readonly("commandFileMetadata", &Driver::getCommandFileMetadata)
         .def("addStandardArgs", &Driver::addStandardArgs)
         .def(
             "parseCommandLine",

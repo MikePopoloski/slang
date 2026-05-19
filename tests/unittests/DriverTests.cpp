@@ -107,6 +107,62 @@ TEST_CASE("Driver command files are processed strictly in order") {
     CHECK(std::ranges::is_sorted(fileNames));
 }
 
+TEST_CASE("Driver tracks command file metadata") {
+    auto guard = OS::captureOutput();
+
+    std::error_code ec;
+    auto path = fs::temp_directory_path(ec) / "slang_command_file_metadata.f";
+    auto emptyPath = fs::temp_directory_path(ec) / "slang_empty_command_file_metadata.f";
+    auto jsonPath = fs::temp_directory_path(ec) / "slang_command_file_metadata.json";
+    {
+        std::ofstream file(path);
+        file << "-D FOO=1\n";
+        file << "-D BAR=2\n";
+    }
+    {
+        std::ofstream file(emptyPath);
+    }
+    {
+        std::ofstream file(jsonPath);
+    }
+
+    Driver driver;
+    driver.addStandardArgs();
+    REQUIRE(driver.processCommandFiles(path.string(), false, false));
+    REQUIRE(driver.processCommandFiles(emptyPath.string(), false, false));
+    {
+        auto guard = driver.setCurrentCommandFile(jsonPath);
+        const char* argv[] = {"testfoo", "-D", "BAZ=3"};
+        REQUIRE(driver.parseCommandLine(3, argv));
+    }
+    const char* argv[] = {"testfoo", "-D", "NOT_ATTRIBUTED=1"};
+    REQUIRE(driver.parseCommandLine(3, argv));
+
+    auto expectedPath = fs::weakly_canonical(path, ec);
+    REQUIRE(!ec);
+    auto expectedEmptyPath = fs::weakly_canonical(emptyPath, ec);
+    REQUIRE(!ec);
+    auto expectedJsonPath = fs::weakly_canonical(jsonPath, ec);
+    REQUIRE(!ec);
+
+    auto& commandFileMetadata = driver.getCommandFileMetadata();
+    auto it = commandFileMetadata.find(expectedPath);
+    REQUIRE(it != commandFileMetadata.end());
+    CHECK(it->second.defines == std::vector<std::string>{"FOO=1", "BAR=2"});
+
+    auto emptyIt = commandFileMetadata.find(expectedEmptyPath);
+    REQUIRE(emptyIt != commandFileMetadata.end());
+    CHECK(emptyIt->second.defines.empty());
+
+    auto jsonIt = commandFileMetadata.find(expectedJsonPath);
+    REQUIRE(jsonIt != commandFileMetadata.end());
+    CHECK(jsonIt->second.defines == std::vector<std::string>{"BAZ=3"});
+
+    fs::remove(path, ec);
+    fs::remove(emptyPath, ec);
+    fs::remove(jsonPath, ec);
+}
+
 TEST_CASE("SourceLoader doesn't reload names satisfied by later worklist entries") {
     SourceManager sourceManager;
 
