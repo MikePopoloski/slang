@@ -354,6 +354,69 @@ TEST_CASE("Expression types") {
     CHECK(diags[7].code == diag::NotBooleanConvertible);
 }
 
+TEST_CASE("Invalid cast target still binds operand") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial missing_t'(missing_value);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Invalid cast type still binds operand") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial struct { int i; }'(missing_value);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BadCastType);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Invalid sized cast width still binds operand") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial 16777216'(missing_value);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ValueExceedsMaxBitWidth);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Invalid sized cast operand type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial 4'(1.0);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadIntegerCast);
+}
+
 TEST_CASE("Expression - bad name references") {
     auto tree = SyntaxTree::fromText(R"(
 module m1;
