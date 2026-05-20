@@ -103,6 +103,7 @@ void Preprocessor::pushSource(std::string_view source, std::string_view name) {
 
 void Preprocessor::pushSource(SourceBuffer buffer) {
     SLANG_ASSERT(buffer.id);
+    metadata.sourceBufferIds.push_back(buffer.id);
 
     if (!options.keywordMapping.empty()) {
         std::optional<KeywordVersion> bufVersion;
@@ -315,8 +316,9 @@ std::vector<const DefineDirectiveSyntax*> Preprocessor::getDefinedMacros() const
     return results;
 }
 
-std::vector<IncludeMetadata> Preprocessor::getIncludeDirectives() const {
-    return includeDirectives;
+PreprocessorMetadata&& Preprocessor::getMetadata() {
+    metadata.definedMacros = getDefinedMacros();
+    return std::move(metadata);
 }
 
 Token Preprocessor::next() {
@@ -700,7 +702,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
                 sourceBuffer = *buffer;
             }
         }
-        includeDirectives.push_back(IncludeMetadata{
+        metadata.includeDirectives.push_back(IncludeMetadata{
             .syntax = syntax,
             .path = path,
             .buffer = sourceBuffer,
@@ -858,13 +860,23 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
 }
 
 std::pair<Trivia, Trivia> Preprocessor::handleMacroUsage(Token directive) {
+    auto macroDef = findMacro(directive);
+
     // delegate to a nested function to simplify the error handling paths
     inMacroBody = true;
-    auto [actualArgs, extraTrivia] = handleTopLevelMacro(directive);
+    auto [actualArgs, extraTrivia] = handleTopLevelMacro(directive, macroDef);
     inMacroBody = false;
 
-    auto syntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
-    return std::make_pair(Trivia(TriviaKind::Directive, syntax), extraTrivia);
+    auto* usageSyntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
+
+    if (macroDef.valid() && !macroDef.isIntrinsic()) {
+        metadata.macroRefs.push_back(MacroRefMetadata{
+            .syntax = usageSyntax,
+            .definition = macroDef.syntax,
+        });
+    }
+
+    return std::make_pair(Trivia(TriviaKind::Directive, usageSyntax), extraTrivia);
 }
 
 Trivia Preprocessor::handleIfDefDirective(Token directive, bool inverted, Token savedLastSeen) {
@@ -1175,19 +1187,25 @@ Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {
 
 Trivia Preprocessor::handleUndefDirective(Token directive) {
     Token nameToken = expect(TokenKind::Identifier);
+    auto* result = alloc.emplace<UndefDirectiveSyntax>(directive, nameToken);
 
     if (!nameToken.isMissing()) {
         std::string_view name = nameToken.valueText();
         auto it = macros.find(name);
         if (it != macros.end()) {
-            if (!it->second.builtIn)
+            if (!it->second.builtIn) {
+                metadata.macroRefs.push_back(MacroRefMetadata{
+                    .syntax = result,
+                    .definition = it->second.syntax,
+                });
                 macros.erase(it);
-            else
+            }
+            else {
                 addDiag(diag::UndefineBuiltinDirective, nameToken.range());
+            }
         }
     }
 
-    auto result = alloc.emplace<UndefDirectiveSyntax>(directive, nameToken);
     return Trivia(TriviaKind::Directive, result);
 }
 
