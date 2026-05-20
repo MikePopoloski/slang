@@ -9,11 +9,11 @@
 
 #include "slang/util/Hash.h"
 
-#ifdef SLANG_BOOST_SINGLE_HEADER
-#    include <boost_unordered.hpp>
-#else
+#if __has_include(<boost/unordered/unordered_flat_map.hpp>)
 #    include <boost/unordered/unordered_flat_map.hpp>
 #    include <boost/unordered/unordered_flat_set.hpp>
+#else
+#    include <boost_unordered.hpp>
 #endif
 
 namespace slang {

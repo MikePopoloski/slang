@@ -10,11 +10,11 @@
 #include "slang/util/Hash.h"
 
 #define BOOST_UNORDERED_DISABLE_PARALLEL_ALGORITHMS
-#ifdef SLANG_BOOST_SINGLE_HEADER
-#    include <boost_concurrent.hpp>
-#else
+#if __has_include(<boost/unordered/concurrent_flat_map.hpp>)
 #    include <boost/unordered/concurrent_flat_map.hpp>
 #    include <boost/unordered/concurrent_flat_set.hpp>
+#else
+#    include <boost_concurrent.hpp>
 #endif
 
 namespace slang {

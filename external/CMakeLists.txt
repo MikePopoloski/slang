@@ -45,8 +45,6 @@ if(NOT Boost_FOUND)
 
   add_library(boost_unordered INTERFACE)
   add_library(Boost::headers ALIAS boost_unordered)
-  target_compile_definitions(boost_unordered
-                             INTERFACE SLANG_BOOST_SINGLE_HEADER)
 else()
   message(
     STATUS "Found system boost ${Boost_VERSION_STRING} at ${Boost_INCLUDE_DIRS}"
