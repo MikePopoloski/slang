@@ -170,11 +170,6 @@ if(SLANG_USE_MIMALLOC)
   target_link_libraries(slang_slang PRIVATE ${mimalloc_target})
 endif()
 
-if(SLANG_USE_CPPTRACE)
-  target_link_libraries(slang_slang PUBLIC cpptrace::cpptrace)
-  target_compile_definitions(slang_slang PUBLIC SLANG_USE_CPPTRACE)
-endif()
-
 # If building the Python library we'll end up with a shared lib no matter what,
 # so make sure we always build with PIC.
 if(SLANG_INCLUDE_PYLIB)

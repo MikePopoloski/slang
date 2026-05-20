@@ -85,7 +85,6 @@ option(SLANG_FUZZ_TARGET "Enables changes to make binaries easier to fuzz test"
 option(BUILD_SHARED_LIBS "Generate shared libraries instead of static" OFF)
 option(SLANG_USE_THREADS "Enable use of threads" ON)
 option(SLANG_USE_MIMALLOC "Enable use of the mimalloc library" ON)
-option(SLANG_USE_CPPTRACE "Enable use of the cpptrace library" OFF)
 
 set(SLANG_LIB_NAME
     "svlang"

@@ -10,6 +10,5 @@ include(CMakeFindDependencyMacro)
 @FMT_FIND_DEP@
 @BOOST_FIND_DEP@
 @MIMALLOC_FIND_DEP@
-@CPPTRACE_FIND_DEP@
 
 include("${CMAKE_CURRENT_LIST_DIR}/slangTargets.cmake")
