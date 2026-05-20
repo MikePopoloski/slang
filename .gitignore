@@ -1,5 +1,6 @@
 # Python ignores.
 .pytest_cache/
+.ruff_cache/
 .venv/
 venv/
 .cache/

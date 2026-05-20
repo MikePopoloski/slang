@@ -40,7 +40,7 @@ struct SLANG_EXPORT WaiverRule {
     std::filesystem::path normalizedPattern;
 
     /// Optional source line content pattern (regex). Matched with regex_search
-    /// (substring), not regex_match — anchor with ^ / $ if you need full-line.
+    /// (substring), not regex_match - anchor with ^ / $ if you need full-line.
     std::unique_ptr<WaiverLinePattern> linePattern;
 
     /// Optional diagnostic code names (e.g., "unused-variable").
@@ -104,7 +104,7 @@ struct SLANG_EXPORT WaiverRule {
 /// Evaluation model (see shouldWaive()):
 ///   - Rules are evaluated in load order; the FIRST rule whose predicates all
 ///     match wins. There is no priority/specificity scheme and no "deny"
-///     counterpart — a waiver can only suppress, never re-enable.
+///     counterpart - a waiver can only suppress, never re-enable.
 ///   - For a single rule, all configured predicates are AND'd: scope (file or
 ///     hier), then optional diagnostic-name filter, then optional regex.
 ///   - Waivers run AFTER -W severity remapping and --ignore-paths in
@@ -123,6 +123,7 @@ struct SLANG_EXPORT WaiverRule {
 /// value to get per-rule trace output on stderr from shouldWaive().
 ///
 /// Example TOML format:
+///
 /// @code
 /// [[waivers]]
 /// file = "ip/**"                          # waive all diagnostics in these files
@@ -145,12 +146,13 @@ struct SLANG_EXPORT WaiverRule {
 /// diagnostic = "unused-variable"
 /// regex = '\bdbg_status\b'
 /// @endcode
+///
 class SLANG_EXPORT WaiverManager {
 public:
     WaiverManager() = default;
 
     /// Load waiver rules from a TOML file, appending to any already loaded.
-    /// Multiple loads are purely additive — there is no de-dup, no override,
+    /// Multiple loads are purely additive - there is no de-dup, no override,
     /// and load order determines the first-match-wins precedence used by
     /// shouldWaive(). On parse failure rules already accepted from prior calls
     /// are preserved; rules from the failing file are not partially applied
@@ -169,7 +171,7 @@ public:
     /// Returns true on the FIRST rule that matches; later rules are not
     /// consulted (so order is significant). Side effect: updates per-rule
     /// statistics on every call regardless of result, including on partial
-    /// matches that later predicates reject — these stats feed getSummary().
+    /// matches that later predicates reject - these stats feed getSummary().
     /// @param diagnostic The diagnostic to check
     /// @param location The source location of the diagnostic
     /// @param sourceManager The source manager for accessing file information

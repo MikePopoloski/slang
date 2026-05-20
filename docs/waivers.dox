@@ -48,7 +48,7 @@ diagnostics in matching files are waived.
 File paths are matched against the **absolute path** of each source buffer,
 so a glob like `"rtl/**"` will not match `/home/me/proj/rtl/foo.sv`. To match
 files regardless of where the project lives on disk, prefix patterns with
-`**/`.
+\c &lowast;&lowast;/.
 
 @code{.toml}
 # Waive everything in third-party IP
@@ -95,15 +95,15 @@ diagnostic = "unused-variable"
 regex = '\bdbg_status\b'
 @endcode
 
-**Limitation: not every diagnostic carries a hierarchical path.** Hier-scope
+<b>Limitation: not every diagnostic carries a hierarchical path.</b> Hier-scope
 rules only match diagnostics that are tied to an AST symbol with a parent
 scope. Preprocessor warnings (e.g. `include-not-found`), parser-level
 warnings, and some structural warnings have no symbol and are silently
-passed through by hier rules — use `file` scope for those.
+passed through by hier rules - use `file` scope for those.
 
 If a hier rule names a diagnostic that was issued but had no symbol, the
 unused-waivers summary flags it specifically (`diagnostic 'X' has no symbol;
-hier scope cannot match — use 'file' scope`) so you'll see it instead of
+hier scope cannot match - use 'file' scope`) so you'll see it instead of
 the generic "no hier paths matched" message.
 
 @section waiver-glob-patterns Glob Patterns
@@ -113,17 +113,17 @@ Both `file` and `hier` fields support glob patterns:
 Pattern      | Description
 ------------ | -----------
 `*`          | Matches any characters within a single path segment
-`**` / `...` | Matches any characters across path boundaries (recursive). `...` is the LRM-native spelling used elsewhere in slang; `**` is also accepted for consistency with widespread tooling convention.
+`**` or `...` | Matches any characters across path boundaries (recursive). `...` is the LRM-native spelling used elsewhere in slang; `**` is also accepted for consistency with widespread tooling convention.
 `?`          | Matches a single character
 
 Character classes (`[abc]`) are not supported.
 
-**Examples:**
-- `**/rtl/*.sv` — All `.sv` files directly in any `rtl/` directory
-- `**/rtl/*.s?v` — All `.v` and `.sv` files directly in any `rtl/` directory
-- `**/rtl/**/*.sv` — All `.sv` files anywhere under any `rtl/`
-- `**/test_*.sv` — All files starting with `test_` in any directory
-- `top/**/u_core` — Instance `u_core` anywhere under `top` (hier scope)
+<b>Examples:</b>
+- <tt>&lowast;&lowast;/rtl/&lowast;.sv</tt> - All `.sv` files directly in any `rtl/` directory
+- <tt>&lowast;&lowast;/rtl/&lowast;.s?v</tt> - All `.v` and `.sv` files directly in any `rtl/` directory
+- <tt>&lowast;&lowast;/rtl/&lowast;&lowast;/&lowast;.sv</tt> - All `.sv` files anywhere under any `rtl/`
+- <tt>&lowast;&lowast;/test_.sv</tt> - All files starting with `test_` in any directory
+- <tt>top/&lowast;&lowast;/u_core</tt> - Instance `u_core` anywhere under `top` (hier scope)
 
 @section waiver-diagnostic-names Diagnostic Names
 

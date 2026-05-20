@@ -139,7 +139,7 @@ bool WaiverManager::loadFromFile(const std::filesystem::path& path,
         // Reject unknown keys so typos in user waiver files surface as load
         // errors instead of silently no-op'ing. When adding a new TOML key,
         // append it here AND add a corresponding field to WaiverRule plus a
-        // predicate in shouldWaive — otherwise the new key will be accepted
+        // predicate in shouldWaive - otherwise the new key will be accepted
         // by the parser but never enforced at match time.
         static const std::array knownKeys = {"file", "hier", "diagnostic", "regex"};
         for (auto&& [k, v] : *entry) {
@@ -154,7 +154,7 @@ bool WaiverManager::loadFromFile(const std::filesystem::path& path,
         auto readScalar = [&](const char* field, std::string& out) -> bool {
             const toml::node* node = entry->get(field);
             if (!node)
-                return true; // absent is fine — caller decides if required
+                return true; // absent is fine - caller decides if required
             auto sv = node->value<std::string>();
             if (!sv) {
                 errors = fmt::format("Waiver entry {}: '{}' must be a string", i, field);
@@ -261,7 +261,7 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
     //   - Predicates inside a rule are AND'd in this order: scope, diagnostic
     //     name, regex. The order is chosen cheapest-first, but more importantly
     //     it determines what the rule.scopeMatched / diagnosticMatched bits
-    //     mean — they record "we got this far before falling through", which
+    //     mean - they record "we got this far before falling through", which
     //     is what getSummary() reads to explain unused waivers.
     //   - When you add or reorder a predicate, also adjust those bookkeeping
     //     bits so the unused-waivers diagnostics stay accurate.
@@ -271,7 +271,7 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
     //     from "file never matched at all."
 
     // Read once: env-var-based debug switch is process-wide and cannot change
-    // between calls — keep it static so the env lookup is paid only once.
+    // between calls - keep it static so the env lookup is paid only once.
     static const bool waiverDebug = !OS::getEnv("SLANG_WAIVER_DEBUG").empty();
 
     if (rules.empty() || !location)
@@ -297,7 +297,7 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
     // Gather hierarchy information if available. Many diagnostics have no
     // associated symbol (parse errors, preprocessor warnings, top-level
     // semantic checks) and therefore cannot be matched by hier-scoped rules
-    // at all — only file scope works for those. The unused-waivers report
+    // at all - only file scope works for those. The unused-waivers report
     // tries to detect this case below and steer users to file scope.
     std::string hierPath;
     if (diagnostic.symbol) {
@@ -391,7 +391,7 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
                 continue;
         }
 
-        // All checks passed — waive
+        // All checks passed - waive
         rule.appliedCount++;
         if (waiverDebug) {
             OS::printE(fmt::format("[waiver] applied rule {} (scope={})\n", idx,
@@ -470,7 +470,7 @@ std::string WaiverManager::getSummary(bool showUnused) const {
                 if (!rule.scopeMatched) {
                     if (rule.hierScope && rule.diagnosticSeenWithoutSymbol) {
                         result += fmt::format(
-                            "\n  - {} (diagnostic '{}' has no symbol; hier scope cannot match — "
+                            "\n  - {} (diagnostic '{}' has no symbol; hier scope cannot match - "
                             "use 'file' scope) [{}]",
                             describeRule(rule), describeDiags(rule), file);
                     }

@@ -395,7 +395,7 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
                 categories[details.category] = [d]
 
     for category in categorylist:
-        output += "@subsection {} {} @n\n".format(category.replace(" ", ""), category)
+        output += "@subsection {} {}\n\n".format(category.replace(" ", ""), category)
         warnlist = categories[category]
         warnlist.sort(key=lambda d: d[3] if len(d) > 3 else d[0])
 
