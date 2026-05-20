@@ -45,13 +45,18 @@ public:
         nonstd::expected<std::shared_ptr<SyntaxTree>, std::pair<std::error_code, std::string_view>>;
     using MacroList = std::span<const DefineDirectiveSyntax* const>;
     using IncludeList = std::span<const parsing::IncludeMetadata>;
+    using MacroRefList = std::span<const parsing::MacroRefMetadata>;
 
     /// Indicates whether this syntax tree represents a "library" compilation unit,
     /// which means that modules declared within it are not automatically instantiated.
     bool isLibraryUnit = false;
 
+    // Used to construct a new tree after a transformation.
+    // Since this was partially constructed without a preprocessor, the preprocessor metadata is
+    // left empty.
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-               const SourceLibrary* library, const std::shared_ptr<SyntaxTree>& parent = nullptr);
+               const SourceLibrary* library,
+               const std::shared_ptr<SyntaxTree>& preTransform = nullptr);
 
     SyntaxTree(SyntaxTree&& other) = default;
     ~SyntaxTree();
@@ -217,16 +222,30 @@ public:
     const Bag& options() const { return options_; }
 
     /// Gets various bits of metadata collected during parsing.
-    const parsing::ParserMetadata& getMetadata() const { return *metadata; }
+    const parsing::ParserMetadata& getMetadata() const { return metadata; }
+
+    /// Gets metadata collected during preprocessing.
+    const parsing::PreprocessorMetadata& getPreprocessorMetadata() const {
+        return preprocessorMetadata;
+    }
 
     /// Gets the list of macros that were defined at the end of the loaded source file.
-    MacroList getDefinedMacros() const { return macros; }
+    /// This is empty if created from a SyntaxRewriter.
+    MacroList getDefinedMacros() const { return preprocessorMetadata.definedMacros; }
 
     /// Gets the list of include directives that were encountered while parsing.
-    IncludeList getIncludeDirectives() const { return includes; }
+    /// This is empty if created from a SyntaxRewriter.
+    IncludeList getIncludeDirectives() const { return preprocessorMetadata.includeDirectives; }
+
+    /// Gets the list of macro references that were expanded while parsing.
+    /// This is empty if created from a SyntaxRewriter.
+    MacroRefList getMacroRefs() const { return preprocessorMetadata.macroRefs; }
 
     /// Gets the list of source buffer IDs that this syntax tree was created from.
-    std::span<const BufferID> getSourceBufferIds() const { return sourceBufferIds; }
+    /// This is empty if created from a SyntaxRewriter.
+    std::span<const BufferID> getSourceBufferIds() const {
+        return preprocessorMetadata.sourceBufferIds;
+    }
 
     /// Checks that the syntax tree is valid, in the sense that it round trips
     /// through text and back again to an equivalent tree.
@@ -245,9 +264,7 @@ public:
 private:
     SyntaxTree(SyntaxNode* root, const SourceLibrary* library, SourceManager& sourceManager,
                BumpAllocator&& alloc, Diagnostics&& diagnostics, parsing::ParserMetadata&& metadata,
-               std::vector<const DefineDirectiveSyntax*>&& macros,
-               std::vector<parsing::IncludeMetadata>&& includes,
-               std::vector<BufferID>&& sourceBufferIds, Bag options);
+               parsing::PreprocessorMetadata&& preprocessorMetadata, Bag options);
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager,
                                               std::span<const SourceBuffer> source,
@@ -260,10 +277,8 @@ private:
     BumpAllocator alloc;
     Diagnostics diagnosticsBuffer;
     Bag options_;
-    std::unique_ptr<parsing::ParserMetadata> metadata;
-    std::vector<const DefineDirectiveSyntax*> macros;
-    std::vector<parsing::IncludeMetadata> includes;
-    std::vector<BufferID> sourceBufferIds;
+    parsing::ParserMetadata metadata;
+    parsing::PreprocessorMetadata preprocessorMetadata;
 };
 
 } // namespace slang::syntax
