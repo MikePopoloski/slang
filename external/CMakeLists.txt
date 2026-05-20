@@ -3,18 +3,7 @@
 # SPDX-License-Identifier: MIT
 # ~~~
 
-# Required minimum versions for dependencies
-set(fmt_min_version "12.1")
-set(mimalloc_min_version "3.3")
-set(catch2_min_version "3.14")
-set(tomlplusplus_min_version "3.4")
-
 # --- fmt lib ---
-set(find_pkg_args "")
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "FIND_PACKAGE_ARGS" "${fmt_min_version}")
-endif()
-
 set(FMT_SYSTEM_HEADERS
     ON
     CACHE INTERNAL "")
@@ -24,7 +13,7 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
   GIT_TAG 12.1.0
   GIT_SHALLOW ON
-  ${find_pkg_args})
+  FIND_PACKAGE_ARGS 12.1)
 
 # Force fmtlib to always be a static lib if we pull it via FetchContent (i.e.
 # not intercepted by find_package), since it's a private dependency that's
@@ -33,11 +22,6 @@ set(saved_build_shared_libs ${BUILD_SHARED_LIBS})
 set(BUILD_SHARED_LIBS OFF)
 FetchContent_MakeAvailable(fmt)
 set(BUILD_SHARED_LIBS ${saved_build_shared_libs})
-
-if(NOT TARGET fmt::fmt)
-  message(
-    FATAL_ERROR "Could not find fmt package, min version: ${fmt_min_version}")
-endif()
 
 if((SLANG_INCLUDE_PYLIB OR BUILD_SHARED_LIBS) AND NOT fmt_FOUND)
   set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -76,11 +60,6 @@ if(SLANG_USE_MIMALLOC)
       FATAL_ERROR "mimalloc cannot be used with Windows shared lib builds")
   endif()
 
-  set(find_pkg_args "")
-  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-    set(find_pkg_args "FIND_PACKAGE_ARGS")
-  endif()
-
   set(MI_BUILD_SHARED
       OFF
       CACHE INTERNAL "")
@@ -102,7 +81,7 @@ if(SLANG_USE_MIMALLOC)
     GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
     GIT_TAG v3.3.2
     GIT_SHALLOW ON
-    ${find_pkg_args})
+    FIND_PACKAGE_ARGS 3.3)
   FetchContent_MakeAvailable(mimalloc)
 
   if(mimalloc_FOUND)
@@ -111,10 +90,7 @@ if(SLANG_USE_MIMALLOC)
     elseif(TARGET mimalloc-static)
       set(mimalloc_target "mimalloc-static")
     else()
-      message(
-        FATAL_ERROR
-          "Could not find mimalloc package, min version: ${mimalloc_min_version}"
-      )
+      message(FATAL_ERROR "Could not find mimalloc target")
     endif()
 
     get_target_property(MIMALLOC_CFG ${mimalloc_target} IMPORTED_CONFIGURATIONS)
@@ -127,10 +103,7 @@ if(SLANG_USE_MIMALLOC)
     message(STATUS "Using system mimalloc include: ${MIMALLOC_INC}")
   else()
     if(NOT TARGET mimalloc-obj)
-      message(
-        FATAL_ERROR
-          "Could not find mimalloc package, min version: ${mimalloc_min_version}"
-      )
+      message(FATAL_ERROR "Could not find mimalloc-obj target")
     endif()
     set(mimalloc_target "$<BUILD_INTERFACE:mimalloc-obj>")
     message(STATUS "Using remote mimalloc library")
@@ -149,14 +122,8 @@ if(SLANG_INCLUDE_TESTS)
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
     GIT_TAG v3.14.0
     GIT_SHALLOW ON
-    ${find_pkg_args})
+    FIND_PACKAGE_ARGS 3.14)
   FetchContent_MakeAvailable(Catch2)
-
-  if(NOT TARGET Catch2::Catch2)
-    message(
-      FATAL_ERROR
-        "Could not find Catch2 package, min version: ${catch2_min_version}")
-  endif()
 
   if(Catch2_FOUND)
     get_target_property(Catch2_INCLUDE_DIR Catch2::Catch2
@@ -180,13 +147,6 @@ FetchContent_Declare(
   GIT_TAG v3.4.0
   GIT_SHALLOW ON)
 FetchContent_MakeAvailable(tomlplusplus)
-
-if(NOT TARGET tomlplusplus::tomlplusplus)
-  message(
-    FATAL_ERROR
-      "Could not find tomlplusplus package, min version: ${tomlplusplus_min_version}"
-  )
-endif()
 
 if(tomlplusplus_FOUND)
   get_target_property(TOMLPP_INC tomlplusplus::tomlplusplus
