@@ -48,7 +48,7 @@ file = "**/waivers/y.sv"
     Driver driver;
     driver.addStandardArgs();
     auto args = fmt::format(
-        R"(testfoo "{0}waivers/y.sv" "{0}waivers/z.sv" -Weverything --waiver-file="{1}")",
+        R"(testfoo "{0}waivers/y.sv" "{0}waivers/z.sv" -Weverything --waiver-file="{1}" --color-diagnostics=false)",
         findTestDir(), waiverPath.string());
 
     CHECK(driver.parseCommandLine(args));
