@@ -10,10 +10,6 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <ranges>
-
-// Disable exceptions in toml++ so slang still builds when configured without
-// exception support.
-#define TOML_EXCEPTIONS 0
 #include <toml++/toml.h>
 
 #include "slang/ast/Symbol.h"
@@ -22,6 +18,7 @@
 #include "slang/text/Glob.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/OS.h"
+#include "slang/util/String.h"
 
 namespace slang {
 
@@ -91,16 +88,31 @@ bool WaiverRule::matchesHier(std::string_view hierPath) const {
     return svGlobMatches(std::filesystem::path(normalizeDotSep(hierPath)), normalizedPattern);
 }
 
+static std::string formatError(const toml::parse_error& err) {
+    auto& source = err.source();
+    return fmt::format("{}:{}:{}: error: {}", *source.path, source.begin.line, source.begin.column,
+                       err.description());
+}
+
 bool WaiverManager::loadFromFile(const std::filesystem::path& path,
                                  const DiagnosticEngine& diagnosticEngine, std::string& errors) {
-    toml::parse_result parsed = toml::parse_file(path.string());
-    if (!parsed) {
-        const auto& err = parsed.error();
-        errors = fmt::format("TOML parsing error: {}", std::string_view(err.description()));
+    toml::table root;
+#if TOML_EXCEPTIONS
+    try {
+        root = toml::parse_file(getU8Str(path));
+    }
+    catch (const toml::parse_error& e) {
+        errors = formatError(e);
         return false;
     }
-
-    const toml::table& root = parsed.table();
+#else
+    auto parsed = toml::parse_file(getU8Str(path));
+    if (!parsed) {
+        errors = formatError(parsed.error());
+        return false;
+    }
+    root = std::move(parsed).table();
+#endif
 
     const toml::node* waiversNode = root.get("waivers");
     if (!waiversNode) {
