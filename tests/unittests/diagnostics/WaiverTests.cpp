@@ -321,8 +321,6 @@ TEST_CASE("Waiver Manager - TOML loading and validation") {
         std::filesystem::remove(waiverPath);
     }
 
-    // Invalid regex (only under exceptions — std::regex has no non-throwing ctor)
-#if __cpp_exceptions
     {
         auto waiverPath = writeWaiver("[[waivers]]\nfile = \"rtl/**\"\n"
                                       "diagnostic = \"unused-variable\"\n"
@@ -332,7 +330,6 @@ TEST_CASE("Waiver Manager - TOML loading and validation") {
         CHECK_FALSE(mgr.loadFromFile(waiverPath, engine, errors));
         std::filesystem::remove(waiverPath);
     }
-#endif
 
     // Unknown diagnostic option name
     {

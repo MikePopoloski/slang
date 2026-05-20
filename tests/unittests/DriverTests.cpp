@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
+#include <boost/regex.hpp>
 #include <fmt/core.h>
 #include <fstream>
-#include <regex>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -71,7 +71,7 @@ TEST_CASE("Driver file preprocess -- obfuscation") {
                                  PreprocessOutputFlags::UseFixedObfuscationSeed));
 
     auto output = OS::capturedStdout;
-    output = std::regex_replace(output, std::regex("\r\n"), "\n");
+    output = boost::regex_replace(output, boost::regex("\r\n"), "\n");
 
     CHECK(output.starts_with("\nmodule AOOpUHNpKPjVcKHQ;\n"
                              "    // hello\n"

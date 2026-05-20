@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/WaiverManager.h"
 
+#include <boost/regex.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <ranges>
@@ -21,6 +22,17 @@
 #include "slang/util/String.h"
 
 namespace slang {
+
+struct WaiverLinePattern {
+    boost::regex regex;
+
+    explicit WaiverLinePattern(boost::regex r) : regex(std::move(r)) {}
+};
+
+WaiverRule::WaiverRule() = default;
+WaiverRule::~WaiverRule() = default;
+WaiverRule::WaiverRule(WaiverRule&&) noexcept = default;
+WaiverRule& WaiverRule::operator=(WaiverRule&&) noexcept = default;
 
 /// Rewrite '.' to '/' so glob wildcards behave correctly on hierarchical
 /// paths. svGlobMatches is a path-aware glob matcher whose only separator
@@ -70,18 +82,9 @@ bool WaiverRule::matchesFile(const std::filesystem::path& filePath) const {
 
 bool WaiverRule::matchesLineContent(std::string_view lineContent) const {
     SLANG_ASSERT(linePattern);
-#if __cpp_exceptions
-    try {
-        return std::regex_search(lineContent.begin(), lineContent.end(), *linePattern);
-    }
-    catch (const std::regex_error&) {
-        return false;
-    }
-#else
-    // Under -fno-exceptions a regex error aborts; pre-validation at load
-    // time keeps that unreachable in practice for well-formed patterns.
-    return std::regex_search(lineContent.begin(), lineContent.end(), *linePattern);
-#endif
+    // Patterns are validated at load time (no_except + status() check), so
+    // regex_search shouldn't fault here for well-formed inputs.
+    return boost::regex_search(lineContent.begin(), lineContent.end(), linePattern->regex);
 }
 
 bool WaiverRule::matchesHier(std::string_view hierPath) const {
@@ -235,20 +238,13 @@ bool WaiverManager::loadFromFile(const std::filesystem::path& path,
             rule.diagnosticCodes = std::move(names);
         }
 
-        // Parse optional regex
         if (!regexStr.empty()) {
-#if __cpp_exceptions
-            try {
-                rule.linePattern = std::regex(regexStr, std::regex::ECMAScript);
-            }
-            catch (const std::regex_error& e) {
-                errors = fmt::format("Invalid regex in entry {}: {}", i, e.what());
+            boost::regex compiled(regexStr, boost::regex::no_except);
+            if (compiled.status() != 0) {
+                errors = fmt::format("Invalid regex in entry {}: '{}'", i, regexStr);
                 return false;
             }
-#else
-            // std::regex has no non-throwing ctor; an invalid pattern aborts.
-            rule.linePattern = std::regex(regexStr, std::regex::ECMAScript);
-#endif
+            rule.linePattern = std::make_unique<WaiverLinePattern>(std::move(compiled));
         }
 
         rules.push_back(std::move(rule));

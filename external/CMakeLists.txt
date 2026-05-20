@@ -45,6 +45,27 @@ if(NOT Boost_FOUND)
 
   add_library(boost_unordered INTERFACE)
   add_library(Boost::headers ALIAS boost_unordered)
+
+  # slang uses boost::regex (in place of std::regex) as a header-only library.
+  # When a system boost install was found above, its headers already include
+  # <boost/regex.hpp> with full boost. Otherwise we fetch just the regex repo;
+  # boost.regex auto-detects standalone mode by the absence of
+  # <boost/config.hpp> and falls back to the C++ standard library for its
+  # dependencies. We don't add_subdirectory the fetched repo (SOURCE_SUBDIR
+  # pointed at a non-existent path makes FetchContent_MakeAvailable populate
+  # only).
+  message(STATUS "Using FetchContent for boost::regex (header-only)")
+  FetchContent_Declare(
+    boost_regex
+    GIT_REPOSITORY https://github.com/boostorg/regex.git
+    GIT_TAG boost-1.91.0
+    GIT_SHALLOW ON
+    SOURCE_SUBDIR _no_build_)
+  FetchContent_MakeAvailable(boost_regex)
+
+  target_include_directories(
+    boost_unordered SYSTEM
+    INTERFACE "$<BUILD_INTERFACE:${boost_regex_SOURCE_DIR}/include>")
 else()
   message(
     STATUS "Found system boost ${Boost_VERSION_STRING} at ${Boost_INCLUDE_DIRS}"

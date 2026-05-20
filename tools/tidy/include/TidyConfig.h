@@ -9,9 +9,9 @@
 
 #include "TidyKind.h"
 #include <algorithm>
+#include <boost/regex.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
-#include <regex>
 #include <slang/util/TypeTraits.h>
 #include <string>
 #include <unordered_map>
@@ -28,7 +28,7 @@ public:
     struct CheckConfigs {
         std::string clkName;
         std::string clkNameRegexString;
-        std::regex clkNameRegexPattern;
+        boost::regex clkNameRegexPattern;
         std::string resetName;
         bool resetIsActiveHigh;
         std::vector<std::string> inputPortSuffix;
@@ -140,7 +140,7 @@ private:
         }
         else if (configName == "clkNameRegexString") {
             visit(checkConfigs.clkNameRegexString);
-            checkConfigs.clkNameRegexPattern = std::regex(checkConfigs.clkNameRegexString);
+            checkConfigs.clkNameRegexPattern = boost::regex(checkConfigs.clkNameRegexString);
             return;
         }
         else if (configName == "resetIsActiveHigh") {

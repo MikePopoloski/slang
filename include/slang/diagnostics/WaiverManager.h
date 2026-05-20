@@ -9,8 +9,6 @@
 
 #include <filesystem>
 #include <memory>
-#include <optional>
-#include <regex>
 #include <string>
 #include <vector>
 
@@ -23,9 +21,13 @@ class DiagnosticEngine;
 class SourceLocation;
 class SourceManager;
 
+/// Opaque holder for a compiled line-content regex. Defined in the .cpp so the
+/// boost::regex type doesn't leak into slang's public headers.
+struct WaiverLinePattern;
+
 /// Represents a single waiver rule that can suppress diagnostics based on
 /// file paths, hierarchy paths, diagnostic names, and source content patterns.
-struct WaiverRule {
+struct SLANG_EXPORT WaiverRule {
     /// True if this is a hierarchy-scoped rule; false for file-scoped.
     bool hierScope = false;
 
@@ -39,7 +41,7 @@ struct WaiverRule {
 
     /// Optional source line content pattern (regex). Matched with regex_search
     /// (substring), not regex_match — anchor with ^ / $ if you need full-line.
-    std::optional<std::regex> linePattern;
+    std::unique_ptr<WaiverLinePattern> linePattern;
 
     /// Optional diagnostic code names (e.g., "unused-variable").
     /// Empty means match all diagnostics; one or more entries means match any in the list.
@@ -78,7 +80,10 @@ struct WaiverRule {
     /// matched glob" message.
     bool diagnosticSeenWithoutSymbol = false;
 
-    WaiverRule() = default;
+    WaiverRule();
+    ~WaiverRule();
+    WaiverRule(WaiverRule&&) noexcept;
+    WaiverRule& operator=(WaiverRule&&) noexcept;
 
     /// Check if a file path matches this rule's file pattern (file-scoped rules only)
     [[nodiscard]] bool matchesFile(const std::filesystem::path& filePath) const;

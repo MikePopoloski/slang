@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include <algorithm>
-#include <regex>
+#include <boost/regex.hpp>
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
@@ -19,8 +19,8 @@ using namespace slang::driver;
 using namespace slang::ast;
 
 int main(int argc, char** argv) {
-    std::regex regex;
-    std::smatch match;
+    boost::regex regex;
+    boost::smatch match;
     Driver driver;
     driver.addStandardArgs();
 
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
                 }
 
                 auto s_inst = type.getHierarchicalPath();
-                if (!instRegex.has_value() || std::regex_search(s_inst, match, regex)) {
+                if (!instRegex.has_value() || boost::regex_search(s_inst, match, regex)) {
                     auto s_module = type.getDefinition().name;
                     auto s_file = sourceManager->getFileName(type.getDefinition().location);
                     if (customFormat.has_value())
