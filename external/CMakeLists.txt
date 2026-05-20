@@ -146,12 +146,14 @@ if(tomlplusplus_FOUND)
   get_target_property(TOMLPP_INC tomlplusplus::tomlplusplus
                       INTERFACE_INCLUDE_DIRECTORIES)
   message(STATUS "Found system tomlplusplus library: ${TOMLPP_INC}")
+  set(tomlplusplus_target "tomlplusplus::tomlplusplus")
 else()
   message(STATUS "Using remote tomlplusplus library")
   if(IS_DIRECTORY "${tomlplusplus_SOURCE_DIR}")
     set_property(DIRECTORY ${tomlplusplus_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL
                                                                YES)
   endif()
+  set(tomlplusplus_target "$<BUILD_INTERFACE:tomlplusplus::tomlplusplus>")
 endif()
 
 # --- install rules ---
@@ -194,17 +196,6 @@ if(SLANG_INCLUDE_INSTALL)
   if(SLANG_USE_THREADS)
     install(
       FILES ${PROJECT_SOURCE_DIR}/external/BS_thread_pool.hpp
-      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-      COMPONENT slang_Development)
-  endif()
-
-  if(NOT tomlplusplus_FOUND)
-    install(
-      TARGETS tomlplusplus_tomlplusplus
-      EXPORT slangTargets
-      COMPONENT slang_Development)
-    install(
-      DIRECTORY ${tomlplusplus_SOURCE_DIR}/include/toml++
       DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
       COMPONENT slang_Development)
   endif()

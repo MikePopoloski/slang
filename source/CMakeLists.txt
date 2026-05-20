@@ -158,7 +158,7 @@ target_include_directories(
 
 # Link libraries
 target_link_libraries(slang_slang PUBLIC fmt::fmt Boost::headers)
-target_link_libraries(slang_slang PRIVATE tomlplusplus::tomlplusplus)
+target_link_libraries(slang_slang PRIVATE ${tomlplusplus_target})
 
 if(SLANG_USE_THREADS)
   find_package(Threads REQUIRED)
