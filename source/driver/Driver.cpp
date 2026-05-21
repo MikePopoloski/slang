@@ -83,9 +83,16 @@ void Driver::addStandardArgs() {
                 "behavior of VCS and similar simulators");
 
     // Preprocessor
-    cmdLine.add("-D,--define-macro,+define", options.defines,
-                "Define <macro> to <value> (or 1 if <value> ommitted) in all source files",
-                "<macro>=<value>");
+    cmdLine.add(
+        "-D,--define-macro,+define",
+        [this](std::string_view value) {
+            options.defines.emplace_back(value);
+            if (!currentCommandFile.empty())
+                commandFileMetadata[currentCommandFile].defines.emplace_back(value);
+            return "";
+        },
+        "Define <macro> to <value> (or 1 if <value> ommitted) in all source files",
+        "<macro>=<value>");
     cmdLine.add("-U,--undefine-macro", options.undefines,
                 "Undefine macro name at the start of all source files", "<macro>",
                 CommandLineFlags::CommaList);
@@ -550,6 +557,7 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bo
             currPath = fs::current_path(ec);
             fs::current_path(path.parent_path(), ec);
         }
+        auto commandFileGuard = setCurrentCommandFile(path);
 
         bool result;
         if (separateUnit) {
@@ -1460,15 +1468,11 @@ bool Driver::reportLoadErrors() {
 }
 
 void Driver::printError(const std::string& message) {
-    OS::printE(fg(textDiagClient->errorColor), "error: ");
-    OS::printE(message);
-    OS::printE("\n");
+    OS::printError(message);
 }
 
 void Driver::printWarning(const std::string& message) {
-    OS::printE(fg(textDiagClient->warningColor), "warning: ");
-    OS::printE(message);
-    OS::printE("\n");
+    OS::printWarning(message);
 }
 
 void Driver::printNote(const std::string& message) {

@@ -315,14 +315,14 @@ void OS::writeFile(const fs::path& path, std::string_view contents) {
 
 void OS::print(std::string_view text) {
     if (capturingOutput)
-        capturedStdout += text;
+        outputCallback(text, true);
     else
         fmt::detail::print(stdout, fmt::detail::to_string_view(text));
 }
 
 void OS::print(const fmt::text_style& style, std::string_view text) {
     if (capturingOutput)
-        capturedStdout += text;
+        outputCallback(text, true);
     else if (showColorsStdout)
         fmt::print(stdout, style, "{}"sv, text);
     else
@@ -331,18 +331,48 @@ void OS::print(const fmt::text_style& style, std::string_view text) {
 
 void OS::printE(std::string_view text) {
     if (capturingOutput)
-        capturedStderr += text;
+        outputCallback(text, false);
     else
         fmt::detail::print(stderr, fmt::detail::to_string_view(text));
 }
 
 void OS::printE(const fmt::text_style& style, std::string_view text) {
     if (capturingOutput)
-        capturedStderr += text;
+        outputCallback(text, false);
     else if (showColorsStderr)
         fmt::print(stderr, style, "{}"sv, text);
     else
         fmt::detail::print(stderr, fmt::detail::to_string_view(text));
+}
+
+void OS::printError(std::string_view text) {
+    if (capturingOutput) {
+        outputCallback(text, false);
+    }
+    else {
+        if (showColorsStderr)
+            fmt::print(stderr, fmt::fg(fmt::terminal_color::red), "error: ");
+        else
+            fmt::detail::print(stderr, fmt::detail::to_string_view("error: "sv));
+
+        fmt::detail::print(stderr, fmt::detail::to_string_view(text));
+        fmt::detail::print(stderr, fmt::detail::to_string_view("\n"sv));
+    }
+}
+
+void OS::printWarning(std::string_view text) {
+    if (capturingOutput) {
+        outputCallback(text, false);
+    }
+    else {
+        if (showColorsStderr)
+            fmt::print(stderr, fmt::fg(fmt::terminal_color::red), "warning: ");
+        else
+            fmt::detail::print(stderr, fmt::detail::to_string_view("warning: "sv));
+
+        fmt::detail::print(stderr, fmt::detail::to_string_view(text));
+        fmt::detail::print(stderr, fmt::detail::to_string_view("\n"sv));
+    }
 }
 
 std::string OS::getEnv(const std::string& name) {
