@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
-#include <boost/regex.hpp>
+#include <boost_regex.hpp>
 #include <fmt/core.h>
 #include <fstream>
 

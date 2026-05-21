@@ -9,7 +9,7 @@
 
 #include "TidyKind.h"
 #include <algorithm>
-#include <boost/regex.hpp>
+#include <boost_regex.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <slang/util/TypeTraits.h>

@@ -5,7 +5,7 @@
 #include "TidyDiags.h"
 #include "fmt/color.h"
 #include <algorithm>
-#include <boost/regex.hpp>
+#include <boost_regex.hpp>
 
 #include "slang/syntax/AllSyntax.h"
 

@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/WaiverManager.h"
 
-#include <boost/regex.hpp>
+#include <boost_regex.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <ranges>

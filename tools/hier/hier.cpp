@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include <algorithm>
-#include <boost/regex.hpp>
+#include <boost_regex.hpp>
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
