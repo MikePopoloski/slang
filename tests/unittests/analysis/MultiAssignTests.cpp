@@ -3,6 +3,8 @@
 
 #include "AnalysisTests.h"
 
+#include "slang/diagnostics/AnalysisDiags.h"
+
 TEST_CASE("Class method driver crash regress GH #552") {
     auto& code = R"(
 class B;
@@ -493,6 +495,80 @@ endmodule
 
     auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Output port driver with declaration initializer and language option") {
+    auto& code = R"(
+module n1(output logic z);
+endmodule
+
+module m;
+    typedef struct packed {
+        logic a;
+        logic b;
+    } t1;
+
+    typedef struct packed {
+        t1 c;
+        logic d;
+    } t2;
+
+    // This is an initial driver
+    t2 e = '0;
+    n1 n2(.z(e.c.a));
+endmodule
+)";
+
+    {
+        Compilation compilation;
+        AnalysisManager analysisManager;
+
+        auto diags = analyze(code, compilation, analysisManager);
+        REQUIRE(diags.size() == 1);
+        CHECK(diags[0].code == diag::MixedVarAssigns);
+    }
+
+    {
+        AnalysisOptions options;
+        options.flags |= AnalysisFlags::AllowDupInitialDrivers;
+
+        Compilation compilation;
+        AnalysisManager analysisManager(options);
+
+        auto diags = analyze(code, compilation, analysisManager);
+        CHECK_DIAGS_EMPTY;
+    }
+}
+
+TEST_CASE("UWire initializer is not an initial driver") {
+    auto& code = R"(
+module m;
+    // This is a continous driver
+    uwire w = '0;
+    assign w = 1'b1;
+endmodule
+)";
+
+    {
+        Compilation compilation;
+        AnalysisManager analysisManager;
+
+        auto diags = analyze(code, compilation, analysisManager);
+        REQUIRE(diags.size() == 1);
+        CHECK(diags[0].code == diag::MultipleUWireDrivers);
+    }
+
+    {
+        AnalysisOptions options;
+        options.flags |= AnalysisFlags::AllowDupInitialDrivers;
+
+        Compilation compilation;
+        AnalysisManager analysisManager(options);
+
+        auto diags = analyze(code, compilation, analysisManager);
+        REQUIRE(diags.size() == 1);
+        CHECK(diags[0].code == diag::MultipleUWireDrivers);
+    }
 }
 
 TEST_CASE("hierarchical driver errors") {

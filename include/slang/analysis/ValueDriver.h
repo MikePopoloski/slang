@@ -123,6 +123,12 @@ public:
     /// Indicates whether the driver is for a clocking variable.
     bool isClockVar() const { return flags.has(DriverFlags::ClockVar); }
 
+    /// Indicates whether the driver is from an initial block or procedural initializer.
+    bool isInitialDriver() const {
+        return source == DriverSource::Initial ||
+               (flags.has(DriverFlags::Initializer) && kind == DriverKind::Procedural);
+    }
+
     /// Indicates whether the driver is inside a single-driver procedure (such as always_comb).
     bool isInSingleDriverProcedure() const {
         return source == DriverSource::AlwaysComb || source == DriverSource::AlwaysLatch ||

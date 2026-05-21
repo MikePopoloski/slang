@@ -363,6 +363,8 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
         }
     }
 
+    auto addDriverToMap = [&]() { driverMap.insert(bounds, &driver, driverAlloc); };
+
     // Keep track of "indirect" drivers separately so we can revisit them at the end of analysis.
     auto indirectUpdater = [&](auto& item) { item.second.push_back(&driver); };
     if (symbol.kind == SymbolKind::ModportPort) {
@@ -370,7 +372,7 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
 
         // We don't do overlap detection for modports but we will still track them for downstream
         // users to query later.
-        driverMap.insert(bounds, &driver, driverAlloc);
+        addDriverToMap();
         return;
     }
 
@@ -419,7 +421,7 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
         }
 
         if (driverMap.empty()) {
-            driverMap.insert(bounds, &driver, driverAlloc);
+            addDriverToMap();
             return;
         }
     }
@@ -447,11 +449,16 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
     const bool allowDupInitialDrivers = context.manager->hasFlag(
         AnalysisFlags::AllowDupInitialDrivers);
 
+    // Can short circuit if we're adding an initial driver
+    if (allowDupInitialDrivers && driver.isInitialDriver()) {
+        addDriverToMap();
+        return;
+    }
+
     auto shouldIgnore = [&](const ValueDriver& vd) {
         // We ignore drivers from subroutines and from initializers.
         // We also ignore initial blocks if the user has set a flag.
-        return vd.source == DriverSource::Subroutine || vd.flags.has(DriverFlags::Initializer) ||
-               (vd.source == DriverSource::Initial && allowDupInitialDrivers);
+        return vd.source == DriverSource::Subroutine || vd.flags.has(DriverFlags::Initializer);
     };
 
     auto end = driverMap.end();
@@ -465,6 +472,10 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
         //      - Report if multiple continuous assignments
         bool isProblem = false;
         auto curr = *it;
+
+        if (allowDupInitialDrivers && (curr->isInitialDriver())) {
+            continue;
+        };
 
         if (curr->isUnidirectionalPort() != driver.isUnidirectionalPort()) {
             isProblem = true;
@@ -488,7 +499,7 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
         }
     }
 
-    driverMap.insert(bounds, &driver, driverAlloc);
+    addDriverToMap();
 }
 
 void DriverTracker::noteHierPortDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
