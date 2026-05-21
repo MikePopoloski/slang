@@ -57,7 +57,7 @@ if(NOT Boost_FOUND)
   message(STATUS "Using FetchContent for boost::regex (header-only)")
   FetchContent_Declare(
     boost_regex
-    GIT_REPOSITORY https://github.com/boostorg/regex.git
+    GIT_REPOSITORY https://github.com/MikePopoloski/regex.git
     GIT_TAG boost-1.91.0
     GIT_SHALLOW ON
     SOURCE_SUBDIR _no_build_)
