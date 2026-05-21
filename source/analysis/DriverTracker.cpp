@@ -421,7 +421,7 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
         }
 
         if (driverMap.empty()) {
-            driverMap.insert(bounds, &driver, driverAlloc);
+            addDriverToMap();
             return;
         }
     }
