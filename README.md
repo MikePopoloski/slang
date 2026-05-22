@@ -48,6 +48,10 @@ The project also includes Python bindings for the library, which can be installe
 ```
 pip install pyslang
 ```
+or conda:
+```
+conda install pyslang -c conda-forge
+```
 See the `pyslang` directory in this repository for tests and examples that show how to use the Python API.
 
 ### Try It Out
