@@ -1468,15 +1468,11 @@ bool Driver::reportLoadErrors() {
 }
 
 void Driver::printError(const std::string& message) {
-    OS::printE(fg(textDiagClient->errorColor), "error: ");
-    OS::printE(message);
-    OS::printE("\n");
+    OS::printError(message);
 }
 
 void Driver::printWarning(const std::string& message) {
-    OS::printE(fg(textDiagClient->warningColor), "warning: ");
-    OS::printE(message);
-    OS::printE("\n");
+    OS::printWarning(message);
 }
 
 void Driver::printNote(const std::string& message) {

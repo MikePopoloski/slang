@@ -5,8 +5,11 @@
 #include <BS_thread_pool.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <sstream>
+#include <utility>
+#include <vector>
 
 #include "slang/util/Bag.h"
+#include "slang/util/OS.h"
 #include "slang/util/Random.h"
 #include "slang/util/TimeTrace.h"
 
@@ -36,6 +39,19 @@ TEST_CASE("TypeName test") {
 TEST_CASE("createRandomGenerator construction") {
     // Basic construction test, not much else we can do with it.
     auto rng = createRandomGenerator<std::mt19937>();
+}
+
+TEST_CASE("OS print helpers capture raw messages") {
+    std::vector<std::pair<std::string, bool>> output;
+    auto guard = OS::captureOutput(
+        [&](std::string_view text, bool isStdout) { output.emplace_back(text, isStdout); });
+
+    OS::printError("bad thing");
+    OS::printWarning("heads up");
+
+    REQUIRE(output.size() == 2);
+    CHECK(output[0] == std::pair<std::string, bool>{"bad thing", false});
+    CHECK(output[1] == std::pair<std::string, bool>{"heads up", false});
 }
 
 TEST_CASE("Bag constructor doesn't accept Bag") {
