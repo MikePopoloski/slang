@@ -69,6 +69,7 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .value("AllowUnnamedGenerate", CompilationFlags::AllowUnnamedGenerate)
         .value("AllowVirtualIfaceWithOverride", CompilationFlags::AllowVirtualIfaceWithOverride)
         .value("AllowArrayConcatAssignPattern", CompilationFlags::AllowArrayConcatAssignPattern)
+        .value("AllowCrossAutoBinMax", CompilationFlags::AllowCrossAutoBinMax)
         .finalize();
 
     py::classh<CompilationOptions>(ast, "CompilationOptions")

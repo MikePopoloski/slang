@@ -662,6 +662,16 @@ redefinition produces a `duplicate-definition` warning and a different-kind rede
 
 This option is enabled automatically when `--compat=vcs` or `--compat=all` is used.
 
+`--allow-cross-auto-bin-max`
+
+Allow the legacy `cross_auto_bin_max` coverage option to be set on covergroups and crosses.
+This option was part of the SystemVerilog 3.1a coverage option set but was removed from
+IEEE 1800; some tools still accept it for compatibility with older code. When this flag is
+set, the option is accepted and parsed but has no effect (slang does not compute coverage
+bins at elaboration).
+
+This option is enabled automatically when `--compat=vcs` or `--compat=all` is used.
+
 `--cmd-ignore <vendor_cmd>,<N>`
 
 Define rule to ignore vendor command &lt;vendor_cmd> with its following &lt;N> parameters.

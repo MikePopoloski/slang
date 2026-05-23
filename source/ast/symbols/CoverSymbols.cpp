@@ -171,6 +171,8 @@ CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc
     option.addField("comment"sv, string_t);
     option.addField("at_least"sv, int_t);
     option.addField("auto_bin_max"sv, int_t, VariableFlags::ImmutableCoverageOption);
+    if (comp.hasFlag(CompilationFlags::AllowCrossAutoBinMax))
+        option.addField("cross_auto_bin_max"sv, int_t, VariableFlags::ImmutableCoverageOption);
     option.addField("cross_num_print_missing"sv, int_t);
     if (lv >= LanguageVersion::v1800_2023)
         option.addField("cross_retain_auto_bins"sv, bit_t, VariableFlags::ImmutableCoverageOption);
@@ -908,6 +910,8 @@ CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, std::string_view name, Sou
     option.addField("goal"sv, int_t);
     option.addField("comment"sv, string_t);
     option.addField("at_least"sv, int_t);
+    if (comp.hasFlag(CompilationFlags::AllowCrossAutoBinMax))
+        option.addField("cross_auto_bin_max"sv, int_t, VariableFlags::ImmutableCoverageOption);
     option.addField("cross_num_print_missing"sv, int_t);
     if (lv >= LanguageVersion::v1800_2023)
         option.addField("cross_retain_auto_bins"sv, bit_t, VariableFlags::ImmutableCoverageOption);
