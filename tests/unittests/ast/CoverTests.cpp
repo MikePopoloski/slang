@@ -882,3 +882,81 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CrossIdentInBinsof);
 }
+
+TEST_CASE("Legacy cross_auto_bin_max option -- error without flag") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    bit clk;
+    logic [1:0] a, b;
+    covergroup cg @(posedge clk);
+        cp_a : coverpoint a;
+        cp_b : coverpoint b;
+        x : cross cp_a, cp_b {
+            option.cross_auto_bin_max = 0;
+        }
+    endgroup
+    cg c = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownMember);
+}
+
+TEST_CASE("Legacy cross_auto_bin_max option -- allowed with flag at covergroup and cross scope") {
+    // SystemVerilog 3.1a Table 20-2: cross_auto_bin_max is allowed at covergroup
+    // scope (as default for crosses) and at cross scope.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    bit clk;
+    logic [1:0] a, b;
+    covergroup cg @(posedge clk);
+        option.cross_auto_bin_max = 32;
+        cp_a : coverpoint a;
+        cp_b : coverpoint b;
+        x : cross cp_a, cp_b {
+            option.cross_auto_bin_max = 0;
+        }
+    endgroup
+    cg c = new;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowCrossAutoBinMax;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Legacy cross_auto_bin_max option -- still rejected at coverpoint scope") {
+    // SystemVerilog 3.1a Table 20-2: cross_auto_bin_max is not allowed at
+    // coverpoint scope even in 3.1a.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    bit clk;
+    logic [1:0] a;
+    covergroup cg @(posedge clk);
+        cp_a : coverpoint a {
+            option.cross_auto_bin_max = 0;
+        }
+    endgroup
+    cg c = new;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowCrossAutoBinMax;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownMember);
+}

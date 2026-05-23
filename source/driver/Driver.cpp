@@ -262,6 +262,9 @@ void Driver::addStandardArgs() {
                 "primitive at the root scope within the same library when the conflicting "
                 "definition comes from a library file (-v / --libfile); the first definition "
                 "is kept and subsequent library-file redefinitions are silently discarded");
+    addCompFlag(CompilationFlags::AllowCrossAutoBinMax, "--allow-cross-auto-bin-max",
+                "Allow the legacy SystemVerilog 3.1a cross_auto_bin_max coverage option to "
+                "be set on covergroups and crosses. The option is accepted and ignored.");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "
