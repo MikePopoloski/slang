@@ -867,7 +867,7 @@ std::pair<Trivia, Trivia> Preprocessor::handleMacroUsage(Token directive) {
     auto [actualArgs, extraTrivia] = handleTopLevelMacro(directive, macroDef);
     inMacroBody = false;
 
-    auto* usageSyntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
+    auto usageSyntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
 
     if (macroDef.valid() && !macroDef.isIntrinsic()) {
         metadata.macroRefs.push_back(MacroRefMetadata{
@@ -1187,7 +1187,7 @@ Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {
 
 Trivia Preprocessor::handleUndefDirective(Token directive) {
     Token nameToken = expect(TokenKind::Identifier);
-    auto* result = alloc.emplace<UndefDirectiveSyntax>(directive, nameToken);
+    auto result = alloc.emplace<UndefDirectiveSyntax>(directive, nameToken);
 
     if (!nameToken.isMissing()) {
         std::string_view name = nameToken.valueText();

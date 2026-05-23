@@ -475,7 +475,7 @@ endmodule
     // the port connection expression for the middle instance should be 2 bits,
     // not 3 (which was the bug: the right-partial element was over-selected).
     auto& midInst = arr.elements[1]->as<InstanceSymbol>();
-    auto* connExpr = midInst.getPortConnections()[0]->getExpression();
+    auto connExpr = midInst.getPortConnections()[0]->getExpression();
     REQUIRE(connExpr);
     // for an output port, the expression is an assignment; the LHS is the
     // sliced destination in the parent scope (the concatenation of d6 slices).

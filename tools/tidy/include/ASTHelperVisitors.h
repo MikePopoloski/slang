@@ -50,7 +50,7 @@ protected:
 struct CollectIdentifiers
     : public slang::ast::ASTVisitor<CollectIdentifiers, slang::ast::VisitFlags::AllGood> {
     void handle(const slang::ast::NamedValueExpression& expression) {
-        if (auto* symbol = expression.getSymbolReference(); symbol) {
+        if (auto symbol = expression.getSymbolReference(); symbol) {
             identifiers.push_back(symbol->name);
         }
     }

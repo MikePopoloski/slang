@@ -289,7 +289,7 @@ int b = `BAR(2);
     CHECK(usages[2].definition->name.valueText() == "BAR");
 
     BumpAllocator newAlloc;
-    auto* newRoot = deepClone(tree->root(), newAlloc);
+    auto newRoot = deepClone(tree->root(), newAlloc);
     auto cloned = std::make_shared<SyntaxTree>(newRoot, tree->sourceManager(), std::move(newAlloc),
                                                nullptr, tree);
 

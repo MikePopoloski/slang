@@ -3515,7 +3515,7 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
 
     if (!delays.empty() && delays.size() != 1 && delays.size() != 2 && delays.size() != 3 &&
         delays.size() != 6 && delays.size() != 12) {
-        auto* lastDelay = delays[delays.size() - 1];
+        auto lastDelay = delays[delays.size() - 1];
         addDiag(diag::WrongSpecifyDelayCount, lastDelay->sourceRange());
     }
 
@@ -3609,7 +3609,7 @@ TimingCheckArgSyntax& Parser::parseTimingCheckArg() {
 
             // List is allowed to have up to 6 specifiers.
             if (list.size() > 6) {
-                auto* lastDesc = list[6];
+                auto lastDesc = list[6];
                 addDiag(diag::TooManyEdgeDescriptors, lastDesc->sourceRange());
             }
 

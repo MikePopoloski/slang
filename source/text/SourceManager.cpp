@@ -196,7 +196,7 @@ const SourceLibrary* SourceManager::getLibraryFor(BufferID buffer) const {
 SourceManager::BufferKind SourceManager::getBufferKind(BufferID buffer) const {
     std::shared_lock<std::shared_mutex> lock(mutex);
     if (buffer && buffer.getId() < bufferEntries.size()) {
-        if (auto* exp = std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]))
+        if (auto exp = std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]))
             return exp->isMacroArg ? BufferKind::MacroArg : BufferKind::Macro;
         else
             return std::get<FileInfo>(bufferEntries[buffer.getId()]).bufferKind;

@@ -44,7 +44,6 @@ protected:
 
     std::string getFileName(SourceLocation location) const;
     void getIncludeStack(BufferID buffer, SmallVectorBase<SourceLocation>& stack) const;
-    std::string_view getSourceLine(SourceLocation location, size_t col) const;
     size_t getColumnNumber(SourceLocation location) const;
     static std::string_view getSeverityString(DiagnosticSeverity severity);
 };

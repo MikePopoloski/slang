@@ -709,13 +709,12 @@ bool Driver::processOptions(bool checkFiles) {
 
     // Multiple --waiver-file flags are additive (no override). Must run after
     // setWarningOptions so loadFromFile can resolve user-defined warning groups.
-    // Bail on first failure so partial rule state never reaches the engine.
     if (!options.waiverFiles.empty()) {
         auto waiverManager = std::make_shared<WaiverManager>();
-        std::string errors;
         for (const auto& waiverPath : options.waiverFiles) {
-            if (!waiverManager->loadFromFile(waiverPath, diagEngine, errors)) {
-                OS::printE(fmt::format("Error loading waiver file '{}': {}\n", waiverPath, errors));
+            auto errors = waiverManager->loadFromFile(waiverPath, diagEngine);
+            if (!errors.empty()) {
+                OS::printE(fmt::format("{}\n", errors));
                 return false;
             }
         }

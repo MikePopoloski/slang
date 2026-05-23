@@ -346,7 +346,7 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, std::span<const Source
         buffer->format(" [-W{}]", optionName);
 
     if (hasLocation && includeSource) {
-        std::string_view line = getSourceLine(loc, col);
+        std::string_view line = sourceManager->getSourceLine(loc);
         if (!line.empty() && line.length() < MaxLineLengthToPrint) {
             // We might want to make the tab width configurable at some point,
             // but for now hardcode it to 8 to match the default on basically

@@ -15,7 +15,7 @@
 using namespace slang::driver;
 
 static bool stdoutContains(std::string_view text) {
-    return OS::capturedStdout.find(text) != std::string::npos;
+    return contains(OS::capturedStdout, text);
 }
 
 TEST_CASE("Driver basic") {
@@ -110,39 +110,28 @@ TEST_CASE("Driver command files are processed strictly in order") {
 TEST_CASE("Driver tracks command file metadata") {
     auto guard = OS::captureOutput();
 
-    std::error_code ec;
-    auto path = fs::temp_directory_path(ec) / "slang_command_file_metadata.f";
-    auto emptyPath = fs::temp_directory_path(ec) / "slang_empty_command_file_metadata.f";
-    auto jsonPath = fs::temp_directory_path(ec) / "slang_command_file_metadata.json";
-    {
-        std::ofstream file(path);
-        file << "-D FOO=1\n";
-        file << "-D BAR=2\n";
-    }
-    {
-        std::ofstream file(emptyPath);
-    }
-    {
-        std::ofstream file(jsonPath);
-    }
+    TempFile fileWithDefs("-D FOO=1\n-D BAR=2\n");
+    TempFile emptyFile("");
+    TempFile extraFile("");
 
     Driver driver;
     driver.addStandardArgs();
-    REQUIRE(driver.processCommandFiles(path.string(), false, false));
-    REQUIRE(driver.processCommandFiles(emptyPath.string(), false, false));
+    REQUIRE(driver.processCommandFiles(fileWithDefs.path.string(), false, false));
+    REQUIRE(driver.processCommandFiles(emptyFile.path.string(), false, false));
     {
-        auto guard = driver.setCurrentCommandFile(jsonPath);
+        auto guard = driver.setCurrentCommandFile(extraFile.path);
         const char* argv[] = {"testfoo", "-D", "BAZ=3"};
         REQUIRE(driver.parseCommandLine(3, argv));
     }
     const char* argv[] = {"testfoo", "-D", "NOT_ATTRIBUTED=1"};
     REQUIRE(driver.parseCommandLine(3, argv));
 
-    auto expectedPath = fs::weakly_canonical(path, ec);
+    std::error_code ec;
+    auto expectedPath = fs::weakly_canonical(fileWithDefs.path, ec);
     REQUIRE(!ec);
-    auto expectedEmptyPath = fs::weakly_canonical(emptyPath, ec);
+    auto expectedEmptyPath = fs::weakly_canonical(emptyFile.path, ec);
     REQUIRE(!ec);
-    auto expectedJsonPath = fs::weakly_canonical(jsonPath, ec);
+    auto expectedJsonPath = fs::weakly_canonical(extraFile.path, ec);
     REQUIRE(!ec);
 
     auto& commandFileMetadata = driver.getCommandFileMetadata();
@@ -157,10 +146,6 @@ TEST_CASE("Driver tracks command file metadata") {
     auto jsonIt = commandFileMetadata.find(expectedJsonPath);
     REQUIRE(jsonIt != commandFileMetadata.end());
     CHECK(jsonIt->second.defines == std::vector<std::string>{"BAZ=3"});
-
-    fs::remove(path, ec);
-    fs::remove(emptyPath, ec);
-    fs::remove(jsonPath, ec);
 }
 
 TEST_CASE("SourceLoader doesn't reload names satisfied by later worklist entries") {
@@ -198,10 +183,6 @@ endmodule
 
     CHECK(leafLookups == 0);
     CHECK(trees.size() == 2);
-}
-
-static bool contains(std::string_view str, std::string_view value) {
-    return str.find(value) != std::string_view::npos;
 }
 
 TEST_CASE("Driver library files with explicit name") {

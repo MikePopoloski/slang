@@ -3,6 +3,8 @@
 
 #include "Test.h"
 
+#include <atomic>
+#include <fstream>
 #include <sstream>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -10,6 +12,21 @@
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/OS.h"
+
+TempFile::TempFile(std::string_view contents, std::string_view extension) {
+    static std::atomic<unsigned> counter{0};
+    path = fs::temp_directory_path() /
+           (std::string("slang-test-") + std::to_string(OS::getpid()) + "-" +
+            std::to_string(counter.fetch_add(1)) + std::string(extension));
+    std::ofstream out(path);
+    out << contents;
+}
+
+TempFile::~TempFile() {
+    std::error_code ec;
+    fs::remove(path, ec);
+}
 
 #ifndef TEST_DATA_DIR
 #    error "TEST_DATA_DIR is not defined. Please configure with CMake."

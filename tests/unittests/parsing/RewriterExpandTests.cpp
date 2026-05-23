@@ -262,6 +262,6 @@ endmodule
         auto resultStr = result.str();
 
         // Should not see SOME_VALUE token
-        CHECK(resultStr.find("SOME_VALUE") == std::string::npos);
+        CHECK(!contains(resultStr, "SOME_VALUE"));
     }
 }

@@ -817,8 +817,16 @@ Treat warning (or group of warnings) "foo" as a warning even if `-Werror` is spe
 of whether `-Werror` appears before or after in the command line. Note that unlike `-Werror=`, this
 will not turn on the warning if it hasn't been enabled with a separate option.
 
-slang also supports external waiver files for suppressing diagnostics
-without modifying source. See @ref waivers.
+slang also supports external waiver files for suppressing diagnostics without modifying source.
+See @ref waivers for more details. Commands controlling this are:
+
+`--waiver-file <file-pattern>[,...]`
+
+One or more waiver files (in TOML format) to control diagnostic output.
+
+`--print-unused-waivers`
+
+If set, detailed information about unused waiver rules will be printed.
 
 @section clr-profiling Profiling
 

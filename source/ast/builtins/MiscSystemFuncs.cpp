@@ -209,7 +209,7 @@ public:
 
             // Allow element selects and member accesses to support randomizing
             // array elements and struct members (non-standard extension).
-            auto* left = &arg->as<AssignmentExpression>().left();
+            auto left = &arg->as<AssignmentExpression>().left();
             bool isNonstandard = false;
             while (true) {
                 if (left->kind == ExpressionKind::ElementSelect) {

@@ -280,7 +280,7 @@ public:
 
     /// Gets the list of parameter declarations for this class.
     std::span<const DefinitionSymbol::ParameterDecl> getParameterDecls() const {
-        return {paramDecls.data(), paramDecls.size()};
+        return paramDecls;
     }
 
     void serializeTo(ASTSerializer& serializer) const;

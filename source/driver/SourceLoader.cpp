@@ -385,15 +385,15 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
     return syntaxTrees;
 }
 
-void SourceLoader::loadTrees(
-    SyntaxTreeList& syntaxTrees, function_ref<SourceBuffer(std::string_view)> findBufferFunc,
-    SourceManager& sourceManager, const Bag& optionBag,
-    std::span<const syntax::DefineDirectiveSyntax* const> inheritedMacros) {
+void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
+                             function_ref<SourceBuffer(std::string_view)> findBufferFunc,
+                             SourceManager& sourceManager, const Bag& optionBag,
+                             std::span<const DefineDirectiveSyntax* const> inheritedMacros) {
     flat_hash_set<std::string_view> knownNames;
     flat_hash_set<std::string_view> missingNames;
     SmallVector<std::string_view, 8> worklist;
 
-    auto addKnownNames = [&](const std::shared_ptr<syntax::SyntaxTree>& tree) {
+    auto addKnownNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
         auto& meta = tree->getMetadata();
         meta.visitDeclaredSymbols([&](std::string_view name) {
             knownNames.emplace(name);
@@ -401,13 +401,11 @@ void SourceLoader::loadTrees(
         });
     };
 
-    auto findMissingNames = [&](const std::shared_ptr<syntax::SyntaxTree>& tree) {
+    auto findMissingNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
         auto& meta = tree->getMetadata();
         meta.visitReferencedSymbols([&](std::string_view name) {
-            if (!knownNames.contains(name) && !missingNames.contains(name)) {
-                missingNames.emplace(name);
+            if (!knownNames.contains(name) && missingNames.emplace(name).second)
                 worklist.push_back(name);
-            }
         });
     };
 
@@ -425,8 +423,7 @@ void SourceLoader::loadTrees(
         if (knownNames.contains(name))
             continue;
 
-        auto buffer = findBufferFunc(name);
-        if (buffer) {
+        if (auto buffer = findBufferFunc(name)) {
             auto tree = syntax::SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
                                                        inheritedMacros);
             tree->isLibraryUnit = true;

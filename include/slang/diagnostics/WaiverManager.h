@@ -21,8 +21,7 @@ class DiagnosticEngine;
 class SourceLocation;
 class SourceManager;
 
-/// Opaque holder for a compiled line-content regex. Defined in the .cpp so the
-/// boost::regex type doesn't leak into slang's public headers.
+/// Opaque holder for a compiled line-content regex.
 struct WaiverLinePattern;
 
 /// Represents a single waiver rule that can suppress diagnostics based on
@@ -53,9 +52,7 @@ struct SLANG_EXPORT WaiverRule {
     size_t appliedCount = 0;
 
     // The next three flags exist purely to drive the "why was this waiver unused?"
-    // explanation in WaiverManager::getSummary. They are NOT used as fast-paths
-    // during matching. shouldWaive() must keep them in sync with the corresponding
-    // predicate decision points; if you add a new predicate, add a sibling flag.
+    // explanation in WaiverManager::getSummary.
 
     /// Whether the scope glob (file or hier) matched at least once.
     bool scopeMatched = false;
@@ -84,16 +81,6 @@ struct SLANG_EXPORT WaiverRule {
     ~WaiverRule();
     WaiverRule(WaiverRule&&) noexcept;
     WaiverRule& operator=(WaiverRule&&) noexcept;
-
-    /// Check if a file path matches this rule's file pattern (file-scoped rules only)
-    [[nodiscard]] bool matchesFile(const std::filesystem::path& filePath) const;
-
-    /// Check if source line content matches this rule's line pattern.
-    /// Caller must ensure linePattern is set before calling.
-    [[nodiscard]] bool matchesLineContent(std::string_view lineContent) const;
-
-    /// Check if a hierarchical path matches this rule's hier glob (hier-scoped rules only)
-    [[nodiscard]] bool matchesHier(std::string_view hierPath) const;
 };
 
 /// The WaiverManager loads and manages diagnostic waiver rules from external
@@ -102,22 +89,15 @@ struct SLANG_EXPORT WaiverRule {
 /// and source content patterns.
 ///
 /// Evaluation model (see shouldWaive()):
-///   - Rules are evaluated in load order; the FIRST rule whose predicates all
+///   - Rules are evaluated in load order; the first rule whose predicates all
 ///     match wins. There is no priority/specificity scheme and no "deny"
 ///     counterpart - a waiver can only suppress, never re-enable.
 ///   - For a single rule, all configured predicates are AND'd: scope (file or
 ///     hier), then optional diagnostic-name filter, then optional regex.
-///   - Waivers run AFTER -W severity remapping and --ignore-paths in
-///     DiagnosticEngine::issueImpl, so a waiver cannot promote a warning to an
-///     error and cannot resurrect a diagnostic already suppressed elsewhere.
 ///
 /// Extending the schema: when adding a new TOML key, update the `knownKeys`
 /// allowlist in loadFromFile (otherwise it will be rejected as a typo) and add
 /// matching state to WaiverRule plus a corresponding predicate in shouldWaive.
-///
-/// Threading: like DiagnosticEngine, instances are not synchronized. Callers
-/// must ensure shouldWaive() is invoked single-threaded, which is the
-/// contract DiagnosticEngine::issue() already imposes.
 ///
 /// Debugging: set the SLANG_WAIVER_DEBUG environment variable to any non-empty
 /// value to get per-rule trace output on stderr from shouldWaive().
@@ -135,7 +115,7 @@ struct SLANG_EXPORT WaiverRule {
 /// [[waivers]]
 /// file = "rtl/core.sv"                    # waive specific occurrence via line content
 /// diagnostic = "unused-variable"
-/// regex = '\bdebug_reg\b'                  # literal string: no escape soup
+/// regex = '\bdebug_reg\b'
 ///
 /// [[waivers]]
 /// hier = "top/u_subsys/u_conv"            # waive by hierarchy
@@ -151,27 +131,31 @@ class SLANG_EXPORT WaiverManager {
 public:
     WaiverManager() = default;
 
-    /// Load waiver rules from a TOML file, appending to any already loaded.
+    /// Loads waiver rules from a TOML file, appending to any already loaded.
+    ///
     /// Multiple loads are purely additive - there is no de-dup, no override,
     /// and load order determines the first-match-wins precedence used by
     /// shouldWaive(). On parse failure rules already accepted from prior calls
     /// are preserved; rules from the failing file are not partially applied
     /// because each rule is push_back'd only after the entry fully validates.
+    ///
     /// @param path The path to the TOML waiver file
     /// @param diagnosticEngine Used to validate diagnostic option names at load time
     ///        (so misspelled diagnostic names fail loudly instead of silently
     ///        never matching). Warning options must already be configured on
     ///        the engine before this call so that user-defined groups resolve.
-    /// @param errors Output parameter for error messages (if any)
-    /// @return true if the file was loaded successfully, false otherwise
-    [[nodiscard]] bool loadFromFile(const std::filesystem::path& path,
-                                    const DiagnosticEngine& diagnosticEngine, std::string& errors);
+    /// @return A string that is empty if the load succeeded, and contains error information
+    ///         if it otherwise failed.
+    [[nodiscard]] std::string loadFromFile(const std::filesystem::path& path,
+                                           const DiagnosticEngine& diagnosticEngine);
 
-    /// Check if a diagnostic should be waived based on the loaded rules.
-    /// Returns true on the FIRST rule that matches; later rules are not
+    /// Checks if a diagnostic should be waived based on the loaded rules.
+    ///
+    /// Returns true on the first rule that matches; later rules are not
     /// consulted (so order is significant). Side effect: updates per-rule
     /// statistics on every call regardless of result, including on partial
-    /// matches that later predicates reject - these stats feed getSummary().
+    /// matches that later predicates reject.
+    ///
     /// @param diagnostic The diagnostic to check
     /// @param location The source location of the diagnostic
     /// @param sourceManager The source manager for accessing file information
@@ -181,22 +165,17 @@ public:
                                    const SourceManager& sourceManager,
                                    const DiagnosticEngine& diagnosticEngine);
 
-    /// Get how many times waivers were applied.
+    /// Gets how many times waivers were applied.
     [[nodiscard]] size_t getAppliedCount() const;
 
-    /// Get how many rules were never hit.
+    /// Gets how many rules were never hit.
     [[nodiscard]] size_t getUnusedCount() const;
 
-    /// Render a summary of unused waivers for logging.
+    /// Renders a summary of unused waivers for logging.
     [[nodiscard]] std::string getSummary(bool showUnused = false) const;
 
 private:
     std::vector<WaiverRule> rules;
-
-    /// Helper to get the source line text at a given location. The returned
-    /// view is backed by @a sourceManager and is valid for as long as it is.
-    [[nodiscard]] std::string_view getLineText(SourceLocation location,
-                                               const SourceManager& sourceManager) const;
 };
 
 } // namespace slang

@@ -20,7 +20,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::All
     struct CollectAllIdentifiers
         : public slang::ast::ASTVisitor<CollectAllIdentifiers, VisitFlags::AllCanonical> {
         void handle(const slang::ast::NamedValueExpression& expression) {
-            if (auto* symbol = expression.getSymbolReference(); symbol && expression.syntax) {
+            if (auto symbol = expression.getSymbolReference(); symbol && expression.syntax) {
                 identifiers.push_back(
                     std::make_pair(symbol->name, getExpressionSourceLocation(expression).value()));
             }

@@ -75,7 +75,6 @@ public:
             capturedStderr += text;
     }
 
-    // take in a callback to be called when the output is captured
     static auto captureOutput(
         std::function<void(std::string_view, bool)>&& callback = captureOutputStreams) {
 

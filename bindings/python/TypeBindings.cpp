@@ -124,11 +124,15 @@ void registerTypes(py::module_& m) {
     typePrintingOptions.def_readwrite("quoteChar", &TypePrintingOptions::quoteChar)
         .def_readwrite("elideScopeNames", &TypePrintingOptions::elideScopeNames)
         .def_readwrite("printAKA", &TypePrintingOptions::printAKA)
-        .def_readwrite("anonymousTypeStyle", &TypePrintingOptions::anonymousTypeStyle)
         .def_readwrite("skipScopedTypeNames", &TypePrintingOptions::skipScopedTypeNames)
+        .def_readwrite("skipTypeDefs", &TypePrintingOptions::skipTypeDefs)
         .def_readwrite("fullEnumType", &TypePrintingOptions::fullEnumType)
+        .def_readwrite("typedefsAsLinks", &TypePrintingOptions::typedefsAsLinks)
+        .def_readwrite("enumsAsLinks", &TypePrintingOptions::enumsAsLinks)
+        .def_readwrite("classesAsLinks", &TypePrintingOptions::classesAsLinks)
         .def_readwrite("printIntegralRange", &TypePrintingOptions::printIntegralRange)
-        .def_readwrite("skipTypeDefs", &TypePrintingOptions::skipTypeDefs);
+        .def_readwrite("anonymousTypeStyle", &TypePrintingOptions::anonymousTypeStyle)
+        .def_readwrite("friendlyMemberCharLimit", &TypePrintingOptions::friendlyMemberCharLimit);
 
     py::native_enum<TypePrintingOptions::AnonymousTypeStyle>(typePrintingOptions,
                                                              "AnonymousTypeStyle", "enum.Enum")

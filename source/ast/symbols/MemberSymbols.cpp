@@ -1124,7 +1124,7 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
     SmallVector<const UdpEntrySyntax*> conflicts;
     trie.insert(syntax, inputs, stateChar, trieAlloc, conflicts);
     if (!conflicts.empty()) {
-        for (const auto* existing : conflicts) {
+        for (auto existing : conflicts) {
             // This is an error if the existing row has a different output,
             // otherwise it's just silently ignored.
             auto existingOutput = getOutputChar(existing->next);

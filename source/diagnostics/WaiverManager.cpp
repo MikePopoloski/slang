@@ -21,6 +21,8 @@
 #include "slang/util/OS.h"
 #include "slang/util/String.h"
 
+namespace fs = std::filesystem;
+
 namespace slang {
 
 struct WaiverLinePattern {
@@ -29,16 +31,11 @@ struct WaiverLinePattern {
     explicit WaiverLinePattern(boost::regex r) : regex(std::move(r)) {}
 };
 
-WaiverRule::WaiverRule() = default;
-WaiverRule::~WaiverRule() = default;
-WaiverRule::WaiverRule(WaiverRule&&) noexcept = default;
-WaiverRule& WaiverRule::operator=(WaiverRule&&) noexcept = default;
-
-/// Rewrite '.' to '/' so glob wildcards behave correctly on hierarchical
-/// paths. svGlobMatches is a path-aware glob matcher whose only separator
-/// is '/': '*' stops at '/' and '...' is what recurses across '/'. A
-/// literal '...' run in the input is preserved verbatim so users can use
-/// the LRM-native recursive glob spelling in hier patterns.
+// Rewrites '.' to '/' so glob wildcards behave correctly on hierarchical
+// paths. svGlobMatches is a path-aware glob matcher whose only separator
+// is '/': '*' stops at '/' and '...' is what recurses across '/'. A
+// literal '...' run in the input is preserved verbatim so users can use
+// the LRM-native recursive glob spelling in hier patterns.
 static std::string normalizeDotSep(std::string_view s) {
     std::string result;
     result.reserve(s.size());
@@ -57,10 +54,10 @@ static std::string normalizeDotSep(std::string_view s) {
     return result;
 }
 
-/// Convert user-facing '**' recursive glob syntax to the '...' syntax used
-/// internally by slang's svGlobMatches. We expose '**' to users because that
-/// matches widespread tooling convention (gitignore, rg, fd, etc.); '...' is
-/// accepted too as it's the LRM-native spelling used elsewhere in slang.
+// Converts user-facing '**' recursive glob syntax to the '...' syntax used
+// internally by slang's svGlobMatches. We expose '**' to users because that
+// matches widespread tooling convention (gitignore, rg, fd, etc.); '...' is
+// accepted too as it's the LRM-native spelling used elsewhere in slang.
 static std::string convertDoubleStarToEllipsis(std::string_view s) {
     std::string result;
     result.reserve(s.size());
@@ -76,90 +73,72 @@ static std::string convertDoubleStarToEllipsis(std::string_view s) {
     return result;
 }
 
-bool WaiverRule::matchesFile(const std::filesystem::path& filePath) const {
-    return svGlobMatches(filePath.lexically_normal(), normalizedPattern);
-}
+WaiverRule::WaiverRule() = default;
+WaiverRule::~WaiverRule() = default;
+WaiverRule::WaiverRule(WaiverRule&&) noexcept = default;
+WaiverRule& WaiverRule::operator=(WaiverRule&&) noexcept = default;
 
-bool WaiverRule::matchesLineContent(std::string_view lineContent) const {
-    SLANG_ASSERT(linePattern);
-    // Patterns are validated at load time (no_except + status() check), so
-    // regex_search shouldn't fault here for well-formed inputs.
-    return boost::regex_search(lineContent.begin(), lineContent.end(), linePattern->regex);
-}
-
-bool WaiverRule::matchesHier(std::string_view hierPath) const {
-    return svGlobMatches(std::filesystem::path(normalizeDotSep(hierPath)), normalizedPattern);
-}
-
-static std::string formatError(const toml::parse_error& err) {
-    auto& source = err.source();
+template<typename TNode>
+static std::string tomlErr(const TNode& node, std::string_view msg) {
+    auto& source = node.source();
     return fmt::format("{}:{}:{}: error: {}", *source.path, source.begin.line, source.begin.column,
-                       err.description());
+                       msg);
 }
 
-bool WaiverManager::loadFromFile(const std::filesystem::path& path,
-                                 const DiagnosticEngine& diagnosticEngine, std::string& errors) {
+static constexpr std::array KnownKeys = {"file", "hier", "diagnostic", "regex"};
+
+std::string WaiverManager::loadFromFile(const fs::path& path,
+                                        const DiagnosticEngine& diagnosticEngine) {
     toml::table root;
 #if TOML_EXCEPTIONS
     try {
         root = toml::parse_file(getU8Str(path));
     }
     catch (const toml::parse_error& e) {
-        errors = formatError(e);
-        return false;
+        return tomlErr(e, e.description());
     }
 #else
     auto parsed = toml::parse_file(getU8Str(path));
     if (!parsed) {
-        errors = formatError(parsed.error());
-        return false;
+        return tomlErr(parsed.error(), parsed.error().description());
     }
     root = std::move(parsed).table();
 #endif
 
-    const toml::node* waiversNode = root.get("waivers");
-    if (!waiversNode) {
-        errors = "Missing 'waivers' key in TOML file";
-        return false;
-    }
+    auto waiversNode = root.get("waivers");
+    if (!waiversNode)
+        return tomlErr(root, "missing 'waivers' key");
 
-    const toml::array* waivers = waiversNode->as_array();
-    if (!waivers) {
-        errors = "'waivers' must be an array of tables";
-        return false;
-    }
+    auto waivers = waiversNode->as_array();
+    if (!waivers)
+        return tomlErr(*waiversNode, "'waivers' must be an array of tables");
 
-    for (size_t i = 0; i < waivers->size(); i++) {
-        const toml::table* entry = (*waivers)[i].as_table();
-        if (!entry) {
-            errors = fmt::format("Waiver entry {} must be a table", i);
-            return false;
-        }
+    for (auto& currNode : *waivers) {
+        auto entry = currNode.as_table();
+        if (!entry)
+            return tomlErr(currNode, "waiver entry must be a table");
 
         // Reject unknown keys so typos in user waiver files surface as load
-        // errors instead of silently no-op'ing. When adding a new TOML key,
-        // append it here AND add a corresponding field to WaiverRule plus a
-        // predicate in shouldWaive - otherwise the new key will be accepted
-        // by the parser but never enforced at match time.
-        static const std::array knownKeys = {"file", "hier", "diagnostic", "regex"};
-        for (auto&& [k, v] : *entry) {
+        // errors instead of silently no-op'ing.
+        for (auto& [k, v] : *entry) {
             std::string key(k.str());
-            if (std::ranges::find(knownKeys, key) == knownKeys.end()) {
-                errors = fmt::format("Unknown key '{}' in waiver entry {}", key, i);
-                return false;
-            }
+            if (std::ranges::find(KnownKeys, key) == KnownKeys.end())
+                return tomlErr(k, fmt::format("unknown key '{}'", key));
         }
 
         // Helper to read a scalar string field with a clear error on bad values.
-        auto readScalar = [&](const char* field, std::string& out) -> bool {
-            const toml::node* node = entry->get(field);
+        std::string errorStr;
+        auto readScalar = [&](const char* field, std::string& out) {
+            auto node = entry->get(field);
             if (!node)
                 return true; // absent is fine - caller decides if required
+
             auto sv = node->value<std::string>();
             if (!sv) {
-                errors = fmt::format("Waiver entry {}: '{}' must be a string", i, field);
+                errorStr = tomlErr(*node, fmt::format("'{}' must be a string", field));
                 return false;
             }
+
             out = std::move(*sv);
             return true;
         };
@@ -167,21 +146,16 @@ bool WaiverManager::loadFromFile(const std::filesystem::path& path,
         std::string fileStr, hierStr, regexStr;
         if (!readScalar("file", fileStr) || !readScalar("hier", hierStr) ||
             !readScalar("regex", regexStr)) {
-            return false;
+            return errorStr;
         }
 
-        bool hasFile = !fileStr.empty();
-        bool hasHier = !hierStr.empty();
+        const bool hasFile = !fileStr.empty();
+        const bool hasHier = !hierStr.empty();
+        if (hasFile && hasHier)
+            return tomlErr(*entry, "waiver entry has both 'file' and 'hier'; specify exactly one");
 
-        if (hasFile && hasHier) {
-            errors = fmt::format("Waiver entry {} has both 'file' and 'hier'; specify exactly one",
-                                 i);
-            return false;
-        }
-        if (!hasFile && !hasHier) {
-            errors = fmt::format("Waiver entry {} must have either 'file' or 'hier' as scope", i);
-            return false;
-        }
+        if (!hasFile && !hasHier)
+            return tomlErr(*entry, "waiver entry must have either 'file' or 'hier' as scope");
 
         WaiverRule rule;
         rule.sourceFile = path;
@@ -191,7 +165,7 @@ bool WaiverManager::loadFromFile(const std::filesystem::path& path,
             rule.hierScope = false;
             rule.scopeGlob = fileStr;
             rule.normalizedPattern =
-                std::filesystem::path(convertDoubleStarToEllipsis(fileStr)).lexically_normal();
+                fs::path(convertDoubleStarToEllipsis(fileStr)).lexically_normal();
         }
         else {
             rule.hierScope = true;
@@ -200,38 +174,31 @@ bool WaiverManager::loadFromFile(const std::filesystem::path& path,
         }
 
         // Parse optional diagnostic (string or array of strings)
-        if (const toml::node* diagNode = entry->get("diagnostic")) {
+        if (auto diagNode = entry->get("diagnostic")) {
             std::vector<std::string> names;
-            if (auto str = diagNode->value<std::string>(); str) {
-                names.push_back(std::move(*str));
+            if (auto str = diagNode->value<std::string>()) {
+                names.emplace_back(std::move(*str));
             }
-            else if (const toml::array* arr = diagNode->as_array()) {
+            else if (auto arr = diagNode->as_array()) {
                 for (size_t j = 0; j < arr->size(); j++) {
                     auto v = (*arr)[j].value<std::string>();
-                    if (!v) {
-                        errors = fmt::format(
-                            "Waiver entry {}: 'diagnostic' list element {} must be a string", i, j);
-                        return false;
-                    }
+                    if (!v)
+                        return tomlErr((*arr)[j], "'diagnostic' list element must be a string");
                     names.push_back(std::move(*v));
                 }
-                if (names.empty()) {
-                    errors = fmt::format("Waiver entry {}: 'diagnostic' list must not be empty", i);
-                    return false;
-                }
+
+                if (names.empty())
+                    return tomlErr(*diagNode, "'diagnostic' list must not be empty");
             }
             else {
-                errors = fmt::format(
-                    "Waiver entry {}: 'diagnostic' must be a string or array of strings", i);
-                return false;
+                return tomlErr(*diagNode, "'diagnostic' must be a string or array of strings");
             }
 
-            for (const auto& name : names) {
+            for (auto& name : names) {
                 if (diagnosticEngine.findFromOptionName(name).empty()) {
-                    errors = fmt::format("Unknown diagnostic '{}' in entry {} (use warning "
-                                         "option names like 'unused-variable')",
-                                         name, i);
-                    return false;
+                    return tomlErr(*diagNode, fmt::format("unknown diagnostic '{}' (use warning "
+                                                          "option names like 'unused-variable')",
+                                                          name));
                 }
             }
 
@@ -240,17 +207,15 @@ bool WaiverManager::loadFromFile(const std::filesystem::path& path,
 
         if (!regexStr.empty()) {
             boost::regex compiled(regexStr, boost::regex::no_except);
-            if (compiled.status() != 0) {
-                errors = fmt::format("Invalid regex in entry {}: '{}'", i, regexStr);
-                return false;
-            }
+            if (compiled.status() != 0)
+                return tomlErr(*entry, fmt::format("invalid regex '{}'", regexStr));
             rule.linePattern = std::make_unique<WaiverLinePattern>(std::move(compiled));
         }
 
-        rules.push_back(std::move(rule));
+        rules.emplace_back(std::move(rule));
     }
 
-    return true;
+    return {};
 }
 
 bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation location,
@@ -274,24 +239,15 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
     // between calls - keep it static so the env lookup is paid only once.
     static const bool waiverDebug = !OS::getEnv("SLANG_WAIVER_DEBUG").empty();
 
-    if (rules.empty() || !location)
-        return false;
-
-    // Get file path
     auto buffer = location.buffer();
-    if (!buffer)
+    if (rules.empty() || !buffer)
         return false;
 
-    const std::filesystem::path& filePath = sourceManager.getFullPath(buffer);
-
-    bool diagnosticNameInitialized = false;
-    std::string_view diagnosticName;
-    auto getDiagnosticName = [&]() -> std::string_view {
-        if (!diagnosticNameInitialized) {
+    std::optional<std::string_view> diagnosticName;
+    auto getDiagnosticName = [&]() {
+        if (!diagnosticName)
             diagnosticName = diagnosticEngine.getOptionName(diagnostic.code);
-            diagnosticNameInitialized = true;
-        }
-        return diagnosticName;
+        return *diagnosticName;
     };
 
     // Gather hierarchy information if available. Many diagnostics have no
@@ -299,6 +255,7 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
     // semantic checks) and therefore cannot be matched by hier-scoped rules
     // at all - only file scope works for those. The unused-waivers report
     // tries to detect this case below and steer users to file scope.
+    auto& filePath = sourceManager.getFullPath(buffer);
     std::string hierPath;
     if (diagnostic.symbol) {
         // A symbol detached from the AST (no parent scope) has no meaningful
@@ -313,7 +270,7 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
         if (ruleHasHierScope) {
             OS::printE(fmt::format("[waiver] diag '{}' has no symbol/hier; hier-scoped rules "
                                    "cannot match (file={} line={})\n",
-                                   getDiagnosticName(), filePath.generic_string(),
+                                   getDiagnosticName(), getU8Str(filePath),
                                    sourceManager.getLineNumber(location)));
         }
     }
@@ -321,7 +278,6 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
     // Check each rule
     for (size_t idx = 0; idx < rules.size(); idx++) {
         auto& rule = rules[idx];
-
         if (rule.hierScope) {
             // Hier-scoped rule: match hierarchy path
             if (hierPath.empty()) {
@@ -339,7 +295,7 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
                 continue;
             }
 
-            bool hierMatch = rule.matchesHier(hierPath);
+            bool hierMatch = svGlobMatches(normalizeDotSep(hierPath), rule.normalizedPattern);
             if (waiverDebug) {
                 OS::printE(
                     fmt::format("[waiver] rule {} scope=hier glob={} hierPath={} hierMatch={}\n",
@@ -352,11 +308,11 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
         }
         else {
             // File-scoped rule: match file path
-            bool fileMatch = rule.matchesFile(filePath);
+            bool fileMatch = svGlobMatches(filePath.lexically_normal(), rule.normalizedPattern);
             if (waiverDebug) {
                 OS::printE(fmt::format("[waiver] rule {} scope=file glob={} file={} fileMatch={}\n",
-                                       idx, rule.scopeGlob.generic_string(),
-                                       filePath.generic_string(), fileMatch));
+                                       idx, rule.scopeGlob.generic_string(), getU8Str(filePath),
+                                       fileMatch));
             }
             if (!fileMatch)
                 continue;
@@ -381,8 +337,10 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
 
         // Check regex filter
         if (rule.linePattern) {
-            std::string_view lineText = getLineText(location, sourceManager);
-            bool lineMatch = rule.matchesLineContent(lineText);
+            SLANG_ASSERT(rule.linePattern);
+            auto lineText = sourceManager.getSourceLine(location);
+            bool lineMatch = boost::regex_search(lineText.begin(), lineText.end(),
+                                                 rule.linePattern->regex);
             if (waiverDebug) {
                 OS::printE(fmt::format("[waiver] rule {} regex lineMatch={} text=\"{}\"\n", idx,
                                        lineMatch, lineText));
@@ -401,17 +359,6 @@ bool WaiverManager::shouldWaive(const Diagnostic& diagnostic, SourceLocation loc
     }
 
     return false;
-}
-
-std::string_view WaiverManager::getLineText(SourceLocation location,
-                                            const SourceManager& sourceManager) const {
-    // Returns the raw source line containing `location`, with no transformation:
-    // tabs are not expanded, leading/trailing whitespace is preserved, and the
-    // text is treated as raw bytes (UTF-8 sequences are passed through, not
-    // decoded). The returned view is what user-supplied regexes match against,
-    // so any user surprise about anchoring or character classes likely traces
-    // back to that raw-bytes contract.
-    return sourceManager.getSourceLine(location);
 }
 
 size_t WaiverManager::getAppliedCount() const {
@@ -443,7 +390,6 @@ static std::string describeRule(const WaiverRule& rule) {
 
 std::string WaiverManager::getSummary(bool showUnused) const {
     auto unused = getUnusedCount();
-
     if (unused == 0)
         return {};
 
@@ -454,7 +400,7 @@ std::string WaiverManager::getSummary(bool showUnused) const {
     else {
         // For each unused rule, pick the most specific reason we can. The cases
         // below are ordered "earliest predicate that failed" first, mirroring
-        // shouldWaive's evaluation order: scope → diagnostic name → regex. If
+        // shouldWaive's evaluation order: scope -> diagnostic name -> regex. If
         // shouldWaive grows a new predicate, add a matching else-branch here so
         // users get an accurate "why" instead of an inappropriate fallback.
         result += "\nUnused waivers:";
@@ -464,9 +410,10 @@ std::string WaiverManager::getSummary(bool showUnused) const {
                 if (rule.sourceFile.empty())
                     file = "<unknown>";
                 else if (rule.sourceLine > 0)
-                    file = fmt::format("{}:{}", rule.sourceFile.string(), rule.sourceLine);
+                    file = fmt::format("{}:{}", getU8Str(rule.sourceFile), rule.sourceLine);
                 else
-                    file = rule.sourceFile.string();
+                    file = getU8Str(rule.sourceFile);
+
                 if (!rule.scopeMatched) {
                     if (rule.hierScope && rule.diagnosticSeenWithoutSymbol) {
                         result += fmt::format(

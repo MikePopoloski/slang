@@ -354,8 +354,8 @@ endmodule
     auto& outer = root.lookupName<GenerateBlockSymbol>("Top.outer");
     auto& inner = root.lookupName<GenerateBlockSymbol>("Top.outer.inner");
 
-    auto* outerConstruct = constructOf(outer);
-    auto* innerConstruct = constructOf(inner);
+    auto outerConstruct = constructOf(outer);
+    auto innerConstruct = constructOf(inner);
     REQUIRE(outerConstruct != nullptr);
     REQUIRE(innerConstruct != nullptr);
     CHECK(outerConstruct->kind == SyntaxKind::IfGenerate);
@@ -390,7 +390,7 @@ endmodule
     auto& t = root.lookupName<GenerateBlockSymbol>("Top.t");
     auto& f = root.lookupName<GenerateBlockSymbol>("Top.f");
 
-    auto* innerIf = constructOf(t);
+    auto innerIf = constructOf(t);
     REQUIRE(innerIf != nullptr);
     CHECK(innerIf->kind == SyntaxKind::IfGenerate);
     CHECK(innerIf == constructOf(f));
@@ -430,13 +430,13 @@ endmodule
     auto& md = root.lookupName<GenerateBlockSymbol>("Top.wrapper.md");
 
     CHECK(wrapper.branchKind == GenerateBranchKind::IfTrue);
-    auto* wrapperConstruct = constructOf(wrapper);
+    auto wrapperConstruct = constructOf(wrapper);
     REQUIRE(wrapperConstruct != nullptr);
     CHECK(wrapperConstruct->kind == SyntaxKind::IfGenerate);
 
     CHECK(m1.branchKind == GenerateBranchKind::CaseItem);
     CHECK(md.branchKind == GenerateBranchKind::CaseDefault);
-    auto* m1Construct = constructOf(m1);
+    auto m1Construct = constructOf(m1);
     REQUIRE(m1Construct != nullptr);
     CHECK(m1Construct->kind == SyntaxKind::CaseGenerate);
     CHECK(m1Construct == constructOf(md));

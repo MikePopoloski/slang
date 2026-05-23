@@ -534,7 +534,7 @@ TEST_CASE("Test CommandLine -- check setRenameCommand()") {
 
 TEST_CASE("Test CommandLine -- ignore and rename errors") {
     CommandLine cmdLine;
-    CHECK(cmdLine.addRenameCommand("--xxx").find("missing or extra comma") != std::string::npos);
+    CHECK(contains(cmdLine.addRenameCommand("--xxx"), "missing or extra comma"));
     CHECK(cmdLine.addIgnoreCommand("--yyy,--bar,baz").find("missing or extra comma") !=
           std::string::npos);
 }

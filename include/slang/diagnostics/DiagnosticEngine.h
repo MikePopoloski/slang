@@ -173,8 +173,7 @@ public:
     /// to an error.
     std::error_code addIgnoreMacroPaths(std::string_view pattern);
 
-    /// Installs a waiver manager. Called by the driver when --waiver-file is
-    /// passed on the command line.
+    /// Installs a waiver manager, which can control diagnostics via external config files.
     void setWaiverManager(std::shared_ptr<WaiverManager> manager);
 
     /// Gets the waiver manager, if configured.
