@@ -358,8 +358,7 @@ private:
 };
 
 std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMacro(
-    Token directive) {
-    auto macro = findMacro(directive);
+    Token directive, const MacroDef& macro) {
     if (!macro.valid()) {
         if (options.ignoreDirectives.find(directive.valueText().substr(1)) !=
             options.ignoreDirectives.end()) {

@@ -19,21 +19,12 @@ namespace slang::syntax {
 using namespace parsing;
 
 SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-                       const SourceLibrary* library, const std::shared_ptr<SyntaxTree>& parent) :
-    rootNode(root), library(library), sourceMan(sourceManager), alloc(std::move(alloc)) {
-    metadata = std::make_unique<ParserMetadata>(ParserMetadata::fromSyntax(*root));
-    if (parent) { // copy parent's info
-        for (size_t i = 0; i < parent->macros.size(); ++i) {
-            auto macro = parent->macros[i];
-            if (macro)
-                macro = deepClone(*macro, this->alloc);
-            macros.push_back(macro);
-        }
-        if (!metadata->eofToken)
-            metadata->eofToken = parent->getMetadata().eofToken.deepClone(this->alloc);
-
-        sourceBufferIds = parent->sourceBufferIds;
-    }
+                       const SourceLibrary* library,
+                       const std::shared_ptr<SyntaxTree>& preTransform) :
+    rootNode(root), library(library), sourceMan(sourceManager), alloc(std::move(alloc)),
+    metadata(ParserMetadata::fromSyntax(*root)) {
+    if (preTransform && !metadata.eofToken)
+        metadata.eofToken = preTransform->getMetadata().eofToken.deepClone(this->alloc);
 }
 
 SyntaxTree::~SyntaxTree() = default;
@@ -126,13 +117,10 @@ SourceManager& SyntaxTree::getDefaultSourceManager() {
 
 SyntaxTree::SyntaxTree(SyntaxNode* root, const SourceLibrary* library, SourceManager& sourceManager,
                        BumpAllocator&& alloc, Diagnostics&& diagnostics, ParserMetadata&& metadata,
-                       std::vector<const DefineDirectiveSyntax*>&& macros,
-                       std::vector<parsing::IncludeMetadata>&& includes,
-                       std::vector<BufferID>&& sourceBufferIds, Bag options) :
+                       PreprocessorMetadata&& preprocessorMetadata, Bag options) :
     rootNode(root), library(library), sourceMan(sourceManager), alloc(std::move(alloc)),
     diagnosticsBuffer(std::move(diagnostics)), options_(std::move(options)),
-    metadata(std::make_unique<ParserMetadata>(std::move(metadata))), macros(std::move(macros)),
-    includes(std::move(includes)), sourceBufferIds(std::move(sourceBufferIds)) {
+    metadata(std::move(metadata)), preprocessorMetadata(std::move(preprocessorMetadata)) {
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
@@ -180,15 +168,9 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
             return create(sourceManager, sources, options, inheritedMacros, false);
     }
 
-    std::vector<BufferID> bufferIds;
-    bufferIds.reserve(sources.size());
-    for (const auto& source : sources)
-        bufferIds.push_back(source.id);
-
     return std::shared_ptr<SyntaxTree>(
         new SyntaxTree(root, library, sourceManager, std::move(alloc), std::move(diagnostics),
-                       parser.getMetadata(), preprocessor.getDefinedMacros(),
-                       preprocessor.getIncludeDirectives(), std::move(bufferIds), options));
+                       parser.getMetadata(), preprocessor.getMetadata(), options));
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapFile(std::string_view path,
@@ -229,12 +211,9 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapBuffer(const SourceBuffer&
     Parser parser(preprocessor, options);
     auto& root = parser.parseLibraryMap();
 
-    std::vector<BufferID> bufferIds = {buffer.id};
-
     return std::shared_ptr<SyntaxTree>(
         new SyntaxTree(&root, nullptr, sourceManager, std::move(alloc), std::move(diagnostics),
-                       parser.getMetadata(), preprocessor.getDefinedMacros(),
-                       preprocessor.getIncludeDirectives(), std::move(bufferIds), options));
+                       parser.getMetadata(), preprocessor.getMetadata(), options));
 }
 
 bool SyntaxTree::validate() const {
