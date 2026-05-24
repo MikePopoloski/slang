@@ -297,8 +297,8 @@ std::error_code OS::readFile(const fs::path& path, SmallVector<char>& buffer) {
 
 void OS::writeFile(const fs::path& path, std::string_view contents) {
     if (path == "-") {
-        if (capturingOutput) {
-            capturedStdout += contents;
+        if (outputCallback) {
+            outputCallback(contents, /* isStdout */ true);
         }
         else {
             std::cout.write(contents.data(), (std::streamsize)contents.size());
@@ -313,65 +313,49 @@ void OS::writeFile(const fs::path& path, std::string_view contents) {
     }
 }
 
-void OS::print(std::string_view text) {
-    if (capturingOutput)
-        outputCallback(text, true);
-    else
+void OS::print(std::string_view text, bool skipCapture) {
+    if (outputCallback) {
+        if (!skipCapture)
+            outputCallback(text, /* isStdout */ true);
+    }
+    else {
         fmt::detail::print(stdout, fmt::detail::to_string_view(text));
+    }
 }
 
-void OS::print(const fmt::text_style& style, std::string_view text) {
-    if (capturingOutput)
-        outputCallback(text, true);
-    else if (showColorsStdout)
+void OS::print(const fmt::text_style& style, std::string_view text, bool skipCapture) {
+    if (outputCallback) {
+        if (!skipCapture)
+            outputCallback(text, /* isStdout */ true);
+    }
+    else if (showColorsStdout) {
         fmt::print(stdout, style, "{}"sv, text);
-    else
+    }
+    else {
         fmt::detail::print(stdout, fmt::detail::to_string_view(text));
+    }
 }
 
-void OS::printE(std::string_view text) {
-    if (capturingOutput)
-        outputCallback(text, false);
-    else
+void OS::printE(std::string_view text, bool skipCapture) {
+    if (outputCallback) {
+        if (!skipCapture)
+            outputCallback(text, /* isStdout */ false);
+    }
+    else {
         fmt::detail::print(stderr, fmt::detail::to_string_view(text));
+    }
 }
 
-void OS::printE(const fmt::text_style& style, std::string_view text) {
-    if (capturingOutput)
-        outputCallback(text, false);
-    else if (showColorsStderr)
+void OS::printE(const fmt::text_style& style, std::string_view text, bool skipCapture) {
+    if (outputCallback) {
+        if (!skipCapture)
+            outputCallback(text, /* isStdout */ false);
+    }
+    else if (showColorsStderr) {
         fmt::print(stderr, style, "{}"sv, text);
-    else
-        fmt::detail::print(stderr, fmt::detail::to_string_view(text));
-}
-
-void OS::printError(std::string_view text) {
-    if (capturingOutput) {
-        outputCallback(text, false);
     }
     else {
-        if (showColorsStderr)
-            fmt::print(stderr, fmt::fg(fmt::terminal_color::red), "error: ");
-        else
-            fmt::detail::print(stderr, fmt::detail::to_string_view("error: "sv));
-
         fmt::detail::print(stderr, fmt::detail::to_string_view(text));
-        fmt::detail::print(stderr, fmt::detail::to_string_view("\n"sv));
-    }
-}
-
-void OS::printWarning(std::string_view text) {
-    if (capturingOutput) {
-        outputCallback(text, false);
-    }
-    else {
-        if (showColorsStderr)
-            fmt::print(stderr, fmt::fg(fmt::terminal_color::red), "warning: ");
-        else
-            fmt::detail::print(stderr, fmt::detail::to_string_view("warning: "sv));
-
-        fmt::detail::print(stderr, fmt::detail::to_string_view(text));
-        fmt::detail::print(stderr, fmt::detail::to_string_view("\n"sv));
     }
 }
 

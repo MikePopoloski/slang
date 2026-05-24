@@ -46,8 +46,9 @@ TEST_CASE("OS print helpers capture raw messages") {
     auto guard = OS::captureOutput(
         [&](std::string_view text, bool isStdout) { output.emplace_back(text, isStdout); });
 
-    OS::printError("bad thing");
-    OS::printWarning("heads up");
+    OS::printE("bad thing");
+    OS::printE("heads up");
+    OS::printE("skipped", /* skipCapture */ true);
 
     REQUIRE(output.size() == 2);
     CHECK(output[0] == std::pair<std::string, bool>{"bad thing", false});

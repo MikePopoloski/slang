@@ -1470,17 +1470,21 @@ bool Driver::reportLoadErrors() {
 }
 
 void Driver::printError(const std::string& message) {
-    OS::printError(message);
+    OS::printE(fg(textDiagClient->errorColor), "error: ", /* skipCapture */ true);
+    OS::printE(message);
+    OS::printE("\n", /* skipCapture */ true);
 }
 
 void Driver::printWarning(const std::string& message) {
-    OS::printWarning(message);
+    OS::printE(fg(textDiagClient->warningColor), "warning: ", /* skipCapture */ true);
+    OS::printE(message);
+    OS::printE("\n", /* skipCapture */ true);
 }
 
 void Driver::printNote(const std::string& message) {
-    OS::printE(fg(textDiagClient->noteColor), "  note: ");
+    OS::printE(fg(textDiagClient->noteColor), "  note: ", /* skipCapture */ true);
     OS::printE(message);
-    OS::printE("\n");
+    OS::printE("\n", /* skipCapture */ true);
 }
 
 void Driver::setTerminalColorsEnabled(bool enable) {
