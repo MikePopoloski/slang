@@ -1380,6 +1380,15 @@ std::span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnection
         portNames = names.copy(comp);
 
         for (auto port : *ports) {
+            // An InvalidAssertionExpr represents an empty/unconnected
+            // port connection (`.foo()`) — legal SystemVerilog, NOT a
+            // checker marker. The original heuristic mis-classified
+            // any uninstantiated module with an unconnected port as a
+            // checker because `Invalid != Simple` flipped the flag.
+            // Tolerate Invalid explicitly. The strict checker
+            // fingerprint is "non-Simple AND non-Invalid".
+            if (port->kind == AssertionExprKind::Invalid)
+                continue;
             if (port->kind != AssertionExprKind::Simple ||
                 port->as<SimpleAssertionExpr>().repetition) {
                 mustBeChecker = true;
