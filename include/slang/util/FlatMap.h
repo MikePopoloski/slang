@@ -9,7 +9,8 @@
 
 #include "slang/util/Hash.h"
 
-#if __has_include(<boost/unordered/unordered_flat_map.hpp>)
+#if __has_include(<boost/unordered/unordered_flat_map.hpp>) && \
+    __has_include(<boost/unordered/concurrent_flat_map.hpp>)
 #    include <boost/unordered/unordered_flat_map.hpp>
 #    include <boost/unordered/unordered_flat_set.hpp>
 #else
