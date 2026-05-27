@@ -18,7 +18,7 @@ class Type;
 namespace SFormat {
 
 /// A collection of options that can be applied to the SFormat string formatting functions.
-struct FormatOptions {
+struct SLANG_EXPORT FormatOptions {
     /// The width of a numeric field. If left empty a default will be used.
     std::optional<uint32_t> width;
 
@@ -42,7 +42,7 @@ struct FormatOptions {
 /// @param onError Will be invoked for any errors in the format string, with a diagnostic code
 ///                describing the problem and the location in the string where the error occurred.
 /// @return true if parsing was successful, and false if an error occurred.
-bool parse(
+SLANG_EXPORT bool parse(
     std::string_view formatString, function_ref<void(std::string_view text)> onText,
     function_ref<void(char specifier, size_t offset, size_t len, const FormatOptions& options)>
         onArg,
@@ -51,13 +51,13 @@ bool parse(
 
 /// Format the given @a value into a string and append it to @a result according
 /// to the provided @a options
-void formatInt(std::string& result, const SVInt& value, LiteralBase base,
-               const FormatOptions& options);
+SLANG_EXPORT void formatInt(std::string& result, const SVInt& value, LiteralBase base,
+                            const FormatOptions& options);
 
 /// Format the given @a arg into a string and append it to @a result according
 /// to the provided @a options
-void formatArg(std::string& result, const ConstantValue& arg, const Type& type, char specifier,
-               const FormatOptions& options, bool isStringLiteral);
+SLANG_EXPORT void formatArg(std::string& result, const ConstantValue& arg, const Type& type,
+                            char specifier, const FormatOptions& options, bool isStringLiteral);
 
 } // namespace SFormat
 
