@@ -41,6 +41,10 @@ using namespace slang::ast;
             std::string nameStr = std::string(toString(member)); \
             if (nameStr == "None")                               \
                 nameStr = "None_";                               \
+            if (nameStr == "and")                                \
+                nameStr = "and_";                                \
+            if (nameStr == "or")                                 \
+                nameStr = "or_";                                 \
             e.value(nameStr.c_str(), member);                    \
         }                                                        \
         e.finalize();                                            \
