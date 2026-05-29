@@ -20,6 +20,8 @@ Checks: >
     -modernize-concat-nested-namespaces,
     -modernize-avoid-c-style-cast,
     -modernize-use-nullptr,
+    -modernize-use-default-member-init,
+    -modernize-use-equals-default,
     -bugprone-suspicious-semicolon,
     -bugprone-branch-clone,
     -bugprone-sizeof-expression,
@@ -58,6 +60,8 @@ Checks: >
     -misc-confusable-identifiers,
     -misc-unconventional-assign-operator,
     -misc-multiple-inheritance,
+    -misc-anonymous-namespace-in-header,
+    -misc-definitions-in-headers,
     -performance-no-int-to-ptr,
     -performance-enum-size,
     -portability-simd-intrinsics,
@@ -66,3 +70,4 @@ Checks: >
     -performance-unnecessary-value-param,
     -performance-noexcept-swap,
     -performance-noexcept-move-constructor
+ExcludeHeaderFilterRegex: '.*/boost/regex/.*'

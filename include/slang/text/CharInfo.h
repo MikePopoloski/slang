@@ -138,7 +138,7 @@ constexpr uint8_t getHexDigitValue(char c) {
 constexpr char getHexForDigit(uint32_t num, bool lowerCase = false) {
     constexpr const char LUT[] = "0123456789ABCDEF";
     const char offset = lowerCase ? 32 : 0;
-    return LUT[num] | offset;
+    return char(LUT[num] | offset);
 }
 
 /// Gets the length of the UTF-8 sequence starting with the given first character.

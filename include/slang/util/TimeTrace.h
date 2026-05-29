@@ -52,9 +52,9 @@ public:
     /// Ends tracing a section previously started by @a beginTrace
     static void endTrace();
 
-private:
     TimeTrace() = delete;
 
+private:
     struct Profiler;
     static std::unique_ptr<Profiler> profiler;
 };

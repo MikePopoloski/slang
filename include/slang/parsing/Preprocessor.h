@@ -89,6 +89,7 @@ public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics,
                  const Bag& options = {},
                  std::span<const syntax::DefineDirectiveSyntax* const> inheritedMacros = {});
+    Preprocessor& operator=(const Preprocessor& other) = delete;
 
     /// Gets the next token in the stream, after applying preprocessor rules.
     Token next();
@@ -193,7 +194,6 @@ private:
     friend class MacroOpEvaluator;
 
     Preprocessor(const Preprocessor& other);
-    Preprocessor& operator=(const Preprocessor& other) = delete;
 
     // Internal methods to grab and handle the next token
     Token nextProcessed();

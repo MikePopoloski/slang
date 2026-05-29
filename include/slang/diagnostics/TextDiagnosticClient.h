@@ -31,7 +31,7 @@ public:
     fmt::terminal_color locationColor;
 
     TextDiagnosticClient();
-    ~TextDiagnosticClient();
+    ~TextDiagnosticClient() override;
 
     void showColors(bool show);
     void showColumn(bool show) { includeColumn = show; }
