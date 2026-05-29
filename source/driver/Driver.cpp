@@ -966,6 +966,11 @@ void Driver::optionallyWriteDepFiles() {
     if (!options.includeDepfile && !options.moduleDepfile && !options.allDepfile)
         return;
 
+    if (options.depfileTrim == true && options.singleUnit.value_or(false)) {
+        printError("--depfile-trim cannot be combined with --single-unit");
+        return;
+    }
+
     std::vector<const SyntaxTree*> depTrees;
     if (options.depfileTrim == true || options.depfileSort == true) {
         depTrees = getSortedDependencies(*this, syntaxTrees, options.depfileTrim == true);
@@ -1003,12 +1008,12 @@ void Driver::optionallyWriteDepFiles() {
     flat_hash_set<fs::path> seenPaths;
     if (options.includeDepfile || options.allDepfile) {
         for (auto& tree : depTrees) {
-            for (auto& inc : tree->getIncludeDirectives()) {
-                if (inc.isSystem)
-                    continue;
-
-                auto p = sourceManager.getFullPath(inc.buffer.id);
-                if (seenPaths.insert(p).second)
+            auto bufferIds = tree->getSourceBufferIds();
+            // The first id is the top-level source file; the rest were pushed
+            // via `include directives.
+            for (size_t i = 1; i < bufferIds.size(); ++i) {
+                auto p = sourceManager.getFullPath(bufferIds[i]);
+                if (!p.empty() && seenPaths.insert(p).second)
                     includePaths.emplace_back(getProximatePathStr(p));
             }
         }
@@ -1020,8 +1025,9 @@ void Driver::optionallyWriteDepFiles() {
     std::vector<std::string> modulePaths;
     if (options.moduleDepfile || options.allDepfile) {
         for (auto& tree : depTrees) {
-            for (auto bufferId : tree->getSourceBufferIds()) {
-                auto path = sourceManager.getFullPath(bufferId);
+            auto bufferIds = tree->getSourceBufferIds();
+            if (!bufferIds.empty()) {
+                auto path = sourceManager.getFullPath(bufferIds.front());
                 if (!path.empty())
                     modulePaths.emplace_back(getProximatePathStr(path));
             }
