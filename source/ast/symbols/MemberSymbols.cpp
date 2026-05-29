@@ -22,8 +22,10 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
+#include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/ast/types/Type.h"
+#include "slang/ast/types/TypePrinter.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
@@ -673,6 +675,19 @@ std::optional<std::string_view> ElabSystemTaskSymbol::createMessage(
     return std::string_view(reinterpret_cast<char*>(mem), str->size());
 }
 
+// Prints `type` with just its immediate name and no AKA expansion. The
+// per-step 'declared here' notes provide disambiguation when two same-named
+// types come from different scopes.
+static std::string printTypeForReduce(const Type& type) {
+    TypePrinter printer;
+    printer.options.quoteChar = '\'';
+    printer.options.elideScopeNames = true;
+    printer.options.printAKA = false;
+    printer.options.anonymousTypeStyle = TypePrintingOptions::FriendlyName;
+    printer.append(type);
+    return printer.toString();
+}
+
 static void reduceComparison(const BinaryExpression& expr, Diagnostic& result) {
     switch (expr.op) {
         case BinaryOperator::Equality:
@@ -697,9 +712,58 @@ static void reduceComparison(const BinaryExpression& expr, Diagnostic& result) {
 
     auto opToken = syntax->as<BinaryExpressionSyntax>().operatorToken;
 
+    if (expr.left().kind == ExpressionKind::TypeReference &&
+        expr.right().kind == ExpressionKind::TypeReference) {
+        auto& lt = expr.left().as<TypeReferenceExpression>().targetType;
+        auto& rt = expr.right().as<TypeReferenceExpression>().targetType;
+        // If either side is an error type, a separate diagnostic was already
+        // emitted; a note here would just print '<error>' and confuse things.
+        if (lt.isError() || rt.isError())
+            return;
+
+        auto& note = result.addNote(diag::NoteComparisonReduces, opToken.location());
+        note << expr.sourceRange;
+        note << printTypeForReduce(lt) << opToken.rawText() << printTypeForReduce(rt);
+        // For each side, walk the alias chain. The first step uses an lhs/rhs
+        // header note so the two chains can't be confused with each other.
+        // Each subsequent step is shown as 'X declared here', plus an
+        // 'aliases Y here' note pointing at the syntax that connects this
+        // step to the next (e.g. the `I #(.data_type(other_t))` parameter
+        // binding, or the RHS of a typedef). When neither side has any
+        // aliases this emits no extra notes — the single-line note above
+        // is enough.
+        auto noteChain = [&](const Type& start, std::string_view sideLabel) {
+            bool isFirst = true;
+            for (const Type* t = &start; t->kind == SymbolKind::TypeAlias;) {
+                if (t->location) {
+                    if (isFirst) {
+                        result.addNote(diag::NoteLabeledDeclaredHere, t->location)
+                            << sideLabel << t->name;
+                    }
+                    else {
+                        result.addNote(diag::NoteNamedDeclaredHere, t->location) << t->name;
+                    }
+                }
+                isFirst = false;
+                auto& declared = t->as<TypeAliasType>().targetType;
+                auto& nextType = declared.getType();
+                if (auto typeSyntax = declared.getResolvedTypeSyntax();
+                    typeSyntax && !nextType.name.empty()) {
+                    result.addNote(diag::NoteConnectedHere, typeSyntax->sourceRange().start())
+                        << nextType.name << typeSyntax->sourceRange();
+                }
+                t = &nextType;
+            }
+        };
+        noteChain(lt, "lhs"sv);
+        noteChain(rt, "rhs"sv);
+        return;
+    }
+
     auto lc = expr.left().getConstant();
     auto rc = expr.right().getConstant();
-    SLANG_ASSERT(lc && rc);
+    if (!lc || !rc)
+        return;
 
     auto& note = result.addNote(diag::NoteComparisonReduces, opToken.location());
     note << expr.sourceRange;

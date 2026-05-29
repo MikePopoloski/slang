@@ -130,6 +130,19 @@ public:
         return hasLink ? nullptr : typeOrLink.typeSyntax;
     }
 
+    /// Like @a getTypeSyntax but follows the link chain, so for declared
+    /// types that link to a parameter's targetType this returns the syntax
+    /// of the parameter binding (e.g. `other_t` in `I #(.data_type(other_t))`).
+    const syntax::DataTypeSyntax* getResolvedTypeSyntax() const {
+        const DeclaredType* dt = this;
+        while (dt->hasLink) {
+            if (!dt->typeOrLink.link)
+                return nullptr;
+            dt = dt->typeOrLink.link;
+        }
+        return dt->typeOrLink.typeSyntax;
+    }
+
     /// Sets an additional set of dimensions that represent the unpacked portion of
     /// the type declaration.
     void setDimensionSyntax(
