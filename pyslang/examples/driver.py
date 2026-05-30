@@ -3,7 +3,7 @@
 
 import sys
 
-from pyslang import CommandLineOptions, Driver
+from pyslang.driver import CommandLineOptions, Driver
 
 
 def main():
