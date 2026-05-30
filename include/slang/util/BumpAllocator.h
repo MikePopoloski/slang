@@ -65,7 +65,7 @@ public:
             return {};
 
         auto dest = reinterpret_cast<T*>(allocate(len * sizeof(T), alignof(T)));
-        std::memcpy(dest, src.data(), len * sizeof(T));
+        std::memcpy(dest, src.data(), len * sizeof(T)); // NOLINT
 
         return std::span<T>(dest, len);
     }

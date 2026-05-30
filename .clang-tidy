@@ -50,6 +50,7 @@ Checks: >
     -clang-analyzer-core.uninitialized.UndefReturn,
     -clang-analyzer-optin.cplusplus.UninitializedObject,
     -clang-analyzer-security.ArrayBound,
+    -clang-analyzer-optin.core.EnumCastOutOfRange,
     -misc-non-private-member-variables-in-classes,
     -misc-no-recursion,
     -misc-const-correctness,
@@ -70,4 +71,3 @@ Checks: >
     -performance-unnecessary-value-param,
     -performance-noexcept-swap,
     -performance-noexcept-move-constructor
-ExcludeHeaderFilterRegex: '.*/boost/regex/.*'

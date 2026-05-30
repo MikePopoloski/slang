@@ -860,9 +860,9 @@ protected:
         // so we join the true state with the true state after visiting
         // the RHS, since either being true leads to the same outcome.
         if (expr.op == BinaryOperator::LogicalOr)
-            (DERIVED).joinState(stateWhenTrue, trueState);
+            (DERIVED).joinState(stateWhenTrue, trueState); // NOLINT(bugprone-use-after-move)
         else if (expr.op == BinaryOperator::LogicalAnd)
-            (DERIVED).joinState(stateWhenFalse, falseState);
+            (DERIVED).joinState(stateWhenFalse, falseState); // NOLINT(bugprone-use-after-move)
         else {
             // Reminder that logical implication (a -> b) is
             // equivalent to (!a || b)
