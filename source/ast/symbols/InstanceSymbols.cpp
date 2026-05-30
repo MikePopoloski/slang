@@ -1384,6 +1384,9 @@ std::span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnection
         portNames = names.copy(comp);
 
         for (auto port : *ports) {
+            if (port->kind == AssertionExprKind::Invalid)
+                continue;
+
             if (port->kind != AssertionExprKind::Simple ||
                 port->as<SimpleAssertionExpr>().repetition) {
                 mustBeChecker = true;
