@@ -370,7 +370,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
     if (!searchDirectories.empty()) {
         loadTrees(
             syntaxTrees, [this](std::string_view name) { return findBuffer(name); }, sourceManager,
-            optionBag, inheritedMacros);
+            optionBag, inheritedMacros, pool);
     }
 
     // Collect per-buffer warning options from all separate compilation units.
@@ -388,9 +388,11 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
 void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
                              function_ref<SourceBuffer(std::string_view)> findBufferFunc,
                              SourceManager& sourceManager, const Bag& optionBag,
-                             std::span<const DefineDirectiveSyntax* const> inheritedMacros) {
+                             std::span<const DefineDirectiveSyntax* const> inheritedMacros,
+                             ThreadPool* pool) {
     flat_hash_set<std::string_view> knownNames;
     flat_hash_set<std::string_view> missingNames;
+    flat_hash_map<std::string_view, std::shared_ptr<SyntaxTree>> parsedTreeCache;
     SmallVector<std::string_view, 8> worklist;
 
     auto addKnownNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
@@ -415,22 +417,126 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
     for (auto& tree : syntaxTrees)
         findMissingNames(tree);
 
-    // Process the worklist until exhausted
-    while (!worklist.empty()) {
-        std::string_view name = worklist.back();
-        worklist.pop_back();
+    auto parseBuffer = [&](const SourceBuffer& buffer) {
+        auto tree = syntax::SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
+                                                   inheritedMacros);
+        tree->isLibraryUnit = true;
+        return tree;
+    };
 
-        if (knownNames.contains(name))
-            continue;
+    auto addTree = [&](std::shared_ptr<SyntaxTree> tree) {
+        syntaxTrees.emplace_back(std::move(tree));
+        addKnownNames(syntaxTrees.back());
+        findMissingNames(syntaxTrees.back());
+    };
+
+    auto loadTree = [&](std::string_view name) {
+        if (knownNames.contains(name)) {
+            parsedTreeCache.erase(name);
+            return;
+        }
+
+        if (auto it = parsedTreeCache.find(name); it != parsedTreeCache.end()) {
+            auto tree = std::move(it->second);
+            parsedTreeCache.erase(it);
+            addTree(std::move(tree));
+            return;
+        }
 
         if (auto buffer = findBufferFunc(name)) {
-            auto tree = syntax::SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
-                                                       inheritedMacros);
-            tree->isLibraryUnit = true;
-            syntaxTrees.emplace_back(tree);
+            auto tree = parseBuffer(buffer);
+            addTree(std::move(tree));
+        }
+    };
 
-            addKnownNames(tree);
-            findMissingNames(tree);
+    struct PendingTree {
+        std::string_view name;
+        SourceBuffer buffer;
+        std::shared_ptr<SyntaxTree> tree;
+    };
+
+    // Process the worklist until exhausted
+    while (!worklist.empty()) {
+        if (!pool || worklist.size() < MinFilesForThreading) {
+            auto name = worklist.back();
+            worklist.pop_back();
+            loadTree(name);
+            continue;
+        }
+
+        SmallVector<std::string_view, 8> depthNames;
+        while (!worklist.empty()) {
+            depthNames.push_back(worklist.back());
+            worklist.pop_back();
+        }
+
+        std::vector<PendingTree> pendingTrees;
+        pendingTrees.reserve(depthNames.size());
+        size_t parseCount = 0;
+        for (auto name : depthNames) {
+            if (knownNames.contains(name))
+                continue;
+
+            if (auto it = parsedTreeCache.find(name); it != parsedTreeCache.end()) {
+                pendingTrees.push_back({name, {}, std::move(it->second)});
+                parsedTreeCache.erase(it);
+            }
+            else if (auto buffer = findBufferFunc(name)) {
+                pendingTrees.push_back({name, buffer, nullptr});
+                parseCount++;
+            }
+        }
+
+        if (pendingTrees.empty())
+            continue;
+
+        auto parseDepthBuffer = [&](size_t i) {
+            if (!pendingTrees[i].tree)
+                pendingTrees[i].tree = parseBuffer(pendingTrees[i].buffer);
+        };
+
+        if (parseCount >= MinFilesForThreading) {
+            pool->detach_loop(size_t(0), pendingTrees.size(), parseDepthBuffer);
+            pool->wait();
+        }
+        else {
+            for (size_t i = 0; i < pendingTrees.size(); i++)
+                parseDepthBuffer(i);
+        }
+
+        for (size_t i = 0; i < pendingTrees.size(); i++) {
+            if (knownNames.contains(pendingTrees[i].name))
+                continue;
+
+            if (!pendingTrees[i].tree)
+                continue;
+
+            addTree(std::move(pendingTrees[i].tree));
+            if (!worklist.empty()) {
+                SmallVector<std::string_view, 8> newNames;
+                while (!worklist.empty()) {
+                    newNames.push_back(worklist.back());
+                    worklist.pop_back();
+                }
+
+                // New names discovered by this tree must be processed before the older
+                // pending names to preserve the serial fixed-point order. Keep already
+                // parsed trees cached so we don't have to find or parse them again later.
+                for (size_t j = pendingTrees.size() - 1; j > i; j--) {
+                    auto& pending = pendingTrees[j];
+                    if (!pending.tree || knownNames.contains(pending.name))
+                        continue;
+
+                    parsedTreeCache[pending.name] = std::move(pending.tree);
+                    worklist.push_back(pending.name);
+                }
+
+                while (!newNames.empty()) {
+                    worklist.push_back(newNames.back());
+                    newNames.pop_back();
+                }
+                break;
+            }
         }
     }
 }
