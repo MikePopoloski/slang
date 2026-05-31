@@ -33,7 +33,7 @@ public:
 
     static Expression& fromSymbol(const ASTContext& context, const Symbol& symbol,
                                   const HierarchicalReference* hierRef, SourceRange sourceRange,
-                                  bool constraintAllowed = false, bool isDottedAccess = false);
+                                  bool constraintAllowed = false);
 
     static bool checkLValue(const ASTContext& context, const ValueSymbol& symbol,
                             bitmask<AssignFlags> flags, SourceLocation assignLoc,

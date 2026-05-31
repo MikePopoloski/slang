@@ -52,8 +52,7 @@ static std::string_view getNonValueName(const Symbol& symbol) {
 
 Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Symbol& symbol,
                                             const HierarchicalReference* hierRef,
-                                            SourceRange sourceRange, bool constraintAllowed,
-                                            bool isDottedAccess) {
+                                            SourceRange sourceRange, bool constraintAllowed) {
     // Automatic variables have additional restrictions.
     bool isUnbounded = false;
     auto& comp = context.getCompilation();
@@ -186,7 +185,7 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         return badExpr(comp, nullptr);
     }
 
-    context.noteReference(value, isDottedAccess);
+    context.noteReference(value, /* isDottedAccess */ false);
 
     Expression* result;
     if (hierRef && hierRef->target) {

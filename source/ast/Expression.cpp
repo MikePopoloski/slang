@@ -1081,6 +1081,23 @@ Expression& Expression::bindName(Compilation& comp, const NameSyntax& syntax,
     return bindLookupResult(comp, result, invocation, withClause, context);
 }
 
+static bool isSelectOfHandle(const Symbol& symbol,
+                             std::span<const LookupResult::Selector> selectors) {
+    if (selectors.empty() || !symbol.isValue())
+        return false;
+
+    auto type = &symbol.as<ValueSymbol>().getType();
+    while (type->isUnpackedArray() &&
+           std::holds_alternative<const ElementSelectSyntax*>(selectors[0])) {
+        selectors = selectors.subspan(1);
+        type = type->getArrayElementType();
+        if (!type || selectors.empty())
+            return false;
+    }
+
+    return type->isObjectHandleType();
+}
+
 Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result,
                                          const InvocationExpressionSyntax* invocation,
                                          const ArrayOrRandomizeMethodExpressionSyntax* withClause,
@@ -1190,13 +1207,23 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
             [[fallthrough]];
         default: {
             const bool constraintAllowed = !result.selectors.empty();
-            const bool isDottedAccess =
-                context.flags.has(ASTFlags::LValue) && !result.selectors.empty() &&
-                std::get_if<LookupResult::MemberSelector>(&result.selectors[0]) != nullptr;
-
             auto hierRef = HierarchicalReference::fromLookup(comp, result);
-            expr = &ValueExpressionBase::fromSymbol(context, *symbol, &hierRef, result.nameRange,
-                                                    constraintAllowed, isDottedAccess);
+
+            // If we're in an lvalue context but we're selecting into this value
+            // such that the actual assignment is to some indirected member
+            // (via a class handle) then we need to clear the lvalue flag so that
+            // this counts as a read and not a write.
+            if (context.flags.has(ASTFlags::LValue) &&
+                isSelectOfHandle(*symbol, result.selectors)) {
+                ASTContext nonLValCtx = context;
+                nonLValCtx.flags &= ~ASTFlags::LValue;
+                expr = &ValueExpressionBase::fromSymbol(nonLValCtx, *symbol, &hierRef,
+                                                        result.nameRange, constraintAllowed);
+            }
+            else {
+                expr = &ValueExpressionBase::fromSymbol(context, *symbol, &hierRef,
+                                                        result.nameRange, constraintAllowed);
+            }
 
             // If we were accessed via a virtual interface wrap the result up
             // in a member access expression, so we don't lose the information

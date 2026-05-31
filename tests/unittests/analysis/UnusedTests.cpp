@@ -962,6 +962,60 @@ endmodule
     CHECK(diags[5].code == diag::UnassignedLocalProperty);
 }
 
+TEST_CASE("Unused class property false positive on class handle array") {
+    auto& text = R"(
+class C;
+    bit clear;
+
+    function int f();
+        if (clear) begin
+        end
+        return 0;
+    endfunction
+endclass
+
+class A;
+    C c1[];
+    C c2;
+    C c3[4];
+    C c4[string];
+
+    function new();
+        c1 = new[4];
+        c2 = new;
+    endfunction
+
+    function void setup(int i, C c);
+        c1[i] = c;
+        c3[i] = c;
+        c4["a"] = c;
+    endfunction
+
+    function void clr(int i);
+        c1[i].clear = 1'b1;
+        c2.clear = 1'b1;
+        c3[i].clear = 1'b1;
+        c4["a"].clear = 1'b1;
+    endfunction
+endclass
+
+module top;
+    A a;
+    initial begin
+        automatic C c = new();
+        a = new();
+        a.setup(0, c);
+        a.clr(0);
+        $display(c.f());
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    auto diags = analyze(text, compilation);
+    CHECK_DIAGS_EMPTY;
+}
+
 // Helper that runs analysis with only the CheckShadow flag enabled.
 static Diagnostics analyzeShadow(const std::string& text, Compilation& compilation) {
     AnalysisOptions options;
