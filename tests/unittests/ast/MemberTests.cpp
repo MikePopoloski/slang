@@ -1200,6 +1200,95 @@ source:4:27: note: comparison reduces to (1 < 0)
 )");
 }
 
+TEST_CASE("$static_assert with type comparison doesn't crash") {
+    // Regression: type(X) == type(Y) has no per-side constant value, so the
+    // reduceComparison helper used to assert and crash when emitting the
+    // failure note.
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    $static_assert(type(logic) == type(bit));
+    $static_assert(type(logic) == type(logic));
+    logic x;
+    $static_assert(type(x) == type(logic));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(diagnostics.size() == 1);
+    CHECK(result == R"(
+source:3:5: error: static assertion failed
+    $static_assert(type(logic) == type(bit));
+    ^
+source:3:32: note: comparison reduces to ('logic' == 'bit')
+    $static_assert(type(logic) == type(bit));
+                   ~~~~~~~~~~~~^~~~~~~~~~~~
+)");
+}
+
+TEST_CASE("$static_assert type comparison shows declaration locations") {
+    // Structurally-identical-but-distinct types print confusingly similar
+    // when only their immediate name is shown. Walk each alias chain fully
+    // and emit per-step 'declared here' notes so the user can disambiguate.
+    // This exercises a chain of two parameter overrides (T_inner -> T_outer
+    // -> bar_t) so the full hierarchy of "connected to" notes is visible.
+    auto tree = SyntaxTree::fromText(R"(
+package pkg;
+    typedef struct packed { logic [7:0] x; } foo_t;
+    typedef struct packed { logic [7:0] x; } bar_t;
+endpackage
+
+interface I_inner #(parameter type T_inner = logic);
+    import pkg::*;
+    $static_assert(type(T_inner) == type(foo_t));
+endinterface
+
+interface I_outer #(parameter type T_outer = logic);
+    I_inner #(.T_inner(T_outer)) inner_inst();
+endinterface
+
+module top;
+    import pkg::*;
+    I_outer #(.T_outer(bar_t)) outer_inst();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:9:5: error: static assertion failed
+    $static_assert(type(T_inner) == type(foo_t));
+    ^
+source:9:34: note: comparison reduces to ('T_inner' == 'foo_t')
+    $static_assert(type(T_inner) == type(foo_t));
+                   ~~~~~~~~~~~~~~^~~~~~~~~~~~~~
+source:7:36: note: lhs 'T_inner' declared here
+interface I_inner #(parameter type T_inner = logic);
+                                   ^
+source:13:24: note: connected to 'T_outer' here
+    I_inner #(.T_inner(T_outer)) inner_inst();
+                       ^~~~~~~
+source:12:36: note: 'T_outer' declared here
+interface I_outer #(parameter type T_outer = logic);
+                                   ^
+source:18:24: note: connected to 'bar_t' here
+    I_outer #(.T_outer(bar_t)) outer_inst();
+                       ^~~~~
+source:4:46: note: 'bar_t' declared here
+    typedef struct packed { logic [7:0] x; } bar_t;
+                                             ^
+source:3:46: note: rhs 'foo_t' declared here
+    typedef struct packed { logic [7:0] x; } foo_t;
+                                             ^
+)");
+}
+
 TEST_CASE("Interconnect nets") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
