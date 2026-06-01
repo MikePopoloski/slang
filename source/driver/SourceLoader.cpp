@@ -392,8 +392,12 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
                              ThreadPool* pool) {
     flat_hash_set<std::string_view> knownNames;
     flat_hash_set<std::string_view> missingNames;
-    flat_hash_map<std::string_view, std::shared_ptr<SyntaxTree>> parsedTreeCache;
-    SmallVector<std::string_view, 8> worklist;
+    struct PendingLoad {
+        std::string_view name;
+        std::shared_ptr<SyntaxTree> tree;
+    };
+
+    std::vector<PendingLoad> worklist;
 
     auto addKnownNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
         auto& meta = tree->getMetadata();
@@ -407,7 +411,7 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
         auto& meta = tree->getMetadata();
         meta.visitReferencedSymbols([&](std::string_view name) {
             if (!knownNames.contains(name) && missingNames.emplace(name).second)
-                worklist.push_back(name);
+                worklist.push_back({name});
         });
     };
 
@@ -418,123 +422,69 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
         findMissingNames(tree);
 
     auto parseBuffer = [&](const SourceBuffer& buffer) {
-        auto tree = syntax::SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
-                                                   inheritedMacros);
+        auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag, inheritedMacros);
         tree->isLibraryUnit = true;
         return tree;
     };
 
     auto addTree = [&](std::shared_ptr<SyntaxTree> tree) {
-        syntaxTrees.emplace_back(std::move(tree));
-        addKnownNames(syntaxTrees.back());
-        findMissingNames(syntaxTrees.back());
+        auto& addedTree = syntaxTrees.emplace_back(std::move(tree));
+        addKnownNames(addedTree);
+        findMissingNames(addedTree);
     };
 
-    auto loadTree = [&](std::string_view name) {
-        if (knownNames.contains(name)) {
-            parsedTreeCache.erase(name);
-            return;
-        }
-
-        if (auto it = parsedTreeCache.find(name); it != parsedTreeCache.end()) {
-            auto tree = std::move(it->second);
-            parsedTreeCache.erase(it);
-            addTree(std::move(tree));
-            return;
-        }
-
-        if (auto buffer = findBufferFunc(name)) {
-            auto tree = parseBuffer(buffer);
-            addTree(std::move(tree));
-        }
-    };
-
-    struct PendingTree {
-        std::string_view name;
-        SourceBuffer buffer;
-        std::shared_ptr<SyntaxTree> tree;
-    };
-
-    // Process the worklist until exhausted
+    // Keep the worklist as a LIFO stack. Parallel batches can parse ahead, but trees are
+    // still committed one at a time in the same order as the serial fixed-point search.
     while (!worklist.empty()) {
         if (!pool || worklist.size() < MinFilesForThreading) {
-            auto name = worklist.back();
+            auto load = std::move(worklist.back());
             worklist.pop_back();
-            loadTree(name);
+
+            if (knownNames.contains(load.name))
+                continue;
+
+            if (load.tree)
+                addTree(std::move(load.tree));
+            else if (auto buffer = findBufferFunc(load.name))
+                addTree(parseBuffer(buffer));
             continue;
         }
 
-        SmallVector<std::string_view, 8> depthNames;
-        while (!worklist.empty()) {
-            depthNames.push_back(worklist.back());
-            worklist.pop_back();
+        std::vector<PendingLoad> batch;
+        batch.swap(worklist);
+
+        // Buffer lookup stays serial; only parsing the found buffers runs concurrently.
+        std::vector<SourceBuffer> buffers(batch.size());
+        for (size_t i = 0; i < batch.size(); i++) {
+            if (!knownNames.contains(batch[i].name) && !batch[i].tree)
+                buffers[i] = findBufferFunc(batch[i].name);
         }
 
-        std::vector<PendingTree> pendingTrees;
-        pendingTrees.reserve(depthNames.size());
-        size_t parseCount = 0;
-        for (auto name : depthNames) {
-            if (knownNames.contains(name))
+        pool->detach_loop(size_t(0), batch.size(), [&](size_t i) {
+            if (buffers[i])
+                batch[i].tree = parseBuffer(buffers[i]);
+        });
+        pool->wait();
+
+        for (size_t i = batch.size(); i-- > 0;) {
+            if (knownNames.contains(batch[i].name) || !batch[i].tree)
                 continue;
 
-            if (auto it = parsedTreeCache.find(name); it != parsedTreeCache.end()) {
-                pendingTrees.push_back({name, {}, std::move(it->second)});
-                parsedTreeCache.erase(it);
-            }
-            else if (auto buffer = findBufferFunc(name)) {
-                pendingTrees.push_back({name, buffer, nullptr});
-                parseCount++;
-            }
-        }
-
-        if (pendingTrees.empty())
-            continue;
-
-        auto parseDepthBuffer = [&](size_t i) {
-            if (!pendingTrees[i].tree)
-                pendingTrees[i].tree = parseBuffer(pendingTrees[i].buffer);
-        };
-
-        if (parseCount >= MinFilesForThreading) {
-            pool->detach_loop(size_t(0), pendingTrees.size(), parseDepthBuffer);
-            pool->wait();
-        }
-        else {
-            for (size_t i = 0; i < pendingTrees.size(); i++)
-                parseDepthBuffer(i);
-        }
-
-        for (size_t i = 0; i < pendingTrees.size(); i++) {
-            if (knownNames.contains(pendingTrees[i].name))
-                continue;
-
-            if (!pendingTrees[i].tree)
-                continue;
-
-            addTree(std::move(pendingTrees[i].tree));
+            addTree(std::move(batch[i].tree));
             if (!worklist.empty()) {
-                SmallVector<std::string_view, 8> newNames;
-                while (!worklist.empty()) {
-                    newNames.push_back(worklist.back());
-                    worklist.pop_back();
+                std::vector<PendingLoad> newLoads;
+                newLoads.swap(worklist);
+
+                // New names discovered by this tree must be processed before older parsed
+                // pending loads. Push the older loads first so the new loads end up on top
+                // of the LIFO stack.
+                for (size_t j = 0; j < i; j++) {
+                    if (batch[j].tree && !knownNames.contains(batch[j].name))
+                        worklist.push_back(std::move(batch[j]));
                 }
 
-                // New names discovered by this tree must be processed before the older
-                // pending names to preserve the serial fixed-point order. Keep already
-                // parsed trees cached so we don't have to find or parse them again later.
-                for (size_t j = pendingTrees.size() - 1; j > i; j--) {
-                    auto& pending = pendingTrees[j];
-                    if (!pending.tree || knownNames.contains(pending.name))
-                        continue;
-
-                    parsedTreeCache[pending.name] = std::move(pending.tree);
-                    worklist.push_back(pending.name);
-                }
-
-                while (!newNames.empty()) {
-                    worklist.push_back(newNames.back());
-                    newNames.pop_back();
-                }
+                for (auto& load : newLoads)
+                    worklist.push_back(std::move(load));
                 break;
             }
         }

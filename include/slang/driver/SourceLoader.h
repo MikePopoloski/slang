@@ -175,11 +175,7 @@ public:
     /// Find a source buffer by searching through libraries added via -y
     SourceBuffer findBuffer(std::string_view name) const;
 
-    /// Load trees using a custom buffer finder function.
-    ///
-    /// If a thread pool is provided, each dependency depth can be parsed speculatively
-    /// in parallel. Trees are still merged in the same fixed-point worklist order as
-    /// the serial path.
+    /// Load trees using a custom buffer finder function
     /// Result is stored in the same syntaxTree list
     static void loadTrees(
         SyntaxTreeList& syntaxTrees, function_ref<SourceBuffer(std::string_view)> findBufferFunc,
