@@ -113,6 +113,13 @@ std::string WaiverManager::loadFromFile(const fs::path& path,
     if (!waivers)
         return tomlErr(*waiversNode, "'waivers' must be an array of tables");
 
+    // Reject unknown top-level keys so a misspelled table name (e.g. '[[waviers]]')
+    // surfaces as a load error instead of being silently ignored.
+    for (auto& [k, v] : root) {
+        if (k.str() != "waivers")
+            return tomlErr(k, fmt::format("unknown top-level key '{}'", k.str()));
+    }
+
     for (auto& currNode : *waivers) {
         auto entry = currNode.as_table();
         if (!entry)
