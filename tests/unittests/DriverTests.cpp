@@ -11,6 +11,8 @@
 #include "slang/driver/Driver.h"
 #include "slang/driver/SourceLoader.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/ScopeGuard.h"
+#include "slang/util/ThreadPool.h"
 
 using namespace slang::driver;
 
@@ -184,6 +186,149 @@ endmodule
     CHECK(leafLookups == 0);
     CHECK(trees.size() == 2);
 }
+
+#if defined(SLANG_USE_THREADS)
+TEST_CASE("SourceLoader loads search libraries in parallel depths") {
+    SourceManager sourceManager;
+
+    auto top = SyntaxTree::fromText(R"(
+module top;
+    a a();
+    b b();
+    c c();
+    d d();
+endmodule
+)",
+                                    sourceManager, "", "load_tree_parallel_top.sv");
+
+    SourceLoader::SyntaxTreeList trees;
+    trees.push_back(top);
+
+    flat_hash_map<std::string_view, SourceBuffer> buffers;
+    buffers["a"] = sourceManager.assignText("load_tree_a.sv", "module a; e e(); endmodule");
+    buffers["b"] = sourceManager.assignText("load_tree_b.sv", "module b; f f(); endmodule");
+    buffers["c"] = sourceManager.assignText("load_tree_c.sv", "module c; g g(); endmodule");
+    buffers["d"] = sourceManager.assignText("load_tree_d.sv", "module d; h h(); endmodule");
+    buffers["e"] = sourceManager.assignText("load_tree_e.sv", "module e; endmodule");
+    buffers["f"] = sourceManager.assignText("load_tree_f.sv", "module f; endmodule");
+    buffers["g"] = sourceManager.assignText("load_tree_g.sv", "module g; endmodule");
+    buffers["h"] = sourceManager.assignText("load_tree_h.sv", "module h; endmodule");
+
+    ThreadPool pool(4);
+    SourceLoader::loadTrees(
+        trees,
+        [&](std::string_view name) {
+            if (auto it = buffers.find(name); it != buffers.end())
+                return it->second;
+            return SourceBuffer();
+        },
+        sourceManager, {}, {}, &pool);
+
+    CHECK(trees.size() == 9);
+}
+
+TEST_CASE("SourceLoader skips parallel depth trees satisfied by earlier loads") {
+    SourceManager sourceManager;
+
+    auto top = SyntaxTree::fromText(R"(
+module top;
+    leaf leaf();
+    a a();
+    b b();
+    mid mid();
+endmodule
+)",
+                                    sourceManager, "", "load_tree_parallel_skip_top.sv");
+
+    SourceLoader::SyntaxTreeList trees;
+    trees.push_back(top);
+
+    flat_hash_map<std::string_view, SourceBuffer> buffers;
+    buffers["leaf"] = sourceManager.assignText("load_tree_leaf.sv", "module leaf; endmodule");
+    buffers["mid"] = sourceManager.assignText("load_tree_mid.sv", R"(
+module mid;
+    helper helper();
+endmodule
+)");
+    buffers["helper"] = sourceManager.assignText("load_tree_helper.sv", R"(
+module helper;
+endmodule
+module leaf;
+endmodule
+)");
+    buffers["a"] = sourceManager.assignText("load_tree_a.sv", "module a; endmodule");
+    buffers["b"] = sourceManager.assignText("load_tree_b.sv", "module b; endmodule");
+
+    ThreadPool pool(4);
+    SourceLoader::loadTrees(
+        trees,
+        [&](std::string_view name) {
+            if (auto it = buffers.find(name); it != buffers.end())
+                return it->second;
+            return SourceBuffer();
+        },
+        sourceManager, {}, {}, &pool);
+
+    CHECK(trees.size() == 5);
+
+    Compilation compilation;
+    for (auto& tree : trees)
+        compilation.addSyntaxTree(tree);
+
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Driver libdir search loads parallel dependency depths") {
+    auto guard = OS::captureOutput();
+
+    std::error_code ec;
+    auto root = fs::temp_directory_path(ec);
+    REQUIRE(!ec);
+    root /= fmt::format("slang-libdir-{}", OS::getpid());
+    fs::remove_all(root, ec);
+    fs::create_directories(root, ec);
+    REQUIRE(!ec);
+    ScopeGuard cleanup([&] { fs::remove_all(root, ec); });
+
+    auto writeFile = [](const fs::path& path, std::string_view text) {
+        std::ofstream out(path);
+        REQUIRE(out.good());
+        out << text;
+    };
+
+    writeFile(root / "top.sv", R"(
+module top;
+    a a();
+    b b();
+    c c();
+    d d();
+endmodule
+)");
+    writeFile(root / "a.qv", "module a; e e(); endmodule");
+    writeFile(root / "b.qv", "module b; f f(); endmodule");
+    writeFile(root / "c.qv", "module c; g g(); endmodule");
+    writeFile(root / "d.qv", "module d; h h(); endmodule");
+    writeFile(root / "e.qv", "module e; endmodule");
+    writeFile(root / "f.qv", "module f; endmodule");
+    writeFile(root / "g.qv", "module g; endmodule");
+    writeFile(root / "h.qv", "module h; endmodule");
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format("testfoo \"{}\" --libdir \"{}\" --libext .qv --top top -j 4",
+                            (root / "top.sv").string(), root.string());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.reportParseDiags());
+    CHECK(driver.syntaxTrees.size() == 9);
+
+    auto compilation = driver.createCompilation();
+    driver.reportCompilation(*compilation, true);
+    CHECK(driver.reportDiagnostics(true));
+}
+#endif
 
 TEST_CASE("Driver library files with explicit name") {
     auto guard = OS::captureOutput();

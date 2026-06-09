@@ -180,7 +180,8 @@ public:
     static void loadTrees(
         SyntaxTreeList& syntaxTrees, function_ref<SourceBuffer(std::string_view)> findBufferFunc,
         SourceManager& sourceManager, const Bag& optionBag,
-        std::span<const syntax::DefineDirectiveSyntax* const> inheritedMacros = {});
+        std::span<const syntax::DefineDirectiveSyntax* const> inheritedMacros = {},
+        ThreadPool* pool = nullptr);
 
 private:
     // One entry per unit of files + options to compile them.

@@ -8,6 +8,7 @@
 #include "slang/driver/SourceLoader.h"
 
 #include <fmt/core.h>
+#include <iterator>
 
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/AllSyntax.h"
@@ -370,7 +371,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
     if (!searchDirectories.empty()) {
         loadTrees(
             syntaxTrees, [this](std::string_view name) { return findBuffer(name); }, sourceManager,
-            optionBag, inheritedMacros);
+            optionBag, inheritedMacros, pool);
     }
 
     // Collect per-buffer warning options from all separate compilation units.
@@ -388,10 +389,16 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
 void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
                              function_ref<SourceBuffer(std::string_view)> findBufferFunc,
                              SourceManager& sourceManager, const Bag& optionBag,
-                             std::span<const DefineDirectiveSyntax* const> inheritedMacros) {
+                             std::span<const DefineDirectiveSyntax* const> inheritedMacros,
+                             ThreadPool* pool) {
     flat_hash_set<std::string_view> knownNames;
     flat_hash_set<std::string_view> missingNames;
-    SmallVector<std::string_view, 8> worklist;
+    struct PendingLoad {
+        std::string_view name;
+        std::shared_ptr<SyntaxTree> tree;
+    };
+
+    std::vector<PendingLoad> worklist;
 
     auto addKnownNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
         auto& meta = tree->getMetadata();
@@ -405,7 +412,7 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
         auto& meta = tree->getMetadata();
         meta.visitReferencedSymbols([&](std::string_view name) {
             if (!knownNames.contains(name) && missingNames.emplace(name).second)
-                worklist.push_back(name);
+                worklist.push_back({name, nullptr});
         });
     };
 
@@ -415,22 +422,70 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
     for (auto& tree : syntaxTrees)
         findMissingNames(tree);
 
-    // Process the worklist until exhausted
+    auto parseBuffer = [&](const SourceBuffer& buffer) {
+        auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag, inheritedMacros);
+        tree->isLibraryUnit = true;
+        return tree;
+    };
+
+    auto addTree = [&](std::shared_ptr<SyntaxTree> tree) {
+        auto& addedTree = syntaxTrees.emplace_back(std::move(tree));
+        addKnownNames(addedTree);
+        findMissingNames(addedTree);
+    };
+
+    // The worklist is a LIFO stack. Parsed batches are committed one tree at a time so
+    // newly discovered names can take precedence over older pending loads.
     while (!worklist.empty()) {
-        std::string_view name = worklist.back();
-        worklist.pop_back();
+        if (!pool || worklist.size() < MinFilesForThreading) {
+            auto load = std::move(worklist.back());
+            worklist.pop_back();
 
-        if (knownNames.contains(name))
+            if (knownNames.contains(load.name))
+                continue;
+
+            if (load.tree)
+                addTree(std::move(load.tree));
+            else if (auto buffer = findBufferFunc(load.name))
+                addTree(parseBuffer(buffer));
             continue;
+        }
 
-        if (auto buffer = findBufferFunc(name)) {
-            auto tree = syntax::SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
-                                                       inheritedMacros);
-            tree->isLibraryUnit = true;
-            syntaxTrees.emplace_back(tree);
+        std::vector<PendingLoad> batch;
+        batch.swap(worklist);
 
-            addKnownNames(tree);
-            findMissingNames(tree);
+        // Fill buffers before launching workers so findBufferFunc is only called here.
+        std::vector<SourceBuffer> buffers(batch.size());
+        for (size_t i = 0; i < batch.size(); i++) {
+            if (!batch[i].tree && !knownNames.contains(batch[i].name))
+                buffers[i] = findBufferFunc(batch[i].name);
+        }
+
+        pool->detach_loop(size_t(0), batch.size(), [&](size_t i) {
+            if (buffers[i])
+                batch[i].tree = parseBuffer(buffers[i]);
+        });
+        pool->wait();
+
+        for (size_t i = batch.size(); i-- > 0;) {
+            if (!batch[i].tree || knownNames.contains(batch[i].name))
+                continue;
+
+            addTree(std::move(batch[i].tree));
+            if (!worklist.empty()) {
+                std::vector<PendingLoad> newLoads;
+                newLoads.swap(worklist);
+
+                // Keep the new work above older parsed loads on the stack.
+                for (size_t j = 0; j < i; j++) {
+                    if (batch[j].tree && !knownNames.contains(batch[j].name))
+                        worklist.push_back(std::move(batch[j]));
+                }
+
+                worklist.insert(worklist.end(), std::make_move_iterator(newLoads.begin()),
+                                std::make_move_iterator(newLoads.end()));
+                break;
+            }
         }
     }
 }
