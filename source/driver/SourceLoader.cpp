@@ -8,6 +8,7 @@
 #include "slang/driver/SourceLoader.h"
 
 #include <fmt/core.h>
+#include <iterator>
 
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/AllSyntax.h"
@@ -433,8 +434,8 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
         findMissingNames(addedTree);
     };
 
-    // Keep the worklist as a LIFO stack. Parallel batches can parse ahead, but trees are
-    // still committed one at a time in the same order as the serial fixed-point search.
+    // The worklist is a LIFO stack. Parsed batches are committed one tree at a time so
+    // newly discovered names can take precedence over older pending loads.
     while (!worklist.empty()) {
         if (!pool || worklist.size() < MinFilesForThreading) {
             auto load = std::move(worklist.back());
@@ -453,10 +454,10 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
         std::vector<PendingLoad> batch;
         batch.swap(worklist);
 
-        // Buffer lookup stays serial; only parsing the found buffers runs concurrently.
+        // Fill buffers before launching workers so findBufferFunc is only called here.
         std::vector<SourceBuffer> buffers(batch.size());
         for (size_t i = 0; i < batch.size(); i++) {
-            if (!knownNames.contains(batch[i].name) && !batch[i].tree)
+            if (!batch[i].tree && !knownNames.contains(batch[i].name))
                 buffers[i] = findBufferFunc(batch[i].name);
         }
 
@@ -467,7 +468,7 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
         pool->wait();
 
         for (size_t i = batch.size(); i-- > 0;) {
-            if (knownNames.contains(batch[i].name) || !batch[i].tree)
+            if (!batch[i].tree || knownNames.contains(batch[i].name))
                 continue;
 
             addTree(std::move(batch[i].tree));
@@ -475,16 +476,14 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
                 std::vector<PendingLoad> newLoads;
                 newLoads.swap(worklist);
 
-                // New names discovered by this tree must be processed before older parsed
-                // pending loads. Push the older loads first so the new loads end up on top
-                // of the LIFO stack.
+                // Keep the new work above older parsed loads on the stack.
                 for (size_t j = 0; j < i; j++) {
                     if (batch[j].tree && !knownNames.contains(batch[j].name))
                         worklist.push_back(std::move(batch[j]));
                 }
 
-                for (auto& load : newLoads)
-                    worklist.push_back(std::move(load));
+                worklist.insert(worklist.end(), std::make_move_iterator(newLoads.begin()),
+                                std::make_move_iterator(newLoads.end()));
                 break;
             }
         }
