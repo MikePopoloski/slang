@@ -412,7 +412,7 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
         auto& meta = tree->getMetadata();
         meta.visitReferencedSymbols([&](std::string_view name) {
             if (!knownNames.contains(name) && missingNames.emplace(name).second)
-                worklist.push_back({name});
+                worklist.push_back({name, nullptr});
         });
     };
 
