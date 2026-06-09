@@ -703,7 +703,7 @@ SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
     }
 
     if (name.empty())
-        name = getU8Str(path.filename());
+        name = getU8Str(path);
 
     std::unique_lock<std::shared_mutex> lock(mutex);
 
