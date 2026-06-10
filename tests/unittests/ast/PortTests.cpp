@@ -1385,6 +1385,66 @@ endmodule
     CHECK(diags[1].code == diag::InOutVarPortConn);
 }
 
+TEST_CASE("Typed input port is a net by default -- GH #1853") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic w);
+    n n(w);
+endmodule
+
+module n(inout logic w);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Typed input port as variable with InferInputPortsAsVars -- GH #1853") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic w);
+    n n(w);
+endmodule
+
+module n(inout logic w);
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::InferInputPortsAsVars;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InOutVarPortConn);
+}
+
+TEST_CASE("Typed input port with non-net data type -- GH #1853") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input bit a, input int b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    // An explicit net keyword with such a type is still an error.
+    auto tree2 = SyntaxTree::fromText(R"(
+module m(input wire bit a);
+endmodule
+)");
+
+    Compilation compilation2;
+    compilation2.addSyntaxTree(tree2);
+
+    auto& diags = compilation2.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidNetType);
+}
+
 TEST_CASE("Unconnected ref port errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m(a[1:0]);
@@ -1473,7 +1533,7 @@ module o({a, b});
     input b;
 endmodule
 
-module q(input int b);
+module q(input var int b);
 endmodule
 
 module top;

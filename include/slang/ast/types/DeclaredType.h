@@ -85,12 +85,18 @@ enum class SLANG_EXPORT DeclaredTypeFlags {
     /// The type is for a variable declaration inside an interface or generate block.
     IfaceOrGenBlkVar = 1 << 16,
 
+    /// The net type was implicitly inferred for an ANSI `input` port that has an
+    /// explicit data type. Such a port is treated as a net per the LRM (and Questa)
+    /// but the data type is allowed to be one that wouldn't otherwise be valid for a
+    /// net, so the usual net type check is suppressed.
+    ImplicitInputNet = 1 << 17,
+
     /// A mask of flags that indicate additional type rules are needed to
     /// be checked after the type itself is resolved.
     NeedsTypeCheck = NetType | UserDefinedNetType | FormalArgMergeVar | Rand | DPIReturnType |
                      DPIArg | RequireSequenceType | CoverageType | IfaceOrGenBlkVar
 };
-SLANG_BITMASK(DeclaredTypeFlags, IfaceOrGenBlkVar)
+SLANG_BITMASK(DeclaredTypeFlags, ImplicitInputNet)
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type. Optionally includes an

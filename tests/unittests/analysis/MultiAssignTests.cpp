@@ -841,7 +841,7 @@ endmodule
     auto diags = analyze(code, compilation, analysisManager);
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::InputPortAssign);
-    CHECK(diags[1].code == diag::InputPortAssign);
+    CHECK(diags[1].code == diag::InputPortCoercion);
     CHECK(diags[2].code == diag::InputPortAssign);
     CHECK(diags[3].code == diag::MixedVarAssigns);
 }
