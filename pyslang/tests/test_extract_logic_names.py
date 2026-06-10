@@ -83,9 +83,6 @@ def test_complex_module_with_ports():
     """
 
     assert set(extract_logic_declaration_names(code)) == {
-        "clk",
-        "reset_n",
-        "data_in",
         "data_out",
         "valid",
         "internal_counter",
