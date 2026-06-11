@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <atomic>
 #include <exception>
 #include <functional>
 #include <memory>
@@ -240,6 +241,10 @@ private:
 
     const AnalysisOptions options;
     std::vector<WorkerState> workerStates;
+
+    // Hands out a distinct workerStates slot to each thread that participates in
+    // analysis; see getState() for why we don't use the thread pool's own index.
+    std::atomic<size_t> nextWorkerSlot{0};
 
     concurrent_map<const ast::Scope*, std::optional<const AnalyzedScope*>> analyzedScopes;
     concurrent_map<const ast::SubroutineSymbol*, std::unique_ptr<AnalyzedProcedure>>

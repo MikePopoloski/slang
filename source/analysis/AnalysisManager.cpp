@@ -444,8 +444,23 @@ void AnalysisManager::handleAssertion(std::unique_ptr<AnalyzedAssertion>&& asser
 
 AnalysisManager::WorkerState& AnalysisManager::getState() {
 #if defined(SLANG_USE_THREADS)
-    if (threadPool)
-        return workerStates[BS::this_thread::get_index().value_or(workerStates.size() - 1)];
+    if (threadPool) {
+        // Map each participating thread to a distinct worker state. We can't rely on
+        // BS::this_thread::get_index() here: it reads an inline thread_local from the
+        // thread-pool header which, under hidden visibility, can be a *different*
+        // instance in this shared object than the one the pool's worker threads write
+        // to (when the pool is instantiated in another module). That made every worker
+        // fall back to the same slot and race on a shared WorkerState. Instead we hand
+        // out slots ourselves, lazily, the first time a thread asks for its state.
+        thread_local const AnalysisManager* cachedManager = nullptr;
+        thread_local size_t cachedSlot = 0;
+        if (cachedManager != this) {
+            cachedManager = this;
+            cachedSlot = nextWorkerSlot.fetch_add(1, std::memory_order_relaxed);
+            SLANG_ASSERT(cachedSlot < workerStates.size());
+        }
+        return workerStates[cachedSlot];
+    }
 #endif
     return workerStates[0];
 }

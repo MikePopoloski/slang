@@ -171,6 +171,18 @@
       }
     },
     {
+      "name": "gcc-asan",
+      "displayName": "GCC ASan",
+      "description": "GCC debug shared build with AddressSanitizer + UBSan",
+      "inherits": "gcc-debug-shared",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-DSLANG_ASSERT_ENABLED -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=address,undefined",
+        "SLANG_USE_MIMALLOC": "OFF"
+      }
+    },
+    {
       "name": "gcc-debug-noexcept",
       "displayName": "GCC Debug No Exceptions",
       "inherits": [
