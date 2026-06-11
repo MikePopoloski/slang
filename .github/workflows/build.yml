@@ -57,16 +57,13 @@ jobs:
       if: ${{ startsWith(matrix.preset, 'wasi-') }}
     - uses: bytecodealliance/actions/wasmtime/setup@9152e710e9f7182e4c29ad218e4f335a7b203613 # v1
       if: ${{ startsWith(matrix.preset, 'wasi-') }}
-    - name: Build
-      if: ${{ !startsWith(matrix.preset, 'wasi-') && !startsWith(matrix.preset, 'win64') }}
-      run: |
-        cmake --preset ${{ matrix.preset }} $BUILD_FLAGS
-        cmake --build build/${{ matrix.preset }} -j8
-    - name: Build (Windows)
+    - name: Set up MSVC environment (Windows)
       if: ${{ startsWith(matrix.preset, 'win64') }}
-      shell: cmd
+      shell: pwsh
+      run: ./scripts/setup-msvc-env.ps1 -Arch ${{ contains(matrix.preset, 'arm') && 'arm64' || 'x64' }}
+    - name: Build
+      if: ${{ !startsWith(matrix.preset, 'wasi-') }}
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\${{ contains(matrix.preset, 'arm') && 'vcvarsarm64.bat' || 'vcvars64.bat' }}"
         cmake --preset ${{ matrix.preset }} ${{ env.BUILD_FLAGS }}
         cmake --build build/${{ matrix.preset }} -j8
     - name: Build (WASI)
