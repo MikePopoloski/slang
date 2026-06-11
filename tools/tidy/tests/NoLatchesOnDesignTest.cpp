@@ -12,7 +12,7 @@ module top (
     output logic b
 );
     always_latch begin
-        a <= b;
+        b <= a;
     end
 endmodule
 )");
@@ -26,7 +26,7 @@ module top (
     output logic b
 );
     always_comb begin
-        a = b;
+        b = a;
     end
 endmodule
 )");

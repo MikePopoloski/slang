@@ -166,24 +166,42 @@ public:
                 // - For output, if we have a data type it's a var, otherwise net
                 // - For ref it's always a var
                 //
-                // Unfortunately, all major simulators ignore the rule for input ports,
-                // and treat them the same as output ports (i.e. it's not a net if there
-                // is a data type specified). This is pretty noticeable as otherwise a
-                // port like this:
-                //    input int i
-                // will throw an error because int is not a valid type for a net. Actually
-                // noticing the other fact, that it's a net port vs a variable port, is very
-                // hard to do, so we go along with everyone else and use the same rule.
-
+                // By default slang follows the LRM here (which also matches Questa):
+                // input and inout ports default to nets even when an explicit data type
+                // is provided. The data type is allowed to be one that wouldn't otherwise
+                // be legal for a net (e.g. `input int i`); that check is suppressed for
+                // this implicitly-inferred case, see DeclaredTypeFlags::ImplicitInputNet.
+                //
+                // Some tools (notably VCS) instead treat a typed input port as a variable,
+                // which for example rejects connecting it to an inout port. The
+                // InferInputPortsAsVars flag selects that behavior.
                 ArgumentDirection direction = getDirection(header.direction);
+                const bool implicitType = header.dataType->kind == SyntaxKind::ImplicitType;
+
                 const NetType* netType = nullptr;
-                if (!header.varKeyword && (direction == ArgumentDirection::InOut ||
-                                           (direction != ArgumentDirection::Ref &&
-                                            header.dataType->kind == SyntaxKind::ImplicitType))) {
-                    netType = &getDefaultNetType(scope, decl.name.location());
+                bool implicitInputNet = false;
+                if (!header.varKeyword && direction != ArgumentDirection::Ref) {
+                    bool isNet;
+                    if (direction == ArgumentDirection::Out)
+                        isNet = implicitType;
+                    else if (direction == ArgumentDirection::In)
+                        isNet = implicitType ||
+                                !comp.hasFlag(CompilationFlags::InferInputPortsAsVars);
+                    else // InOut
+                        isNet = true;
+
+                    if (isNet) {
+                        netType = &getDefaultNetType(scope, decl.name.location());
+
+                        // Suppress the net type validity check for an input port that
+                        // was given an explicit data type, since the user wrote e.g.
+                        // `input bit w` and expects it to act like a net port anyway.
+                        implicitInputNet = direction == ArgumentDirection::In && !implicitType;
+                    }
                 }
 
-                return add(decl, direction, header.dataType, netType, syntax.attributes);
+                return add(decl, direction, header.dataType, netType, syntax.attributes,
+                           implicitInputNet);
             }
             case SyntaxKind::NetPortHeader: {
                 auto& header = syntax.header->as<NetPortHeaderSyntax>();
@@ -220,6 +238,7 @@ public:
         lastDirection = port->direction;
         lastType = nullptr;
         lastNetType = nullptr;
+        lastImplicitInputNet = false;
         lastInterface = nullptr;
         lastModport = ""sv;
         lastGenericIface = false;
@@ -240,12 +259,13 @@ private:
         if (!lastType && !lastNetType)
             lastType = &comp.createEmptyTypeSyntax(decl.getFirstToken().location());
 
-        return add(decl, lastDirection, lastType, lastNetType, attrs);
+        return add(decl, lastDirection, lastType, lastNetType, attrs, lastImplicitInputNet);
     }
 
     Symbol* add(const DeclaratorSyntax& decl, ArgumentDirection direction,
                 const DataTypeSyntax* type, const NetType* netType,
-                std::span<const AttributeInstanceSyntax* const> attrs) {
+                std::span<const AttributeInstanceSyntax* const> attrs,
+                bool implicitInputNet = false) {
         auto port = comp.emplace<PortSymbol>(decl.name.valueText(), decl.name.location(),
                                              /* isAnsiPort */ true);
         port->direction = direction;
@@ -296,6 +316,9 @@ private:
                     symbol->getDeclaredType()->setDimensionSyntax(decl.dimensions);
             }
 
+            if (implicitInputNet)
+                symbol->getDeclaredType()->addFlags(DeclaredTypeFlags::ImplicitInputNet);
+
             symbol->setSyntax(decl);
             symbol->setAttributes(scope, attrs);
             port->internalSymbol = symbol;
@@ -321,6 +344,7 @@ private:
         lastDirection = direction;
         lastType = type;
         lastNetType = netType;
+        lastImplicitInputNet = implicitInputNet;
         lastInterface = nullptr;
         lastModport = ""sv;
         lastGenericIface = false;
@@ -344,6 +368,7 @@ private:
         lastDirection = ArgumentDirection::InOut;
         lastType = nullptr;
         lastNetType = nullptr;
+        lastImplicitInputNet = false;
         lastInterface = iface;
         lastModport = modport;
         lastGenericIface = isGeneric;
@@ -358,6 +383,7 @@ private:
     ArgumentDirection lastDirection = ArgumentDirection::InOut;
     const DataTypeSyntax* lastType = nullptr;
     const NetType* lastNetType = nullptr;
+    bool lastImplicitInputNet = false;
     const DefinitionSymbol* lastInterface = nullptr;
     std::string_view lastModport;
     bool lastGenericIface = false;

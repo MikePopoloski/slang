@@ -265,6 +265,9 @@ void Driver::addStandardArgs() {
     addCompFlag(CompilationFlags::AllowCrossAutoBinMax, "--allow-cross-auto-bin-max",
                 "Allow the legacy SystemVerilog 3.1a cross_auto_bin_max coverage option to "
                 "be set on covergroups and crosses. The option is accepted and ignored.");
+    addCompFlag(CompilationFlags::InferInputPortsAsVars, "--infer-input-ports-as-vars",
+                "Infer ANSI input ports that have an explicit data type as variables instead "
+                "of nets. By default such ports are treated as nets, following the LRM.");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "

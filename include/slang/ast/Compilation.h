@@ -135,9 +135,16 @@ enum class SLANG_EXPORT CompilationFlags {
     /// Allow the legacy `cross_auto_bin_max` coverage option to be set on covergroups
     /// and crosses. This option was part of SystemVerilog 3.1a but is not in IEEE 1800;
     /// some tools still accept it for compatibility with older code.
-    AllowCrossAutoBinMax = 1 << 18
+    AllowCrossAutoBinMax = 1 << 18,
+
+    /// Infer an ANSI `input` port that has an explicit data type as a variable
+    /// instead of a net. By default slang follows the LRM (and Questa) and treats
+    /// such ports as nets, which for example allows them to be connected to `inout`
+    /// ports. Some tools (notably VCS) treat them as variables instead; enabling
+    /// this flag selects that behavior.
+    InferInputPortsAsVars = 1 << 19
 };
-SLANG_BITMASK(CompilationFlags, AllowCrossAutoBinMax)
+SLANG_BITMASK(CompilationFlags, InferInputPortsAsVars)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {
