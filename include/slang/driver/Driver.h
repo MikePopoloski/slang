@@ -439,8 +439,15 @@ public:
     /// @brief Parses all loaded buffers into syntax trees and appends the resulting trees
     /// to the @a syntaxTrees list.
     ///
+    /// @param bufferChangeCB an optional callback invoked whenever the preprocessor enters
+    ///                       or returns from a source buffer. The arguments are the BufferID
+    ///                       of the affected file, whether we are returning to a file (isBack),
+    ///                       and whether the file is being skipped as an already-included
+    ///                       header (isSkip). Note that when parsing with multiple threads
+    ///                       this callback may be invoked concurrently from those threads.
     /// @returns true on success and false if errors were encountered.
-    [[nodiscard]] bool parseAllSources();
+    [[nodiscard]] bool parseAllSources(
+        function_ref<void(BufferID, bool, bool)> bufferChangeCB = {});
 
     /// Creates an options bag from all of the currently set options.
     [[nodiscard]] Bag createOptionBag() const;

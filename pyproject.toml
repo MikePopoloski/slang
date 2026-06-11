@@ -68,3 +68,8 @@ profile = "black"
 
 [tool.pytest.ini_options]
 testpaths = ["pyslang/tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]

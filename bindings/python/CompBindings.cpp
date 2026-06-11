@@ -238,7 +238,24 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .def("runPreprocessor", &Driver::runPreprocessor, "flags"_a)
         .def("reportMacros", &Driver::reportMacros, "groupByFile"_a = false)
         .def("optionallyWriteDepFiles", &Driver::optionallyWriteDepFiles)
-        .def("parseAllSources", &Driver::parseAllSources)
+        .def(
+            "parseAllSources",
+            [](Driver& self, py::object bufferChangeCB) {
+                if (bufferChangeCB.is_none()) {
+                    py::gil_scoped_release release;
+                    return self.parseAllSources();
+                }
+
+                auto cb = bufferChangeCB.cast<py::function>();
+                auto wrapper = [&cb](BufferID buffer, bool isBack, bool isSkip) {
+                    py::gil_scoped_acquire acquire;
+                    cb(buffer, isBack, isSkip);
+                };
+
+                py::gil_scoped_release release;
+                return self.parseAllSources(wrapper);
+            },
+            "bufferChangeCB"_a = py::none())
         .def("createOptionBag", &Driver::createOptionBag)
         .def("createCompilation", &Driver::createCompilation, py::keep_alive<0, 1>())
         .def("reportParseDiags", &Driver::reportParseDiags)

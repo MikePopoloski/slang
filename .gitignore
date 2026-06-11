@@ -3,6 +3,7 @@
 .ruff_cache/
 .venv/
 venv/
+dist/
 .cache/
 .DS_Store
 __pycache__/
@@ -11,6 +12,7 @@ __pycache__/
 *.pyd
 _version.py
 __init__.pyi
+uv.lock
 
 # C and CMake ignores.
 build/

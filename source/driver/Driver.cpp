@@ -1061,7 +1061,7 @@ static std::string_view bufferKindToStr(SourceManager::BufferKind kind) {
     }
 }
 
-bool Driver::parseAllSources() {
+bool Driver::parseAllSources(function_ref<void(BufferID, bool, bool)> bufferChangeCB) {
     if (!threadPool) {
         const auto numThreads = options.numThreads.value_or(0u);
         if (numThreads != 1u)
@@ -1072,7 +1072,7 @@ bool Driver::parseAllSources() {
 
     if (options.showParsedFiles == true) {
         concurrent_map<size_t, std::vector<std::string>> parsedFiles;
-        auto bufferChangeCB = [&](BufferID buf, bool isBack, bool isSkip) {
+        auto showParsedFilesCB = [&](BufferID buf, bool isBack, bool isSkip) {
             auto path = getU8Str(sourceManager.getFullPath(buf));
             std::string msg;
             if (isBack) {
@@ -1091,9 +1091,12 @@ bool Driver::parseAllSources() {
 #endif
             auto appendMsg = [&](auto& entry) { entry.second.push_back(std::move(msg)); };
             parsedFiles.try_emplace_and_visit(idx, appendMsg, appendMsg);
+
+            if (bufferChangeCB)
+                bufferChangeCB(buf, isBack, isSkip);
         };
 
-        bag.insertOrGet<PreprocessorOptions>().bufferChangeCB = bufferChangeCB;
+        bag.insertOrGet<PreprocessorOptions>().bufferChangeCB = showParsedFilesCB;
 
         syntaxTrees = sourceLoader.loadAndParseSources(bag, threadPool.get());
 
@@ -1101,6 +1104,7 @@ bool Driver::parseAllSources() {
         parsedFiles.visit_all([&](auto&& entry) {
             threadOutputs.emplace_back(entry.first, std::move(entry.second));
         });
+
         std::sort(threadOutputs.begin(), threadOutputs.end(),
                   [](const auto& a, const auto& b) { return a.first < b.first; });
         for (auto& [idx, msgs] : threadOutputs) {
@@ -1109,6 +1113,9 @@ bool Driver::parseAllSources() {
         }
     }
     else {
+        if (bufferChangeCB)
+            bag.insertOrGet<PreprocessorOptions>().bufferChangeCB = bufferChangeCB;
+
         syntaxTrees = sourceLoader.loadAndParseSources(bag, threadPool.get());
     }
 
