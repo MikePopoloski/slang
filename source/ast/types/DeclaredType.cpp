@@ -254,10 +254,12 @@ void DeclaredType::checkType(const ASTContext& context) const {
         case uint32_t(DeclaredTypeFlags::NetType): {
             auto& net = parent.as<NetSymbol>();
             if (net.netType.netKind != NetType::UserDefined && !isValidForNet(*type) &&
-                !flags.has(DeclaredTypeFlags::ImplicitInputNet))
+                !flags.has(DeclaredTypeFlags::ImplicitInputNet)) {
                 context.addDiag(diag::InvalidNetType, parent.location) << *type;
-            else if (type->getBitWidth() == 1 && net.expansionHint != NetSymbol::None)
+            }
+            else if (type->getBitWidth() == 1 && net.expansionHint != NetSymbol::None) {
                 context.addDiag(diag::SingleBitVectored, parent.location);
+            }
             break;
         }
         case uint32_t(DeclaredTypeFlags::UserDefinedNetType):

@@ -166,15 +166,15 @@ public:
                 // - For output, if we have a data type it's a var, otherwise net
                 // - For ref it's always a var
                 //
-                // By default slang follows the LRM here (which also matches Questa):
-                // input and inout ports default to nets even when an explicit data type
-                // is provided. The data type is allowed to be one that wouldn't otherwise
-                // be legal for a net (e.g. `input int i`); that check is suppressed for
-                // this implicitly-inferred case, see DeclaredTypeFlags::ImplicitInputNet.
+                // By default slang follows the LRM here: input and inout ports default to
+                // nets even when an explicit data type is provided. The data type is allowed
+                // to be one that wouldn't otherwise be legal for a net (e.g. `input int i`);
+                // that check is suppressed for this implicitly-inferred case,
+                // see DeclaredTypeFlags::ImplicitInputNet.
                 //
-                // Some tools (notably VCS) instead treat a typed input port as a variable,
-                // which for example rejects connecting it to an inout port. The
-                // InferInputPortsAsVars flag selects that behavior.
+                // Some tools instead treat a typed input port as a variable, which for example
+                // rejects connecting it to an inout port. The InferInputPortsAsVars flag selects
+                // that behavior.
                 ArgumentDirection direction = getDirection(header.direction);
                 const bool implicitType = header.dataType->kind == SyntaxKind::ImplicitType;
 
@@ -182,13 +182,16 @@ public:
                 bool implicitInputNet = false;
                 if (!header.varKeyword && direction != ArgumentDirection::Ref) {
                     bool isNet;
-                    if (direction == ArgumentDirection::Out)
+                    if (direction == ArgumentDirection::Out) {
                         isNet = implicitType;
-                    else if (direction == ArgumentDirection::In)
+                    }
+                    else if (direction == ArgumentDirection::In) {
                         isNet = implicitType ||
                                 !comp.hasFlag(CompilationFlags::InferInputPortsAsVars);
-                    else // InOut
+                    }
+                    else { // InOut
                         isNet = true;
+                    }
 
                     if (isNet) {
                         netType = &getDefaultNetType(scope, decl.name.location());
@@ -383,9 +386,9 @@ private:
     ArgumentDirection lastDirection = ArgumentDirection::InOut;
     const DataTypeSyntax* lastType = nullptr;
     const NetType* lastNetType = nullptr;
-    bool lastImplicitInputNet = false;
     const DefinitionSymbol* lastInterface = nullptr;
     std::string_view lastModport;
+    bool lastImplicitInputNet = false;
     bool lastGenericIface = false;
 };
 

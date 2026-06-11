@@ -1201,9 +1201,6 @@ source:4:27: note: comparison reduces to (1 < 0)
 }
 
 TEST_CASE("$static_assert with type comparison doesn't crash") {
-    // Regression: type(X) == type(Y) has no per-side constant value, so the
-    // reduceComparison helper used to assert and crash when emitting the
-    // failure note.
     auto tree = SyntaxTree::fromText(R"(
 module top;
     $static_assert(type(logic) == type(bit));

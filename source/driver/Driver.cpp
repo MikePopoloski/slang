@@ -1011,9 +1011,9 @@ void Driver::optionallyWriteDepFiles() {
     flat_hash_set<fs::path> seenPaths;
     if (options.includeDepfile || options.allDepfile) {
         for (auto& tree : depTrees) {
-            auto bufferIds = tree->getSourceBufferIds();
             // The first id is the top-level source file; the rest were pushed
             // via `include directives.
+            auto bufferIds = tree->getSourceBufferIds();
             for (size_t i = 1; i < bufferIds.size(); ++i) {
                 auto p = sourceManager.getFullPath(bufferIds[i]);
                 if (!p.empty() && seenPaths.insert(p).second)

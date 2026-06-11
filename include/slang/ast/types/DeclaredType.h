@@ -86,9 +86,9 @@ enum class SLANG_EXPORT DeclaredTypeFlags {
     IfaceOrGenBlkVar = 1 << 16,
 
     /// The net type was implicitly inferred for an ANSI `input` port that has an
-    /// explicit data type. Such a port is treated as a net per the LRM (and Questa)
-    /// but the data type is allowed to be one that wouldn't otherwise be valid for a
-    /// net, so the usual net type check is suppressed.
+    /// explicit data type. Such a port is treated as a net per the LRM but the data type
+    /// is allowed to be one that wouldn't otherwise be valid for a net, so the usual net
+    /// type check is suppressed.
     ImplicitInputNet = 1 << 17,
 
     /// A mask of flags that indicate additional type rules are needed to

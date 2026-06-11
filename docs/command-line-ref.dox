@@ -675,10 +675,9 @@ This option is enabled automatically when `--compat=vcs` or `--compat=all` is us
 `--infer-input-ports-as-vars`
 
 Infer ANSI `input` ports that have an explicit data type as variables instead of nets.
-By default slang follows the LRM (and matches Questa) and treats such ports as nets, which
-for example allows them to be connected to `inout` ports. Some tools (notably VCS) treat them
-as variables instead, which rejects such connections but in turn allows them to be connected
-to `ref` ports; this flag selects that behavior.
+By default slang follows the LRM and treats such ports as nets, which for example allows them
+to be connected to `inout` ports. Some tools treat them as variables instead, which rejects
+such connections but in turn allows them to be connected to `ref` ports; this flag selects that behavior.
 
 For example, by default the following is allowed, but is an error when this flag is set:
 
