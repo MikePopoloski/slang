@@ -15,12 +15,12 @@ git clone https://github.com/MikePopoloski/slang.git
 
 slang requires the following tools in order to build:
 - [python 3](https://www.python.org/)
-- [CMake](https://cmake.org/) (3.20 or later)
+- [CMake](https://cmake.org/) (3.24 or later)
 - C++20 compatible compiler. Minimum supported compiler versions:
     - GCC 11
     - clang 17
-    - Xcode 16
-    - MSVC support is tested only against the most recent update of VS 2022
+    - Xcode 16.4
+    - MSVC 14.50 (VS 2026)
 
 @section building-start Quick Start
 
@@ -171,7 +171,7 @@ in one of the default locations, you should be able to use a simple `find_packag
 it into your build.
 
 ```
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.24)
 project(example)
 
 find_package(slang 1.0.0)
@@ -188,7 +188,7 @@ Instead of installing the slang package on your system, you can instead instruct
 from GitHub and build it as part of your own project.
 
 ```
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.24)
 project(example)
 
 # Note: this example just pulls the head master branch
