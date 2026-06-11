@@ -38,7 +38,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       with:
         fetch-depth: 0
     - name: Install dependencies
@@ -50,12 +50,12 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y g++-16 g++-11 clang-22 clang-tidy-22
     - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.23
+      uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
       with:
         key: ${{ matrix.preset }}
-    - uses: konsumer/install-wasi-sdk@v1
+    - uses: konsumer/install-wasi-sdk@d728b7abb7ef7db1610039d9798a8270e23f56f8 # v1
       if: ${{ startsWith(matrix.preset, 'wasi-') }}
-    - uses: bytecodealliance/actions/wasmtime/setup@v1
+    - uses: bytecodealliance/actions/wasmtime/setup@9152e710e9f7182e4c29ad218e4f335a7b203613 # v1
       if: ${{ startsWith(matrix.preset, 'wasi-') }}
     - name: Build
       if: ${{ !startsWith(matrix.preset, 'wasi-') && !startsWith(matrix.preset, 'win64') }}
