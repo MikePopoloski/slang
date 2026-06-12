@@ -22,6 +22,11 @@
     #if __has_include(<version>)
         #include <version> // NOLINT(misc-include-cleaner)
     #endif
+    #if __has_include("slang/slang_export.h")
+        #include "slang/slang_export.h"
+    #else
+        #define SLANG_EXPORT
+    #endif
 #endif
 
 // At the time of this release, there is a bug in Clang with libc++ where using `std::jthread` in a C++20 module causes a compilation error. As a workaround, until the bug is fixed, the thread pool library automatically falls back to `std::thread` if it detects that Clang and libc++ are being used together with C++20 modules. This workaround can be disabled by defining `BS_THREAD_POOL_DISABLE_WORKAROUNDS` when compiling the module. TODO: Remove this workaround when the bug is fixed.
@@ -963,7 +968,7 @@ inline bool set_os_process_priority(const os_process_priority priority)
 /**
  * @brief A class used to obtain information about the current thread and, if native extensions are enabled, get/set its priority, affinity, or name.
  */
-class [[nodiscard]] this_thread
+class SLANG_EXPORT [[nodiscard]] this_thread
 {
     template <tp>
     friend class thread_pool;
