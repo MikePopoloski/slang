@@ -33,7 +33,11 @@ def _create_driver(top):
     driver = Driver()
     driver.addStandardArgs()
 
-    assert driver.parseCommandLine(f"slang {top}", CommandLineOptions())
+    # Use a quoted POSIX-style path so backslashes in Windows paths aren't
+    # treated as escape characters by the command-line tokenizer.
+    assert driver.parseCommandLine(
+        f'slang "{Path(top).as_posix()}"', CommandLineOptions()
+    )
     assert driver.processOptions()
 
     return driver
