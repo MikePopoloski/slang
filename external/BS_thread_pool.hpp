@@ -1344,8 +1344,8 @@ public:
 #endif
 
 private:
-    inline static thread_local std::optional<std::size_t> my_index = std::nullopt;
-    inline static thread_local std::optional<void*> my_pool = std::nullopt;
+    static thread_local std::optional<std::size_t> my_index;
+    static thread_local std::optional<void*> my_pool;
 }; // class this_thread
 
 /**

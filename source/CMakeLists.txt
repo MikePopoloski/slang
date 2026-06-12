@@ -118,6 +118,7 @@ add_library(
   util/OS.cpp
   util/SmallVector.cpp
   util/String.cpp
+  util/ThreadPool.cpp
   util/TimeTrace.cpp
   util/Util.cpp)
 
