@@ -1682,11 +1682,13 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
     auto& classScope = *details.classType;
 
     auto findSuperScope = [&]() -> const Scope& {
-        if (details.thisVar) {
-            auto dt = details.thisVar->getDeclaredType();
-            SLANG_ASSERT(dt);
-            return dt->getType().getCanonicalType().as<ClassType>();
-        }
+        // classScope is the canonical class type of the object being randomized,
+        // which is exactly the scope from which 'super' should be resolved. Note
+        // that we can't rely on thisVar's declared type here, since it may not be
+        // a class type directly (e.g. when randomizing an element of an array of
+        // class handles).
+        if (details.thisVar)
+            return classScope;
 
         return *context.scope;
     };

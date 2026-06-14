@@ -3867,6 +3867,32 @@ endclass
     CHECK(diags[0].code == diag::MemberImplNotFound);
 }
 
+TEST_CASE("super in randomize-with on array element doesn't crash -- GH #1862") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    rand bit [7:0] val;
+endclass
+module t;
+    C od[2];
+    initial begin
+        automatic int i = 0;
+        od[0] = new();
+        od[1] = new();
+        assert(od[i].randomize() with {
+            super.x;
+        });
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SuperNoBase);
+}
+
 TEST_CASE("Generic class specializations are not assignment compatible") {
     auto tree = SyntaxTree::fromText(R"(
 class C #(int i);
