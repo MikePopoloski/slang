@@ -3,17 +3,12 @@
 # SPDX-License-Identifier: MIT
 # ~~~
 
-set(find_pkg_args "")
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "FIND_PACKAGE_ARGS" "3.0")
-endif()
-
 FetchContent_Declare(
   pybind11
   GIT_REPOSITORY https://github.com/pybind/pybind11.git
   GIT_TAG v3.0.4
   GIT_SHALLOW ON
-  ${find_pkg_args})
+  FIND_PACKAGE_ARGS 3.0)
 FetchContent_MakeAvailable(pybind11)
 
 if(pybind11_FOUND)
