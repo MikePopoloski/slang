@@ -33,7 +33,7 @@ jobs:
             os: windows-11-arm
           - preset: win64-debug-noexcept
             os: windows-latest
-          - preset: wasi-sdk
+          - preset: wasi-sdk-p1
             os: ubuntu-latest
 
     runs-on: ${{ matrix.os }}
