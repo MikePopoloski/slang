@@ -6,11 +6,33 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Compatibility
+* Added `--allow-cross-auto-bin-max` (included in 'vcs' compat mode) which enables the `cross_auto_bin_max` legacy coverage option, for compatibility with (pre-IEEE) SystemVerilog 3.1a (thanks to @hankhsu1996)
+* ANSI input ports without an explicit port kind (net or var) are specified by the LRM to be nets. slang instead used to default them to variables, so that cases like `input int p` wouldn't error (since 2-state types are not valid for nets). Now they are defaulted to nets to match the LRM, with a carve out for the 2-state net type check to suppress the error for these implicit cases only. This behavior better matches the LRM and several commercial tools. `--infer-input-ports-as-vars` (included by default in 'vcs' compat mode) can be used to get the old behavior. (thanks to @likeamahoney)
+
 ### Notable Breaking Changes
+* The minimum required CMake version to build slang is now 3.28
+
 ### New Features
+* Added support for external [diagnostic waivers](https://sv-lang.com/waivers.html) files for suppressing unwanted warnings (thanks to @sjalloq)
+
 ### Improvements
+* Depfiles created by `--Mall` and `--Minclude` now include system-style included files (via angle brackets) in addition to user-style (via double quotes) (thanks to @AndrewNolte)
+* `$static_assert` with type reference comparisons now shows a detailed resolution chain for type aliases when the assert fails (thanks to @AndrewNolte)
+* Library search (with `--libdir`) can now parse files in parallel when threading is enabled (thanks to @ebrevdo)
+
 ### Fixes
+* Fixed a potential crash when a single symbol has many (greater than 16) attributes declared (thanks to @AndrewNolte)
+* Fixed a bug where library search (with `--libdir`) could sometimes try to load and parse the same file more than once (thanks to @AndrewNolte)
+* Fixed spurious "unused" warnings on symbols that already have a previous error with their type resolution (thanks to @AndrewNolte)
+* Fixed `` `include `` files incorrectly being included in depfiles created by `--Mmodule` (thanks to @AndrewNolte)
+* Fixed a crash when using `$static_assert` to compare type references (thanks to @AndrewNolte)
+* Fixed false positives for `-Wunused-but-set-property` when accessing members via arrays of class handles
+* Fixed a crash when using `super` inside `randomize` calls on arrays of class handles
+* Fixed the ordering of element expressions in assignment patterns with explicit indices targeting arrays with descending indices
+
 ### Tools & Bindings
+#### pyslang
+* Fixed binding of enum members named "and" and "or" (thanks to @slide)
 
 
 ## [v11.0] - 2026-05-14
