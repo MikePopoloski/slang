@@ -805,6 +805,50 @@ endmodule
     CHECK(elems[2].integer() == 1);
 }
 
+TEST_CASE("Keyed assignment pattern indices for descending ranges -- GH #1867") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int A[2:0] = '{0: 10, 1: 20, 2: 30};
+    localparam int A0 = A[0];
+    localparam int A1 = A[1];
+    localparam int A2 = A[2];
+
+    localparam int B[0:2] = '{0: 10, 1: 20, 2: 30};
+    localparam int B0 = B[0];
+    localparam int B1 = B[1];
+    localparam int B2 = B[2];
+
+    localparam logic [3:0][7:0] C = '{1: 8'd20, 3: 8'd40, default: 8'd99};
+    localparam int C0 = C[0];
+    localparam int C1 = C[1];
+    localparam int C2 = C[2];
+    localparam int C3 = C[3];
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto val = [&](std::string_view name) {
+        return root.lookupName<ParameterSymbol>(name).getValue().integer();
+    };
+
+    CHECK(val("m.A0") == 10);
+    CHECK(val("m.A1") == 20);
+    CHECK(val("m.A2") == 30);
+
+    CHECK(val("m.B0") == 10);
+    CHECK(val("m.B1") == 20);
+    CHECK(val("m.B2") == 30);
+
+    CHECK(val("m.C0") == 99);
+    CHECK(val("m.C1") == 20);
+    CHECK(val("m.C2") == 99);
+    CHECK(val("m.C3") == 40);
+}
+
 TEST_CASE("Array select out of bounds - valid") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
