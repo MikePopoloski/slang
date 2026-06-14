@@ -205,6 +205,7 @@ endproperty
 
 c1: cover property (@(posedge clk) a #-# p3);
 a1: assert property (@(posedge clk) a |-> p3);
+r1: restrict property (@(posedge clk) a);
 )";
 
     diagnostics.clear();
@@ -217,10 +218,13 @@ a1: assert property (@(posedge clk) a |-> p3);
     auto propertyDecl = parser.parseSingleMember(SyntaxKind::ModuleDeclaration);
     auto coverStatement = parser.parseSingleMember(SyntaxKind::ModuleDeclaration);
     auto assertStatement = parser.parseSingleMember(SyntaxKind::ModuleDeclaration);
+    auto restrictStatement = parser.parseSingleMember(SyntaxKind::ModuleDeclaration);
 
     REQUIRE(propertyDecl);
     REQUIRE(coverStatement);
     REQUIRE(assertStatement);
+    REQUIRE(restrictStatement);
+    CHECK(restrictStatement->kind == SyntaxKind::ConcurrentAssertionMember);
     CHECK_DIAGNOSTICS_EMPTY;
 }
 

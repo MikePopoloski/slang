@@ -237,7 +237,7 @@ MemberSyntax* Parser::parseMemberImpl(AttrList attributes, SyntaxKind parentKind
                 // point we either have a labeled assertion, or this is some kind of error.
                 TokenKind next = peek(2).kind;
                 if (next == TokenKind::AssertKeyword || next == TokenKind::AssumeKeyword ||
-                    next == TokenKind::CoverKeyword) {
+                    next == TokenKind::CoverKeyword || next == TokenKind::RestrictKeyword) {
 
                     auto name = consume();
                     auto& label = factory.namedLabel(name, expect(TokenKind::Colon));

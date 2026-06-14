@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed false positives for `-Wunused-but-set-property` when accessing members via arrays of class handles
 * Fixed a crash when using `super` inside `randomize` calls on arrays of class handles
 * Fixed the ordering of element expressions in assignment patterns with explicit indices targeting arrays with descending indices
+* Fixed a parsing error where a labeled `restrict property` concurrent assertion was rejected
 
 ### Tools & Bindings
 #### pyslang

@@ -536,6 +536,9 @@ StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label, AttrLi
                 return parseConcurrentAssertion(label, attributes);
             assertionKind = SyntaxKind::ImmediateCoverStatement;
             break;
+        case TokenKind::RestrictKeyword:
+            // restrict is always a concurrent assertion.
+            return parseConcurrentAssertion(label, attributes);
         default:
             SLANG_UNREACHABLE;
     }
