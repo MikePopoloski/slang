@@ -1325,6 +1325,48 @@ endmodule
     CHECK(diags[1].code == diag::InterconnectReference);
 }
 
+TEST_CASE("Net alias on interconnect nets") {
+    // IEEE 1800-2023 6.6.8: a net_alias statement is legal with interconnect
+    // net_lvalues as long as all nets in the alias are also interconnect nets.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    interconnect a, b, c, f;
+    interconnect [3:0] d, e;
+    alias a = b;
+    alias c = f;
+    alias d = e;
+endmodule
+
+module n;
+    interconnect a, b, c;
+    alias a = b = c;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Net alias mixing interconnect and regular nets") {
+    // Mixing an interconnect net with a non-interconnect net in an alias is
+    // illegal; the nets do not share a common nettype.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    interconnect a;
+    wire [0:0] b;
+    alias a = b;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NetAliasCommonNetType);
+}
+
 TEST_CASE("always_comb / always_ff restrictions") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

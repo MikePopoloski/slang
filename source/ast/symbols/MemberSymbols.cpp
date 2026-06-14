@@ -2435,7 +2435,8 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
     SLANG_ASSERT(scope && syntax);
 
     SmallVector<const Expression*> buffer;
-    ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NonProcedural);
+    ASTContext context(*scope, LookupLocation::after(*this),
+                       ASTFlags::NonProcedural | ASTFlags::AllowInterconnect);
     EvalContext evalCtx(context);
     NetAliasVisitor visitor(context, evalCtx);
     SmallVector<SmallVector<NetAlias>> netAliases;
