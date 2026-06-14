@@ -131,15 +131,10 @@ endif()
 
 # --- catch2 ---
 if(SLANG_INCLUDE_TESTS)
-  set(find_pkg_args "")
-  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-    set(find_pkg_args "FIND_PACKAGE_ARGS" "${catch2_min_version}")
-  endif()
-
   FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.15.0
+    GIT_TAG v3.15.1
     GIT_SHALLOW ON
     FIND_PACKAGE_ARGS 3.15)
   FetchContent_MakeAvailable(Catch2)
