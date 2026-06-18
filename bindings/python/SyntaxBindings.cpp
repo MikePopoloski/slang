@@ -23,7 +23,9 @@ namespace fs = std::filesystem;
 
 namespace {
 
-struct PySyntaxVisitor : public PyVisitorBase<PySyntaxVisitor, SyntaxVisitor> {
+struct PySyntaxVisitor
+    : public PyVisitorBase<PySyntaxVisitor, std::tuple<SyntaxKind, parsing::TokenKind>,
+                           SyntaxVisitor> {
     using PyVisitorBase::PyVisitorBase;
 
     template<typename T>
@@ -37,42 +39,36 @@ struct PySyntaxVisitor : public PyVisitorBase<PySyntaxVisitor, SyntaxVisitor> {
         // at the actual type.
         auto node = static_cast<const SyntaxNode*>(&t);
 
-        py::object result = py::none();
+        py::object result;
         if (this->lookupTable) {
-            auto pyKind = py::cast(t.kind);
-            if (this->lookupTable->contains(pyKind)) {
-                py::object handler{(*this->lookupTable)[pyKind]};
+            py::handle handler = this->tables.find(t.kind);
+            if (handler)
                 result = handler(node);
-            }
         }
         else {
             result = this->f(node);
         }
 
-        if (result.equal(py::cast(VisitAction::Interrupt)))
-            this->interrupted = true;
-        else if (result.not_equal(py::cast(VisitAction::Skip)))
+        if (this->applyResult(result))
             this->visitDefault(t);
     }
 
     void visitToken(parsing::Token t) {
-        if (interrupted)
+        if (this->interrupted)
             return;
 
-        py::object result = py::none();
-        if (lookupTable) {
-            auto pyKind = py::cast(t.kind);
-            if (lookupTable->contains(pyKind)) {
-                py::object handler{(*lookupTable)[pyKind]};
+        py::object result;
+        if (this->lookupTable) {
+            py::handle handler = this->tables.find(t.kind);
+            if (handler)
                 result = handler(t);
-            }
         }
         else {
-            result = f(t);
+            result = this->f(t);
         }
 
-        if (result.equal(py::cast(VisitAction::Interrupt)))
-            interrupted = true;
+        // Tokens are leaves; applyResult records an Interrupt and Skip is a no-op here.
+        this->applyResult(result);
     }
 };
 
