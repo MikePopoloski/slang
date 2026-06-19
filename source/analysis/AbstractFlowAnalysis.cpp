@@ -26,6 +26,52 @@ ConstantValue FlowAnalysisBase::tryEvalBool(const Expression& expr) const {
     return expr.eval(evalContext);
 }
 
+namespace {
+
+struct LoopModifiesVarsVisitor : public ASTVisitor<LoopModifiesVarsVisitor, VisitFlags::AllGood> {
+    SmallSet<const Symbol*, 2> vars;
+    bool modified = false;
+
+    LoopModifiesVarsVisitor(
+        const SmallVector<std::pair<ConstantValue*, const VariableSymbol*>>& iterVars) {
+        vars.reserve(iterVars.size());
+        for (auto& [_, var] : iterVars)
+            vars.insert(var);
+    }
+
+    void handle(const AssignmentExpression& expr) {
+        if (modified)
+            return;
+
+        checkTarget(expr.left());
+        visitDefault(expr);
+    }
+
+    void handle(const UnaryExpression& expr) {
+        if (modified)
+            return;
+
+        if (OpInfo::isLValue(expr.op))
+            checkTarget(expr.operand());
+        visitDefault(expr);
+    }
+
+    template<typename T>
+    void handle(const T& node) {
+        if (modified)
+            return;
+        visitDefault(node);
+    }
+
+private:
+    void checkTarget(const Expression& lhs) {
+        if (auto sym = lhs.getSymbolReference())
+            modified = vars.contains(sym);
+    }
+};
+
+} // anonymous namespace
+
 FlowAnalysisBase::WillExecute FlowAnalysisBase::tryGetLoopIterValues(
     const ForLoopStatement& stmt, SmallVector<ConstantValue>& values, ForLoopVars& iterVars) {
 
@@ -71,10 +117,22 @@ FlowAnalysisBase::WillExecute FlowAnalysisBase::tryGetLoopIterValues(
         return WillExecute::Maybe;
     }
 
-    // If there are no steps in the loop header we cannot unroll. However, we
-    // can still determine whether the body executes at all by evaluating the
-    // initial stop condition with the initializer values just set up.
-    if (stmt.steps.empty()) {
+    auto loopModifiesVars = [&] {
+        LoopModifiesVarsVisitor modifiesVarsVisitor(iterVars);
+        stmt.body.visit(modifiesVarsVisitor);
+        return modifiesVarsVisitor.modified;
+    };
+
+    // We can't unroll the loop if there are no steps in the loop header, or if
+    // the loop body modifies one of the iteration variables. In the latter case
+    // the values we would compute by evaluating only the loop header don't match
+    // the values actually seen while executing the body, which would lead to
+    // incorrect data flow conclusions (such as wrongly pruning a branch that
+    // tests the iteration variable). In either case we can still determine
+    // whether the body executes at least once by evaluating the initial stop
+    // condition with the values we just set up, since the first iteration's entry
+    // test always runs before the body has a chance to modify anything.
+    if (stmt.steps.empty() || loopModifiesVars()) {
         auto cv = stmt.stopExpr->eval(evalContext);
         if (!cv)
             return WillExecute::Maybe;
@@ -89,7 +147,7 @@ FlowAnalysisBase::WillExecute FlowAnalysisBase::tryGetLoopIterValues(
     while (true) {
         auto cv = stmt.stopExpr->eval(evalContext);
         if (!cv)
-            return WillExecute::Maybe;
+            return willExec;
 
         if (!cv.isTrue())
             break;
