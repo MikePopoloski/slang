@@ -2449,6 +2449,40 @@ endmodule
     CHECK(diags[0].code == diag::DanglingElse);
 }
 
+TEST_CASE("Missing else clause warning") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic a;
+    logic b;
+    initial begin
+        // Warn: likely meant "end else if".
+        if (a) begin
+        end if (b) begin
+        end
+
+        // No warning: next if starts on its own line.
+        if (a) begin
+        end
+        if (b) begin
+        end
+
+        // No warning: previous if has an else clause.
+        if (a) begin
+        end else begin
+        end if (b) begin
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MissingElseClause);
+}
+
 TEST_CASE("Timing statement not allowed in function") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

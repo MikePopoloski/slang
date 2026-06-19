@@ -787,6 +787,20 @@ module m(input a, b);
 endmodule
 ```
 
+-Wmissing-else-clause
+An `if` statement appears on the same line as the preceding `end` token from a prior
+`if` statement that has no `else` clause. This often indicates a typo where
+`end else if (...)` was intended but `else` was omitted.
+```
+module m(input a, b);
+    initial begin
+        if (a) begin
+        end if (b) begin
+        end
+    end
+endmodule
+```
+
 -Wmisleading-indentation
 A statement follows a loop or conditional statement that does not use `begin`/`end`, and that
 statement is at the same indentation level as the body of the preceding construct. This is

@@ -322,6 +322,7 @@ warning nonstandard-constraint-block NonstandardConstraintBlock "use of nested c
 warning empty-body EmptyBody "{} has empty body (put the semicolon on a separate line to silence this warning)"
 warning dangling-else DanglingElse "ambiguous dangling 'else'; add begin/end to clarify which 'if' the 'else' belongs to"
 note NoteMatchingIf "'if' statement here"
+warning missing-else-clause MissingElseClause "'if' starts on the same line as the previous 'end' without an 'else'; did you mean 'end else if'"
 warning misleading-indentation MisleadingIndentation "this statement is misleadingly indented as if it is part of the preceding {}"
 warning colon-plus ColonPlusRange "':+' in range select was probably meant to be '+:' for ascending range select"
 warning split-distweight-op SplitDistWeightOp "split dist weight operator is not allowed; SystemVerilog requires that they be joined together"
@@ -1324,7 +1325,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 shadow-hierarchy shadow-property implicit-conv inc-dec-bit dangling-else constraint-func-cycle
                 misleading-indentation constraint-solve-cycle header-guard dynamic-cast-const
                 fork-loop-var loop-var-modify loop-cond-not-modified divide-by-zero colon-plus empty-input-connection
-                bits-of-integer-constant }
+                bits-of-integer-constant missing-else-clause }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }

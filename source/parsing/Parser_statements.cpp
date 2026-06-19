@@ -1152,6 +1152,18 @@ static size_t getLeadingWhitespace(Token token) {
 }
 
 void Parser::checkMisleadingIndentation(const SyntaxNode& prevStmt, Token nextToken) {
+    // First check: `end` for a conditional block followed by `if` on the same line
+    // without an `else`, which is likely a typo.
+    if (prevStmt.kind == SyntaxKind::ConditionalStatement && !nextToken.isMissing() &&
+        nextToken.isOnSameLine() && nextToken.kind == TokenKind::IfKeyword) {
+
+        auto& prevIf = prevStmt.as<ConditionalStatementSyntax>();
+        if (!prevIf.elseClause && prevIf.statement->kind == SyntaxKind::SequentialBlockStatement) {
+            auto& diag = addDiag(diag::MissingElseClause, nextToken.location());
+            diag.addNote(diag::NoteMatchingIf, prevIf.ifKeyword.range());
+        }
+    }
+
     std::string_view ctrlName;
     auto body = getSingleBodyForIndentCheck(prevStmt, ctrlName);
     if (!body)
