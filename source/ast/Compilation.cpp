@@ -9,7 +9,7 @@
 
 #include "ElabVisitors.h"
 #include "builtins/Builtins.h"
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <mutex>
 
 #include "slang/ast/ScriptSession.h"

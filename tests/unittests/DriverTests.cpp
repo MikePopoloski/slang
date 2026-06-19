@@ -3,7 +3,7 @@
 
 #include "Test.h"
 #include <boost_regex.hpp>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <fstream>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"

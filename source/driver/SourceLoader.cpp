@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/driver/SourceLoader.h"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <iterator>
 
 #include "slang/parsing/Preprocessor.h"

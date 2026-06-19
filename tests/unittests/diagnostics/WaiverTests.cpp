@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/WaiverManager.h"

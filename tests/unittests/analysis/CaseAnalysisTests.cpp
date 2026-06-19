@@ -3,7 +3,7 @@
 
 #include "AnalysisTests.h"
 #include "Test.h"
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include "slang/analysis/CaseDecisionDag.h"
 

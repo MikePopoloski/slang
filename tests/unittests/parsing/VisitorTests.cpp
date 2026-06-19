@@ -3,7 +3,6 @@
 
 #include "Test.h"
 #include "catch2/catch_test_macros.hpp"
-#include <fmt/core.h>
 #include <fmt/format.h>
 
 #include "slang/analysis/AnalysisManager.h"

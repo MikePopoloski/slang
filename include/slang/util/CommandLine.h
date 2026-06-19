@@ -9,7 +9,7 @@
 
 #include <cctype>
 #include <deque>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <functional>
 #include <map>
 #include <optional>

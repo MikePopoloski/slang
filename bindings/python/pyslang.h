@@ -5,7 +5,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <optional>
 #include <pybind11/cast.h>
 #include <pybind11/functional.h>
