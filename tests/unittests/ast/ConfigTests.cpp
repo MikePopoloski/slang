@@ -979,6 +979,23 @@ endmodule
     CHECK(diags[1].code == diag::ConfigParamsForPrimitive);
 }
 
+TEST_CASE("Invalid top module with unknown library") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("nolib.foo");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidTopModule);
+}
+
 TEST_CASE("Config target multiple primitives") {
     auto tree = SyntaxTree::fromText(R"(
 config cfg1;

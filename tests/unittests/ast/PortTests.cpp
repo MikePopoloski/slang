@@ -1955,3 +1955,82 @@ endmodule
     CHECK(diags[1].code == diag::EmptyOutputPortConn);
     CHECK(diags[2].code == diag::EmptyInOutPortConn);
 }
+
+TEST_CASE("Ref port cannot be left unconnected") {
+    auto tree = SyntaxTree::fromText(R"(
+module n(ref int r);
+endmodule
+
+module m;
+    n n1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RefPortUnconnected);
+}
+
+TEST_CASE("Unknown interface as port type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(foo.bar p);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownInterface);
+}
+
+TEST_CASE("Port type is neither interface nor data") {
+    auto tree = SyntaxTree::fromText(R"(
+module n();
+endmodule
+
+module m(n.x p);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::PortTypeNotInterfaceOrData);
+}
+
+TEST_CASE("Expected subroutine port declaration") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void f(interface.mp p);
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpectedFunctionPort);
+}
+
+TEST_CASE("Unknown interface modport port type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(I.mp p);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownInterface);
+}

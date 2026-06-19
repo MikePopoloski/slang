@@ -1092,3 +1092,58 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CheckerCovergroupProc);
 }
+
+TEST_CASE("Checker timing control must use event control") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    logic clk;
+    checker c;
+        always_ff @(posedge clk) #1 $display("x");
+    endchecker
+    c i1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::CheckerTimingControl);
+    CHECK(diags[1].code == diag::BlockingInAlwaysFF);
+}
+
+TEST_CASE("Invalid statement in checker procedure") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    checker c;
+        initial forever #1 $display("x");
+    endchecker
+    c i1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidStmtInChecker);
+}
+
+TEST_CASE("Checker instance array exceeds maximum size") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    checker c;
+    endchecker
+    c i1[0:100000000]();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MaxInstanceArrayExceeded);
+}

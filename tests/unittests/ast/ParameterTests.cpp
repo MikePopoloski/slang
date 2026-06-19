@@ -1572,3 +1572,111 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InfoTask);
 }
+
+TEST_CASE("defparam target must be a parameter") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int x;
+    defparam x = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DefParamTarget);
+}
+
+TEST_CASE("Body parameter missing initializer") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam x;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BodyParamNoInitializer);
+}
+
+TEST_CASE("Local parameter port missing initializer") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(localparam int p) ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::LocalParamNoInitializer);
+}
+
+TEST_CASE("Invalid initializer for type parameter") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter type T = int) ();
+endmodule
+
+module top;
+    m #(.T(1 + 1)) i();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadTypeParamExpr);
+}
+
+TEST_CASE("Type parameter missing initializer") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    parameter type T;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BodyParamNoInitializer);
+}
+
+TEST_CASE("Package value parameter missing initializer") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    parameter x;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BodyParamNoInitializer);
+}
+
+TEST_CASE("Package type parameter missing initializer") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    parameter type T;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BodyParamNoInitializer);
+}

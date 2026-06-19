@@ -960,3 +960,26 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UnknownMember);
 }
+
+TEST_CASE("Invalid binsof target") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [3:0] a, b;
+    covergroup cg;
+        x: coverpoint a;
+        cross x {
+            bins bad = binsof(b);
+        }
+    endgroup
+    cg c1 = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::CoverCrossItems);
+    CHECK(diags[1].code == diag::InvalidBinsTarget);
+}

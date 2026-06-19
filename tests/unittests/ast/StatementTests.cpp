@@ -2448,3 +2448,145 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::DanglingElse);
 }
+
+TEST_CASE("Timing statement not allowed in function") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void f;
+        #5;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::TimingInFuncNotAllowed);
+}
+
+TEST_CASE("foreach over wildcard associative array") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int aa[*];
+    initial foreach (aa[i]) begin end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ForeachWildcardIndex);
+}
+
+TEST_CASE("Event trigger target is not an event") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int x;
+    initial -> x;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NotAnEvent);
+}
+
+TEST_CASE("Cover statement cannot have a fail action") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic clk, a;
+    cover property (@(posedge clk) a) $display("ok"); else $display("x");
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CoverStmtNoFail);
+}
+
+TEST_CASE("Const eval of timed statements is not constant") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    event ev;
+    function int f_assert; assert #0 (1); return 0; endfunction
+    function int f_disable; disable fork; return 0; endfunction
+    function int f_trigger; -> ev; return 0; endfunction
+    localparam int a = f_assert();
+    localparam int b = f_disable();
+    localparam int c = f_trigger();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ConstEvalTimedStmtNotConst);
+    CHECK(diags[1].code == diag::ConstEvalTimedStmtNotConst);
+    CHECK(diags[2].code == diag::ConstEvalTimedStmtNotConst);
+}
+
+TEST_CASE("wait_order target must be an event") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int x, y;
+    initial wait_order(x, y) else;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NotAnEvent);
+}
+
+TEST_CASE("Procedural assign and deassign not constant") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function automatic int f1; static int x; assign x = 1; return x; endfunction
+    function automatic int f2; static int x; deassign x; return 0; endfunction
+    localparam int a = f1();
+    localparam int b = f2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConstEvalProceduralAssign);
+    CHECK(diags[1].code == diag::ConstEvalProceduralAssign);
+}
+
+TEST_CASE("Random value statements not constant") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function automatic int f1; int x; randcase 1: x = 1; endcase return x; endfunction
+    function automatic int f2; randsequence(main) main : a; a : { }; endsequence return 0; endfunction
+    localparam int a = f1();
+    localparam int b = f2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConstEvalRandValue);
+    CHECK(diags[1].code == diag::ConstEvalRandValue);
+}

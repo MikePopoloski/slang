@@ -342,3 +342,52 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::UniquePriorityAfterElse);
 }
+
+TEST_CASE("Label on empty statement") {
+    parseStatement("foo : ;");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::NoLabelOnSemicolon);
+}
+
+TEST_CASE("Empty statement not allowed in foreach body") {
+    parseStatement("foreach (a[i]) ;");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedStatement);
+}
+
+TEST_CASE("Case statement with multiple defaults") {
+    parseStatement("case (a) default: ; default: ; endcase");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::MultipleDefaultCases);
+}
+
+TEST_CASE("Empty case statement") {
+    parseStatement("case (a) endcase");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::CaseStatementEmpty);
+}
+
+TEST_CASE("Procedural assign requires assignment expression") {
+    parseStatement("assign a;");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedContinuousAssignment);
+}
+
+TEST_CASE("Deferred assertion delay must be zero") {
+    parseStatement("assert #2 (a);");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::DeferredDelayMustBeZero);
+}
+
+TEST_CASE("Empty randsequence case production") {
+    parseStatement("randsequence(main) main : case (1) endcase ; endsequence");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::CaseStatementEmpty);
+}

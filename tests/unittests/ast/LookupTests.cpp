@@ -2964,3 +2964,25 @@ endmodule
     auto& jSym = body.find<VariableSymbol>("j");
     CHECK(jSym.getInitializer() == nullptr);
 }
+
+TEST_CASE("Duplicate wildcard import is redundant") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    int x;
+endpackage
+
+module m;
+    import p::*;
+    import p::*;
+    int y = x;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::DuplicateImport);
+    CHECK(diags[1].code == diag::StaticInitValue);
+}

@@ -755,3 +755,73 @@ endprimitive
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UdpCoverage);
 }
+
+TEST_CASE("N-input gate requires at least two connections") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic a;
+    and g(a);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidNGateCount);
+}
+
+TEST_CASE("Primitive instance wrong number of ports") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic a, b, c, d;
+    pmos g(a, b, c, d);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::PrimitivePortCountWrong);
+}
+
+TEST_CASE("Primitive port connection must be a simple expression") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic a;
+    buf g(a, );
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidPrimitivePortConn);
+}
+
+TEST_CASE("User-defined primitive with too many delay values") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p(o, a);
+    output o;
+    input a;
+    table 0 : 1; 1 : 0; endtable
+endprimitive
+
+module m;
+    logic x, y;
+    p #(1, 2, 3, 4) i1(x, y);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpectedNetDelay);
+}

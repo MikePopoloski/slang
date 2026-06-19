@@ -737,3 +737,38 @@ function,(*;*)output
     // Just check no crash.
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Method return type does not match prototype") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    extern function int f();
+endclass
+
+function void C::f();
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MethodReturnMismatch);
+}
+
+TEST_CASE("Expected subroutine port with net header") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void f;
+        input wire x;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpectedFunctionPort);
+}
