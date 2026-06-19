@@ -11,6 +11,7 @@
 
 #define BOOST_UNORDERED_DISABLE_PARALLEL_ALGORITHMS
 #if __has_include(<boost/unordered/concurrent_flat_map.hpp>) && \
+    __has_include(<boost/unordered/concurrent_flat_set.hpp>) && \
     __has_include(<boost/unordered/unordered_flat_map.hpp>)
 #    include <boost/unordered/concurrent_flat_map.hpp>
 #    include <boost/unordered/concurrent_flat_set.hpp>
