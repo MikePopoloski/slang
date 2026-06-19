@@ -2150,6 +2150,17 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         outOfBlockIndex = SymbolIndex(0);
     }
 
+    if (sym.kind == SymbolKind::CovergroupType &&
+        location.getScope()->asSymbol().kind == SymbolKind::ClassType) {
+        // An embedded covergroup is a member of its containing class (IEEE 1800-2023
+        // 19.4), and class members are visible throughout the class body regardless of
+        // textual declaration order (IEEE 1800-2023 8.3). Coverage expressions may
+        // therefore reference class properties that are declared later in the class, so
+        // when we walk up out of the covergroup into the class we drop the
+        // declared-before-use restriction for that class scope only.
+        location = LookupLocation(location.getScope(), UINT_MAX);
+    }
+
     if (sym.kind == SymbolKind::ClassType) {
         // Suppress errors when we fail to find a symbol inside a class that
         // had a problem resolving its base class, since the symbol may be

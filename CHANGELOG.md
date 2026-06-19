@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a crash when using `super` inside `randomize` calls on arrays of class handles
 * Fixed the ordering of element expressions in assignment patterns with explicit indices targeting arrays with descending indices
 * Fixed a parsing error where a labeled `restrict property` concurrent assertion was rejected
+* Fixed coverage expressions in an embedded covergroup not being able to reference class members that are declared later in the class
 
 ### Tools & Bindings
 #### pyslang

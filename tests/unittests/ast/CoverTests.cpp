@@ -339,6 +339,73 @@ endclass
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Covergroup in class sees later class members") {
+    // IEEE 1800-2023 19.4 makes an embedded covergroup a class member, and 8.3 makes
+    // class members visible throughout the class body, so coverage expressions may
+    // reference a class property that is declared later in the class.
+    auto tree = SyntaxTree::fromText(R"(
+class xyz;
+    typedef struct packed {
+        bit we;
+    } txn_t;
+
+    covergroup cov1;
+        coverpoint analysis_txn.we;
+    endgroup
+
+    txn_t analysis_txn;
+
+    function new(); cov1 = new; endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Covergroup in class still errors on undeclared identifier") {
+    // The forward-reference relaxation must not suppress the undeclared-identifier
+    // diagnostic: a name that exists nowhere in the class must still be an error.
+    auto tree = SyntaxTree::fromText(R"(
+class xyz;
+    covergroup cov1;
+        coverpoint does_not_exist;
+    endgroup
+
+    function new(); cov1 = new; endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Covergroup forward lookup is limited to embedded class covergroups") {
+    // The relaxation is gated to embedded class covergroups; a module-level covergroup
+    // referencing a later module item still cannot see that name.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    covergroup cg1;
+        coverpoint later;
+    endgroup
+
+    int later;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
 TEST_CASE("Covergroup built-in methods") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
