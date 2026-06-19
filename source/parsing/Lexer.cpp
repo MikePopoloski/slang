@@ -8,7 +8,7 @@
 #include "slang/parsing/Lexer.h"
 
 #include <cmath>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/NumericDiags.h"

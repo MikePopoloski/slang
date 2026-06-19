@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/AbstractFlowAnalysis.h"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include "slang/analysis/CaseDecisionDag.h"
 #include "slang/diagnostics/AnalysisDiags.h"

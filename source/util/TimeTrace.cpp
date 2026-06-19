@@ -8,7 +8,7 @@
 #include "slang/util/TimeTrace.h"
 
 #include <chrono>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <mutex>
 #include <ostream>
 #include <thread>

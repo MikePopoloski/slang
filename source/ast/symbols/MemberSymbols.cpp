@@ -8,7 +8,6 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 
 #include "../FmtHelpers.h"
-#include "fmt/core.h"
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"

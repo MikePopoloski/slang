@@ -9,7 +9,7 @@
 
 #include "SVIntHelpers.h"
 #include <cmath>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <ostream>
 #include <stdexcept>
 

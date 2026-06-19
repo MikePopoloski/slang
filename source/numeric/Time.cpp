@@ -8,7 +8,7 @@
 #include "slang/numeric/Time.h"
 
 #include <cmath>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <ostream>
 
 #include "slang/util/String.h"

@@ -7,8 +7,6 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/statements/ConditionalStatements.h"
 
-#include <fmt/core.h>
-
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
