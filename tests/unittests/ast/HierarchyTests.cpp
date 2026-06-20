@@ -924,6 +924,7 @@ interface I;
 endinterface
 
 module bar #(parameter int foo);
+    wire l;
     localparam int bar = foo;
     int j = int'(bar[foo]);
     if (j != 10) begin : blk
@@ -1034,6 +1035,7 @@ primitive foo(output a, input b);
 endprimitive
 
 interface I;
+    wire a, b;
     if (1) begin : blk
         m m1();
     end
@@ -1105,6 +1107,7 @@ module m(I i, input int j);
 endmodule
 
 module n;
+    wire a, b;
     m m1(a |-> b, a [*3]);
     m m2(a throughout b, 4);
     m m3(a [*3], 4);
@@ -1490,6 +1493,7 @@ module foo #(parameter int bar) (input a);
 endmodule
 
 module n #(parameter int f);
+    wire b;
     logic thing;
 endmodule
 
@@ -1547,7 +1551,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter({diag::ImplicitNet});
     REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::InvalidBindTarget);
     CHECK(diags[1].code == diag::InvalidBindTarget);
@@ -1937,6 +1941,7 @@ endmodule
 TEST_CASE("Streaming op in uninstantiated module regress") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter int i);
+    wire a;
     foo f(.a({<< {a}}));
 endmodule
 

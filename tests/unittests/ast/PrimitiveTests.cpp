@@ -42,6 +42,7 @@ TEST_CASE("Gates") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     wire foo;
+    wire a, b, c;
     pullup (supply0, pull1) (foo);
     pmos #3 asdf [3:0][4][5] (foo, 1, 0), blah (foo, 1, 0), (foo, 1, 0);
     rtranif1 (foo, foo, 1), asdf2(foo, foo, 0);
@@ -232,6 +233,7 @@ endprimitive
 
 module m;
     logic foo[3];
+    wire a, b;
     p1 #(3, 4) (a, b);
     p1 #(foo) (a, b);
     p1 #(.baz(1), .bar(2)) (a, b);
@@ -280,6 +282,7 @@ module \and (output a, input b, c);
 endmodule
 
 module m;
+    wire a1, b1, c1, a2, b2, c2;
     \and a(a1, b1, c1);
     and (a2, b2, c2);
 endmodule
@@ -424,7 +427,8 @@ TEST_CASE("Primitive with large number of inputs") {
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+    auto diags = compilation.getAllDiagnostics().filter({diag::ImplicitNet});
+    CHECK(diags.empty());
 }
 
 TEST_CASE("More UDP overlapping row errors") {
@@ -468,6 +472,7 @@ primitive ppp (q, clock, data);
 endprimitive
 
 module top;
+    wire o, a, b;
   p p1(o, a, b);
   pp pp1(o, a, b);
   ppp ppp1(o, a, b);

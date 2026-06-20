@@ -1252,6 +1252,7 @@ TEST_CASE("System call output args in disallowed context") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     int i;
+    wire j;
     assign j = $ferror(i, i);
 endmodule
 )");
@@ -1926,6 +1927,7 @@ module m;
     end
 
     logic [1:4] in_mem[100];
+    wire i1, i2, i3, i4;
     assign {i1,i2,i3,i4} = $getpattern(in_mem[n]);
 
     initial begin

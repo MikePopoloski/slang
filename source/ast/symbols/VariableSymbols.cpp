@@ -475,13 +475,16 @@ void NetSymbol::fromSyntax(const ASTContext& context, const UserDefinedNetDeclar
     }
 }
 
-NetSymbol& NetSymbol::createImplicit(Compilation& compilation, const IdentifierNameSyntax& syntax,
+NetSymbol& NetSymbol::createImplicit(const ASTContext& context, const IdentifierNameSyntax& syntax,
                                      const NetType& netType) {
+    auto& compilation = context.getCompilation();
     auto t = syntax.identifier;
     auto net = compilation.emplace<NetSymbol>(t.valueText(), t.location(), netType);
     net->setType(compilation.getLogicType());
     net->isImplicit = true;
     net->setSyntax(syntax);
+
+    context.addDiag(diag::ImplicitNet, t.location()) << t.valueText();
     return *net;
 }
 
