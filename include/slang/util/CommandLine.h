@@ -387,6 +387,9 @@ public:
     /// @a overview text is a human friendly description of what the program does.
     std::string getHelpText(std::string_view overview) const;
 
+    /// Gets a list of help options based on registered flags.
+    std::vector<std::pair<std::string, std::string>> getHelpOptions() const;
+
 private:
     using OptionStorage =
         std::variant<std::optional<bool>*, std::optional<int32_t>*, std::optional<uint32_t>*,

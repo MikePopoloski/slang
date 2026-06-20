@@ -582,6 +582,25 @@ std::string CommandLine::getHelpText(std::string_view overview) const {
     return result;
 }
 
+std::vector<std::pair<std::string, std::string>> CommandLine::getHelpOptions() const {
+    std::vector<std::pair<std::string, std::string>> result;
+    result.reserve(orderedOptions.size());
+
+    for (const auto& opt : orderedOptions) {
+        std::string key = opt->allArgNames;
+
+        if (!opt->valueName.empty()) {
+            if (opt->valueName[0] != '=')
+                key += ' ';
+            key += opt->valueName;
+        }
+
+        result.emplace_back(std::move(key), opt->desc);
+    }
+
+    return result;
+}
+
 void CommandLine::handlePlusArg(std::string_view arg, const ParseOptions& options,
                                 bool& hadUnknowns, SourceLocation loc) {
     // Values are plus separated.

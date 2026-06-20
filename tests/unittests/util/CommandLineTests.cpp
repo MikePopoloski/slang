@@ -122,6 +122,24 @@ OPTIONS:
   -m,+multi            SDF
   --count              asdf
 )");
+
+    std::vector<std::pair<std::string, std::string>> expected = {
+        {"-a", "SDF"},
+        {"-b", "SDF"},
+        {"-z,-y,-x,--longFlag", "This flag does fun stuff"},
+        {"--longFlag2", "Another\ngood\nthing"},
+        {"-c", "SDF"},
+        {"-d", "SDF"},
+        {"-e,--ext", "Definitely should set me"},
+        {"-f,--ext2 <value>", "Me too!"},
+        {"--biz,--baz <entry>", "SDF"},
+        {"--buz,--boz=<val>", "SDF"},
+        {"--fiz,--faz", "SDF"},
+        {"--fuz,--foz", "SDF"},
+        {"-m,+multi", "SDF"},
+        {"--count", "asdf"},
+    };
+    CHECK(cmdLine.getHelpOptions() == expected);
 }
 
 TEST_CASE("Test CommandLine -- backslash at EOL") {
