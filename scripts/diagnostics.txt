@@ -578,6 +578,7 @@ warning empty-output-connection EmptyOutputPortConn "output port '{}' is explici
 warning empty-inout-connection EmptyInOutPortConn "inout port '{}' is explicitly connected to nothing"
 note EmptyInputPortConnDefault "port has a default value expression here that will not be used"
 warning implicit-net-port ImplicitNetPortNoDefault "implicit net port disallowed because `default_nettype is set to 'none'"
+warning implicit-net ImplicitNet "implicit net '{}' created"
 warning dup-attr DuplicateAttribute "duplicate attribute definition '{}'; taking last value"
 warning empty-member EmptyMember "extra ';' has no effect"
 warning ineffective-sign SignednessNoEffect "'{}' on I/O declaration has no effect on type {}"

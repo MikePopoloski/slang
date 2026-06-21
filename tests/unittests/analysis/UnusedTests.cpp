@@ -155,7 +155,7 @@ endmodule
 
     Compilation compilation;
     auto diags = analyze(text, compilation);
-    diags = diags.filter({diag::StaticInitOrder, diag::StaticInitValue});
+    diags = diags.filter({diag::StaticInitOrder, diag::StaticInitValue, diag::ImplicitNet});
     REQUIRE(diags.size() == 19);
     CHECK(diags[0].code == diag::UnusedPort);
     CHECK(diags[1].code == diag::UndrivenPort);

@@ -448,8 +448,7 @@ void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
 
                 for (auto ins : implicitNetNames) {
                     if (seenNames.emplace(ins->identifier.valueText()).second) {
-                        implicitNets.push_back(
-                            &NetSymbol::createImplicit(compilation, *ins, netType));
+                        implicitNets.push_back(&NetSymbol::createImplicit(context, *ins, netType));
                     }
                 }
             }
@@ -2351,7 +2350,7 @@ NetAliasSymbol& NetAliasSymbol::fromSyntax(const ASTContext& parentContext,
 
             for (auto ins : implicitNetNames) {
                 if (seenNames.emplace(ins->identifier.valueText()).second)
-                    implicitNets.push_back(&NetSymbol::createImplicit(comp, *ins, netType));
+                    implicitNets.push_back(&NetSymbol::createImplicit(context, *ins, netType));
             }
         }
     }

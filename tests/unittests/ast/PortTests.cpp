@@ -382,7 +382,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter({diag::ImplicitNet});
 
     auto it = diags.begin();
     CHECK((it++)->code == diag::UnknownInterface);
@@ -745,6 +745,7 @@ module m(,);
 endmodule
 
 module n;
+    wire a;
     m m1(,);
     m m2(a);
 endmodule
@@ -956,7 +957,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter({diag::ImplicitNet});
     REQUIRE(diags.size() == 21);
     CHECK(diags[0].code == diag::MissingPortIODeclaration);
     CHECK(diags[1].code == diag::Redefinition);
@@ -1243,6 +1244,64 @@ endmodule
     CHECK(diags[0].code == diag::ImplicitNetPortNoDefault);
 }
 
+TEST_CASE("Implicit net creation warning") {
+    auto tree = SyntaxTree::fromText(R"(
+module producer(output out); endmodule
+module consumer(input in); endmodule
+
+module top;
+    producer p (.out(sig));
+    consumer c (.in(sig));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // The implicit net is created once, even though it is referenced by two
+    // port connections.
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ImplicitNet);
+}
+
+TEST_CASE("Implicit net creation warning -- continuous assign") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    assign w = 1'b1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ImplicitNet);
+}
+
+TEST_CASE("Implicit net creation warning -- default_nettype none") {
+    auto tree = SyntaxTree::fromText(R"(
+`default_nettype none
+module producer(output out); endmodule
+module consumer(input in); endmodule
+
+module top;
+    producer p (.out(sig));
+    consumer c (.in(sig));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // With no default nettype no implicit net is created, so the implicit-net
+    // warning must not fire; the undeclared identifier is an error instead.
+    auto& diags = compilation.getAllDiagnostics();
+    for (auto& diag : diags)
+        CHECK(diag.code != diag::ImplicitNet);
+}
+
 TEST_CASE("Module as interface port def") {
     auto tree = SyntaxTree::fromText(R"(
 module N;
@@ -1345,7 +1404,7 @@ endmodule
     CHECK(!m1_i.getInternalExpr());
     CHECK(!m1.getPortConnection(m1_i)->getIfaceConn().first);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter({diag::ImplicitNet});
     REQUIRE(diags.size() == 15);
     CHECK(diags[0].code == diag::PortTypeNotInterfaceOrData);
     CHECK(diags[1].code == diag::TooManyPortConnections);
@@ -1556,6 +1615,7 @@ endmodule
 TEST_CASE("More interconnect ports") {
     auto tree = SyntaxTree::fromText(R"(
 module top();
+    logic rst;
     interconnect [0:3] [0:1] aBus;
     logic [0:3] dBus;
     driver driverArray[0:3](aBus);

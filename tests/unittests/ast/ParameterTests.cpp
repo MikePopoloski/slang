@@ -112,7 +112,8 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    auto diags =
+        compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings).filter({diag::ImplicitNet});
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::WarningTask);
 }

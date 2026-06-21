@@ -138,6 +138,7 @@ module m;
     real r;
 
     import p::*;
+    wire e, foo;
     c c2 [3](1, 2, e, 3.14);
     c c3 [1:2][3:2] (.*, .c(foo), .r);
     c c4(.*, .c(foo));
@@ -186,7 +187,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter({diag::ImplicitNet});
     REQUIRE(diags.size() == 19);
     CHECK(diags[0].code == diag::ExpectedIdentifier);
     CHECK(diags[1].code == diag::CheckerArgCannotBeEmpty);
@@ -221,6 +222,7 @@ checker check;
 endchecker
 
 module m;
+    wire clk;
     c c1(posedge clk, $, 3 + 4);
     initial d d1(posedge clk, $, 3 + 4);
 

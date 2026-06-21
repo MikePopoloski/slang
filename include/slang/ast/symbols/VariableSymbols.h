@@ -192,7 +192,7 @@ public:
                            const syntax::UserDefinedNetDeclarationSyntax& syntax,
                            SmallVectorBase<const NetSymbol*>& results);
 
-    static NetSymbol& createImplicit(Compilation& compilation,
+    static NetSymbol& createImplicit(const ASTContext& context,
                                      const syntax::IdentifierNameSyntax& syntax,
                                      const NetType& netType);
 
