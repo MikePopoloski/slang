@@ -3982,10 +3982,33 @@ endfunction
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto diags = compilation.getAllDiagnostics().filter({diag::FloatBoolConv, diag::IntBoolConv});
+    auto diags = compilation.getAllDiagnostics().filter(
+        {diag::FloatBoolConv, diag::IntBoolConv, diag::NonstandardRealCaseEq});
     if (!diags.empty()) {
         FAIL_CHECK(report(diags));
     }
+}
+
+TEST_CASE("Case equality on real operands is non-standard") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    real r1, r2;
+    shortreal s1, s2;
+    bit b;
+    initial begin
+        b = r1 === r2;
+        b = s1 !== s2;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::NonstandardRealCaseEq);
+    CHECK(diags[1].code == diag::NonstandardRealCaseEq);
 }
 
 TEST_CASE("Referring to instance array in expression -- GH #1314") {

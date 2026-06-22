@@ -815,6 +815,7 @@ warning consecutive-comparison ConsecutiveComparison "comparisons like 'x < y < 
 note NoteForPortConn "for connection to port '{}'"
 warning dynamic-non-procedural DynamicNotProcedural "cannot refer to an element or member of a dynamic type outside of a procedural context"
 warning nonstandard-string-concat NonstandardStringConcat "string concatenation using '+' operator is non-standard"
+warning nonstandard-real-case-eq NonstandardRealCaseEq "case equality operator '{}' on a real operand is non-standard"
 warning inc-dec-bit IncDecBit "increment/decrement of a 1-bit operand"
 warning string-int-concat ConcatWithStringInt "cannot mix strings and integers in a concatenation (use a cast if this is desired)"
 warning range-select-reversed RangeSelectReversed "range of selection [{}:{}] from {} is reversed"
@@ -1329,7 +1330,8 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 bits-of-integer-constant missing-else-clause }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
-                   nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }
+                   nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage
+                   nonstandard-real-case-eq }
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
                      constant-conversion sign-conversion float-bool-conv int-bool-conv float-int-conv

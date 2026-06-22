@@ -1747,6 +1747,21 @@ module m;
 endmodule
 ```
 
+-Wnonstandard-real-case-eq
+The case equality operators `===` and `!==` are not part of the SystemVerilog standard for real,
+shortreal, or realtime operands (see Table 11-1 in the LRM) but are supported by some commercial
+tools. slang accepts them and treats them just like the ordinary equality operators
+`==` and `!=`, since real values have no x or z bits for the case comparison to act on. This
+warning is issued when a case equality operator is applied to a real operand.
+```
+module m;
+    real a;
+    real b;
+    bit c;
+    initial c = (a === b);
+endmodule
+```
+
 -Wnested-comment
 Nested block comments are not allowed in SystemVerilog but most tools ignore them and
 just include them as part of the containing comment block. Note that the opening characters
