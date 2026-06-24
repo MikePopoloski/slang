@@ -123,8 +123,20 @@ const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
             symbol = &symbol->as<TransparentMemberSymbol>().wrapped;
 
         switch (symbol->kind) {
-            case SymbolKind::ExplicitImport:
-                return symbol->as<ExplicitImportSymbol>().importedSymbol();
+            case SymbolKind::ExplicitImport: {
+                // Items that are imported into a package are not made visible to
+                // things that subsequently import this package, unless they are
+                // also exported (see IEEE 1800-2017 section 26.6).
+                auto& eis = symbol->as<ExplicitImportSymbol>();
+                auto imported = eis.importedSymbol();
+                if (eis.isFromExport)
+                    return imported;
+
+                if (imported && isExported(*imported))
+                    return imported;
+
+                return nullptr;
+            }
             case SymbolKind::ForwardingTypedef:
                 return nullptr;
             default:
@@ -144,38 +156,43 @@ const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
     }
 
     // Look through symbols that have been wildcard imported with this name.
+    // If we don't have an export-all directive then we need to check whether
+    // we actually wanted to export this symbol.
     if (auto it = wildcardData->importedSymbols.find(lookupName);
         it != wildcardData->importedSymbols.end()) {
-
-        auto symbol = it->second;
-        if (hasExportAll)
-            return symbol;
-
-        // If we don't have an export-all directive then we need to check
-        // whether we wanted to actually export this symbol.
-        // First find the package that owns the target symbol.
-        const Symbol* packageParent;
-        auto targetScope = symbol->getParentScope();
-        while (true) {
-            SLANG_ASSERT(targetScope);
-            packageParent = &targetScope->asSymbol();
-            if (packageParent->kind == SymbolKind::Package)
-                break;
-
-            targetScope = packageParent->getParentScope();
-        }
-
-        // Now look for a matching export.
-        for (auto decl : exportDecls) {
-            if (decl->package.valueText() != packageParent->name)
-                continue;
-
-            if (decl->item.kind == TokenKind::Star || decl->item.valueText() == symbol->name)
-                return symbol;
-        }
+        if (isExported(*it->second))
+            return it->second;
     }
 
     return nullptr;
+}
+
+bool PackageSymbol::isExported(const Symbol& symbol) const {
+    if (hasExportAll)
+        return true;
+
+    // Find the package that owns the target symbol.
+    const Symbol* packageParent;
+    auto targetScope = symbol.getParentScope();
+    while (true) {
+        SLANG_ASSERT(targetScope);
+        packageParent = &targetScope->asSymbol();
+        if (packageParent->kind == SymbolKind::Package)
+            break;
+
+        targetScope = packageParent->getParentScope();
+    }
+
+    // Look for a matching export.
+    for (auto decl : exportDecls) {
+        if (decl->package.valueText() != packageParent->name)
+            continue;
+
+        if (decl->item.kind == TokenKind::Star || decl->item.valueText() == symbol.name)
+            return true;
+    }
+
+    return false;
 }
 
 void PackageSymbol::checkExplicitExports() const {

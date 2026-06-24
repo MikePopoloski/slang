@@ -1937,6 +1937,88 @@ endmodule
     CHECK(diags[4].code == diag::UnknownPackageMember);
 }
 
+TEST_CASE("Imported names not visible to importers without export -- GH #1877") {
+    auto tree = SyntaxTree::fromText(R"(
+package a_pkg;
+   localparam A = 1;
+endpackage
+
+package b_pkg;
+   import a_pkg::A;
+endpackage
+
+package a2_pkg;
+   localparam A = 2;
+endpackage
+
+module m;
+  import b_pkg::*;
+  import a2_pkg::*;
+  localparam MW = A; // a_pkg::A is not exported from b_pkg, so this is a2_pkg::A.
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m").body;
+    CHECK(m.find<ParameterSymbol>("MW").getValue().integer() == 2);
+}
+
+TEST_CASE("Imported names not visible via scoped access without export -- GH #1877") {
+    auto tree = SyntaxTree::fromText(R"(
+package a_pkg;
+   localparam A = 1;
+endpackage
+
+package b_pkg;
+   import a_pkg::A;
+endpackage
+
+module m;
+  localparam MW = b_pkg::A; // Error: A is imported but not exported from b_pkg.
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownPackageMember);
+}
+
+TEST_CASE("Imported names visible to importers with explicit export -- GH #1877") {
+    auto tree = SyntaxTree::fromText(R"(
+package a_pkg;
+   localparam A = 1;
+endpackage
+
+package b_pkg;
+   import a_pkg::A;
+   export a_pkg::A;
+endpackage
+
+package a2_pkg;
+   localparam A = 2;
+endpackage
+
+module m;
+  import b_pkg::*;
+  import a2_pkg::*;
+  localparam MW = A; // Ambiguous: b_pkg exports a_pkg::A and a2_pkg::A is imported.
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AmbiguousWildcardImport);
+}
+
 TEST_CASE("Hierarchical lookup of type name") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

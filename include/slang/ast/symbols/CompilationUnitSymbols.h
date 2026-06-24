@@ -71,6 +71,11 @@ public:
                                      std::optional<TimeScale> directiveTimeScale);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Package; }
+
+private:
+    // Checks whether the given symbol, which was imported into this package from
+    // another package, is re-exported by this package via an export declaration.
+    bool isExported(const Symbol& symbol) const;
 };
 
 /// Represents the entirety of a design, along with all contained compilation units.
