@@ -38,6 +38,9 @@ public:
     static void setStdoutColorsEnabled(bool enabled) { showColorsStdout = enabled; }
     static void setStderrColorsEnabled(bool enabled) { showColorsStderr = enabled; }
 
+    /// Sets whether skip capture override should be enabled for the print() functions.
+    static void setSkipCaptureOverride(bool enabled) { captureOverride = enabled; }
+
     /// Reads a file from @a path into memory. If successful, the bytes are placed
     /// into @a buffer -- otherwise, returns false.
     /// Note that the buffer will be null-terminated.
@@ -92,6 +95,7 @@ private:
             capturedStderr += text;
     }
 
+    static inline bool captureOverride = false;
     static inline bool showColorsStdout = false;
     static inline bool showColorsStderr = false;
     static inline std::function<void(std::string_view, bool)> outputCallback;

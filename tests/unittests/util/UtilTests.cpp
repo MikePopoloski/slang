@@ -49,10 +49,30 @@ TEST_CASE("OS print helpers capture raw messages") {
     OS::printE("bad thing");
     OS::printE("heads up");
     OS::printE("skipped", /* skipCapture */ true);
+    OS::printE({}, "skipped again", /* skipCapture */ true);
 
     REQUIRE(output.size() == 2);
     CHECK(output[0] == std::pair<std::string, bool>{"bad thing", false});
     CHECK(output[1] == std::pair<std::string, bool>{"heads up", false});
+}
+
+TEST_CASE("OS print helpers skip capture override") {
+    std::vector<std::pair<std::string, bool>> output;
+    auto guard = OS::captureOutput(
+        [&](std::string_view text, bool isStdout) { output.emplace_back(text, isStdout); });
+
+    OS::setSkipCaptureOverride(true);
+    OS::printE("bad thing");
+    OS::printE("heads up");
+    OS::printE("skipped", /* skipCapture */ true);
+    OS::printE({}, "skipped again", /* skipCapture */ true);
+    OS::setSkipCaptureOverride(false);
+
+    REQUIRE(output.size() == 4);
+    CHECK(output[0] == std::pair<std::string, bool>{"bad thing", false});
+    CHECK(output[1] == std::pair<std::string, bool>{"heads up", false});
+    CHECK(output[2] == std::pair<std::string, bool>{"skipped", false});
+    CHECK(output[3] == std::pair<std::string, bool>{"skipped again", false});
 }
 
 TEST_CASE("Bag constructor doesn't accept Bag") {
