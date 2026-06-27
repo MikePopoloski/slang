@@ -2624,3 +2624,23 @@ endmodule
     CHECK(diags[0].code == diag::ConstEvalRandValue);
     CHECK(diags[1].code == diag::ConstEvalRandValue);
 }
+
+TEST_CASE("For loop binds body even when header is bad -- regression GH #1890") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function automatic void test();
+        $display("hi");
+        for ( ; i < 0; )
+            for (int j = 0; j < 0; )
+                ;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}

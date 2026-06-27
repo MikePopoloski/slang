@@ -166,9 +166,9 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
         }
     }
 
-    if (anyBad || (stopExpr && stopExpr->bad()))
-        return badStmt(compilation, nullptr);
-
+    // Always bind the body, even if something above was bad, so that any implicit
+    // blocks created for nested statements get consumed and stay in sync with the
+    // StatementContext's block list.
     auto guard = stmtCtx.enterLoop();
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
 
@@ -177,7 +177,7 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
                                                         syntax.sourceRange());
     result->loopVars = loopVars.copy(compilation);
 
-    if (bodyStmt.bad())
+    if (anyBad || (stopExpr && stopExpr->bad()) || bodyStmt.bad())
         return badStmt(compilation, result);
 
     return *result;
