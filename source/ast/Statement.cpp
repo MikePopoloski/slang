@@ -372,8 +372,14 @@ const Statement& Statement::bindItems(const SyntaxList<SyntaxNode>& items,
     if (buffer.size() == 1)
         return *buffer[0];
 
+    SourceRange range;
+    if (buffer.empty())
+        range = SourceRange::NoLocation;
+    else
+        range = {buffer.front()->sourceRange.start(), buffer.back()->sourceRange.end()};
+
     auto& comp = context.getCompilation();
-    return *comp.emplace<StatementList>(buffer.copy(comp), SourceRange());
+    return *comp.emplace<StatementList>(buffer.copy(comp), range);
 }
 
 void Statement::bindScopeInitializers(const ASTContext& context,
@@ -682,8 +688,7 @@ void StatementList::serializeTo(ASTSerializer& serializer) const {
 
 Statement& StatementList::makeEmpty(Compilation& compilation) {
     return *compilation.emplace<StatementList>(std::span<const Statement* const>(),
-                                               SourceRange(SourceLocation::NoLocation,
-                                                           SourceLocation::NoLocation));
+                                               SourceRange::NoLocation);
 }
 
 Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyntax& syntax,
@@ -750,9 +755,9 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
 }
 
 BlockStatement& BlockStatement::makeEmpty(Compilation& compilation) {
-    return *compilation.emplace<BlockStatement>(
-        StatementList::makeEmpty(compilation), StatementBlockKind::Sequential,
-        SourceRange(SourceLocation::NoLocation, SourceLocation::NoLocation));
+    return *compilation.emplace<BlockStatement>(StatementList::makeEmpty(compilation),
+                                                StatementBlockKind::Sequential,
+                                                SourceRange::NoLocation);
 }
 
 void BlockStatement::serializeTo(ASTSerializer& serializer) const {

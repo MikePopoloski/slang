@@ -1425,3 +1425,29 @@ endmodule
     auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Const eval step limit in loop condition doesn't crash -- GH #1889") {
+    auto& code = R"(
+module t;
+  function int unsigned foo(input int unsigned n);
+    foo = 1;
+    while (n != 0) begin
+      n = n + 1;
+    end
+  endfunction
+
+  initial begin
+    while (foo(1) != 1) begin end
+  end
+endmodule
+)";
+
+    CompilationOptions options;
+    options.maxConstexprSteps = 10;
+
+    Compilation compilation(options);
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
