@@ -1302,6 +1302,24 @@ endmodule
         CHECK(diag.code != diag::ImplicitNet);
 }
 
+TEST_CASE("Implicit net creation with missing identifier in port connection -- GH #1888") {
+    auto tree = SyntaxTree::fromText(R"(
+module foo(input x);
+endmodule
+
+module top;
+    foo foo1(+++0);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpectedExpression);
+}
+
 TEST_CASE("Module as interface port def") {
     auto tree = SyntaxTree::fromText(R"(
 module N;

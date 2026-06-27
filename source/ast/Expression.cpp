@@ -1564,6 +1564,11 @@ void Expression::findPotentiallyImplicitNets(
             if (nameSyntax.kind != SyntaxKind::IdentifierName)
                 return;
 
+            // A missing identifier token can be inserted by the parser during error
+            // recovery; it has already been diagnosed.
+            if (nameSyntax.as<IdentifierNameSyntax>().identifier.isMissing())
+                return;
+
             bitmask<LookupFlags> flags = LookupFlags::NoUndeclaredError;
             if (context.flags.has(ASTFlags::BindInstantiation))
                 flags |= LookupFlags::DisallowWildcardImport | LookupFlags::DisallowUnitReferences;
