@@ -184,8 +184,14 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
 
     /// AST binding is for a wildcard port connection.
     WildcardPortConn = 1ull << 42,
+
+    /// AST binding is for a port connection of an unknown / uninstantiated module
+    /// instance. The target port type is not known, so expressions are bound
+    /// self-determined and diagnostics that would otherwise require a context
+    /// (target) type are suppressed.
+    UnknownPortConn = 1ull << 43,
 };
-SLANG_BITMASK(ASTFlags, WildcardPortConn)
+SLANG_BITMASK(ASTFlags, UnknownPortConn)
 
 /// Various flags that can be applied to a constant expression evaluation.
 enum class SLANG_EXPORT EvalFlags : uint8_t {

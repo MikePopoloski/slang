@@ -1943,7 +1943,8 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& comp,
 
         if (!type.isIntegral()) {
             errored = true;
-            context.addDiag(diag::BadConcatExpression, arg->sourceRange) << type;
+            if (!context.flags.has(ASTFlags::UnknownPortConn))
+                context.addDiag(diag::BadConcatExpression, arg->sourceRange) << type;
             break;
         }
 
@@ -1987,7 +1988,8 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& comp,
         }
 
         if (!anyStrings && totalWidth == 0) {
-            context.addDiag(diag::EmptyConcatNotAllowed, syntax.sourceRange());
+            if (!context.flags.has(ASTFlags::UnknownPortConn))
+                context.addDiag(diag::EmptyConcatNotAllowed, syntax.sourceRange());
             errored = true;
         }
     }
@@ -2013,8 +2015,10 @@ Expression& ConcatenationExpression::fromEmpty(Compilation& comp,
                                                const Type* assignmentTarget) {
     // Empty concatenation can only target arrays.
     if (!assignmentTarget || !assignmentTarget->isUnpackedArray()) {
-        if (!assignmentTarget || !assignmentTarget->isError())
+        if ((!assignmentTarget || !assignmentTarget->isError()) &&
+            !context.flags.has(ASTFlags::UnknownPortConn)) {
             context.addDiag(diag::EmptyConcatNotAllowed, syntax.sourceRange());
+        }
         return badExpr(comp, nullptr);
     }
 

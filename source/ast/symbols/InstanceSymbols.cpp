@@ -1298,7 +1298,8 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
     // We have to check for a simple reference to an interface instance or port here,
     // since we don't know whether this is an interface port connection or even
     // a normal connection with a virtual interface type.
-    const auto flags = ASTFlags::AllowUnboundedLiteral | ASTFlags::StreamingAllowed;
+    const auto flags = ASTFlags::AllowUnboundedLiteral | ASTFlags::StreamingAllowed |
+                       ASTFlags::UnknownPortConn;
     const SyntaxNode* node = &syntax;
     if (node->kind == SyntaxKind::SimplePropertyExpr) {
         node = node->as<SimplePropertyExprSyntax>().expr;
@@ -1331,9 +1332,11 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
                     }
                 }
 
-                return comp.emplace<SimpleAssertionExpr>(
-                    Expression::bindRValue(comp.getErrorType(), *expr, {}, context, flags),
-                    std::nullopt);
+                // Bind self-determined so that typeable connections keep their real
+                // type. The UnknownPortConn flag suppresses diagnostics for the
+                // genuinely context-dependent expressions that have no such type.
+                return comp.emplace<SimpleAssertionExpr>(Expression::bind(*expr, context, flags),
+                                                         std::nullopt);
             }
         }
     }
