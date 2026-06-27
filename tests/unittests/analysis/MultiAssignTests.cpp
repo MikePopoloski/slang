@@ -1581,3 +1581,28 @@ endmodule
     CHECK(diags[0].code == diag::InferredLatch);
     CHECK(diags[1].code == diag::InferredComb);
 }
+
+TEST_CASE("Malformed literal checker arg driver crash regress GH #1884") {
+    auto& code = R"(
+module t;
+    bit failure;
+    mutex c((0_r), failure);
+endmodule
+checker mutex(input logic [31:0] sig, output bit failure);
+    assert property ($onehot0(sig)) failure = 1'b0; else failure = 1'b1;
+endchecker
+)";
+
+    // The code here is invalid because of the malformed literal, but we want to
+    // make sure we don't crash in the analysis manager when the checker output
+    // port connection ends up being a null expression.
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto tree = SyntaxTree::fromText(code);
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    compilation.freeze();
+
+    analysisManager.analyze(compilation);
+}

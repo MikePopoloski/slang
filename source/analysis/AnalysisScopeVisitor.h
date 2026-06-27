@@ -62,8 +62,8 @@ struct AnalysisScopeVisitor {
 
         for (auto& conn : symbol.getPortConnections()) {
             if (conn.formal.kind == SymbolKind::FormalArgument && conn.actual.index() == 0) {
-                manager.driverTracker.add(state.context, state.driverAlloc,
-                                          *std::get<0>(conn.actual), symbol);
+                if (auto expr = std::get<0>(conn.actual))
+                    manager.driverTracker.add(state.context, state.driverAlloc, *expr, symbol);
             }
         }
     }
