@@ -2756,6 +2756,71 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Uninstantiated def port connections keep self-determined types") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    logic [7:0] x, y;
+    hard u(.a(x), .b(8'hAB), .c(x + y), .d('{default:'0}));
+endmodule
+)");
+    CompilationOptions options;
+    options.flags |= CompilationFlags::IgnoreUnknownModules;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& u = compilation.getRoot().lookupName<UninstantiatedDefSymbol>("top.u");
+    auto conns = u.getPortConnections();
+    REQUIRE(conns.size() == 4);
+
+    auto typeOf = [&](size_t i) -> const Type& {
+        return *conns[i]->as<SimpleAssertionExpr>().expr.type;
+    };
+
+    CHECK(!typeOf(0).isError());
+    CHECK(!typeOf(1).isError());
+    CHECK(typeOf(1).getBitWidth() == 8);
+    CHECK(!typeOf(2).isError());
+
+    CHECK(typeOf(3).isError());
+}
+
+TEST_CASE("Uninstantiated def port connections with no self-determined type") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    int a[];
+    int b;
+    hard h1({});
+    hard h2('{default:0});
+    hard h3(tagged A);
+    hard h4({<<{a with [b]}});
+    hard h5({a, b});
+endmodule
+)");
+    CompilationOptions options;
+    options.flags |= CompilationFlags::IgnoreUnknownModules;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    NO_COMPILATION_ERRORS;
+
+    auto exprOf = [&](std::string_view name) -> const Expression& {
+        auto& sym = compilation.getRoot().lookupName<UninstantiatedDefSymbol>(name);
+        auto conns = sym.getPortConnections();
+        REQUIRE(conns.size() == 1);
+        return conns[0]->as<SimpleAssertionExpr>().expr;
+    };
+
+    CHECK(exprOf("top.h1").type->isError()); // {}
+    CHECK(exprOf("top.h2").type->isError()); // '{default:0}
+    CHECK(exprOf("top.h3").type->isError()); // tagged A
+    CHECK(exprOf("top.h5").type->isError()); // {a, b} with a dynamic array
+
+    CHECK(exprOf("top.h4").kind == ExpressionKind::Streaming);
+}
+
 TEST_CASE("Ignore uninstantiated modules") {
     auto tree = SyntaxTree::fromText(R"(
 module unused;

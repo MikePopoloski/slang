@@ -1602,8 +1602,10 @@ Expression& TaggedUnionExpression::fromSyntax(Compilation& compilation,
                                               const ASTContext& context,
                                               const Type* assignmentTarget) {
     if (!assignmentTarget || !assignmentTarget->isTaggedUnion()) {
-        if (!assignmentTarget || !assignmentTarget->isError())
+        if ((!assignmentTarget || !assignmentTarget->isError()) &&
+            !context.flags.has(ASTFlags::UnknownPortConn)) {
             context.addDiag(diag::TaggedUnionTarget, syntax.sourceRange());
+        }
         return badExpr(compilation, nullptr);
     }
 

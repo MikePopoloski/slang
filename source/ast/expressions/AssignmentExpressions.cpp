@@ -794,7 +794,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
     }
 
     if (!assignmentTarget || assignmentTarget->isError()) {
-        if (!assignmentTarget)
+        if (!assignmentTarget && !context.flags.has(ASTFlags::UnknownPortConn))
             context.addDiag(diag::AssignmentPatternNoContext, syntax.sourceRange());
         return badExpr(comp, &bindInvalidAssignmentPattern(context, p));
     }
