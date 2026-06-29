@@ -874,13 +874,14 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                     good = true;
                     result->type = &compilation.getBitType();
 
-                    // Table 11-1 doesn't list real operands for the case equality
-                    // operators, but commercial tools accept them and treat them just
-                    // like ordinary equality since reals have no x or z bits. We do the
-                    // same, but warn since this is a non-standard extension.
-                    if (!bothIntegral)
-                        context.addDiag(diag::NonstandardRealCaseEq, opRange)
-                            << OpInfo::getText(op);
+                    // Reals have no x or z bits, so the case equality operators
+                    // behave just like ordinary equality here. Warn so the user
+                    // knows the case comparison has no special effect on a real operand.
+                    if (!bothIntegral) {
+                        context.addDiag(diag::RealCaseEq, opRange)
+                            << OpInfo::getText(op)
+                            << (op == BinaryOperator::CaseEquality ? "equality"sv : "inequality"sv);
+                    }
                 }
                 else {
                     good = bothIntegral;
