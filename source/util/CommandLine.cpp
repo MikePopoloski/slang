@@ -163,12 +163,12 @@ void CommandLine::setPositional(const OptionStrCallback& cb, std::string_view va
     positional->flags = flags;
 }
 
-bool CommandLine::parse(int argc, const char* const argv[]) {
+bool CommandLine::parse(int argc, const char* const argv[], const ParseOptions& options) {
     SmallVector<std::string_view, 8> args{size_t(argc), UninitializedTag()};
     for (int i = 0; i < argc; i++)
         args.push_back(argv[i]);
 
-    return parse(args);
+    return parse(args, options);
 }
 
 bool CommandLine::parse(std::string_view argList, const ParseOptions& options) {

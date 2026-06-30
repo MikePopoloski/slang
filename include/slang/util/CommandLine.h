@@ -324,10 +324,6 @@ public:
     /// @returns a string containing an error message if the @a value is malformed.
     std::string addRenameCommand(std::string_view value);
 
-    /// Parse the provided command line (C-style).
-    /// @return true on success, false if any errors occur.
-    bool parse(int argc, const char* const argv[]);
-
     /// Represents an error encountered while parsing command line arguments.
     struct Error {
         /// A human-readable error message.
@@ -364,6 +360,10 @@ public:
 
         ParseOptions() {}
     };
+
+    /// Parse the provided command line (C-style).
+    /// @return true on success, false if any errors occur.
+    bool parse(int argc, const char* const argv[], const ParseOptions& options = {});
 
     /// Parse the provided command line (space delimited, with handling of
     /// quoted arguments).
