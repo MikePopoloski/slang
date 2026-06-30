@@ -523,3 +523,16 @@ TEST_CASE("Driver single-unit gives library files their own tree") {
     CHECK(defaultUnits == 1);
     CHECK(libraryUnits == 1);
 }
+
+TEST_CASE("Driver basic with ParseOptions") {
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto filePath = findTestDir() + "test.sv";
+    const char* argv[] = {"testfoo", filePath.c_str(), "-j", "2", "-j", "1"};
+    slang::CommandLine::ParseOptions parseOptions;
+    parseOptions.ignoreDuplicates = true;
+    CHECK(driver.parseCommandLine(6, argv, parseOptions));
+    CHECK(driver.processOptions());
+    CHECK(driver.options.numThreads == 2);
+}
