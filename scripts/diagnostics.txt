@@ -798,6 +798,7 @@ warning arith-op-mismatch ArithOpMismatch "arithmetic between operands of differ
 warning bitwise-op-mismatch BitwiseOpMismatch "bitwise operation between operands of different types ({} and {})"
 warning comparison-mismatch ComparisonMismatch "comparison between operands of different types ({} and {})"
 warning sign-compare SignCompare "comparison of differently signed types ({} and {})"
+warning real-case-eq RealCaseEq "a real operand has no x or z bits so '{}' acts as ordinary {}"
 warning case-type CaseTypeMismatch "comparison of different types in '{}' statement ({} and {})"
 warning case-outside-range CaseOutsideRange "'{}' item with {} bits can never match the {} bit case expression"
 warning bitwise-rel-precedence BitwiseRelPrecedence "'{}' has lower precedence than '{}'; '{}' will be evaluated first"

@@ -197,6 +197,21 @@ module m;
 endmodule
 ```
 
+-Wreal-case-eq
+The case equality operators `===` and `!==` differ from the ordinary equality operators `==` and
+`!=` only in how they treat x and z bits. Real, shortreal, and realtime values have no x or z
+bits, so applying a case equality operator to a real operand performs an ordinary equality
+comparison, exactly as `==` or `!=` would. This warning is issued when a case equality
+operator is applied to a real operand, in case a plain equality operator was intended.
+```
+module m;
+    real a;
+    real b;
+    bit c;
+    initial c = (a === b);
+endmodule
+```
+
 -Wpacked-array-conv
 Indicates an implicit conversion between types with differing
 packed array dimensions, even if their overall bit width is the same.
