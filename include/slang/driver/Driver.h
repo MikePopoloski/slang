@@ -389,8 +389,9 @@ public:
     /// This is templated to support both char and wchar_t arg lists.
     /// Any errors encountered will be printed to stderr.
     template<typename TArgs>
-    [[nodiscard]] bool parseCommandLine(int argc, TArgs argv) {
-        if (!cmdLine.parse(argc, argv)) {
+    [[nodiscard]] bool parseCommandLine(int argc, TArgs argv,
+                                        const CommandLine::ParseOptions& parseOptions = {}) {
+        if (!cmdLine.parse(argc, argv, parseOptions)) {
             issueCommandLineErrors(cmdLine);
             return false;
         }
