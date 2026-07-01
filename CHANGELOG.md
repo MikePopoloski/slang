@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### New Features
 * Added support for external [diagnostic waivers](https://sv-lang.com/waivers.html) files for suppressing unwanted warnings (thanks to @sjalloq)
+* Added [-Wmissing-else-clause](https://sv-lang.com/warning-ref.html#missing-else-clause) which warns about `if` statements that look like they were meant to be `else if` based on being on the same line as a previous `end` keyword
+* Added [-Wimplicit-net](https://sv-lang.com/warning-ref.html#implicit-net) which warns for each implicit net that is created (thanks to @hankhsu1996)
+* Added [-Wreal-case-eq](https://sv-lang.com/warning-ref.html#real-case-eq) which warns about using case equality operators ('===' and '!==') on `real` operands (thanks to @hankhsu1996)
 
 ### Improvements
 * Depfiles created by `--Mall` and `--Minclude` now include system-style included files (via angle brackets) in addition to user-style (via double quotes) (thanks to @AndrewNolte)
@@ -30,10 +33,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a crash when using `super` inside `randomize` calls on arrays of class handles
 * Fixed the ordering of element expressions in assignment patterns with explicit indices targeting arrays with descending indices
 * Fixed a parsing error where a labeled `restrict property` concurrent assertion was rejected
+* Fixed a bug that prevented `interconnect` nets from being used in alias directives
+* Fixed loop unrolling in data flow analysis to more conservatively handle loops that modify the iteration variable within their body
+* Fixed names explicitly imported into a package incorrectly being made visible to other units that import that package even when not re-exported
+* Fixed several internal assertions that could occur when recovering from invalid syntax
+* Fixed a malformed diagnostic for missing identifier tokens that go through the implicit net search logic
+* Fixed a crash when trying to analyze checkers with invalid port connections
 
 ### Tools & Bindings
 #### pyslang
 * Fixed binding of enum members named "and" and "or" (thanks to @slide)
+* Improved performance of visiting nodes when using the `lookup_table` dict of callbacks (thanks to @hankhsu1996)
 
 
 ## [v11.0] - 2026-05-14
