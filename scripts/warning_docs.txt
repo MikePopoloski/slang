@@ -2361,7 +2361,7 @@ endclass
 ```
 
 -Wimplicit-net-port
-A net port that elides its net type occurs in a context where `default_nettype is set to 'none'.
+A net port that elides its net type occurs in a context where `` `default_nettype `` is set to 'none'.
 This technically should be an error but it makes the use of 'none' as a default nettype very
 annoying and most tools just default to a wire in this case.
 ```
@@ -2372,11 +2372,11 @@ endmodule
 ```
 
 -Wimplicit-net
-An undeclared identifier was used in a context where `default_nettype is in effect,
+An undeclared identifier was used in a context where `` `default_nettype `` is in effect,
 causing an implicit net to be created. This is legal, but the implicit net may be the
 result of a typo or a missing declaration. Unlike -Wunused-implicit-net, this warning
 fires regardless of whether the net is subsequently used, so it can catch typos that
-happen to be referenced more than once. Set `default_nettype none if you want such
+happen to be referenced more than once. Set `` `default_nettype none `` if you want such
 implicit nets to be an error instead.
 ```
 module producer(output out); endmodule
