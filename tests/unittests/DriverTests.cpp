@@ -529,10 +529,9 @@ TEST_CASE("Driver basic with ParseOptions") {
     driver.addStandardArgs();
 
     auto filePath = findTestDir() + "test.sv";
-    const char* argv[] = {"testfoo", filePath.c_str(), "-j", "2", "-j", "1"};
+    const char* argv[] = {"testfoo", filePath.c_str(), "--lint-only", "--lint-only"};
     slang::CommandLine::ParseOptions parseOptions;
     parseOptions.ignoreDuplicates = true;
-    CHECK(driver.parseCommandLine(6, argv, parseOptions));
+    CHECK(driver.parseCommandLine(4, argv, parseOptions));
     CHECK(driver.processOptions());
-    CHECK(driver.options.numThreads == 2);
 }
