@@ -11,9 +11,9 @@ set(FMT_SYSTEM_HEADERS
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 12.1.0
+  GIT_TAG 12.2.0
   GIT_SHALLOW ON
-  FIND_PACKAGE_ARGS 12.1)
+  FIND_PACKAGE_ARGS 12.2)
 
 # Force fmtlib to always be a static lib if we pull it via FetchContent (i.e.
 # not intercepted by find_package), since it's a private dependency that's

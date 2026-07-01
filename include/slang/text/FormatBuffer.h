@@ -21,17 +21,16 @@ public:
 
     template<typename... Args>
     void format(fmt::format_string<Args...> fmt, Args&&... args) {
-        fmt::detail::vformat_to(buf, fmt::string_view(fmt), fmt::make_format_args(args...));
+        fmt::detail::vformat_to(buf, fmt.get(), fmt::make_format_args(args...));
     }
 
     template<typename... Args>
     void format(const fmt::text_style& style, fmt::format_string<Args...> fmt, Args&&... args) {
         if (!showColors) {
-            fmt::detail::vformat_to(buf, fmt::string_view(fmt), fmt::make_format_args(args...));
+            fmt::detail::vformat_to(buf, fmt.get(), fmt::make_format_args(args...));
         }
         else {
-            fmt::detail::vformat_to(buf, style, fmt::string_view(fmt),
-                                    fmt::make_format_args(args...));
+            fmt::detail::vformat_to(buf, style, fmt.get(), fmt::make_format_args(args...));
         }
     }
 
