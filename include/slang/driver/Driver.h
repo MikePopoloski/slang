@@ -493,9 +493,6 @@ public:
     /// Prints a warning to stderr with appropriate terminal colors.
     void printWarning(const std::string& message);
 
-    /// Prints a note to stderr with appropriate terminal colors.
-    void printNote(const std::string& message);
-
     /// Sets whether terminal output should use color.
     void setTerminalColorsEnabled(bool enable);
 

@@ -16,7 +16,7 @@
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/diagnostics/DriverDiags.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
-#include "slang/diagnostics/TextDiagnosticClient.h"
+#include "slang/diagnostics/StderrDiagnosticClient.h"
 #include "slang/diagnostics/WaiverManager.h"
 #include "slang/driver/SourceLoader.h"
 #include "slang/driver/UserDefinedSubroutine.h"
@@ -40,7 +40,7 @@ using namespace syntax;
 using namespace analysis;
 
 Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
-    textDiagClient = std::make_shared<TextDiagnosticClient>();
+    textDiagClient = std::make_shared<StderrDiagnosticClient>();
     diagEngine.addClient(textDiagClient);
     setTerminalColorsEnabled(OS::fileSupportsColors(stderr));
 }
@@ -525,11 +525,6 @@ void Driver::issueCommandLineErrors(const CommandLine& cl) {
         d << err.message;
         diagEngine.issue(d);
     }
-
-    if (!textDiagClient->empty()) {
-        OS::printE(textDiagClient->getString());
-        textDiagClient->clear();
-    }
 }
 
 bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bool separateUnit) {
@@ -693,6 +688,12 @@ bool Driver::processOptions(bool checkFiles) {
         jsonDiagClient->showAbsPaths(options.diagAbsPaths.value_or(false));
         jsonDiagClient->setColumnUnit(options.diagColumnUnit.value_or(ColumnUnit::Display));
         diagEngine.addClient(jsonDiagClient);
+
+        if (options.diagJson == "-") {
+            // If we're printing JSON diagnostics to stdout don't also
+            // print the text diagnostics.
+            diagEngine.removeClient(textDiagClient);
+        }
     }
 
     auto& tdc = *textDiagClient;
@@ -922,17 +923,22 @@ static std::vector<const SyntaxTree*> getSortedDependencies(
                 dfsVisit(dep);
 
             for (auto name : it->second.missingNames) {
-                driver.printWarning(fmt::format("'{}' not found in any source file", name));
+                Diagnostic d(diag::CommandLineWarning, SourceLocation::NoLocation);
+                d << fmt::format("'{}' not found in any source file", name);
 
                 // Print one representative note for where this is referenced.
                 if (auto missingIt = missingToTree.find(name); missingIt != missingToTree.end()) {
                     auto buffers = missingIt->second->getSourceBufferIds();
                     if (!buffers.empty()) {
-                        driver.printNote(fmt::format(
-                            "referenced in file '{}'",
-                            getProximatePathStr(driver.sourceManager.getFullPath(buffers[0]))));
+                        Diagnostic note(diag::NoteCommandLine, SourceLocation::NoLocation);
+                        note << fmt::format("referenced in file '{}'",
+                                            getProximatePathStr(
+                                                driver.sourceManager.getFullPath(buffers[0])));
+                        d.addNote(note);
                     }
                 }
+
+                driver.diagEngine.issue(d);
             }
         }
 
@@ -1289,7 +1295,6 @@ bool Driver::reportParseDiags() {
     diags.sort(sourceManager);
     diagEngine.issue(diags);
 
-    OS::printE(textDiagClient->getString());
     return diagEngine.getNumErrors() == 0;
 }
 
@@ -1327,30 +1332,14 @@ std::unique_ptr<AnalysisManager> Driver::runAnalysis(ast::Compilation& compilati
 }
 
 bool Driver::reportDiagnostics(bool quiet) {
-    bool hasDiagsStdout = false;
-    bool succeeded = diagEngine.getNumErrors() == 0;
-
-    if (jsonWriter)
+    if (jsonWriter) {
         jsonWriter->endArray();
-
-    if (options.diagJson == "-") {
-        // If we're printing JSON diagnostics to stdout don't also
-        // print the text diagnostics.
-        hasDiagsStdout = true;
-        OS::print(jsonWriter->view());
-    }
-    else {
-        std::string diagStr = textDiagClient->getString();
-        hasDiagsStdout = diagStr.size() > 1;
-        OS::printE(diagStr);
-
-        if (jsonWriter)
-            OS::writeFile(*options.diagJson, jsonWriter->view());
+        OS::writeFile(*options.diagJson, jsonWriter->view());
     }
 
+    bool succeeded = diagEngine.getNumErrors() == 0;
     if (!quiet) {
-        if (hasDiagsStdout)
-            OS::print("\n");
+        OS::print("\n");
 
         if (succeeded)
             OS::print(fg(textDiagClient->highlightColor), "Build succeeded: ");
@@ -1486,21 +1475,15 @@ bool Driver::reportLoadErrors() {
 }
 
 void Driver::printError(const std::string& message) {
-    OS::printE(fg(textDiagClient->errorColor), "error: ", /* skipCapture */ true);
-    OS::printE(message);
-    OS::printE("\n", /* skipCapture */ true);
+    Diagnostic d(diag::CommandLineError, SourceLocation::NoLocation);
+    d << message;
+    diagEngine.issue(d);
 }
 
 void Driver::printWarning(const std::string& message) {
-    OS::printE(fg(textDiagClient->warningColor), "warning: ", /* skipCapture */ true);
-    OS::printE(message);
-    OS::printE("\n", /* skipCapture */ true);
-}
-
-void Driver::printNote(const std::string& message) {
-    OS::printE(fg(textDiagClient->noteColor), "  note: ", /* skipCapture */ true);
-    OS::printE(message);
-    OS::printE("\n", /* skipCapture */ true);
+    Diagnostic d(diag::CommandLineWarning, SourceLocation::NoLocation);
+    d << message;
+    diagEngine.issue(d);
 }
 
 void Driver::setTerminalColorsEnabled(bool enable) {

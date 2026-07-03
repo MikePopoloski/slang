@@ -2954,3 +2954,6 @@ endmodule
 
 -Winvalid-source-encoding
 <ignored>
+
+-Wcommand-line
+<ignored>

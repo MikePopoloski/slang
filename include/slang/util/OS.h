@@ -47,18 +47,16 @@ public:
     static void writeFile(const std::filesystem::path& path, std::string_view contents);
 
     /// Prints text to stdout.
-    static void print(std::string_view text, bool skipCapture = false);
+    static void print(std::string_view text);
 
     /// Prints colored formatted text to stdout.
-    static void print(const fmt::text_style& style, std::string_view text,
-                      bool skipCapture = false);
+    static void print(const fmt::text_style& style, std::string_view text);
 
     /// Prints formatted text to stderr.
-    static void printE(std::string_view text, bool skipCapture = false);
+    static void printE(std::string_view text);
 
     /// Prints colored formatted text to stderr.
-    static void printE(const fmt::text_style& style, std::string_view text,
-                       bool skipCapture = false);
+    static void printE(const fmt::text_style& style, std::string_view text);
 
     static std::string getEnv(const std::string& name);
     static std::string parseEnvVar(const char*& ptr, const char* end);

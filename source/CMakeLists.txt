@@ -78,6 +78,7 @@ add_library(
   diagnostics/DiagnosticEngine.cpp
   diagnostics/Diagnostics.cpp
   diagnostics/JsonDiagnosticClient.cpp
+  diagnostics/StderrDiagnosticClient.cpp
   diagnostics/TextDiagnosticClient.cpp
   diagnostics/WaiverManager.cpp
   driver/CompatSettings.cpp

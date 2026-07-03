@@ -63,6 +63,9 @@ public:
     /// Adds a client which will receive all future diagnostics that are issued.
     void addClient(const std::shared_ptr<DiagnosticClient>& client);
 
+    /// Removes a previously added client from the engine.
+    void removeClient(const std::shared_ptr<DiagnosticClient>& client);
+
     /// Clears all previously registered clients from the engine.
     void clearClients();
 

@@ -15,10 +15,13 @@ namespace slang {
 
 class JsonWriter;
 
+/// A diagnostic client that serializes each diagnostic to JSON format.
 class SLANG_EXPORT JsonDiagnosticClient : public DiagnosticClient {
 public:
+    /// Constructs a new JsonDiagnosticClient that outputs to the given JsonWriter.
     JsonDiagnosticClient(JsonWriter& writer) : writer(writer) {}
 
+    /// Called by the DiagnosticEngine to report a new diagnostic.
     void report(const ReportedDiagnostic& diagnostic) override;
 
 private:

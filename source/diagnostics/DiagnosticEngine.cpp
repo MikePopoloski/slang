@@ -44,6 +44,10 @@ void DiagnosticEngine::addClient(const std::shared_ptr<DiagnosticClient>& client
     clients.push_back(client);
 }
 
+void DiagnosticEngine::removeClient(const std::shared_ptr<DiagnosticClient>& client) {
+    std::erase(clients, client);
+}
+
 void DiagnosticEngine::clearClients() {
     clients.clear();
 }

@@ -313,20 +313,18 @@ void OS::writeFile(const fs::path& path, std::string_view contents) {
     }
 }
 
-void OS::print(std::string_view text, bool skipCapture) {
+void OS::print(std::string_view text) {
     if (outputCallback) {
-        if (!skipCapture)
-            outputCallback(text, /* isStdout */ true);
+        outputCallback(text, /* isStdout */ true);
     }
     else {
         fmt::detail::print(stdout, fmt::detail::to_string_view(text));
     }
 }
 
-void OS::print(const fmt::text_style& style, std::string_view text, bool skipCapture) {
+void OS::print(const fmt::text_style& style, std::string_view text) {
     if (outputCallback) {
-        if (!skipCapture)
-            outputCallback(text, /* isStdout */ true);
+        outputCallback(text, /* isStdout */ true);
     }
     else if (showColorsStdout) {
         fmt::print(stdout, style, "{}"sv, text);
@@ -336,20 +334,18 @@ void OS::print(const fmt::text_style& style, std::string_view text, bool skipCap
     }
 }
 
-void OS::printE(std::string_view text, bool skipCapture) {
+void OS::printE(std::string_view text) {
     if (outputCallback) {
-        if (!skipCapture)
-            outputCallback(text, /* isStdout */ false);
+        outputCallback(text, /* isStdout */ false);
     }
     else {
         fmt::detail::print(stderr, fmt::detail::to_string_view(text));
     }
 }
 
-void OS::printE(const fmt::text_style& style, std::string_view text, bool skipCapture) {
+void OS::printE(const fmt::text_style& style, std::string_view text) {
     if (outputCallback) {
-        if (!skipCapture)
-            outputCallback(text, /* isStdout */ false);
+        outputCallback(text, /* isStdout */ false);
     }
     else if (showColorsStderr) {
         fmt::print(stderr, style, "{}"sv, text);
