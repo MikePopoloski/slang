@@ -609,14 +609,33 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
     do {
         // Search for a scope or instance target within our current scope.
         auto symbol = scope->find(name.text);
-        if (symbol && !symbol->isValue() && !symbol->isType() &&
-            (symbol->isScope() || symbol->kind == SymbolKind::Instance)) {
-            if (!tryMatch(*symbol))
-                return false;
+        if (symbol) {
+            // Normally an upward lookup can only match the head of a hierarchical name
+            // against a scope or instance target, since those are the only things we can
+            // descend into.
+            const bool viable = !symbol->isValue() && !symbol->isType() &&
+                                (symbol->isScope() || symbol->kind == SymbolKind::Instance);
 
-            if (result.found) {
-                result.upwardCount = upwardCount;
-                return true;
+            // If we've walked up into an enclosing class, however, its members are visible
+            // throughout the entire class body regardless of textual declaration order. A
+            // dotted name whose head resolves to such a member -- for example a class property
+            // referenced by an embedded covergroup's coverage expression -- is really an
+            // implicit-this member select, so resolve it here even though the order-sensitive
+            // unqualified lookup that got us to this point skipped over it.
+            const bool enclosingClassMember = scope->asSymbol().kind == SymbolKind::ClassType &&
+                                              symbol->isValue();
+
+            if (viable || enclosingClassMember) {
+                if (!tryMatch(*symbol))
+                    return false;
+
+                if (result.found) {
+                    // Resolving a member of an enclosing class is a lexical reference within
+                    // the same instance, not an upward hierarchical one, so don't count it as
+                    // such (otherwise it would spuriously trigger the upward-name warning).
+                    result.upwardCount = enclosingClassMember ? 0 : upwardCount;
+                    return true;
+                }
             }
         }
 

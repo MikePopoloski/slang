@@ -339,6 +339,53 @@ endclass
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Covergroup coverage expr references later class member") {
+    auto tree = SyntaxTree::fromText(R"(
+class xyz;
+    covergroup cov1;
+        coverpoint analysis_txn.we;
+    endgroup
+
+    typedef struct packed { bit we; } txn_t;
+    txn_t analysis_txn;
+
+    function new(); cov1 = new; endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Covergroup coverage expr forward reference errors") {
+    auto tree = SyntaxTree::fromText(R"(
+class xyz;
+    covergroup cov1;
+        coverpoint does_not_exist.we;
+    endgroup
+
+    function new(); cov1 = new; endfunction
+endclass
+
+module m;
+    covergroup cg1;
+        coverpoint later.we;
+    endgroup
+
+    struct packed { bit we; } later;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UsedBeforeDeclared);
+}
+
 TEST_CASE("Covergroup built-in methods") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
