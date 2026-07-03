@@ -44,7 +44,7 @@ module m;
     wire foo;
     wire a, b, c;
     pullup (supply0, pull1) (foo);
-    pmos #3 asdf [3:0][4][5] (foo, 1, 0), blah (foo, 1, 0), (foo, 1, 0);
+    pmos #3 asdf [3:0][4][5] (foo, 1'b1, 1'b0), blah (foo, 1, 0), (foo, 1, 0);
     rtranif1 (foo, foo, 1), asdf2(foo, foo, 0);
 
     pmos #6 (a, b, c);

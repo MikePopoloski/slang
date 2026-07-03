@@ -239,18 +239,19 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
         if (instanceDims.empty())
             return portType.isEquivalent(*ct) ? result : bad();
 
-        // Otherwise, if there are instance dimemsions left there needs to be packed dimensions
-        // in the connection to match up with them.
-        if (ct->kind != SymbolKind::PackedArrayType)
+        // Otherwise, if there are instance dimensions left there needs to be a packed
+        // integral type in the connection (a packed array, struct, union, enum, or a
+        // plain integer) that can be sliced up to match up with them.
+        if (!ct->isIntegral())
             return bad();
     }
-    else if (ct->kind != SymbolKind::PackedArrayType) {
+    else if (!ct->isIntegral()) {
         return nullptr;
     }
 
-    // If we reach this point we're looking at a packed array connection; if there were
+    // If we reach this point we're looking at a packed integral connection; if there were
     // any unpacked dimensions we already stripped them off and accounted for them.
-    // The port type must be integral since we're assigning a packed array.
+    // The port type must be integral since we're assigning a packed value.
     if (!portType.isIntegral())
         return bad();
 

@@ -490,6 +490,63 @@ endmodule
     CHECK(totalWidth == 2);
 }
 
+TEST_CASE("Instance array packed struct port slicing -- GH #1883") {
+    auto tree = SyntaxTree::fromText(R"(
+package pkg;
+   typedef struct packed {
+     logic a, b;
+   } st_t;
+endpackage
+
+module sub (
+  input wire en,
+  input wire iv,
+  output wire ov
+);
+   assign ov = en && iv;
+endmodule
+
+module top (
+  input wire en,
+  input wire pkg::st_t iv,
+  output pkg::st_t ov
+);
+  sub u_sub [$bits(pkg::st_t)-1:0] (
+    .en(en),
+    .iv(iv),
+    .ov(ov)
+  );
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Instance array integral port slicing (enum / packed union)") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef enum logic [1:0] { A, B, C, D } en_t;
+typedef union packed { logic [1:0] v; en_t e; } un_t;
+
+module sub (input wire iv, output wire ov);
+    assign ov = iv;
+endmodule
+
+module top_enum (input en_t iv, output logic [1:0] ov);
+    sub u [1:0] (.iv(iv), .ov(ov));
+endmodule
+
+module top_union (input un_t iv, output logic [1:0] ov);
+    sub u [1:0] (.iv(iv), .ov(ov));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Instance array port connection errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m(input logic a[5]);
