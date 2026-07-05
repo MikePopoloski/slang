@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/util/OS.h"
 
+#include "../text/FormatBuffer.h"
 #include <iostream>
 
 #include "slang/text/CharInfo.h"
@@ -322,12 +323,12 @@ void OS::print(std::string_view text) {
     }
 }
 
-void OS::print(const fmt::text_style& style, std::string_view text) {
+void OS::print(const TextStyle& style, std::string_view text) {
     if (outputCallback) {
         outputCallback(text, /* isStdout */ true);
     }
     else if (showColorsStdout) {
-        fmt::print(stdout, style, "{}"sv, text);
+        fmt::print(stdout, detail::toFmtTextStyle(style), "{}"sv, text);
     }
     else {
         fmt::detail::print(stdout, fmt::detail::to_string_view(text));
@@ -343,16 +344,20 @@ void OS::printE(std::string_view text) {
     }
 }
 
-void OS::printE(const fmt::text_style& style, std::string_view text) {
+void OS::printE(const TextStyle& style, std::string_view text) {
     if (outputCallback) {
         outputCallback(text, /* isStdout */ false);
     }
     else if (showColorsStderr) {
-        fmt::print(stderr, style, "{}"sv, text);
+        fmt::print(stderr, detail::toFmtTextStyle(style), "{}"sv, text);
     }
     else {
         fmt::detail::print(stderr, fmt::detail::to_string_view(text));
     }
+}
+
+void OS::printException(std::string_view format, std::string_view what) {
+    printE(fmt::vformat(format, fmt::make_format_args(what)));
 }
 
 std::string OS::getEnv(const std::string& name) {

@@ -6,7 +6,7 @@
 add_executable(slang_driver slang_main.cpp)
 add_executable(slang::driver ALIAS slang_driver)
 
-target_link_libraries(slang_driver PRIVATE slang::slang)
+target_link_libraries(slang_driver PRIVATE slang::slang fmt::fmt)
 set_target_properties(slang_driver PROPERTIES OUTPUT_NAME "slang")
 
 if(SLANG_FUZZ_TARGET)

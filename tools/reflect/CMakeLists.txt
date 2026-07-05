@@ -9,7 +9,7 @@ add_library(
   src/SvLocalParam.cpp src/SvUnion.cpp)
 
 target_include_directories(slang_reflect_obj_lib PUBLIC include)
-target_link_libraries(slang_reflect_obj_lib PUBLIC slang::slang)
+target_link_libraries(slang_reflect_obj_lib PUBLIC slang::slang fmt::fmt)
 
 add_executable(slang_reflect src/reflect.cpp)
 add_executable(slang::reflect ALIAS slang_reflect)

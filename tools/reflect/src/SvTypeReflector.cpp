@@ -49,7 +49,7 @@ void SvTypeReflector::reflect() {
                 namespaces[getNamespace(type)].members.emplace_back(
                     std::make_unique<SvUnion>(type));
             if (verbose)
-                OS::print(fg(fmt::color::yellow_green),
+                OS::print(fg(TerminalColor::Green),
                           fmt::format("Detected {} as public\n", type.name));
         }
 
@@ -62,7 +62,7 @@ void SvTypeReflector::reflect() {
             namespaces[getNamespace(type)].members.emplace_back(
                 std::make_unique<SvLocalParam>(type));
             if (verbose)
-                OS::print(fg(fmt::color::yellow_green),
+                OS::print(fg(TerminalColor::Green),
                           fmt::format("Detected {} as public\n", type.name));
         }
     }));

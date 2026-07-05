@@ -8,11 +8,11 @@
 #pragma once
 
 #include <filesystem>
-#include <fmt/color.h>
 #include <functional>
 
 #include "slang/util/ScopeGuard.h"
 #include "slang/util/SmallVector.h"
+#include "slang/util/TextStyle.h"
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -50,13 +50,18 @@ public:
     static void print(std::string_view text);
 
     /// Prints colored formatted text to stdout.
-    static void print(const fmt::text_style& style, std::string_view text);
+    static void print(const TextStyle& style, std::string_view text);
 
     /// Prints formatted text to stderr.
     static void printE(std::string_view text);
 
     /// Prints colored formatted text to stderr.
-    static void printE(const fmt::text_style& style, std::string_view text);
+    static void printE(const TextStyle& style, std::string_view text);
+
+    /// Formats an exception message and prints it to stderr. @a format is a
+    /// format string containing a single `{}` placeholder that is replaced
+    /// with @a what.
+    static void printException(std::string_view format, std::string_view what);
 
     static std::string getEnv(const std::string& name);
     static std::string parseEnvVar(const char*& ptr, const char* end);

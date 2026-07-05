@@ -7,13 +7,13 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/SFormat.h"
 
+#include "../text/FormatBuffer.h"
 #include <cmath>
 #include <ieee1800/vpi_user.h>
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/text/CharInfo.h"
-#include "slang/text/FormatBuffer.h"
 #include "slang/util/String.h"
 
 static const double log2_10 = std::log2(10.0);

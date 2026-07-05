@@ -7,22 +7,22 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/TextDiagnosticClient.h"
 
+#include "../text/FormatBuffer.h"
 #include <ranges>
 
 #include "slang/text/CharInfo.h"
-#include "slang/text/FormatBuffer.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang {
 
 TextDiagnosticClient::TextDiagnosticClient() : buffer(std::make_unique<FormatBuffer>()) {
-    noteColor = fmt::terminal_color::bright_black;
-    warningColor = fmt::terminal_color::bright_yellow;
-    errorColor = fmt::terminal_color::bright_red;
-    fatalColor = fmt::terminal_color::bright_red;
-    highlightColor = fmt::terminal_color::bright_green;
-    filenameColor = fmt::terminal_color::cyan;
-    locationColor = fmt::terminal_color::bright_cyan;
+    noteColor = TerminalColor::BrightBlack;
+    warningColor = TerminalColor::BrightYellow;
+    errorColor = TerminalColor::BrightRed;
+    fatalColor = TerminalColor::BrightRed;
+    highlightColor = TerminalColor::BrightGreen;
+    filenameColor = TerminalColor::Cyan;
+    locationColor = TerminalColor::BrightCyan;
 }
 
 TextDiagnosticClient::~TextDiagnosticClient() = default;
@@ -31,7 +31,7 @@ void TextDiagnosticClient::showColors(bool show) {
     buffer->setColorsEnabled(show);
 }
 
-fmt::terminal_color TextDiagnosticClient::getSeverityColor(DiagnosticSeverity severity) const {
+TerminalColor TextDiagnosticClient::getSeverityColor(DiagnosticSeverity severity) const {
     switch (severity) {
         case DiagnosticSeverity::Note:
             return noteColor;
@@ -42,7 +42,7 @@ fmt::terminal_color TextDiagnosticClient::getSeverityColor(DiagnosticSeverity se
         case DiagnosticSeverity::Fatal:
             return fatalColor;
         default:
-            return fmt::terminal_color::black;
+            return TerminalColor::Black;
     }
 }
 
@@ -70,7 +70,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
         else
             buffer->format("  in {} instances, e.g. ", *od.coalesceCount);
 
-        buffer->append(fmt::emphasis::bold, symbolPathCB(*od.symbol));
+        buffer->append(TextEmphasis::Bold, symbolPathCB(*od.symbol));
         buffer->append("\n"sv);
     }
 
@@ -273,7 +273,7 @@ struct SourceSnippet {
 
     void trimHighlight() { highlightLine.erase(highlightLine.find_last_not_of(' ') + 1); }
 
-    void printTo(FormatBuffer& out, fmt::terminal_color highlightColor) {
+    void printTo(FormatBuffer& out, TerminalColor highlightColor) {
         out.append("\n");
 
         if (invalidRanges.empty()) {
@@ -286,7 +286,7 @@ struct SourceSnippet {
                 SLANG_ASSERT(start >= index);
                 out.append(view.substr(index, start - index));
 
-                out.append(fmt::emphasis::reverse, view.substr(start, count));
+                out.append(TextEmphasis::Reverse, view.substr(start, count));
                 index = start + count;
             }
 
@@ -338,7 +338,7 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, std::span<const Source
     buffer->format(fg(getSeverityColor(severity)), "{}: ", getSeverityString(severity));
 
     if (severity != DiagnosticSeverity::Note)
-        buffer->format(fmt::text_style(fmt::emphasis::bold), "{}", message);
+        buffer->format(TextEmphasis::Bold, "{}", message);
     else
         buffer->append(message);
 

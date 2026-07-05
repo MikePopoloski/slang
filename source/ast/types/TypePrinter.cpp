@@ -7,8 +7,9 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/types/TypePrinter.h"
 
+#include "../../text/FormatBuffer.h"
+
 #include "slang/ast/ASTVisitor.h"
-#include "slang/text/FormatBuffer.h"
 
 namespace slang::ast {
 

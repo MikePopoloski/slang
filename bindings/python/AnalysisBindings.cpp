@@ -11,7 +11,6 @@
 #include "slang/analysis/AnalyzedProcedure.h"
 #include "slang/analysis/ValueDriver.h"
 #include "slang/ast/symbols/BlockSymbols.h"
-#include "slang/text/FormatBuffer.h"
 #include "slang/text/SourceManager.h"
 
 using namespace slang::analysis;

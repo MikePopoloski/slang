@@ -7,13 +7,14 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/ASTSerializer.h"
 
+#include "../text/FormatBuffer.h"
+
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/types/TypePrinter.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/CharInfo.h"
-#include "slang/text/FormatBuffer.h"
 #include "slang/text/Json.h"
 #include "slang/text/SourceManager.h"
 

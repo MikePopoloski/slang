@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/Bitstream.h"
 
+#include "../text/FormatBuffer.h"
 #include <numeric>
 
 #include "slang/ast/Compilation.h"
@@ -19,7 +20,6 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/numeric/MathUtils.h"
-#include "slang/text/FormatBuffer.h"
 
 namespace slang::ast {
 

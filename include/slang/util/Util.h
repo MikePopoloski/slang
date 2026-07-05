@@ -21,7 +21,7 @@
 #    define SLANG_TRY try
 #    define SLANG_CATCH(X) catch (X)
 #    define SLANG_THROW(e) throw(e)
-#    define SLANG_REPORT_EXCEPTION(e, msg) slang::OS::printE(fmt::format(msg, e.what()))
+#    define SLANG_REPORT_EXCEPTION(e, msg) slang::OS::printException(msg, (e).what())
 #else
 #    define SLANG_TRY if (true)
 #    define SLANG_CATCH(X) if (false)

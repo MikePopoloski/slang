@@ -9,8 +9,7 @@
 
 #include "TidyConfigParser.h"
 #include "TidyFactory.h"
-
-#include "slang/text/FormatBuffer.h"
+#include <fmt/format.h>
 
 struct TidyConfigPrinter {
 
@@ -21,24 +20,23 @@ struct TidyConfigPrinter {
         return result;
     }
 
-    static slang::FormatBuffer dumpConfig(TidyConfig const& tidyConfig) {
-        slang::FormatBuffer result;
-        result.append("Checks:\n");
+    static std::string dumpConfig(TidyConfig const& tidyConfig) {
+        std::string result = "Checks:\n";
         const auto& enabledChecks = Registry::getEnabledChecks();
         for (auto it = enabledChecks.begin(); it != enabledChecks.end(); ++it) {
             const auto check = Registry::create(*it);
-            result.append(fmt::format("  {}-{}", toLower(toString(check->getKind())),
-                                      TidyConfigParser::unformatCheckName(check->name())));
+            result += fmt::format("  {}-{}", toLower(toString(check->getKind())),
+                                  TidyConfigParser::unformatCheckName(check->name()));
             if (std::next(it) != enabledChecks.end()) {
-                result.append(",\n");
+                result += ",\n";
             }
             else {
-                result.append("\n");
+                result += "\n";
             }
         }
-        result.append("\n");
+        result += "\n";
 
-        result.append("CheckConfigs:\n");
+        result += "CheckConfigs:\n";
         const auto& configValues = tidyConfig.serialise();
         std::vector<std::pair<std::string, std::string>> populatedValues;
         for (auto& [name, value] : configValues) {
@@ -49,12 +47,12 @@ struct TidyConfigPrinter {
             populatedValues.push_back({name, value});
         }
         for (auto it = populatedValues.begin(); it != populatedValues.end(); ++it) {
-            result.append(fmt::format("  {}: \"{}\"", it->first, it->second));
+            result += fmt::format("  {}: \"{}\"", it->first, it->second);
             if (std::next(it) != populatedValues.end()) {
-                result.append(",\n");
+                result += ",\n";
             }
             else {
-                result.append("\n");
+                result += "\n";
             }
         }
 

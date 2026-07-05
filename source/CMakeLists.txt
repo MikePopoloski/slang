@@ -150,8 +150,8 @@ target_include_directories(
   PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../external/>")
 
 # Link libraries
-target_link_libraries(slang_slang PUBLIC fmt::fmt Boost::headers)
-target_link_libraries(slang_slang PRIVATE ${tomlplusplus_target})
+target_link_libraries(slang_slang PUBLIC Boost::headers)
+target_link_libraries(slang_slang PRIVATE ${tomlplusplus_target} fmt::fmt)
 
 if(SLANG_USE_THREADS)
   find_package(Threads REQUIRED)

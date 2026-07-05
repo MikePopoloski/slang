@@ -35,10 +35,10 @@ TEST_CASE("Round trip config file") {
     fs::current_path(p, ec);
 
     TidyConfig config;
-    OS::writeFile("tidy-config1", TidyConfigPrinter::dumpConfig(config).str());
+    OS::writeFile("tidy-config1", TidyConfigPrinter::dumpConfig(config));
 
     auto newConfig = TidyConfigParser(std::filesystem::path("tidy-config1")).getConfig();
-    OS::writeFile("tidy-config2", TidyConfigPrinter::dumpConfig(newConfig).str());
+    OS::writeFile("tidy-config2", TidyConfigPrinter::dumpConfig(newConfig));
 
     CHECK(filesEqual("tidy-config1", "tidy-config2"));
 }

@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
     // Print the configuration file for the currently enabled checks.
     if (dumpConfig) {
         Registry::setConfig(tidyConfig);
-        OS::print(TidyConfigPrinter::dumpConfig(tidyConfig).str());
+        OS::print(TidyConfigPrinter::dumpConfig(tidyConfig));
         return 0;
     }
 
@@ -260,19 +260,19 @@ int main(int argc, char** argv) {
                     // Skip.
                 }
                 else if (check->diagSeverity() == DiagnosticSeverity::Note) {
-                    OS::print(fmt::emphasis::bold |
-                                  fmt::fg(tdc.getSeverityColor(DiagnosticSeverity::Note)),
+                    OS::print(TextEmphasis::Bold |
+                                  fg(tdc.getSeverityColor(DiagnosticSeverity::Note)),
                               " NOTE\n");
                 }
                 else if (check->diagSeverity() == DiagnosticSeverity::Warning) {
-                    OS::print(fmt::emphasis::bold |
-                                  fmt::fg(tdc.getSeverityColor(DiagnosticSeverity::Warning)),
+                    OS::print(TextEmphasis::Bold |
+                                  fg(tdc.getSeverityColor(DiagnosticSeverity::Warning)),
                               " WARN\n");
                 }
                 else if (check->diagSeverity() == DiagnosticSeverity::Error ||
                          check->diagSeverity() == DiagnosticSeverity::Fatal) {
-                    OS::print(fmt::emphasis::bold |
-                                  fmt::fg(tdc.getSeverityColor(DiagnosticSeverity::Error)),
+                    OS::print(TextEmphasis::Bold |
+                                  fg(tdc.getSeverityColor(DiagnosticSeverity::Error)),
                               " FAIL\n");
                     // Any errors are propagated to the return code.
                     retCode = 1;
@@ -291,7 +291,7 @@ int main(int argc, char** argv) {
         }
         else {
             if (!quiet)
-                OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::green), " PASS\n");
+                OS::print(TextEmphasis::Bold | fg(TerminalColor::Green), " PASS\n");
         }
     }
 

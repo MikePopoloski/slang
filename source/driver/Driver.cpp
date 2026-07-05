@@ -8,6 +8,7 @@
 //------------------------------------------------------------------------------
 #include "slang/driver/Driver.h"
 
+#include "../text/FormatBuffer.h"
 #include <fmt/color.h>
 
 #include "slang/analysis/AnalysisManager.h"
@@ -24,7 +25,6 @@
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
-#include "slang/text/FormatBuffer.h"
 #include "slang/text/Json.h"
 #include "slang/util/Random.h"
 #include "slang/util/String.h"

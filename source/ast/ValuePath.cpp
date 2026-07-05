@@ -7,12 +7,13 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/ValuePath.h"
 
+#include "../text/FormatBuffer.h"
+
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/TypeProvider.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/text/FormatBuffer.h"
 
 namespace slang::ast {
 

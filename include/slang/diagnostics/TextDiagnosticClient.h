@@ -7,10 +7,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <fmt/color.h>
 #include <string>
 
 #include "slang/diagnostics/DiagnosticClient.h"
+#include "slang/util/TextStyle.h"
 
 namespace slang {
 
@@ -24,25 +24,25 @@ SLANG_ENUM(ShowHierarchyPathOption, SHPO)
 class SLANG_EXPORT TextDiagnosticClient : public DiagnosticClient {
 public:
     /// The color to use for notes.
-    fmt::terminal_color noteColor;
+    TerminalColor noteColor;
 
     /// The color to use for warnings.
-    fmt::terminal_color warningColor;
+    TerminalColor warningColor;
 
     /// The color to use for errors.
-    fmt::terminal_color errorColor;
+    TerminalColor errorColor;
 
     /// The color to use for fatal errors.
-    fmt::terminal_color fatalColor;
+    TerminalColor fatalColor;
 
     /// The color to use for highlights.
-    fmt::terminal_color highlightColor;
+    TerminalColor highlightColor;
 
     /// The color to use for file names.
-    fmt::terminal_color filenameColor;
+    TerminalColor filenameColor;
 
     /// The color to use for locations.
-    fmt::terminal_color locationColor;
+    TerminalColor locationColor;
 
     /// Constructs a new TextDiagnosticClient.
     TextDiagnosticClient();
@@ -73,7 +73,7 @@ public:
     void showHierarchyInstance(ShowHierarchyPathOption option) { includeHierarchy = option; }
 
     /// Gets the terminal color to use for the given diagnostic severity.
-    fmt::terminal_color getSeverityColor(DiagnosticSeverity severity) const;
+    TerminalColor getSeverityColor(DiagnosticSeverity severity) const;
 
     /// Called by the DiagnosticEngine to report a new diagnostic.
     void report(const ReportedDiagnostic& diagnostic) override;

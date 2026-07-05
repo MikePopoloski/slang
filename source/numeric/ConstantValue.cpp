@@ -7,10 +7,10 @@
 //------------------------------------------------------------------------------
 #include "slang/numeric/ConstantValue.h"
 
+#include "../text/FormatBuffer.h"
 #include <ostream>
 
 #include "slang/numeric/MathUtils.h"
-#include "slang/text/FormatBuffer.h"
 #include "slang/util/FlatMap.h"
 
 namespace slang {

@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include <algorithm>
 #include <boost_regex.hpp>
+#include <fmt/format.h>
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"

@@ -7,13 +7,14 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/Symbol.h"
 
+#include "../text/FormatBuffer.h"
+
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/ast/types/TypePrinter.h"
 #include "slang/text/CharInfo.h"
-#include "slang/text/FormatBuffer.h"
 #include "slang/util/SmallMap.h"
 
 namespace {

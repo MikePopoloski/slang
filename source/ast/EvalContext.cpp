@@ -7,13 +7,14 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/EvalContext.h"
 
+#include "../text/FormatBuffer.h"
+
 #include "slang/ast/ASTContext.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
-#include "slang/text/FormatBuffer.h"
 
 namespace slang::ast {
 

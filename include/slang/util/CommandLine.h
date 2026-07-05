@@ -9,7 +9,6 @@
 
 #include <cctype>
 #include <deque>
-#include <fmt/format.h>
 #include <functional>
 #include <map>
 #include <optional>
@@ -571,8 +570,8 @@ void CommandLine::addEnum(std::string_view name, std::optional<T>& value, std::s
             }
         }
 
-        return fmt::format("invalid value '{}', valid options are: {}", str,
-                           buildValidOptionsList());
+        return "invalid value '" + std::string(str) +
+               "', valid options are: " + buildValidOptionsList();
     };
 
     // Build description with valid options listed
