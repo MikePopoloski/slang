@@ -1,0 +1,57 @@
+name: Examples
+
+# Builds the integration example under examples/ to make sure that consuming
+# slang as an installed package and as a FetchContent subproject both keep
+# working against the current source tree.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  package:
+    name: package (find_package)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
+      with:
+        key: examples-package
+    - name: Build and install slang
+      run: |
+        cmake -B build/slang \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DSLANG_INCLUDE_TESTS=OFF \
+          -DSLANG_INCLUDE_TOOLS=OFF \
+          -DCMAKE_INSTALL_PREFIX=$PWD/prefix
+        cmake --build build/slang -j8
+        cmake --install build/slang --component slang_Development --strip
+    - name: Build example (find_package)
+      working-directory: examples/integration
+      run: |
+        cmake -B build \
+          -DSLANG_EXAMPLE_METHOD=package \
+          -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/prefix
+        cmake --build build -j8
+
+  subproject:
+    name: subproject (FetchContent)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
+      with:
+        key: examples-subproject
+    - name: Build example (FetchContent) against this checkout
+      working-directory: examples/integration
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DSLANG_EXAMPLE_METHOD=subproject \
+          -DFETCHCONTENT_SOURCE_DIR_SLANG=$GITHUB_WORKSPACE
+        cmake --build build -j8

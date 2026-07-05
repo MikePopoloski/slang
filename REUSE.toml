@@ -9,6 +9,7 @@ path = [
     "docs/grammar.md",
     "docs/index.html",
     "docs/Doxyfile.in",
+    "examples/**/README.md",
     "external/ieee1800/*.h",
     "pyslang/docs/pages/index.rst",
     "pyslang/examples/README.md",

@@ -15,7 +15,7 @@ git clone https://github.com/MikePopoloski/slang.git
 
 slang requires the following tools in order to build:
 - [python 3](https://www.python.org/)
-- [CMake](https://cmake.org/) (3.24 or later)
+- [CMake](https://cmake.org/) (3.28 or later)
 - C++20 compatible compiler. Minimum supported compiler versions:
     - GCC 11
     - clang 17
@@ -59,6 +59,7 @@ SLANG_INCLUDE_COVERAGE | Include code coverage targets in the build | OFF
 SLANG_INCLUDE_THREADTEST | Include threadtest target in the build | OFF
 SLANG_INCLUDE_UVM_TEST | Include UVM as a test target in the build | OFF
 SLANG_INCLUDE_BENCHMARKS | Include benchmark targets in the build | OFF
+SLANG_INCLUDE_EXAMPLES | Include the integration example projects (see @ref integration) in the build | OFF
 BUILD_SHARED_LIBS | Build a shared library instead of static | OFF
 SLANG_USE_THREADS | Enable use of threads | ON
 SLANG_USE_MIMALLOC | Enable use of the mimalloc library. Can be turned off, the resulting library will be slightly slower. | ON
@@ -171,7 +172,7 @@ in one of the default locations, you should be able to use a simple `find_packag
 it into your build.
 
 ```
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.28)
 project(example)
 
 find_package(slang 1.0.0)
@@ -180,7 +181,7 @@ add_executable(example example.cpp)
 target_link_libraries(example PRIVATE slang::slang)
 ```
 
-See [this GitHub project](https://github.com/MikePopoloski/slang_package_example) as an example of integrating slang using this method.
+See the [examples/integration](https://github.com/MikePopoloski/slang/tree/master/examples/integration) directory in this repository (configured with `-DSLANG_EXAMPLE_METHOD=package`) as an example of integrating slang using this method.
 
 ## FetchContent
 
@@ -188,7 +189,7 @@ Instead of installing the slang package on your system, you can instead instruct
 from GitHub and build it as part of your own project.
 
 ```
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.28)
 project(example)
 
 # Note: this example just pulls the head master branch
@@ -206,6 +207,8 @@ add_executable(example example.cpp)
 target_link_libraries(example PRIVATE slang::slang)
 ```
 
-See [this GitHub project](https://github.com/MikePopoloski/slang_subproject_example) as an example of integrating slang using this method.
+See the [examples/integration](https://github.com/MikePopoloski/slang/tree/master/examples/integration) directory in this repository (configured with `-DSLANG_EXAMPLE_METHOD=subproject`) as an example of integrating slang using this method.
+
+This example project is also built as part of slang's own CI (and can be built locally by configuring with `-DSLANG_INCLUDE_EXAMPLES=ON`) to ensure it keeps working against the current API.
 
 */
