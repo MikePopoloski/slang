@@ -1606,3 +1606,18 @@ endchecker
 
     analysisManager.analyze(compilation);
 }
+
+TEST_CASE("Multi-assign for output port variable with initializer") {
+    auto& code = R"(
+module m(output var reg r = 1);
+   assign r = 1;
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MixedVarAssigns);
+}
