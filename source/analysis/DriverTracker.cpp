@@ -59,16 +59,24 @@ void DriverTracker::add(AnalysisContext& context, DriverAlloc& driverAlloc,
                         const PortSymbol& symbol) {
     // This method adds a driver *from* the port to the *internal*
     // symbol (or expression) that it connects to.
+    auto flags = DriverFlags::None;
+    auto kind = DriverKind::Continuous;
     auto dir = symbol.direction;
-    if (dir != ArgumentDirection::In && dir != ArgumentDirection::InOut &&
-        !(dir == ArgumentDirection::Out && symbol.getInitializer()))
+    if (dir == ArgumentDirection::Ref)
         return;
 
-    auto flags = dir == ArgumentDirection::In    ? DriverFlags::InputPort
-                 : dir == ArgumentDirection::Out ? DriverFlags::Initializer
-                                                 : DriverFlags::None;
+    if (dir == ArgumentDirection::In) {
+        flags = DriverFlags::InputPort;
+    }
+    else if (dir == ArgumentDirection::Out) {
+        if (!symbol.getInitializer())
+            return;
+
+        flags = DriverFlags::Initializer;
+        kind = DriverKind::Procedural;
+    }
+
     auto scope = symbol.getParentScope();
-    auto kind = flags == DriverFlags::Initializer ? DriverKind::Procedural : DriverKind::Continuous;
     SLANG_ASSERT(scope);
 
     if (auto expr = symbol.getInternalExpr()) {
