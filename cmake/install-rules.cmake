@@ -32,7 +32,7 @@ install(
 if(fmt_FOUND)
   set(FMT_FIND_DEP "find_dependency(fmt)")
 endif()
-if(Boost_FOUND)
+if(SLANG_USE_SYSTEM_BOOST)
   set(BOOST_FIND_DEP "find_dependency(Boost)")
 endif()
 if(mimalloc_FOUND)

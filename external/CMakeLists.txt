@@ -46,21 +46,27 @@ else()
 endif()
 
 # --- boost ---
-find_package(Boost 1.87.0 CONFIG QUIET)
-if(NOT Boost_FOUND)
+# By default slang stays header-only and consumes a vendored boost_unordered
+# header plus a FetchContent'd header-only boost::regex, avoiding a transitive
+# boost dependency for downstream consumers. Set SLANG_USE_SYSTEM_BOOST to link
+# against a system-installed boost instead.
+if(SLANG_USE_SYSTEM_BOOST)
+  find_package(Boost 1.87.0 CONFIG REQUIRED)
+  message(
+    STATUS "Found system boost ${Boost_VERSION_STRING} at ${Boost_INCLUDE_DIRS}"
+  )
+else()
   message(STATUS "Using vendored boost_unordered header")
 
   add_library(boost_unordered INTERFACE)
   add_library(Boost::headers ALIAS boost_unordered)
 
   # slang uses boost::regex (in place of std::regex) as a header-only library.
-  # When a system boost install was found above, its headers already include
-  # <boost/regex.hpp> with full boost. Otherwise we fetch just the regex repo;
-  # boost.regex auto-detects standalone mode by the absence of
-  # <boost/config.hpp> and falls back to the C++ standard library for its
-  # dependencies. We don't add_subdirectory the fetched repo (SOURCE_SUBDIR
-  # pointed at a non-existent path makes FetchContent_MakeAvailable populate
-  # only).
+  # We fetch just the regex repo; boost.regex auto-detects standalone mode by
+  # the absence of <boost/config.hpp> and falls back to the C++ standard library
+  # for its dependencies. We don't add_subdirectory the fetched repo
+  # (SOURCE_SUBDIR pointed at a non-existent path makes
+  # FetchContent_MakeAvailable populate only).
   message(STATUS "Using FetchContent for boost::regex (header-only)")
   FetchContent_Declare(
     boost_regex
@@ -73,10 +79,6 @@ if(NOT Boost_FOUND)
   target_include_directories(
     boost_unordered SYSTEM
     INTERFACE "$<BUILD_INTERFACE:${boost_regex_SOURCE_DIR}/include>")
-else()
-  message(
-    STATUS "Found system boost ${Boost_VERSION_STRING} at ${Boost_INCLUDE_DIRS}"
-  )
 endif()
 
 # --- mimalloc ---
@@ -190,7 +192,7 @@ if(SLANG_INCLUDE_INSTALL)
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     COMPONENT slang_Development)
 
-  if(NOT Boost_FOUND)
+  if(NOT SLANG_USE_SYSTEM_BOOST)
     install(
       TARGETS boost_unordered
       EXPORT slangTargets
