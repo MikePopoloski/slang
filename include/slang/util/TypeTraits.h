@@ -69,11 +69,25 @@ private:
     int* id;
     constexpr type_index(int* id) : id(id) {}
 
+    // The type identity is derived from the address of the function-local static
+    // below. It must resolve to a single instance across a shared library
+    // boundary, so we force default visibility here; otherwise
+    // -fvisibility-inlines-hidden makes the static a private symbol inside the
+    // slang shared library that can't be coalesced with the copy in a consumer,
+    // producing two different addresses for the same type.
+#if defined(_WIN32)
     template<typename T>
     static type_index type_id_with_cvr() {
         static int id;
         return &id;
     }
+#else
+    template<typename T>
+    [[gnu::visibility("default")]] static type_index type_id_with_cvr() {
+        static int id;
+        return &id;
+    }
+#endif
 };
 
 } // namespace slang
