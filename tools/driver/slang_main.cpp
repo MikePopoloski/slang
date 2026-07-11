@@ -267,14 +267,14 @@ int driverMain(int argc, TArgs argv) {
         }
 
         if (!driver.processOptions())
-            return 2;
+            return 1;
 
         if (onlyParse.has_value() + onlyPreprocess.has_value() + onlyMacros.has_value() +
                 driver.options.lintMode() >
             1) {
             driver.printError("can only specify one of --preprocess, --macros-only, "
                               "--parse-only, --lint-only");
-            return 3;
+            return 1;
         }
 
         if ((onlyPreprocess || onlyMacros) &&
@@ -282,7 +282,7 @@ int driverMain(int argc, TArgs argv) {
              driver.options.allDepfile)) {
             driver.printError(
                 "cannot use dependency file options with --preprocess or --macros-only");
-            return 3;
+            return 1;
         }
 
         if (timeTrace || timeStats)
@@ -363,7 +363,7 @@ int driverMain(int argc, TArgs argv) {
         }
         SLANG_CATCH(const std::exception& e) {
             SLANG_REPORT_EXCEPTION(e, "internal compiler error: {}\n");
-            return 4;
+            return 1;
         }
 
         if (timeTrace) {
@@ -378,12 +378,12 @@ int driverMain(int argc, TArgs argv) {
         if (timeStats)
             printTimeStats(*timeStats);
 
-        return ok ? 0 : 5;
+        return ok ? 0 : 1;
     }
     SLANG_CATCH(const std::exception& e) {
         SLANG_REPORT_EXCEPTION(e, "{}\n");
     }
-    return 6;
+    return 1;
 }
 
 #ifndef FUZZ_TARGET
