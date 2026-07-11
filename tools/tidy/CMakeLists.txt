@@ -32,7 +32,7 @@ add_library(
   src/synthesis/LoopBeforeResetCheck.cpp)
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include)
-target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang fmt::fmt)
+target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang ${fmt_target})
 
 add_executable(slang_tidy src/tidy.cpp)
 add_executable(slang::tidy ALIAS slang_tidy)

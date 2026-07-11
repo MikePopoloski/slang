@@ -4,38 +4,37 @@
 # ~~~
 
 # --- fmt lib ---
-set(FMT_SYSTEM_HEADERS
-    ON
-    CACHE INTERNAL "")
+if(SLANG_USE_SYSTEM_FMT)
+  find_package(fmt 12.2 REQUIRED)
 
-FetchContent_Declare(
-  fmt
-  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 12.2.0
-  GIT_SHALLOW ON
-  FIND_PACKAGE_ARGS 12.2)
-
-# Force fmtlib to always be a static lib if we pull it via FetchContent (i.e.
-# not intercepted by find_package), since it's a private dependency that's
-# mostly header-only already.
-set(saved_build_shared_libs ${BUILD_SHARED_LIBS})
-set(BUILD_SHARED_LIBS OFF)
-FetchContent_MakeAvailable(fmt)
-set(BUILD_SHARED_LIBS ${saved_build_shared_libs})
-
-if((SLANG_INCLUDE_PYLIB OR BUILD_SHARED_LIBS) AND NOT fmt_FOUND)
-  set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
-endif()
-
-if(fmt_FOUND)
   get_target_property(FMT_CFG fmt::fmt IMPORTED_CONFIGURATIONS)
   list(GET FMT_CFG 0 FMT_CFG_FIRST)
   get_target_property(FMT_LIB fmt::fmt IMPORTED_LOCATION_${FMT_CFG_FIRST})
   get_target_property(FMT_INC fmt::fmt INTERFACE_INCLUDE_DIRECTORIES)
   message(STATUS "Found system fmt library: ${FMT_LIB}")
   message(STATUS "Using system fmt include: ${FMT_INC}")
+
+  set(fmt_target "fmt::fmt")
 else()
-  message(STATUS "Using remote fmt library")
+  FetchContent_Declare(
+    fmt
+    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_TAG 12.2.0
+    GIT_SHALLOW ON
+    SYSTEM EXCLUDE_FROM_ALL)
+  FetchContent_MakeAvailable(fmt)
+
+  # The fmt-header-only target unconditionally defines FMT_HEADER_ONLY, which
+  # pulls the entire fmt implementation into every TU that includes a fmt
+  # header. We strip that define here and instead manually build the definitions
+  # into one TU (Fmt.cpp).
+  set_property(TARGET fmt-header-only PROPERTY INTERFACE_COMPILE_DEFINITIONS)
+
+  message(STATUS "Using remote fmt library (header-only)")
+
+  # Wrap in BUILD_INTERFACE so the header-only usage requirements apply only
+  # while building slang and don't leak into the installed/exported interface.
+  set(fmt_target "$<BUILD_INTERFACE:fmt::fmt-header-only>")
 endif()
 
 # --- boost ---
@@ -182,20 +181,6 @@ if(SLANG_INCLUDE_INSTALL)
     FILES ${PROJECT_SOURCE_DIR}/external/expected.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     COMPONENT slang_Development)
-
-  if(NOT fmt_FOUND)
-    install(
-      TARGETS fmt
-      EXPORT slangTargets
-      LIBRARY COMPONENT slang_Development
-      ARCHIVE COMPONENT slang_Development
-      PUBLIC_HEADER EXCLUDE_FROM_ALL
-      PRIVATE_HEADER EXCLUDE_FROM_ALL)
-    install(
-      DIRECTORY ${fmt_SOURCE_DIR}/include/fmt
-      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-      COMPONENT slang_Development)
-  endif()
 
   if(NOT Boost_FOUND)
     install(

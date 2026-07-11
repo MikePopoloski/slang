@@ -115,6 +115,7 @@ add_library(
   text/SourceManager.cpp
   util/BumpAllocator.cpp
   util/CommandLine.cpp
+  util/Fmt.cpp
   util/IntervalMap.cpp
   util/OS.cpp
   util/SmallVector.cpp
@@ -151,7 +152,7 @@ target_include_directories(
 
 # Link libraries
 target_link_libraries(slang_slang PUBLIC Boost::headers)
-target_link_libraries(slang_slang PRIVATE ${tomlplusplus_target} fmt::fmt)
+target_link_libraries(slang_slang PRIVATE ${tomlplusplus_target} ${fmt_target})
 
 if(SLANG_USE_THREADS)
   find_package(Threads REQUIRED)

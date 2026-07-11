@@ -56,7 +56,7 @@ set_source_files_properties(
   python/pyslang.cpp PROPERTIES COMPILE_DEFINITIONS
                                 VERSION_INFO=${PROJECT_VERSION})
 target_link_libraries(pyslang PUBLIC slang::slang)
-target_link_libraries(pyslang PRIVATE fmt::fmt)
+target_link_libraries(pyslang PRIVATE ${fmt_target})
 target_include_directories(pyslang PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/python)
 
 install(
