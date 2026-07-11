@@ -35,6 +35,7 @@ target_sources(
           symbols/ClassSymbols.cpp
           symbols/CompilationUnitSymbols.cpp
           symbols/CoverSymbols.cpp
+          symbols/DefaultIfacePortConnections.cpp
           symbols/InstanceSymbols.cpp
           symbols/MemberSymbols.cpp
           symbols/ParameterBuilder.cpp
