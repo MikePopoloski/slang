@@ -30,6 +30,14 @@ else()
   # into one TU (Fmt.cpp).
   set_property(TARGET fmt-header-only PROPERTY INTERFACE_COMPILE_DEFINITIONS)
 
+  # The slang library compiles the fmt definitions into a single TU (Fmt.cpp)
+  # using PIC as needed, but the compiled fmt target is still used by
+  # non-exported consumers (tools, tests, bindings). Make sure it's built with
+  # PIC when it may be linked into a shared library or the Python module.
+  if((SLANG_INCLUDE_PYLIB OR BUILD_SHARED_LIBS) AND TARGET fmt)
+    set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  endif()
+
   message(STATUS "Using remote fmt library (header-only)")
 
   # Wrap in BUILD_INTERFACE so the header-only usage requirements apply only
