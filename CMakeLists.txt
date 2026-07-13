@@ -91,6 +91,9 @@ option(SLANG_USE_SYSTEM_FMT
        "Use a system-installed fmt library instead of FetchContent" OFF)
 option(SLANG_USE_SYSTEM_BOOST
        "Use a system-installed boost library instead of FetchContent" OFF)
+option(SLANG_USE_SYSTEM_TOMLPLUSPLUS
+       "Use a system-installed tomlplusplus library instead of FetchContent"
+       OFF)
 
 set(SLANG_LIB_NAME
     "svlang"
