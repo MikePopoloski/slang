@@ -78,6 +78,7 @@ SLANG_USE_THREADS | Enable use of threads | ON
 SLANG_USE_MIMALLOC | Enable use of the mimalloc library. Can be turned off, the resulting library will be slightly slower. | ON
 SLANG_USE_SYSTEM_FMT | Use a system-installed fmt library (via find_package) instead of fetching it with FetchContent. When off, fmt is consumed header-only so it imposes no transitive dependency on downstream consumers. | OFF
 SLANG_USE_SYSTEM_BOOST | Use a system-installed boost library (via find_package) instead of fetching it with FetchContent. When off, boost is consumed header-only so it imposes no transitive dependency on downstream consumers. | OFF
+SLANG_USE_SYSTEM_TOMLPLUSPLUS | Use a system-installed tomlplusplus library (via find_package) instead of fetching it with FetchContent. When off, tomlplusplus is consumed header-only so it imposes no transitive dependency on downstream consumers. | OFF
 SLANG_FUZZ_TARGET | Turn on to enable some changes to make binaries easier to fuzz test | OFF
 SLANG_CI_BUILD | Enable additional longer-running tests for automated builds | OFF
 SLANG_CLANG_TIDY | The path to a clang-tidy binary to run against the slang sources | ""

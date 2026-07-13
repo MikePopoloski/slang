@@ -159,26 +159,36 @@ if(SLANG_INCLUDE_TESTS)
 endif()
 
 # --- tomlplusplus ---
-FetchContent_Declare(
-  tomlplusplus
-  GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
-  GIT_TAG v3.4.0
-  GIT_SHALLOW ON
-  FIND_PACKAGE_ARGS 3.4)
-FetchContent_MakeAvailable(tomlplusplus)
-
-if(tomlplusplus_FOUND)
-  get_target_property(TOMLPP_INC tomlplusplus::tomlplusplus
+if(SLANG_USE_SYSTEM_TOMLPLUSPLUS)
+  find_package(tomlplusplus 3.4 REQUIRED)
+  get_target_property(TOML_LIB tomlplusplus::tomlplusplus IMPORTED_LOCATION)
+  get_target_property(TOML_INC tomlplusplus::tomlplusplus
                       INTERFACE_INCLUDE_DIRECTORIES)
-  message(STATUS "Found system tomlplusplus library: ${TOMLPP_INC}")
+  message(STATUS "Found system tomlplusplus library: ${TOML_LIB}")
+  message(STATUS "Using system tomlplusplus include: ${TOML_INC}")
   set(tomlplusplus_target "tomlplusplus::tomlplusplus")
 else()
-  message(STATUS "Using remote tomlplusplus library")
-  if(IS_DIRECTORY "${tomlplusplus_SOURCE_DIR}")
-    set_property(DIRECTORY ${tomlplusplus_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL
-                                                               YES)
+  FetchContent_Declare(
+    tomlplusplus
+    GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
+    GIT_TAG v3.4.0
+    GIT_SHALLOW ON
+    FIND_PACKAGE_ARGS 3.4)
+  FetchContent_MakeAvailable(tomlplusplus)
+
+  if(tomlplusplus_FOUND)
+    get_target_property(TOMLPP_INC tomlplusplus::tomlplusplus
+                        INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "Found system tomlplusplus library: ${TOMLPP_INC}")
+    set(tomlplusplus_target "tomlplusplus::tomlplusplus")
+  else()
+    message(STATUS "Using remote tomlplusplus library")
+    if(IS_DIRECTORY "${tomlplusplus_SOURCE_DIR}")
+      set_property(DIRECTORY ${tomlplusplus_SOURCE_DIR}
+                   PROPERTY EXCLUDE_FROM_ALL YES)
+    endif()
+    set(tomlplusplus_target "$<BUILD_INTERFACE:tomlplusplus::tomlplusplus>")
   endif()
-  set(tomlplusplus_target "$<BUILD_INTERFACE:tomlplusplus::tomlplusplus>")
 endif()
 
 # --- install rules ---
