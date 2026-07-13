@@ -36,7 +36,7 @@ repos:
 
 # Python linting and formatting with Ruff.
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.15.20
+  rev: v0.15.21
   hooks:
     - id: ruff-check
       args: [ --fix ]
@@ -53,7 +53,7 @@ repos:
 
 # clang-format
 - repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v22.1.5
+  rev: v22.1.8
   hooks:
   - id: clang-format
     exclude: ^external/.*
