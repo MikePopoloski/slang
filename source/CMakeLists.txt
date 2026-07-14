@@ -16,6 +16,7 @@ add_custom_command(
          ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/CompilationDiags.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/ConstEvalDiags.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/DeclarationsDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/DriverDiags.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/ExpressionsDiags.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/GeneralDiags.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/LexerDiags.h
