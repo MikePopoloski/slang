@@ -155,6 +155,10 @@ target_include_directories(
 target_link_libraries(slang_slang PUBLIC Boost::headers)
 target_link_libraries(slang_slang PRIVATE ${tomlplusplus_target} ${fmt_target})
 
+if(SLANG_USE_SYSTEM_BOOST)
+  target_compile_definitions(slang_slang PUBLIC SLANG_USE_SYSTEM_BOOST)
+endif()
+
 if(SLANG_USE_THREADS)
   find_package(Threads REQUIRED)
   target_link_libraries(slang_slang PUBLIC ${CMAKE_THREAD_LIBS_INIT})
