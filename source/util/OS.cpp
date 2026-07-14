@@ -31,6 +31,7 @@
 // clang-format on
 #elif !defined(__wasi__)
 #    include <fcntl.h>
+#    include <sys/ioctl.h>
 #    include <sys/resource.h>
 #    include <sys/stat.h>
 #    include <unistd.h>
@@ -434,6 +435,39 @@ uint64_t OS::getPeakMemoryBytes() {
     if (getrusage(RUSAGE_SELF, &usage) == 0)
         return static_cast<uint64_t>(usage.ru_maxrss) * 1024;
     return 0;
+#endif
+}
+
+uint32_t OS::getTerminalWidth() {
+#if defined(_WIN32)
+    auto queryHandle = [](DWORD which) -> uint32_t {
+        HANDLE handle = GetStdHandle(which);
+        if (handle == INVALID_HANDLE_VALUE || handle == nullptr)
+            return 0;
+
+        CONSOLE_SCREEN_BUFFER_INFO csbi;
+        if (GetConsoleScreenBufferInfo(handle, &csbi))
+            return static_cast<uint32_t>(csbi.srWindow.Right - csbi.srWindow.Left + 1);
+        return 0;
+    };
+
+    if (uint32_t width = queryHandle(STD_OUTPUT_HANDLE))
+        return width;
+    return queryHandle(STD_ERROR_HANDLE);
+#elif defined(__wasi__)
+    // WASI has no concept of a terminal.
+    return 0;
+#else
+    auto queryFd = [](int fd) -> uint32_t {
+        struct winsize ws;
+        if (::ioctl(fd, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0)
+            return static_cast<uint32_t>(ws.ws_col);
+        return 0;
+    };
+
+    if (uint32_t width = queryFd(STDOUT_FILENO))
+        return width;
+    return queryFd(STDERR_FILENO);
 #endif
 }
 

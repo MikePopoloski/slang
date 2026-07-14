@@ -98,7 +98,7 @@ TEST_CASE("Test CommandLine -- basic") {
     CHECK(vals[5] == "--buz");
     CHECK(vals[6] == "--boz");
 
-    auto help = "\n" + cmdLine.getHelpText("prog - A fun program!!");
+    auto help = "\n" + cmdLine.getHelpText("prog - A fun program!!", 100);
     CHECK(help == R"(
 OVERVIEW: prog - A fun program!!
 
@@ -165,7 +165,7 @@ TEST_CASE("Test CommandLine -- help text groups") {
     cmdLine.add("--four", d, "ungrouped");
     cmdLine.add("--five", e, "also ungrouped");
 
-    auto help = "\n" + cmdLine.getHelpText("grouped program");
+    auto help = "\n" + cmdLine.getHelpText("grouped program", 100);
     CHECK(help == R"(
 OVERVIEW: grouped program
 
@@ -182,6 +182,36 @@ First Group:
 Second Group:
   --two    in second group
 )");
+}
+
+TEST_CASE("Test CommandLine -- help text description wrapping") {
+    std::optional<bool> a;
+
+    CommandLine cmdLine;
+    cmdLine.setProgramName("prog");
+    cmdLine.add("--a-very-long-option-name-here", a,
+                "one two three four five six seven eight nine ten eleven twelve thirteen fourteen");
+
+    auto help = cmdLine.getHelpText("", 100);
+
+    // The description is word-wrapped, with continuation lined up under the
+    // description column and no word split across lines.
+    std::string expected = "USAGE: prog [options]\n\nOPTIONS:\n"
+                           "  --a-very-long-option-name-here  "
+                           "one two three four five six seven eight nine ten eleven twelve\n" +
+                           std::string(34, ' ') + "thirteen fourteen\n";
+    CHECK(help == expected);
+
+    // No line may exceed the maximum column width.
+    size_t pos = 0;
+    while (pos < help.size()) {
+        size_t nl = help.find('\n', pos);
+        size_t end = (nl == std::string::npos) ? help.size() : nl;
+        CHECK(end - pos <= 100);
+        if (nl == std::string::npos)
+            break;
+        pos = nl + 1;
+    }
 }
 
 TEST_CASE("Test CommandLine -- backslash at EOL") {
@@ -609,7 +639,7 @@ TEST_CASE("Test CommandLine enum options basic") {
     CHECK(mode == TestMode::Fast);
 
     // Test help text includes valid options
-    auto help = cmdLine.getHelpText("Test program");
+    auto help = cmdLine.getHelpText("Test program", 100);
     CHECK(help.find("Valid options: 'fast', 'normal', 'slow', 'very-detailed-mode'") !=
           std::string::npos);
 }

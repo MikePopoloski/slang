@@ -532,7 +532,7 @@ void CommandLine::handleArg(std::string_view arg, Option*& expectingVal,
     }
 }
 
-std::string CommandLine::getHelpText(std::string_view overview) const {
+std::string CommandLine::getHelpText(std::string_view overview, size_t maxWidth) const {
     std::string result;
     if (!overview.empty())
         result = fmt::format("OVERVIEW: {}\n\n"sv, overview);
@@ -569,24 +569,89 @@ std::string CommandLine::getHelpText(std::string_view overview) const {
     // Add two spaces so that the description text is offset from the longest option name.
     maxLen += 2;
 
-    // Helper to append a single option's line, wrapping its (possibly multi-line)
-    // description to line up under the description column.
-    std::string indent = fmt::format("  {:{}}"sv, " "sv, maxLen);
-    auto appendOption = [&](Option* opt, const std::string& key) {
-        result += fmt::format("  {:{}}"sv, key, maxLen);
-        if (!opt->desc.empty()) {
-            std::string_view desc = opt->desc;
-            while (true) {
-                size_t index = desc.find_first_of('\n');
-                if (index == std::string_view::npos) {
-                    result += desc;
-                    break;
-                }
+    // Descriptions are word-wrapped so that no line exceeds this many columns.
+    // A width of zero means detect the current terminal width, falling back to a
+    // sensible default when the output isn't attached to a terminal.
+    size_t maxLineWidth = maxWidth;
+    if (maxLineWidth == 0) {
+        maxLineWidth = OS::getTerminalWidth();
+        if (maxLineWidth == 0)
+            maxLineWidth = 100;
+    }
 
-                result += desc.substr(0, index + 1);
+    // The description column starts after the two leading spaces and the padded key.
+    // On narrow terminals cap it so descriptions keep at least a minimum width; any
+    // option whose key is too long then has its description start on the next line.
+    static constexpr size_t minDescWidth = 20;
+    size_t descCol = maxLen + 2;
+    if (maxLineWidth > minDescWidth && descCol + minDescWidth > maxLineWidth)
+        descCol = maxLineWidth - minDescWidth;
+
+    const size_t descWidth = descCol < maxLineWidth ? maxLineWidth - descCol : minDescWidth;
+    const std::string indent(descCol, ' ');
+
+    // Appends a description, honoring explicit newlines and soft-wrapping long lines
+    // at word boundaries. A word that is too long to fit on a line by itself is
+    // hard-broken so that no line ever exceeds the maximum width.
+    auto appendDescription = [&](std::string_view desc) {
+        size_t col = 0;
+        for (size_t i = 0; i < desc.size();) {
+            char c = desc[i];
+            if (c == '\n') {
+                result += '\n';
                 result += indent;
-                desc = desc.substr(index + 1);
+                col = 0;
+                i++;
             }
+            else if (c == ' ') {
+                // Measure the next word to decide whether it still fits on this line.
+                size_t j = i + 1;
+                while (j < desc.size() && desc[j] != ' ' && desc[j] != '\n')
+                    j++;
+
+                size_t wordLen = j - (i + 1);
+                if (col != 0 && col + 1 + wordLen > descWidth) {
+                    // Break here; the wrapped word starts the next line, so drop the space.
+                    result += '\n';
+                    result += indent;
+                    col = 0;
+                    i++;
+                }
+                else {
+                    result += ' ';
+                    col++;
+                    i++;
+                }
+            }
+            else {
+                // Hard-break a word that is too long to fit on a line by itself.
+                if (col >= descWidth) {
+                    result += '\n';
+                    result += indent;
+                    col = 0;
+                }
+                result += c;
+                col++;
+                i++;
+            }
+        }
+    };
+
+    auto appendOption = [&](Option* opt, const std::string& key) {
+        result += "  ";
+        result += key;
+        if (!opt->desc.empty()) {
+            // Pad to the description column, or wrap to the next line if the key is
+            // too long to leave room for the description.
+            size_t keyEnd = 2 + key.size();
+            if (keyEnd + 1 > descCol) {
+                result += '\n';
+                result += indent;
+            }
+            else {
+                result.append(descCol - keyEnd, ' ');
+            }
+            appendDescription(opt->desc);
         }
         result += "\n";
     };

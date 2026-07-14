@@ -84,6 +84,11 @@ public:
     /// or 0 if the information is not available on this platform.
     static uint64_t getPeakMemoryBytes();
 
+    /// Returns the width in columns of the terminal attached to the standard
+    /// output (or standard error) stream, or 0 if it can't be determined, for
+    /// example when the output is redirected to a file or pipe.
+    static uint32_t getTerminalWidth();
+
 private:
     OS() = default;
 

@@ -396,7 +396,10 @@ public:
 
     /// Gets a string representing program help text, based on registered flags.
     /// @a overview text is a human friendly description of what the program does.
-    std::string getHelpText(std::string_view overview) const;
+    /// Option descriptions are word-wrapped to @a maxWidth columns; if @a maxWidth
+    /// is 0 the current terminal width is queried, falling back to a default when
+    /// it can't be determined.
+    std::string getHelpText(std::string_view overview, size_t maxWidth = 0) const;
 
     /// Gets a list of help options based on registered flags.
     std::vector<std::pair<std::string, std::string>> getHelpOptions() const;
