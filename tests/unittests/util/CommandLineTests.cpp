@@ -142,6 +142,48 @@ OPTIONS:
     CHECK(cmdLine.getHelpOptions() == expected);
 }
 
+TEST_CASE("Test CommandLine -- help text groups") {
+    std::optional<bool> a, b, c, d, e;
+
+    CommandLine cmdLine;
+    cmdLine.setProgramName("prog");
+
+    // Start with a named group so that the default group isn't the first one seen.
+    cmdLine.setGroup("First Group");
+    cmdLine.add("--one", a, "in first group");
+
+    cmdLine.setGroup("Second Group");
+    cmdLine.add("--two", b, "in second group");
+
+    // Registering back into the first group should cluster with --one.
+    cmdLine.setGroup("First Group");
+    cmdLine.add("--three", c, "also first group");
+
+    // Setting an empty group name reverts to the default section, which is always
+    // displayed at the top of the list, before any named groups.
+    cmdLine.setGroup("");
+    cmdLine.add("--four", d, "ungrouped");
+    cmdLine.add("--five", e, "also ungrouped");
+
+    auto help = "\n" + cmdLine.getHelpText("grouped program");
+    CHECK(help == R"(
+OVERVIEW: grouped program
+
+USAGE: prog [options]
+
+OPTIONS:
+  --four   ungrouped
+  --five   also ungrouped
+
+First Group:
+  --one    in first group
+  --three  also first group
+
+Second Group:
+  --two    in second group
+)");
+}
+
 TEST_CASE("Test CommandLine -- backslash at EOL") {
     std::optional<bool> a, b, c;
     CommandLine cmdLine;

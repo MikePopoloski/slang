@@ -95,6 +95,10 @@ void CommandLine::add(std::string_view name, OptionBoolCallback cb, std::string_
     addInternal(name, std::move(cb), desc, {}, flags);
 }
 
+void CommandLine::setGroup(std::string_view name) {
+    currentGroup = name;
+}
+
 void CommandLine::addInternal(std::string_view name, OptionStorage storage, std::string_view desc,
                               std::string_view valueName, bitmask<CommandLineFlags> flags) {
     if (name.empty())
@@ -104,6 +108,7 @@ void CommandLine::addInternal(std::string_view name, OptionStorage storage, std:
     option->desc = desc;
     option->valueName = valueName;
     option->allArgNames = name;
+    option->group = currentGroup;
     option->storage = std::move(storage); // NOLINT
     option->flags = flags;
 
@@ -538,10 +543,12 @@ std::string CommandLine::getHelpText(std::string_view overview) const {
 
     result += "\n\nOPTIONS:\n"sv;
 
-    // For each option group that takes a value, tack on the value name.
-    // Then compute the maximum length of any particular group's key.
+    // For each option, tack on the value name if it takes one, and track the
+    // maximum key length for alignment. Simultaneously bucket the options into
+    // their display groups, preserving the order in which each group was first seen.
     size_t maxLen = 0;
-    std::vector<std::pair<Option*, std::string>> lines;
+    std::vector<std::string_view> groupOrder;
+    std::map<std::string_view, std::vector<std::pair<Option*, std::string>>> groups;
     for (auto& opt : orderedOptions) {
         std::string key = opt->allArgNames;
         std::string& val = opt->valueName;
@@ -552,15 +559,20 @@ std::string CommandLine::getHelpText(std::string_view overview) const {
         }
 
         maxLen = std::max(maxLen, key.length());
-        lines.emplace_back(opt.get(), std::move(key));
+
+        auto [it, inserted] = groups.try_emplace(opt->group);
+        if (inserted)
+            groupOrder.push_back(it->first);
+        it->second.emplace_back(opt.get(), std::move(key));
     }
 
     // Add two spaces so that the description text is offset from the longest option name.
     maxLen += 2;
 
-    // Finally append all groups to the output.
+    // Helper to append a single option's line, wrapping its (possibly multi-line)
+    // description to line up under the description column.
     std::string indent = fmt::format("  {:{}}"sv, " "sv, maxLen);
-    for (auto& [opt, key] : lines) {
+    auto appendOption = [&](Option* opt, const std::string& key) {
         result += fmt::format("  {:{}}"sv, key, maxLen);
         if (!opt->desc.empty()) {
             std::string_view desc = opt->desc;
@@ -577,6 +589,23 @@ std::string CommandLine::getHelpText(std::string_view overview) const {
             }
         }
         result += "\n";
+    };
+
+    // The default (unnamed) group is always printed first, without a header, so
+    // that ungrouped options appear at the top of the list. The named groups then
+    // follow in the order they were first seen.
+    if (auto it = groups.find(std::string_view{}); it != groups.end()) {
+        for (auto& [opt, key] : it->second)
+            appendOption(opt, key);
+    }
+
+    for (auto groupName : groupOrder) {
+        if (groupName.empty())
+            continue;
+
+        result += fmt::format("\n{}:\n"sv, groupName);
+        for (auto& [opt, key] : groups.at(groupName))
+            appendOption(opt, key);
     }
 
     return result;

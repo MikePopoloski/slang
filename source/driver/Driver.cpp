@@ -52,104 +52,6 @@ void Driver::addStandardArgs() {
                 "The version of the Verilog or SystemVerilog language to use",
                 "(1364-2005 | 1800-2017 | 1800-2023 | latest)");
 
-    // Include paths
-    cmdLine.add(
-        "-I,--include-directory,+incdir",
-        [this](std::string_view value) {
-            if (auto ec = sourceManager.addUserDirectories(value)) {
-                printWarning(fmt::format("include directory '{}': {}", value, ec.message()));
-            }
-            return "";
-        },
-        "Additional include search paths", "<dir-pattern>[,...]", CommandLineFlags::CommaList);
-
-    cmdLine.add(
-        "--isystem",
-        [this](std::string_view value) {
-            if (auto ec = sourceManager.addSystemDirectories(value)) {
-                printWarning(fmt::format("system include directory '{}': {}", value, ec.message()));
-            }
-            return "";
-        },
-        "Additional system include search paths", "<dir-pattern>[,...]",
-        CommandLineFlags::CommaList);
-
-    cmdLine.add("--disable-local-includes", options.disableLocalIncludes,
-                "Disables \"local\" include path lookup, where include directives search "
-                "relative to the file containing the directive first");
-    cmdLine.add("--incdir-first", options.incDirFirst,
-                "Search user-specified include directories (+incdir/-I) before the local "
-                "directory of the file containing the include directive. This matches the "
-                "behavior of VCS and similar simulators");
-
-    // Preprocessor
-    cmdLine.add(
-        "-D,--define-macro,+define",
-        [this](std::string_view value) {
-            options.defines.emplace_back(value);
-            if (!currentCommandFile.empty())
-                commandFileMetadata[currentCommandFile].defines.emplace_back(value);
-            return "";
-        },
-        "Define <macro> to <value> (or 1 if <value> ommitted) in all source files",
-        "<macro>=<value>");
-    cmdLine.add("-U,--undefine-macro", options.undefines,
-                "Undefine macro name at the start of all source files", "<macro>",
-                CommandLineFlags::CommaList);
-    cmdLine.add("--max-include-depth", options.maxIncludeDepth,
-                "Maximum depth of nested include files allowed", "<depth>");
-    cmdLine.add("--libraries-inherit-macros", options.librariesInheritMacros,
-                "If true, library files will inherit macro definitions from the primary source "
-                "files. --single-unit must also be passed when this option is used.");
-    cmdLine.add("--enable-legacy-protect", options.enableLegacyProtect,
-                "If true, the preprocessor will support legacy protected envelope directives, "
-                "for compatibility with old Verilog tools");
-    cmdLine.add("--translate-off-format", options.translateOffOptions,
-                "Set a format for comment directives that mark a region of disabled "
-                "source text. The format is a common keyword, a start word, and an "
-                "end word, each separated by commas. For example, "
-                "'pragma,translate_off,translate_on'",
-                "<common>,<start>,<end>");
-    cmdLine.add(
-        "--map-keyword-version",
-        [this](std::string_view value) { return parseMapKeywordVersion(value); },
-        "Indicates that any files used during parsing which match the given patterns should "
-        "be parsed using the provided language keywords version, as if they contained a "
-        "`begin_keywords directive. For example '1364-2005+*.v,*.vh'",
-        "<keyword-version>+<file-pattern>[,...]. ");
-    cmdLine.add("--allow-macro-trailing-space", options.allowMacroTrailingSpace,
-                "If true, the preprocessor will allow trailing whitespaces after the continuation "
-                "character in a macro definition");
-    cmdLine.add("--show-parsed-files", options.showParsedFiles,
-                "Print the name and kind of each file as it is parsed.");
-    cmdLine.add("--allow-missing-protected-scope-end", options.allowMissingProtectedScopeEnd,
-                "If true, the preprocessor will assume that a missing end of scope keyword for a "
-                "module/program/package/class inside an include file with protected code has the "
-                "end of scope keyword inside the protected code. This only works if the include "
-                "file with protected code does not include any other files.");
-
-    // Legacy vendor commands support
-    cmdLine.add(
-        "--cmd-ignore", [this](std::string_view value) { return cmdLine.addIgnoreCommand(value); },
-        "Define rule to ignore vendor command <vendor_cmd> with its following <N> parameters.\n"
-        "A command of the form +xyz will also match any vendor command of the form +xyz+abc,\n"
-        "as +abc is the command's argument, and doesn't need to be matched.",
-        "<vendor_cmd>,<N>");
-    cmdLine.add(
-        "--cmd-rename", [this](std::string_view value) { return cmdLine.addRenameCommand(value); },
-        "Define rule to rename vendor command <vendor_cmd> into existing <slang_cmd>",
-        "<vendor_cmd>,<slang_cmd>");
-    cmdLine.add("--ignore-directive", options.ignoreDirectives,
-                "Ignore preprocessor directive and all its arguments until EOL", "<directive>",
-                CommandLineFlags::CommaList);
-
-    // Parsing
-    cmdLine.add("--max-parse-depth", options.maxParseDepth,
-                "Maximum depth of nested language constructs allowed", "<depth>");
-    cmdLine.add("--max-lexer-errors", options.maxLexerErrors,
-                "Maximum number of errors that can occur during lexing before the rest of the file "
-                "is skipped",
-                "<count>");
 #if defined(SLANG_USE_THREADS)
     cmdLine.add("-j,--threads", options.numThreads,
                 "The number of threads to use to parallelize parsing", "<count>");
@@ -157,216 +59,9 @@ void Driver::addStandardArgs() {
     options.numThreads = 1;
 #endif
 
-    cmdLine.add(
-        "-C",
-        [this](std::string_view value) {
-            processCommandFiles(value, /* makeRelative */ true, /* separateUnit */ true);
-            return "";
-        },
-        "One or more files containing independent compilation unit listings. "
-        "The files accept a subset of options that pertain specifically to parsing "
-        "that unit and optionally including it in a library.",
-        "<file-pattern>[,...]", CommandLineFlags::CommaList);
-
-    // Compilation
-    cmdLine.add("--max-hierarchy-depth", options.maxInstanceDepth,
-                "Maximum depth of the design hierarchy", "<depth>");
-    cmdLine.add("--max-generate-steps", options.maxGenerateSteps,
-                "Maximum number of steps that can occur during generate block "
-                "evaluation before giving up",
-                "<steps>");
-    cmdLine.add("--max-constexpr-depth", options.maxConstexprDepth,
-                "Maximum depth of a constant evaluation call stack", "<depth>");
-    cmdLine.add("--max-constexpr-steps", options.maxConstexprSteps,
-                "Maximum number of steps that can occur during constant "
-                "evaluation before giving up",
-                "<steps>");
-    cmdLine.add("--max-constant-size", options.maxConstantSize,
-                "Maximum number of bits a single constant value can occupy during "
-                "constant evaluation before giving up",
-                "<bits>");
-    cmdLine.add("--constexpr-backtrace-limit", options.maxConstexprBacktrace,
-                "Maximum number of frames to show when printing a constant evaluation "
-                "backtrace; the rest will be abbreviated",
-                "<limit>");
-    cmdLine.add("--max-instance-array", options.maxInstanceArray,
-                "Maximum number of instances allowed in a single instance array", "<limit>");
-    cmdLine.add("--max-enum-values", options.maxEnumValues,
-                "Maximum number of members allowed in a single enum declaration", "<limit>");
-    cmdLine.add("--max-udp-coverage-notes", options.maxUDPCoverageNotes,
-                "Maximum number of UDP coverage notes that will be generated for a single "
-                "warning about missing edge transitions",
-                "<limit>");
-    cmdLine.addEnum<CompatMode, CompatMode_traits>(
-        "--compat", options.compat, "Attempt to increase compatibility with the specified tool",
-        "<mode>");
-    cmdLine.addEnum<MinTypMax, MinTypMax_traits>(
-        "-T,--timing", options.minTypMax,
-        "Select which value to consider in min:typ:max expressions", "min|typ|max");
-    cmdLine.add("--timescale", options.timeScale,
-                "Default time scale to use for design elements that don't specify one explicitly",
-                "<base>/<precision>");
-
-    auto addCompFlag = [&](CompilationFlags flag, std::string_view name, std::string_view desc) {
-        auto [it, inserted] = options.compilationFlags.emplace(flag, std::nullopt);
-        SLANG_ASSERT(inserted);
-        cmdLine.add(name, it->second, desc);
-    };
-
-    addCompFlag(CompilationFlags::AllowUseBeforeDeclare, "--allow-use-before-declare",
-                "Don't issue an error for use of names before their declarations");
-    addCompFlag(CompilationFlags::IgnoreUnknownModules, "--ignore-unknown-modules",
-                "Don't issue an error for instantiations of unknown modules, "
-                "interface, and programs");
-    addCompFlag(CompilationFlags::RelaxEnumConversions, "--relax-enum-conversions",
-                "Allow all integral types to convert implicitly to enum types");
-    addCompFlag(CompilationFlags::RelaxStringConversions, "--relax-string-conversions",
-                "Allow string types to convert implicitly to integral types");
-    addCompFlag(CompilationFlags::AllowHierarchicalConst, "--allow-hierarchical-const",
-                "Allow hierarchical references in constant expressions");
-    addCompFlag(CompilationFlags::AllowTopLevelIfacePorts, "--allow-toplevel-iface-ports",
-                "Allow top-level modules to have interface ports");
-    addCompFlag(CompilationFlags::AllowRecursiveImplicitCall, "--allow-recursive-implicit-call",
-                "Allow implicit call expressions to be recursive function calls");
-    addCompFlag(CompilationFlags::AllowBareValParamAssignment, "--allow-bare-value-param-assigment",
-                "Allow module parameter assignments to elide the parentheses");
-    addCompFlag(CompilationFlags::AllowSelfDeterminedStreamConcat,
-                "--allow-self-determined-stream-concat",
-                "Allow self-determined streaming concatenation expressions");
-    addCompFlag(CompilationFlags::AllowMergingAnsiPorts, "--allow-merging-ansi-ports",
-                "Allow merging ANSI port declarations with nets and variables declared in the "
-                "instance body");
-    addCompFlag(CompilationFlags::LintMode, "--lint-only",
-                "Only perform linting of code, don't try to elaborate a full hierarchy");
-    addCompFlag(CompilationFlags::DisableInstanceCaching, "--disable-instance-caching",
-                "Disable the use of instance caching, which normally allows skipping duplicate "
-                "instance bodies to save time when elaborating");
-    addCompFlag(CompilationFlags::DisallowRefsToUnknownInstances,
-                "--disallow-refs-to-unknown-instances",
-                "When using --ignore-unknown-modules, explicitly disallow references to ignored "
-                "module instances by issuing an error");
-    addCompFlag(CompilationFlags::AllowUnnamedGenerate, "--allow-genblk-reference",
-                "Allow references to unnamed generate blocks via their external names "
-                "(e.g. genblk1)");
-    addCompFlag(CompilationFlags::AllowVirtualIfaceWithOverride,
-                "--allow-virtual-iface-with-override",
-                "Allow interface instances that are bind/defparam targets to be assigned "
-                "to virtual interfaces");
-    addCompFlag(CompilationFlags::AllowArrayConcatAssignPattern,
-                "--allow-array-concat-assign-pattern",
-                "Allow assignment pattern expressions to be used in unpacked array "
-                "concatenations. The LRM states that these are not assignment-like "
-                "contexts but some tools allow it anyway.");
-    addCompFlag(CompilationFlags::AllowLibModuleRedefinition, "--allow-lib-module-redef",
-                "Allow multiple definitions of the same module, interface, program, or "
-                "primitive at the root scope within the same library when the conflicting "
-                "definition comes from a library file (-v / --libfile); the first definition "
-                "is kept and subsequent library-file redefinitions are silently discarded");
-    addCompFlag(CompilationFlags::AllowCrossAutoBinMax, "--allow-cross-auto-bin-max",
-                "Allow the legacy SystemVerilog 3.1a cross_auto_bin_max coverage option to "
-                "be set on covergroups and crosses. The option is accepted and ignored.");
-    addCompFlag(CompilationFlags::InferInputPortsAsVars, "--infer-input-ports-as-vars",
-                "Infer ANSI input ports that have an explicit data type as variables instead "
-                "of nets. By default such ports are treated as nets, following the LRM.");
-
-    cmdLine.add("--top", options.topModules,
-                "One or more top-level modules to instantiate "
-                "(instead of figuring it out automatically)",
-                "<name>", CommandLineFlags::CommaList);
-    cmdLine.add("-G", options.paramOverrides,
-                "One or more parameter overrides to apply when instantiating top-level modules",
-                "<name>=<value>");
-    cmdLine.add("-L", options.libraryOrder,
-                "A list of library names that controls the priority order for module lookup",
-                "<library>", CommandLineFlags::CommaList);
-    cmdLine.add("--defaultLibName", options.defaultLibName, "Sets the name of the default library",
-                "<name>");
-    cmdLine.add(
-        "--define-system-task",
-        [this](std::string_view arg) {
-            auto result = UserDefinedSubroutine::create(arg, sourceManager);
-            if (!result)
-                return result.error();
-
-            userDefinedSubroutines.emplace_back(std::move(*result));
-            return ""s;
-        },
-        "Define a custom system task or function. The subroutine name must start with '$'. "
-        "Optionally include a port list and, for functions, a return type using standard "
-        "SystemVerilog syntax (e.g. 'function int $my_func(int a, string b)'). "
-        "If neither a port list nor a return type is specified the subroutine accepts "
-        "any number of arguments and is treated as a task.",
-        "<prototype>");
-
-    // Diagnostics control
-    cmdLine.add("-W", options.warningOptions, "Control the specified warning", "<warning>");
-    cmdLine.add("--waiver-file", options.waiverFiles,
-                "Path to TOML file containing diagnostic waiver rules (repeatable)", "<file>",
-                CommandLineFlags::FilePath);
-    cmdLine.add(
-        "--color-diagnostics",
-        [this](bool value) {
-            setTerminalColorsEnabled(value);
-            return "";
-        },
-        "Always print diagnostics in color. "
-        "If this option is unset, colors will be enabled if a color-capable "
-        "terminal is detected.");
-    cmdLine.add("--diag-column", options.diagColumn, "Show column numbers in diagnostic output");
-    cmdLine.addEnum<ColumnUnit, ColumnUnit_traits>("--diag-column-unit", options.diagColumnUnit,
-                                                   "Unit for column numbers in diagnostics",
-                                                   "<unit>");
-    cmdLine.add("--diag-location", options.diagLocation,
-                "Show location information in diagnostic output");
-    cmdLine.add("--diag-source", options.diagSourceLine,
-                "Show source line or caret info in diagnostic output");
-    cmdLine.add("--diag-option", options.diagOptionName, "Show option names in diagnostic output");
-    cmdLine.add("--diag-include-stack", options.diagIncludeStack,
-                "Show include stacks in diagnostic output");
-    cmdLine.add("--diag-macro-expansion", options.diagMacroExpansion,
-                "Show macro expansion backtraces in diagnostic output");
-    cmdLine.add("--diag-abs-paths", options.diagAbsPaths,
-                "Display absolute paths to files in diagnostic output");
-    cmdLine.addEnum<ShowHierarchyPathOption, ShowHierarchyPathOption_traits>(
-        "--diag-hierarchy", options.diagHierarchy, "Show hierarchy locations in diagnostic output",
-        "always|never|auto");
-    cmdLine.add("--print-unused-waivers", options.printUnusedWaivers,
-                "Print detailed information about unused diagnostic waivers");
-    cmdLine.add("--diag-json", options.diagJson,
-                "Dump all diagnostics in JSON format to the specified file, or '-' for stdout",
-                "<file>", CommandLineFlags::FilePath);
-    cmdLine.add("--error-limit", options.errorLimit,
-                "Limit on the number of errors that will be printed. Setting this to zero will "
-                "disable the limit.",
-                "<limit>");
-
-    cmdLine.add(
-        "--suppress-warnings",
-        [this](std::string_view value) {
-            if (auto ec = diagEngine.addIgnorePaths(value))
-                printWarning(fmt::format("--suppress-warnings path '{}': {}", value, ec.message()));
-            return "";
-        },
-        "One or more paths in which to suppress warnings", "<file-pattern>[,...]",
-        CommandLineFlags::CommaList);
-
-    cmdLine.add(
-        "--suppress-macro-warnings",
-        [this](std::string_view value) {
-            if (auto ec = diagEngine.addIgnoreMacroPaths(value)) {
-                printWarning(
-                    fmt::format("--suppress-macro-warnings path '{}': {}", value, ec.message()));
-            }
-            return "";
-        },
-        "One or more paths in which to suppress warnings that "
-        "originate in macro expansions",
-        "<file-pattern>[,...]", CommandLineFlags::CommaList);
-
-    // File lists
+    cmdLine.setGroup("Input Files");
     cmdLine.add("--single-unit", options.singleUnit,
                 "Treat all input files as a single compilation unit");
-
     cmdLine.add(
         "-v,--libfile",
         [this](std::string_view value) {
@@ -458,7 +153,311 @@ void Driver::addStandardArgs() {
         "Paths in the file are considered relative to the file itself.",
         "<file-pattern>[,...]", CommandLineFlags::CommaList);
 
-    // Dependency files
+    cmdLine.add(
+        "-C",
+        [this](std::string_view value) {
+            processCommandFiles(value, /* makeRelative */ true, /* separateUnit */ true);
+            return "";
+        },
+        "One or more files containing independent compilation unit listings. "
+        "The files accept a subset of options that pertain specifically to parsing "
+        "that unit and optionally including it in a library.",
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
+
+    cmdLine.setGroup("Actions");
+    cmdLine.add("--show-parsed-files", options.showParsedFiles,
+                "Print the name and kind of each file as it is parsed.");
+
+    cmdLine.setGroup("Include Paths and Macros");
+    cmdLine.add(
+        "-I,--include-directory,+incdir",
+        [this](std::string_view value) {
+            if (auto ec = sourceManager.addUserDirectories(value)) {
+                printWarning(fmt::format("include directory '{}': {}", value, ec.message()));
+            }
+            return "";
+        },
+        "Additional include search paths", "<dir-pattern>[,...]", CommandLineFlags::CommaList);
+
+    cmdLine.add(
+        "--isystem",
+        [this](std::string_view value) {
+            if (auto ec = sourceManager.addSystemDirectories(value)) {
+                printWarning(fmt::format("system include directory '{}': {}", value, ec.message()));
+            }
+            return "";
+        },
+        "Additional system include search paths", "<dir-pattern>[,...]",
+        CommandLineFlags::CommaList);
+
+    cmdLine.add("--disable-local-includes", options.disableLocalIncludes,
+                "Disables \"local\" include path lookup, where include directives search "
+                "relative to the file containing the directive first");
+    cmdLine.add("--incdir-first", options.incDirFirst,
+                "Search user-specified include directories (+incdir/-I) before the local "
+                "directory of the file containing the include directive. This matches the "
+                "behavior of VCS and similar simulators");
+
+    cmdLine.add(
+        "-D,--define-macro,+define",
+        [this](std::string_view value) {
+            options.defines.emplace_back(value);
+            if (!currentCommandFile.empty())
+                commandFileMetadata[currentCommandFile].defines.emplace_back(value);
+            return "";
+        },
+        "Define <macro> to <value> (or 1 if <value> ommitted) in all source files",
+        "<macro>=<value>");
+    cmdLine.add("-U,--undefine-macro", options.undefines,
+                "Undefine macro name at the start of all source files", "<macro>",
+                CommandLineFlags::CommaList);
+
+    cmdLine.setGroup("Preprocessor");
+    cmdLine.add("--max-include-depth", options.maxIncludeDepth,
+                "Maximum depth of nested include files allowed", "<depth>");
+    cmdLine.add("--libraries-inherit-macros", options.librariesInheritMacros,
+                "If true, library files will inherit macro definitions from the primary source "
+                "files. --single-unit must also be passed when this option is used.");
+    cmdLine.add("--enable-legacy-protect", options.enableLegacyProtect,
+                "If true, the preprocessor will support legacy protected envelope directives, "
+                "for compatibility with old Verilog tools");
+    cmdLine.add("--translate-off-format", options.translateOffOptions,
+                "Set a format for comment directives that mark a region of disabled "
+                "source text. The format is a common keyword, a start word, and an "
+                "end word, each separated by commas. For example, "
+                "'pragma,translate_off,translate_on'",
+                "<common>,<start>,<end>");
+    cmdLine.add(
+        "--map-keyword-version",
+        [this](std::string_view value) { return parseMapKeywordVersion(value); },
+        "Indicates that any files used during parsing which match the given patterns should "
+        "be parsed using the provided language keywords version, as if they contained a "
+        "`begin_keywords directive. For example '1364-2005+*.v,*.vh'",
+        "<keyword-version>+<file-pattern>[,...]. ");
+    cmdLine.add("--allow-macro-trailing-space", options.allowMacroTrailingSpace,
+                "If true, the preprocessor will allow trailing whitespaces after the continuation "
+                "character in a macro definition");
+
+    cmdLine.add("--allow-missing-protected-scope-end", options.allowMissingProtectedScopeEnd,
+                "If true, the preprocessor will assume that a missing end of scope keyword for a "
+                "module/program/package/class inside an include file with protected code has the "
+                "end of scope keyword inside the protected code. This only works if the include "
+                "file with protected code does not include any other files.");
+
+    cmdLine.setGroup("Parsing");
+    cmdLine.add("--max-parse-depth", options.maxParseDepth,
+                "Maximum depth of nested language constructs allowed", "<depth>");
+    cmdLine.add("--max-lexer-errors", options.maxLexerErrors,
+                "Maximum number of errors that can occur during lexing before the rest of the file "
+                "is skipped",
+                "<count>");
+
+    cmdLine.setGroup("Compilation");
+    cmdLine.add("--top", options.topModules,
+                "One or more top-level modules to instantiate "
+                "(instead of figuring it out automatically)",
+                "<name>", CommandLineFlags::CommaList);
+    cmdLine.add("-G", options.paramOverrides,
+                "One or more parameter overrides to apply when instantiating top-level modules",
+                "<name>=<value>");
+    cmdLine.add("-L", options.libraryOrder,
+                "A list of library names that controls the priority order for module lookup",
+                "<library>", CommandLineFlags::CommaList);
+    cmdLine.add("--defaultLibName", options.defaultLibName, "Sets the name of the default library",
+                "<name>");
+    cmdLine.add(
+        "--define-system-task",
+        [this](std::string_view arg) {
+            auto result = UserDefinedSubroutine::create(arg, sourceManager);
+            if (!result)
+                return result.error();
+
+            userDefinedSubroutines.emplace_back(std::move(*result));
+            return ""s;
+        },
+        "Define a custom system task or function. The subroutine name must start with '$'. "
+        "Optionally include a port list and, for functions, a return type using standard "
+        "SystemVerilog syntax (e.g. 'function int $my_func(int a, string b)'). "
+        "If neither a port list nor a return type is specified the subroutine accepts "
+        "any number of arguments and is treated as a task.",
+        "<prototype>");
+
+    cmdLine.add("--max-hierarchy-depth", options.maxInstanceDepth,
+                "Maximum depth of the design hierarchy", "<depth>");
+    cmdLine.add("--max-generate-steps", options.maxGenerateSteps,
+                "Maximum number of steps that can occur during generate block "
+                "evaluation before giving up",
+                "<steps>");
+    cmdLine.add("--max-constexpr-depth", options.maxConstexprDepth,
+                "Maximum depth of a constant evaluation call stack", "<depth>");
+    cmdLine.add("--max-constexpr-steps", options.maxConstexprSteps,
+                "Maximum number of steps that can occur during constant "
+                "evaluation before giving up",
+                "<steps>");
+    cmdLine.add("--max-constant-size", options.maxConstantSize,
+                "Maximum number of bits a single constant value can occupy during "
+                "constant evaluation before giving up",
+                "<bits>");
+    cmdLine.add("--constexpr-backtrace-limit", options.maxConstexprBacktrace,
+                "Maximum number of frames to show when printing a constant evaluation "
+                "backtrace; the rest will be abbreviated",
+                "<limit>");
+    cmdLine.add("--max-instance-array", options.maxInstanceArray,
+                "Maximum number of instances allowed in a single instance array", "<limit>");
+    cmdLine.add("--max-enum-values", options.maxEnumValues,
+                "Maximum number of members allowed in a single enum declaration", "<limit>");
+    cmdLine.add("--max-udp-coverage-notes", options.maxUDPCoverageNotes,
+                "Maximum number of UDP coverage notes that will be generated for a single "
+                "warning about missing edge transitions",
+                "<limit>");
+    cmdLine.addEnum<MinTypMax, MinTypMax_traits>(
+        "-T,--timing", options.minTypMax,
+        "Select which value to consider in min:typ:max expressions", "min|typ|max");
+    cmdLine.add("--timescale", options.timeScale,
+                "Default time scale to use for design elements that don't specify one explicitly",
+                "<base>/<precision>");
+
+    cmdLine.setGroup("Compatibility");
+    cmdLine.addEnum<CompatMode, CompatMode_traits>(
+        "--compat", options.compat, "Attempt to increase compatibility with the specified tool",
+        "<mode>");
+
+    auto addCompFlag = [&](CompilationFlags flag, std::string_view name, std::string_view desc) {
+        auto [it, inserted] = options.compilationFlags.emplace(flag, std::nullopt);
+        SLANG_ASSERT(inserted);
+        cmdLine.add(name, it->second, desc);
+    };
+
+    addCompFlag(CompilationFlags::AllowUseBeforeDeclare, "--allow-use-before-declare",
+                "Don't issue an error for use of names before their declarations");
+    addCompFlag(CompilationFlags::RelaxEnumConversions, "--relax-enum-conversions",
+                "Allow all integral types to convert implicitly to enum types");
+    addCompFlag(CompilationFlags::RelaxStringConversions, "--relax-string-conversions",
+                "Allow string types to convert implicitly to integral types");
+    addCompFlag(CompilationFlags::AllowHierarchicalConst, "--allow-hierarchical-const",
+                "Allow hierarchical references in constant expressions");
+    addCompFlag(CompilationFlags::AllowTopLevelIfacePorts, "--allow-toplevel-iface-ports",
+                "Allow top-level modules to have interface ports");
+    addCompFlag(CompilationFlags::AllowRecursiveImplicitCall, "--allow-recursive-implicit-call",
+                "Allow implicit call expressions to be recursive function calls");
+    addCompFlag(CompilationFlags::AllowBareValParamAssignment, "--allow-bare-value-param-assigment",
+                "Allow module parameter assignments to elide the parentheses");
+    addCompFlag(CompilationFlags::AllowSelfDeterminedStreamConcat,
+                "--allow-self-determined-stream-concat",
+                "Allow self-determined streaming concatenation expressions");
+    addCompFlag(CompilationFlags::AllowMergingAnsiPorts, "--allow-merging-ansi-ports",
+                "Allow merging ANSI port declarations with nets and variables declared in the "
+                "instance body");
+    addCompFlag(CompilationFlags::AllowUnnamedGenerate, "--allow-genblk-reference",
+                "Allow references to unnamed generate blocks via their external names "
+                "(e.g. genblk1)");
+    addCompFlag(CompilationFlags::AllowVirtualIfaceWithOverride,
+                "--allow-virtual-iface-with-override",
+                "Allow interface instances that are bind/defparam targets to be assigned "
+                "to virtual interfaces");
+    addCompFlag(CompilationFlags::AllowArrayConcatAssignPattern,
+                "--allow-array-concat-assign-pattern",
+                "Allow assignment pattern expressions to be used in unpacked array "
+                "concatenations. The LRM states that these are not assignment-like "
+                "contexts but some tools allow it anyway.");
+    addCompFlag(CompilationFlags::AllowLibModuleRedefinition, "--allow-lib-module-redef",
+                "Allow multiple definitions of the same module, interface, program, or "
+                "primitive at the root scope within the same library when the conflicting "
+                "definition comes from a library file (-v / --libfile); the first definition "
+                "is kept and subsequent library-file redefinitions are silently discarded");
+    addCompFlag(CompilationFlags::AllowCrossAutoBinMax, "--allow-cross-auto-bin-max",
+                "Allow the legacy SystemVerilog 3.1a cross_auto_bin_max coverage option to "
+                "be set on covergroups and crosses. The option is accepted and ignored.");
+    addCompFlag(CompilationFlags::InferInputPortsAsVars, "--infer-input-ports-as-vars",
+                "Infer ANSI input ports that have an explicit data type as variables instead "
+                "of nets. By default such ports are treated as nets, following the LRM.");
+
+    cmdLine.setGroup("Actions");
+    addCompFlag(CompilationFlags::LintMode, "--lint-only",
+                "Only perform linting of code, don't try to elaborate a full hierarchy");
+
+    cmdLine.setGroup("Compilation");
+    addCompFlag(CompilationFlags::DisableInstanceCaching, "--disable-instance-caching",
+                "Disable the use of instance caching, which normally allows skipping duplicate "
+                "instance bodies to save time when elaborating");
+
+    cmdLine.setGroup("Diagnostic Control");
+    addCompFlag(CompilationFlags::IgnoreUnknownModules, "--ignore-unknown-modules",
+                "Don't issue an error for instantiations of unknown modules, "
+                "interface, and programs");
+    addCompFlag(CompilationFlags::DisallowRefsToUnknownInstances,
+                "--disallow-refs-to-unknown-instances",
+                "When using --ignore-unknown-modules, explicitly disallow references to ignored "
+                "module instances by issuing an error");
+
+    cmdLine.add(
+        "--color-diagnostics",
+        [this](bool value) {
+            setTerminalColorsEnabled(value);
+            return "";
+        },
+        "Always print diagnostics in color. "
+        "If this option is unset, colors will be enabled if a color-capable "
+        "terminal is detected.");
+    cmdLine.add("--diag-column", options.diagColumn, "Show column numbers in diagnostic output");
+    cmdLine.addEnum<ColumnUnit, ColumnUnit_traits>("--diag-column-unit", options.diagColumnUnit,
+                                                   "Unit for column numbers in diagnostics",
+                                                   "<unit>");
+    cmdLine.add("--diag-location", options.diagLocation,
+                "Show location information in diagnostic output");
+    cmdLine.add("--diag-source", options.diagSourceLine,
+                "Show source line or caret info in diagnostic output");
+    cmdLine.add("--diag-option", options.diagOptionName, "Show option names in diagnostic output");
+    cmdLine.add("--diag-include-stack", options.diagIncludeStack,
+                "Show include stacks in diagnostic output");
+    cmdLine.add("--diag-macro-expansion", options.diagMacroExpansion,
+                "Show macro expansion backtraces in diagnostic output");
+    cmdLine.add("--diag-abs-paths", options.diagAbsPaths,
+                "Display absolute paths to files in diagnostic output");
+    cmdLine.addEnum<ShowHierarchyPathOption, ShowHierarchyPathOption_traits>(
+        "--diag-hierarchy", options.diagHierarchy, "Show hierarchy locations in diagnostic output",
+        "always|never|auto");
+
+    cmdLine.add("--diag-json", options.diagJson,
+                "Dump all diagnostics in JSON format to the specified file, or '-' for stdout",
+                "<file>", CommandLineFlags::FilePath);
+    cmdLine.add("--error-limit", options.errorLimit,
+                "Limit on the number of errors that will be printed. Setting this to zero will "
+                "disable the limit.",
+                "<limit>");
+
+    cmdLine.add(
+        "--suppress-warnings",
+        [this](std::string_view value) {
+            if (auto ec = diagEngine.addIgnorePaths(value))
+                printWarning(fmt::format("--suppress-warnings path '{}': {}", value, ec.message()));
+            return "";
+        },
+        "One or more paths in which to suppress warnings", "<file-pattern>[,...]",
+        CommandLineFlags::CommaList);
+
+    cmdLine.add(
+        "--suppress-macro-warnings",
+        [this](std::string_view value) {
+            if (auto ec = diagEngine.addIgnoreMacroPaths(value)) {
+                printWarning(
+                    fmt::format("--suppress-macro-warnings path '{}': {}", value, ec.message()));
+            }
+            return "";
+        },
+        "One or more paths in which to suppress warnings that "
+        "originate in macro expansions",
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
+
+    cmdLine.setGroup("Warnings");
+    cmdLine.add("-W", options.warningOptions, "Control the specified warning", "<warning>");
+    cmdLine.add("--waiver-file", options.waiverFiles,
+                "Path to TOML file containing diagnostic waiver rules (repeatable)", "<file>",
+                CommandLineFlags::FilePath);
+    cmdLine.add("--print-unused-waivers", options.printUnusedWaivers,
+                "Print detailed information about unused diagnostic waivers");
+
+    cmdLine.setGroup("Dependency Files");
     cmdLine.add("--depfile-target", options.depfileTarget,
                 "Output depfile lists in makefile format, creating the file with "
                 "`<target>:` as the make target");
@@ -478,19 +477,27 @@ void Driver::addStandardArgs() {
     cmdLine.add("--depfile-sort", options.depfileSort,
                 "Topologically sort the emitted files in dependency lists");
 
-    // Analysis modifiers
     auto addAnalysisFlag = [&](AnalysisFlags flag, std::string_view name, std::string_view desc) {
         auto [it, inserted] = options.analysisFlags.emplace(flag, std::nullopt);
         SLANG_ASSERT(inserted);
         cmdLine.add(name, it->second, desc);
     };
 
+    cmdLine.setGroup("Analysis");
     addAnalysisFlag(AnalysisFlags::FullCaseUniquePriority, "--dfa-unique-priority",
                     "Respect the 'unique' and 'priority' keywords when analyzing data flow "
                     "through case statements");
     addAnalysisFlag(AnalysisFlags::FullCaseFourState, "--dfa-four-state",
                     "Require that case items cover X and Z bits to assume full coverage "
                     "in data flow analysis");
+    cmdLine.add("--max-case-analysis-steps", options.maxCaseAnalysisSteps,
+                "Maximum number of steps that can occur during case analysis before giving up",
+                "<steps>");
+    cmdLine.add("--max-loop-analysis-steps", options.maxLoopAnalysisSteps,
+                "Maximum number of steps that can occur during loop analysis before giving up",
+                "<steps>");
+
+    cmdLine.setGroup("Compatibility");
     addAnalysisFlag(
         AnalysisFlags::AllowMultiDrivenLocals, "--allow-multi-driven-locals",
         "Allow subroutine local variables to be driven from multiple always_comb/_ff blocks");
@@ -498,12 +505,23 @@ void Driver::addStandardArgs() {
                     "Allow signals driven in an always_comb or always_ff block to also be driven "
                     "by initial blocks");
 
-    cmdLine.add("--max-case-analysis-steps", options.maxCaseAnalysisSteps,
-                "Maximum number of steps that can occur during case analysis before giving up",
-                "<steps>");
-    cmdLine.add("--max-loop-analysis-steps", options.maxLoopAnalysisSteps,
-                "Maximum number of steps that can occur during loop analysis before giving up",
-                "<steps>");
+    cmdLine.add(
+        "--cmd-ignore", [this](std::string_view value) { return cmdLine.addIgnoreCommand(value); },
+        "Define rule to ignore vendor command <vendor_cmd> with its following <N> parameters.\n"
+        "A command of the form +xyz will also match any vendor command of the form +xyz+abc,\n"
+        "as +abc is the command's argument, and doesn't need to be matched.",
+        "<vendor_cmd>,<N>");
+    cmdLine.add(
+        "--cmd-rename", [this](std::string_view value) { return cmdLine.addRenameCommand(value); },
+        "Define rule to rename vendor command <vendor_cmd> into existing <slang_cmd>",
+        "<vendor_cmd>,<slang_cmd>");
+    cmdLine.add("--ignore-directive", options.ignoreDirectives,
+                "Ignore preprocessor directive and all its arguments until EOL", "<directive>",
+                CommandLineFlags::CommaList);
+
+    // Reset back to the default group so that any options registered afterwards
+    // (for example by individual tools) are ungrouped unless they set their own.
+    cmdLine.setGroup({});
 }
 
 [[nodiscard]] bool Driver::parseCommandLine(std::string_view argList,

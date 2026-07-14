@@ -283,6 +283,18 @@ public:
     void addEnum(std::string_view name, std::optional<T>& value, std::string_view desc,
                  std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
+    /// Sets the group into which subsequently registered options will be placed
+    /// for the purpose of organizing help text output. All options added after a
+    /// call to this function will be associated with the given @a name until it is
+    /// changed by another call. Passing an empty string reverts to the default,
+    /// ungrouped section.
+    ///
+    /// Groups are displayed in help text in the order in which they are first seen.
+    /// Grouping has no effect on how options are parsed.
+    ///
+    /// @param name the name of the group to place subsequently added options into
+    void setGroup(std::string_view name);
+
     /// Set a variable that will receive any positional arguments provided
     /// on the command line. They will be returned as a list of strings.
     ///
@@ -404,6 +416,7 @@ private:
         std::string desc;
         std::string valueName;
         std::string allArgNames;
+        std::string group;
         bitmask<CommandLineFlags> flags;
 
         explicit Option(CommandLine& parent) : parent(parent) {}
@@ -538,6 +551,7 @@ private:
     std::map<std::string, std::string> cmdRename;
 
     std::string programName;
+    std::string currentGroup;
     std::vector<Error> errors;
 };
 
