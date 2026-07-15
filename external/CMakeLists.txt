@@ -91,9 +91,6 @@ if(SLANG_USE_MIMALLOC)
   set(MI_BUILD_SHARED
       OFF
       CACHE INTERNAL "")
-  set(MI_BUILD_STATIC
-      OFF
-      CACHE INTERNAL "")
   set(MI_BUILD_TESTS
       OFF
       CACHE INTERNAL "")
@@ -107,9 +104,9 @@ if(SLANG_USE_MIMALLOC)
   FetchContent_Declare(
     mimalloc
     GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
-    GIT_TAG v3.3.2
+    GIT_TAG v3.4.3
     GIT_SHALLOW ON
-    FIND_PACKAGE_ARGS 3.3)
+    FIND_PACKAGE_ARGS 3.4)
   FetchContent_MakeAvailable(mimalloc)
 
   if(mimalloc_FOUND)
