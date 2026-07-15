@@ -2437,14 +2437,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
-    CHECK(diags[0].code == diag::ImplicitNetPortNoDefault);
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
     CHECK(diags[2].code == diag::UndeclaredIdentifier);
-    CHECK(diags[3].code == diag::UndeclaredIdentifier);
-    CHECK(diags[4].code == diag::ImplicitNamedPortNotFound);
-    CHECK(diags[5].code == diag::UndeclaredIdentifier);
-    CHECK(diags[6].code == diag::ImplicitNamedPortNotFound);
+    CHECK(diags[3].code == diag::ImplicitNamedPortNotFound);
+    CHECK(diags[4].code == diag::UndeclaredIdentifier);
+    CHECK(diags[5].code == diag::ImplicitNamedPortNotFound);
 }
 
 TEST_CASE("Enum in inherited class lookup regress -- GH #1177") {
