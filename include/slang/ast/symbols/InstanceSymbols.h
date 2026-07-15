@@ -145,8 +145,7 @@ public:
     static InstanceSymbol& createDefault(
         Compilation& compilation, const DefinitionSymbol& definition,
         const HierarchyOverrideNode* hierarchyOverrideNode = nullptr,
-        const ConfigBlockSymbol* configBlock = nullptr, const ConfigRule* configRule = nullptr,
-        SourceLocation locationOverride = {});
+        const ConfigBlockSymbol* configBlock = nullptr, const ConfigRule* configRule = nullptr);
 
     /// Creates a placeholder instance for a virtual interface type declaration.
     static const InstanceSymbol& createVirtual(
