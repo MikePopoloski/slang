@@ -316,6 +316,8 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     auto guard = ScopeGuard([this] { finalizing = false; });
 
     auto isValidTop = [&](auto& definition) {
+        if (hasFlag(CompilationFlags::AllowInvalidTop))
+            return true;
         // All parameters must have defaults.
         for (auto& param : definition.parameters) {
             if (!param.hasDefault() &&

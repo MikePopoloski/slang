@@ -70,6 +70,7 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .value("AllowVirtualIfaceWithOverride", CompilationFlags::AllowVirtualIfaceWithOverride)
         .value("AllowArrayConcatAssignPattern", CompilationFlags::AllowArrayConcatAssignPattern)
         .value("AllowCrossAutoBinMax", CompilationFlags::AllowCrossAutoBinMax)
+        .value("AllowInvalidTop", CompilationFlags::AllowInvalidTop)
         .finalize();
 
     py::classh<CompilationOptions>(ast, "CompilationOptions")

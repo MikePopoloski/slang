@@ -141,9 +141,12 @@ enum class SLANG_EXPORT CompilationFlags {
     /// instead of a net. By default slang follows the LRM and treats such ports as nets,
     /// which for example allows them to be connected to `inout` ports. Some tools treat them
     /// as variables instead; enabling this flag selects that behavior.
-    InferInputPortsAsVars = 1 << 19
+    InferInputPortsAsVars = 1 << 19,
+
+    /// Allow top-level modules to be selected even when their parameters have no defaults.
+    AllowInvalidTop = 1 << 20,
 };
-SLANG_BITMASK(CompilationFlags, InferInputPortsAsVars)
+SLANG_BITMASK(CompilationFlags, AllowInvalidTop)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {

@@ -983,6 +983,43 @@ endmodule
     CHECK(unusedDefs[1]->name == "nottop");
 }
 
+TEST_CASE("Allow invalid top module parameters") {
+    auto text = R"(
+module top #(parameter int p, parameter type t);
+endmodule
+)";
+
+    // Without the flag the explicitly requested top is rejected for having
+    // non-defaulted parameters.
+    {
+        CompilationOptions options;
+        options.topModules.emplace("top"sv);
+
+        Compilation compilation(options);
+        compilation.addSyntaxTree(SyntaxTree::fromText(text));
+
+        auto& diags = compilation.getAllDiagnostics();
+        REQUIRE(diags.size() == 1);
+        CHECK(diags[0].code == diag::InvalidTopModule);
+    }
+
+    // With the flag it elaborates anyway; the missing parameters get error types
+    // rather than producing errors.
+    {
+        CompilationOptions options;
+        options.flags |= CompilationFlags::AllowInvalidTop;
+        options.topModules.emplace("top"sv);
+
+        Compilation compilation(options);
+        compilation.addSyntaxTree(SyntaxTree::fromText(text));
+        NO_COMPILATION_ERRORS;
+
+        auto& top = *compilation.getRoot().topInstances[0];
+        CHECK(top.body.find<ParameterSymbol>("p").getValue().bad());
+        CHECK(top.body.find<TypeParameterSymbol>("t").targetType.getType().isError());
+    }
+}
+
 TEST_CASE("No top warning") {
     auto tree = SyntaxTree::fromText(R"(
 )");
