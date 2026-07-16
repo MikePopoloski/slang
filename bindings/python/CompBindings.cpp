@@ -71,6 +71,7 @@ void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver) 
         .value("AllowArrayConcatAssignPattern", CompilationFlags::AllowArrayConcatAssignPattern)
         .value("AllowCrossAutoBinMax", CompilationFlags::AllowCrossAutoBinMax)
         .value("AllowInvalidTop", CompilationFlags::AllowInvalidTop)
+        .value("CheckUninstantiated", CompilationFlags::CheckUninstantiated)
         .finalize();
 
     py::classh<CompilationOptions>(ast, "CompilationOptions")
