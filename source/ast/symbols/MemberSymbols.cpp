@@ -69,7 +69,7 @@ const PackageSymbol* ExplicitImportSymbol::package() const {
 }
 
 static const PackageSymbol* findPackage(std::string_view packageName, const Scope& lookupScope,
-                                        SourceLocation errorLoc, bool isFromExport) {
+                                        SourceLocation errorLoc) {
     auto& comp = lookupScope.getCompilation();
     auto package = comp.getPackage(packageName);
     if (!package) {
@@ -82,10 +82,7 @@ static const PackageSymbol* findPackage(std::string_view packageName, const Scop
         do {
             auto& sym = currScope->asSymbol();
             if (package == &sym) {
-                if (isFromExport)
-                    lookupScope.addDiag(diag::PackageExportSelf, errorLoc);
-                else
-                    lookupScope.addDiag(diag::PackageImportSelf, errorLoc);
+                lookupScope.addDiag(diag::PackageImportSelf, errorLoc);
                 return nullptr;
             }
 
@@ -107,7 +104,7 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
         if (auto syntax = getSyntax())
             loc = syntax->as<PackageImportItemSyntax>().package.location();
 
-        package_ = findPackage(packageName, *scope, loc, isFromExport);
+        package_ = findPackage(packageName, *scope, loc);
         if (!package_)
             return nullptr;
 
@@ -127,7 +124,6 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
 }
 
 void ExplicitImportSymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("isFromExport", isFromExport);
     if (auto pkg = package())
         serializer.writeLink("package", *pkg);
 
@@ -148,13 +144,12 @@ const PackageSymbol* WildcardImportSymbol::getPackage() const {
         if (auto syntax = getSyntax(); syntax)
             loc = syntax->as<PackageImportItemSyntax>().package.location();
 
-        package = findPackage(packageName, *scope, loc, isFromExport);
+        package = findPackage(packageName, *scope, loc);
     }
     return *package;
 }
 
 void WildcardImportSymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("isFromExport", isFromExport);
     if (auto pkg = getPackage())
         serializer.writeLink("package", *pkg);
 }

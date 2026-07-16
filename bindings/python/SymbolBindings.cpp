@@ -175,7 +175,6 @@ void registerSymbols(py::module_& m) {
                                [](const PackageSymbol& self) { return &self.defaultNetType; })
         .def_readonly("timeScale", &PackageSymbol::timeScale)
         .def_readonly("defaultLifetime", &PackageSymbol::defaultLifetime)
-        .def_readonly("exportDecls", &PackageSymbol::exportDecls)
         .def_readonly("hasExportAll", &PackageSymbol::hasExportAll)
         .def("findForImport", &PackageSymbol::findForImport, byrefint, "name"_a);
 
@@ -493,13 +492,11 @@ void registerSymbols(py::module_& m) {
     py::classh<ExplicitImportSymbol, Symbol>(m, "ExplicitImportSymbol")
         .def_readonly("packageName", &ExplicitImportSymbol::packageName)
         .def_readonly("importName", &ExplicitImportSymbol::importName)
-        .def_readonly("isFromExport", &ExplicitImportSymbol::isFromExport)
         .def_property_readonly("package", &ExplicitImportSymbol::package)
         .def_property_readonly("importedSymbol", &ExplicitImportSymbol::importedSymbol);
 
     py::classh<WildcardImportSymbol, Symbol>(m, "WildcardImportSymbol")
         .def_readonly("packageName", &WildcardImportSymbol::packageName)
-        .def_readonly("isFromExport", &WildcardImportSymbol::isFromExport)
         .def_property_readonly("package", &WildcardImportSymbol::getPackage);
 
     py::classh<ModportPortSymbol, ValueSymbol>(m, "ModportPortSymbol")

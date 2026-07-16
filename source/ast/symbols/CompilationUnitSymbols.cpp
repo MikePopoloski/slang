@@ -15,6 +15,7 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/LookupDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
 
@@ -83,6 +84,8 @@ PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclara
     std::optional<SourceRange> unitsRange;
     std::optional<SourceRange> precisionRange;
     SmallVector<const PackageImportItemSyntax*> exportDecls;
+    bool hasExplicitExports = false;
+    bool hasStarExports = false;
 
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::TimeUnitsDeclaration) {
@@ -101,42 +104,203 @@ PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclara
             result->hasExportAll = true;
         }
         else if (member->kind == SyntaxKind::PackageExportDeclaration) {
-            for (auto item : member->as<PackageExportDeclarationSyntax>().items)
+            auto& exportDecl = member->as<PackageExportDeclarationSyntax>();
+            for (auto item : exportDecl.items) {
                 exportDecls.push_back(item);
+                if (item->item.kind == TokenKind::Star)
+                    hasStarExports = true;
+                else
+                    hasExplicitExports = true;
+            }
         }
 
         result->addMembers(*member);
     }
 
-    result->exportDecls = exportDecls.copy(comp);
+    if (!exportDecls.empty()) {
+        result->exportData = comp.emplace<ExportData>();
+        result->exportData->decls = exportDecls.copy(comp);
+
+        if (hasExplicitExports)
+            result->exportData->explicitExportSyms = comp.allocSymbolMap();
+
+        if (hasStarExports)
+            result->exportData->wildcardExportPackages = comp.allocSymbolMap();
+    }
 
     SemanticFacts::populateTimeScale(result->timeScale, scope, directiveTimeScale, unitsRange,
                                      precisionRange);
     return *result;
 }
 
-const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
-    auto& scopeNameMap = getNameMap();
+static const PackageSymbol* findPackageForExport(std::string_view packageName,
+                                                 const PackageSymbol& lookupScope,
+                                                 SourceLocation errorLoc) {
+    auto& comp = lookupScope.getCompilation();
+    auto package = comp.getPackage(packageName);
+    if (!package) {
+        if (!packageName.empty() && !comp.hasFlag(CompilationFlags::LintMode))
+            lookupScope.addDiag(diag::UnknownPackage, errorLoc) << packageName;
+    }
+    // Unlike the general import case (see findPackage in MemberSymbols.cpp), an export
+    // always originates directly in a package body, so a self-reference can only be the
+    // package itself; there's no need to walk parent scopes.
+    else if (package == &lookupScope) {
+        lookupScope.addDiag(diag::PackageExportSelf, errorLoc);
+        return nullptr;
+    }
+
+    return package;
+}
+
+static const Symbol& unwrapTransparent(const Symbol& symbol) {
+    auto result = &symbol;
+    while (result->kind == SymbolKind::TransparentMember)
+        result = &result->as<TransparentMemberSymbol>().wrapped;
+    return *result;
+}
+
+// Checks that the given explicitly-exported symbol is actually imported into the
+// package, which is required for the export to be valid. Emits the appropriate
+// diagnostic and returns false if it is not.
+static bool checkExportIsImported(const PackageSymbol& package, const PackageImportItemSyntax& item,
+                                  const Symbol& exported) {
+    auto lookupName = item.item.valueText();
+
+    auto notImported = [&] {
+        package.addDiag(diag::PackageExportNotImported, item.item.location()) << lookupName;
+        return false;
+    };
+
+    auto& scopeNameMap = package.getNameMap();
     if (auto it = scopeNameMap.find(lookupName); it != scopeNameMap.end()) {
-        auto symbol = it->second;
-        while (symbol->kind == SymbolKind::TransparentMember)
-            symbol = &symbol->as<TransparentMemberSymbol>().wrapped;
+        auto& symbol = unwrapTransparent(*it->second);
+        if (auto ei = symbol.as_if<ExplicitImportSymbol>())
+            return ei->importedSymbol() == &exported ? true : notImported();
+
+        auto& diag = package.addDiag(diag::Redefinition, symbol.location);
+        diag << lookupName;
+        diag.addNote(diag::NotePreviousDefinition, item.item.location());
+        return false;
+    }
+
+    auto wildcardData = package.getWildcardImportData();
+    if (!wildcardData)
+        return notImported();
+
+    if (auto it = wildcardData->importedSymbols.find(lookupName);
+        it != wildcardData->importedSymbols.end()) {
+        if (it->second == &exported)
+            return true;
+
+        auto& diag = package.addDiag(diag::ImportNameCollision, item.item.range());
+        diag << lookupName;
+        diag.addNote(diag::NoteDeclarationHere, item.item.location());
+        diag.addNote(diag::NoteDeclarationHere, it->second->location);
+        return false;
+    }
+
+    for (auto import : wildcardData->wildcardImports) {
+        auto importPackage = import->getPackage();
+        if (!importPackage || importPackage->name != item.package.valueText())
+            continue;
+
+        return importPackage->findForImport(lookupName) == &exported ? true : notImported();
+    }
+
+    return notImported();
+}
+
+void PackageSymbol::resolveExports() const {
+    auto data = exportData;
+    if (!data || data->resolved)
+        return;
+
+    // Set this before doing any work; resolving an export can re-enter findForImport
+    // on this same package, and we want those lookups to see the maps we're building
+    // rather than recursing forever.
+    data->resolved = true;
+
+    // Resolve star exports first so that any re-entrant lookup performed while
+    // validating the explicit exports below sees a populated star map.
+    if (data->wildcardExportPackages) {
+        for (auto item : data->decls) {
+            if (item->item.kind != TokenKind::Star)
+                continue;
+
+            if (auto package = findPackageForExport(item->package.valueText(), *this,
+                                                    item->package.location())) {
+                data->wildcardExportPackages->emplace(item->package.valueText(), package);
+            }
+        }
+    }
+
+    if (data->explicitExportSyms) {
+        for (auto item : data->decls) {
+            if (item->item.kind == TokenKind::Star)
+                continue;
+
+            auto lookupName = item->item.valueText();
+            auto package = findPackageForExport(item->package.valueText(), *this,
+                                                item->package.location());
+            if (!package)
+                continue;
+
+            auto exported = package->findForImport(lookupName);
+            if (!exported) {
+                addDiag(diag::UnknownPackageMember, item->item.location())
+                    << lookupName << item->package.valueText();
+                continue;
+            }
+
+            if (!checkExportIsImported(*this, *item, *exported))
+                continue;
+
+            auto [it, inserted] = data->explicitExportSyms->emplace(lookupName, exported);
+            if (!inserted && it->second != exported) {
+                auto& diag = addDiag(diag::ImportNameCollision, item->item.range());
+                diag << lookupName;
+                diag.addNote(diag::NoteDeclarationHere, item->item.location());
+                diag.addNote(diag::NoteDeclarationHere, it->second->location);
+            }
+        }
+    }
+}
+
+// Walks up the parent scopes of the given symbol to find the package that owns it.
+static const Symbol& findOwningPackage(const Symbol& symbol) {
+    auto scope = symbol.getParentScope();
+    while (true) {
+        SLANG_ASSERT(scope);
+        auto& parent = scope->asSymbol();
+        if (parent.kind == SymbolKind::Package)
+            return parent;
+
+        scope = parent.getParentScope();
+    }
+}
+
+const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
+    // A plain member (or forwarding typedef) is resolved without consulting exports,
+    // so handle those before resolving exports. This matters because resolveExports
+    // can re-enter findForImport on other packages; resolving eagerly for every
+    // lookup would break packages that mutually export from each other.
+    const ExplicitImportSymbol* eis = nullptr;
+    auto& scopeNameMap = getNameMap();
+    // Either find the symbol defined in the scope, or it's explicit import
+    if (auto it = scopeNameMap.find(lookupName); it != scopeNameMap.end()) {
+        auto symbol = &unwrapTransparent(*it->second);
 
         switch (symbol->kind) {
-            case SymbolKind::ExplicitImport: {
+            case SymbolKind::ExplicitImport:
                 // Items that are imported into a package are not made visible to
                 // things that subsequently import this package, unless they are
-                // also exported (see IEEE 1800-2017 section 26.6).
-                auto& eis = symbol->as<ExplicitImportSymbol>();
-                auto imported = eis.importedSymbol();
-                if (eis.isFromExport)
-                    return imported;
-
-                if (imported && isExported(*imported))
-                    return imported;
-
-                return nullptr;
-            }
+                // also exported (see IEEE 1800-2017 section 26.6). Fall through to
+                // the shared export resolution below to determine that.
+                eis = &symbol->as<ExplicitImportSymbol>();
+                if (!eis->importedSymbol())
+                    return nullptr;
+                break;
             case SymbolKind::ForwardingTypedef:
                 return nullptr;
             default:
@@ -144,8 +308,42 @@ const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
         }
     }
 
+    resolveExports();
+
+    // If it was explicit imported, check that it was exported via explicit, export all, or wildcard
+    // export.
+    if (eis) {
+        auto imported = eis->importedSymbol();
+        if (exportData && exportData->explicitExportSyms) {
+            auto exportIt = exportData->explicitExportSyms->find(lookupName);
+            if (exportIt != exportData->explicitExportSyms->end() && exportIt->second == imported) {
+                return imported;
+            }
+        }
+
+        if (hasExportAll || (exportData && exportData->wildcardExportPackages &&
+                             exportData->wildcardExportPackages->contains(eis->packageName))) {
+            return imported;
+        }
+
+        return nullptr;
+    }
+
+    // The name isn't a direct member or explicit import, but it may still be
+    // explicitly exported -- e.g. `export p::x` where x was brought in via a
+    // wildcard import, so it never became a named member of this scope.
+    // explicitExportSyms only ever contains exports that resolveExports() has already
+    // confirmed are imported (see isImportedForExport), so no re-check is needed here.
+    if (exportData && exportData->explicitExportSyms) {
+        if (auto it = exportData->explicitExportSyms->find(lookupName);
+            it != exportData->explicitExportSyms->end()) {
+            return it->second;
+        }
+    }
+
+    // Now check our wildcard imports, if any
     auto wildcardData = getWildcardImportData();
-    if (!wildcardData || (!hasExportAll && exportDecls.empty()))
+    if (!wildcardData || (!hasExportAll && (!exportData || !exportData->wildcardExportPackages)))
         return nullptr;
 
     // We need to force-elaborate the entire package body because any
@@ -155,84 +353,21 @@ const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
         getCompilation().forceElaborate(*this);
     }
 
-    // Look through symbols that have been wildcard imported with this name.
-    // If we don't have an export-all directive then we need to check whether
-    // we actually wanted to export this symbol.
+    // Look through symbols that have been wildcard imported with this name, and verify it's also
+    // exported.
     if (auto it = wildcardData->importedSymbols.find(lookupName);
         it != wildcardData->importedSymbols.end()) {
-        if (isExported(*it->second))
+        if (hasExportAll)
             return it->second;
+
+        if (exportData && exportData->wildcardExportPackages) {
+            auto& owningPackage = findOwningPackage(*it->second);
+            if (exportData->wildcardExportPackages->contains(owningPackage.name))
+                return it->second;
+        }
     }
 
     return nullptr;
-}
-
-bool PackageSymbol::isExported(const Symbol& symbol) const {
-    if (hasExportAll)
-        return true;
-
-    // Find the package that owns the target symbol.
-    const Symbol* packageParent;
-    auto targetScope = symbol.getParentScope();
-    while (true) {
-        SLANG_ASSERT(targetScope);
-        packageParent = &targetScope->asSymbol();
-        if (packageParent->kind == SymbolKind::Package)
-            break;
-
-        targetScope = packageParent->getParentScope();
-    }
-
-    // Look for a matching export.
-    for (auto decl : exportDecls) {
-        if (decl->package.valueText() != packageParent->name)
-            continue;
-
-        if (decl->item.kind == TokenKind::Star || decl->item.valueText() == symbol.name)
-            return true;
-    }
-
-    return false;
-}
-
-void PackageSymbol::checkExplicitExports() const {
-    // If we have an explicit export declaration, make sure that the
-    // referenced symbol is actually imported into the package.
-    auto& scopeNameMap = getNameMap();
-    auto wildcardData = getWildcardImportData();
-    for (auto& decl : exportDecls) {
-        if (decl->item.kind == TokenKind::Star)
-            continue;
-
-        auto lookupName = decl->item.valueText();
-        if (auto it = scopeNameMap.find(lookupName); it != scopeNameMap.end()) {
-            auto ei = it->second->as_if<ExplicitImportSymbol>();
-            if (ei && ei->isFromExport && !ei->sawCorrespondingImport() && ei->importedSymbol()) {
-                bool found = false;
-                if (wildcardData) {
-                    if (wildcardData->importedSymbols.contains(lookupName)) {
-                        // If the target symbol was already wildcard imported then we're done.
-                        found = true;
-                    }
-                    else {
-                        // There was no explicit import for this export, but if there is a viable
-                        // candidate for import then this export counts as a sufficient reference.
-                        for (auto import : wildcardData->wildcardImports) {
-                            auto package = import->getPackage();
-                            if (!package || package->name != decl->package.valueText())
-                                continue;
-
-                            found = package->findForImport(lookupName) != nullptr;
-                            break;
-                        }
-                    }
-                }
-
-                if (!found)
-                    addDiag(diag::PackageExportNotImported, decl->item.range()) << lookupName;
-            }
-        }
-    }
 }
 
 DefinitionSymbol::ParameterDecl::ParameterDecl(

@@ -73,7 +73,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
     void handle(const PackageSymbol& symbol) {
         if (!handleDefault(symbol))
             return;
-        symbol.checkExplicitExports();
+        symbol.resolveExports();
     }
 
     void handle(const InterfacePortSymbol& symbol) {
