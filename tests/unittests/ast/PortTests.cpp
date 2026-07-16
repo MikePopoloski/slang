@@ -1301,6 +1301,25 @@ endmodule
     CHECK(diags[0].code == diag::ImplicitNetPortNoDefault);
 }
 
+TEST_CASE("No default nettype warning for explicitly typed ANSI input port") {
+    auto tree = SyntaxTree::fromText(R"(
+`default_nettype none
+
+module top (
+    input logic clk
+);
+endmodule
+
+`default_nettype wire
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK(diags.empty());
+}
+
 TEST_CASE("Implicit net creation warning") {
     auto tree = SyntaxTree::fromText(R"(
 module producer(output out); endmodule

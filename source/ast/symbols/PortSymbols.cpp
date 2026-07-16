@@ -25,12 +25,15 @@ using namespace syntax;
 
 namespace {
 
-const NetType& getDefaultNetType(const Scope& scope, SourceLocation location) {
+const NetType& getDefaultNetType(const Scope& scope, SourceLocation location,
+                                 bool issueDiag = true) {
     auto& netType = scope.getDefaultNetType();
     if (!netType.isError())
         return netType;
 
-    scope.addDiag(diag::ImplicitNetPortNoDefault, location);
+    if (issueDiag)
+        scope.addDiag(diag::ImplicitNetPortNoDefault, location);
+
     return scope.getCompilation().getWireNetType();
 }
 
@@ -194,7 +197,7 @@ public:
                     }
 
                     if (isNet) {
-                        netType = &getDefaultNetType(scope, decl.name.location());
+                        netType = &getDefaultNetType(scope, decl.name.location(), implicitType);
 
                         // Suppress the net type validity check for an input port that
                         // was given an explicit data type, since the user wrote e.g.
