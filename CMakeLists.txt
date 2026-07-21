@@ -205,9 +205,6 @@ if(CMAKE_SYSTEM_NAME MATCHES "WASI")
   add_link_options(-lwasi-emulated-signal)
   set(CATCH_CONFIG_NO_POSIX_SIGNALS ON)
 
-  # https://github.com/fmtlib/fmt/issues/4496#issuecomment-3094630184
-  add_compile_definitions(FMT_USE_FCNTL=0)
-
   # to make stack overflows crash instead of silently corrupt memory
   add_link_options(-Wl,--stack-first -Wl,-z,stack-size=1048576)
 
@@ -217,7 +214,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "WASI")
   # to have CTest invoke a Wasm engine when running tests
   set(mappings --dir=/ --dir=${CMAKE_CURRENT_SOURCE_DIR}/tests::tests)
   set(CMAKE_TEST_LAUNCHER
-      wasmtime run -S threads ${mappings}
+      wasmtime run ${mappings}
       CACHE STRING "")
 endif()
 
