@@ -769,8 +769,6 @@ def maybe_wrap_wasm_launcher(slang_bin: str) -> tuple[str, bool]:
         [
             _quote_arg(wasmtime),
             "run",
-            "-S",
-            "threads",
             "--dir=/",
             f"--dir={_quote_arg(str(tests_dir))}::tests",
             _quote_arg(str(p.resolve())),
