@@ -5,7 +5,7 @@
 
 # --- fmt lib ---
 if(SLANG_USE_SYSTEM_FMT)
-  find_package(fmt 12.2 REQUIRED)
+  find_package(fmt 12 REQUIRED)
 
   get_target_property(FMT_CFG fmt::fmt IMPORTED_CONFIGURATIONS)
   list(GET FMT_CFG 0 FMT_CFG_FIRST)
