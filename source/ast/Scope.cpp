@@ -241,31 +241,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::PackageExportDeclaration: {
-            auto& exportDecl = syntax.as<PackageExportDeclarationSyntax>();
-            for (auto item : exportDecl.items) {
-                if (item->item.kind == TokenKind::Star) {
-                    // These are handled manually as "wildcard imports" but don't get
-                    // added to the import list. This is done just so that the package
-                    // name itself gets validated and the attributes have somewhere to live.
-                    // The actual export functionality is handled in PackageSymbol.
-                    auto import = compilation.emplace<WildcardImportSymbol>(
-                        item->package.valueText(), item->item.location());
-
-                    import->setSyntax(*item);
-                    import->setAttributes(*this, exportDecl.attributes);
-                    import->isFromExport = true;
-                    addMember(*import);
-                }
-                else {
-                    auto import = compilation.emplace<ExplicitImportSymbol>(
-                        item->package.valueText(), item->item.valueText(), item->item.location());
-
-                    import->setSyntax(*item);
-                    import->setAttributes(*this, exportDecl.attributes);
-                    import->isFromExport = true;
-                    addMember(*import);
-                }
-            }
+            // Package exports are tracked separately by PackageSymbol so that they don't collide
+            // with ordinary package members in this scope's name map.
             break;
         }
         case SyntaxKind::HierarchyInstantiation:
@@ -707,16 +684,6 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing) co
     }
 
     if (existing->kind == SymbolKind::ExplicitImport && member.kind == SymbolKind::ExplicitImport) {
-        // If one of these is an import and the other is an export we should note
-        // that there was a corresponding import for the export so we don't error later.
-        auto& ei = existing->as<ExplicitImportSymbol>();
-        auto& mi = member.as<ExplicitImportSymbol>();
-        if (ei.isFromExport != mi.isFromExport) {
-            // It doesn't hurt anything to set it for both, even though only one is an export.
-            ei.noteCorrespondingImport();
-            mi.noteCorrespondingImport();
-        }
-
         // These can't be checked until we can resolve the imports and
         // see if they point to the same symbol.
         compilation.noteNameConflict(member);
@@ -814,12 +781,10 @@ void Scope::checkImportConflict(const Symbol& member, const Symbol& existing) co
         return;
 
     if (s1 == s2) {
-        if (!mei.isFromExport && !eei.isFromExport) {
-            // Duplicate explicit imports are specifically allowed,
-            // so just ignore the other one (with a warning).
-            auto& diag = addDiag(diag::DuplicateImport, member.location);
-            diag.addNote(diag::NotePreviousDefinition, existing.location);
-        }
+        // Duplicate explicit imports are specifically allowed,
+        // so just ignore the other one (with a warning).
+        auto& diag = addDiag(diag::DuplicateImport, member.location);
+        diag.addNote(diag::NotePreviousDefinition, existing.location);
     }
     else {
         reportNameConflict(member, existing);

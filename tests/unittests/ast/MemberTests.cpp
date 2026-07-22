@@ -2408,12 +2408,11 @@ endpackage
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::PackageImportSelf);
     CHECK(diags[1].code == diag::PackageImportSelf);
     CHECK(diags[2].code == diag::PackageExportSelf);
-    CHECK(diags[3].code == diag::Redefinition);
-    CHECK(diags[4].code == diag::PackageExportSelf);
+    CHECK(diags[3].code == diag::PackageExportSelf);
 }
 
 TEST_CASE("DPI task import has correct return type") {
