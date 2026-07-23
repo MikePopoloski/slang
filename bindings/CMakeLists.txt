@@ -16,7 +16,8 @@ if(NOT nanobind_FOUND)
   if(nanobind_result EQUAL 0 AND EXISTS "${nanobind_cmake_dir}")
     list(APPEND CMAKE_PREFIX_PATH "${nanobind_cmake_dir}")
     find_package(nanobind CONFIG REQUIRED)
-    message(STATUS "Using nanobind from Python environment: ${nanobind_cmake_dir}")
+    message(
+      STATUS "Using nanobind from Python environment: ${nanobind_cmake_dir}")
   else()
     FetchContent_Declare(
       nanobind
@@ -86,10 +87,14 @@ install(
 # built-in stub generator, then install it alongside the module.
 nanobind_add_stub(
   pyslang_stub
-  MODULE pyslang
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pyslang.pyi
-  PYTHON_PATH $<TARGET_FILE_DIR:pyslang>
-  DEPENDS pyslang)
+  MODULE
+  pyslang
+  OUTPUT
+  ${CMAKE_CURRENT_BINARY_DIR}/pyslang.pyi
+  PYTHON_PATH
+  $<TARGET_FILE_DIR:pyslang>
+  DEPENDS
+  pyslang)
 
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/pyslang.pyi

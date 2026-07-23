@@ -1344,14 +1344,14 @@ decltype(KnownSystemName_traits::values) KnownSystemName_traits::values = {
 
 
 def generatePyBindings(builddir, alltypes):
-  numfiles = 4
-  items = list(alltypes.items())
-  perfile = math.ceil(len(items) / numfiles)
+    numfiles = 4
+    items = list(alltypes.items())
+    perfile = math.ceil(len(items) / numfiles)
 
-  for i in range(numfiles):
-    outf = open(os.path.join(builddir, f"PySyntaxBindings{i}.cpp"), "w")
-    outf.write(
-        """//------------------------------------------------------------------------------
+    for i in range(numfiles):
+        outf = open(os.path.join(builddir, f"PySyntaxBindings{i}.cpp"), "w")
+        outf.write(
+            """//------------------------------------------------------------------------------
 // PySyntaxBindings{0}.cpp
 // Generated Python bindings for syntax types
 //
@@ -1363,39 +1363,37 @@ def generatePyBindings(builddir, alltypes):
 #include "slang/syntax/AllSyntax.h"
 
 void registerSyntaxNodes{0}(nb::module_& m) {{
-""".format(
-            i
+""".format(i)
         )
-    )
 
-    idx = i * perfile
-    for class_name, v in items[idx : idx + perfile]:
-      if class_name == "SyntaxNode":
-        continue
+        idx = i * perfile
+        for class_name, v in items[idx : idx + perfile]:
+            if class_name == "SyntaxNode":
+                continue
 
-      outf.write(f'    nb::class_<{class_name}, {v.base}>(m, "{class_name}")')
-      for member_name in v.members:
-        python_member_name = member_name[1]
+            outf.write(f'    nb::class_<{class_name}, {v.base}>(m, "{class_name}")')
+            for member_name in v.members:
+                python_member_name = member_name[1]
 
-        # Validate and rewrite invalid Python attribute names.
-        if python_member_name == "with":
-          python_member_name = "with_"
+                # Validate and rewrite invalid Python attribute names.
+                if python_member_name == "with":
+                    python_member_name = "with_"
 
-        outf.write(
-            f'\n        .def_rw("{python_member_name}",'
-            f" &{class_name}::{member_name[1]})"
-        )
-      outf.write(";\n\n")
+                outf.write(
+                    f'\n        .def_rw("{python_member_name}",'
+                    f" &{class_name}::{member_name[1]})"
+                )
+            outf.write(";\n\n")
 
-    outf.write("}\n")
+        outf.write("}\n")
 
 
 def generatePyFactoryBindings(builddir, alltypes):
-  """Generate Python bindings for SyntaxFactory class and all its methods."""
+    """Generate Python bindings for SyntaxFactory class and all its methods."""
 
-  outf = open(os.path.join(builddir, "PySyntaxFactory.cpp"), "w")
-  outf.write(
-      """//------------------------------------------------------------------------------
+    outf = open(os.path.join(builddir, "PySyntaxFactory.cpp"), "w")
+    outf.write(
+        """//------------------------------------------------------------------------------
 // PySyntaxFactory.cpp
 // Generated Python bindings for SyntaxFactory
 //
@@ -1410,58 +1408,58 @@ void registerSyntaxFactory(nb::module_& m) {
     nb::class_<SyntaxFactory>(m, "SyntaxFactory",
         "Factory for creating syntax nodes. Access via SyntaxRewriter.factory.")
 """
-  )
+    )
 
-  factory_methods = []
-  for name, typeinfo in sorted(alltypes.items()):
-    if name == "SyntaxNode":
-      continue
-    if not typeinfo.final:
-      continue
-    factory_methods.append((name, typeinfo))
+    factory_methods = []
+    for name, typeinfo in sorted(alltypes.items()):
+        if name == "SyntaxNode":
+            continue
+        if not typeinfo.final:
+            continue
+        factory_methods.append((name, typeinfo))
 
-  methods_by_letter = {}
-  for name, typeinfo in factory_methods:
-    first_letter = name[0].upper()
-    if first_letter not in methods_by_letter:
-      methods_by_letter[first_letter] = []
-    methods_by_letter[first_letter].append((name, typeinfo))
+    methods_by_letter = {}
+    for name, typeinfo in factory_methods:
+        first_letter = name[0].upper()
+        if first_letter not in methods_by_letter:
+            methods_by_letter[first_letter] = []
+        methods_by_letter[first_letter].append((name, typeinfo))
 
-  for letter in sorted(methods_by_letter.keys()):
-    outf.write(f"\n        // --- {letter} ---\n")
-    for name, typeinfo in methods_by_letter[letter]:
-      method_name = name
-      if method_name.endswith("Syntax"):
-        method_name = method_name[:-6]
-      method_name = method_name[0].lower() + method_name[1:]
+    for letter in sorted(methods_by_letter.keys()):
+        outf.write(f"\n        // --- {letter} ---\n")
+        for name, typeinfo in methods_by_letter[letter]:
+            method_name = name
+            if method_name.endswith("Syntax"):
+                method_name = method_name[:-6]
+            method_name = method_name[0].lower() + method_name[1:]
 
-      outf.write(f'        .def("{method_name}", &SyntaxFactory::{method_name}')
-      # `byrefint` is the nanobind rv_policy::reference_internal alias
-      # defined in pyslang.h (included by the generated files).
-      outf.write(", byrefint")
+            outf.write(f'        .def("{method_name}", &SyntaxFactory::{method_name}')
+            # `byrefint` is the nanobind rv_policy::reference_internal alias
+            # defined in pyslang.h (included by the generated files).
+            outf.write(", byrefint")
 
-      for arg in typeinfo.argNames:
-        if arg in typeinfo.optionalMembers:
-          for m in typeinfo.combinedMembers:
-            if m[MEMBER_NAME] == arg:
-              if len(m) <= MEMBER_BASE_TYPE:
-                raise ValueError(
-                    f"Optional member '{arg}' in '{name}' is missing base type"
-                    f" information (expected at index {MEMBER_BASE_TYPE})"
-                )
-              base_type = m[MEMBER_BASE_TYPE]
-              outf.write(
-                  f', nb::arg("{arg}") = static_cast<{base_type}*>(nullptr)'
-              )
-              break
-        else:
-          outf.write(f', "{arg}"_a')
+            for arg in typeinfo.argNames:
+                if arg in typeinfo.optionalMembers:
+                    for m in typeinfo.combinedMembers:
+                        if m[MEMBER_NAME] == arg:
+                            if len(m) <= MEMBER_BASE_TYPE:
+                                raise ValueError(
+                                    f"Optional member '{arg}' in '{name}' is missing base type"
+                                    f" information (expected at index {MEMBER_BASE_TYPE})"
+                                )
+                            base_type = m[MEMBER_BASE_TYPE]
+                            outf.write(
+                                f', nb::arg("{arg}") = static_cast<{base_type}*>(nullptr)'
+                            )
+                            break
+                else:
+                    outf.write(f', "{arg}"_a')
 
-      outf.write(")\n")
+            outf.write(")\n")
 
-  outf.write("    ;\n")
-  outf.write("}\n")
-  outf.close()
+    outf.write("    ;\n")
+    outf.write("}\n")
+    outf.close()
 
 
 def generateCSTJson(builddir, alltypes):
