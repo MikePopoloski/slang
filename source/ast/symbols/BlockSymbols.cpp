@@ -913,7 +913,12 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
     result->entries = entries.copy(comp);
     if (entries.empty()) {
+        // Create block and add it so visitors can access the uninstantiated block; by
+        // default diags from uninstantiated blocks are suppressed, so this is safe. This is used
+        // for things like unused checking and with CompilationFlags::CheckUninstantiated.
+        // It is still inacessible from gen_arr[0] due to how lookups work.
         createBlock(SVInt(32, 0, true), true);
+        result->addMember(*entries[0]);
     }
     else {
         for (auto entry : entries)

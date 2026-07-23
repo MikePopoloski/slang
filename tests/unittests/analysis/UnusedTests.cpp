@@ -313,6 +313,59 @@ endmodule
     CHECK(diags[0].isError());
 }
 
+TEST_CASE("Unused diagnostics cover the symbol name") {
+    auto& text = R"(
+module m;
+    int unused_name;
+endmodule
+)";
+
+    Compilation compilation;
+    auto diags = analyze(text, compilation);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnusedVariable);
+    REQUIRE(diags[0].ranges.size() == 1);
+
+    auto range = diags[0].ranges[0];
+    auto sm = compilation.getSourceManager();
+    CHECK(range.end() - range.start() == 11);
+    CHECK(sm->getColumnNumber(range.start()) == 9);
+    CHECK(sm->getColumnNumber(range.end()) == 20);
+}
+
+TEST_CASE("Unused definition inside macro expansion uses point diagnostic") {
+    auto libTree = SyntaxTree::fromText(R"(
+`define DEFINE_UNUSED_DEF module unused_from_macro; endmodule
+`DEFINE_UNUSED_DEF
+)");
+    libTree->isLibraryUnit = true;
+
+    auto userTree = SyntaxTree::fromText(R"(
+module top;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(libTree);
+    compilation.addSyntaxTree(userTree);
+
+    auto diags = compilation.getAllDiagnostics();
+    compilation.freeze();
+
+    AnalysisOptions options;
+    options.flags = AnalysisFlags::CheckUnused;
+    AnalysisManager analysisManager(options);
+    analysisManager.analyze(compilation);
+
+    diags.append_range(analysisManager.getDiagnostics());
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnusedDefinition);
+    REQUIRE(diags[0].args.size() == 1);
+    CHECK(std::get<std::string>(diags[0].args[0]) == "unused_from_macro");
+    CHECK(compilation.getSourceManager()->isMacroLoc(diags[0].location));
+    CHECK(diags[0].ranges.empty());
+}
+
 TEST_CASE("Undriven net via unused modport writer") {
     auto& text = R"(
 interface status_if;

@@ -1520,6 +1520,77 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Check uninstantiated reports bindable errors") {
+    auto text = R"(
+module child(input logic a);
+endmodule
+
+module top;
+    if (0) begin
+        child child(.missing(1'b1));
+        missing missing();
+        string s;
+        initial s.foobar();
+    end
+endmodule
+)";
+
+    auto hasCode = [](auto& diags, DiagCode code) {
+        return std::ranges::any_of(diags, [&](auto& diag) { return diag.code == code; });
+    };
+
+    // By default the contents of an untaken generate branch are not elaborated, so
+    // none of these problems are reported.
+    {
+        Compilation compilation;
+        compilation.addSyntaxTree(SyntaxTree::fromText(text));
+        NO_COMPILATION_ERRORS;
+    }
+
+    // With the flag the branch is elaborated and structural / lookup errors surface.
+    {
+        CompilationOptions options;
+        options.flags |= CompilationFlags::CheckUninstantiated;
+
+        Compilation compilation(options);
+        compilation.addSyntaxTree(SyntaxTree::fromText(text));
+
+        auto& diags = compilation.getAllDiagnostics();
+        CHECK(hasCode(diags, diag::PortDoesNotExist));
+        CHECK(hasCode(diags, diag::UnknownModule));
+        CHECK(hasCode(diags, diag::UnknownSystemMethod));
+    }
+}
+
+TEST_CASE("Check uninstantiated still suppresses dead-code-only diagnostics") {
+    // Diagnostics that would be false positives in never-taken code (e.g. an out
+    // of bounds index that is only reachable in the untaken branch) stay
+    // suppressed even when CheckUninstantiated is enabled.
+    auto text = R"(
+module top;
+    logic [3:0] arr;
+    if (0) begin
+        wire w = arr[7];
+    end
+endmodule
+)";
+
+    auto hasCode = [](auto& diags, DiagCode code) {
+        return std::ranges::any_of(diags, [&](auto& diag) { return diag.code == code; });
+    };
+
+    {
+        CompilationOptions options;
+        options.flags |= CompilationFlags::CheckUninstantiated;
+
+        Compilation compilation(options);
+        compilation.addSyntaxTree(SyntaxTree::fromText(text));
+
+        auto& diags = compilation.getAllDiagnostics();
+        CHECK_FALSE(hasCode(diags, diag::IndexOOB));
+    }
+}
+
 TEST_CASE("Bind directives") {
     auto tree = SyntaxTree::fromText(R"(
 module baz(input q);

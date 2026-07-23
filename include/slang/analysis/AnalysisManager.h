@@ -75,6 +75,9 @@ public:
 
     /// Issues a new diagnostic.
     Diagnostic& addDiag(const ast::Symbol& symbol, DiagCode code, SourceRange sourceRange);
+
+    /// Issues a new diagnostic.
+    Diagnostic& addDiag(const ast::Symbol& symbol, DiagCode code);
 };
 
 /// The analysis manager coordinates running various analyses on AST symbols.
@@ -191,6 +194,7 @@ public:
                                    bool isDisableCondition = false);
 
 private:
+    friend class AnalysisContext;
     friend struct AnalysisScopeVisitor;
     friend class AnalyzedProcedure;
 
