@@ -3,19 +3,31 @@
 # SPDX-License-Identifier: MIT
 # ~~~
 
-FetchContent_Declare(
-  pybind11
-  GIT_REPOSITORY https://github.com/pybind/pybind11.git
-  GIT_TAG v3.0.4
-  GIT_SHALLOW ON
-  FIND_PACKAGE_ARGS 3.0)
-FetchContent_MakeAvailable(pybind11)
-
-if(pybind11_FOUND)
-  message(STATUS "Using system pybind11 library: ${pybind11_VERSION}")
-  message(STATUS "Using system pybind11 include: ${pybind11_INCLUDE_DIRS}")
-else()
-  message(STATUS "Using remote pybind11 library")
+# Locate nanobind. Prefer a nanobind installed in the active Python environment
+# (this is how scikit-build-core provides it during a wheel build); otherwise
+# fall back to fetching it from GitHub.
+if(NOT nanobind_FOUND)
+  execute_process(
+    COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    OUTPUT_VARIABLE nanobind_cmake_dir
+    RESULT_VARIABLE nanobind_result
+    ERROR_QUIET)
+  if(nanobind_result EQUAL 0 AND EXISTS "${nanobind_cmake_dir}")
+    list(APPEND CMAKE_PREFIX_PATH "${nanobind_cmake_dir}")
+    find_package(nanobind CONFIG REQUIRED)
+    message(
+      STATUS "Using nanobind from Python environment: ${nanobind_cmake_dir}")
+  else()
+    FetchContent_Declare(
+      nanobind
+      GIT_REPOSITORY https://github.com/wjakob/nanobind.git
+      GIT_TAG v2.13.0
+      GIT_SHALLOW ON
+      FIND_PACKAGE_ARGS)
+    FetchContent_MakeAvailable(nanobind)
+    message(STATUS "Using remote nanobind library")
+  endif()
 endif()
 
 # Generate bindings for syntax node types and SyntaxFactory
@@ -32,10 +44,10 @@ add_custom_command(
   DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
   COMMENT "Generating syntax bindings")
 
-# Add the pyslang module via pybind11
-pybind11_add_module(
+# Add the pyslang module via nanobind
+nanobind_add_module(
   pyslang
-  MODULE
+  NB_STATIC
   python/AnalysisBindings.cpp
   python/ASTBindings.cpp
   python/CompBindings.cpp
@@ -71,11 +83,20 @@ install(
   COMPONENT pylib
   DESTINATION .)
 
-# Generate Python stubs as a post-install step
+# Generate a Python stub (.pyi) for the compiled module using nanobind's
+# built-in stub generator, then install it alongside the module.
+nanobind_add_stub(
+  pyslang_stub
+  MODULE
+  pyslang
+  OUTPUT
+  ${CMAKE_CURRENT_BINARY_DIR}/pyslang.pyi
+  PYTHON_PATH
+  $<TARGET_FILE_DIR:pyslang>
+  DEPENDS
+  pyslang)
+
 install(
-  CODE "
-  set(STUBGEN_PYTHON_EXECUTABLE \"${Python_EXECUTABLE}\")
-  # Do NOT override CMAKE_INSTALL_PREFIX - the install-time value is correct
-  include(\"${CMAKE_CURRENT_SOURCE_DIR}/generate_stubs.cmake\")
-"
-  COMPONENT pylib)
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/pyslang.pyi
+  COMPONENT pylib
+  DESTINATION .)

@@ -1362,7 +1362,7 @@ def generatePyBindings(builddir, alltypes):
 
 #include "slang/syntax/AllSyntax.h"
 
-void registerSyntaxNodes{0}(py::module_& m) {{
+void registerSyntaxNodes{0}(nb::module_& m) {{
 """.format(i)
         )
 
@@ -1371,7 +1371,7 @@ void registerSyntaxNodes{0}(py::module_& m) {{
             if class_name == "SyntaxNode":
                 continue
 
-            outf.write(f'    py::classh<{class_name}, {v.base}>(m, "{class_name}")')
+            outf.write(f'    nb::class_<{class_name}, {v.base}>(m, "{class_name}")')
             for member_name in v.members:
                 python_member_name = member_name[1]
 
@@ -1380,7 +1380,8 @@ void registerSyntaxNodes{0}(py::module_& m) {{
                     python_member_name = "with_"
 
                 outf.write(
-                    f'\n        .def_readwrite("{python_member_name}", &{class_name}::{member_name[1]})'
+                    f'\n        .def_rw("{python_member_name}",'
+                    f" &{class_name}::{member_name[1]})"
                 )
             outf.write(";\n\n")
 
@@ -1403,8 +1404,8 @@ def generatePyFactoryBindings(builddir, alltypes):
 
 #include "slang/syntax/AllSyntax.h"
 
-void registerSyntaxFactory(py::module_& m) {
-    py::classh<SyntaxFactory>(m, "SyntaxFactory",
+void registerSyntaxFactory(nb::module_& m) {
+    nb::class_<SyntaxFactory>(m, "SyntaxFactory",
         "Factory for creating syntax nodes. Access via SyntaxRewriter.factory.")
 """
     )
@@ -1433,7 +1434,9 @@ void registerSyntaxFactory(py::module_& m) {
             method_name = method_name[0].lower() + method_name[1:]
 
             outf.write(f'        .def("{method_name}", &SyntaxFactory::{method_name}')
-            outf.write(", py::return_value_policy::reference_internal")
+            # `byrefint` is the nanobind rv_policy::reference_internal alias
+            # defined in pyslang.h (included by the generated files).
+            outf.write(", byrefint")
 
             for arg in typeinfo.argNames:
                 if arg in typeinfo.optionalMembers:
@@ -1441,12 +1444,12 @@ void registerSyntaxFactory(py::module_& m) {
                         if m[MEMBER_NAME] == arg:
                             if len(m) <= MEMBER_BASE_TYPE:
                                 raise ValueError(
-                                    f"Optional member '{arg}' in '{name}' is missing "
-                                    f"base type information (expected at index {MEMBER_BASE_TYPE})"
+                                    f"Optional member '{arg}' in '{name}' is missing base type"
+                                    f" information (expected at index {MEMBER_BASE_TYPE})"
                                 )
                             base_type = m[MEMBER_BASE_TYPE]
                             outf.write(
-                                f', py::arg("{arg}") = static_cast<{base_type}*>(nullptr)'
+                                f', nb::arg("{arg}") = static_cast<{base_type}*>(nullptr)'
                             )
                             break
                 else:

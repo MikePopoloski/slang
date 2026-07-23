@@ -20,10 +20,10 @@ static SVInt SVIntFromFloat(double value) {
     return SVInt::fromDouble(bitwidth_t(bits), value, true);
 }
 
-static SVInt SVIntFromPyInt(const py::int_& value) {
+static SVInt SVIntFromPyInt(const nb::int_& value) {
     size_t bits = _PyLong_NumBits(value.ptr());
     if (bits == size_t(-1))
-        throw py::error_already_set();
+        throw nb::python_error();
 
     if (bits == 0)
         return SVInt::Zero;
@@ -44,14 +44,14 @@ static SVInt SVIntFromPyInt(const py::int_& value) {
 #endif
 
     if (r == -1)
-        throw py::error_already_set();
+        throw nb::python_error();
 
     return SVInt(bitwidth_t(bits), mem, true);
 }
 
-static py::int_ PyIntFromSVInt(const SVInt& value) {
+static nb::int_ PyIntFromSVInt(const SVInt& value) {
     if (value.hasUnknown())
-        return 0;
+        return nb::int_(0);
 
     uint32_t numWords = value.getNumWords();
     size_t numBytes = numWords * SVInt::WORD_SIZE;
@@ -77,25 +77,25 @@ static py::int_ PyIntFromSVInt(const SVInt& value) {
     }
 
     if (!obj)
-        throw py::error_already_set();
+        throw nb::python_error();
 
-    return py::reinterpret_steal<py::int_>(obj);
+    return nb::steal<nb::int_>(obj);
 }
 
-void registerNumeric(py::module_& m) {
+void registerNumeric(nb::module_& m) {
     EXPOSE_ENUM(m, LiteralBase);
     m.def("literalBaseFromChar", &literalBaseFromChar, "base"_a, "result"_a);
-    m.def("clog2", py::overload_cast<const SVInt&>(&clog2), "value"_a);
+    m.def("clog2", nb::overload_cast<const SVInt&>(&clog2), "value"_a);
 
-    py::classh<logic_t>(m, "logic_t")
-        .def(py::init<>())
-        .def(py::init<uint8_t>(), "value"_a)
-        .def_readwrite("value", &logic_t::value)
-        .def_property_readonly("isUnknown", &logic_t::isUnknown)
-        .def_readonly_static("x", &logic_t::x)
-        .def_readonly_static("z", &logic_t::z)
-        .def(py::self == py::self)
-        .def(py::self != py::self)
+    nb::class_<logic_t>(m, "logic_t")
+        .def(nb::init<>())
+        .def(nb::init<uint8_t>(), "value"_a)
+        .def_rw("value", &logic_t::value)
+        .def_prop_ro("isUnknown", &logic_t::isUnknown)
+        .def_ro_static("x", &logic_t::x)
+        .def_ro_static("z", &logic_t::z)
+        .def(nb::self == nb::self)
+        .def(nb::self != nb::self)
         .def("__and__", &logic_t::operator&)
         .def("__or__", &logic_t::operator|)
         .def("__xor__", &logic_t::operator^)
@@ -104,17 +104,25 @@ void registerNumeric(py::module_& m) {
         .def("__bool__", [](const logic_t& self) { return bool(self); })
         .def("__repr__", [](const logic_t& self) { return fmt::format("{}", self.toChar()); });
 
-    py::classh<SVInt>(m, "SVInt")
-        .def(py::init<>())
-        .def(py::init<logic_t>(), "bit"_a)
-        .def(py::init<bitwidth_t, uint64_t, bool>(), "bits"_a, "value"_a, "isSigned"_a)
-        .def(py::init<bitwidth_t, std::span<const byte>, bool>(), "bits"_a, "bytes"_a, "isSigned"_a)
-        .def(py::init([](std::string_view str) { return SVInt::fromString(str); }), "str"_a)
-        .def(py::init(&SVIntFromFloat), "value"_a)
-        .def(py::init(&SVIntFromPyInt), "value"_a)
-        .def_property_readonly("isSigned", &SVInt::isSigned)
-        .def_property_readonly("hasUnknown", &SVInt::hasUnknown)
-        .def_property_readonly("bitWidth", &SVInt::getBitWidth)
+    nb::class_<SVInt>(m, "SVInt")
+        .def(nb::init<>())
+        .def(nb::init<logic_t>(), "bit"_a)
+        .def(nb::init<bitwidth_t, uint64_t, bool>(), "bits"_a, "value"_a, "isSigned"_a)
+        .def(nb::init<bitwidth_t, std::span<const byte>, bool>(), "bits"_a, "bytes"_a, "isSigned"_a)
+        .def(
+            "__init__",
+            [](SVInt* self, std::string_view str) { new (self) SVInt(SVInt::fromString(str)); },
+            "str"_a)
+        .def(
+            "__init__", [](SVInt* self, double value) { new (self) SVInt(SVIntFromFloat(value)); },
+            "value"_a)
+        .def(
+            "__init__",
+            [](SVInt* self, const nb::int_& value) { new (self) SVInt(SVIntFromPyInt(value)); },
+            "value"_a)
+        .def_prop_ro("isSigned", &SVInt::isSigned)
+        .def_prop_ro("hasUnknown", &SVInt::hasUnknown)
+        .def_prop_ro("bitWidth", &SVInt::getBitWidth)
         .def_static("createFillX", &SVInt::createFillX, "bitWidth"_a, "isSigned"_a)
         .def_static("createFillZ", &SVInt::createFillZ, "bitWidth"_a, "isSigned"_a)
         .def_static("fromDigits", &SVInt::fromDigits, "bits"_a, "base"_a, "isSigned"_a,
@@ -138,12 +146,12 @@ void registerNumeric(py::module_& m) {
         .def("flattenUnknowns", &SVInt::flattenUnknowns)
         .def("shrinkToFit", &SVInt::shrinkToFit)
         .def("toString",
-             py::overload_cast<LiteralBase, bool, bitwidth_t>(&SVInt::toString, py::const_),
+             nb::overload_cast<LiteralBase, bool, bitwidth_t>(&SVInt::toString, nb::const_),
              "base"_a, "includeBase"_a,
              "abbreviateThresholdBits"_a = static_cast<bitwidth_t>(SVInt::MAX_BITS))
-        .def("shl", py::overload_cast<const SVInt&>(&SVInt::shl, py::const_), "rhs"_a)
-        .def("ashr", py::overload_cast<const SVInt&>(&SVInt::ashr, py::const_), "rhs"_a)
-        .def("lshr", py::overload_cast<const SVInt&>(&SVInt::lshr, py::const_), "rhs"_a)
+        .def("shl", nb::overload_cast<const SVInt&>(&SVInt::shl, nb::const_), "rhs"_a)
+        .def("ashr", nb::overload_cast<const SVInt&>(&SVInt::ashr, nb::const_), "rhs"_a)
+        .def("lshr", nb::overload_cast<const SVInt&>(&SVInt::lshr, nb::const_), "rhs"_a)
         .def("replicate", &SVInt::replicate, "times"_a)
         .def("reductionOr", &SVInt::reductionOr)
         .def("reductionAnd", &SVInt::reductionAnd)
@@ -169,40 +177,40 @@ void registerNumeric(py::module_& m) {
         .def("resize", &SVInt::resize, "bits"_a)
         .def("reverse", &SVInt::reverse)
         .def("xnor", &SVInt::xnor, "rhs"_a)
-        .def(-py::self)
-        .def(py::self += py::self)
-        .def(py::self -= py::self)
-        .def(py::self *= py::self)
-        .def(py::self /= py::self)
-        .def(py::self %= py::self)
-        .def(py::self + py::self)
-        .def(py::self - py::self)
-        .def(py::self * py::self)
-        .def(py::self / py::self)
-        .def(py::self % py::self)
-        .def(py::self == py::self)
-        .def(py::self != py::self)
-        .def(py::self < py::self)
-        .def(py::self <= py::self)
-        .def(py::self > py::self)
-        .def(py::self >= py::self)
-        .def(py::self += int())
-        .def(py::self -= int())
-        .def(py::self *= int())
-        .def(py::self /= int())
-        .def(py::self %= int())
-        .def(py::self + int())
-        .def(py::self - int())
-        .def(py::self * int())
-        .def(py::self / int())
-        .def(py::self % int())
-        .def(py::self == int())
-        .def(py::self != int())
-        .def(py::self < int())
-        .def(py::self <= int())
-        .def(py::self > int())
-        .def(py::self >= int())
-        .def(py::hash(py::self))
+        .def(-nb::self)
+        .def(nb::self += nb::self)
+        .def(nb::self -= nb::self)
+        .def(nb::self *= nb::self)
+        .def(nb::self /= nb::self)
+        .def(nb::self %= nb::self)
+        .def(nb::self + nb::self)
+        .def(nb::self - nb::self)
+        .def(nb::self * nb::self)
+        .def(nb::self / nb::self)
+        .def(nb::self % nb::self)
+        .def(nb::self == nb::self)
+        .def(nb::self != nb::self)
+        .def(nb::self < nb::self)
+        .def(nb::self <= nb::self)
+        .def(nb::self > nb::self)
+        .def(nb::self >= nb::self)
+        .def(nb::self += int())
+        .def(nb::self -= int())
+        .def(nb::self *= int())
+        .def(nb::self /= int())
+        .def(nb::self %= int())
+        .def(nb::self + int())
+        .def(nb::self - int())
+        .def(nb::self * int())
+        .def(nb::self / int())
+        .def(nb::self % int())
+        .def(nb::self == int())
+        .def(nb::self != int())
+        .def(nb::self < int())
+        .def(nb::self <= int())
+        .def(nb::self > int())
+        .def(nb::self >= int())
+        .def(nb::hash(nb::self))
         .def("__pow__", &SVInt::pow)
         .def("__iand__", &SVInt::operator&=)
         .def("__ior__", &SVInt::operator|=)
@@ -230,59 +238,62 @@ void registerNumeric(py::module_& m) {
         .def("__getitem__",
              [](const SVInt& self, size_t i) {
                  if (i >= self.getBitWidth())
-                     throw py::index_error();
+                     throw nb::index_error();
                  return self[int32_t(i)];
              })
         .def("__int__", [](const SVInt& self) { return PyIntFromSVInt(self); })
         .def("__float__", [](const SVInt& self) { return self.toDouble(); });
 
-    py::implicitly_convertible<py::int_, SVInt>();
-    py::implicitly_convertible<double, SVInt>();
+    nb::implicitly_convertible<nb::int_, SVInt>();
+    nb::implicitly_convertible<double, SVInt>();
 
     EXPOSE_ENUM(m, TimeUnit);
 
-    py::native_enum<TimeScaleMagnitude>(m, "TimeScaleMagnitude", "enum.Enum")
+    nb::enum_<TimeScaleMagnitude>(m, "TimeScaleMagnitude")
         .value("One", TimeScaleMagnitude::One)
         .value("Ten", TimeScaleMagnitude::Ten)
-        .value("Hundred", TimeScaleMagnitude::Hundred)
-        .finalize();
+        .value("Hundred", TimeScaleMagnitude::Hundred);
 
-    py::classh<TimeScaleValue>(m, "TimeScaleValue")
-        .def(py::init<>())
-        .def(py::init<TimeUnit, TimeScaleMagnitude>(), "unit"_a, "magnitude"_a)
-        .def_readwrite("unit", &TimeScaleValue::unit)
-        .def_readwrite("magnitude", &TimeScaleValue::magnitude)
+    nb::class_<TimeScaleValue>(m, "TimeScaleValue")
+        .def(nb::init<>())
+        .def(nb::init<TimeUnit, TimeScaleMagnitude>(), "unit"_a, "magnitude"_a)
+        .def_rw("unit", &TimeScaleValue::unit)
+        .def_rw("magnitude", &TimeScaleValue::magnitude)
         .def_static("fromLiteral", &TimeScaleValue::fromLiteral, "value"_a, "unit"_a)
         .def_static("fromString", &TimeScaleValue::fromString, "str"_a)
-        .def(py::self == py::self)
-        .def(py::self != py::self)
+        .def(nb::self == nb::self)
+        .def(nb::self != nb::self)
         .def("__repr__", [](const TimeScaleValue& self) { return self.toString(); });
 
-    py::classh<TimeScale>(m, "TimeScale")
-        .def(py::init<>())
-        .def(py::init<TimeScaleValue, TimeScaleValue>(), "base"_a, "precision"_a)
-        .def_readwrite("base", &TimeScale::base)
-        .def_readwrite("precision", &TimeScale::precision)
+    nb::class_<TimeScale>(m, "TimeScale")
+        .def(nb::init<>())
+        .def(nb::init<TimeScaleValue, TimeScaleValue>(), "base"_a, "precision"_a)
+        .def_rw("base", &TimeScale::base)
+        .def_rw("precision", &TimeScale::precision)
         .def("apply", &TimeScale::apply, "value"_a, "unit"_a, "roundToPrecision"_a)
         .def_static("fromString", &TimeScale::fromString, "str"_a)
-        .def(py::self == py::self)
-        .def(py::self != py::self)
+        .def(nb::self == nb::self)
+        .def(nb::self != nb::self)
         .def("__repr__", [](const TimeScale& self) { return self.toString(); });
 
-    py::classh<ConstantValue::NullPlaceholder>(m, "Null")
-        .def(py::init<>())
+    nb::class_<ConstantValue::NullPlaceholder>(m, "Null")
+        .def(nb::init<>())
         .def("__repr__", [](const ConstantValue::NullPlaceholder&) { return "null"; });
 
-    py::classh<ConstantValue::UnboundedPlaceholder>(m, "Unbounded")
-        .def(py::init<>())
+    nb::class_<ConstantValue::UnboundedPlaceholder>(m, "Unbounded")
+        .def(nb::init<>())
         .def("__repr__", [](const ConstantValue::UnboundedPlaceholder&) { return "$"; });
 
-    py::classh<ConstantValue>(m, "ConstantValue")
-        .def(py::init<>())
-        .def(py::init<const SVInt&>(), "integer"_a)
-        .def(py::init<const std::string&>(), "str"_a)
-        .def(py::init([](int i) { return ConstantValue(SVInt(i)); }), "value"_a)
-        .def(py::init([](double d) { return ConstantValue(real_t(d)); }), "value"_a)
+    nb::class_<ConstantValue>(m, "ConstantValue")
+        .def(nb::init<>())
+        .def(nb::init<const SVInt&>(), "integer"_a)
+        .def(nb::init<const std::string&>(), "str"_a)
+        .def(
+            "__init__", [](ConstantValue* self, int i) { new (self) ConstantValue(SVInt(i)); },
+            "value"_a)
+        .def(
+            "__init__", [](ConstantValue* self, double d) { new (self) ConstantValue(real_t(d)); },
+            "value"_a)
         .def("isContainer", &ConstantValue::isContainer)
         .def("isTrue", &ConstantValue::isTrue)
         .def("isFalse", &ConstantValue::isFalse)
@@ -291,74 +302,76 @@ void registerNumeric(py::module_& m) {
         .def("getSlice", &ConstantValue::getSlice, "upper"_a, "lower"_a, "defaultValue"_a)
         .def("empty", &ConstantValue::empty)
         .def("size", &ConstantValue::size)
-        .def("convertToInt", py::overload_cast<>(&ConstantValue::convertToInt, py::const_))
+        .def("convertToInt", nb::overload_cast<>(&ConstantValue::convertToInt, nb::const_))
         .def("convertToInt",
-             py::overload_cast<bitwidth_t, bool, bool>(&ConstantValue::convertToInt, py::const_),
+             nb::overload_cast<bitwidth_t, bool, bool>(&ConstantValue::convertToInt, nb::const_),
              "width"_a, "isSigned"_a, "isFourState"_a)
         .def("convertToReal", &ConstantValue::convertToReal)
         .def("convertToShortReal", &ConstantValue::convertToShortReal)
         .def("convertToStr", &ConstantValue::convertToStr)
         .def("convertToByteArray", &ConstantValue::convertToByteArray, "size"_a, "isSigned"_a)
         .def("convertToByteQueue", &ConstantValue::convertToByteQueue, "isSigned"_a)
-        .def(py::hash(py::self))
-        .def(py::self == py::self)
-        .def(py::self != py::self)
+        .def(nb::hash(nb::self))
+        .def(nb::self == nb::self)
+        .def(nb::self != nb::self)
         .def("__bool__", [](const ConstantValue& self) { return bool(self); })
         .def("__repr__", [](const ConstantValue& self) { return self.toString(); })
-        .def_property_readonly("value", [](const ConstantValue& self) {
+        .def_prop_ro("value", [](const ConstantValue& self) {
             return std::visit(
-                [](auto&& arg) -> py::object {
+                [](auto&& arg) -> nb::object {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, std::monostate>)
-                        return py::none();
+                        return nb::none();
                     else if constexpr (std::is_same_v<T, SVInt>)
-                        return py::cast(arg);
+                        return nb::cast(arg);
                     else if constexpr (std::is_same_v<T, real_t>)
-                        return py::cast(double(arg));
+                        return nb::cast(double(arg));
                     else if constexpr (std::is_same_v<T, shortreal_t>)
-                        return py::cast(float(arg));
+                        return nb::cast(float(arg));
                     else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
-                        return py::cast(arg);
+                        return nb::cast(arg);
                     else if constexpr (std::is_same_v<T, ConstantValue::UnboundedPlaceholder>)
-                        return py::cast(arg);
+                        return nb::cast(arg);
                     else if constexpr (std::is_same_v<T, ConstantValue::Elements>)
-                        return py::cast(arg);
+                        return nb::cast(arg);
                     else if constexpr (std::is_same_v<T, std::string>)
-                        return py::cast(arg);
+                        return nb::cast(arg);
                     else if constexpr (std::is_same_v<T, ConstantValue::Map>)
-                        return py::cast(*arg);
+                        return nb::cast(*arg);
                     else if constexpr (std::is_same_v<T, ConstantValue::Queue>)
-                        return py::cast(*arg);
+                        return nb::cast(*arg);
                     else if constexpr (std::is_same_v<T, ConstantValue::Union>)
-                        return py::cast(*arg);
+                        return nb::cast(*arg);
                     else
                         static_assert(always_false<T>::value, "Missing case");
                 },
                 self.getVariant());
         });
 
-    py::implicitly_convertible<SVInt, ConstantValue>();
-    py::implicitly_convertible<std::string, ConstantValue>();
-    py::implicitly_convertible<int, ConstantValue>();
-    py::implicitly_convertible<double, ConstantValue>();
+    nb::implicitly_convertible<SVInt, ConstantValue>();
+    nb::implicitly_convertible<std::string, ConstantValue>();
+    nb::implicitly_convertible<int, ConstantValue>();
+    nb::implicitly_convertible<double, ConstantValue>();
 
-    py::classh<ConstantRange>(m, "ConstantRange")
-        .def(py::init<>())
-        .def(py::init([](int left, int right) { return ConstantRange{left, right}; }), "left"_a,
-             "right"_a)
-        .def_readwrite("left", &ConstantRange::left)
-        .def_readwrite("right", &ConstantRange::right)
-        .def_property_readonly("width", &ConstantRange::width)
-        .def_property_readonly("lower", &ConstantRange::lower)
-        .def_property_readonly("upper", &ConstantRange::upper)
-        .def_property_readonly("isDescending", &ConstantRange::isDescending)
+    nb::class_<ConstantRange>(m, "ConstantRange")
+        .def(nb::init<>())
+        .def(
+            "__init__",
+            [](ConstantRange* self, int left, int right) { new (self) ConstantRange{left, right}; },
+            "left"_a, "right"_a)
+        .def_rw("left", &ConstantRange::left)
+        .def_rw("right", &ConstantRange::right)
+        .def_prop_ro("width", &ConstantRange::width)
+        .def_prop_ro("lower", &ConstantRange::lower)
+        .def_prop_ro("upper", &ConstantRange::upper)
+        .def_prop_ro("isDescending", &ConstantRange::isDescending)
         .def("reverse", &ConstantRange::reverse)
         .def("subrange", &ConstantRange::subrange)
         .def("translateIndex", &ConstantRange::translateIndex)
         .def("containsPoint", &ConstantRange::containsPoint)
         .def("overlaps", &ConstantRange::overlaps)
         .def("getIndexedRange", &ConstantRange::getIndexedRange)
-        .def(py::self == py::self)
-        .def(py::self != py::self)
+        .def(nb::self == nb::self)
+        .def(nb::self != nb::self)
         .def("__repr__", [](const ConstantRange& self) { return self.toString(); });
 }

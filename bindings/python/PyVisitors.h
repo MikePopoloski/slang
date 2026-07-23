@@ -29,35 +29,34 @@ enum class VisitAction {
 // compile error rather than a silently dropped handler.
 template<typename... Kinds>
 struct KindHandlerTables {
-    std::tuple<std::unordered_map<Kinds, py::object>...> maps;
+    std::tuple<std::unordered_map<Kinds, nb::object>...> maps;
 
     template<typename KindT>
-    std::unordered_map<KindT, py::object>& mapFor() {
-        return std::get<std::unordered_map<KindT, py::object>>(maps);
+    std::unordered_map<KindT, nb::object>& mapFor() {
+        return std::get<std::unordered_map<KindT, nb::object>>(maps);
     }
 
     // Try to place one (key, value) pair into the map for KindT. Returns false if the
     // key is not an instance of that enum type, so callers can try the next type.
     template<typename KindT>
-    bool tryInsert(py::handle key, py::handle value) {
-        if (!py::isinstance<KindT>(key))
+    bool tryInsert(nb::handle key, nb::handle value) {
+        if (!nb::isinstance<KindT>(key))
             return false;
-        mapFor<KindT>().insert_or_assign(py::cast<KindT>(key),
-                                         py::reinterpret_borrow<py::object>(value));
+        mapFor<KindT>().insert_or_assign(nb::cast<KindT>(key), nb::borrow<nb::object>(value));
         return true;
     }
 
     // Compile the Python dict once into the typed maps.
-    void build(const py::dict& table) {
+    void build(const nb::dict& table) {
         for (auto item : table)
             (tryInsert<Kinds>(item.first, item.second) || ...);
     }
 
     template<typename KindT>
-    py::handle find(KindT kind) {
+    nb::handle find(KindT kind) {
         auto& m = mapFor<KindT>();
         auto it = m.find(kind);
-        return it == m.end() ? py::handle() : py::handle(it->second);
+        return it == m.end() ? nb::handle() : nb::handle(it->second);
     }
 };
 
@@ -72,29 +71,40 @@ struct KindTablesFor<std::tuple<Ks...>> {
 template<typename TDerived, typename KindList, template<class, auto...> class BaseVisitor,
          auto... baseArgs>
 struct PyVisitorBase : public BaseVisitor<TDerived, baseArgs...> {
-    py::object f;
-    std::optional<py::dict> lookupTable;
+    nb::object f;
+    std::optional<nb::dict> lookupTable;
     bool interrupted = false;
 
     static inline constexpr auto doc =
-        "Visit a pyslang object with a callback function `f` or a `lookup_table` dict.\n\n"
-        "At least one of `f` or `lookup_table` must be provided (both default to `None`). "
-        "If both are provided, 'lookup_table' will be used to decide which callback to use.\n\n"
-        "When `f` is provided without `lookup_table`, it is called for every node visited. "
+        "Visit a pyslang object with a callback function `f` or a `lookup_table` "
+        "dict.\n\n"
+        "At least one of `f` or `lookup_table` must be provided (both default to "
+        "`None`). "
+        "If both are provided, 'lookup_table' will be used to decide which "
+        "callback to use.\n\n"
+        "When `f` is provided without `lookup_table`, it is called for every "
+        "node visited. "
         "The callback should take a single argument (the current node). "
-        "Its return value controls traversal: `pyslang.VisitAction.Interrupt` aborts the "
-        "visit, `pyslang.VisitAction.Skip` skips child nodes, and any other return value "
-        "(including `pyslang.VisitAction.Advance` or `None`) continues normally.\n\n"
-        "When `lookup_table` is provided, it should be a dict mapping node kind enum values "
-        "to handler functions. The C++ side checks each node's kind before crossing the "
-        "Python boundary, calling only the matching handler. Nodes not in the table are "
+        "Its return value controls traversal: `pyslang.VisitAction.Interrupt` "
+        "aborts the "
+        "visit, `pyslang.VisitAction.Skip` skips child nodes, and any other "
+        "return value "
+        "(including `pyslang.VisitAction.Advance` or `None`) continues "
+        "normally.\n\n"
+        "When `lookup_table` is provided, it should be a dict mapping node kind "
+        "enum values "
+        "to handler functions. The C++ side checks each node's kind before "
+        "crossing the "
+        "Python boundary, calling only the matching handler. Nodes not in the "
+        "table are "
         "traversed without invoking Python. `f` is not called in this mode.\n\n"
-        "The `lookup_table` is compiled into native lookups when the visit begins and must "
+        "The `lookup_table` is compiled into native lookups when the visit "
+        "begins and must "
         "not be mutated during traversal.";
 
-    explicit PyVisitorBase(py::object f, std::optional<py::dict> lt = std::nullopt) :
-        f{f}, lookupTable{std::move(lt)}, actionInterrupt{py::cast(VisitAction::Interrupt)},
-        actionSkip{py::cast(VisitAction::Skip)} {
+    explicit PyVisitorBase(nb::object f, std::optional<nb::dict> lt = std::nullopt) :
+        f{f}, lookupTable{std::move(lt)}, actionInterrupt{nb::cast(VisitAction::Interrupt)},
+        actionSkip{nb::cast(VisitAction::Skip)} {
         if (this->lookupTable)
             tables.build(*this->lookupTable);
     }
@@ -104,10 +114,10 @@ struct PyVisitorBase : public BaseVisitor<TDerived, baseArgs...> {
         if (this->interrupted)
             return;
 
-        py::object result;
+        nb::object result;
         if (this->lookupTable) {
             if constexpr (requires { t.kind; }) {
-                py::handle handler = tables.find(t.kind);
+                nb::handle handler = tables.find(t.kind);
                 if (handler)
                     result = handler(&t);
             }
@@ -125,7 +135,7 @@ protected:
     // returning a VisitAction (or None to advance). The VisitAction objects are cached so the
     // comparison does not re-cast them per node; value comparison (==) is kept to match the
     // previous behavior, and it only runs on a non-None return.
-    bool applyResult(const py::object& result) {
+    bool applyResult(const nb::object& result) {
         if (!result || result.is_none())
             return true;
         if (result.equal(actionInterrupt)) {
@@ -138,8 +148,8 @@ protected:
     typename KindTablesFor<KindList>::type tables;
 
 private:
-    py::object actionInterrupt;
-    py::object actionSkip;
+    nb::object actionInterrupt;
+    nb::object actionSkip;
 };
 
 struct PyASTVisitor
@@ -151,13 +161,13 @@ struct PyASTVisitor
 };
 
 template<typename T>
-void pyASTVisit(const T& t, py::object f = py::none(), py::object lookup_table = py::none()) {
+void pyASTVisit(const T& t, nb::object f = nb::none(), nb::object lookup_table = nb::none()) {
     if (f.is_none() && lookup_table.is_none())
-        throw py::type_error("visit() requires 'f' or 'lookup_table' (both are None)");
+        throw nb::type_error("visit() requires 'f' or 'lookup_table' (both are None)");
 
-    std::optional<py::dict> lt;
+    std::optional<nb::dict> lt;
     if (!lookup_table.is_none())
-        lt = py::cast<py::dict>(lookup_table);
+        lt = nb::cast<nb::dict>(lookup_table);
 
     PyASTVisitor visitor{f, std::move(lt)};
     t.visit(visitor);
