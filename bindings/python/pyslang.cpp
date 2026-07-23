@@ -5,25 +5,25 @@
 //------------------------------------------------------------------------------
 #include "pyslang.h"
 
-void registerAnalysis(py::module_& m, py::module_& ast);
-void registerAST(py::module_& m);
-void registerCompilation(py::module_& m, py::module_& ast, py::module_& driver);
-void registerExpressions(py::module_& m);
-void registerNumeric(py::module_& m);
-void registerDiagnostics(py::module_& m);
-void registerText(py::module_& m);
-void registerUtil(py::module_& m);
-void registerStatements(py::module_& m);
-void registerSymbols(py::module_& m);
-void registerSyntax(py::module_& syntax, py::module_& parsing);
-void registerSyntaxNodes0(py::module_& m);
-void registerSyntaxNodes1(py::module_& m);
-void registerSyntaxNodes2(py::module_& m);
-void registerSyntaxNodes3(py::module_& m);
-void registerSyntaxFactory(py::module_& m);
-void registerTypes(py::module_& m);
+void registerAnalysis(nb::module_& m, nb::module_& ast);
+void registerAST(nb::module_& m);
+void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver);
+void registerExpressions(nb::module_& m);
+void registerNumeric(nb::module_& m);
+void registerDiagnostics(nb::module_& m);
+void registerText(nb::module_& m);
+void registerUtil(nb::module_& m);
+void registerStatements(nb::module_& m);
+void registerSymbols(nb::module_& m);
+void registerSyntax(nb::module_& syntax, nb::module_& parsing);
+void registerSyntaxNodes0(nb::module_& m);
+void registerSyntaxNodes1(nb::module_& m);
+void registerSyntaxNodes2(nb::module_& m);
+void registerSyntaxNodes3(nb::module_& m);
+void registerSyntaxFactory(nb::module_& m);
+void registerTypes(nb::module_& m);
 
-PYBIND11_MODULE(pyslang, m) {
+NB_MODULE(pyslang, m) {
     m.doc() = "Python bindings for slang, the SystemVerilog compiler library";
 
 #ifdef VERSION_INFO
@@ -56,7 +56,11 @@ PYBIND11_MODULE(pyslang, m) {
     registerSyntaxFactory(syntax);
     registerTypes(ast);
 
-    py::register_exception_translator([](std::exception_ptr p) {
+    // nanobind exception translators take a `(const std::exception_ptr&,
+    // void*)` callback (a non-capturing lambda convertible to a function
+    // pointer). If this translator does not handle the exception it simply lets
+    // it propagate, and nanobind falls back to the next (default) translator.
+    nb::register_exception_translator([](const std::exception_ptr& p, void* /*payload*/) {
         try {
             if (p)
                 std::rethrow_exception(p);
@@ -66,9 +70,9 @@ PYBIND11_MODULE(pyslang, m) {
             const auto p1 = e.path1().string();
             const auto p2 = e.path2().string();
             PyErr_SetObject(PyExc_IOError,
-                            py::make_tuple(code.value(), code.message(),
-                                           p1.empty() ? py::none() : py::cast(p1), code.value(),
-                                           p2.empty() ? py::none() : py::cast(p2))
+                            nb::make_tuple(code.value(), code.message(),
+                                           p1.empty() ? nb::none() : nb::cast(p1), code.value(),
+                                           p2.empty() ? nb::none() : nb::cast(p2))
                                 .ptr());
         }
     });

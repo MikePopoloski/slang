@@ -24,6 +24,22 @@ endmodule
 
 
 def test_custom_systasks():
+    # NOTE: This test reports nanobind instance leaks at interpreter shutdown
+    # (Compilation, SyntaxTree, NonConstantFunction, Bag, and the Python-defined
+    # BarFunc). This is a known, benign nanobind limitation, not a bug:
+    #
+    #   Compilation --(nb::keep_alive<1,2> on addSystemSubroutine)--> BarFunc
+    #   BarFunc      --(its class -> method __closure__ -> c)-------> Compilation
+    #
+    # forms a reference cycle. nanobind stores keep_alive patients in a global
+    # internals map (not on the instance), and its default inst_traverse only
+    # visits __dict__ and the type object, so the Compilation -> BarFunc edge is
+    # invisible to Python's cyclic GC; the cycle therefore survives to shutdown.
+    # The keep_alive edge cannot simply be dropped: Compilation stores a raw C++
+    # pointer to the subroutine, so it is required for memory safety. This mirrors
+    # the documented AnalysisManager case in AnalysisBindings.cpp. The objects are
+    # still correctly kept alive (no use-after-free); only their cleanup is
+    # deferred to interpreter shutdown.
     c = Compilation()
     c.addSyntaxTree(SyntaxTree.fromText(testfile))
 

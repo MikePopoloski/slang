@@ -196,7 +196,10 @@ endmodule
     arr = root.lookupName("m.arr")
     drivers = am.getDrivers(arr)
 
-    ec = EvalContext(root)
+    # Note: EvalContext must be constructed from a symbol that has a parent
+    # scope. Passing the compilation root (which has no parent scope) triggers
+    # a null-pointer dereference (SIGILL) inside slang's EvalContext ctor.
+    ec = EvalContext(m)
 
     assert len(drivers) >= 1
     for driver in drivers:
@@ -239,7 +242,9 @@ endmodule
         values_found.append(path.rootSymbol.name)
 
     if isinstance(stmt, ExpressionStatement):
-        ValuePath.visitPaths(stmt.expr, EvalContext(root), on_path)
+        # EvalContext must be constructed from a symbol that has a parent scope;
+        # the compilation root has none, so use the module instance instead.
+        ValuePath.visitPaths(stmt.expr, EvalContext(m), on_path)
 
     assert "a" in values_found
     assert "b" in values_found
@@ -455,20 +460,25 @@ def _get_proc_block(code):
 
 
 def _analyze(code):
-    """Compile *code* and return (compilation, AnalyzedProcedure) for module m."""
+    """Compile *code* and return (AnalysisManager, AnalyzedProcedure) for module m.
+
+    The returned AnalyzedProcedure is a non-owning reference into the
+    AnalysisManager's storage, so the caller must keep the returned manager
+    alive for as long as it uses the procedure.
+    """
     compilation, _ = _get_proc_block(code)
     procs = []
     am = AnalysisManager()
     am.addProcListener(lambda p: procs.append(p))
     am.analyze(compilation)
     if procs:
-        return procs[0]
+        return am, procs[0]
     raise AssertionError("No AnalyzedProcedure for a ProceduralBlockSymbol found")
 
 
 def test_sensitivity_list_always_comb_implicit():
     """always_comb produces an Implicit sensitivity list over the read signals."""
-    proc = _analyze("""
+    unused_am, proc = _analyze("""
 module m;
     logic a, b, y;
     always_comb y = a & b;
@@ -483,7 +493,7 @@ endmodule
 
 def test_sensitivity_list_read_range_type():
     """Each entry in SensitivityList.reads is a ReadRange with the right fields."""
-    proc = _analyze("""
+    unused_am, proc = _analyze("""
 module m;
     logic [7:0] vec;
     logic y;
@@ -504,7 +514,7 @@ endmodule
 
 def test_sensitivity_list_always_ff_explicit():
     """always_ff produces an Explicit sensitivity list with a timingControl."""
-    proc = _analyze("""
+    unused_am, proc = _analyze("""
 module m(input logic clk);
     logic [7:0] count;
     always_ff @(posedge clk) count <= count + 1;
@@ -519,7 +529,7 @@ endmodule
 
 def test_sensitivity_list_initial_none():
     """initial blocks have no event-based sensitivity (Kind.None_)."""
-    proc = _analyze("""
+    unused_am, proc = _analyze("""
 module m;
     logic a;
     initial a = 1;
@@ -532,7 +542,7 @@ endmodule
 
 def test_sensitivity_list_always_star_implicit():
     """always @* derives an Implicit sensitivity like always_comb."""
-    proc = _analyze("""
+    unused_am, proc = _analyze("""
 module m;
     logic a, b, y;
     always @(*) y = a | b;
@@ -546,7 +556,7 @@ endmodule
 
 def test_sensitivity_list_always_comb_partially_driven():
     """Bits of a vector that are also written are excluded from the sensitivity."""
-    proc = _analyze("""
+    unused_am, proc = _analyze("""
 module m;
     logic [7:0] vec;
     logic [3:0] y;
@@ -568,7 +578,7 @@ endmodule
 
 def test_analyzed_procedure_read_set():
     """AnalyzedProcedure.readSet contains all symbols read in the procedure."""
-    proc = _analyze("""
+    unused_am, proc = _analyze("""
 module m;
     logic a, b, y;
     always_comb y = a & b;
@@ -580,7 +590,7 @@ endmodule
 
 def test_analyzed_procedure_implicit_event_read_sets():
     """ImplicitEventReadSet is populated for always @* blocks."""
-    proc = _analyze("""
+    unused_am, proc = _analyze("""
 module m;
     logic a, b, y;
     always @(*) y = a ^ b;
