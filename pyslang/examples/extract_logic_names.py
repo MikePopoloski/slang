@@ -14,12 +14,11 @@ The script will parse a sample SystemVerilog module and print the names of
 all logic declarations found in the code.
 """
 
-from typing import Union
-
-from pyslang import DiagnosticEngine, TextDiagnosticClient
 from pyslang.ast import Compilation, PackedArrayType, ScalarType, VariableSymbol
 from pyslang.parsing import Token
 from pyslang.syntax import SyntaxNode, SyntaxTree
+
+from pyslang import DiagnosticEngine, TextDiagnosticClient
 
 
 class LogicDeclarationExtractor:
@@ -59,7 +58,7 @@ class LogicDeclarationExtractor:
         # Not a logic type
         return False
 
-    def __call__(self, obj: Union[Token, SyntaxNode]) -> None:
+    def __call__(self, obj: Token | SyntaxNode) -> None:
         """
         Visit method called for each node in the AST.
 

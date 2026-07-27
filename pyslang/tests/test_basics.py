@@ -128,9 +128,9 @@ endmodule
 
 def test_include_metadata():
     tree = SyntaxTree.fromText(
-        """
-    `include "{}/some_file.svh"
-    """.format(Path(__file__).parent)
+        f"""
+    `include "{Path(__file__).parent}/some_file.svh"
+    """
     )
     includes = tree.getIncludeDirectives()
     assert len(includes) == 1

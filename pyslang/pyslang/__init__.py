@@ -3,9 +3,15 @@
 
 import sys as _sys
 
-from pyslang.pyslang import *  # noqa: F401,F403
-from pyslang.pyslang import driver  # noqa: F401
-from pyslang.pyslang import __version__ as __version__, analysis, ast, parsing, syntax
+from pyslang.pyslang import *
+from pyslang.pyslang import __version__ as __version__
+from pyslang.pyslang import (
+    analysis,
+    ast,
+    driver,
+    parsing,
+    syntax,
+)
 
 for _name, _mod in [
     ("pyslang.ast", ast),

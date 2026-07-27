@@ -37,7 +37,7 @@ def entry(line):
         for c in ["*", "-", "|", "[", "{", "_"]:
             t = t.replace(c, "\\" + c)
         if s not in ["|", "[", "]", "{", "}"]:
-            return "`{}`".format(s)
+            return f"`{s}`"
         return t
 
     line = line.replace("{,", "{ ,")

@@ -4,7 +4,6 @@
 """Tests for the logic declaration name extractor example."""
 
 import pytest
-
 from extract_logic_names import (
     LogicDeclarationExtractor,
     extract_logic_declaration_names,

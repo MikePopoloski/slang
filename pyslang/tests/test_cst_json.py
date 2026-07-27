@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 from pyslang.parsing import TokenKind, TriviaKind
 from pyslang.syntax import CSTJsonMode, SyntaxKind, SyntaxTree
@@ -35,7 +35,7 @@ class CSTValidator:
         self._validate_node(json_data, path)
         return len(self.errors) == 0
 
-    def get_errors(self) -> List[str]:
+    def get_errors(self) -> list[str]:
         """Get list of validation errors."""
         return self.errors.copy()
 
@@ -76,7 +76,7 @@ class CSTValidator:
         # Validate trivia constraints based on mode
         self._validate_trivia_constraints(node, path)
 
-    def _validate_token(self, token: Dict[str, Any], path: str):
+    def _validate_token(self, token: dict[str, Any], path: str):
         """Validate a token node."""
         kind = token["kind"]
 
@@ -102,7 +102,7 @@ class CSTValidator:
         if "trivia" in token:
             self._validate_trivia(token["trivia"], f"{path}.trivia")
 
-    def _validate_syntax_node(self, node: Dict[str, Any], path: str):
+    def _validate_syntax_node(self, node: dict[str, Any], path: str):
         """Validate a syntax node (non-token)."""
         for key, value in node.items():
             if key == "kind":
@@ -194,7 +194,7 @@ class CSTValidator:
                         f"{path}[{i}]",
                     )
 
-    def _validate_trivia_constraints(self, node: Dict[str, Any], path: str):
+    def _validate_trivia_constraints(self, node: dict[str, Any], path: str):
         """Validate trivia constraints based on mode."""
         has_trivia = "trivia" in node
 
