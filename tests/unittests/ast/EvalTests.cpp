@@ -2060,6 +2060,22 @@ localparam logic[7:0] value6 = {<<4{ {<<2{value5}} }};
     CHECK(diags[1].code == diag::BadStreamSize);
 }
 
+TEST_CASE("Streaming concat with irregular packed slice boundary") {
+    // Regression: a right-to-left streaming concatenation whose packed layout
+    // makes a slice land exactly on an element boundary used to crash reOrder
+    // (the packing iterator ran past the end of the packed list). Streaming is
+    // a bit permutation, so the population count must be preserved.
+    ScriptSession session;
+    session.eval("localparam logic [2:0] a = 3'h5;");
+    session.eval("localparam logic b = 1'b1;");
+    session.eval("localparam logic [15:0] s = {<<3{a, a, a, a, a, b}};");
+    CHECK(session.eval("$countones(s)").integer() == 11);
+
+    session.eval("localparam logic [15:0] c = 16'hCAFE;");
+    session.eval("localparam logic [15:0] p = {<<3{ {<<3{c}} }};");
+    CHECK(session.eval("$countones(p)").integer() == session.eval("$countones(c)").integer());
+}
+
 TEST_CASE("streaming operator target evaluation") {
     ScriptSession session;
     session.eval(R"(
