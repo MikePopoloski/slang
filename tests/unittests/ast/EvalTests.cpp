@@ -608,6 +608,23 @@ TEST_CASE("Dynamic arrays -- out of bounds") {
     CHECK(diags[5].code == diag::ConstEvalEmptyQueue);
 }
 
+TEST_CASE("Queue read at the append index") {
+    // Reading a queue at index == size() (the append slot) is out of bounds; it
+    // must warn and return the element default rather than crash. Writing that
+    // slot is still allowed and appends.
+    ScriptSession session;
+    session.eval("int q[$] = '{10, 20, 30};");
+    CHECK(session.eval("q[3]").integer() == 0);
+    CHECK(session.eval("q[2]").integer() == 30);
+
+    session.eval("q[3] = 40;");
+    CHECK(session.eval("q[3]").integer() == 40);
+
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalDynamicArrayIndex);
+}
+
 TEST_CASE("Associative array eval") {
     ScriptSession session;
     session.eval("integer arr[string] = '{\"Hello\":4, \"World\":8, default:-1};");
