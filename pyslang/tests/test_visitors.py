@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
 
-from typing import Union
 
 from pyslang.ast import (
     Compilation,
@@ -27,7 +26,7 @@ def test_syntax_node_visitor():
     tree = SyntaxTree.fromText("always @(*)")
     tokens = []
 
-    def handle(obj: Union[Token, SyntaxNode]) -> None:
+    def handle(obj: Token | SyntaxNode) -> None:
         if isinstance(obj, Token):
             tokens.append(obj)
 
@@ -83,7 +82,7 @@ def test_timing_control_visitor():
         def __init__(self):
             self.sensitivity_vars = []
 
-        def __call__(self, obj: Union[Token, SyntaxNode]) -> None:
+        def __call__(self, obj: Token | SyntaxNode) -> None:
             if isinstance(obj, SignalEventControl):
                 assert isinstance(obj.expr, NamedValueExpression)
                 self.sensitivity_vars.append(obj.expr.getSymbolReference())
@@ -121,7 +120,7 @@ endmodule
         def __init__(self):
             self.statement_count = 0
 
-        def visit(self, node: Union[Token, SyntaxNode]) -> None:
+        def visit(self, node: Token | SyntaxNode) -> None:
             if isinstance(node, Statement):
                 self.statement_count += 1
 

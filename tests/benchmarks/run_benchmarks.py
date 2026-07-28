@@ -244,6 +244,7 @@ def run_case(
         cmd,
         capture_output=True,
         text=True,
+        check=False,
     )
 
     # --time-stats - writes JSON to stdout; parse it.

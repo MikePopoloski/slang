@@ -32,7 +32,8 @@ def main():
     parser.add_argument("--slangBin")
     args = parser.parse_args()
 
-    inf = open(args.diagnostics)
+    with open(args.diagnostics) as f:
+        inf = f.readlines()
     headerdir = os.path.join(args.outDir, "slang", "diagnostics")
     os.makedirs(headerdir, exist_ok=True)
 
@@ -82,7 +83,7 @@ def main():
                 diags[subsystem].append(("Note", parts[1], parts[2], ""))
                 diaglist.append(parts[1])
             else:
-                raise Exception("Invalid entry: {}".format(line))
+                raise ValueError(f"Invalid entry: {line}")
 
     if args.docs:
         createdocs(
@@ -107,9 +108,9 @@ def main():
 
 
 def createheader(path, subsys, diags):
-    output = """//------------------------------------------------------------------------------
-//! @file {}Diags.h
-//! @brief Generated diagnostic enums for the {} subsystem
+    output = f"""//------------------------------------------------------------------------------
+//! @file {subsys}Diags.h
+//! @brief Generated diagnostic enums for the {subsys} subsystem
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -120,14 +121,12 @@ def createheader(path, subsys, diags):
 
 namespace slang::diag {{
 
-""".format(subsys, subsys)
+"""
 
-    index = 0
-    for d in sorted(diags):
-        output += "inline constexpr DiagCode {}(DiagSubsystem::{}, {});\n".format(
-            d[1], subsys, index
+    for index, d in enumerate(sorted(diags)):
+        output += (
+            f"inline constexpr DiagCode {d[1]}(DiagSubsystem::{subsys}, {index});\n"
         )
-        index += 1
 
     output += """
 }
@@ -156,9 +155,7 @@ static const flat_hash_map<DiagCode, std::tuple<std::string_view, std::string_vi
 
     for _, v in sorted(diags.items()):
         for d in sorted(v):
-            output += '    {{diag::{}, std::make_tuple("{}"sv, "{}"sv, DiagnosticSeverity::{}, "{}"sv)}},\n'.format(
-                d[1], d[1], d[2], d[0], d[3]
-            )
+            output += f'    {{diag::{d[1]}, std::make_tuple("{d[1]}"sv, "{d[2]}"sv, DiagnosticSeverity::{d[0]}, "{d[3]}"sv)}},\n'
 
     output += """};
 
@@ -179,8 +176,8 @@ static const flat_hash_map<std::string_view, std::vector<DiagCode>> optionMap = 
 
     for key in sorted(optionMap):
         vals = optionMap[key]
-        valstr = ", ".join(["diag::{}".format(v) for v in vals])
-        output += '    {{"{}"sv, {{ {} }}}},\n'.format(key, valstr)
+        valstr = ", ".join([f"diag::{v}" for v in vals])
+        output += f'    {{"{key}"sv, {{ {valstr} }}}},\n'
 
     output += """};
 
@@ -192,10 +189,8 @@ static const flat_hash_map<std::string_view, DiagGroup> groupMap = {
         for e in sorted(g[1]):
             elems.extend(optionMap[e])
 
-        elems = ", ".join("diag::{}".format(e) for e in elems)
-        output += '    {{"{}"sv, DiagGroup("{}", {{ {} }})}},\n'.format(
-            g[0], g[0], elems
-        )
+        elems = ", ".join(f"diag::{e}" for e in elems)
+        output += f'    {{"{g[0]}"sv, DiagGroup("{g[0]}", {{ {elems} }})}},\n'
 
     output += """};
 
@@ -245,7 +240,7 @@ static const DiagCode AllGeneratedCodes[] = {
 
     for _, v in sorted(diags.items()):
         for d in sorted(v):
-            output += "    diag::{},\n".format(d[1])
+            output += f"    diag::{d[1]},\n"
 
     output += """};
 
@@ -269,7 +264,7 @@ def createallheader(path, diags):
 """
 
     for k in sorted(diags.keys()):
-        output += '#include "slang/diagnostics/{}Diags.h"\n'.format(k)
+        output += f'#include "slang/diagnostics/{k}Diags.h"\n'
 
     output += "\n"
     writefile(path, output)
@@ -285,7 +280,8 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
             self.options = ""
             self.category = category
 
-    inf = open(inpath)
+    with open(inpath) as f:
+        inf = f.readlines()
     curropt = None
     inexample = False
     category = "Miscellaneous"
@@ -328,7 +324,7 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
 
     categorylist.append("Warning Groups")
 
-    for _, v in exampleMap.items():
+    for v in exampleMap.values():
         if not v.example:
             continue
 
@@ -349,11 +345,15 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
             args.extend(v.options.split())
 
         result = subprocess.run(
-            args, encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+            args,
+            encoding="utf-8",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
         )
         v.output = result.stdout
         if v.name not in v.output:
-            raise Exception("Test for -W{} is not correct".format(v.name))
+            raise RuntimeError(f"Test for -W{v.name} is not correct")
 
     output = """/** @page warning-ref Warning Reference
 @brief Reference information about all supported warnings
@@ -374,16 +374,16 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
             if e in groupMap:
                 groupMap[e].add(g[0])
             else:
-                groupMap[e] = set([g[0]])
+                groupMap[e] = {g[0]}
 
-    for _, v in diags.items():
+    for v in diags.values():
         for d in v:
             opt = d[3]
             if not opt:
                 continue
 
             if opt not in exampleMap:
-                raise Exception("No documentation for -W{}".format(opt))
+                raise RuntimeError(f"No documentation for -W{opt}")
 
             details = exampleMap[opt]
             if details.desc == "<ignored>":
@@ -408,7 +408,7 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
 
                 if lastOpt != "":
                     output += "\n@n\n"
-                output += "@subsubsection {} -W{}\n".format(opt, opt)
+                output += f"@subsubsection {opt} -W{opt}\n"
 
                 details = exampleMap[opt]
                 output += details.desc
@@ -437,10 +437,10 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
 
                 opt = d[0]
                 lastOpt = opt
-                elemlist = ", ".join("@ref {}".format(s) for s in d[1])
+                elemlist = ", ".join(f"@ref {s}" for s in d[1])
 
-                output += "@subsubsection {} -W{}\n".format(opt, opt)
-                output += "Controls {}.\n@n\n".format(elemlist)
+                output += f"@subsubsection {opt} -W{opt}\n"
+                output += f"Controls {elemlist}.\n@n\n"
 
     output += "\n*/"
     writefile(os.path.join(outDir, "warnings.dox"), output)
@@ -459,7 +459,7 @@ def checkDiags(path, diags):
 
 def reportUnused(diags):
     for d in diags:
-        print("warning: '{}' is unused".format(d))
+        print(f"warning: '{d}' is unused")
 
 
 if __name__ == "__main__":

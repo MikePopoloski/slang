@@ -3,8 +3,9 @@
 
 from pathlib import Path
 
-from pyslang import BufferID
 from pyslang.driver import CommandLineOptions, Driver
+
+from pyslang import BufferID
 
 
 def _write_driver_sources(tmp_path):

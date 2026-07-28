@@ -48,7 +48,7 @@ class TestMakeToken:
             if node.kind == SyntaxKind.ModuleDeclaration:
                 try:
                     rewriter.makeToken(TokenKind.Identifier)
-                except Exception as e:
+                except ValueError as e:
                     error_raised["error"] = str(e)
 
         rewrite(SyntaxTree.fromText("module m; endmodule", "test.sv"), handler)

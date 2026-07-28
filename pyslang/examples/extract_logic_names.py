@@ -14,12 +14,11 @@ The script will parse a sample SystemVerilog module and print the names of
 all logic declarations found in the code.
 """
 
-from typing import Union
-
-from pyslang import DiagnosticEngine, TextDiagnosticClient
 from pyslang.ast import Compilation, PackedArrayType, ScalarType, VariableSymbol
 from pyslang.parsing import Token
 from pyslang.syntax import SyntaxNode, SyntaxTree
+
+from pyslang import DiagnosticEngine, TextDiagnosticClient
 
 
 class LogicDeclarationExtractor:
@@ -59,7 +58,7 @@ class LogicDeclarationExtractor:
         # Not a logic type
         return False
 
-    def __call__(self, obj: Union[Token, SyntaxNode]) -> None:
+    def __call__(self, obj: Token | SyntaxNode) -> None:
         """
         Visit method called for each node in the AST.
 
@@ -109,7 +108,7 @@ def extract_logic_declaration_names(systemverilog_code: str) -> list[str]:
     print(diagClient.getString())
 
     if has_error:
-        raise Exception("Compilation had errors")
+        raise RuntimeError("Compilation had errors")
 
     # Create our visitor to extract logic declaration names
     extractor = LogicDeclarationExtractor()
@@ -175,7 +174,7 @@ def main():
                 else:
                     print("No logic declarations found.")
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - example keeps going on any per-file error
                 print(f"Error: {e}")
             print()
     else:
@@ -254,7 +253,7 @@ def main():
             print("Usage: python extract_logic_names.py [file1.sv file2.sv ...]")
             print("       python extract_logic_names.py --verbose  # Show sample code")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - top-level guard reports any failure
             print(f"Error processing SystemVerilog code: {e}")
             print("Make sure pyslang is properly installed.")
 

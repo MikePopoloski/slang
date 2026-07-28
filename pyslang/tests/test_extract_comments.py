@@ -67,7 +67,7 @@ def test_extract_comments():
     assert len(moduleComments) == 5
     assert moduleComments[4] == "| col 1 is | left-aligned | $1600 |"
 
-    for k, _ in portComments.copy().items():
+    for k in portComments.copy():
         if len(portComments[k]) == 0:
             del portComments[k]
 

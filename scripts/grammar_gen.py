@@ -10,11 +10,6 @@ import re
 
 ourdir = os.path.dirname(os.path.realpath(__file__))
 
-inf = open(os.path.join(ourdir, "grammar.txt"))
-outf = open(os.path.join(ourdir, "../docs/grammar.md"), "w")
-
-outf.write("# SystemVerilog\n")
-
 
 def entry(line):
     match = re.match(r"(\w+) ::=", line)
@@ -37,7 +32,7 @@ def entry(line):
         for c in ["*", "-", "|", "[", "{", "_"]:
             t = t.replace(c, "\\" + c)
         if s not in ["|", "[", "]", "{", "}"]:
-            return "`{}`".format(s)
+            return f"`{s}`"
         return t
 
     line = line.replace("{,", "{ ,")
@@ -49,21 +44,27 @@ def entry(line):
         entry(saved_match)
 
 
-for line in inf:
-    line = line.strip()
-    if not line:
-        continue
+with (
+    open(os.path.join(ourdir, "grammar.txt")) as inf,
+    open(os.path.join(ourdir, "../docs/grammar.md"), "w") as outf,
+):
+    outf.write("# SystemVerilog\n")
 
-    if line.startswith("A."):
-        count = line.split(" ")[0].count(".")
-        if count == 1:
-            outf.write("## ")
-        elif count == 2:
-            outf.write("### ")
-        elif count == 3:
-            outf.write("#### ")
+    for line in inf:
+        line = line.strip()
+        if not line:
+            continue
+
+        if line.startswith("A."):
+            count = line.split(" ")[0].count(".")
+            if count == 1:
+                outf.write("## ")
+            elif count == 2:
+                outf.write("### ")
+            elif count == 3:
+                outf.write("#### ")
+            else:
+                raise ValueError("wut")
+            outf.write(line + "\n")
         else:
-            raise Exception("wut")
-        outf.write(line + "\n")
-    else:
-        entry(line)
+            entry(line)

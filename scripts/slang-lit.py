@@ -541,10 +541,10 @@ def run_test(
             proc = subprocess.run(
                 cmd,
                 shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 text=True,
                 timeout=60,
+                check=False,
             )
         except subprocess.TimeoutExpired:
             elapsed = time.monotonic() - start
@@ -642,9 +642,10 @@ def discover_tests(paths: list[Path], filter_re: re.Pattern | None) -> list[Path
             for root, _dirs, files in os.walk(p):
                 for name in sorted(files):
                     fp = Path(root) / name
-                    if fp.suffix in _TEST_EXTENSIONS:
-                        if filter_re is None or filter_re.search(str(fp)):
-                            result.append(fp)
+                    if fp.suffix in _TEST_EXTENSIONS and (
+                        filter_re is None or filter_re.search(str(fp))
+                    ):
+                        result.append(fp)
         else:
             print(f"warning: {p} does not exist, skipping", file=sys.stderr)
     return result
@@ -883,10 +884,11 @@ def main(argv: list[str] | None = None) -> int:
             stderr=subprocess.STDOUT,
             text=True,
             timeout=10,
+            check=False,
         ).stdout
         if "--emit-ir" in help_out:
             available_features.add("llvm")
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
         pass
 
     # Each --define KEY=VALUE also registers KEY as an available feature so

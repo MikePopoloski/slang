@@ -7,6 +7,7 @@
 import argparse
 import math
 import os
+from io import StringIO
 
 # member tuple indices for combinedMembers entries: (type, name, base_type)
 # - MEMBER_TYPE: the C++ type (e.g. "Token", "SyntaxList<...>" etc.)
@@ -73,7 +74,8 @@ def main():
 
 
 def loadalltypes(ourdir):
-    inf = open(os.path.join(ourdir, "syntax.txt"))
+    with open(os.path.join(ourdir, "syntax.txt")) as f:
+        inf = f.readlines()
 
     currtype = None
     currkind = None
@@ -97,12 +99,12 @@ def loadalltypes(ourdir):
         elif currtype is not None:
             p = line.split(" ")
             if len(p) != 2:
-                raise Exception("Two elements per member please.")
+                raise ValueError("Two elements per member please.")
             currtype.append(p)
         elif currkind is not None:
             for k in line.split(" "):
                 if k in kindmap:
-                    raise Exception("More than one kind map for {}".format(k))
+                    raise ValueError(f"More than one kind map for {k}")
                 kindmap[k] = currkind
         elif line.startswith("kindmap<"):
             currkind = line[8 : line.index(">")] + "Syntax"
@@ -177,7 +179,7 @@ def createtype(name, tags, members, alltypes, kindmap):
                 m[0] += "Syntax"
 
             if m[0] not in alltypes:
-                raise Exception("Unknown type '{}'".format(m[0]))
+                raise ValueError(f"Unknown type '{m[0]}'")
 
             typename = m[0]
             if optional:
@@ -188,9 +190,9 @@ def createtype(name, tags, members, alltypes, kindmap):
                 notNullMembers.add(m[1])
 
         m.append(typename)
-        processedMembers.append("{} {}".format(m[0], m[1]))
+        processedMembers.append(f"{m[0]} {m[1]}")
         if m[1] in notNullMembers:
-            m[0] = "not_null<{}*>".format(typename)
+            m[0] = f"not_null<{typename}*>"
 
     final = " final"
     if "final" in tagdict and tagdict["final"] == "false":
@@ -204,11 +206,10 @@ def createtype(name, tags, members, alltypes, kindmap):
         argNames.append("kind")
     else:
         k = name
-        if k.endswith("Syntax"):
-            k = k[:-6]
+        k = k.removesuffix("Syntax")
 
         if k in kindmap:
-            raise Exception("More than one kind map for {}".format(k))
+            raise ValueError(f"More than one kind map for {k}")
         kindmap[k] = name
         kindArg = ""
         kindValue = "SyntaxKind::" + k
@@ -230,17 +231,13 @@ def createtype(name, tags, members, alltypes, kindmap):
         space = m.index(" ")
         argNames.append(m[space + 1 :])
 
-        if (
-            m.startswith("SyntaxList<")
-            or m.startswith("SeparatedSyntaxList<")
-            or m.startswith("TokenList")
-        ):
-            argMembers.append("const {}&{}".format(m[:space], m[space:]))
+        if m.startswith(("SyntaxList<", "SeparatedSyntaxList<", "TokenList")):
+            argMembers.append(f"const {m[:space]}&{m[space:]}")
         else:
             argMembers.append(m)
 
     if final and not argMembers:
-        raise Exception("{} has no members".format(name))
+        raise ValueError(f"{name} has no members")
 
     constructorArgs = "{}{}".format(kindArg, ", ".join(argMembers))
     alltypes[name] = TypeInfo(
@@ -268,7 +265,7 @@ def generateSyntax(builddir, alltypes, kindmap):
         pass
 
     # Start the header file.
-    outf = open(os.path.join(headerdir, "AllSyntax.h"), "w")
+    outf = StringIO()
     outf.write(
         """//------------------------------------------------------------------------------
 //! @file AllSyntax.h
@@ -292,7 +289,7 @@ namespace slang::syntax {
     )
 
     # Start a documentation header file.
-    docf = open(os.path.join(headerdir, "SyntaxDoc.dox"), "w")
+    docf = StringIO()
     docf.write("/** @file */\n\n")
 
     # Write all type definitions.
@@ -301,42 +298,27 @@ namespace slang::syntax {
         if name == "SyntaxNode":
             continue
 
-        outf.write(
-            "struct SLANG_EXPORT {} : public {} {{\n".format(name, currtype.base)
-        )
+        outf.write(f"struct SLANG_EXPORT {name} : public {currtype.base} {{\n")
 
         article = "an" if name[0] in vowels else "a"
-        docf.write("/** @struct slang::syntax::{}\n".format(name))
-        docf.write(
-            "    @brief Concrete syntax definition for {} {}\n".format(
-                article, name[:-6]
-            )
-        )
+        docf.write(f"/** @struct slang::syntax::{name}\n")
+        docf.write(f"    @brief Concrete syntax definition for {article} {name[:-6]}\n")
 
         for m in currtype.members:
-            outf.write("    {} {};\n".format(m[0], m[1]))
-            docf.write("    @var slang::syntax::{}::{}\n".format(name, m[1]))
-            docf.write("    @brief The {} member\n".format(m[1]))
+            outf.write(f"    {m[0]} {m[1]};\n")
+            docf.write(f"    @var slang::syntax::{name}::{m[1]}\n")
+            docf.write(f"    @brief The {m[1]} member\n")
 
         outf.write("\n")
-        outf.write("    {}({}) :\n".format(name, currtype.constructorArgs))
+        outf.write(f"    {name}({currtype.constructorArgs}) :\n")
         outf.write(
-            "        {}({}{}){} {{\n".format(
-                currtype.base,
-                currtype.kindValue,
-                currtype.baseInitializers,
-                currtype.initializers,
-            )
+            f"        {currtype.base}({currtype.kindValue}{currtype.baseInitializers}){currtype.initializers} {{\n"
         )
 
         docf.write(
-            "    @fn slang::syntax::{}::{}({})\n".format(
-                name, name, currtype.constructorArgs
-            )
+            f"    @fn slang::syntax::{name}::{name}({currtype.constructorArgs})\n"
         )
-        docf.write(
-            "    @brief Constructs a new instance of the {} struct\n".format(name)
-        )
+        docf.write(f"    @brief Constructs a new instance of the {name} struct\n")
 
         # Write constructor body.
         for m in currtype.members:
@@ -349,32 +331,30 @@ namespace slang::syntax {
                     # Lists are standalone (not derived from SyntaxNode); they
                     # have no parent pointer of their own. Their elements still
                     # parent to the enclosing real node.
-                    outf.write("        for (auto child : this->{})\n".format(m[1]))
+                    outf.write(f"        for (auto child : this->{m[1]})\n")
                     outf.write("            child->parent = this;\n")
                 elif m[0] == "TokenList":
                     # TokenList holds Tokens which have no parent pointer; nothing
                     # to wire up.
                     pass
                 else:
-                    outf.write("        this->{}.parent = this;\n".format(m[1]))
+                    outf.write(f"        this->{m[1]}.parent = this;\n")
             elif m[1] in currtype.optionalMembers:
                 outf.write(
                     "        if (this->{0}) this->{0}->parent = this;\n".format(m[1])
                 )
             else:
-                outf.write("        this->{}->parent = this;\n".format(m[1]))
+                outf.write(f"        this->{m[1]}->parent = this;\n")
 
         outf.write("    }\n\n")
 
         # Copy constructor (defaulted).
-        outf.write("    explicit {}(const {}&) = default;\n\n".format(name, name))
+        outf.write(f"    explicit {name}(const {name}&) = default;\n\n")
 
-        docf.write(
-            "    @fn slang::syntax::{}::{}(const {}&)\n".format(name, name, name)
-        )
+        docf.write(f"    @fn slang::syntax::{name}::{name}(const {name}&)\n")
         docf.write("    @brief Copy constructor\n")
 
-        docf.write("    @fn slang::syntax::{}::isKind\n".format(name))
+        docf.write(f"    @fn slang::syntax::{name}::isKind\n")
         docf.write(
             "    @brief Returns true if the provided syntax kind is represented by this type\n"
         )
@@ -391,38 +371,30 @@ namespace slang::syntax {
             outf.write("    void setChild(size_t index, TokenOrSyntax child);\n\n")
 
             docf.write(
-                "    @fn static bool slang::syntax::{}::isChildOptional(size_t index);\n".format(
-                    name
-                )
+                f"    @fn static bool slang::syntax::{name}::isChildOptional(size_t index);\n"
             )
             docf.write(
                 "    @brief Returns true if child member (token or syntax node) at the provided index within this struct is a nullable pointer\n"
             )
             docf.write(
-                "    @fn TokenOrSyntax slang::syntax::{}::getChild(size_t index)\n".format(
-                    name
-                )
+                f"    @fn TokenOrSyntax slang::syntax::{name}::getChild(size_t index)\n"
             )
             docf.write(
                 "    @brief Gets the child member (token or syntax node) at the provided index within this struct\n"
             )
             docf.write(
-                "    @fn ConstTokenOrSyntax slang::syntax::{}::getChild(size_t index) const\n".format(
-                    name
-                )
+                f"    @fn ConstTokenOrSyntax slang::syntax::{name}::getChild(size_t index) const\n"
             )
             docf.write(
                 "    @brief Gets the child member (token or syntax node) as a pointer at the provided index within this struct\n"
             )
             docf.write(
-                "    @fn PtrTokenOrSyntax slang::syntax::{}::getChildPtr(size_t index)\n".format(
-                    name
-                )
+                f"    @fn PtrTokenOrSyntax slang::syntax::{name}::getChildPtr(size_t index)\n"
             )
             docf.write(
                 "    @brief Gets the child member (token or syntax node) at the provided index within this struct\n"
             )
-            docf.write("    @fn slang::syntax::{}::setChild\n".format(name))
+            docf.write(f"    @fn slang::syntax::{name}::setChild\n")
             docf.write(
                 "    @brief Sets the child member (token or syntax node) at the provided index within this struct\n"
             )
@@ -431,7 +403,7 @@ namespace slang::syntax {
         docf.write("*/\n\n")
 
     # Start the source file.
-    cppf = open(os.path.join(builddir, "AllSyntax.cpp"), "w")
+    cppf = StringIO()
     cppf.write(
         """//------------------------------------------------------------------------------
 // AllSyntax.cpp
@@ -468,22 +440,18 @@ size_t SyntaxNode::getChildCount() const {
                 or m[0].startswith("SeparatedSyntaxList<")
                 or m[0].startswith("TokenList")
             ):
-                list_terms.append(
-                    "((const {}*)this)->{}.getChildCount()".format(v, m[1])
-                )
+                list_terms.append(f"((const {v}*)this)->{m[1]}.getChildCount()")
             else:
                 const_count += 1
         if not list_terms:
-            cppf.write(
-                "        case SyntaxKind::{}: return {};\n".format(k, const_count)
-            )
+            cppf.write(f"        case SyntaxKind::{k}: return {const_count};\n")
         else:
             expr = (
                 " + ".join([str(const_count)] + list_terms)
                 if const_count
                 else " + ".join(list_terms)
             )
-            cppf.write("        case SyntaxKind::{}: return {};\n".format(k, expr))
+            cppf.write(f"        case SyntaxKind::{k}: return {expr};\n")
 
     cppf.write("    }\n")
     cppf.write("    SLANG_UNREACHABLE;\n")
@@ -508,8 +476,7 @@ size_t SyntaxNode::getChildCount() const {
 
         def is_list(mtype):
             return (
-                mtype.startswith("SyntaxList<")
-                or mtype.startswith("SeparatedSyntaxList<")
+                mtype.startswith(("SyntaxList<", "SeparatedSyntaxList<"))
                 or mtype == "TokenList"
             )
 
@@ -518,22 +485,16 @@ size_t SyntaxNode::getChildCount() const {
             i for i, m in enumerate(ti.combinedMembers) if is_list(m[0])
         )
 
-        cppf.write("        case SyntaxKind::{}: {{\n".format(k))
-        cppf.write("            auto& self = static_cast<{}&>(node);\n".format(v))
+        cppf.write(f"        case SyntaxKind::{k}: {{\n")
+        cppf.write(f"            auto& self = static_cast<{v}&>(node);\n")
         cppf.write("            size_t flatStart = 0;\n")
         for i, m in enumerate(ti.combinedMembers[: last_list_idx + 1]):
             mtype, mname = m[0], m[1]
             if is_list(mtype):
-                cppf.write(
-                    "            out.push_back({{self.{0}, flatStart}});\n".format(
-                        mname
-                    )
-                )
+                cppf.write(f"            out.push_back({{self.{mname}, flatStart}});\n")
                 if i != last_list_idx:
                     cppf.write(
-                        "            flatStart += self.{0}.getChildCount();\n".format(
-                            mname
-                        )
+                        f"            flatStart += self.{mname}.getChildCount();\n"
                     )
             else:
                 cppf.write("            ++flatStart;\n")
@@ -570,14 +531,15 @@ size_t SyntaxNode::getChildCount() const {
         if v.base is None:
             continue
 
-        cppf.write("bool {}::isKind(SyntaxKind kind) {{\n".format(k))
+        cppf.write(f"bool {k}::isKind(SyntaxKind kind) {{\n")
         kinds = set(reverseKindmap[k])
         if len(kinds) == 1:
-            cppf.write("    return kind == SyntaxKind::{};\n".format(list(kinds)[0]))
+            cppf.write(f"    return kind == SyntaxKind::{next(iter(kinds))};\n")
         else:
             cppf.write("    switch (kind) {\n")
-            for kind in sorted(kinds):
-                cppf.write("        case SyntaxKind::{}:\n".format(kind))
+            cppf.writelines(
+                f"        case SyntaxKind::{kind}:\n" for kind in sorted(kinds)
+            )
             cppf.write("            return true;\n")
             cppf.write("        default:\n")
             cppf.write("            return false;\n")
@@ -599,15 +561,13 @@ size_t SyntaxNode::getChildCount() const {
 
             has_list = any(is_list_member(m) for m in v.combinedMembers)
 
-            cppf.write("bool {}::isChildOptional(size_t index) const {{\n".format(k))
+            cppf.write(f"bool {k}::isChildOptional(size_t index) const {{\n")
             if not has_list:
                 if v.optionalMembers:
                     cppf.write("    switch (index) {\n")
-                    idx = 0
-                    for m in v.combinedMembers:
+                    for idx, m in enumerate(v.combinedMembers):
                         if m[1] in v.optionalMembers:
-                            cppf.write("        case {}: return true;\n".format(idx))
-                        idx += 1
+                            cppf.write(f"        case {idx}: return true;\n")
                     cppf.write("        default: return false;\n")
                     cppf.write("    }\n")
                 else:
@@ -623,14 +583,10 @@ size_t SyntaxNode::getChildCount() const {
                     is_last = i == last_idx
                     if is_list_member(m):
                         cppf.write(
-                            "    if (index < {0}.getChildCount()) return true;\n".format(
-                                m[1]
-                            )
+                            f"    if (index < {m[1]}.getChildCount()) return true;\n"
                         )
                         if not is_last:
-                            cppf.write(
-                                "    index -= {0}.getChildCount();\n".format(m[1])
-                            )
+                            cppf.write(f"    index -= {m[1]}.getChildCount();\n")
                     else:
                         if m[1] in v.optionalMembers:
                             cppf.write("    if (index == 0) return true;\n")
@@ -662,8 +618,7 @@ size_t SyntaxNode::getChildCount() const {
                     cppf.write("    return nullptr;\n")
                 elif not has_list:
                     cppf.write("    switch (index) {\n")
-                    idx = 0
-                    for m in v.combinedMembers:
+                    for idx, m in enumerate(v.combinedMembers):
                         addr = ""
                         if returnPointer:
                             if m[0] == "Token" or (m[1] in v.pointerMembers):
@@ -671,12 +626,7 @@ size_t SyntaxNode::getChildCount() const {
                         elif m[1] in v.pointerMembers:
                             addr = "&"
                         get = ".get()" if m[1] in v.notNullMembers else ""
-                        cppf.write(
-                            "        case {}: return {}{}{};\n".format(
-                                idx, addr, m[1], get
-                            )
-                        )
-                        idx += 1
+                        cppf.write(f"        case {idx}: return {addr}{m[1]}{get};\n")
                     cppf.write("        default: return nullptr;\n")
                     cppf.write("    }\n")
                 else:
@@ -691,9 +641,7 @@ size_t SyntaxNode::getChildCount() const {
                                 )
                             )
                             if not is_last:
-                                cppf.write(
-                                    "    index -= {0}.getChildCount();\n".format(m[1])
-                                )
+                                cppf.write(f"    index -= {m[1]}.getChildCount();\n")
                         else:
                             addr = ""
                             if returnPointer:
@@ -703,9 +651,7 @@ size_t SyntaxNode::getChildCount() const {
                                 addr = "&"
                             get = ".get()" if m[1] in v.notNullMembers else ""
                             cppf.write(
-                                "    if (index == 0) return {}{}{};\n".format(
-                                    addr, m[1], get
-                                )
+                                f"    if (index == 0) return {addr}{m[1]}{get};\n"
                             )
                             if not is_last:
                                 cppf.write("    --index;\n")
@@ -713,29 +659,21 @@ size_t SyntaxNode::getChildCount() const {
 
                 cppf.write("}\n\n")
 
-            cppf.write(
-                "void {}::setChild(size_t index, TokenOrSyntax child) {{\n".format(k)
-            )
+            cppf.write(f"void {k}::setChild(size_t index, TokenOrSyntax child) {{\n")
             if not v.combinedMembers:
                 cppf.write("    (void)index;\n")
                 cppf.write("    (void)child;\n")
             elif not has_list:
                 cppf.write("    switch (index) {\n")
-                idx = 0
-                for m in v.combinedMembers:
-                    cppf.write("        case {}: ".format(idx))
-                    idx += 1
+                for idx, m in enumerate(v.combinedMembers):
+                    cppf.write(f"        case {idx}: ")
                     if m[0] == "Token":
-                        cppf.write("{} = child.token(); return;\n".format(m[1]))
+                        cppf.write(f"{m[1]} = child.token(); return;\n")
                     elif m[1] in v.pointerMembers:
-                        cppf.write(
-                            "{} = child.node()->as<{}>(); return;\n".format(m[1], m[2])
-                        )
+                        cppf.write(f"{m[1]} = child.node()->as<{m[2]}>(); return;\n")
                     else:
                         cppf.write(
-                            "{} = child.node() ? &child.node()->as<{}>() : nullptr; return;\n".format(
-                                m[1], m[2]
-                            )
+                            f"{m[1]} = child.node() ? &child.node()->as<{m[2]}>() : nullptr; return;\n"
                         )
                 cppf.write("        default: SLANG_UNREACHABLE;\n")
                 cppf.write("    }\n")
@@ -750,30 +688,22 @@ size_t SyntaxNode::getChildCount() const {
                             )
                         )
                         if not is_last:
-                            cppf.write(
-                                "    index -= {0}.getChildCount();\n".format(m[1])
-                            )
+                            cppf.write(f"    index -= {m[1]}.getChildCount();\n")
                     elif m[0] == "Token":
                         cppf.write(
-                            "    if (index == 0) {{ {} = child.token(); return; }}\n".format(
-                                m[1]
-                            )
+                            f"    if (index == 0) {{ {m[1]} = child.token(); return; }}\n"
                         )
                         if not is_last:
                             cppf.write("    --index;\n")
                     elif m[1] in v.pointerMembers:
                         cppf.write(
-                            "    if (index == 0) {{ {} = child.node()->as<{}>(); return; }}\n".format(
-                                m[1], m[2]
-                            )
+                            f"    if (index == 0) {{ {m[1]} = child.node()->as<{m[2]}>(); return; }}\n"
                         )
                         if not is_last:
                             cppf.write("    --index;\n")
                     else:
                         cppf.write(
-                            "    if (index == 0) {{ {} = child.node() ? &child.node()->as<{}>() : nullptr; return; }}\n".format(
-                                m[1], m[2]
-                            )
+                            f"    if (index == 0) {{ {m[1]} = child.node() ? &child.node()->as<{m[2]}>() : nullptr; return; }}\n"
                         )
                         if not is_last:
                             cppf.write("    --index;\n")
@@ -792,16 +722,13 @@ size_t SyntaxNode::getChildCount() const {
             continue
 
         methodName = k
-        if methodName.endswith("Syntax"):
-            methodName = methodName[:-6]
+        methodName = methodName.removesuffix("Syntax")
         methodName = methodName[:1].lower() + methodName[1:]
-        outf.write("    {}& {}({});\n".format(k, methodName, v.constructorArgs))
+        outf.write(f"    {k}& {methodName}({v.constructorArgs});\n")
 
         argNames = ", ".join(v.argNames)
-        cppf.write(
-            "{}& SyntaxFactory::{}({}) {{\n".format(k, methodName, v.constructorArgs)
-        )
-        cppf.write("    return *alloc.emplace<{}>({});\n".format(k, argNames))
+        cppf.write(f"{k}& SyntaxFactory::{methodName}({v.constructorArgs}) {{\n")
+        cppf.write(f"    return *alloc.emplace<{k}>({argNames});\n")
         cppf.write("}\n\n")
 
     # Write out toString methods for SyntaxKind enum.
@@ -817,7 +744,7 @@ std::string_view toString(SyntaxKind kind) {
 """)
 
     for k, _ in sorted(kindmap.items()):
-        cppf.write('        case SyntaxKind::{}: return "{}";\n'.format(k, k))
+        cppf.write(f'        case SyntaxKind::{k}: return "{k}";\n')
 
     cppf.write("""    }
     return "";
@@ -830,7 +757,7 @@ std::string_view toString(SyntaxKind kind) {
     cppf.write("""    SyntaxKind::Unknown,
 """)
     for k, _ in sorted(kindmap.items()):
-        cppf.write("    SyntaxKind::{},\n".format(k))
+        cppf.write(f"    SyntaxKind::{k},\n")
     cppf.write("""};
 
 #ifdef SLANG_RTTI_ENABLED
@@ -840,7 +767,7 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
 """)
 
     for k, v in sorted(kindmap.items()):
-        cppf.write("        case SyntaxKind::{}: return &typeid({});\n".format(k, v))
+        cppf.write(f"        case SyntaxKind::{k}: return &typeid({v});\n")
     cppf.write("""    }
     return nullptr;
 }
@@ -878,13 +805,9 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
     )
 
     for k, v in sorted(kindmap.items()):
+        outf.write(f"        case SyntaxKind::{k}: return visitor.visit(*static_cast<")
         outf.write(
-            "        case SyntaxKind::{}: return visitor.visit(*static_cast<".format(k)
-        )
-        outf.write(
-            "std::conditional_t<isConst, const {0}*, {0}*>>(node), std::forward<Args>(args)...);\n".format(
-                v
-            )
+            f"std::conditional_t<isConst, const {v}*, {v}*>>(node), std::forward<Args>(args)...);\n"
         )
         alltypes.pop(v, None)
 
@@ -918,10 +841,17 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
     # loop above.
     for k, v in alltypes.items():
         if v.final:
-            print("Type '{}' has no kinds assigned to it.".format(k))
+            print(f"Type '{k}' has no kinds assigned to it.")
+
+    with open(os.path.join(headerdir, "AllSyntax.h"), "w") as f:
+        f.write(outf.getvalue())
+    with open(os.path.join(headerdir, "SyntaxDoc.dox"), "w") as f:
+        f.write(docf.getvalue())
+    with open(os.path.join(builddir, "AllSyntax.cpp"), "w") as f:
+        f.write(cppf.getvalue())
 
     # Write out the SyntaxKind header file.
-    outf = open(os.path.join(headerdir, "SyntaxKind.h"), "w")
+    outf = StringIO()
     outf.write(
         """//------------------------------------------------------------------------------
 //! @file SyntaxKind.h
@@ -945,27 +875,30 @@ enum class SLANG_EXPORT SyntaxKind {
     )
 
     for k, _ in sorted(kindmap.items()):
-        outf.write("    {},\n".format(k))
+        outf.write(f"    {k},\n")
 
     outf.write(
-        """}};
+        f"""}};
 
 SLANG_EXPORT std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
 SLANG_EXPORT std::string_view toString(SyntaxKind kind);
 
 class SLANG_EXPORT SyntaxKind_traits {{
 public:
-    static const std::array<SyntaxKind, {}> values;
+    static const std::array<SyntaxKind, {len(kindmap.items()) + 1}> values;
 }};
 
 SLANG_EXPORT const std::type_info* typeFromSyntaxKind(SyntaxKind kind);
 
 }}
-""".format(len(kindmap.items()) + 1)
+"""
     )
 
+    with open(os.path.join(headerdir, "SyntaxKind.h"), "w") as f:
+        f.write(outf.getvalue())
+
     # Write the forward declaration header file.
-    outf = open(os.path.join(headerdir, "SyntaxFwd.h"), "w")
+    outf = StringIO()
     outf.write(
         """//------------------------------------------------------------------------------
 //! @file SyntaxFwd.h
@@ -983,17 +916,20 @@ class SyntaxNode;
     )
 
     # Write all type names.
-    for name, _ in alltypesSaved.items():
+    for name in alltypesSaved:
         if name == "SyntaxNode":
             continue
 
-        outf.write("struct {};\n".format(name))
+        outf.write(f"struct {name};\n")
     outf.write("\n}\n")
+
+    with open(os.path.join(headerdir, "SyntaxFwd.h"), "w") as f:
+        f.write(outf.getvalue())
 
 
 def generateSyntaxClone(builddir, alltypes, kindmap):
     # Start the clone source file.
-    clonef = open(os.path.join(builddir, "SyntaxClone.cpp"), "w")
+    clonef = StringIO()
     clonef.write(
         """//------------------------------------------------------------------------------
 // SyntaxClone.cpp
@@ -1032,19 +968,15 @@ SyntaxNode* clone(const T& node, BumpAllocator& alloc) {
             continue
         if v.final:
             clonef.write(
-                "static SyntaxNode* clone(const {0}& node, BumpAllocator& alloc) {{\n".format(
-                    k
-                )
+                f"static SyntaxNode* clone(const {k}& node, BumpAllocator& alloc) {{\n"
             )
-            clonef.write("    return alloc.emplace<{0}>(\n".format(k))
+            clonef.write(f"    return alloc.emplace<{k}>(\n")
             if "kind" in v.argNames:
                 clonef.write("        node.kind,\n")
             for i, m in enumerate(v.combinedMembers):
                 if m[1] in v.notNullMembers:
                     clonef.write(
-                        "        *deepClone<{0}>(*node.{1}, alloc)".format(
-                            m[0][9:-2], m[1]
-                        )
+                        f"        *deepClone<{m[0][9:-2]}>(*node.{m[1]}, alloc)"
                     )
                 elif m[1] in v.optionalMembers:
                     clonef.write(
@@ -1057,11 +989,11 @@ SyntaxNode* clone(const T& node, BumpAllocator& alloc) {
                     or m[0].startswith("SeparatedSyntaxList")
                     or m[0].startswith("TokenList")
                 ):
-                    clonef.write("        *deepClone(node.{0}, alloc)".format(m[1]))
+                    clonef.write(f"        *deepClone(node.{m[1]}, alloc)")
                 elif m[0] == "Token":
-                    clonef.write("        node.{0}.deepClone(alloc)".format(m[1]))
+                    clonef.write(f"        node.{m[1]}.deepClone(alloc)")
                 else:
-                    clonef.write("        node.{0}".format(m[1]))
+                    clonef.write(f"        node.{m[1]}")
                 if i != len(v.combinedMembers) - 1:
                     clonef.write(",\n")
                 else:
@@ -1102,10 +1034,14 @@ SyntaxNode* clone(const SyntaxNode& node, BumpAllocator& alloc) {
 }
 """)
 
+    with open(os.path.join(builddir, "SyntaxClone.cpp"), "w") as f:
+        f.write(clonef.getvalue())
+
 
 def loadkinds(ourdir, filename):
     kinds = []
-    inf = open(os.path.join(ourdir, filename))
+    with open(os.path.join(ourdir, filename)) as f:
+        inf = f.readlines()
     for line in [x.strip("\n") for x in inf]:
         line = line.strip()
         if not line:
@@ -1116,39 +1052,39 @@ def loadkinds(ourdir, filename):
 
 
 def writekinddecl(outf, name, basetype, kinds):
-    outf.write("enum class SLANG_EXPORT {} : {} {{\n".format(name, basetype))
+    outf.write(f"enum class SLANG_EXPORT {name} : {basetype} {{\n")
     for k in kinds:
-        outf.write("    {},\n".format(k))
+        outf.write(f"    {k},\n")
 
     outf.write(
-        """}};
+        f"""}};
 
-SLANG_EXPORT std::ostream& operator<<(std::ostream& os, {} kind);
-SLANG_EXPORT std::string_view toString({} kind);
+SLANG_EXPORT std::ostream& operator<<(std::ostream& os, {name} kind);
+SLANG_EXPORT std::string_view toString({name} kind);
 
-class SLANG_EXPORT {}_traits {{
+class SLANG_EXPORT {name}_traits {{
 public:
-    static const std::array<{}, {}> values;
+    static const std::array<{name}, {len(kinds)}> values;
 }};
 
-""".format(name, name, name, name, len(kinds))
+"""
     )
 
 
 def writekindimpls(outf, name, kinds):
     outf.write(
-        """std::ostream& operator<<(std::ostream& os, {} kind) {{
+        f"""std::ostream& operator<<(std::ostream& os, {name} kind) {{
     os << toString(kind);
     return os;
 }}
 
-std::string_view toString({} kind) {{
+std::string_view toString({name} kind) {{
     switch (kind) {{
-""".format(name, name)
+"""
     )
 
     for k in kinds:
-        outf.write('        case {}::{}: return "{}";\n'.format(name, k, k))
+        outf.write(f'        case {name}::{k}: return "{k}";\n')
     outf.write("""    }
     return "";
 }
@@ -1156,12 +1092,12 @@ std::string_view toString({} kind) {{
 """)
 
     outf.write(
-        """decltype({}_traits::values) {}_traits::values = {{
-""".format(name, name)
+        f"""decltype({name}_traits::values) {name}_traits::values = {{
+"""
     )
 
     for k in kinds:
-        outf.write("    {}::{},\n".format(name, k))
+        outf.write(f"    {name}::{k},\n")
     outf.write("""};
 
 """)
@@ -1177,7 +1113,7 @@ def generateTokenKinds(ourdir, builddir):
     triviakinds = loadkinds(ourdir, "triviakinds.txt")
     tokenkinds = loadkinds(ourdir, "tokenkinds.txt")
 
-    outf = open(os.path.join(headerdir, "TokenKind.h"), "w")
+    outf = StringIO()
     outf.write(
         """//------------------------------------------------------------------------------
 //! @file TokenKind.h
@@ -1202,7 +1138,10 @@ namespace slang::parsing {
     writekinddecl(outf, "TokenKind", "uint16_t", tokenkinds)
     outf.write("}\n")
 
-    outf = open(os.path.join(builddir, "TokenKind.cpp"), "w")
+    with open(os.path.join(headerdir, "TokenKind.h"), "w") as f:
+        f.write(outf.getvalue())
+
+    outf = StringIO()
     outf.write(
         """//------------------------------------------------------------------------------
 // TokenKind.cpp
@@ -1222,6 +1161,9 @@ namespace slang::parsing {
     writekindimpls(outf, "TokenKind", tokenkinds)
     outf.write("}\n")
 
+    with open(os.path.join(builddir, "TokenKind.cpp"), "w") as f:
+        f.write(outf.getvalue())
+
 
 def generateSystemNames(ourdir, builddir):
     headerdir = os.path.join(builddir, "slang", "parsing")
@@ -1231,7 +1173,8 @@ def generateSystemNames(ourdir, builddir):
         pass
 
     names = []
-    inf = open(os.path.join(ourdir, "systemnames.txt"))
+    with open(os.path.join(ourdir, "systemnames.txt")) as f:
+        inf = f.readlines()
     for line in [x.strip("\n") for x in inf]:
         line = line.strip()
         if not line:
@@ -1239,7 +1182,7 @@ def generateSystemNames(ourdir, builddir):
 
         names.append(line.split())
 
-    outf = open(os.path.join(headerdir, "KnownSystemName.h"), "w")
+    outf = StringIO()
     outf.write(
         """//------------------------------------------------------------------------------
 //! @file KnownSystemName.h
@@ -1262,11 +1205,10 @@ enum class SLANG_EXPORT KnownSystemName {
 """
     )
 
-    for name in names:
-        outf.write("    {},\n".format(name[1]))
+    outf.writelines(f"    {name[1]},\n" for name in names)
 
     outf.write(
-        """}};
+        f"""}};
 
 SLANG_EXPORT std::ostream& operator<<(std::ostream& os, KnownSystemName ksn);
 SLANG_EXPORT std::string_view toString(KnownSystemName ksn);
@@ -1274,14 +1216,17 @@ SLANG_EXPORT KnownSystemName parseKnownSystemName(std::string_view str);
 
 class SLANG_EXPORT KnownSystemName_traits {{
 public:
-    static const std::array<KnownSystemName, {}> values;
+    static const std::array<KnownSystemName, {len(names) + 1}> values;
 }};
 
 }}
-""".format(len(names) + 1)
+"""
     )
 
-    outf = open(os.path.join(builddir, "KnownSystemName.cpp"), "w")
+    with open(os.path.join(headerdir, "KnownSystemName.h"), "w") as f:
+        f.write(outf.getvalue())
+
+    outf = StringIO()
     outf.write(
         """//------------------------------------------------------------------------------
 // KnownSystemName.cpp
@@ -1307,10 +1252,10 @@ std::string_view toString(KnownSystemName ksn) {
 """
     )
 
-    for name in names:
-        outf.write(
-            '        case KnownSystemName::{}: return "{}";\n'.format(name[1], name[0])
-        )
+    outf.writelines(
+        f'        case KnownSystemName::{name[1]}: return "{name[0]}";\n'
+        for name in names
+    )
 
     outf.write("""    }
     return "";
@@ -1319,8 +1264,9 @@ std::string_view toString(KnownSystemName ksn) {
 const static flat_hash_map<std::string_view, KnownSystemName> ksnTable = {
 """)
 
-    for name in names:
-        outf.write('    {{ "{}", KnownSystemName::{} }},\n'.format(name[0], name[1]))
+    outf.writelines(
+        f'    {{ "{name[0]}", KnownSystemName::{name[1]} }},\n' for name in names
+    )
 
     outf.write("""};
 
@@ -1334,13 +1280,15 @@ decltype(KnownSystemName_traits::values) KnownSystemName_traits::values = {
     KnownSystemName::Unknown,
 """)
 
-    for name in names:
-        outf.write("    KnownSystemName::{},\n".format(name[1]))
+    outf.writelines(f"    KnownSystemName::{name[1]},\n" for name in names)
 
     outf.write("""};
 
 }
 """)
+
+    with open(os.path.join(builddir, "KnownSystemName.cpp"), "w") as f:
+        f.write(outf.getvalue())
 
 
 def generatePyBindings(builddir, alltypes):
@@ -1349,10 +1297,10 @@ def generatePyBindings(builddir, alltypes):
     perfile = math.ceil(len(items) / numfiles)
 
     for i in range(numfiles):
-        outf = open(os.path.join(builddir, f"PySyntaxBindings{i}.cpp"), "w")
+        outf = StringIO()
         outf.write(
-            """//------------------------------------------------------------------------------
-// PySyntaxBindings{0}.cpp
+            f"""//------------------------------------------------------------------------------
+// PySyntaxBindings{i}.cpp
 // Generated Python bindings for syntax types
 //
 // SPDX-FileCopyrightText: Michael Popoloski
@@ -1362,8 +1310,8 @@ def generatePyBindings(builddir, alltypes):
 
 #include "slang/syntax/AllSyntax.h"
 
-void registerSyntaxNodes{0}(py::module_& m) {{
-""".format(i)
+void registerSyntaxNodes{i}(py::module_& m) {{
+"""
         )
 
         idx = i * perfile
@@ -1386,11 +1334,14 @@ void registerSyntaxNodes{0}(py::module_& m) {{
 
         outf.write("}\n")
 
+        with open(os.path.join(builddir, f"PySyntaxBindings{i}.cpp"), "w") as f:
+            f.write(outf.getvalue())
+
 
 def generatePyFactoryBindings(builddir, alltypes):
     """Generate Python bindings for SyntaxFactory class and all its methods."""
 
-    outf = open(os.path.join(builddir, "PySyntaxFactory.cpp"), "w")
+    outf = StringIO()
     outf.write(
         """//------------------------------------------------------------------------------
 // PySyntaxFactory.cpp
@@ -1428,8 +1379,7 @@ void registerSyntaxFactory(py::module_& m) {
         outf.write(f"\n        // --- {letter} ---\n")
         for name, typeinfo in methods_by_letter[letter]:
             method_name = name
-            if method_name.endswith("Syntax"):
-                method_name = method_name[:-6]
+            method_name = method_name.removesuffix("Syntax")
             method_name = method_name[0].lower() + method_name[1:]
 
             outf.write(f'        .def("{method_name}", &SyntaxFactory::{method_name}')
@@ -1456,11 +1406,12 @@ void registerSyntaxFactory(py::module_& m) {
 
     outf.write("    ;\n")
     outf.write("}\n")
-    outf.close()
+    with open(os.path.join(builddir, "PySyntaxFactory.cpp"), "w") as f:
+        f.write(outf.getvalue())
 
 
 def generateCSTJson(builddir, alltypes):
-    cppf = open(os.path.join(builddir, "slang", "syntax", "CSTJsonVisitorGen.h"), "w")
+    cppf = StringIO()
 
     # Generate handle() methods for all leaf syntax types
     for typename, typeinfo in sorted(alltypes.items()):
@@ -1518,6 +1469,11 @@ def generateCSTJson(builddir, alltypes):
 
         cppf.write("    }\n")
         cppf.write("    \n")
+
+    with open(
+        os.path.join(builddir, "slang", "syntax", "CSTJsonVisitorGen.h"), "w"
+    ) as f:
+        f.write(cppf.getvalue())
 
 
 if __name__ == "__main__":

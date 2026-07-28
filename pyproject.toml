@@ -70,6 +70,4 @@ profile = "black"
 testpaths = ["pyslang/tests"]
 
 [dependency-groups]
-dev = [
-    "pytest>=9.0.3",
-]
+dev = ["pytest>=9.0.3"]
