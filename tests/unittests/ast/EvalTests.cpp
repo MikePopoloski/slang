@@ -2377,6 +2377,20 @@ TEST_CASE("Tagged union eval") {
     CHECK(diags[3].code == diag::ConstEvalTaggedUnion);
 }
 
+TEST_CASE("Tagged union eval with unknown tag") {
+    // Accessing a member of a 4-state packed tagged union whose tag bits are
+    // unknown must report a tagged-union access error, not crash: the tag slice
+    // has no known value, so it can never match a member's tag.
+    ScriptSession session;
+    session.eval("union tagged packed { logic [7:0] a; logic [7:0] b; } v;");
+    session.eval("v = 'x;");
+    session.eval("v.a");
+
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalTaggedUnion);
+}
+
 TEST_CASE("Assignment pattern eval") {
     ScriptSession session;
     session.eval("typedef logic[7:0] bt;");
