@@ -71,13 +71,12 @@ target_link_libraries(pyslang PUBLIC slang::slang)
 target_link_libraries(pyslang PRIVATE fmt::fmt)
 target_include_directories(pyslang PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/python)
 
-# NumericBindings.cpp uses a few private CPython APIs
-# (_PyLong_NumBits / _PyLong_AsByteArray / _PyLong_FromByteArray). On
-# macOS, nanobind links extension modules against an explicit
-# allowlist of symbols (nanobind/cmake/darwin-ld-cpython.sym), so
-# these private symbols are reported as undefined. Set to resolve
-# Python symbols lazily at import time instead (as pybind11 used),
-# which lets the private symbols link.
+# NumericBindings.cpp uses a few private CPython APIs (_PyLong_NumBits /
+# _PyLong_AsByteArray / _PyLong_FromByteArray). On macOS, nanobind links
+# extension modules against an explicit allowlist of symbols
+# (nanobind/cmake/darwin-ld-cpython.sym), so these private symbols are reported
+# as undefined. Set to resolve Python symbols lazily at import time instead (as
+# pybind11 used), which lets the private symbols link.
 if(APPLE)
   target_link_options(pyslang PRIVATE -undefined dynamic_lookup)
 endif()
