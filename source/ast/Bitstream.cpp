@@ -695,9 +695,12 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, uint64_t sliceSize, uint
             auto bit = width - slice;
             result.emplace_back(slicePacked(iter, std::cend(packed), bit, slice));
             width -= slice;
+            // slicePacked already advanced iter past packed[index] (it consumed
+            // the element's last `slice` bits), so do not advance it again.
         }
-
-        iter++;
+        else {
+            iter++;
+        }
         auto nextIndex = index;
         while (++index < rightIndex)
             result.emplace_back(std::move(**iter++));
