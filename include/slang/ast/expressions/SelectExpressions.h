@@ -41,7 +41,8 @@ public:
     bool isEquivalentImpl(const ElementSelectExpression& rhs) const;
 
     std::optional<ConstantRange> evalIndex(EvalContext& context, const ConstantValue& val,
-                                           ConstantValue& associativeIndex, bool& softFail) const;
+                                           ConstantValue& associativeIndex, bool& softFail,
+                                           bool allowQueueAppend = false) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
