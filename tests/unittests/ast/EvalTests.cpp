@@ -2073,8 +2073,7 @@ TEST_CASE("Streaming concat with irregular packed slice boundary") {
 
     session.eval("localparam logic [15:0] c = 16'hCAFE;");
     session.eval("localparam logic [15:0] p = {<<3{ {<<3{c}} }};");
-    CHECK(session.eval("$countones(p)").integer() ==
-          session.eval("$countones(c)").integer());
+    CHECK(session.eval("$countones(p)").integer() == session.eval("$countones(c)").integer());
 }
 
 TEST_CASE("streaming operator target evaluation") {
