@@ -2236,6 +2236,40 @@ endfunction
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Streaming 'with' range starting past the array extent") {
+    // Regression: a source-side streaming 'with' range may begin beyond the current
+    // queue/dynamic-array size; the nonexistent elements are streamed as the default
+    // value (IEEE 1800-2017 11.4.14.3). Previously this crashed with an internal error
+    // because the range's lower bound was not clamped to the array size.
+    ScriptSession session;
+    session.eval(R"(
+    function automatic bit [63:0] f_empty_queue();
+        int q[$];
+        return {>>{q with [1:2]}};      // empty queue, indices 1,2 nonexistent -> 0
+    endfunction
+    function automatic bit [63:0] f_empty_dynarray();
+        int d[];
+        return {>>{d with [1:2]}};      // empty dynamic array, indices 1,2 nonexistent -> 0
+    endfunction
+    function automatic bit [63:0] f_small_queue();
+        int q[$] = {7};
+        return {>>{q with [3:4]}};      // size 1, indices 3,4 nonexistent -> 0
+    endfunction
+    function automatic bit [95:0] f_partial();
+        int q[$] = {10, 20, 30};
+        return {>>{q with [1:3]}};      // 20, 30, then default 0 for nonexistent index 3
+    endfunction
+)");
+
+    CHECK(session.eval("f_empty_queue()").integer() == 0);
+    CHECK(session.eval("f_empty_dynarray()").integer() == 0);
+    CHECK(session.eval("f_small_queue()").integer() == 0);
+    CHECK(session.eval("f_partial()").integer() ==
+          session.eval("{32'd20, 32'd30, 32'd0}").integer());
+
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Array reduction methods") {
     ScriptSession session;
     session.eval("byte b[] = { 1, 2, 3, 4 };");
