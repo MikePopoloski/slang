@@ -21,6 +21,41 @@
 
 using namespace slang::driver;
 
+namespace {
+
+/// Trampoline subclass that adds GC-visible subroutine tracking to Compilation.
+/// The subroutines_ vector is traversed by comp_tp_traverse so Python's cyclic
+/// GC can discover and break cycles (e.g. Compilation -> subroutine -> closure
+/// -> Compilation).
+struct PyCompilation : Compilation {
+    using Compilation::Compilation;
+    std::vector<std::shared_ptr<SystemSubroutine>> subroutines_;
+};
+
+int comp_tp_traverse(PyObject* self, visitproc visit, void* arg) {
+    Py_VISIT(Py_TYPE(self));
+    if (!nb::inst_ready(self))
+        return 0;
+    auto* w = nb::inst_ptr<PyCompilation>(self);
+    for (auto& sub : w->subroutines_) {
+        nb::handle h = nb::find(sub);
+        Py_VISIT(h.ptr());
+    }
+    return 0;
+}
+
+int comp_tp_clear(PyObject* self) {
+    auto* w = nb::inst_ptr<PyCompilation>(self);
+    w->subroutines_.clear();
+    return 0;
+}
+
+PyType_Slot comp_slots[] = {{Py_tp_traverse, (void*)comp_tp_traverse},
+                            {Py_tp_clear, (void*)comp_tp_clear},
+                            {0, nullptr}};
+
+} // namespace
+
 void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) {
     EXPOSE_ENUM(ast, VariableLifetime);
     EXPOSE_ENUM(ast, Visibility);
@@ -98,7 +133,7 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .def_rw("paramOverrides", &CompilationOptions::paramOverrides)
         .def_rw("defaultLiblist", &CompilationOptions::defaultLiblist);
 
-    nb::class_<Compilation> comp(ast, "Compilation");
+    nb::class_<Compilation, PyCompilation> comp(ast, "Compilation", nb::type_slots(comp_slots));
     comp.def(nb::init<>())
         .def(nb::init<const Bag&>(), "options"_a)
         .def_prop_ro("options", &Compilation::getOptions)
@@ -109,10 +144,22 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .def("addSyntaxTree", &Compilation::addSyntaxTree, "tree"_a)
         .def("getSyntaxTrees", &Compilation::getSyntaxTrees)
         .def("getRoot", nb::overload_cast<>(&Compilation::getRoot), byrefint)
-        .def("addSystemSubroutine", &Compilation::addSystemSubroutine, nb::keep_alive<1, 2>(),
-             "subroutine"_a)
-        .def("addSystemMethod", &Compilation::addSystemMethod, nb::keep_alive<1, 3>(), "typeKind"_a,
-             "method"_a)
+        .def(
+            "addSystemSubroutine",
+            [](Compilation& self, const std::shared_ptr<SystemSubroutine>& subroutine) {
+                // Safe: all instances are PyCompilation due to the trampoline.
+                static_cast<PyCompilation&>(self).subroutines_.push_back(subroutine);
+                self.addSystemSubroutine(subroutine);
+            },
+            "subroutine"_a)
+        .def(
+            "addSystemMethod",
+            [](Compilation& self, SymbolKind typeKind,
+               const std::shared_ptr<SystemSubroutine>& method) {
+                static_cast<PyCompilation&>(self).subroutines_.push_back(method);
+                self.addSystemMethod(typeKind, method);
+            },
+            "typeKind"_a, "method"_a)
         .def("getSystemSubroutine",
              nb::overload_cast<std::string_view>(&Compilation::getSystemSubroutine, nb::const_),
              byrefint, "name"_a)

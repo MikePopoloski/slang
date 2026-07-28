@@ -196,10 +196,7 @@ endmodule
     arr = root.lookupName("m.arr")
     drivers = am.getDrivers(arr)
 
-    # Note: EvalContext must be constructed from a symbol that has a parent
-    # scope. Passing the compilation root (which has no parent scope) triggers
-    # a null-pointer dereference (SIGILL) inside slang's EvalContext ctor.
-    ec = EvalContext(m)
+    ec = EvalContext(root)
 
     assert len(drivers) >= 1
     for driver in drivers:
@@ -242,9 +239,7 @@ endmodule
         values_found.append(path.rootSymbol.name)
 
     if isinstance(stmt, ExpressionStatement):
-        # EvalContext must be constructed from a symbol that has a parent scope;
-        # the compilation root has none, so use the module instance instead.
-        ValuePath.visitPaths(stmt.expr, EvalContext(m), on_path)
+        ValuePath.visitPaths(stmt.expr, EvalContext(root), on_path)
 
     assert "a" in values_found
     assert "b" in values_found
@@ -460,19 +455,13 @@ def _get_proc_block(code):
 
 
 def _analyze(code):
-    """Compile *code* and return (AnalysisManager, AnalyzedProcedure) for module m.
-
-    The returned AnalyzedProcedure is a non-owning reference into the
-    AnalysisManager's storage, so the caller must keep the returned manager
-    alive for as long as it uses the procedure.
-    """
-    compilation, _ = _get_proc_block(code)
-    procs = []
+    """Compile *code* and return (AnalysisManager, AnalyzedProcedure) for module m."""
+    compilation, proc_block = _get_proc_block(code)
     am = AnalysisManager()
-    am.addProcListener(lambda p: procs.append(p))
     am.analyze(compilation)
-    if procs:
-        return am, procs[0]
+    scope = am.getAnalyzedScope(proc_block.parentScope)
+    if scope and scope.procedures:
+        return am, scope.procedures[0]
     raise AssertionError("No AnalyzedProcedure for a ProceduralBlockSymbol found")
 
 

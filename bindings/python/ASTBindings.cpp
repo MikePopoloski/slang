@@ -43,11 +43,19 @@ void registerAST(nb::module_& m) {
             "__init__",
             [](EvalContext* self, const Symbol& symbol, bitmask<EvalFlags> flags) {
                 if (!symbol.getParentScope()) {
-                    throw std::invalid_argument(
-                        "Symbol must have a parent scope to be used for EvalContext "
-                        "construction");
+                    if (symbol.isScope()) {
+                        new (self)
+                            EvalContext(ASTContext(symbol.as<Scope>(), LookupLocation::max), flags);
+                    }
+                    else {
+                        throw std::invalid_argument(
+                            "Symbol must have a parent scope to be used for EvalContext "
+                            "construction");
+                    }
                 }
-                new (self) EvalContext(symbol, flags);
+                else {
+                    new (self) EvalContext(symbol, flags);
+                }
             },
             "symbol"_a, "flags"_a = bitmask<EvalFlags>{})
         .def_ro("flags", &EvalContext::flags)
