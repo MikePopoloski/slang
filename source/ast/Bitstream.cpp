@@ -930,11 +930,14 @@ ConstantValue Bitstream::resizeToRange(ConstantValue&& value, ConstantRange rang
     }
 
     if (range.lower() > 0 || range.width() != value.size()) {
-        auto upper = static_cast<uint32_t>(range.upper());
-        auto lower = static_cast<uint32_t>(range.lower());
+        // A source-side streaming 'with' range may start beyond the current array/queue
+        // extent (IEEE 1800-2017 11.4.14.3); nonexistent elements are the default value.
+        // Clamp both bounds to the size so the copy range is never reversed, and take the
+        // remaining 'more' elements as default fills, keeping the result range.width() wide.
         auto size = static_cast<uint32_t>(value.size());
-        auto more = upper >= size ? upper - size + 1 : 0;
-        upper = std::min(upper + 1, size);
+        auto lower = std::min(static_cast<uint32_t>(range.lower()), size);
+        auto upper = std::min(static_cast<uint32_t>(range.upper()) + 1, size);
+        auto more = static_cast<uint32_t>(range.width()) - (upper - lower);
 
         if (value.isUnpacked()) {
             const auto old = value.elements();
