@@ -117,8 +117,7 @@ public:
         nb::gil_scoped_acquire acquire;
         nb::object pyObj = getObj();
         if (pyObj.is_valid() && nb::hasattr(pyObj, "eval")) {
-            return nb::cast<ConstantValue>(
-                pyObj.attr("eval")(context, args, range, callInfo));
+            return nb::cast<ConstantValue>(pyObj.attr("eval")(context, args, range, callInfo));
         }
         return ConstantValue();
     }
