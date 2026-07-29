@@ -31,14 +31,14 @@ def test_custom_systasks():
     c.addSystemSubroutine(foo)
 
     class BarFunc(SimpleSystemSubroutine):
-        def __init__(self, int_type):
+        def __init__(self):
             SimpleSystemSubroutine.__init__(
                 self,
                 "$bar",
                 SubroutineKind.Function,
                 1,
-                [int_type],
-                int_type,
+                [c.int_type],
+                c.int_type,
                 False,
                 False,
             )
@@ -50,7 +50,7 @@ def test_custom_systasks():
 
             return cv.value + 10
 
-    c.addSystemSubroutine(BarFunc(c.intType))
+    c.addSystemSubroutine(BarFunc())
 
     diags = c.getAllDiagnostics()
     report = DiagnosticEngine.reportAll(c.sourceManager, diags)
