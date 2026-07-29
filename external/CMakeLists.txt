@@ -3,6 +3,13 @@
 # SPDX-License-Identifier: MIT
 # ~~~
 
+execute_process(
+  COMMAND bash -c "git remote get-url origin | sed -E 's#(git@[^:]+:|ssh://git@[^/]+/|https://[^/]+/).*#\\1#'"
+  OUTPUT_VARIABLE GITHUB_PREFIX
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+message(STATUS "Git remote URL: ${GITHUB_PREFIX}")
+
 # --- fmt lib ---
 if(SLANG_USE_SYSTEM_FMT)
   find_package(fmt 12 REQUIRED)
@@ -18,7 +25,7 @@ if(SLANG_USE_SYSTEM_FMT)
 else()
   FetchContent_Declare(
     fmt
-    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_REPOSITORY ${GITHUB_PREFIX}fmtlib/fmt.git
     GIT_TAG 12.2.0
     GIT_SHALLOW ON
     SYSTEM EXCLUDE_FROM_ALL)
@@ -70,7 +77,7 @@ else()
   message(STATUS "Using FetchContent for boost::regex (header-only)")
   FetchContent_Declare(
     boost_regex
-    GIT_REPOSITORY https://github.com/MikePopoloski/regex.git
+    GIT_REPOSITORY ${GITHUB_PREFIX}MikePopoloski/regex.git
     GIT_TAG boost-1.91.0
     GIT_SHALLOW ON
     SOURCE_SUBDIR _no_build_)
@@ -103,7 +110,7 @@ if(SLANG_USE_MIMALLOC)
 
   FetchContent_Declare(
     mimalloc
-    GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
+    GIT_REPOSITORY ${GITHUB_PREFIX}microsoft/mimalloc.git
     GIT_TAG v3.4.3
     GIT_SHALLOW ON
     FIND_PACKAGE_ARGS 3.4)
@@ -139,7 +146,7 @@ endif()
 if(SLANG_INCLUDE_TESTS)
   FetchContent_Declare(
     Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_REPOSITORY ${GITHUB_PREFIX}catchorg/Catch2.git
     GIT_TAG v3.15.3
     GIT_SHALLOW ON
     FIND_PACKAGE_ARGS 3.15)
@@ -167,7 +174,7 @@ if(SLANG_USE_SYSTEM_TOMLPLUSPLUS)
 else()
   FetchContent_Declare(
     tomlplusplus
-    GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
+    GIT_REPOSITORY ${GITHUB_PREFIX}marzer/tomlplusplus.git
     GIT_TAG v3.4.0
     GIT_SHALLOW ON
     FIND_PACKAGE_ARGS 3.4)
