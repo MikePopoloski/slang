@@ -29,7 +29,7 @@ namespace {
 /// -> Compilation).
 struct PyCompilation : Compilation {
     using Compilation::Compilation;
-    std::vector<std::shared_ptr<SystemSubroutine>> subroutines_;
+    std::vector<nb::object> pySubroutines_;
 };
 
 int comp_tp_traverse(PyObject* self, visitproc visit, void* arg) {
@@ -37,22 +37,110 @@ int comp_tp_traverse(PyObject* self, visitproc visit, void* arg) {
     if (!nb::inst_ready(self))
         return 0;
     auto* w = nb::inst_ptr<PyCompilation>(self);
-    for (auto& sub : w->subroutines_) {
-        nb::handle h = nb::find(sub);
-        Py_VISIT(h.ptr());
+    for (auto& obj : w->pySubroutines_) {
+        Py_VISIT(obj.ptr());
     }
     return 0;
 }
 
 int comp_tp_clear(PyObject* self) {
     auto* w = nb::inst_ptr<PyCompilation>(self);
-    w->subroutines_.clear();
+    w->pySubroutines_.clear();
     return 0;
 }
 
 PyType_Slot comp_slots[] = {{Py_tp_traverse, (void*)comp_tp_traverse},
                             {Py_tp_clear, (void*)comp_tp_clear},
                             {0, nullptr}};
+
+class PySimpleSystemSubroutine : public SimpleSystemSubroutine {
+public:
+    NB_TRAMPOLINE(SimpleSystemSubroutine, 1);
+
+    std::vector<const Type*> argTypes_;
+    const Type* returnType_;
+    size_t requiredArgs_;
+    bool isMethod_;
+    bool isFirstArgLValue_;
+
+    PySimpleSystemSubroutine(const std::string& name, SubroutineKind kind, size_t requiredArgs,
+                             const std::vector<const Type*>& argTypes, const Type& returnType,
+                             bool isMethod, bool isFirstArgLValue = false) :
+        SimpleSystemSubroutine(name, kind, requiredArgs, argTypes, returnType, isMethod,
+                               isFirstArgLValue),
+        argTypes_(argTypes), returnType_(&returnType), requiredArgs_(requiredArgs),
+        isMethod_(isMethod), isFirstArgLValue_(isFirstArgLValue) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
+                       const CallExpression::SystemCallInfo& callInfo) const override {
+        NB_OVERRIDE_PURE(eval, context, args, range, callInfo);
+    }
+};
+
+class PySystemSubroutineBridge : public SimpleSystemSubroutine {
+public:
+    nb::object pyWeak;
+
+    PySystemSubroutineBridge(nb::object obj, const PySimpleSystemSubroutine& sub) :
+        SimpleSystemSubroutine(sub.name, sub.kind, sub.requiredArgs_, sub.argTypes_,
+                               *sub.returnType_, sub.isMethod_, sub.isFirstArgLValue_) {
+        knownNameId = sub.knownNameId;
+        hasOutputArgs = sub.hasOutputArgs;
+        withClauseMode = sub.withClauseMode;
+        pyWeak = nb::steal(PyWeakref_NewRef(obj.ptr(), nullptr));
+        if (!pyWeak.is_valid())
+            throw std::runtime_error("Failed to create weak reference for subroutine bridge");
+    }
+
+    nb::object getObj() const {
+        PyObject* obj = PyWeakref_GET_OBJECT(pyWeak.ptr());
+        if (obj && obj != Py_None)
+            return nb::borrow(obj);
+        return nb::object();
+    }
+
+    bool allowEmptyArgument(size_t argIndex) const override {
+        nb::gil_scoped_acquire acquire;
+        nb::object pyObj = getObj();
+        if (pyObj.is_valid() && nb::hasattr(pyObj, "allowEmptyArgument"))
+            return nb::cast<bool>(pyObj.attr("allowEmptyArgument")(argIndex));
+        return SimpleSystemSubroutine::allowEmptyArgument(argIndex);
+    }
+
+    bool allowClockingArgument(size_t argIndex) const override {
+        nb::gil_scoped_acquire acquire;
+        nb::object pyObj = getObj();
+        if (pyObj.is_valid() && nb::hasattr(pyObj, "allowClockingArgument"))
+            return nb::cast<bool>(pyObj.attr("allowClockingArgument")(argIndex));
+        return SimpleSystemSubroutine::allowClockingArgument(argIndex);
+    }
+
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
+                       const CallExpression::SystemCallInfo& callInfo) const override {
+        nb::gil_scoped_acquire acquire;
+        nb::object pyObj = getObj();
+        if (pyObj.is_valid() && nb::hasattr(pyObj, "eval")) {
+            return nb::cast<ConstantValue>(
+                pyObj.attr("eval")(context, args, range, callInfo));
+        }
+        return ConstantValue();
+    }
+};
+
+std::shared_ptr<SystemSubroutine> wrapSubroutine(nb::object pySubroutine) {
+    if (pySubroutine.type().is(nb::type<SimpleSystemSubroutine>()) ||
+        pySubroutine.type().is(nb::type<NonConstantFunction>())) {
+        return nb::cast<std::shared_ptr<SystemSubroutine>>(pySubroutine);
+    }
+    if (nb::isinstance<SimpleSystemSubroutine>(pySubroutine)) {
+        // Safe: nanobind's trampoline registration ensures Python subclasses of
+        // SimpleSystemSubroutine always instantiate PySimpleSystemSubroutine.
+        const auto& simple = static_cast<const PySimpleSystemSubroutine&>(
+            nb::cast<const SimpleSystemSubroutine&>(pySubroutine));
+        return std::make_shared<PySystemSubroutineBridge>(pySubroutine, simple);
+    }
+    return nb::cast<std::shared_ptr<SystemSubroutine>>(pySubroutine);
+}
 
 } // namespace
 
@@ -146,18 +234,18 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .def("getRoot", nb::overload_cast<>(&Compilation::getRoot), byrefint)
         .def(
             "addSystemSubroutine",
-            [](Compilation& self, const std::shared_ptr<SystemSubroutine>& subroutine) {
-                // Safe: all instances are PyCompilation due to the trampoline.
-                static_cast<PyCompilation&>(self).subroutines_.push_back(subroutine);
-                self.addSystemSubroutine(subroutine);
+            [](Compilation& self, nb::object pySub) {
+                auto sub = wrapSubroutine(pySub);
+                static_cast<PyCompilation&>(self).pySubroutines_.push_back(pySub);
+                self.addSystemSubroutine(sub);
             },
             "subroutine"_a)
         .def(
             "addSystemMethod",
-            [](Compilation& self, SymbolKind typeKind,
-               const std::shared_ptr<SystemSubroutine>& method) {
-                static_cast<PyCompilation&>(self).subroutines_.push_back(method);
-                self.addSystemMethod(typeKind, method);
+            [](Compilation& self, SymbolKind typeKind, nb::object pyMethod) {
+                auto sub = wrapSubroutine(pyMethod);
+                static_cast<PyCompilation&>(self).pySubroutines_.push_back(pyMethod);
+                self.addSystemMethod(typeKind, sub);
             },
             "typeKind"_a, "method"_a)
         .def("getSystemSubroutine",
@@ -382,7 +470,8 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         using SystemSubroutine::unevaluatedContext;
     };
 
-    nb::class_<SystemSubroutine, PySystemSubroutine> systemSub(ast, "SystemSubroutine");
+    nb::class_<SystemSubroutine, PySystemSubroutine> systemSub(ast, "SystemSubroutine",
+                                                               nb::pooled(0));
     systemSub.def(nb::init<const std::string&, SubroutineKind>(), "name"_a, "kind"_a)
         .def_rw("name", &SystemSubroutine::name)
         .def_rw("kind", &SystemSubroutine::kind)
@@ -411,30 +500,15 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .value("Iterator", SystemSubroutine::WithClauseMode::Iterator)
         .value("Randomize", SystemSubroutine::WithClauseMode::Randomize);
 
-    class PySimpleSystemSubroutine : public SimpleSystemSubroutine {
-    public:
-        NB_TRAMPOLINE(SimpleSystemSubroutine, 1);
-
-        PySimpleSystemSubroutine(const std::string& name, SubroutineKind kind, size_t requiredArgs,
-                                 const std::vector<const Type*>& argTypes, const Type& returnType,
-                                 bool isMethod, bool isFirstArgLValue = false) :
-            SimpleSystemSubroutine(name, kind, requiredArgs, argTypes, returnType, isMethod,
-                                   isFirstArgLValue) {}
-
-        ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
-                           const CallExpression::SystemCallInfo& callInfo) const override {
-            NB_OVERRIDE_PURE(eval, context, args, range, callInfo);
-        }
-    };
-
     nb::class_<SimpleSystemSubroutine, SystemSubroutine, PySimpleSystemSubroutine>(
-        ast, "SimpleSystemSubroutine")
+        ast, "SimpleSystemSubroutine", nb::pooled(0))
         .def(nb::init<const std::string&, SubroutineKind, size_t, const std::vector<const Type*>&,
                       const Type&, bool, bool>(),
              "name"_a, "kind"_a, "requiredArgs"_a, "argTypes"_a, "returnType"_a, "isMethod"_a,
              "isFirstArgLValue"_a = false);
 
-    nb::class_<NonConstantFunction, SimpleSystemSubroutine>(ast, "NonConstantFunction")
+    nb::class_<NonConstantFunction, SimpleSystemSubroutine>(ast, "NonConstantFunction",
+                                                            nb::pooled(0))
         .def(nb::init<const std::string&, const Type&, size_t, const std::vector<const Type*>&,
                       bool>(),
              "name"_a, "returnType"_a, "requiredArgs"_a = 0,

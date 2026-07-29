@@ -37,8 +37,8 @@ def test_custom_systasks():
                 "$bar",
                 SubroutineKind.Function,
                 1,
-                [c.int_type],
-                c.int_type,
+                [c.intType],
+                c.intType,
                 False,
                 False,
             )
