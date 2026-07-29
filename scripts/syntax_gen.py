@@ -1311,7 +1311,7 @@ def generatePyBindings(builddir, alltypes):
 #include "slang/syntax/AllSyntax.h"
 
 void registerSyntaxNodes{0}(nb::module_& m) {{
-""".format(i)
+"""
         )
 
         idx = i * perfile
