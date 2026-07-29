@@ -270,6 +270,13 @@ static void formatRaw2(std::string& result, const ConstantValue& value) {
         return;
     }
 
+    if (value.isUnion()) {
+        // An unpacked union stores its active member; emit that member's raw
+        // representation, mirroring the unpacked struct/array recursion above.
+        formatRaw2(result, value.unionVal()->value);
+        return;
+    }
+
     SVInt sv = value.integer();
     sv.flattenUnknowns();
 
@@ -290,6 +297,13 @@ static void formatRaw4(std::string& result, const ConstantValue& value) {
     if (value.isUnpacked()) {
         for (auto& elem : value.elements())
             formatRaw4(result, elem);
+        return;
+    }
+
+    if (value.isUnion()) {
+        // An unpacked union stores its active member; emit that member's raw
+        // representation, mirroring the unpacked struct/array recursion above.
+        formatRaw4(result, value.unionVal()->value);
         return;
     }
 
