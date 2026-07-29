@@ -23,35 +23,32 @@ using namespace slang::driver;
 
 namespace {
 
-/// Trampoline subclass that adds GC-visible subroutine tracking to Compilation.
-/// The subroutines_ vector is traversed by comp_tp_traverse so Python's cyclic
-/// GC can discover and break cycles (e.g. Compilation -> subroutine -> closure
-/// -> Compilation).
-struct PyCompilation : Compilation {
-    using Compilation::Compilation;
-    std::vector<nb::object> pySubroutines_;
-};
+/// Keeps a Python reference to `obj` alive for as long as the Compilation Python
+/// object wrapping `self` is alive, in a garbage-collector-visible way.
+///
+/// The references are stored in a list attribute in the Compilation instance's
+/// __dict__ (enabled via nb::dynamic_attr). This is important for correctness in
+/// two ways:
+///   1. Python's cyclic GC traverses the instance dict, so it can discover and
+///      break reference cycles such as
+///      Compilation -> subroutine -> closure -> Compilation.
+///   2. nanobind clears the instance dict on every deallocation, so the held
+///      references are released without relying on a C++ destructor (a direct
+///      Compilation() instantiates the base type, not a trampoline subclass, so
+///      any extra C++ member destructor would not run).
+void keepAliveInDict(Compilation& self, nb::handle obj) {
+    static constexpr const char* key = "_pyslang_keepalive";
+    nb::object pySelf = nb::find(self);
+    if (!pySelf.is_valid())
+        throw std::runtime_error("Compilation Python object not found for keep-alive");
 
-int comp_tp_traverse(PyObject* self, visitproc visit, void* arg) {
-    Py_VISIT(Py_TYPE(self));
-    if (!nb::inst_ready(self))
-        return 0;
-    auto* w = nb::inst_ptr<PyCompilation>(self);
-    for (auto& obj : w->pySubroutines_) {
-        Py_VISIT(obj.ptr());
-    }
-    return 0;
+    nb::list lst;
+    if (nb::hasattr(pySelf, key))
+        lst = nb::borrow<nb::list>(nb::getattr(pySelf, key));
+    else
+        nb::setattr(pySelf, key, lst);
+    lst.append(obj);
 }
-
-int comp_tp_clear(PyObject* self) {
-    auto* w = nb::inst_ptr<PyCompilation>(self);
-    w->pySubroutines_.clear();
-    return 0;
-}
-
-PyType_Slot comp_slots[] = {{Py_tp_traverse, (void*)comp_tp_traverse},
-                            {Py_tp_clear, (void*)comp_tp_clear},
-                            {0, nullptr}};
 
 class PySimpleSystemSubroutine : public SimpleSystemSubroutine {
 public:
@@ -221,7 +218,7 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .def_rw("paramOverrides", &CompilationOptions::paramOverrides)
         .def_rw("defaultLiblist", &CompilationOptions::defaultLiblist);
 
-    nb::class_<Compilation, PyCompilation> comp(ast, "Compilation", nb::type_slots(comp_slots));
+    nb::class_<Compilation> comp(ast, "Compilation", nb::dynamic_attr());
     comp.def(nb::init<>())
         .def(nb::init<const Bag&>(), "options"_a)
         .def_prop_ro("options", &Compilation::getOptions)
@@ -236,7 +233,7 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
             "addSystemSubroutine",
             [](Compilation& self, nb::object pySub) {
                 auto sub = wrapSubroutine(pySub);
-                static_cast<PyCompilation&>(self).pySubroutines_.push_back(pySub);
+                keepAliveInDict(self, pySub);
                 self.addSystemSubroutine(sub);
             },
             "subroutine"_a)
@@ -244,7 +241,7 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
             "addSystemMethod",
             [](Compilation& self, SymbolKind typeKind, nb::object pyMethod) {
                 auto sub = wrapSubroutine(pyMethod);
-                static_cast<PyCompilation&>(self).pySubroutines_.push_back(pyMethod);
+                keepAliveInDict(self, pyMethod);
                 self.addSystemMethod(typeKind, sub);
             },
             "typeKind"_a, "method"_a)

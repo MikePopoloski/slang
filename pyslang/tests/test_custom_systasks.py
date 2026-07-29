@@ -1,6 +1,9 @@
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
 
+import gc
+import weakref
+
 from pyslang.ast import (
     Compilation,
     NonConstantFunction,
@@ -62,3 +65,41 @@ source:8:5: note: $info encountered: bar:52
     ^
 """
     )
+
+
+def test_custom_subroutine_is_not_leaked():
+    """A registered Python subroutine must be collectable (leak regression).
+
+    This exercises the Compilation -> subroutine -> closure -> Compilation
+    reference cycle. The keep-alive references are stored in the Compilation
+    instance __dict__ (nb::dynamic_attr), which is garbage-collector visible, so
+    the cyclic collector can break the cycle and free the subroutine.
+    """
+    ref = []
+
+    def build():
+        c = Compilation()
+
+        class BarFunc(SimpleSystemSubroutine):
+            def __init__(self):
+                SimpleSystemSubroutine.__init__(
+                    self,
+                    "$bar",
+                    SubroutineKind.Function,
+                    1,
+                    [c.intType],
+                    c.intType,
+                    False,
+                    False,
+                )
+
+            def eval(self, context, args, sourceRange, callInfo):
+                return None
+
+        b = BarFunc()
+        c.addSystemSubroutine(b)
+        ref.append(weakref.ref(b))
+
+    build()
+    gc.collect()
+    assert ref[0]() is None, "registered custom subroutine was leaked"
