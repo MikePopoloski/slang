@@ -4,10 +4,11 @@
 # ~~~
 
 execute_process(
-  COMMAND bash -c "git remote get-url origin | sed -E 's#(git@[^:]+:|ssh://git@[^/]+/|https://[^/]+/).*#\\1#'"
+  COMMAND
+    bash -c
+    "git remote get-url origin | sed -E 's#(git@[^:]+:|ssh://git@[^/]+/|https://[^/]+/).*#\\1#'"
   OUTPUT_VARIABLE GITHUB_PREFIX
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
 message(STATUS "Git remote URL: ${GITHUB_PREFIX}")
 
 # --- fmt lib ---
