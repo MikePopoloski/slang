@@ -52,7 +52,7 @@ Options
   --define KEY=VALUE    Define a custom substitution; %KEY in RUN lines is
                         replaced with VALUE. Can be specified multiple times.
   --verbose, -v         Print each test command as it runs.
-  --jobs, -j <N>        Run N tests in parallel (default: 1).
+  --jobs, -j <N>        Run N tests in parallel (default: one per usable CPU).
   --filter <regex>      Run only tests whose paths match <regex>.
   --no-color            Disable ANSI colour output.
 
@@ -783,8 +783,23 @@ def maybe_wrap_wasm_launcher(slang_bin: str) -> tuple[str, bool]:
 # ---------------------------------------------------------------------------
 
 
+def usable_cpu_count() -> int:
+    """Return the number of CPUs this process may actually run on.
+
+    os.cpu_count() reports the CPUs of the machine and ignores any restriction
+    placed on the process, so a run pinned to a couple of cores would still
+    start a job per CPU of the host.
+    """
+    process_cpu_count = getattr(os, "process_cpu_count", None)
+    if process_cpu_count is not None:  # Python 3.13+
+        return process_cpu_count() or 1
+    if hasattr(os, "sched_getaffinity"):
+        return len(os.sched_getaffinity(0)) or 1
+    return os.cpu_count() or 1
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    _default_jobs = os.cpu_count() or 1
+    _default_jobs = usable_cpu_count()
 
     p = argparse.ArgumentParser(
         description=__doc__ or "",
