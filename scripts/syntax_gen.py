@@ -1310,7 +1310,7 @@ def generatePyBindings(builddir, alltypes):
 
 #include "slang/syntax/AllSyntax.h"
 
-void registerSyntaxNodes{0}(nb::module_& m) {{
+void registerSyntaxNodes{i}(nb::module_& m) {{
 """
         )
 
