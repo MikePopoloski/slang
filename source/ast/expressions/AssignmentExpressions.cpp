@@ -1170,7 +1170,7 @@ ConstantValue SimpleAssignmentPatternExpression::applyConversions(EvalContext& c
 
 static const Expression* matchElementValue(
     const ASTContext& context, const Type& elementType, const FieldSymbol* targetField,
-    SourceRange sourceRange,
+    const Type& assignmentTargetType, const StructuredAssignmentPatternSyntax& syntax,
     std::span<const StructuredAssignmentPatternExpression::TypeSetter> typeSetters,
     const Expression* defaultSetter) {
 
@@ -1227,8 +1227,8 @@ static const Expression* matchElementValue(
             if (type.isError() || field.name.empty())
                 return nullptr;
 
-            auto elemExpr = matchElementValue(context, type, &field, sourceRange, typeSetters,
-                                              defaultSetter);
+            auto elemExpr = matchElementValue(context, type, &field, assignmentTargetType, syntax,
+                                              typeSetters, defaultSetter);
             if (!elemExpr)
                 return nullptr;
 
@@ -1237,15 +1237,16 @@ static const Expression* matchElementValue(
 
         auto& comp = context.getCompilation();
         return comp.emplace<SimpleAssignmentPatternExpression>(elementType, /* isLValue */ false,
-                                                               elements.copy(comp), sourceRange);
+                                                               elements.copy(comp),
+                                                               syntax.sourceRange());
     }
 
     if (elementType.isArray() && elementType.hasFixedRange()) {
         auto nestedElemType = elementType.getArrayElementType();
         SLANG_ASSERT(nestedElemType);
 
-        auto elemExpr = matchElementValue(context, *nestedElemType, nullptr, sourceRange,
-                                          typeSetters, defaultSetter);
+        auto elemExpr = matchElementValue(context, *nestedElemType, targetField,
+                                          assignmentTargetType, syntax, typeSetters, defaultSetter);
         if (!elemExpr)
             return nullptr;
 
@@ -1256,7 +1257,8 @@ static const Expression* matchElementValue(
 
         auto& comp = context.getCompilation();
         return comp.emplace<SimpleAssignmentPatternExpression>(elementType, /* isLValue */ false,
-                                                               elements.copy(comp), sourceRange);
+                                                               elements.copy(comp),
+                                                               syntax.sourceRange());
     }
 
     // Finally, if we have a default then it must now be assignment compatible.
@@ -1265,12 +1267,15 @@ static const Expression* matchElementValue(
 
     // Otherwise there's no setter for this element, which is an error.
     if (targetField) {
-        auto& diag = context.addDiag(diag::AssignmentPatternNoMember, sourceRange);
+        auto& diag = context.addDiag(diag::AssignmentPatternNoMember,
+                                     syntax.getFirstToken().range());
         diag << targetField->name;
         diag.addNote(diag::NoteDeclarationHere, targetField->location);
     }
     else {
-        context.addDiag(diag::AssignmentPatternMissingElements, sourceRange);
+        SLANG_ASSERT(assignmentTargetType.hasFixedRange());
+        context.addDiag(diag::AssignmentPatternMissingElements, syntax.getFirstToken().range())
+            << assignmentTargetType;
     }
 
     return nullptr;
@@ -1390,7 +1395,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
             continue;
         }
 
-        auto expr = matchElementValue(context, fieldType, &field, sourceRange, typeSetters,
+        auto expr = matchElementValue(context, fieldType, &field, type, syntax, typeSetters,
                                       defaultSetter);
         if (!expr) {
             bad = true;
@@ -1504,8 +1509,8 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
         }
 
         if (!cachedVal) {
-            cachedVal = matchElementValue(context, elementType, nullptr, syntax.sourceRange(),
-                                          typeSetters, defaultSetter);
+            cachedVal = matchElementValue(context, elementType, nullptr, type, syntax, typeSetters,
+                                          defaultSetter);
             if (!cachedVal.value()) {
                 bad = true;
                 break;
@@ -1567,7 +1572,7 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
     // If there is a default setter expression, translate it to the target type
     // of the array, and store that in case we need it to do constant evaluation.
     if (defaultSetter) {
-        auto matched = matchElementValue(context, elementType, nullptr, syntax.sourceRange(), {},
+        auto matched = matchElementValue(context, elementType, nullptr, type, syntax, {},
                                          defaultSetter);
         if (!matched)
             bad = true;
@@ -1578,7 +1583,9 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
     SmallVector<const Expression*> elements;
     if (indexMap.size() != maxIndex + 1 && !defaultSetter) {
         if (!bad) {
-            context.addDiag(diag::AssignmentPatternMissingElements, sourceRange);
+            context.addDiag(diag::AssignmentPatternMissingDynamicElements,
+                            syntax.getFirstToken().range())
+                << maxIndex + 1 << type;
             bad = true;
         }
     }
