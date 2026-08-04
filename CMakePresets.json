@@ -179,8 +179,10 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc-16",
         "CMAKE_CXX_FLAGS": "-fno-exceptions -fno-rtti",
-        "CMAKE_CXX_COMPILER": "g++-16"
+        "CMAKE_CXX_COMPILER": "g++-16",
+        "MI_NO_USE_CXX": "ON"
       }
     },
     {
