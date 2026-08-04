@@ -9,11 +9,12 @@ module m;
         int scalar;
 //          ^ NoteDeclarationHere declared here - for AssignmentPatternNoMember(scalar)
         int array[2];
+//          ^ NoteDeclarationHere declared here - for AssignmentPatternNoMember(array)
     } st;
 
     st value = '{real: 1.0};
-//             ^^^^^^^^^^^^ AssignmentPatternMissingElements not all elements of array are covered by an assignment pattern key
-//             ^^^^^^^^^^^^ AssignmentPatternNoMember member 'scalar' is not covered by any assignment pattern key
+//             ^^ AssignmentPatternNoMember member 'scalar' is not covered by any assignment pattern key
+//             ^^ AssignmentPatternNoMember member 'array' is not covered by any assignment pattern key
 
     st too_many = '{
 //                ^^ WrongNumberAssignmentPatterns assignment pattern for 'st' requires 2 elements but 3 were provided
@@ -64,7 +65,13 @@ module assignment_pattern_errors;
 //                                       ^^^^^ AssignmentPatternKeyExpr expression is not a valid assignment pattern member name or type
 //                                                ^ IndexValueInvalid cannot refer to element 9 of 'int$[1:2]'
     int g[] = '{1:1};
-//            ^^^^^^ AssignmentPatternMissingElements not all elements of array are covered by an assignment pattern key
+//            ^^ AssignmentPatternMissingDynamicElements assignment pattern does not cover all elements in an array of length 2 of type 'int$[]'
+    int sparse[] = '{2:1, 5:1, 1000:1};
+//                 ^^ AssignmentPatternMissingDynamicElements assignment pattern does not cover all elements in an array of length 1001 of type 'int$[]'
+    int very_sparse[] = '{2147483647:1};
+//                      ^^ AssignmentPatternMissingDynamicElements assignment pattern does not cover all elements in an array of length 2147483648 of type 'int$[]'
+    int fixed_gaps[5:1] = '{5:1, 2:1};
+//                        ^^ AssignmentPatternMissingElements assignment pattern does not cover all elements of type 'int$[5:1]'
 
     st h = '{-1{0}};
 //           ^^ ValueMustBePositive value must be positive
@@ -82,9 +89,9 @@ module assignment_pattern_errors;
 //                                                 ^^^ AssignmentPatternDynamicType assignment patterns for dynamic arrays, associative arrays, and queues cannot have type keys
 
     int m[2][2] = '{real:3.14};
-//                ^^^^^^^^^^^^ AssignmentPatternMissingElements not all elements of array are covered by an assignment pattern key
+//                ^^ AssignmentPatternMissingElements assignment pattern does not cover all elements of type 'int$[2][2]'
     struct { int i; real r; } n[2] = '{real:3.14};
-//                                   ^^^^^^^^^^^^ AssignmentPatternNoMember member 'i' is not covered by any assignment pattern key
+//                                   ^^ AssignmentPatternNoMember member 'i' is not covered by any assignment pattern key
 //               ^ NoteDeclarationHere declared here - for AssignmentPatternNoMember(i)
 endmodule
 
@@ -93,12 +100,13 @@ module assignment_pattern_statement;
         int scalar;
 //          ^ NoteDeclarationHere declared here - for AssignmentPatternNoMember(scalar)
         int array[2];
+//          ^ NoteDeclarationHere declared here - for AssignmentPatternNoMember(array)
     } st;
 
     st other;
     initial other = '{real: 1.0};
-//                  ^^^^^^^^^^^^ AssignmentPatternMissingElements not all elements of array are covered by an assignment pattern key
-//                  ^^^^^^^^^^^^ AssignmentPatternNoMember member 'scalar' is not covered by any assignment pattern key
+//                  ^^ AssignmentPatternNoMember member 'scalar' is not covered by any assignment pattern key
+//                  ^^ AssignmentPatternNoMember member 'array' is not covered by any assignment pattern key
 endmodule
 
 module nested_assignment_pattern_statement;
@@ -113,7 +121,7 @@ module nested_assignment_pattern_statement;
 
     outer_t value;
     initial value = '{inner: '{present: 1}};
-//                           ^^^^^^^^^^^^^ AssignmentPatternNoMember member 'missing' is not covered by any assignment pattern key
+//                           ^^ AssignmentPatternNoMember member 'missing' is not covered by any assignment pattern key
 endmodule
 
 module nested_and_outer_missing_assignment_pattern_statement;
@@ -130,6 +138,6 @@ module nested_and_outer_missing_assignment_pattern_statement;
 
     outer_t value;
     initial value = '{inner: '{present: 1}};
-//                  ^^^^^^^^^^^^^^^^^^^^^^^ AssignmentPatternNoMember member 'outer_missing' is not covered by any assignment pattern key
-//                           ^^^^^^^^^^^^^ AssignmentPatternNoMember member 'missing' is not covered by any assignment pattern key
+//                  ^^ AssignmentPatternNoMember member 'outer_missing' is not covered by any assignment pattern key
+//                           ^^ AssignmentPatternNoMember member 'missing' is not covered by any assignment pattern key
 endmodule
