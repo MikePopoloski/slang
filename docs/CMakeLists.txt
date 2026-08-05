@@ -24,6 +24,7 @@ set(DOXYGEN_INPUT_DIR_LIST
 set(DOXYGEN_EXAMPLE_DIR_LIST
     "${PROJECT_SOURCE_DIR}/tools/hier/README.md"
     "${PROJECT_SOURCE_DIR}/tools/reflect/README.md"
+    "${PROJECT_SOURCE_DIR}/tools/slang-unifdef/README.md"
     "${PROJECT_SOURCE_DIR}/tools/rewriter/README.md"
     "${PROJECT_SOURCE_DIR}/tools/threadtest/README.md"
     "${PROJECT_SOURCE_DIR}/tools/tidy/README.md")
