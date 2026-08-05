@@ -2045,7 +2045,6 @@ void Compilation::checkDPIMethods(std::span<const SubroutineSymbol* const> dpiIm
 
             auto [nameIt, nameInserted] = nameMap.emplace(cId, &sub);
             if (!nameInserted) {
-                shouldRecordResolved = false;
                 if (!checkSignaturesMatch(sub, *nameIt->second)) {
                     auto& diag = scope->addDiag(diag::DPISignatureMismatch, syntax->name.range());
                     diag << cId;
