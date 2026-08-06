@@ -250,6 +250,21 @@ def test_cst_json():
             )
 
 
+def test_syntax_node_to_json_with_source_manager():
+    tree = SyntaxTree.fromText("""
+`define DECL logic value;
+module m;
+    `DECL
+endmodule
+""")
+
+    tree_root = json.loads(tree.to_json(CSTJsonMode.Full))["root"]
+    node = json.loads(tree.root.to_json(CSTJsonMode.Full, tree.sourceManager))
+
+    assert tree_root == node
+    assert "fromExpansion" in json.dumps(node)
+
+
 def _collect_trivia_kinds(node: Any) -> set:
     """Recursively collect all trivia kind strings from a CST JSON tree."""
     kinds = set()

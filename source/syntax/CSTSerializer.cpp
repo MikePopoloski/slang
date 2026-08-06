@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/syntax/CSTSerializer.h"
 
+#include <algorithm>
 #include <ranges>
 #include <string_view>
 #include <type_traits>
@@ -15,6 +16,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/syntax/SyntaxVisitor.h"
+#include "slang/text/SourceManager.h"
 #include "slang/util/Util.h"
 
 namespace slang::syntax {
@@ -27,7 +29,7 @@ void CSTSerializer::serialize(const SyntaxTree& tree) {
     writer.writeProperty("kind");
     writer.writeValue("SyntaxTree"sv);
     writer.writeProperty("root");
-    serialize(tree.root());
+    serialize(tree.root(), &tree.sourceManager());
     writer.endObject();
 }
 
@@ -37,8 +39,10 @@ struct always_false : std::false_type {};
 struct CSTJsonVisitor {
     JsonWriter& writer;
     CSTJsonMode mode;
+    const SourceManager* sourceManager;
 
-    CSTJsonVisitor(JsonWriter& w, CSTJsonMode m) : writer(w), mode(m) {}
+    CSTJsonVisitor(JsonWriter& w, CSTJsonMode m, const SourceManager* sm) :
+        writer(w), mode(m), sourceManager(sm) {}
 
     template<std::derived_from<SyntaxNode> T>
     void visit(const T& node) {
@@ -143,10 +147,23 @@ struct CSTJsonVisitor {
         writer.endArray();
     }
 
-    void writeTrivia(parsing::Trivia trivia) {
+    // Returns true if the given source location comes from a macro expansion or an
+    // included file, i.e. text that is serialized in addition to the directive that
+    // produced it and so should not be double-counted when reconstructing source.
+    bool isExpandedLoc(SourceLocation loc) const {
+        return sourceManager && sourceManager->isPreprocessedLoc(loc);
+    }
+
+    void writeTrivia(parsing::Trivia trivia, bool expanded) {
         writer.startObject();
         writer.writeProperty("kind");
         writer.writeValue(toString(trivia.kind));
+
+        if (expanded) {
+            writer.writeProperty("fromExpansion");
+            writer.writeValue(true);
+        }
+
         switch (trivia.kind) {
             case parsing::TriviaKind::Directive:
             case parsing::TriviaKind::SkippedSyntax:
@@ -168,6 +185,37 @@ struct CSTJsonVisitor {
         writer.endObject();
     }
 
+    bool shouldWriteTrivia(parsing::Trivia trivia) const {
+        if (mode != CSTJsonMode::NoWhitespace)
+            return true;
+
+        if (trivia.kind == parsing::TriviaKind::Whitespace ||
+            trivia.kind == parsing::TriviaKind::EndOfLine) {
+            return false;
+        }
+
+        return true;
+    }
+
+    // Locationless trivia is relative to either the next explicitly located trivia or,
+    // if there is no such trivia, the parent token. Resolve those groups before filtering
+    // anything so that NoWhitespace mode cannot discard a group's location anchor.
+    void writeTriviaList(parsing::TriviaView trivia, bool parentExpanded) {
+        size_t groupStart = 0;
+        auto writeGroup = [&](size_t groupEnd, bool expanded) {
+            for (; groupStart < groupEnd; groupStart++) {
+                if (shouldWriteTrivia(trivia[groupStart]))
+                    writeTrivia(trivia[groupStart], expanded);
+            }
+        };
+
+        for (size_t i = 0; i < trivia.size(); i++) {
+            if (auto loc = trivia[i].getExplicitLocation())
+                writeGroup(i + 1, isExpandedLoc(*loc));
+        }
+        writeGroup(trivia.size(), parentExpanded);
+    }
+
     void writeTokenValue(parsing::Token token) {
         // If simple-tokens mode, just write the text value
         if (mode == CSTJsonMode::SimpleTokens) {
@@ -181,37 +229,33 @@ struct CSTJsonVisitor {
         writer.writeProperty("text");
         writer.writeValue(token.rawText());
 
+        // Flag tokens that come from a macro expansion or an included file. Such tokens
+        // are serialized in addition to the directive that produced them -- the macro
+        // usage, or the `include -- which occupies the same textual position, so consumers
+        // reconstructing the original source can skip them to avoid double-counting. The
+        // trailing trivia without an explicit source anchor inherits the token's state.
+        bool expanded = isExpandedLoc(token.location());
+        if (expanded) {
+            writer.writeProperty("fromExpansion");
+            writer.writeValue(true);
+        }
+
         // Handle trivia based on mode
         if (!token.trivia().empty()) {
             switch (mode) {
                 case CSTJsonMode::Full:
                     writer.writeProperty("trivia");
                     writer.startArray();
-                    for (auto& t : token.trivia())
-                        writeTrivia(t);
+                    writeTriviaList(token.trivia(), expanded);
                     writer.endArray();
                     break;
                 case CSTJsonMode::NoWhitespace: {
-                    // Write trivia array, but skip whitespace and end-of-line trivia.
-                    auto filtered = token.trivia() | std::views::filter([](auto& t) {
-                                        if (t.kind == parsing::TriviaKind::Whitespace ||
-                                            t.kind == parsing::TriviaKind::EndOfLine)
-                                            return false;
-                                        // Also skip DisabledText entries that contain only
-                                        // whitespace, since the preprocessor rewrites
-                                        // Whitespace/EndOfLine trivia to DisabledText on directive
-                                        // tokens in untaken branches.
-                                        if (t.kind == parsing::TriviaKind::DisabledText) {
-                                            return !std::ranges::all_of(t.getRawText(),
-                                                                        isWhitespace);
-                                        }
-                                        return true;
-                                    });
-                    if (!std::ranges::empty(filtered)) {
+                    auto trivia = token.trivia();
+                    if (std::ranges::any_of(trivia,
+                                            [this](auto t) { return shouldWriteTrivia(t); })) {
                         writer.writeProperty("trivia");
                         writer.startArray();
-                        for (auto& t : filtered)
-                            writeTrivia(t);
+                        writeTriviaList(trivia, expanded);
                         writer.endArray();
                     }
                     break;
@@ -237,8 +281,8 @@ struct CSTJsonVisitor {
 #include "slang/syntax/CSTJsonVisitorGen.h"
 };
 
-void CSTSerializer::serialize(const SyntaxNode& node) {
-    CSTJsonVisitor visitor(writer, mode);
+void CSTSerializer::serialize(const SyntaxNode& node, const SourceManager* sourceManager) {
+    CSTJsonVisitor visitor(writer, mode, sourceManager);
     node.visit(visitor);
 }
 

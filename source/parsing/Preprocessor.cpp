@@ -9,6 +9,7 @@
 
 #include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
+#include "slang/parsing/TokenKind.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/Glob.h"
 #include "slang/text/SourceManager.h"
@@ -988,25 +989,14 @@ Trivia Preprocessor::parseBranchDirective(Token directive,
             }
 
             if (done) {
-                // Put the token back so that we'll look at it next, but with
-                // its trivia rewritten to change comments and whitespace to disabled
-                // text, since this branch was not taken and we want the comments to
-                // disappear in the preprocessed output.
-                SmallVector<Trivia, 2> trivia(token.trivia());
-                for (auto& t : trivia) {
-                    switch (t.kind) {
-                        case TriviaKind::LineComment:
-                        case TriviaKind::BlockComment:
-                        case TriviaKind::Whitespace:
-                        case TriviaKind::EndOfLine:
-                            t.kind = TriviaKind::DisabledText;
-                            break;
-                        default:
-                            break;
-                    }
-                }
 
-                currentToken = token.withTrivia(alloc, trivia);
+                // Make a synthetic token for holding the trailing trivia, to keep it still
+                // classified as disabled text.
+                scratchTokenBuffer.push_back(
+                    Token::createMissing(alloc, TokenKind::Placeholder, token.location())
+                        .withTrivia(alloc, token.trivia()));
+
+                currentToken = token.withTrivia(alloc, {});
                 break;
             }
             scratchTokenBuffer.push_back(token);
