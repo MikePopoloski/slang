@@ -10,6 +10,10 @@
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/text/Json.h"
 
+namespace slang {
+class SourceManager;
+}
+
 namespace slang::syntax {
 
 class SyntaxTree;
@@ -26,8 +30,12 @@ public:
     /// Serialize a syntax tree to JSON
     void serialize(const SyntaxTree& tree);
 
-    /// Serialize a syntax node to JSON
-    void serialize(const SyntaxNode& node);
+    /// Serialize a syntax node to JSON. If provided, the source manager is used to annotate
+    /// tokens that originate from macro expansions or included files with a
+    /// `"fromExpansion": true` property. Such tokens are serialized in addition to the
+    /// directive that produced them, so the annotation lets consumers avoid double-counting
+    /// the text.
+    void serialize(const SyntaxNode& node, const SourceManager* sourceManager = nullptr);
 
 private:
     JsonWriter& writer;
