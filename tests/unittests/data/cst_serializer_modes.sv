@@ -3,9 +3,10 @@
 
 // Fixture for tests/regression/driver/cst-json-modes.sv. It is serialized via
 // `--cst-json` in every CSTJsonMode. It intentionally contains a macro
-// definition, an untaken `ifdef branch (which produces DisabledText trivia),
-// line and block comments, and a stray token after `endmodule` (which becomes
-// SkippedTokens trivia) so that the directive, disabled-text and skipped-token
+// definition, an untaken `ifdef branch (whose skipped tokens are carried as the
+// directive's disabled tokens, terminated by a Placeholder token), line and
+// block comments, and a stray token after `endmodule` (which becomes
+// SkippedTokens trivia) so that the directive, disabled-token and skipped-token
 // serialization paths all run.
 
 `define WIDTH 8
