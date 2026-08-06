@@ -16,24 +16,24 @@
 // RUN: echo CST-MODE-simple-tokens && %slang --cst-json - --cst-json-mode simple-tokens --parse-only %data/cst_serializer_modes.sv || true
 
 // "full" mode keeps every trivia kind verbatim, including whitespace, the
-// disabled `ifdef text, comments, directives and skipped tokens.
+// disabled `ifdef branch (whose tokens are carried as disabled tokens ending in
+// a Placeholder), comments, directives and skipped tokens.
 // CHECK-LABEL: CST-MODE-full
 // CHECK-DAG: "kind": "Whitespace"
-// CHECK-DAG: "kind": "DisabledText"
+// CHECK-DAG: "kind": "Placeholder"
 // CHECK-DAG: "kind": "Directive"
 // CHECK-DAG: "kind": "LineComment"
 // CHECK-DAG: "kind": "BlockComment"
 // CHECK-DAG: "kind": "SkippedTokens"
 
-// "no-whitespace" mode drops Whitespace/EndOfLine (and whitespace-only
-// DisabledText) trivia but preserves comments, directives and skipped tokens.
+// "no-whitespace" mode drops Whitespace/EndOfLine trivia but preserves comments,
+// directives and skipped tokens.
 // CHECK-LABEL: CST-MODE-no-whitespace
 // CHECK-DAG: "kind": "Directive"
 // CHECK-DAG: "kind": "LineComment"
 // CHECK-DAG: "kind": "BlockComment"
 // CHECK-DAG: "kind": "SkippedTokens"
 // CHECK-NOT: "kind": "Whitespace"
-// CHECK-NOT: "kind": "DisabledText"
 
 // "simple-trivia" mode emits the trivia of each token as a single concatenated
 // string value instead of an array of structured trivia objects.
