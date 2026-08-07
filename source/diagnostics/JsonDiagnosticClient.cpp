@@ -18,8 +18,28 @@ void JsonDiagnosticClient::report(const ReportedDiagnostic& diag) {
     writer.startObject();
     writer.writeProperty("severity");
     writer.writeValue(getSeverityString(diag.severity));
+
+    writeDiagnostic(diag);
+
+    if (!diag.notes.empty()) {
+        writer.writeProperty("notes");
+        writer.startArray();
+        for (auto& note : diag.notes) {
+            writer.startObject();
+            writeDiagnostic(note);
+            writer.endObject();
+        }
+        writer.endArray();
+    }
+
+    writer.endObject();
+}
+
+void JsonDiagnosticClient::writeDiagnostic(const ReportedDiagnosticInfo& diag) {
     writer.writeProperty("message");
     writer.writeValue(diag.formattedMessage);
+    writer.writeProperty("code");
+    writer.writeValue(toString(diag.originalDiagnostic.code));
 
     auto optionName = engine->getOptionName(diag.originalDiagnostic.code);
     if (!optionName.empty()) {
@@ -32,6 +52,33 @@ void JsonDiagnosticClient::report(const ReportedDiagnostic& diag) {
         writer.writeProperty("location");
         writer.writeValue(fmt::format("{}:{}:{}", getFileName(loc),
                                       sourceManager->getLineNumber(loc), getColumnNumber(loc)));
+    }
+
+    SmallVector<SourceRange> mappedRanges;
+    engine->mapSourceRanges(diag.location, diag.ranges, mappedRanges);
+    if (!mappedRanges.empty()) {
+        auto writeLocation = [&](SourceLocation loc) {
+            writer.startObject();
+            writer.writeProperty("file");
+            writer.writeValue(getFileName(loc));
+            writer.writeProperty("line");
+            writer.writeValue(uint64_t(sourceManager->getLineNumber(loc)));
+            writer.writeProperty("column");
+            writer.writeValue(uint64_t(getColumnNumber(loc)));
+            writer.endObject();
+        };
+
+        writer.writeProperty("ranges");
+        writer.startArray();
+        for (auto range : mappedRanges) {
+            writer.startObject();
+            writer.writeProperty("start");
+            writeLocation(range.start());
+            writer.writeProperty("end");
+            writeLocation(range.end());
+            writer.endObject();
+        }
+        writer.endArray();
     }
 
     if (diag.shouldShowIncludeStack) {
@@ -81,7 +128,6 @@ void JsonDiagnosticClient::report(const ReportedDiagnostic& diag) {
         }
         writer.endArray();
     }
-    writer.endObject();
 }
 
 } // namespace slang
