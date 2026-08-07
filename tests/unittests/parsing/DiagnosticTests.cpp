@@ -736,6 +736,20 @@ endmodule
     "code": "EmptyMember",
     "optionName": "empty-member",
     "location": "source:3:15",
+    "ranges": [
+      {
+        "start": {
+          "file": "source",
+          "line": 3,
+          "column": 15
+        },
+        "end": {
+          "file": "source",
+          "line": 3,
+          "column": 16
+        }
+      }
+    ],
     "symbolPath": "m"
   },
   {
@@ -743,6 +757,20 @@ endmodule
     "message": "identifier 'q' used before its declaration",
     "code": "UsedBeforeDeclared",
     "location": "source:4:13",
+    "ranges": [
+      {
+        "start": {
+          "file": "source",
+          "line": 4,
+          "column": 13
+        },
+        "end": {
+          "file": "source",
+          "line": 4,
+          "column": 14
+        }
+      }
+    ],
     "symbolPath": "m",
     "notes": [
       {
@@ -792,6 +820,32 @@ endmodule
     "message": "no member named 'bar' in 'struct{int i}'",
     "code": "UnknownMember",
     "location": "source:7:13",
+    "ranges": [
+      {
+        "start": {
+          "file": "source",
+          "line": 7,
+          "column": 13
+        },
+        "end": {
+          "file": "source",
+          "line": 7,
+          "column": 23
+        }
+      },
+      {
+        "start": {
+          "file": "source",
+          "line": 7,
+          "column": 18
+        },
+        "end": {
+          "file": "source",
+          "line": 7,
+          "column": 22
+        }
+      }
+    ],
     "symbolPath": "m",
     "macroStack": [
       {
