@@ -47,6 +47,13 @@ TerminalColor TextDiagnosticClient::getSeverityColor(DiagnosticSeverity severity
 }
 
 void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
+    writeDiagnostic(diag, diag.severity);
+    for (auto& note : diag.notes)
+        writeDiagnostic(note, DiagnosticSeverity::Note);
+}
+
+void TextDiagnosticClient::writeDiagnostic(const ReportedDiagnosticInfo& diag,
+                                           DiagnosticSeverity severity) {
     if (diag.shouldShowIncludeStack && includeFileStack) {
         SmallVector<SourceLocation> includeStack;
         getIncludeStack(diag.location.buffer(), includeStack);
@@ -79,7 +86,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
     engine->mapSourceRanges(diag.location, diag.ranges, mappedRanges);
 
     // Write the diagnostic.
-    formatDiag(diag.location, mappedRanges, diag.severity, diag.formattedMessage,
+    formatDiag(diag.location, mappedRanges, severity, diag.formattedMessage,
                engine->getOptionName(diag.originalDiagnostic.code));
 
     // Write out macro expansions, if we have any, in reverse order.
