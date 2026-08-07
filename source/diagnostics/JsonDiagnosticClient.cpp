@@ -18,8 +18,28 @@ void JsonDiagnosticClient::report(const ReportedDiagnostic& diag) {
     writer.startObject();
     writer.writeProperty("severity");
     writer.writeValue(getSeverityString(diag.severity));
+
+    writeDiagnostic(diag);
+
+    if (!diag.notes.empty()) {
+        writer.writeProperty("notes");
+        writer.startArray();
+        for (auto& note : diag.notes) {
+            writer.startObject();
+            writeDiagnostic(note);
+            writer.endObject();
+        }
+        writer.endArray();
+    }
+
+    writer.endObject();
+}
+
+void JsonDiagnosticClient::writeDiagnostic(const ReportedDiagnosticInfo& diag) {
     writer.writeProperty("message");
     writer.writeValue(diag.formattedMessage);
+    writer.writeProperty("code");
+    writer.writeValue(toString(diag.originalDiagnostic.code));
 
     auto optionName = engine->getOptionName(diag.originalDiagnostic.code);
     if (!optionName.empty()) {
@@ -81,7 +101,6 @@ void JsonDiagnosticClient::report(const ReportedDiagnostic& diag) {
         }
         writer.endArray();
     }
-    writer.endObject();
 }
 
 } // namespace slang
