@@ -36,6 +36,7 @@ TidyConfig::TidyConfig() {
     styleChecks.emplace("GenerateNamed", CheckOptions());
     styleChecks.emplace("NoDotVarInPortConnection", CheckOptions());
     styleChecks.emplace("NoLegacyGenerate", CheckOptions());
+    styleChecks.emplace("NoCaseX", CheckOptions());
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckOptions>();
