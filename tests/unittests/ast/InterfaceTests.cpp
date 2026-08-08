@@ -1011,6 +1011,297 @@ parameter p = foo();
     CHECK(diags[0].code == diag::ConstEvalVifType);
 }
 
+// A `$static_assert` written directly in a top-level module body can pin an interface-port
+// parameter to a value/type; the override is applied to the auto-instantiated interface. The
+// feature is gated on AllowTopLevelIfacePorts: without it the module can't be a top at all
+// (diag::TopModuleIfacePort) and the override path never runs, so each case checks both. On the
+// flag-on side we inspect the *elaborated* parameter of the connected interface to prove the
+// assert actually drove the value.
+TEST_CASE("Top-level iface port params from $static_assert") {
+    auto compile = [](std::string_view source, bool allowIfacePorts) {
+        CompilationOptions options;
+        if (allowIfacePorts)
+            options.flags |= CompilationFlags::AllowTopLevelIfacePorts;
+        else
+            options.flags &= ~CompilationFlags::AllowTopLevelIfacePorts;
+        auto comp = std::make_unique<Compilation>(options);
+        comp->addSyntaxTree(SyntaxTree::fromText(source));
+        return comp;
+    };
+    auto diagCodes = [](Compilation& c) {
+        std::vector<DiagCode> codes;
+        for (auto& d : c.getAllDiagnostics())
+            codes.push_back(d.code);
+        return codes;
+    };
+    // The interface instance or array connected to the named interface port of the (single) top.
+    auto connectedIfaceSymbol = [](Compilation& c, std::string_view portName) -> const Symbol& {
+        auto& tops = c.getRoot().topInstances;
+        REQUIRE(tops.size() == 1);
+        for (auto conn : tops[0]->getPortConnections()) {
+            if (conn->port.kind == SymbolKind::InterfacePort && conn->port.name == portName) {
+                auto sym = conn->getIfaceConn().first;
+                REQUIRE(sym);
+                return *sym;
+            }
+        }
+        FAIL("no connected interface instance for port");
+        SLANG_UNREACHABLE;
+    };
+    auto connectedIface = [&](Compilation& c, std::string_view portName) -> const InstanceSymbol& {
+        auto& sym = connectedIfaceSymbol(c, portName);
+        REQUIRE(sym.kind == SymbolKind::Instance);
+        return sym.as<InstanceSymbol>();
+    };
+    auto paramValue = [&](Compilation& c, std::string_view port, std::string_view param) {
+        auto& sym = connectedIface(c, port).body.find(param)->as<ParameterSymbol>();
+        return *sym.getValue().integer().as<int>();
+    };
+
+    // Most cases share this interface; MY_PARAM defaults to 1, making `data` a single bit.
+    auto withIface = [](std::string_view body) {
+        return std::string(R"(
+interface my_if #(parameter int MY_PARAM = 1);
+    logic [MY_PARAM-1:0] data;
+endinterface
+module test_module()" + std::string(body));
+    };
+
+    SECTION("value param override past the default") {
+        // MY_PARAM defaults to 1 but the assert forces it to 2, so `data[1]` is in range.
+        auto src = withIface(R"(my_if my_if, output logic out);
+    $static_assert(my_if.MY_PARAM == 2);
+    assign out = my_if.data[1];
+endmodule
+)");
+        auto c = compile(src, true);
+        CHECK(diagCodes(*c).empty());
+        CHECK(paramValue(*c, "my_if", "MY_PARAM") == 2);
+        CHECK(diagCodes(*compile(src, false)) == std::vector{diag::TopModuleIfacePort});
+    }
+
+    SECTION("constant on the left") {
+        auto src = withIface(R"(my_if my_if, output logic out);
+    $static_assert(2 == my_if.MY_PARAM);
+    assign out = my_if.data[1];
+endmodule
+)");
+        auto c = compile(src, true);
+        CHECK(diagCodes(*c).empty());
+        CHECK(paramValue(*c, "my_if", "MY_PARAM") == 2);
+    }
+
+    SECTION("operand resolves in the containing module") {
+        auto src = R"(
+interface my_if #(parameter int MY_PARAM = 1);
+    logic [MY_PARAM-1:0] data;
+endinterface
+module test_module #(parameter int REQUIRED = 2)(my_if my_if, output logic out);
+    $static_assert(my_if.MY_PARAM == REQUIRED);
+    assign out = my_if.data[1];
+endmodule
+)";
+        auto c = compile(src, true);
+        CHECK(diagCodes(*c).empty());
+        CHECK(paramValue(*c, "my_if", "MY_PARAM") == 2);
+    }
+
+    SECTION("operand resolves in a package") {
+        auto src = R"(
+package pkg;
+    parameter int REQUIRED = 2;
+endpackage
+interface my_if #(parameter int MY_PARAM = 1);
+    logic [MY_PARAM-1:0] data;
+endinterface
+module test_module(my_if my_if, output logic out);
+    $static_assert(my_if.MY_PARAM == pkg::REQUIRED);
+    assign out = my_if.data[1];
+endmodule
+)";
+        auto c = compile(src, true);
+        CHECK(diagCodes(*c).empty());
+        CHECK(paramValue(*c, "my_if", "MY_PARAM") == 2);
+    }
+
+    SECTION("one array element constrains the whole array") {
+        auto src = R"(
+interface my_if #(parameter int MY_PARAM = 1);
+    logic [MY_PARAM-1:0] data;
+endinterface
+module test_module(my_if my_if[3:2], output logic [1:0] out);
+    $static_assert(my_if[2].MY_PARAM == 2);
+    assign out[0] = my_if[2].data[1];
+    assign out[1] = my_if[3].data[1];
+endmodule
+)";
+        auto c = compile(src, true);
+        CHECK(diagCodes(*c).empty());
+
+        auto& array = connectedIfaceSymbol(*c, "my_if").as<InstanceArraySymbol>();
+        REQUIRE(array.elements.size() == 2);
+        auto getValue = [](const Symbol& element) {
+            auto& param = element.as<InstanceSymbol>().body.find("MY_PARAM")->as<ParameterSymbol>();
+            return *param.getValue().integer().as<int>();
+        };
+        CHECK(getValue(*array.elements[0]) == 2);
+        CHECK(getValue(*array.elements[1]) == 2);
+    }
+
+    SECTION("override still bounds-checks") {
+        // With MY_PARAM forced to 2, `data` is 2 bits, so an access at index 2 is still oob.
+        auto src = withIface(R"(my_if my_if, output logic out);
+    $static_assert(my_if.MY_PARAM == 2);
+    assign out = my_if.data[2];
+endmodule
+)");
+        auto c = compile(src, true);
+        CHECK(diagCodes(*c) == std::vector{diag::IndexOOB});
+        CHECK(paramValue(*c, "my_if", "MY_PARAM") == 2);
+    }
+
+    SECTION("type param override") {
+        // `$static_assert(type(port.T) == type(X))` overrides the type parameter with X. DT
+        // defaults to `logic` (1 bit) but is forced to pkg::my_t (8 bits), so `data[7]` is ok.
+        auto src = R"(
+package pkg;
+    typedef logic [7:0] my_t;
+endpackage
+interface my_if #(parameter type DT = logic);
+    DT data;
+endinterface
+module test_module(my_if my_if, output logic out);
+    $static_assert(type(my_if.DT) == type(pkg::my_t));
+    assign out = my_if.data[7];
+endmodule
+)";
+        auto c = compile(src, true);
+        CHECK(diagCodes(*c).empty());
+        auto& iface = connectedIface(*c, "my_if");
+        CHECK(iface.body.find("DT")->as<TypeParameterSymbol>().targetType.getType().toString() ==
+              "pkg::my_t");
+        CHECK(iface.body.find("data")->as<VariableSymbol>().getType().getBitWidth() == 8);
+
+        // Without the flag DT stays `logic`, so the assert itself also fails.
+        CHECK(diagCodes(*compile(src, false)) ==
+              std::vector{diag::TopModuleIfacePort, diag::StaticAssert});
+    }
+
+    SECTION("multiple constraints accumulate for one port") {
+        auto src = R"(
+interface my_if #(parameter int P = 1, Q = 1);
+    logic [P+Q-1:0] data;
+endinterface
+module test_module(my_if my_if, output logic out);
+    $static_assert(my_if.P == 2);
+    $static_assert(my_if.Q == 3);
+    assign out = my_if.data[4];
+endmodule
+)";
+        auto c = compile(src, true);
+        CHECK(diagCodes(*c).empty());
+        CHECK(paramValue(*c, "my_if", "P") == 2);
+        CHECK(paramValue(*c, "my_if", "Q") == 3);
+    }
+
+    SECTION("invalid type constraint propagates") {
+        auto src = R"(
+interface my_if #(parameter type DT = logic);
+    DT data;
+endinterface
+module test_module(my_if my_if);
+    $static_assert(type(my_if.DT) == type(missing_t));
+endmodule
+)";
+        auto c = compile(src, true);
+        auto& dt = connectedIface(*c, "my_if").body.find("DT")->as<TypeParameterSymbol>();
+        CHECK(dt.targetType.getType().isError());
+
+        auto codes = diagCodes(*c);
+        CHECK(std::ranges::find(codes, diag::UndeclaredIdentifier) != codes.end());
+    }
+
+    SECTION("unrelated assert only affects its own port") {
+        auto src = withIface(R"(my_if my_if, my_if other_if, output logic out);
+    $static_assert(other_if.MY_PARAM == 2);
+    assign out = my_if.data[1];
+endmodule
+)");
+        auto c = compile(src, true);
+        // my_if keeps its default of 1, leaving data[1] out of range.
+        CHECK(diagCodes(*c) == std::vector{diag::IndexOOB});
+        CHECK(paramValue(*c, "my_if", "MY_PARAM") == 1);
+        CHECK(paramValue(*c, "other_if", "MY_PARAM") == 2);
+    }
+
+    SECTION("constraint cannot depend on another interface port") {
+        auto src = withIface(R"(my_if my_if, my_if other_if, output logic out);
+    $static_assert(other_if.MY_PARAM == 2);
+    $static_assert(my_if.MY_PARAM == other_if.MY_PARAM);
+    assign out = my_if.data[1] & other_if.data[1];
+endmodule
+)");
+        auto c = compile(src, true);
+        auto codes = diagCodes(*c);
+        CHECK(std::ranges::count(codes, diag::StaticAssert) == 1);
+        CHECK(std::ranges::count(codes, diag::IndexOOB) == 1);
+        CHECK(paramValue(*c, "my_if", "MY_PARAM") == 1);
+        CHECK(paramValue(*c, "other_if", "MY_PARAM") == 2);
+    }
+
+    SECTION("localparam is not overridden") {
+        auto src = R"(
+interface my_if #(localparam int MY_PARAM = 1);
+    logic [MY_PARAM-1:0] data;
+endinterface
+module test_module(my_if my_if, output logic out);
+    $static_assert(my_if.MY_PARAM == 2);
+    assign out = my_if.data[1];
+endmodule
+)";
+        auto c = compile(src, true);
+        CHECK(diagCodes(*c) == std::vector{diag::StaticAssert, diag::IndexOOB});
+        CHECK(paramValue(*c, "my_if", "MY_PARAM") == 1);
+    }
+
+    SECTION("non-const operand is skipped without spurious diagnostics") {
+        // The operand `o.P` references a sibling instance's parameter, which isn't a constant we
+        // can resolve when building the interface. The override is skipped (MY_PARAM stays 1, so
+        // `data[1]` is oob), and we don't emit a spurious binding error: the only assert-related
+        // diagnostic is the real $static_assert's own ConstEvalHierarchicalName.
+        auto src = R"(
+interface my_if #(parameter int MY_PARAM = 1);
+    logic [MY_PARAM-1:0] data;
+endinterface
+module other #(parameter int P = 2);
+endmodule
+module test_module(my_if my_if, output logic out);
+    other o();
+    $static_assert(my_if.MY_PARAM == o.P);
+    assign out = my_if.data[1];
+endmodule
+)";
+        auto c = compile(src, true);
+        CHECK(diagCodes(*c) == std::vector{diag::ConstEvalHierarchicalName, diag::IndexOOB});
+        CHECK(paramValue(*c, "my_if", "MY_PARAM") == 1);
+    }
+
+    SECTION("assert in a generate block is ignored") {
+        // Generate-block asserts are conditional on branch selection (unknown when the override
+        // is applied), so they don't pin a param: MY_PARAM stays 1 and `data[1]` is oob.
+        auto src = withIface(R"(my_if my_if, output logic out);
+    if (1) begin : g
+        $static_assert(my_if.MY_PARAM == 1);
+    end
+    assign out = my_if.data[1];
+endmodule
+)");
+        auto c = compile(src, true);
+        CHECK(diagCodes(*c) == std::vector{diag::IndexOOB});
+        CHECK(paramValue(*c, "my_if", "MY_PARAM") == 1);
+    }
+}
+
 TEST_CASE("Virtual interface instance access regress -- GH #1765") {
     auto tree = SyntaxTree::fromText(R"(
 interface A;

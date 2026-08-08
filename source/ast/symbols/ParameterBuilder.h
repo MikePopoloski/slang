@@ -30,6 +30,11 @@ public:
     bool hasErrors() const { return anyErrors; }
 
     void setAssignments(const syntax::ParameterValueAssignmentSyntax& syntax, bool isFromConfig);
+
+    void addAssignment(std::string_view name, const syntax::ExpressionSyntax& syntax) {
+        assignments.emplace(name, std::make_pair(&syntax, false));
+    }
+
     void setOverrides(const HierarchyOverrideNode* newVal) { overrideNode = newVal; }
     void setForceInvalidValues(bool set) { forceInvalidValues = set; }
     void setSuppressErrors(bool set) { suppressErrors = set; }

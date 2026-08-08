@@ -326,6 +326,36 @@ endmodule
     CHECK(exports[1].syntax->c_identifier.valueText() == "my_f2");
 }
 
+TEST_CASE("Compilation collects DPI exports from each instance") {
+    auto tree = SyntaxTree::fromText(R"(
+module Sub #(parameter int ID = 0);
+    int id;
+    export "DPI-C" function read_id;
+    function int read_id(); return id; endfunction
+    initial id = ID;
+endmodule
+
+module Top;
+    Sub #(.ID(10)) m0();
+    Sub #(.ID(20)) m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    // The single export directive elaborates into two distinct instances. Both
+    // are valid targets, selected at call time via svSetScope, so both must be
+    // reported even though they share a C identifier.
+    auto exports = compilation.getDPIExports();
+    REQUIRE(exports.size() == 2);
+    CHECK(exports[0].subroutine->getHierarchicalPath() == "Top.m0.read_id");
+    CHECK(exports[0].cIdentifier == "read_id");
+    CHECK(exports[1].subroutine->getHierarchicalPath() == "Top.m1.read_id");
+    CHECK(exports[1].cIdentifier == "read_id");
+}
+
 TEST_CASE("DPI signature checking") {
     auto tree = SyntaxTree::fromText(R"(
 import "DPI-C" function int foo(int a, output b);

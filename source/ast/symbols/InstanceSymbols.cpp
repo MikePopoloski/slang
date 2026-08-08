@@ -856,8 +856,236 @@ void InstanceSymbol::resolvePortConnections() const {
     connections = conns.copy(comp);
 }
 
+struct IfaceParamAccess {
+    std::string_view portName;
+    std::string_view paramName;
+    SmallVector<const syntax::ExpressionSyntax*, 4> elementSelectors;
+};
+
+static bool parseIfacePortBase(const syntax::ExpressionSyntax& expr, std::string_view& portName,
+                               SmallVectorBase<const syntax::ExpressionSyntax*>& selectors) {
+    if (expr.kind == syntax::SyntaxKind::IdentifierName) {
+        portName = expr.as<syntax::IdentifierNameSyntax>().identifier.valueText();
+        return true;
+    }
+
+    if (expr.kind == syntax::SyntaxKind::IdentifierSelectName) {
+        auto& selected = expr.as<syntax::IdentifierSelectNameSyntax>();
+        portName = selected.identifier.valueText();
+        for (auto select : selected.selectors) {
+            if (!select->selector || select->selector->kind != syntax::SyntaxKind::BitSelect)
+                return false;
+            selectors.push_back(select->selector->as<syntax::BitSelectSyntax>().expr);
+        }
+        return true;
+    }
+
+    if (expr.kind == syntax::SyntaxKind::ElementSelectExpression) {
+        auto& selected = expr.as<syntax::ElementSelectExpressionSyntax>();
+        if (!selected.select->selector ||
+            selected.select->selector->kind != syntax::SyntaxKind::BitSelect) {
+            return false;
+        }
+
+        if (!parseIfacePortBase(*selected.left, portName, selectors))
+            return false;
+        selectors.push_back(selected.select->selector->as<syntax::BitSelectSyntax>().expr);
+        return true;
+    }
+
+    return false;
+}
+
+// Returns the port and parameter names if `expr` is `<port>.<param>`. The access can parse either
+// as a member-access expression or, when the left side could be a scope, as a dotted scoped name.
+static std::optional<IfaceParamAccess> asPortParamAccess(const syntax::ExpressionSyntax& expr) {
+    if (expr.kind == syntax::SyntaxKind::MemberAccessExpression) {
+        auto& access = expr.as<syntax::MemberAccessExpressionSyntax>();
+        IfaceParamAccess result;
+        if (!parseIfacePortBase(*access.left, result.portName, result.elementSelectors))
+            return std::nullopt;
+        result.paramName = access.name.valueText();
+        return result;
+    }
+
+    if (expr.kind == syntax::SyntaxKind::ScopedName) {
+        auto& scoped = expr.as<syntax::ScopedNameSyntax>();
+        if (scoped.separator.kind != parsing::TokenKind::Dot)
+            return std::nullopt;
+        if (scoped.right->kind != syntax::SyntaxKind::IdentifierName)
+            return std::nullopt;
+
+        IfaceParamAccess result;
+        if (!parseIfacePortBase(*scoped.left, result.portName, result.elementSelectors))
+            return std::nullopt;
+        result.paramName = scoped.right->as<syntax::IdentifierNameSyntax>().identifier.valueText();
+        return result;
+    }
+
+    return std::nullopt;
+}
+
+using IfacePortMap = SmallMap<std::string_view, const InterfacePortSymbol*, 8>;
+
+struct IfaceParamConstraintMatch {
+    const InterfacePortSymbol* port;
+    std::string_view paramName;
+    const syntax::ExpressionSyntax* constraintExpr;
+    SmallVector<const syntax::ExpressionSyntax*, 4> elementSelectors;
+    bool isType;
+};
+
+// Given a `$static_assert` condition expression, see if it pins an interface port parameter to a
+// constant. Two shapes are recognized (with either operand on the left):
+//   - value:  `<port>.<param> == <expr>`
+//   - type:   `type(<port>.<param>) == type(<expr>)`
+static std::optional<IfaceParamConstraintMatch> matchIfaceParamConstraint(
+    const syntax::ExpressionSyntax& condition, const IfacePortMap& ifacePorts) {
+    if (condition.kind != syntax::SyntaxKind::EqualityExpression)
+        return std::nullopt;
+
+    auto& binExpr = condition.as<syntax::BinaryExpressionSyntax>();
+    const syntax::ExpressionSyntax* paramExpr = binExpr.left;
+    const syntax::ExpressionSyntax* constraintExpr = binExpr.right;
+
+    // In the type form both sides are `type(...)` references. Keep the full constraint expression
+    // for use as the parameter assignment, but unwrap the candidate parameter expression for
+    // matching the port access.
+    bool isType = paramExpr->kind == syntax::SyntaxKind::TypeReference &&
+                  constraintExpr->kind == syntax::SyntaxKind::TypeReference;
+    auto getParamAccess = [&](const syntax::ExpressionSyntax& expr)
+        -> std::optional<std::pair<const InterfacePortSymbol*, IfaceParamAccess>> {
+        auto& access = isType ? *expr.as<syntax::TypeReferenceSyntax>().expr : expr;
+        auto result = asPortParamAccess(access);
+        if (!result)
+            return std::nullopt;
+
+        auto portIt = ifacePorts.find(result->portName);
+        if (portIt == ifacePorts.end())
+            return std::nullopt;
+        return std::pair{portIt->second, std::move(*result)};
+    };
+
+    auto paramAccess = getParamAccess(*paramExpr);
+    if (!paramAccess) {
+        std::swap(paramExpr, constraintExpr);
+        paramAccess = getParamAccess(*paramExpr);
+    }
+
+    if (!paramAccess)
+        return std::nullopt;
+
+    return IfaceParamConstraintMatch{paramAccess->first, paramAccess->second.paramName,
+                                     constraintExpr,
+                                     std::move(paramAccess->second.elementSelectors), isType};
+}
+
+struct IfaceParamAssignment {
+    std::string_view paramName;
+    const syntax::ExpressionSyntax* constraintExpr;
+};
+
+using IfaceParamAssignmentMap =
+    flat_hash_map<const InterfacePortSymbol*, SmallVector<IfaceParamAssignment>>;
+
+// Scan direct-body `$static_assert`s once and collect the parameter assignments they imply for
+// each interface port. Asserts nested in generate blocks are skipped because their constraints are
+// conditional, but parameter assignments must be applied before elaborating generate branches.
+static IfaceParamAssignmentMap collectIfaceParamAssignments(
+    const syntax::ModuleDeclarationSyntax* topBody, const IfacePortMap& ifacePorts,
+    const ASTContext& context) {
+    IfaceParamAssignmentMap result;
+    if (!topBody)
+        return result;
+
+    for (auto member : topBody->members) {
+        if (member->kind != syntax::SyntaxKind::ElabSystemTask)
+            continue;
+
+        auto& task = member->as<syntax::ElabSystemTaskSyntax>();
+        if (SemanticFacts::getElabSystemTaskKind(task.name) != ElabSystemTaskKind::StaticAssert)
+            continue;
+        if (!task.arguments || task.arguments->parameters.empty())
+            continue;
+
+        auto firstArg = task.arguments->parameters[0];
+        if (firstArg->kind != syntax::SyntaxKind::OrderedArgument)
+            continue;
+
+        // Unwrap the property/sequence wrappers down to a plain expression.
+        auto& propExpr = *firstArg->as<syntax::OrderedArgumentSyntax>().expr;
+        if (propExpr.kind != syntax::SyntaxKind::SimplePropertyExpr)
+            continue;
+
+        auto& seqExpr = *propExpr.as<syntax::SimplePropertyExprSyntax>().expr;
+        if (seqExpr.kind != syntax::SyntaxKind::SimpleSequenceExpr)
+            continue;
+
+        auto& simpleSeq = seqExpr.as<syntax::SimpleSequenceExprSyntax>();
+        if (simpleSeq.repetition)
+            continue;
+
+        auto match = matchIfaceParamConstraint(*simpleSeq.expr, ifacePorts);
+        if (!match)
+            continue;
+
+        // Only override parameters the interface actually declares, and require the constraint
+        // form to agree with the parameter kind. Localparams cannot be overridden.
+        auto& def = *match->port->interfaceDef;
+        auto declIt = std::ranges::find(def.parameters, match->paramName,
+                                        &DefinitionSymbol::ParameterDecl::name);
+        if (declIt == def.parameters.end() || declIt->isLocalParam ||
+            declIt->isTypeParam != match->isType) {
+            continue;
+        }
+
+        auto dims = match->port->getDeclaredRange();
+        if (!dims || dims->size() != match->elementSelectors.size())
+            continue;
+
+        // An interface instance array has one shared parameterization. The selectors identify a
+        // valid element whose parameter can appear in the assertion; the inferred assignment is
+        // applied to every element below.
+        bool validPath = true;
+        for (size_t i = 0; i < dims->size(); i++) {
+            auto& selectorExpr = Expression::bind(*match->elementSelectors[i], context);
+            auto selectorValue = context.tryEval(selectorExpr);
+            auto index = selectorValue.isInteger() ? selectorValue.integer().as<int32_t>()
+                                                   : std::optional<int32_t>{};
+            if (selectorExpr.hasHierarchicalReference() || !index ||
+                !(*dims)[i].containsPoint(*index)) {
+                validPath = false;
+                break;
+            }
+        }
+        if (!validPath)
+            continue;
+
+        // The assignment is bound before default interface instances exist, so values that
+        // traverse the instance hierarchy could observe stale parameter defaults. Restrict
+        // inference to expressions that are constant without any hierarchical references.
+        if (!match->isType) {
+            auto& expr = Expression::bind(*match->constraintExpr, context);
+            if (expr.hasHierarchicalReference() || !context.tryEval(expr))
+                continue;
+        }
+        else {
+            auto& typeRef = match->constraintExpr->as<syntax::TypeReferenceSyntax>();
+            auto access = asPortParamAccess(*typeRef.expr);
+            if (access && ifacePorts.contains(access->portName))
+                continue;
+        }
+
+        result[match->port].push_back({match->paramName, match->constraintExpr});
+    }
+
+    return result;
+}
+
 static Symbol* recurseDefaultIfaceInst(Compilation& comp, const InterfacePortSymbol& port,
                                        const InstanceSymbol*& firstInst,
+                                       std::span<const IfaceParamAssignment> paramAssignments,
+                                       const ASTContext& assignmentContext,
                                        std::span<const ConstantRange>::iterator it,
                                        std::span<const ConstantRange>::iterator end) {
     if (it == end) {
@@ -866,6 +1094,11 @@ static Symbol* recurseDefaultIfaceInst(Compilation& comp, const InterfacePortSym
         if (comp.hasFlag(CompilationFlags::AllowInvalidTop)) {
             paramBuilder.setSuppressErrors(true);
         }
+
+        paramBuilder.setInstanceContext(assignmentContext);
+        for (auto& assignment : paramAssignments)
+            paramBuilder.addAssignment(assignment.paramName, *assignment.constraintExpr);
+
         auto& body = InstanceBodySymbol::fromDefinition(comp, def, port.location, paramBuilder,
                                                         InstanceFlags::None);
 
@@ -882,7 +1115,8 @@ static Symbol* recurseDefaultIfaceInst(Compilation& comp, const InterfacePortSym
 
     SmallVector<const Symbol*> elements;
     for (uint32_t i = 0; i < range.width(); i++) {
-        auto symbol = recurseDefaultIfaceInst(comp, port, firstInst, it, end);
+        auto symbol = recurseDefaultIfaceInst(comp, port, firstInst, paramAssignments,
+                                              assignmentContext, it, end);
         symbol->name = "";
         elements.push_back(symbol);
     }
@@ -901,18 +1135,44 @@ void InstanceSymbol::connectDefaultIfacePorts() const {
 
     auto& comp = parent->getCompilation();
     ASTContext context(*parent, LookupLocation::max);
+    ASTContext assignmentContext(body, LookupLocation::max);
+
+    // The body of the instantiating module may contain `$static_assert` constraints that
+    // pin interface-port parameters to specific values; we honor those when synthesizing
+    // the default interface instances below. Ideally one day the language will allow
+    // specifying these constraints in the port declaration itself, or typdefing parameterized
+    // interfaces.
+    auto bodySyntax = body.getSyntax() ? body.getSyntax()->as_if<syntax::ModuleDeclarationSyntax>()
+                                       : nullptr;
+    auto ports = body.getPortList();
+    IfacePortMap ifacePorts;
+    for (auto port : ports) {
+        if (port->kind == SymbolKind::InterfacePort) {
+            auto& ifacePort = port->as<InterfacePortSymbol>();
+            if (ifacePort.interfaceDef)
+                ifacePorts.emplace(ifacePort.name, &ifacePort);
+        }
+    }
+    auto ifaceParamAssignments = collectIfaceParamAssignments(bodySyntax, ifacePorts,
+                                                              assignmentContext);
 
     SmallVector<const PortConnection*> conns;
-    for (auto port : body.getPortList()) {
+    for (auto port : ports) {
         if (port->kind == SymbolKind::InterfacePort) {
             auto& ifacePort = port->as<InterfacePortSymbol>();
             if (ifacePort.interfaceDef) {
+                std::span<const IfaceParamAssignment> paramAssignments;
+                if (auto it = ifaceParamAssignments.find(&ifacePort);
+                    it != ifaceParamAssignments.end()) {
+                    paramAssignments = it->second;
+                }
+
                 Symbol* inst;
                 const ModportSymbol* modport = nullptr;
                 if (auto dims = ifacePort.getDeclaredRange()) {
                     const InstanceSymbol* firstInst = nullptr;
-                    inst = recurseDefaultIfaceInst(comp, ifacePort, firstInst, dims->begin(),
-                                                   dims->end());
+                    inst = recurseDefaultIfaceInst(comp, ifacePort, firstInst, paramAssignments,
+                                                   assignmentContext, dims->begin(), dims->end());
 
                     if (firstInst) {
                         auto portRange = SourceRange{port->location,

@@ -1264,6 +1264,39 @@ TEST_CASE("sformatf with real conversion") {
     CHECK(session.eval("$sformatf(\"%0d\", 3.14)"s).str() == "3");
 }
 
+TEST_CASE("Raw format specifiers (%u/%z) on an unpacked union") {
+    // Regression: %u and %z on an unpacked union previously aborted with an internal
+    // error (std::get on the wrong ConstantValue variant). The active member's raw
+    // representation must be emitted -- identical to formatting that member directly.
+    ScriptSession session;
+    session.eval(R"(
+typedef union { byte a; byte b; } u_t;
+typedef struct { u_t u; byte c; } s_t;
+typedef struct { byte a; byte c; } s2_t;
+function automatic bit chk_u();
+    u_t u; u.a = 8'h41;
+    return ($sformatf("%u", u) == $sformatf("%u", byte'(8'h41)));
+endfunction
+function automatic bit chk_z();
+    u_t u; u.a = 8'h41;
+    return ($sformatf("%z", u) == $sformatf("%z", byte'(8'h41)));
+endfunction
+function automatic bit chk_struct();
+    // A struct containing a union must format the same as the struct with the
+    // union replaced by its (byte) active member.
+    s_t s;
+    s2_t s2;
+    s.u.a = 8'h41; s.c = 8'h42;
+    s2.a = 8'h41; s2.c = 8'h42;
+    return ($sformatf("%u", s) == $sformatf("%u", s2));
+endfunction
+)");
+    CHECK(session.eval("chk_u()").integer() == 1);
+    CHECK(session.eval("chk_z()").integer() == 1);
+    CHECK(session.eval("chk_struct()").integer() == 1);
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Concat assignments") {
     ScriptSession session;
     session.eval("logic [2:0] foo;");

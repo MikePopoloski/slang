@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/ValueDriver.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
@@ -494,8 +495,7 @@ private:
 
         auto [used, _] = isReferenced(*syntax);
         if (!used && shouldWarnUnused(symbol)) {
-            auto& diag = context.addDiag(symbol, isInPackage(symbol) ? packageCode : code,
-                                         symbol.location);
+            auto& diag = context.addDiag(symbol, isInPackage(symbol) ? packageCode : code);
             if constexpr (!std::is_same_v<TKindGetter, std::nullptr_t>) {
                 diag << kindGetter();
             }
@@ -518,7 +518,7 @@ private:
 
     void addUnusedDiag(const Symbol& symbol, DiagCode code) {
         if (shouldWarnUnused(symbol))
-            context.addDiag(symbol, code, symbol.location) << symbol.name;
+            context.addDiag(symbol, code) << symbol.name;
     }
 
     void checkShadowProperty(const ClassPropertySymbol& symbol) {
