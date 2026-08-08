@@ -39,9 +39,9 @@ struct PySyntaxVisitor
         // at the actual type.
         auto node = static_cast<const SyntaxNode*>(&t);
 
-        py::object result;
+        nb::object result;
         if (this->lookupTable) {
-            py::handle handler = this->tables.find(t.kind);
+            nb::handle handler = this->tables.find(t.kind);
             if (handler)
                 result = handler(node);
         }
@@ -57,9 +57,9 @@ struct PySyntaxVisitor
         if (this->interrupted)
             return;
 
-        py::object result;
+        nb::object result;
         if (this->lookupTable) {
-            py::handle handler = this->tables.find(t.kind);
+            nb::handle handler = this->tables.find(t.kind);
             if (handler)
                 result = handler(t);
         }
@@ -72,14 +72,14 @@ struct PySyntaxVisitor
     }
 };
 
-void pySyntaxVisit(const SyntaxNode& sn, py::object f = py::none(),
-                   py::object lookup_table = py::none()) {
+void pySyntaxVisit(const SyntaxNode& sn, nb::object f = nb::none(),
+                   nb::object lookup_table = nb::none()) {
     if (f.is_none() && lookup_table.is_none())
-        throw py::type_error("visit() requires 'f' or 'lookup_table' (both are None)");
+        throw nb::type_error("visit() requires 'f' or 'lookup_table' (both are None)");
 
-    std::optional<py::dict> lt;
+    std::optional<nb::dict> lt;
     if (!lookup_table.is_none())
-        lt = py::cast<py::dict>(lookup_table);
+        lt = nb::cast<nb::dict>(lookup_table);
 
     PySyntaxVisitor visitor{f, std::move(lt)};
     sn.visit(visitor);
@@ -87,13 +87,13 @@ void pySyntaxVisit(const SyntaxNode& sn, py::object f = py::none(),
 
 class PySyntaxRewriter : public SyntaxRewriter<PySyntaxRewriter> {
 public:
-    PySyntaxRewriter(pybind11::function handler) : handler(std::move(handler)) {}
+    PySyntaxRewriter(nb::object handler) : handler(std::move(handler)) {}
 
     void visit(const SyntaxNode& node) {
         try {
-            handler(pybind11::cast(&node), pybind11::cast(this));
+            handler(nb::cast(&node), nb::cast(this));
         }
-        catch (const pybind11::error_already_set& e) {
+        catch (const nb::python_error& e) {
             throw;
         }
         visitDefault(node);
@@ -160,60 +160,60 @@ public:
     SyntaxNode* py_deepClone(const SyntaxNode& node) { return deepClone(node, this->alloc); }
 
     template<typename T>
-    SyntaxList<T>& py_makeSyntaxList(py::list items) {
+    SyntaxList<T>& py_makeSyntaxList(nb::list items) {
         SmallVector<T*> buffer;
         for (auto item : items) {
-            buffer.push_back(&cloneNode(item.cast<T&>()));
+            buffer.push_back(&cloneNode(nb::cast<T&>(item)));
         }
         return *alloc.emplace<SyntaxList<T>>(alloc, buffer);
     }
 
-    SyntaxList<SyntaxNode>& py_makeSyntaxListGeneric(py::list items) {
+    SyntaxList<SyntaxNode>& py_makeSyntaxListGeneric(nb::list items) {
         return py_makeSyntaxList<SyntaxNode>(items);
     }
 
     template<typename T>
-    SeparatedSyntaxList<T>& py_makeSeparatedSyntaxList(py::list items) {
+    SeparatedSyntaxList<T>& py_makeSeparatedSyntaxList(nb::list items) {
         SmallVector<TokenOrSyntax> buffer;
-        for (size_t i = 0; i < py::len(items); i++) {
-            auto item = items[i];
-            if (py::isinstance<Token>(item)) {
-                buffer.push_back(item.cast<Token>());
+        for (size_t i = 0; i < nb::len(items); i++) {
+            nb::object item = items[i];
+            if (nb::isinstance<Token>(item)) {
+                buffer.push_back(nb::cast<Token>(item));
             }
             else {
-                buffer.push_back(&cloneNode(item.cast<SyntaxNode&>()));
+                buffer.push_back(&cloneNode(nb::cast<SyntaxNode&>(item)));
             }
         }
         return *alloc.emplace<SeparatedSyntaxList<T>>(alloc, buffer);
     }
 
-    SeparatedSyntaxList<SyntaxNode>& py_makeSeparatedSyntaxListGeneric(py::list items) {
+    SeparatedSyntaxList<SyntaxNode>& py_makeSeparatedSyntaxListGeneric(nb::list items) {
         return py_makeSeparatedSyntaxList<SyntaxNode>(items);
     }
 
-    TokenList& py_makeTokenList(py::list items) {
+    TokenList& py_makeTokenList(nb::list items) {
         SmallVector<Token> buffer;
         for (auto item : items) {
-            buffer.push_back(item.cast<Token>());
+            buffer.push_back(nb::cast<Token>(item));
         }
         return *alloc.emplace<TokenList>(alloc, buffer);
     }
 
 private:
-    pybind11::function handler;
+    nb::object handler;
 
     SyntaxNode& cloneNode(const SyntaxNode& node) { return *deepClone(node, this->alloc); }
 };
 
 std::shared_ptr<SyntaxTree> pySyntaxRewrite(const std::shared_ptr<SyntaxTree>& tree,
-                                            pybind11::function handler) {
+                                            nb::object handler) {
     PySyntaxRewriter rewriter(std::move(handler));
     return rewriter.transform(tree);
 }
 
 } // end namespace
 
-void registerSyntax(py::module_& syntax, py::module_& parsing) {
+void registerSyntax(nb::module_& syntax, nb::module_& parsing) {
     auto& m = syntax;
     EXPOSE_ENUM(parsing, TriviaKind);
     EXPOSE_ENUM(parsing, TokenKind);
@@ -221,10 +221,10 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
     EXPOSE_ENUM(parsing, KnownSystemName);
     EXPOSE_ENUM(m, CSTJsonMode);
 
-    py::classh<Trivia>(parsing, "Trivia")
-        .def(py::init<>())
-        .def(py::init<TriviaKind, std::string_view>(), "kind"_a, "rawText"_a)
-        .def_readonly("kind", &Trivia::kind)
+    nb::class_<Trivia>(parsing, "Trivia")
+        .def(nb::init<>())
+        .def(nb::init<TriviaKind, std::string_view>(), "kind"_a, "rawText"_a)
+        .def_ro("kind", &Trivia::kind)
         .def("getExplicitLocation", &Trivia::getExplicitLocation)
         .def("syntax", &Trivia::syntax, byrefint)
         .def("getRawText", &Trivia::getRawText)
@@ -233,86 +233,98 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
             return fmt::format("Trivia(TriviaKind.{})", toString(self.kind));
         });
 
-    py::classh<Token>(parsing, "Token")
-        .def(py::init<>())
-        .def(py::init([](BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-                         std::string_view rawText, SourceLocation location) {
-                 return Token(alloc, kind, alloc.copyFrom(trivia), rawText, location);
-             }),
-             py::keep_alive<1, 2>(), py::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
-             "rawText"_a, "location"_a)
-        .def(py::init([](BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-                         std::string_view rawText, SourceLocation location,
-                         std::string_view strText) {
-                 return Token(alloc, kind, alloc.copyFrom(trivia), rawText, location, strText);
-             }),
-             py::keep_alive<1, 2>(), py::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
-             "rawText"_a, "location"_a, "strText"_a)
-        .def(py::init([](BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-                         std::string_view rawText, SourceLocation location, SyntaxKind directive) {
-                 return Token(alloc, kind, alloc.copyFrom(trivia), rawText, location, directive);
-             }),
-             py::keep_alive<1, 2>(), py::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
-             "rawText"_a, "location"_a, "directive"_a)
-        .def(py::init([](BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-                         std::string_view rawText, SourceLocation location, logic_t bit) {
-                 return Token(alloc, kind, alloc.copyFrom(trivia), rawText, location, bit);
-             }),
-             py::keep_alive<1, 2>(), py::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
-             "rawText"_a, "location"_a, "bit"_a)
-        .def(py::init([](BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-                         std::string_view rawText, SourceLocation location, const SVInt& value) {
-                 return Token(alloc, kind, alloc.copyFrom(trivia), rawText, location, value);
-             }),
-             py::keep_alive<1, 2>(), py::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
-             "rawText"_a, "location"_a, "value"_a)
-        .def(py::init([](BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-                         std::string_view rawText, SourceLocation location, double realValue,
-                         bool outOfRange, std::optional<TimeUnit> timeUnit) {
-                 return Token(alloc, kind, alloc.copyFrom(trivia), rawText, location, realValue,
-                              outOfRange, timeUnit);
-             }),
-             py::keep_alive<1, 2>(), py::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
-             "rawText"_a, "location"_a, "value"_a, "outOfRange"_a, "timeUnit"_a)
-        .def(py::init([](BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
-                         std::string_view rawText, SourceLocation location, LiteralBase base,
-                         bool isSigned) {
-                 return Token(alloc, kind, alloc.copyFrom(trivia), rawText, location, base,
-                              isSigned);
-             }),
-             py::keep_alive<1, 2>(), py::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
-             "rawText"_a, "location"_a, "base"_a, "isSigned"_a)
-        .def_readonly("kind", &Token::kind)
-        .def_property_readonly("isMissing", &Token::isMissing)
-        .def_property_readonly("range", &Token::range)
-        .def_property_readonly("location", &Token::location)
-        .def_property_readonly("trivia",
-                               [](const Token& t) {
-                                   auto view = t.trivia();
-                                   return std::vector<Trivia>(view.begin(), view.end());
-                               })
-        .def_property_readonly("valueText", &Token::valueText)
-        .def_property_readonly("rawText", &Token::rawText)
-        .def_property_readonly("isOnSameLine", &Token::isOnSameLine)
-        .def_property_readonly("value",
-                               [](const Token& t) -> py::object {
-                                   switch (t.kind) {
-                                       case TokenKind::IntegerLiteral:
-                                           return py::cast(t.intValue());
-                                       case TokenKind::RealLiteral:
-                                       case TokenKind::TimeLiteral:
-                                           return py::cast(t.realValue());
-                                       case TokenKind::UnbasedUnsizedLiteral:
-                                           return py::cast(t.bitValue());
-                                       case TokenKind::StringLiteral:
-                                       case TokenKind::Identifier:
-                                           return py::cast(t.valueText());
-                                       default:
-                                           return py::none();
-                                   }
-                               })
-        .def(py::self == py::self)
-        .def(py::self != py::self)
+    nb::class_<Token>(parsing, "Token")
+        .def(nb::init<>())
+        .def(
+            "__init__",
+            [](Token* self, BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+               std::string_view rawText, SourceLocation location) {
+                new (self) Token(alloc, kind, alloc.copyFrom(trivia), rawText, location);
+            },
+            nb::keep_alive<1, 2>(), nb::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
+            "rawText"_a, "location"_a)
+        .def(
+            "__init__",
+            [](Token* self, BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+               std::string_view rawText, SourceLocation location, std::string_view strText) {
+                new (self) Token(alloc, kind, alloc.copyFrom(trivia), rawText, location, strText);
+            },
+            nb::keep_alive<1, 2>(), nb::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
+            "rawText"_a, "location"_a, "strText"_a)
+        .def(
+            "__init__",
+            [](Token* self, BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+               std::string_view rawText, SourceLocation location, SyntaxKind directive) {
+                new (self) Token(alloc, kind, alloc.copyFrom(trivia), rawText, location, directive);
+            },
+            nb::keep_alive<1, 2>(), nb::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
+            "rawText"_a, "location"_a, "directive"_a)
+        .def(
+            "__init__",
+            [](Token* self, BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+               std::string_view rawText, SourceLocation location, logic_t bit) {
+                new (self) Token(alloc, kind, alloc.copyFrom(trivia), rawText, location, bit);
+            },
+            nb::keep_alive<1, 2>(), nb::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
+            "rawText"_a, "location"_a, "bit"_a)
+        .def(
+            "__init__",
+            [](Token* self, BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+               std::string_view rawText, SourceLocation location, const SVInt& value) {
+                new (self) Token(alloc, kind, alloc.copyFrom(trivia), rawText, location, value);
+            },
+            nb::keep_alive<1, 2>(), nb::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
+            "rawText"_a, "location"_a, "value"_a)
+        .def(
+            "__init__",
+            [](Token* self, BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+               std::string_view rawText, SourceLocation location, double realValue, bool outOfRange,
+               std::optional<TimeUnit> timeUnit) {
+                new (self) Token(alloc, kind, alloc.copyFrom(trivia), rawText, location, realValue,
+                                 outOfRange, timeUnit);
+            },
+            nb::keep_alive<1, 2>(), nb::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
+            "rawText"_a, "location"_a, "value"_a, "outOfRange"_a, "timeUnit"_a)
+        .def(
+            "__init__",
+            [](Token* self, BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+               std::string_view rawText, SourceLocation location, LiteralBase base, bool isSigned) {
+                new (self)
+                    Token(alloc, kind, alloc.copyFrom(trivia), rawText, location, base, isSigned);
+            },
+            nb::keep_alive<1, 2>(), nb::keep_alive<1, 4>(), "alloc"_a, "kind"_a, "trivia"_a,
+            "rawText"_a, "location"_a, "base"_a, "isSigned"_a)
+        .def_ro("kind", &Token::kind)
+        .def_prop_ro("isMissing", &Token::isMissing)
+        .def_prop_ro("range", &Token::range)
+        .def_prop_ro("location", &Token::location)
+        .def_prop_ro("trivia",
+                     [](const Token& t) {
+                         auto view = t.trivia();
+                         return std::vector<Trivia>(view.begin(), view.end());
+                     })
+        .def_prop_ro("valueText", &Token::valueText)
+        .def_prop_ro("rawText", &Token::rawText)
+        .def_prop_ro("isOnSameLine", &Token::isOnSameLine)
+        .def_prop_ro("value",
+                     [](const Token& t) -> nb::object {
+                         switch (t.kind) {
+                             case TokenKind::IntegerLiteral:
+                                 return nb::cast(t.intValue());
+                             case TokenKind::RealLiteral:
+                             case TokenKind::TimeLiteral:
+                                 return nb::cast(t.realValue());
+                             case TokenKind::UnbasedUnsizedLiteral:
+                                 return nb::cast(t.bitValue());
+                             case TokenKind::StringLiteral:
+                             case TokenKind::Identifier:
+                                 return nb::cast(t.valueText());
+                             default:
+                                 return nb::none();
+                         }
+                     })
+        .def(nb::self == nb::self)
+        .def(nb::self != nb::self)
         .def("__bool__", &Token::operator bool)
         .def("__repr__",
              [](const Token& self) {
@@ -327,10 +339,10 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
             skipToNext();
         }
 
-        py::object dereference() const {
+        nb::object dereference() const {
             if (auto child = node->childNode(index))
-                return py::cast(child, byrefint, py::cast(node));
-            return py::cast(node->childToken(index));
+                return nb::cast(child, byrefint, nb::cast(node));
+            return nb::cast(node->childToken(index));
         }
 
         bool equals(const SyntaxNodeIterator& other) const {
@@ -354,37 +366,38 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
         size_t index;
     };
 
-    py::classh<SyntaxNode>(m, "SyntaxNode")
-        .def_property_readonly("parent",
-                               [](const SyntaxNode& n) -> const SyntaxNode* { return n.parent; })
-        .def_readonly("kind", &SyntaxNode::kind)
+    nb::class_<SyntaxNode>(m, "SyntaxNode")
+        .def_prop_ro(
+            "parent", [](const SyntaxNode& n) -> const SyntaxNode* { return n.parent; }, byrefint)
+        .def_ro("kind", &SyntaxNode::kind)
         .def("getFirstToken", &SyntaxNode::getFirstToken)
         .def("getLastToken", &SyntaxNode::getLastToken)
         .def("isEquivalentTo", &SyntaxNode::isEquivalentTo, "other"_a)
-        .def("visit", &pySyntaxVisit, "f"_a = py::none(), "lookup_table"_a = py::none(),
+        .def("visit", &pySyntaxVisit, "f"_a = nb::none(), "lookup_table"_a = nb::none(),
              PySyntaxVisitor::doc)
-        .def_property_readonly("sourceRange", &SyntaxNode::sourceRange)
+        .def_prop_ro("sourceRange", &SyntaxNode::sourceRange)
         .def("__getitem__",
-             [](const SyntaxNode& self, size_t i) -> py::object {
+             [](const SyntaxNode& self, size_t i) -> nb::object {
                  if (i >= self.getChildCount())
-                     throw py::index_error();
+                     throw nb::index_error();
 
                  if (auto node = self.childNode(i))
-                     return py::cast(node, byrefint, py::cast(&self));
+                     return nb::cast(node, byrefint, nb::cast(&self));
 
                  if (auto token = self.childToken(i))
-                     return py::cast(self.childToken(i));
+                     return nb::cast(self.childToken(i));
 
-                 return py::none();
+                 return nb::none();
              })
         .def("__len__", &SyntaxNode::getChildCount)
         .def(
             "__iter__",
             [](const SyntaxNode& s) {
-                return py::make_iterator(SyntaxNodeIterator(s, 0),
+                return nb::make_iterator(nb::type<SyntaxNode>(), "SyntaxNodeIterator",
+                                         SyntaxNodeIterator(s, 0),
                                          SyntaxNodeIterator(s, s.getChildCount()));
             },
-            py::keep_alive<0, 1>())
+            nb::keep_alive<0, 1>())
         .def("__repr__",
              [](const SyntaxNode& self) {
                  return fmt::format("SyntaxNode(SyntaxKind.{})", toString(self.kind));
@@ -400,17 +413,18 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
                 return std::string(writer.view());
             },
             "mode"_a = CSTJsonMode::Full,
-            "Convert this syntax node to JSON string with optional formatting mode");
+            "Convert this syntax node to JSON string with optional formatting "
+            "mode");
 
-    py::classh<IncludeMetadata>(m, "IncludeMetadata")
-        .def(py::init<>())
-        .def_readonly("syntax", &IncludeMetadata::syntax)
-        .def_readonly("path", &IncludeMetadata::path)
-        .def_readonly("buffer", &IncludeMetadata::buffer)
-        .def_readonly("isSystem", &IncludeMetadata::isSystem);
+    nb::class_<IncludeMetadata>(m, "IncludeMetadata")
+        .def(nb::init<>())
+        .def_ro("syntax", &IncludeMetadata::syntax)
+        .def_ro("path", &IncludeMetadata::path)
+        .def_ro("buffer", &IncludeMetadata::buffer)
+        .def_ro("isSystem", &IncludeMetadata::isSystem);
 
-    py::classh<SyntaxTree>(m, "SyntaxTree")
-        .def_readonly("isLibraryUnit", &SyntaxTree::isLibraryUnit)
+    nb::class_<SyntaxTree>(m, "SyntaxTree")
+        .def_ro("isLibraryUnit", &SyntaxTree::isLibraryUnit)
         .def_static(
             "fromFile",
             [](std::string_view path) {
@@ -428,7 +442,7 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
                     throw fs::filesystem_error("", path, result.error().first);
                 return *result;
             },
-            py::keep_alive<0, 2>(), "path"_a, "sourceManager"_a, "options"_a = Bag())
+            nb::keep_alive<0, 2>(), "path"_a, "sourceManager"_a, "options"_a = Bag())
         .def_static(
             "fromFiles",
             [](std::span<const std::string_view> paths) {
@@ -447,38 +461,38 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
                     throw fs::filesystem_error("", result.error().second, result.error().first);
                 return *result;
             },
-            py::keep_alive<0, 2>(), "paths"_a, "sourceManager"_a, "options"_a = Bag())
+            nb::keep_alive<0, 2>(), "paths"_a, "sourceManager"_a, "options"_a = Bag())
         .def_static("fromText",
-                    py::overload_cast<std::string_view, std::string_view, std::string_view>(
+                    nb::overload_cast<std::string_view, std::string_view, std::string_view>(
                         &SyntaxTree::fromText),
                     "text"_a, "name"_a = "source", "path"_a = "")
         .def_static("fromText",
-                    py::overload_cast<std::string_view, SourceManager&, std::string_view,
+                    nb::overload_cast<std::string_view, SourceManager&, std::string_view,
                                       std::string_view, const Bag&, const SourceLibrary*>(
                         &SyntaxTree::fromText),
-                    py::keep_alive<0, 2>(), "text"_a, "sourceManager"_a, "name"_a = "source",
+                    nb::keep_alive<0, 2>(), "text"_a, "sourceManager"_a, "name"_a = "source",
                     "path"_a = "", "options"_a = Bag(), "library"_a = nullptr)
-        .def_static("fromFileInMemory", &SyntaxTree::fromFileInMemory, py::keep_alive<0, 2>(),
+        .def_static("fromFileInMemory", &SyntaxTree::fromFileInMemory, nb::keep_alive<0, 2>(),
                     "text"_a, "sourceManager"_a, "name"_a = "source", "path"_a = "",
                     "options"_a = Bag())
-        .def_static("fromBuffer", &SyntaxTree::fromBuffer, py::keep_alive<0, 2>(), "buffer"_a,
+        .def_static("fromBuffer", &SyntaxTree::fromBuffer, nb::keep_alive<0, 2>(), "buffer"_a,
                     "sourceManager"_a, "options"_a = Bag(),
                     "inheritedMacros"_a = SyntaxTree::MacroList{})
-        .def_static("fromBuffers", &SyntaxTree::fromBuffers, py::keep_alive<0, 2>(), "buffers"_a,
+        .def_static("fromBuffers", &SyntaxTree::fromBuffers, nb::keep_alive<0, 2>(), "buffers"_a,
                     "sourceManager"_a, "options"_a = Bag(),
                     "inheritedMacros"_a = SyntaxTree::MacroList{})
-        .def_static("fromLibraryMapFile", &SyntaxTree::fromLibraryMapFile, py::keep_alive<0, 2>(),
+        .def_static("fromLibraryMapFile", &SyntaxTree::fromLibraryMapFile, nb::keep_alive<0, 2>(),
                     "path"_a, "sourceManager"_a, "options"_a = Bag())
-        .def_static("fromLibraryMapText", &SyntaxTree::fromLibraryMapText, py::keep_alive<0, 2>(),
+        .def_static("fromLibraryMapText", &SyntaxTree::fromLibraryMapText, nb::keep_alive<0, 2>(),
                     "text"_a, "sourceManager"_a, "name"_a = "source", "path"_a = "",
                     "options"_a = Bag())
         .def_static("fromLibraryMapBuffer", &SyntaxTree::fromLibraryMapBuffer,
-                    py::keep_alive<0, 2>(), "buffer"_a, "sourceManager"_a, "options"_a = Bag())
-        .def_property_readonly("diagnostics", &SyntaxTree::diagnostics)
-        .def_property_readonly("sourceManager", py::overload_cast<>(&SyntaxTree::sourceManager))
-        .def_property_readonly("root", py::overload_cast<>(&SyntaxTree::root))
-        .def_property_readonly("options", &SyntaxTree::options)
-        .def_property_readonly("sourceLibrary", &SyntaxTree::getSourceLibrary)
+                    nb::keep_alive<0, 2>(), "buffer"_a, "sourceManager"_a, "options"_a = Bag())
+        .def_prop_ro("diagnostics", &SyntaxTree::diagnostics)
+        .def_prop_ro("sourceManager", nb::overload_cast<>(&SyntaxTree::sourceManager))
+        .def_prop_ro("root", nb::overload_cast<>(&SyntaxTree::root), byrefint)
+        .def_prop_ro("options", &SyntaxTree::options)
+        .def_prop_ro("sourceLibrary", &SyntaxTree::getSourceLibrary)
         .def("getIncludeDirectives", &SyntaxTree::getIncludeDirectives)
         .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref)
         .def("validate", &SyntaxTree::validate)
@@ -492,65 +506,65 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
                 return std::string(writer.view());
             },
             "mode"_a = CSTJsonMode::Full,
-            "Convert this syntax tree to JSON string with optional formatting mode");
+            "Convert this syntax tree to JSON string with optional formatting "
+            "mode");
 
-    py::classh<CommentHandler> commentHandler(m, "CommentHandler");
-    commentHandler.def(py::init<>())
-        .def(py::init<CommentHandler::Kind, std::string_view>(), "kind"_a, "endRegion"_a)
-        .def_readwrite("kind", &CommentHandler::kind)
-        .def_readwrite("endRegion", &CommentHandler::endRegion);
+    nb::class_<CommentHandler> commentHandler(m, "CommentHandler");
+    commentHandler.def(nb::init<>())
+        .def(nb::init<CommentHandler::Kind, std::string_view>(), "kind"_a, "endRegion"_a)
+        .def_rw("kind", &CommentHandler::kind)
+        .def_rw("endRegion", &CommentHandler::endRegion);
 
-    py::native_enum<CommentHandler::Kind>(commentHandler, "Kind", "enum.Enum")
+    nb::enum_<CommentHandler::Kind>(commentHandler, "Kind")
         .value("Protect", CommentHandler::Protect)
         .value("TranslateOff", CommentHandler::TranslateOff)
         .value("LintOn", CommentHandler::LintOn)
         .value("LintOff", CommentHandler::LintOff)
         .value("LintSave", CommentHandler::LintSave)
         .value("LintRestore", CommentHandler::LintRestore)
-        .export_values()
-        .finalize();
+        .export_values();
 
-    py::classh<LexerOptions>(parsing, "LexerOptions")
-        .def(py::init<>())
-        .def_readwrite("maxErrors", &LexerOptions::maxErrors)
-        .def_readwrite("languageVersion", &LexerOptions::languageVersion)
-        .def_readwrite("enableLegacyProtect", &LexerOptions::enableLegacyProtect)
-        .def_readwrite("commentHandlers", &LexerOptions::commentHandlers);
+    nb::class_<LexerOptions>(parsing, "LexerOptions")
+        .def(nb::init<>())
+        .def_rw("maxErrors", &LexerOptions::maxErrors)
+        .def_rw("languageVersion", &LexerOptions::languageVersion)
+        .def_rw("enableLegacyProtect", &LexerOptions::enableLegacyProtect)
+        .def_rw("commentHandlers", &LexerOptions::commentHandlers);
 
-    py::classh<Lexer>(parsing, "Lexer")
-        .def(py::init<SourceBuffer, BumpAllocator&, Diagnostics&, SourceManager&, LexerOptions>(),
-             py::keep_alive<1, 3>(), py::keep_alive<1, 4>(), py::keep_alive<1, 5>(), "buffer"_a,
+    nb::class_<Lexer>(parsing, "Lexer")
+        .def(nb::init<SourceBuffer, BumpAllocator&, Diagnostics&, SourceManager&, LexerOptions>(),
+             nb::keep_alive<1, 3>(), nb::keep_alive<1, 4>(), nb::keep_alive<1, 5>(), "buffer"_a,
              "alloc"_a, "diagnostics"_a, "sourceManager"_a, "options"_a = LexerOptions())
-        .def("lex", py::overload_cast<>(&Lexer::lex))
+        .def("lex", nb::overload_cast<>(&Lexer::lex))
         .def("isNextTokenOnSameLine", &Lexer::isNextTokenOnSameLine)
-        .def_property_readonly("library", &Lexer::getLibrary)
-        .def_property_readonly("bufferId", &Lexer::getBufferId);
+        .def_prop_ro("library", &Lexer::getLibrary)
+        .def_prop_ro("bufferId", &Lexer::getBufferId);
 
-    py::classh<PreprocessorOptions>(parsing, "PreprocessorOptions")
-        .def(py::init<>())
-        .def_readwrite("maxIncludeDepth", &PreprocessorOptions::maxIncludeDepth)
-        .def_readwrite("languageVersion", &PreprocessorOptions::languageVersion)
-        .def_readwrite("predefineSource", &PreprocessorOptions::predefineSource)
-        .def_readwrite("predefines", &PreprocessorOptions::predefines)
-        .def_readwrite("undefines", &PreprocessorOptions::undefines)
-        .def_readwrite("additionalIncludePaths", &PreprocessorOptions::additionalIncludePaths)
-        .def_readwrite("ignoreDirectives", &PreprocessorOptions::ignoreDirectives)
-        .def_readwrite("keywordMapping", &PreprocessorOptions::keywordMapping);
+    nb::class_<PreprocessorOptions>(parsing, "PreprocessorOptions")
+        .def(nb::init<>())
+        .def_rw("maxIncludeDepth", &PreprocessorOptions::maxIncludeDepth)
+        .def_rw("languageVersion", &PreprocessorOptions::languageVersion)
+        .def_rw("predefineSource", &PreprocessorOptions::predefineSource)
+        .def_rw("predefines", &PreprocessorOptions::predefines)
+        .def_rw("undefines", &PreprocessorOptions::undefines)
+        .def_rw("additionalIncludePaths", &PreprocessorOptions::additionalIncludePaths)
+        .def_rw("ignoreDirectives", &PreprocessorOptions::ignoreDirectives)
+        .def_rw("keywordMapping", &PreprocessorOptions::keywordMapping);
 
-    py::classh<ParserOptions>(parsing, "ParserOptions")
-        .def(py::init<>())
-        .def_readwrite("maxRecursionDepth", &ParserOptions::maxRecursionDepth)
-        .def_readwrite("languageVersion", &ParserOptions::languageVersion);
+    nb::class_<ParserOptions>(parsing, "ParserOptions")
+        .def(nb::init<>())
+        .def_rw("maxRecursionDepth", &ParserOptions::maxRecursionDepth)
+        .def_rw("languageVersion", &ParserOptions::languageVersion);
 
-    py::classh<SyntaxPrinter>(m, "SyntaxPrinter")
-        .def(py::init<>())
-        .def(py::init<const SourceManager&>(), py::keep_alive<1, 2>(), "sourceManager"_a)
+    nb::class_<SyntaxPrinter>(m, "SyntaxPrinter")
+        .def(nb::init<>())
+        .def(nb::init<const SourceManager&>(), nb::keep_alive<1, 2>(), "sourceManager"_a)
         .def("append", &SyntaxPrinter::append, byrefint, "text"_a)
-        .def("print", py::overload_cast<Trivia>(&SyntaxPrinter::print), byrefint, "trivia"_a)
-        .def("print", py::overload_cast<Token>(&SyntaxPrinter::print), byrefint, "token"_a)
-        .def("print", py::overload_cast<const SyntaxNode&>(&SyntaxPrinter::print), byrefint,
+        .def("print", nb::overload_cast<Trivia>(&SyntaxPrinter::print), byrefint, "trivia"_a)
+        .def("print", nb::overload_cast<Token>(&SyntaxPrinter::print), byrefint, "token"_a)
+        .def("print", nb::overload_cast<const SyntaxNode&>(&SyntaxPrinter::print), byrefint,
              "node"_a)
-        .def("print", py::overload_cast<const SyntaxTree&>(&SyntaxPrinter::print), byrefint,
+        .def("print", nb::overload_cast<const SyntaxTree&>(&SyntaxPrinter::print), byrefint,
              "tree"_a)
         .def("setIncludeTrivia", &SyntaxPrinter::setIncludeTrivia, byrefint, "include"_a)
         .def("setIncludeMissing", &SyntaxPrinter::setIncludeMissing, byrefint, "include"_a)
@@ -563,7 +577,7 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
         .def("str", &SyntaxPrinter::str)
         .def_static("printFile", &SyntaxPrinter::printFile, "tree"_a);
 
-    py::classh<PySyntaxRewriter>(m, "SyntaxRewriter")
+    nb::class_<PySyntaxRewriter>(m, "SyntaxRewriter")
         .def("remove", &PySyntaxRewriter::py_remove)
         .def("replace", &PySyntaxRewriter::py_replace, "oldNode"_a, "newNode"_a,
              "preserveTrivia"_a = false)
@@ -577,16 +591,17 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
              "newNode"_a, "separator"_a = Token{})
         .def("insertAtBack", &PySyntaxRewriter::py_insertAtBack<SeparatedSyntaxList<SyntaxNode>>,
              "list"_a, "newNode"_a, "separator"_a = Token{})
-        .def_property_readonly("factory", &PySyntaxRewriter::getFactory,
-                               "Get the SyntaxFactory for creating new syntax nodes")
-        .def_property_readonly("alloc", &PySyntaxRewriter::getAllocator,
-                               "Get the allocator for creating tokens and trivia")
+        .def_prop_ro("factory", &PySyntaxRewriter::getFactory,
+                     "Get the SyntaxFactory for creating new syntax nodes")
+        .def_prop_ro("alloc", &PySyntaxRewriter::getAllocator,
+                     "Get the allocator for creating tokens and trivia")
         .def("makeToken", &PySyntaxRewriter::py_makeToken, "kind"_a, "text"_a,
              "trivia"_a = std::span<const Trivia>{},
              "Create a new token with the given kind and text")
         .def("makeToken", &PySyntaxRewriter::py_makeTokenFromKind, "kind"_a,
              "trivia"_a = std::span<const Trivia>{},
-             "Create a token with text inferred from kind (for keywords/punctuation)")
+             "Create a token with text inferred from kind (for "
+             "keywords/punctuation)")
         .def("makeId", &PySyntaxRewriter::py_makeId, "text"_a,
              "trivia"_a = std::span<const Trivia>{}, "Create an identifier token")
         .def("makeComma", &PySyntaxRewriter::py_makeComma, "Create a comma token")
@@ -600,7 +615,8 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
              "Create a SyntaxList from a list of syntax nodes")
         .def("makeSeparatedList", &PySyntaxRewriter::py_makeSeparatedSyntaxListGeneric, byrefint,
              "items"_a,
-             "Create a SeparatedSyntaxList from a list of syntax nodes and separator tokens")
+             "Create a SeparatedSyntaxList from a list of syntax nodes and "
+             "separator tokens")
         .def("makeTokenList", &PySyntaxRewriter::py_makeTokenList, byrefint, "items"_a,
              "Create a TokenList from a list of tokens");
 
@@ -608,12 +624,12 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
 
     m.def(
         "clone", [](const SyntaxNode& node, BumpAllocator& alloc) { return clone(node, alloc); },
-        byrefint, py::keep_alive<0, 2>(), "node"_a, "alloc"_a,
+        byref, nb::keep_alive<0, 2>(), "node"_a, "alloc"_a,
         "Create a shallow clone of the given syntax node");
 
     m.def(
         "deepClone",
-        [](const SyntaxNode& node, BumpAllocator& alloc) { return deepClone(node, alloc); },
-        byrefint, py::keep_alive<0, 2>(), "node"_a, "alloc"_a,
+        [](const SyntaxNode& node, BumpAllocator& alloc) { return deepClone(node, alloc); }, byref,
+        nb::keep_alive<0, 2>(), "node"_a, "alloc"_a,
         "Create a deep clone of the given syntax node and all its children");
 }

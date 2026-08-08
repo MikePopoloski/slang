@@ -11,24 +11,24 @@
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/syntax/AllSyntax.h"
 
-void registerExpressions(py::module_& m) {
+void registerExpressions(nb::module_& m) {
     EXPOSE_ENUM(m, ExpressionKind);
     EXPOSE_ENUM(m, UnaryOperator);
     EXPOSE_ENUM(m, BinaryOperator);
     EXPOSE_ENUM(m, RangeSelectionKind);
     EXPOSE_ENUM(m, ConversionKind);
 
-    py::classh<Expression>(m, "Expression")
-        .def_readonly("kind", &Expression::kind)
-        .def_readonly("type", &Expression::type)
-        .def_readonly("syntax", &Expression::syntax)
-        .def_readonly("sourceRange", &Expression::sourceRange)
-        .def_property_readonly("constant", &Expression::getConstant)
-        .def_property_readonly("bad", &Expression::bad)
-        .def_property_readonly("isImplicitString", &Expression::isImplicitString)
-        .def_property_readonly("isUnsizedInteger", &Expression::isUnsizedInteger)
-        .def_property_readonly("effectiveWidth", &Expression::getEffectiveWidth)
-        .def_property_readonly("hasHierarchicalReference", &Expression::hasHierarchicalReference)
+    nb::class_<Expression>(m, "Expression")
+        .def_ro("kind", &Expression::kind)
+        .def_ro("type", &Expression::type)
+        .def_ro("syntax", &Expression::syntax)
+        .def_ro("sourceRange", &Expression::sourceRange)
+        .def_prop_ro("constant", &Expression::getConstant)
+        .def_prop_ro("bad", &Expression::bad)
+        .def_prop_ro("isImplicitString", &Expression::isImplicitString)
+        .def_prop_ro("isUnsizedInteger", &Expression::isUnsizedInteger)
+        .def_prop_ro("effectiveWidth", &Expression::getEffectiveWidth)
+        .def_prop_ro("hasHierarchicalReference", &Expression::hasHierarchicalReference)
         .def("eval", &Expression::eval, "context"_a)
         .def("evalLValue", &Expression::evalLValue, "context"_a)
         .def("isImplicitlyAssignableTo", &Expression::isImplicitlyAssignableTo, "compilation"_a,
@@ -36,242 +36,230 @@ void registerExpressions(py::module_& m) {
         .def("getSymbolReference", &Expression::getSymbolReference, byrefint,
              "allowPacked"_a = true)
         .def("isEquivalentTo", &Expression::isEquivalentTo, "other"_a)
-        .def("visit", &pyASTVisit<Expression>, "f"_a = py::none(), "lookup_table"_a = py::none(),
+        .def("visit", &pyASTVisit<Expression>, "f"_a = nb::none(), "lookup_table"_a = nb::none(),
              PyASTVisitor::doc)
         .def("__repr__", [](const Expression& self) {
             return fmt::format("Expression(ExpressionKind.{})", toString(self.kind));
         });
 
-    py::classh<InvalidExpression, Expression>(m, "InvalidExpression");
+    nb::class_<InvalidExpression, Expression>(m, "InvalidExpression");
 
-    py::classh<AssignmentExpression, Expression>(m, "AssignmentExpression")
-        .def_readonly("op", &AssignmentExpression::op)
-        .def_readonly("timingControl", &AssignmentExpression::timingControl)
-        .def_property_readonly("isCompound", &AssignmentExpression::isCompound)
-        .def_property_readonly("isNonBlocking", &AssignmentExpression::isNonBlocking)
-        .def_property_readonly("isLValueArg", &AssignmentExpression::isLValueArg)
-        .def_property_readonly("left", py::overload_cast<>(&AssignmentExpression::left))
-        .def_property_readonly("right", py::overload_cast<>(&AssignmentExpression::right));
+    nb::class_<AssignmentExpression, Expression>(m, "AssignmentExpression")
+        .def_ro("op", &AssignmentExpression::op)
+        .def_ro("timingControl", &AssignmentExpression::timingControl)
+        .def_prop_ro("isCompound", &AssignmentExpression::isCompound)
+        .def_prop_ro("isNonBlocking", &AssignmentExpression::isNonBlocking)
+        .def_prop_ro("isLValueArg", &AssignmentExpression::isLValueArg)
+        .def_prop_ro("left", nb::overload_cast<>(&AssignmentExpression::left))
+        .def_prop_ro("right", nb::overload_cast<>(&AssignmentExpression::right));
 
-    py::classh<ConversionExpression, Expression>(m, "ConversionExpression")
-        .def_readonly("conversionKind", &ConversionExpression::conversionKind)
-        .def_readonly("isConstCast", &ConversionExpression::isConstCast)
-        .def_property_readonly("isImplicit", &ConversionExpression::isImplicit)
-        .def_property_readonly("operand", py::overload_cast<>(&ConversionExpression::operand));
+    nb::class_<ConversionExpression, Expression>(m, "ConversionExpression")
+        .def_ro("conversionKind", &ConversionExpression::conversionKind)
+        .def_ro("isConstCast", &ConversionExpression::isConstCast)
+        .def_prop_ro("isImplicit", &ConversionExpression::isImplicit)
+        .def_prop_ro("operand", nb::overload_cast<>(&ConversionExpression::operand));
 
-    py::classh<NewArrayExpression, Expression>(m, "NewArrayExpression")
-        .def_property_readonly("sizeExpr", &NewArrayExpression::sizeExpr)
-        .def_property_readonly("initExpr", &NewArrayExpression::initExpr);
+    nb::class_<NewArrayExpression, Expression>(m, "NewArrayExpression")
+        .def_prop_ro("sizeExpr", &NewArrayExpression::sizeExpr)
+        .def_prop_ro("initExpr", &NewArrayExpression::initExpr);
 
-    py::classh<NewClassExpression, Expression>(m, "NewClassExpression")
-        .def_readonly("isSuperClass", &NewClassExpression::isSuperClass)
-        .def_property_readonly("constructorCall", &NewClassExpression::constructorCall);
+    nb::class_<NewClassExpression, Expression>(m, "NewClassExpression")
+        .def_ro("isSuperClass", &NewClassExpression::isSuperClass)
+        .def_prop_ro("constructorCall", &NewClassExpression::constructorCall);
 
-    py::classh<NewCovergroupExpression, Expression>(m, "NewCovergroupExpression")
-        .def_readonly("arguments", &NewCovergroupExpression::arguments);
+    nb::class_<NewCovergroupExpression, Expression>(m, "NewCovergroupExpression")
+        .def_ro("arguments", &NewCovergroupExpression::arguments);
 
-    py::classh<AssignmentPatternExpressionBase, Expression>(m, "AssignmentPatternExpressionBase")
-        .def_property_readonly("elements", &AssignmentPatternExpressionBase::elements);
+    nb::class_<AssignmentPatternExpressionBase, Expression>(m, "AssignmentPatternExpressionBase")
+        .def_prop_ro("elements", &AssignmentPatternExpressionBase::elements);
 
-    py::classh<SimpleAssignmentPatternExpression, AssignmentPatternExpressionBase>(
+    nb::class_<SimpleAssignmentPatternExpression, AssignmentPatternExpressionBase>(
         m, "SimpleAssignmentPatternExpression");
 
-    py::classh<StructuredAssignmentPatternExpression, AssignmentPatternExpressionBase> sape(
+    nb::class_<StructuredAssignmentPatternExpression, AssignmentPatternExpressionBase> sape(
         m, "StructuredAssignmentPatternExpression");
-    sape.def_readonly("memberSetters", &StructuredAssignmentPatternExpression::memberSetters)
-        .def_readonly("typeSetters", &StructuredAssignmentPatternExpression::typeSetters)
-        .def_readonly("indexSetters", &StructuredAssignmentPatternExpression::indexSetters)
-        .def_readonly("defaultSetter", &StructuredAssignmentPatternExpression::defaultSetter);
+    sape.def_ro("memberSetters", &StructuredAssignmentPatternExpression::memberSetters)
+        .def_ro("typeSetters", &StructuredAssignmentPatternExpression::typeSetters)
+        .def_ro("indexSetters", &StructuredAssignmentPatternExpression::indexSetters)
+        .def_ro("defaultSetter", &StructuredAssignmentPatternExpression::defaultSetter);
 
-    py::classh<StructuredAssignmentPatternExpression::MemberSetter>(sape, "MemberSetter")
-        .def_readonly("member", &StructuredAssignmentPatternExpression::MemberSetter::member)
-        .def_readonly("expr", &StructuredAssignmentPatternExpression::MemberSetter::expr);
+    nb::class_<StructuredAssignmentPatternExpression::MemberSetter>(sape, "MemberSetter")
+        .def_ro("member", &StructuredAssignmentPatternExpression::MemberSetter::member)
+        .def_ro("expr", &StructuredAssignmentPatternExpression::MemberSetter::expr);
 
-    py::classh<StructuredAssignmentPatternExpression::TypeSetter>(sape, "TypeSetter")
-        .def_readonly("type", &StructuredAssignmentPatternExpression::TypeSetter::type)
-        .def_readonly("expr", &StructuredAssignmentPatternExpression::TypeSetter::expr);
+    nb::class_<StructuredAssignmentPatternExpression::TypeSetter>(sape, "TypeSetter")
+        .def_ro("type", &StructuredAssignmentPatternExpression::TypeSetter::type)
+        .def_ro("expr", &StructuredAssignmentPatternExpression::TypeSetter::expr);
 
-    py::classh<StructuredAssignmentPatternExpression::IndexSetter>(sape, "IndexSetter")
-        .def_readonly("index", &StructuredAssignmentPatternExpression::IndexSetter::index)
-        .def_readonly("expr", &StructuredAssignmentPatternExpression::IndexSetter::expr);
+    nb::class_<StructuredAssignmentPatternExpression::IndexSetter>(sape, "IndexSetter")
+        .def_ro("index", &StructuredAssignmentPatternExpression::IndexSetter::index)
+        .def_ro("expr", &StructuredAssignmentPatternExpression::IndexSetter::expr);
 
-    py::classh<ReplicatedAssignmentPatternExpression, AssignmentPatternExpressionBase>(
+    nb::class_<ReplicatedAssignmentPatternExpression, AssignmentPatternExpressionBase>(
         m, "ReplicatedAssignmentPatternExpression")
-        .def_property_readonly("count", &ReplicatedAssignmentPatternExpression::count);
+        .def_prop_ro("count", &ReplicatedAssignmentPatternExpression::count);
 
-    py::classh<CallExpression, Expression> callExpr(m, "CallExpression");
-    callExpr.def_readonly("subroutine", &CallExpression::subroutine)
-        .def_property_readonly("thisClass", &CallExpression::thisClass)
-        .def_property_readonly("arguments", py::overload_cast<>(&CallExpression::arguments))
-        .def_property_readonly("isSystemCall", &CallExpression::isSystemCall)
-        .def_property_readonly("subroutineName", &CallExpression::getSubroutineName)
-        .def_property_readonly("subroutineKind", &CallExpression::getSubroutineKind);
+    nb::class_<CallExpression, Expression> callExpr(m, "CallExpression");
+    callExpr.def_ro("subroutine", &CallExpression::subroutine)
+        .def_prop_ro("thisClass", &CallExpression::thisClass)
+        .def_prop_ro("arguments", nb::overload_cast<>(&CallExpression::arguments))
+        .def_prop_ro("isSystemCall", &CallExpression::isSystemCall)
+        .def_prop_ro("subroutineName", &CallExpression::getSubroutineName)
+        .def_prop_ro("subroutineKind", &CallExpression::getSubroutineKind);
 
-    py::classh<CallExpression::IteratorCallInfo>(callExpr, "IteratorCallInfo")
-        .def_readonly("iterExpr", &CallExpression::IteratorCallInfo::iterExpr)
-        .def_readonly("iterVar", &CallExpression::IteratorCallInfo::iterVar);
+    nb::class_<CallExpression::IteratorCallInfo>(callExpr, "IteratorCallInfo")
+        .def_ro("iterExpr", &CallExpression::IteratorCallInfo::iterExpr)
+        .def_ro("iterVar", &CallExpression::IteratorCallInfo::iterVar);
 
-    py::classh<CallExpression::RandomizeCallInfo>(callExpr, "RandomizeCallInfo")
-        .def_readonly("inlineConstraints", &CallExpression::RandomizeCallInfo::inlineConstraints)
-        .def_readonly("constraintRestrictions",
-                      &CallExpression::RandomizeCallInfo::constraintRestrictions);
+    nb::class_<CallExpression::RandomizeCallInfo>(callExpr, "RandomizeCallInfo")
+        .def_ro("inlineConstraints", &CallExpression::RandomizeCallInfo::inlineConstraints)
+        .def_ro("constraintRestrictions",
+                &CallExpression::RandomizeCallInfo::constraintRestrictions);
 
-    py::classh<CallExpression::SystemCallInfo>(callExpr, "SystemCallInfo")
-        .def_readonly("subroutine", &CallExpression::SystemCallInfo::subroutine)
-        .def_readonly("scope", &CallExpression::SystemCallInfo::scope)
-        .def_readonly("extraInfo", &CallExpression::SystemCallInfo::extraInfo);
+    nb::class_<CallExpression::SystemCallInfo>(callExpr, "SystemCallInfo")
+        .def_ro("subroutine", &CallExpression::SystemCallInfo::subroutine)
+        .def_ro("scope", &CallExpression::SystemCallInfo::scope)
+        .def_ro("extraInfo", &CallExpression::SystemCallInfo::extraInfo);
 
-    py::classh<IntegerLiteral, Expression>(m, "IntegerLiteral")
-        .def_readonly("isDeclaredUnsized", &IntegerLiteral::isDeclaredUnsized)
-        .def_property_readonly("value", &IntegerLiteral::getValue);
+    nb::class_<IntegerLiteral, Expression>(m, "IntegerLiteral")
+        .def_ro("isDeclaredUnsized", &IntegerLiteral::isDeclaredUnsized)
+        .def_prop_ro("value", &IntegerLiteral::getValue);
 
-    py::classh<RealLiteral, Expression>(m, "RealLiteral")
-        .def_property_readonly("value", &RealLiteral::getValue);
+    nb::class_<RealLiteral, Expression>(m, "RealLiteral")
+        .def_prop_ro("value", &RealLiteral::getValue);
 
-    py::classh<TimeLiteral, Expression>(m, "TimeLiteral")
-        .def_property_readonly("value", &TimeLiteral::getValue)
-        .def_property_readonly("scale", &TimeLiteral::getScale);
+    nb::class_<TimeLiteral, Expression>(m, "TimeLiteral")
+        .def_prop_ro("value", &TimeLiteral::getValue)
+        .def_prop_ro("scale", &TimeLiteral::getScale);
 
-    py::classh<UnbasedUnsizedIntegerLiteral, Expression>(m, "UnbasedUnsizedIntegerLiteral")
-        .def_property_readonly("literalValue", &UnbasedUnsizedIntegerLiteral::getLiteralValue)
-        .def_property_readonly("value", &UnbasedUnsizedIntegerLiteral::getValue);
+    nb::class_<UnbasedUnsizedIntegerLiteral, Expression>(m, "UnbasedUnsizedIntegerLiteral")
+        .def_prop_ro("literalValue", &UnbasedUnsizedIntegerLiteral::getLiteralValue)
+        .def_prop_ro("value", &UnbasedUnsizedIntegerLiteral::getValue);
 
-    py::classh<NullLiteral, Expression>(m, "NullLiteral");
-    py::classh<UnboundedLiteral, Expression>(m, "UnboundedLiteral");
+    nb::class_<NullLiteral, Expression>(m, "NullLiteral");
+    nb::class_<UnboundedLiteral, Expression>(m, "UnboundedLiteral");
 
-    py::classh<StringLiteral, Expression>(m, "StringLiteral")
-        .def_property_readonly("rawValue", &StringLiteral::getRawValue)
-        .def_property_readonly("intValue", &StringLiteral::getIntValue)
-        .def_property_readonly("value", &StringLiteral::getValue);
+    nb::class_<StringLiteral, Expression>(m, "StringLiteral")
+        .def_prop_ro("rawValue", &StringLiteral::getRawValue)
+        .def_prop_ro("intValue", &StringLiteral::getIntValue)
+        .def_prop_ro("value", &StringLiteral::getValue);
 
-    py::classh<ValueExpressionBase, Expression>(m, "ValueExpressionBase")
-        .def_property_readonly("symbol",
-                               [](const ValueExpressionBase& self) { return &self.symbol; });
+    nb::class_<ValueExpressionBase, Expression>(m, "ValueExpressionBase")
+        .def_prop_ro("symbol", [](const ValueExpressionBase& self) { return &self.symbol; });
 
-    py::classh<NamedValueExpression, ValueExpressionBase>(m, "NamedValueExpression");
-    py::classh<HierarchicalValueExpression, ValueExpressionBase>(m, "HierarchicalValueExpression");
-    py::classh<DataTypeExpression, Expression>(m, "DataTypeExpression");
-    py::classh<LValueReferenceExpression, Expression>(m, "LValueReferenceExpression");
-    py::classh<EmptyArgumentExpression, Expression>(m, "EmptyArgumentExpression");
+    nb::class_<NamedValueExpression, ValueExpressionBase>(m, "NamedValueExpression");
+    nb::class_<HierarchicalValueExpression, ValueExpressionBase>(m, "HierarchicalValueExpression");
+    nb::class_<DataTypeExpression, Expression>(m, "DataTypeExpression");
+    nb::class_<LValueReferenceExpression, Expression>(m, "LValueReferenceExpression");
+    nb::class_<EmptyArgumentExpression, Expression>(m, "EmptyArgumentExpression");
 
-    py::classh<TypeReferenceExpression, Expression>(m, "TypeReferenceExpression")
-        .def_property_readonly("targetType", [](const TypeReferenceExpression& self) {
-            return &self.targetType;
-        });
+    nb::class_<TypeReferenceExpression, Expression>(m, "TypeReferenceExpression")
+        .def_prop_ro("targetType",
+                     [](const TypeReferenceExpression& self) { return &self.targetType; });
 
-    py::classh<ArbitrarySymbolExpression, Expression>(m, "ArbitrarySymbolExpression")
-        .def_readonly("symbol", &ArbitrarySymbolExpression::symbol);
+    nb::class_<ArbitrarySymbolExpression, Expression>(m, "ArbitrarySymbolExpression")
+        .def_ro("symbol", &ArbitrarySymbolExpression::symbol);
 
-    py::classh<ClockingEventExpression, Expression>(m, "ClockingEventExpression")
-        .def_property_readonly("timingControl", [](const ClockingEventExpression& self) {
-            return &self.timingControl;
-        });
+    nb::class_<ClockingEventExpression, Expression>(m, "ClockingEventExpression")
+        .def_prop_ro("timingControl",
+                     [](const ClockingEventExpression& self) { return &self.timingControl; });
 
-    py::classh<AssertionInstanceExpression, Expression>(m, "AssertionInstanceExpression")
-        .def_property_readonly("symbol",
-                               [](const AssertionInstanceExpression& self) { return &self.symbol; })
-        .def_property_readonly("body",
-                               [](const AssertionInstanceExpression& self) { return &self.body; })
-        .def_readonly("arguments", &AssertionInstanceExpression::arguments)
-        .def_readonly("localVars", &AssertionInstanceExpression::localVars)
-        .def_readonly("isRecursiveProperty", &AssertionInstanceExpression::isRecursiveProperty);
+    nb::class_<AssertionInstanceExpression, Expression>(m, "AssertionInstanceExpression")
+        .def_prop_ro("symbol", [](const AssertionInstanceExpression& self) { return &self.symbol; })
+        .def_prop_ro("body", [](const AssertionInstanceExpression& self) { return &self.body; })
+        .def_ro("arguments", &AssertionInstanceExpression::arguments)
+        .def_ro("localVars", &AssertionInstanceExpression::localVars)
+        .def_ro("isRecursiveProperty", &AssertionInstanceExpression::isRecursiveProperty);
 
-    py::classh<MinTypMaxExpression, Expression>(m, "MinTypMaxExpression")
-        .def_property_readonly("min", py::overload_cast<>(&MinTypMaxExpression::min))
-        .def_property_readonly("typ", py::overload_cast<>(&MinTypMaxExpression::typ))
-        .def_property_readonly("max", py::overload_cast<>(&MinTypMaxExpression::max))
-        .def_property_readonly("selected", py::overload_cast<>(&MinTypMaxExpression::selected));
+    nb::class_<MinTypMaxExpression, Expression>(m, "MinTypMaxExpression")
+        .def_prop_ro("min", nb::overload_cast<>(&MinTypMaxExpression::min))
+        .def_prop_ro("typ", nb::overload_cast<>(&MinTypMaxExpression::typ))
+        .def_prop_ro("max", nb::overload_cast<>(&MinTypMaxExpression::max))
+        .def_prop_ro("selected", nb::overload_cast<>(&MinTypMaxExpression::selected));
 
-    py::classh<CopyClassExpression, Expression>(m, "CopyClassExpression")
-        .def_property_readonly("sourceExpr", &CopyClassExpression::sourceExpr);
+    nb::class_<CopyClassExpression, Expression>(m, "CopyClassExpression")
+        .def_prop_ro("sourceExpr", &CopyClassExpression::sourceExpr);
 
-    py::classh<DistExpression, Expression> distExpr(m, "DistExpression");
-    distExpr.def_property_readonly("left", &DistExpression::left)
-        .def_property_readonly("items", &DistExpression::items)
-        .def_property_readonly("defaultWeight", &DistExpression::defaultWeight);
+    nb::class_<DistExpression, Expression> distExpr(m, "DistExpression");
+    distExpr.def_prop_ro("left", &DistExpression::left)
+        .def_prop_ro("items", &DistExpression::items)
+        .def_prop_ro("defaultWeight", &DistExpression::defaultWeight);
 
-    py::classh<DistExpression::DistWeight> distWeight(distExpr, "DistWeight");
-    distWeight.def_readonly("kind", &DistExpression::DistWeight::kind)
-        .def_property_readonly("expr",
-                               [](const DistExpression::DistWeight& self) { return self.expr; });
+    nb::class_<DistExpression::DistWeight> distWeight(distExpr, "DistWeight");
+    distWeight.def_ro("kind", &DistExpression::DistWeight::kind)
+        .def_prop_ro("expr", [](const DistExpression::DistWeight& self) { return self.expr; });
 
-    py::native_enum<DistExpression::DistWeight::Kind>(distWeight, "Kind", "enum.Enum")
+    nb::enum_<DistExpression::DistWeight::Kind>(distWeight, "Kind")
         .value("PerValue", DistExpression::DistWeight::PerValue)
         .value("PerRange", DistExpression::DistWeight::PerRange)
-        .export_values()
-        .finalize();
+        .export_values();
 
-    py::classh<DistExpression::DistItem>(distExpr, "DistItem")
-        .def_readonly("weight", &DistExpression::DistItem::weight)
-        .def_property_readonly("value",
-                               [](const DistExpression::DistItem& self) { return &self.value; });
+    nb::class_<DistExpression::DistItem>(distExpr, "DistItem")
+        .def_ro("weight", &DistExpression::DistItem::weight)
+        .def_prop_ro("value", [](const DistExpression::DistItem& self) { return &self.value; });
 
-    py::classh<TaggedUnionExpression, Expression>(m, "TaggedUnionExpression")
-        .def_property_readonly("member",
-                               [](const TaggedUnionExpression& self) { return &self.member; })
-        .def_readonly("valueExpr", &TaggedUnionExpression::valueExpr);
+    nb::class_<TaggedUnionExpression, Expression>(m, "TaggedUnionExpression")
+        .def_prop_ro("member", [](const TaggedUnionExpression& self) { return &self.member; })
+        .def_ro("valueExpr", &TaggedUnionExpression::valueExpr);
 
-    py::classh<UnaryExpression, Expression>(m, "UnaryExpression")
-        .def_property_readonly("operand", py::overload_cast<>(&UnaryExpression::operand))
-        .def_readonly("op", &UnaryExpression::op);
+    nb::class_<UnaryExpression, Expression>(m, "UnaryExpression")
+        .def_prop_ro("operand", nb::overload_cast<>(&UnaryExpression::operand))
+        .def_ro("op", &UnaryExpression::op);
 
-    py::classh<BinaryExpression, Expression>(m, "BinaryExpression")
-        .def_property_readonly("left", py::overload_cast<>(&BinaryExpression::left))
-        .def_property_readonly("right", py::overload_cast<>(&BinaryExpression::right))
-        .def_readonly("op", &BinaryExpression::op);
+    nb::class_<BinaryExpression, Expression>(m, "BinaryExpression")
+        .def_prop_ro("left", nb::overload_cast<>(&BinaryExpression::left))
+        .def_prop_ro("right", nb::overload_cast<>(&BinaryExpression::right))
+        .def_ro("op", &BinaryExpression::op);
 
-    py::classh<ConditionalExpression, Expression> condExpr(m, "ConditionalExpression");
-    condExpr.def_property_readonly("left", py::overload_cast<>(&ConditionalExpression::left))
-        .def_property_readonly("right", py::overload_cast<>(&ConditionalExpression::right))
-        .def_readonly("conditions", &ConditionalExpression::conditions);
+    nb::class_<ConditionalExpression, Expression> condExpr(m, "ConditionalExpression");
+    condExpr.def_prop_ro("left", nb::overload_cast<>(&ConditionalExpression::left))
+        .def_prop_ro("right", nb::overload_cast<>(&ConditionalExpression::right))
+        .def_ro("conditions", &ConditionalExpression::conditions);
 
-    py::classh<ConditionalExpression::Condition>(condExpr, "Condition")
-        .def_readonly("expr", &ConditionalExpression::Condition::expr)
-        .def_readonly("pattern", &ConditionalExpression::Condition::pattern);
+    nb::class_<ConditionalExpression::Condition>(condExpr, "Condition")
+        .def_ro("expr", &ConditionalExpression::Condition::expr)
+        .def_ro("pattern", &ConditionalExpression::Condition::pattern);
 
-    py::classh<InsideExpression, Expression>(m, "InsideExpression")
-        .def_property_readonly("left", &InsideExpression::left)
-        .def_property_readonly("rangeList", &InsideExpression::rangeList);
+    nb::class_<InsideExpression, Expression>(m, "InsideExpression")
+        .def_prop_ro("left", &InsideExpression::left)
+        .def_prop_ro("rangeList", &InsideExpression::rangeList);
 
-    py::classh<ConcatenationExpression, Expression>(m, "ConcatenationExpression")
-        .def_property_readonly("operands", py::overload_cast<>(&ConcatenationExpression::operands));
+    nb::class_<ConcatenationExpression, Expression>(m, "ConcatenationExpression")
+        .def_prop_ro("operands", nb::overload_cast<>(&ConcatenationExpression::operands));
 
-    py::classh<ReplicationExpression, Expression>(m, "ReplicationExpression")
-        .def_property_readonly("count", &ReplicationExpression::count)
-        .def_property_readonly("concat", py::overload_cast<>(&ReplicationExpression::concat));
+    nb::class_<ReplicationExpression, Expression>(m, "ReplicationExpression")
+        .def_prop_ro("count", &ReplicationExpression::count)
+        .def_prop_ro("concat", nb::overload_cast<>(&ReplicationExpression::concat));
 
-    py::classh<StreamingConcatenationExpression, Expression> streamConcatExpr(
+    nb::class_<StreamingConcatenationExpression, Expression> streamConcatExpr(
         m, "StreamingConcatenationExpression");
-    streamConcatExpr
-        .def_property_readonly("sliceSize", &StreamingConcatenationExpression::getSliceSize)
-        .def_property_readonly("isFixedSize", &StreamingConcatenationExpression::isFixedSize)
-        .def_property_readonly("bitstreamWidth",
-                               &StreamingConcatenationExpression::getBitstreamWidth)
-        .def_property_readonly("streams", &StreamingConcatenationExpression::streams);
+    streamConcatExpr.def_prop_ro("sliceSize", &StreamingConcatenationExpression::getSliceSize)
+        .def_prop_ro("isFixedSize", &StreamingConcatenationExpression::isFixedSize)
+        .def_prop_ro("bitstreamWidth", &StreamingConcatenationExpression::getBitstreamWidth)
+        .def_prop_ro("streams", &StreamingConcatenationExpression::streams);
 
-    py::classh<StreamingConcatenationExpression::StreamExpression>(streamConcatExpr,
+    nb::class_<StreamingConcatenationExpression::StreamExpression>(streamConcatExpr,
                                                                    "StreamExpression")
-        .def_readonly("operand", &StreamingConcatenationExpression::StreamExpression::operand)
-        .def_readonly("withExpr", &StreamingConcatenationExpression::StreamExpression::withExpr)
-        .def_readonly("constantWithWidth",
-                      &StreamingConcatenationExpression::StreamExpression::constantWithWidth);
+        .def_ro("operand", &StreamingConcatenationExpression::StreamExpression::operand)
+        .def_ro("withExpr", &StreamingConcatenationExpression::StreamExpression::withExpr)
+        .def_ro("constantWithWidth",
+                &StreamingConcatenationExpression::StreamExpression::constantWithWidth);
 
-    py::classh<ValueRangeExpression, Expression>(m, "ValueRangeExpression")
-        .def_property_readonly("left", py::overload_cast<>(&ValueRangeExpression::left))
-        .def_property_readonly("right", py::overload_cast<>(&ValueRangeExpression::right));
+    nb::class_<ValueRangeExpression, Expression>(m, "ValueRangeExpression")
+        .def_prop_ro("left", nb::overload_cast<>(&ValueRangeExpression::left))
+        .def_prop_ro("right", nb::overload_cast<>(&ValueRangeExpression::right));
 
-    py::classh<ElementSelectExpression, Expression>(m, "ElementSelectExpression")
-        .def_property_readonly("value", py::overload_cast<>(&ElementSelectExpression::value))
-        .def_property_readonly("selector", &ElementSelectExpression::selector);
+    nb::class_<ElementSelectExpression, Expression>(m, "ElementSelectExpression")
+        .def_prop_ro("value", nb::overload_cast<>(&ElementSelectExpression::value))
+        .def_prop_ro("selector", &ElementSelectExpression::selector);
 
-    py::classh<RangeSelectExpression, Expression>(m, "RangeSelectExpression")
-        .def_property_readonly("selectionKind", &RangeSelectExpression::getSelectionKind)
-        .def_property_readonly("value", py::overload_cast<>(&RangeSelectExpression::value))
-        .def_property_readonly("left", &RangeSelectExpression::left)
-        .def_property_readonly("right", &RangeSelectExpression::right);
+    nb::class_<RangeSelectExpression, Expression>(m, "RangeSelectExpression")
+        .def_prop_ro("selectionKind", &RangeSelectExpression::getSelectionKind)
+        .def_prop_ro("value", nb::overload_cast<>(&RangeSelectExpression::value))
+        .def_prop_ro("left", &RangeSelectExpression::left)
+        .def_prop_ro("right", &RangeSelectExpression::right);
 
-    py::classh<MemberAccessExpression, Expression>(m, "MemberAccessExpression")
-        .def_property_readonly("value", py::overload_cast<>(&MemberAccessExpression::value))
-        .def_property_readonly("member",
-                               [](const MemberAccessExpression& self) { return &self.member; });
+    nb::class_<MemberAccessExpression, Expression>(m, "MemberAccessExpression")
+        .def_prop_ro("value", nb::overload_cast<>(&MemberAccessExpression::value))
+        .def_prop_ro("member", [](const MemberAccessExpression& self) { return &self.member; });
 }
