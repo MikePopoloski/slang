@@ -650,4 +650,3 @@ endmodule
 
     del owner
     gc.collect()
-
