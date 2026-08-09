@@ -160,6 +160,36 @@ protected:
     }
 };
 
+struct PyAnalysisManager {
+    AnalysisManager manager;
+    std::vector<nb::object> listeners;
+
+    explicit PyAnalysisManager(AnalysisOptions options) : manager(std::move(options)) {}
+};
+
+static int py_analysis_manager_traverse(PyObject* self, visitproc visit, void* arg) {
+    auto* p = nb::inst_ptr<PyAnalysisManager>(self);
+    if (p) {
+        for (auto& cb : p->listeners) {
+            Py_VISIT(cb.ptr());
+        }
+    }
+    return 0;
+}
+
+static int py_analysis_manager_clear(PyObject* self) {
+    auto* p = nb::inst_ptr<PyAnalysisManager>(self);
+    if (p) {
+        p->listeners.clear();
+    }
+    return 0;
+}
+
+static PyType_Slot py_analysis_manager_slots[] = {{Py_tp_traverse,
+                                                   (void*)py_analysis_manager_traverse},
+                                                  {Py_tp_clear, (void*)py_analysis_manager_clear},
+                                                  {0, nullptr}};
+
 void registerAnalysis(nb::module_& m, nb::module_& ast) {
     nb::enum_<DriverKind>(m, "DriverKind")
         .value("Procedural", DriverKind::Procedural)
@@ -222,57 +252,76 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
         .def_prop_ro("isClockVar", &ValueDriver::isClockVar)
         .def_prop_ro("isInSingleDriverProcedure", &ValueDriver::isInSingleDriverProcedure);
 
-    nb::class_<AnalysisManager>(m, "AnalysisManager")
+    nb::class_<PyAnalysisManager>(m, "AnalysisManager", nb::type_slots(py_analysis_manager_slots))
         .def(
             "__init__",
-            [](AnalysisManager* self, AnalysisOptions options) {
-                new (self) AnalysisManager(std::move(options));
+            [](PyAnalysisManager* self, AnalysisOptions options) {
+                new (self) PyAnalysisManager(std::move(options));
             },
             "options"_a = AnalysisOptions())
-        // The analyzed objects handed to listeners are passed as non-owning
-        // references (rv_policy::reference), NOT reference_internal.
-        // reference_internal would register a nanobind keep_alive edge from the
-        // yielded object back to `self` (the AnalysisManager). Combined with the
-        // C++ listener holding the Python callback, that forms a reference cycle
-        // (manager -> callback -> user container -> object -> manager) which
-        // Python's cyclic GC cannot collect, because nanobind's inst_traverse
-        // does not traverse keep_alive edges. That leaks the manager and
-        // everything it transitively keeps alive at interpreter shutdown.
-        //
-        // The analyzed objects live in the manager's allocator, so callers must
-        // keep the AnalysisManager alive for as long as they retain any object
-        // yielded to a listener.
         .def(
             "addProcListener",
-            [](AnalysisManager& self, nb::callable cb) {
-                self.addListener([cb = std::move(cb)](const AnalyzedProcedure& proc) {
-                    cb(nb::cast(&proc, nb::rv_policy::reference));
+            [](PyAnalysisManager& self, nb::callable cb) {
+                self.listeners.push_back(cb);
+                self.manager.addListener([cb, &self](const AnalyzedProcedure& proc) {
+                    cb(nb::cast(&proc, nb::rv_policy::reference_internal, nb::find(&self)));
                 });
             },
-            nb::keep_alive<1, 2>(), "listener"_a)
+            "listener"_a)
         .def(
             "addScopeListener",
-            [](AnalysisManager& self, nb::callable cb) {
-                self.addListener([cb = std::move(cb)](const AnalyzedScope& scope) {
-                    cb(nb::cast(&scope, nb::rv_policy::reference));
+            [](PyAnalysisManager& self, nb::callable cb) {
+                self.listeners.push_back(cb);
+                self.manager.addListener([cb, &self](const AnalyzedScope& scope) {
+                    cb(nb::cast(&scope, nb::rv_policy::reference_internal, nb::find(&self)));
                 });
             },
-            nb::keep_alive<1, 2>(), "listener"_a)
+            "listener"_a)
         .def(
             "addAssertionListener",
-            [](AnalysisManager& self, nb::callable cb) {
-                self.addListener([cb = std::move(cb)](const AnalyzedAssertion& aa) {
-                    cb(nb::cast(&aa, nb::rv_policy::reference));
+            [](PyAnalysisManager& self, nb::callable cb) {
+                self.listeners.push_back(cb);
+                self.manager.addListener([cb, &self](const AnalyzedAssertion& aa) {
+                    cb(nb::cast(&aa, nb::rv_policy::reference_internal, nb::find(&self)));
                 });
             },
-            nb::keep_alive<1, 2>(), "listener"_a)
-        .def("analyze", &AnalysisManager::analyze, "compilation"_a, nb::keep_alive<1, 2>())
-        .def("getDrivers", &AnalysisManager::getDrivers, "symbol"_a, byrefint)
-        .def("getDiagnostics", &AnalysisManager::getDiagnostics, byrefint)
-        .def("getAnalyzedScope", &AnalysisManager::getAnalyzedScope, "scope"_a, byrefint)
-        .def("getAnalyzedSubroutine", &AnalysisManager::getAnalyzedSubroutine, "symbol"_a, byrefint)
-        .def("getAnalyzedAssertions", &AnalysisManager::getAnalyzedAssertions, "symbol"_a, byrefint)
-        .def_prop_ro("options", &AnalysisManager::getOptions);
+            "listener"_a)
+        .def(
+            "analyze",
+            [](PyAnalysisManager& self, const ast::Compilation& compilation) {
+                self.manager.analyze(compilation);
+            },
+            "compilation"_a, nb::keep_alive<1, 2>())
+        .def(
+            "getDrivers",
+            [](const PyAnalysisManager& self, const ast::ValueSymbol& symbol) {
+                return self.manager.getDrivers(symbol);
+            },
+            "symbol"_a, byrefint)
+        .def(
+            "getDiagnostics", [](PyAnalysisManager& self) { return self.manager.getDiagnostics(); },
+            byrefint)
+        .def(
+            "getAnalyzedScope",
+            [](const PyAnalysisManager& self, const ast::Scope& scope) {
+                return self.manager.getAnalyzedScope(scope);
+            },
+            "scope"_a, byrefint)
+        .def(
+            "getAnalyzedSubroutine",
+            [](const PyAnalysisManager& self, const ast::SubroutineSymbol& symbol) {
+                return self.manager.getAnalyzedSubroutine(symbol);
+            },
+            "symbol"_a, byrefint)
+        .def(
+            "getAnalyzedAssertions",
+            [](const PyAnalysisManager& self, const ast::Symbol& symbol) {
+                return self.manager.getAnalyzedAssertions(symbol);
+            },
+            "symbol"_a, byrefint)
+        .def_prop_ro("options", [](const PyAnalysisManager& self) -> const AnalysisOptions& {
+            return self.manager.getOptions();
+        });
 
     nb::class_<ReadRange>(m, "ReadRange")
         .def_ro("symbol", &ReadRange::symbol)

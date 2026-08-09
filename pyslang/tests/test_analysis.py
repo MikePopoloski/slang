@@ -591,3 +591,63 @@ endmodule
     assert ier.statement is not None
     names = {rr.symbol.name for rr in ier.reads}
     assert names == {"a", "b"}
+
+
+def test_listener_lifetime_retention():
+    """Test that keeping a yielded AnalyzedProcedure keeps AnalysisManager alive without crashing."""
+    import gc
+
+    tree = SyntaxTree.fromText("""
+module m;
+    logic a, b, y;
+    always_comb y = a & b;
+endmodule
+""")
+    compilation = Compilation()
+    compilation.addSyntaxTree(tree)
+    compilation.getAllDiagnostics()
+
+    procedures = []
+
+    def run_analysis():
+        am = AnalysisManager()
+        am.addProcListener(lambda proc: procedures.append(proc))
+        am.analyze(compilation)
+
+    run_analysis()
+    gc.collect()
+
+    assert len(procedures) == 1
+    assert procedures[0].analyzedSymbol is not None
+
+
+def test_listener_cyclic_gc():
+    """Test that cyclic references involving AnalysisManager and Python listeners can be collected."""
+    import gc
+
+    tree = SyntaxTree.fromText("""
+module m;
+    logic a, b, y;
+    always_comb y = a & b;
+endmodule
+""")
+    compilation = Compilation()
+    compilation.addSyntaxTree(tree)
+    compilation.getAllDiagnostics()
+
+    class ListenerOwner:
+        def __init__(self, manager):
+            self.manager = manager
+            self.procs = []
+            manager.addProcListener(self.on_proc)
+
+        def on_proc(self, proc):
+            self.procs.append(proc)
+
+    owner = ListenerOwner(AnalysisManager())
+    owner.manager.analyze(compilation)
+    assert len(owner.procs) == 1
+
+    del owner
+    gc.collect()
+
