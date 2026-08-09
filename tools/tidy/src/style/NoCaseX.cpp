@@ -8,16 +8,20 @@ using namespace slang;
 using namespace slang::ast;
 
 namespace no_case_x {
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::AllCanonical> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::StatementsCanonical> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const CaseStatement& stmt) {
+        NEEDS_SKIP_STATEMENT(stmt)
+
         if (stmt.condition == CaseStatementCondition::WildcardXOrZ)
             diags.add(diag::NoCaseX, stmt.sourceRange);
         visitDefault(stmt);
     }
 
     void handle(const PatternCaseStatement& stmt) {
+        NEEDS_SKIP_STATEMENT(stmt)
+
         if (stmt.condition == CaseStatementCondition::WildcardXOrZ)
             diags.add(diag::NoCaseX, stmt.sourceRange);
         visitDefault(stmt);
@@ -29,7 +33,8 @@ using namespace no_case_x;
 
 class NoCaseX : public TidyCheck {
 public:
-    explicit NoCaseX(TidyKind kind, std::optional<slang::DiagnosticSeverity> severity) :
+    [[maybe_unused]] explicit NoCaseX(TidyKind kind,
+                                      std::optional<slang::DiagnosticSeverity> severity) :
         TidyCheck(kind, severity) {}
 
     bool check(const RootSymbol& root, const slang::analysis::AnalysisManager&) override {

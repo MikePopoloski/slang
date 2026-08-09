@@ -30,7 +30,8 @@ add_library(
   src/synthesis/UnusedSensitiveSignal.cpp
   src/synthesis/UndrivenRange.cpp
   src/synthesis/LoopBeforeResetCheck.cpp
-  src/style/NoCaseX.cpp)
+  src/style/NoCaseX.cpp
+  src/style/NoDefParam.cpp)
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include)
 target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang fmt::fmt)
