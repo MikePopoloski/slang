@@ -455,19 +455,19 @@ def _get_proc_block(code):
 
 
 def _analyze(code):
-    """Compile *code* and return (AnalysisManager, AnalyzedProcedure) for module m."""
+    """Compile *code* and return AnalyzedProcedure for module m."""
     compilation, proc_block = _get_proc_block(code)
     am = AnalysisManager()
     am.analyze(compilation)
     scope = am.getAnalyzedScope(proc_block.parentScope)
     if scope and scope.procedures:
-        return am, scope.procedures[0]
+        return scope.procedures[0]
     raise AssertionError("No AnalyzedProcedure for a ProceduralBlockSymbol found")
 
 
 def test_sensitivity_list_always_comb_implicit():
     """always_comb produces an Implicit sensitivity list over the read signals."""
-    unused_am, proc = _analyze("""
+    proc = _analyze("""
 module m;
     logic a, b, y;
     always_comb y = a & b;
@@ -482,7 +482,7 @@ endmodule
 
 def test_sensitivity_list_read_range_type():
     """Each entry in SensitivityList.reads is a ReadRange with the right fields."""
-    unused_am, proc = _analyze("""
+    proc = _analyze("""
 module m;
     logic [7:0] vec;
     logic y;
@@ -503,7 +503,7 @@ endmodule
 
 def test_sensitivity_list_always_ff_explicit():
     """always_ff produces an Explicit sensitivity list with a timingControl."""
-    unused_am, proc = _analyze("""
+    proc = _analyze("""
 module m(input logic clk);
     logic [7:0] count;
     always_ff @(posedge clk) count <= count + 1;
@@ -518,7 +518,7 @@ endmodule
 
 def test_sensitivity_list_initial_none():
     """initial blocks have no event-based sensitivity (Kind.None_)."""
-    unused_am, proc = _analyze("""
+    proc = _analyze("""
 module m;
     logic a;
     initial a = 1;
@@ -531,7 +531,7 @@ endmodule
 
 def test_sensitivity_list_always_star_implicit():
     """always @* derives an Implicit sensitivity like always_comb."""
-    unused_am, proc = _analyze("""
+    proc = _analyze("""
 module m;
     logic a, b, y;
     always @(*) y = a | b;
@@ -545,7 +545,7 @@ endmodule
 
 def test_sensitivity_list_always_comb_partially_driven():
     """Bits of a vector that are also written are excluded from the sensitivity."""
-    unused_am, proc = _analyze("""
+    proc = _analyze("""
 module m;
     logic [7:0] vec;
     logic [3:0] y;
@@ -567,7 +567,7 @@ endmodule
 
 def test_analyzed_procedure_read_set():
     """AnalyzedProcedure.readSet contains all symbols read in the procedure."""
-    unused_am, proc = _analyze("""
+    proc = _analyze("""
 module m;
     logic a, b, y;
     always_comb y = a & b;
@@ -579,7 +579,7 @@ endmodule
 
 def test_analyzed_procedure_implicit_event_read_sets():
     """ImplicitEventReadSet is populated for always @* blocks."""
-    unused_am, proc = _analyze("""
+    proc = _analyze("""
 module m;
     logic a, b, y;
     always @(*) y = a ^ b;
