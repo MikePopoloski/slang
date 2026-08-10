@@ -190,32 +190,42 @@ void registerTypes(nb::module_& m) {
         .export_values();
 
     scopeClass<EnumType, IntegralType>(m, "EnumType")
-        .def_prop_ro("baseType", [](const EnumType& self) { return &self.baseType; }, byrefint)
+        .def_prop_ro(
+            "baseType", [](const EnumType& self) { return &self.baseType; }, byrefint)
         .def_ro("systemId", &EnumType::systemId);
 
     nb::class_<PackedArrayType, IntegralType>(m, "PackedArrayType")
-        .def_prop_ro("elementType", [](const PackedArrayType& self) { return &self.elementType; }, byrefint)
+        .def_prop_ro(
+            "elementType", [](const PackedArrayType& self) { return &self.elementType; }, byrefint)
         .def_ro("range", &PackedArrayType::range);
 
     nb::class_<FixedSizeUnpackedArrayType, Type>(m, "FixedSizeUnpackedArrayType")
-        .def_prop_ro("elementType",
-                     [](const FixedSizeUnpackedArrayType& self) { return &self.elementType; }, byrefint)
+        .def_prop_ro(
+            "elementType", [](const FixedSizeUnpackedArrayType& self) { return &self.elementType; },
+            byrefint)
         .def_ro("range", &FixedSizeUnpackedArrayType::range);
 
     nb::class_<DynamicArrayType, Type>(m, "DynamicArrayType")
-        .def_prop_ro("elementType", [](const DynamicArrayType& self) { return &self.elementType; }, byrefint);
+        .def_prop_ro(
+            "elementType", [](const DynamicArrayType& self) { return &self.elementType; },
+            byrefint);
 
     nb::class_<DPIOpenArrayType, Type>(m, "DPIOpenArrayType")
         .def_ro("isPacked", &DPIOpenArrayType::isPacked)
-        .def_prop_ro("elementType", [](const DPIOpenArrayType& self) { return &self.elementType; }, byrefint);
+        .def_prop_ro(
+            "elementType", [](const DPIOpenArrayType& self) { return &self.elementType; },
+            byrefint);
 
     nb::class_<AssociativeArrayType, Type>(m, "AssociativeArrayType")
-        .def_prop_ro("elementType",
-                     [](const AssociativeArrayType& self) { return &self.elementType; }, byrefint)
-        .def_prop_ro("indexType", [](const AssociativeArrayType& self) { return self.indexType; }, byrefint);
+        .def_prop_ro(
+            "elementType", [](const AssociativeArrayType& self) { return &self.elementType; },
+            byrefint)
+        .def_prop_ro(
+            "indexType", [](const AssociativeArrayType& self) { return self.indexType; }, byrefint);
 
     nb::class_<QueueType, Type>(m, "QueueType")
-        .def_prop_ro("elementType", [](const QueueType& self) { return &self.elementType; }, byrefint)
+        .def_prop_ro(
+            "elementType", [](const QueueType& self) { return &self.elementType; }, byrefint)
         .def_ro("maxBound", &QueueType::maxBound);
 
     scopeClass<PackedStructType, IntegralType>(m, "PackedStructType")
@@ -248,22 +258,28 @@ void registerTypes(nb::module_& m) {
     SIMPLE_TYPE(ErrorType);
 
     nb::class_<VirtualInterfaceType, Type>(m, "VirtualInterfaceType")
-        .def_prop_ro("iface", [](const VirtualInterfaceType& self) { return &self.iface; }, byrefint)
-        .def_prop_ro("modport", [](const VirtualInterfaceType& self) { return self.modport; }, byrefint);
+        .def_prop_ro(
+            "iface", [](const VirtualInterfaceType& self) { return &self.iface; }, byrefint)
+        .def_prop_ro(
+            "modport", [](const VirtualInterfaceType& self) { return self.modport; }, byrefint);
 
     EXPOSE_ENUM(m, ForwardTypeRestriction);
 
     nb::class_<ForwardingTypedefSymbol, Symbol>(m, "ForwardingTypedefSymbol")
         .def_ro("typeRestriction", &ForwardingTypedefSymbol::typeRestriction)
         .def_ro("visibility", &ForwardingTypedefSymbol::visibility)
-        .def_prop_ro("nextForwardDecl",
-                     [](const ForwardingTypedefSymbol& self) { return self.getNextForwardDecl(); }, byrefint);
+        .def_prop_ro(
+            "nextForwardDecl",
+            [](const ForwardingTypedefSymbol& self) { return self.getNextForwardDecl(); },
+            byrefint);
 
     nb::class_<TypeAliasType, Type>(m, "TypeAliasType")
-        .def_prop_ro("targetType", [](const TypeAliasType& self) { return &self.targetType; }, byrefint)
+        .def_prop_ro(
+            "targetType", [](const TypeAliasType& self) { return &self.targetType; }, byrefint)
         .def_ro("visibility", &TypeAliasType::visibility)
-        .def_prop_ro("firstForwardDecl",
-                     [](const TypeAliasType& self) { return self.getFirstForwardDecl(); }, byrefint);
+        .def_prop_ro(
+            "firstForwardDecl",
+            [](const TypeAliasType& self) { return self.getFirstForwardDecl(); }, byrefint);
 
     scopeClass<ClassType, Type>(m, "ClassType")
         .def_ro("genericClass", &ClassType::genericClass, byrefint)
@@ -285,8 +301,10 @@ void registerTypes(nb::module_& m) {
 
     nb::class_<GenericClassDefSymbol, Symbol>(m, "GenericClassDefSymbol")
         .def_ro("isInterface", &GenericClassDefSymbol::isInterface)
-        .def_prop_ro("defaultSpecialization", &GenericClassDefSymbol::getDefaultSpecialization, byrefint)
-        .def_prop_ro("invalidSpecialization", &GenericClassDefSymbol::getInvalidSpecialization, byrefint)
+        .def_prop_ro("defaultSpecialization", &GenericClassDefSymbol::getDefaultSpecialization,
+                     byrefint)
+        .def_prop_ro("invalidSpecialization", &GenericClassDefSymbol::getInvalidSpecialization,
+                     byrefint)
         .def_prop_ro("firstForwardDecl", &GenericClassDefSymbol::getFirstForwardDecl, byrefint);
 
     nb::enum_<ConstraintBlockFlags>(m, "ConstraintBlockFlags", nb::is_arithmetic())

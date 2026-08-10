@@ -43,7 +43,8 @@ void registerStatements(nb::module_& m) {
     nb::class_<DisableForkStatement, Statement>(m, "DisableForkStatement");
     nb::class_<WaitForkStatement, Statement>(m, "WaitForkStatement");
 
-    nb::class_<StatementList, Statement>(m, "StatementList").def_ro("list", &StatementList::list, byrefint);
+    nb::class_<StatementList, Statement>(m, "StatementList")
+        .def_ro("list", &StatementList::list, byrefint);
 
     nb::class_<BlockStatement, Statement>(m, "BlockStatement")
         .def_ro("blockSymbol", &BlockStatement::blockSymbol, byrefint)
@@ -57,13 +58,15 @@ void registerStatements(nb::module_& m) {
         .def_prop_ro("target", [](const DisableStatement& self) { return &self.target; }, byrefint);
 
     nb::class_<VariableDeclStatement, Statement>(m, "VariableDeclStatement")
-        .def_prop_ro("symbol", [](const VariableDeclStatement& self) { return &self.symbol; }, byrefint);
+        .def_prop_ro(
+            "symbol", [](const VariableDeclStatement& self) { return &self.symbol; }, byrefint);
 
     nb::class_<ConditionalStatement, Statement> condStmt(m, "ConditionalStatement");
     condStmt.def_ro("conditions", &ConditionalStatement::conditions, byrefint)
         .def_ro("check", &ConditionalStatement::check)
         .def_ro("ifFalse", &ConditionalStatement::ifFalse, byrefint)
-        .def_prop_ro("ifTrue", [](const ConditionalStatement& self) { return &self.ifTrue; }, byrefint);
+        .def_prop_ro(
+            "ifTrue", [](const ConditionalStatement& self) { return &self.ifTrue; }, byrefint);
 
     nb::class_<ConditionalStatement::Condition>(condStmt, "Condition")
         .def_ro("expr", &ConditionalStatement::Condition::expr, byrefint)
@@ -101,7 +104,8 @@ void registerStatements(nb::module_& m) {
 
     nb::class_<ForeachLoopStatement, Statement> foreachStmt(m, "ForeachLoopStatement");
     foreachStmt.def_ro("loopDims", &ForeachLoopStatement::loopDims, byrefint)
-        .def_prop_ro("arrayRef", [](const ForeachLoopStatement& self) { return &self.arrayRef; }, byrefint)
+        .def_prop_ro(
+            "arrayRef", [](const ForeachLoopStatement& self) { return &self.arrayRef; }, byrefint)
         .def_prop_ro("body", [](const ForeachLoopStatement& self) { return &self.body; }, byrefint);
 
     nb::class_<ForeachLoopStatement::LoopDim>(foreachStmt, "LoopDim")
@@ -109,15 +113,18 @@ void registerStatements(nb::module_& m) {
         .def_ro("loopVar", &ForeachLoopStatement::LoopDim::loopVar, byrefint);
 
     nb::class_<RepeatLoopStatement, Statement>(m, "RepeatLoopStatement")
-        .def_prop_ro("count", [](const RepeatLoopStatement& self) { return &self.count; }, byrefint)
+        .def_prop_ro(
+            "count", [](const RepeatLoopStatement& self) { return &self.count; }, byrefint)
         .def_prop_ro("body", [](const RepeatLoopStatement& self) { return &self.body; }, byrefint);
 
     nb::class_<WhileLoopStatement, Statement>(m, "WhileLoopStatement")
-        .def_prop_ro("cond", [](const WhileLoopStatement& self) { return &self.cond; }, byrefint)
+        .def_prop_ro(
+            "cond", [](const WhileLoopStatement& self) { return &self.cond; }, byrefint)
         .def_prop_ro("body", [](const WhileLoopStatement& self) { return &self.body; }, byrefint);
 
     nb::class_<DoWhileLoopStatement, Statement>(m, "DoWhileLoopStatement")
-        .def_prop_ro("cond", [](const DoWhileLoopStatement& self) { return &self.cond; }, byrefint)
+        .def_prop_ro(
+            "cond", [](const DoWhileLoopStatement& self) { return &self.cond; }, byrefint)
         .def_prop_ro("body", [](const DoWhileLoopStatement& self) { return &self.body; }, byrefint);
 
     nb::class_<ForeverLoopStatement, Statement>(m, "ForeverLoopStatement")
@@ -127,11 +134,13 @@ void registerStatements(nb::module_& m) {
         .def_prop_ro("expr", [](const ExpressionStatement& self) { return &self.expr; }, byrefint);
 
     nb::class_<TimedStatement, Statement>(m, "TimedStatement")
-        .def_prop_ro("timing", [](const TimedStatement& self) { return &self.timing; }, byrefint)
+        .def_prop_ro(
+            "timing", [](const TimedStatement& self) { return &self.timing; }, byrefint)
         .def_prop_ro("stmt", [](const TimedStatement& self) { return &self.stmt; }, byrefint);
 
     nb::class_<ImmediateAssertionStatement, Statement>(m, "ImmediateAssertionStatement")
-        .def_prop_ro("cond", [](const ImmediateAssertionStatement& self) { return &self.cond; }, byrefint)
+        .def_prop_ro(
+            "cond", [](const ImmediateAssertionStatement& self) { return &self.cond; }, byrefint)
         .def_ro("ifTrue", &ImmediateAssertionStatement::ifTrue, byrefint)
         .def_ro("ifFalse", &ImmediateAssertionStatement::ifFalse, byrefint)
         .def_ro("assertionKind", &ImmediateAssertionStatement::assertionKind)
@@ -139,14 +148,16 @@ void registerStatements(nb::module_& m) {
         .def_ro("isFinal", &ImmediateAssertionStatement::isFinal);
 
     nb::class_<ConcurrentAssertionStatement, Statement>(m, "ConcurrentAssertionStatement")
-        .def_prop_ro("propertySpec",
-                     [](const ConcurrentAssertionStatement& self) { return &self.propertySpec; }, byrefint)
+        .def_prop_ro(
+            "propertySpec",
+            [](const ConcurrentAssertionStatement& self) { return &self.propertySpec; }, byrefint)
         .def_ro("ifTrue", &ConcurrentAssertionStatement::ifTrue, byrefint)
         .def_ro("ifFalse", &ConcurrentAssertionStatement::ifFalse, byrefint)
         .def_ro("assertionKind", &ConcurrentAssertionStatement::assertionKind);
 
     nb::class_<WaitStatement, Statement>(m, "WaitStatement")
-        .def_prop_ro("cond", [](const WaitStatement& self) { return &self.cond; }, byrefint)
+        .def_prop_ro(
+            "cond", [](const WaitStatement& self) { return &self.cond; }, byrefint)
         .def_prop_ro("stmt", [](const WaitStatement& self) { return &self.stmt; }, byrefint);
 
     nb::class_<WaitOrderStatement, Statement>(m, "WaitOrderStatement")
@@ -155,17 +166,21 @@ void registerStatements(nb::module_& m) {
         .def_ro("events", &WaitOrderStatement::events, byrefint);
 
     nb::class_<EventTriggerStatement, Statement>(m, "EventTriggerStatement")
-        .def_prop_ro("target", [](const EventTriggerStatement& self) { return &self.target; }, byrefint)
+        .def_prop_ro(
+            "target", [](const EventTriggerStatement& self) { return &self.target; }, byrefint)
         .def_ro("timing", &EventTriggerStatement::timing, byrefint)
         .def_ro("isNonBlocking", &EventTriggerStatement::isNonBlocking);
 
     nb::class_<ProceduralAssignStatement, Statement>(m, "ProceduralAssignStatement")
-        .def_prop_ro("assignment",
-                     [](const ProceduralAssignStatement& self) { return &self.assignment; }, byrefint)
+        .def_prop_ro(
+            "assignment", [](const ProceduralAssignStatement& self) { return &self.assignment; },
+            byrefint)
         .def_ro("isForce", &ProceduralAssignStatement::isForce);
 
     nb::class_<ProceduralDeassignStatement, Statement>(m, "ProceduralDeassignStatement")
-        .def_prop_ro("lvalue", [](const ProceduralDeassignStatement& self) { return &self.lvalue; }, byrefint)
+        .def_prop_ro(
+            "lvalue", [](const ProceduralDeassignStatement& self) { return &self.lvalue; },
+            byrefint)
         .def_ro("isRelease", &ProceduralDeassignStatement::isRelease);
 
     nb::class_<RandCaseStatement, Statement> randCaseStmt(m, "RandCaseStatement");

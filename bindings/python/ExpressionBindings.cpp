@@ -145,7 +145,8 @@ void registerExpressions(nb::module_& m) {
         .def_prop_ro("value", &StringLiteral::getValue);
 
     nb::class_<ValueExpressionBase, Expression>(m, "ValueExpressionBase")
-        .def_prop_ro("symbol", [](const ValueExpressionBase& self) { return &self.symbol; }, byrefint);
+        .def_prop_ro(
+            "symbol", [](const ValueExpressionBase& self) { return &self.symbol; }, byrefint);
 
     nb::class_<NamedValueExpression, ValueExpressionBase>(m, "NamedValueExpression");
     nb::class_<HierarchicalValueExpression, ValueExpressionBase>(m, "HierarchicalValueExpression");
@@ -154,19 +155,24 @@ void registerExpressions(nb::module_& m) {
     nb::class_<EmptyArgumentExpression, Expression>(m, "EmptyArgumentExpression");
 
     nb::class_<TypeReferenceExpression, Expression>(m, "TypeReferenceExpression")
-        .def_prop_ro("targetType",
-                     [](const TypeReferenceExpression& self) { return &self.targetType; }, byrefint);
+        .def_prop_ro(
+            "targetType", [](const TypeReferenceExpression& self) { return &self.targetType; },
+            byrefint);
 
     nb::class_<ArbitrarySymbolExpression, Expression>(m, "ArbitrarySymbolExpression")
         .def_ro("symbol", &ArbitrarySymbolExpression::symbol, byrefint);
 
     nb::class_<ClockingEventExpression, Expression>(m, "ClockingEventExpression")
-        .def_prop_ro("timingControl",
-                     [](const ClockingEventExpression& self) { return &self.timingControl; }, byrefint);
+        .def_prop_ro(
+            "timingControl",
+            [](const ClockingEventExpression& self) { return &self.timingControl; }, byrefint);
 
     nb::class_<AssertionInstanceExpression, Expression>(m, "AssertionInstanceExpression")
-        .def_prop_ro("symbol", [](const AssertionInstanceExpression& self) { return &self.symbol; }, byrefint)
-        .def_prop_ro("body", [](const AssertionInstanceExpression& self) { return &self.body; }, byrefint)
+        .def_prop_ro(
+            "symbol", [](const AssertionInstanceExpression& self) { return &self.symbol; },
+            byrefint)
+        .def_prop_ro(
+            "body", [](const AssertionInstanceExpression& self) { return &self.body; }, byrefint)
         .def_ro("arguments", &AssertionInstanceExpression::arguments)
         .def_ro("localVars", &AssertionInstanceExpression::localVars)
         .def_ro("isRecursiveProperty", &AssertionInstanceExpression::isRecursiveProperty);
@@ -187,7 +193,8 @@ void registerExpressions(nb::module_& m) {
 
     nb::class_<DistExpression::DistWeight> distWeight(distExpr, "DistWeight");
     distWeight.def_ro("kind", &DistExpression::DistWeight::kind)
-        .def_prop_ro("expr", [](const DistExpression::DistWeight& self) { return self.expr; }, byrefint);
+        .def_prop_ro(
+            "expr", [](const DistExpression::DistWeight& self) { return self.expr; }, byrefint);
 
     nb::enum_<DistExpression::DistWeight::Kind>(distWeight, "Kind")
         .value("PerValue", DistExpression::DistWeight::PerValue)
@@ -196,10 +203,12 @@ void registerExpressions(nb::module_& m) {
 
     nb::class_<DistExpression::DistItem>(distExpr, "DistItem")
         .def_ro("weight", &DistExpression::DistItem::weight)
-        .def_prop_ro("value", [](const DistExpression::DistItem& self) { return &self.value; }, byrefint);
+        .def_prop_ro(
+            "value", [](const DistExpression::DistItem& self) { return &self.value; }, byrefint);
 
     nb::class_<TaggedUnionExpression, Expression>(m, "TaggedUnionExpression")
-        .def_prop_ro("member", [](const TaggedUnionExpression& self) { return &self.member; }, byrefint)
+        .def_prop_ro(
+            "member", [](const TaggedUnionExpression& self) { return &self.member; }, byrefint)
         .def_ro("valueExpr", &TaggedUnionExpression::valueExpr, byrefint);
 
     nb::class_<UnaryExpression, Expression>(m, "UnaryExpression")
@@ -261,5 +270,6 @@ void registerExpressions(nb::module_& m) {
 
     nb::class_<MemberAccessExpression, Expression>(m, "MemberAccessExpression")
         .def_prop_ro("value", nb::overload_cast<>(&MemberAccessExpression::value), byrefint)
-        .def_prop_ro("member", [](const MemberAccessExpression& self) { return &self.member; }, byrefint);
+        .def_prop_ro(
+            "member", [](const MemberAccessExpression& self) { return &self.member; }, byrefint);
 }

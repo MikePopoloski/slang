@@ -1,7 +1,9 @@
 import gc
-from pyslang.syntax import SyntaxTree
-from pyslang.ast import Compilation, SymbolKind, Lookup, ScriptSession
+
+from pyslang.ast import Compilation, Lookup, ScriptSession, SymbolKind
 from pyslang.driver import Driver
+from pyslang.syntax import SyntaxTree
+
 
 def test_symbol_properties_lifetime():
     """Verify Symbol properties keep Compilation alive after parent references are dropped."""
@@ -31,6 +33,7 @@ endmodule
     assert syntax is not None
     assert declared_type is not None
 
+
 def test_expression_properties_lifetime():
     """Verify Expression child navigation keeps AST alive."""
     tree = SyntaxTree.fromText("""
@@ -43,13 +46,13 @@ endmodule
     comp.addSyntaxTree(tree)
     root = comp.getRoot()
     top = root.lookupName("top")
-    
+
     initial_proc = None
     for member in top.body:
         if member.kind == SymbolKind.ProceduralBlock:
             initial_proc = member
             break
-            
+
     assert initial_proc is not None
     expr_stmt = initial_proc.body
     assign_expr = expr_stmt.expr
@@ -65,6 +68,7 @@ endmodule
     assert left_expr is not None
     assert right_expr is not None
     assert expr_type is not None
+
 
 def test_lookup_unqualified_lifetime():
     """Verify Lookup.unqualified ties lifetime to scope argument."""
@@ -85,6 +89,7 @@ endmodule
     assert top_sym is not None
     assert top_sym.name == "top"
 
+
 def test_driver_member_fields_lifetime():
     """Verify Driver member fields keep Driver alive."""
     driver = Driver()
@@ -99,6 +104,7 @@ def test_driver_member_fields_lifetime():
     assert diag is not None
     assert trees is not None
 
+
 def test_script_session_compilation_lifetime():
     """Verify ScriptSession.compilation keeps ScriptSession alive."""
     session = ScriptSession()
@@ -110,6 +116,7 @@ def test_script_session_compilation_lifetime():
 
     assert comp is not None
     assert comp.getRoot() is not None
+
 
 def test_compilation_builtin_types_lifetime():
     """Verify Compilation built-in types keep Compilation alive."""

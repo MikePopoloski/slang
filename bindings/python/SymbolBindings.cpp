@@ -86,8 +86,8 @@ void registerSymbols(nb::module_& m) {
             [](const Symbol& scopeSym, std::string_view name, bitmask<LookupFlags> flags) {
                 if (!scopeSym.isScope())
                     throw nb::type_error("Expected a Scope symbol");
-                return nb::cast(Lookup::unqualified(scopeSym.as<Scope>(), name, flags),
-                                byrefint, nb::cast(&scopeSym));
+                return nb::cast(Lookup::unqualified(scopeSym.as<Scope>(), name, flags), byrefint,
+                                nb::cast(&scopeSym));
             },
             "scope"_a, "name"_a, "flags"_a = LookupFlags::None)
         .def_static(
@@ -96,22 +96,20 @@ void registerSymbols(nb::module_& m) {
                SourceRange sourceRange, bitmask<LookupFlags> flags) {
                 if (!scopeSym.isScope())
                     throw nb::type_error("Expected a Scope symbol");
-                return nb::cast(
-                    Lookup::unqualifiedAt(scopeSym.as<Scope>(), name, location, sourceRange, flags),
-                    byrefint, nb::cast(&scopeSym));
+                return nb::cast(Lookup::unqualifiedAt(scopeSym.as<Scope>(), name, location,
+                                                      sourceRange, flags),
+                                byrefint, nb::cast(&scopeSym));
             },
-            "scope"_a, "name"_a, "location"_a, "sourceRange"_a,
-            "flags"_a = LookupFlags::None)
+            "scope"_a, "name"_a, "location"_a, "sourceRange"_a, "flags"_a = LookupFlags::None)
         .def_static("findClass", &Lookup::findClass, byref, "name"_a, "context"_a,
-                    "requireInterfaceClass"_a = std::optional<DiagCode>{},
-                    nb::keep_alive<0, 2>())
+                    "requireInterfaceClass"_a = std::optional<DiagCode>{}, nb::keep_alive<0, 2>())
         .def_static(
             "getContainingClass",
             [](const Symbol& scopeSym) {
                 if (!scopeSym.isScope())
                     throw nb::type_error("Expected a Scope symbol");
-                return nb::cast(Lookup::getContainingClass(scopeSym.as<Scope>()),
-                                byrefint, nb::cast(&scopeSym));
+                return nb::cast(Lookup::getContainingClass(scopeSym.as<Scope>()), byrefint,
+                                nb::cast(&scopeSym));
             },
             "scope"_a)
         .def_static("getVisibility", &Lookup::getVisibility, "symbol"_a)
@@ -166,10 +164,11 @@ void registerSymbols(nb::module_& m) {
         .def_prop_ro("isUninstantiated", &Scope::isUninstantiated)
         .def("__eq__", [](const Scope& self, const Scope& other) { return &self == &other; })
         .def("__hash__", [](const Scope& self) { return std::hash<const Scope*>()(&self); })
-        .def("__repr__", [](const Scope& self) {
-            const Symbol& sym = self.asSymbol();
-            return fmt::format("Scope(SymbolKind.{}, \"{}\")", toString(sym.kind), sym.name);
-        })
+        .def("__repr__",
+             [](const Scope& self) {
+                 const Symbol& sym = self.asSymbol();
+                 return fmt::format("Scope(SymbolKind.{}, \"{}\")", toString(sym.kind), sym.name);
+             })
         .def(
             "find", [](const Scope& self, std::string_view arg) { return self.find(arg); },
             byrefint)
