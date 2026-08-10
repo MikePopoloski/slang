@@ -261,28 +261,34 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
             "options"_a = AnalysisOptions())
         .def(
             "addProcListener",
-            [](PyAnalysisManager& self, nb::callable cb) {
+            [](PyAnalysisManager& self, nb::object cb) {
+                size_t idx = self.listeners.size();
                 self.listeners.push_back(cb);
-                self.manager.addListener([cb, &self](const AnalyzedProcedure& proc) {
-                    cb(nb::cast(&proc, nb::rv_policy::reference_internal, nb::find(&self)));
+                self.manager.addListener([&self, idx](const AnalyzedProcedure& proc) {
+                    nb::handle fn = self.listeners[idx];
+                    fn(nb::cast(&proc, nb::rv_policy::reference_internal, nb::find(&self)));
                 });
             },
             "listener"_a)
         .def(
             "addScopeListener",
-            [](PyAnalysisManager& self, nb::callable cb) {
+            [](PyAnalysisManager& self, nb::object cb) {
+                size_t idx = self.listeners.size();
                 self.listeners.push_back(cb);
-                self.manager.addListener([cb, &self](const AnalyzedScope& scope) {
-                    cb(nb::cast(&scope, nb::rv_policy::reference_internal, nb::find(&self)));
+                self.manager.addListener([&self, idx](const AnalyzedScope& scope) {
+                    nb::handle fn = self.listeners[idx];
+                    fn(nb::cast(&scope, nb::rv_policy::reference_internal, nb::find(&self)));
                 });
             },
             "listener"_a)
         .def(
             "addAssertionListener",
-            [](PyAnalysisManager& self, nb::callable cb) {
+            [](PyAnalysisManager& self, nb::object cb) {
+                size_t idx = self.listeners.size();
                 self.listeners.push_back(cb);
-                self.manager.addListener([cb, &self](const AnalyzedAssertion& aa) {
-                    cb(nb::cast(&aa, nb::rv_policy::reference_internal, nb::find(&self)));
+                self.manager.addListener([&self, idx](const AnalyzedAssertion& aa) {
+                    nb::handle fn = self.listeners[idx];
+                    fn(nb::cast(&aa, nb::rv_policy::reference_internal, nb::find(&self)));
                 });
             },
             "listener"_a)

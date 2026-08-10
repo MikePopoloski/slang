@@ -82,19 +82,21 @@ void registerTypes(nb::module_& m) {
         .def_prop_ro("integralFlags", &Type::getIntegralFlags)
         .def_prop_ro("defaultValue", &Type::getDefaultValue)
         .def_prop_ro("fixedRange", &Type::getFixedRange)
-        .def_prop_ro("arrayElementType", &Type::getArrayElementType)
-        .def_prop_ro("associativeIndexType", &Type::getAssociativeIndexType)
+        .def_prop_ro("arrayElementType", &Type::getArrayElementType, byrefint)
+        .def_prop_ro("associativeIndexType", &Type::getAssociativeIndexType, byrefint)
         .def_prop_ro("canBeStringLike", &Type::canBeStringLike)
         .def_prop_ro("isIterable", &Type::isIterable)
         .def_prop_ro("isValidForDPIReturn", &Type::isValidForDPIReturn)
         .def_prop_ro("isValidForDPIArg", &Type::isValidForDPIArg)
         .def_prop_ro("isValidForSequence", &Type::isValidForSequence)
+        .def("__eq__", [](const Type& self, const Type& other) { return &self == &other; })
+        .def("__hash__", [](const Type& self) { return std::hash<const Type*>()(&self); })
         .def("__repr__", &Type::toString);
 
     nb::class_<NetType, Symbol> netType(m, "NetType");
-    netType.def_ro("declaredType", &NetType::declaredType)
+    netType.def_ro("declaredType", &NetType::declaredType, byrefint)
         .def_ro("netKind", &NetType::netKind)
-        .def_prop_ro("resolutionFunction", &NetType::getResolutionFunction)
+        .def_prop_ro("resolutionFunction", &NetType::getResolutionFunction, byrefint)
         .def_prop_ro("isError", &NetType::isError)
         .def_prop_ro("isBuiltIn", &NetType::isBuiltIn)
         .def_static("getSimulatedNetType", &NetType::getSimulatedNetType, byrefint, "internal"_a,
@@ -145,10 +147,10 @@ void registerTypes(nb::module_& m) {
         .def("toString", &TypePrinter::toString);
 
     nb::class_<DeclaredType>(m, "DeclaredType")
-        .def_prop_ro("type", &DeclaredType::getType)
-        .def_prop_ro("typeSyntax", &DeclaredType::getTypeSyntax)
-        .def_prop_ro("initializer", &DeclaredType::getInitializer)
-        .def_prop_ro("initializerSyntax", &DeclaredType::getInitializerSyntax)
+        .def_prop_ro("type", &DeclaredType::getType, byrefint)
+        .def_prop_ro("typeSyntax", &DeclaredType::getTypeSyntax, byrefint)
+        .def_prop_ro("initializer", &DeclaredType::getInitializer, byrefint)
+        .def_prop_ro("initializerSyntax", &DeclaredType::getInitializerSyntax, byrefint)
         .def_prop_ro("initializerLocation", &DeclaredType::getInitializerLocation)
         .def_prop_ro("isEvaluating", &DeclaredType::isEvaluating)
         .def_prop_ro("resolvedDimensions", &DeclaredType::getResolvedDimensions);
@@ -188,32 +190,32 @@ void registerTypes(nb::module_& m) {
         .export_values();
 
     scopeClass<EnumType, IntegralType>(m, "EnumType")
-        .def_prop_ro("baseType", [](const EnumType& self) { return &self.baseType; })
+        .def_prop_ro("baseType", [](const EnumType& self) { return &self.baseType; }, byrefint)
         .def_ro("systemId", &EnumType::systemId);
 
     nb::class_<PackedArrayType, IntegralType>(m, "PackedArrayType")
-        .def_prop_ro("elementType", [](const PackedArrayType& self) { return &self.elementType; })
+        .def_prop_ro("elementType", [](const PackedArrayType& self) { return &self.elementType; }, byrefint)
         .def_ro("range", &PackedArrayType::range);
 
     nb::class_<FixedSizeUnpackedArrayType, Type>(m, "FixedSizeUnpackedArrayType")
         .def_prop_ro("elementType",
-                     [](const FixedSizeUnpackedArrayType& self) { return &self.elementType; })
+                     [](const FixedSizeUnpackedArrayType& self) { return &self.elementType; }, byrefint)
         .def_ro("range", &FixedSizeUnpackedArrayType::range);
 
     nb::class_<DynamicArrayType, Type>(m, "DynamicArrayType")
-        .def_prop_ro("elementType", [](const DynamicArrayType& self) { return &self.elementType; });
+        .def_prop_ro("elementType", [](const DynamicArrayType& self) { return &self.elementType; }, byrefint);
 
     nb::class_<DPIOpenArrayType, Type>(m, "DPIOpenArrayType")
         .def_ro("isPacked", &DPIOpenArrayType::isPacked)
-        .def_prop_ro("elementType", [](const DPIOpenArrayType& self) { return &self.elementType; });
+        .def_prop_ro("elementType", [](const DPIOpenArrayType& self) { return &self.elementType; }, byrefint);
 
     nb::class_<AssociativeArrayType, Type>(m, "AssociativeArrayType")
         .def_prop_ro("elementType",
-                     [](const AssociativeArrayType& self) { return &self.elementType; })
-        .def_prop_ro("indexType", [](const AssociativeArrayType& self) { return self.indexType; });
+                     [](const AssociativeArrayType& self) { return &self.elementType; }, byrefint)
+        .def_prop_ro("indexType", [](const AssociativeArrayType& self) { return self.indexType; }, byrefint);
 
     nb::class_<QueueType, Type>(m, "QueueType")
-        .def_prop_ro("elementType", [](const QueueType& self) { return &self.elementType; })
+        .def_prop_ro("elementType", [](const QueueType& self) { return &self.elementType; }, byrefint)
         .def_ro("maxBound", &QueueType::maxBound);
 
     scopeClass<PackedStructType, IntegralType>(m, "PackedStructType")
@@ -246,8 +248,8 @@ void registerTypes(nb::module_& m) {
     SIMPLE_TYPE(ErrorType);
 
     nb::class_<VirtualInterfaceType, Type>(m, "VirtualInterfaceType")
-        .def_prop_ro("iface", [](const VirtualInterfaceType& self) { return &self.iface; })
-        .def_prop_ro("modport", [](const VirtualInterfaceType& self) { return self.modport; });
+        .def_prop_ro("iface", [](const VirtualInterfaceType& self) { return &self.iface; }, byrefint)
+        .def_prop_ro("modport", [](const VirtualInterfaceType& self) { return self.modport; }, byrefint);
 
     EXPOSE_ENUM(m, ForwardTypeRestriction);
 
@@ -255,38 +257,37 @@ void registerTypes(nb::module_& m) {
         .def_ro("typeRestriction", &ForwardingTypedefSymbol::typeRestriction)
         .def_ro("visibility", &ForwardingTypedefSymbol::visibility)
         .def_prop_ro("nextForwardDecl",
-                     [](const ForwardingTypedefSymbol& self) { return self.getNextForwardDecl(); });
+                     [](const ForwardingTypedefSymbol& self) { return self.getNextForwardDecl(); }, byrefint);
 
     nb::class_<TypeAliasType, Type>(m, "TypeAliasType")
-        .def_prop_ro("targetType", [](const TypeAliasType& self) { return &self.targetType; })
+        .def_prop_ro("targetType", [](const TypeAliasType& self) { return &self.targetType; }, byrefint)
         .def_ro("visibility", &TypeAliasType::visibility)
         .def_prop_ro("firstForwardDecl",
-                     [](const TypeAliasType& self) { return self.getFirstForwardDecl(); });
+                     [](const TypeAliasType& self) { return self.getFirstForwardDecl(); }, byrefint);
 
     scopeClass<ClassType, Type>(m, "ClassType")
-        .def_ro("genericClass", &ClassType::genericClass)
+        .def_ro("genericClass", &ClassType::genericClass, byrefint)
         .def_ro("isAbstract", &ClassType::isAbstract)
         .def_ro("isInterface", &ClassType::isInterface)
         .def_ro("isFinal", &ClassType::isFinal)
-        .def_ro("thisVar", &ClassType::thisVar)
-        .def_prop_ro("baseClass", &ClassType::getBaseClass)
-        .def_prop_ro("implementedInterfaces", &ClassType::getImplementedInterfaces)
-        .def_prop_ro("baseConstructorCall", &ClassType::getBaseConstructorCall)
-        .def_prop_ro("constructor", &ClassType::getConstructor)
-        .def_prop_ro("firstForwardDecl", &ClassType::getFirstForwardDecl)
+        .def_ro("thisVar", &ClassType::thisVar, byrefint)
+        .def_prop_ro("baseClass", &ClassType::getBaseClass, byrefint)
+        .def_prop_ro("implementedInterfaces", &ClassType::getImplementedInterfaces, byrefint)
+        .def_prop_ro("baseConstructorCall", &ClassType::getBaseConstructorCall, byrefint)
+        .def_prop_ro("constructor", &ClassType::getConstructor, byrefint)
+        .def_prop_ro("firstForwardDecl", &ClassType::getFirstForwardDecl, byrefint)
         .def_prop_ro("properties", [](const ClassType& self) {
             nb::list result;
             for (auto& prop : self.properties())
-                result.append(nb::cast(&prop));
+                result.append(nb::cast(&prop, byrefint, nb::cast(&self)));
             return result;
         });
 
     nb::class_<GenericClassDefSymbol, Symbol>(m, "GenericClassDefSymbol")
         .def_ro("isInterface", &GenericClassDefSymbol::isInterface)
-        .def_prop_ro("defaultSpecialization", &GenericClassDefSymbol::getDefaultSpecialization)
-        .def_prop_ro("invalidSpecialization", &GenericClassDefSymbol::getInvalidSpecialization)
-        .def_prop_ro("defaultSpecialization", &GenericClassDefSymbol::getDefaultSpecialization)
-        .def_prop_ro("firstForwardDecl", &GenericClassDefSymbol::getFirstForwardDecl);
+        .def_prop_ro("defaultSpecialization", &GenericClassDefSymbol::getDefaultSpecialization, byrefint)
+        .def_prop_ro("invalidSpecialization", &GenericClassDefSymbol::getInvalidSpecialization, byrefint)
+        .def_prop_ro("firstForwardDecl", &GenericClassDefSymbol::getFirstForwardDecl, byrefint);
 
     nb::enum_<ConstraintBlockFlags>(m, "ConstraintBlockFlags", nb::is_arithmetic())
         .value("None_", ConstraintBlockFlags::None)

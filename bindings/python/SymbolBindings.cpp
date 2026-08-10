@@ -81,13 +81,39 @@ void registerSymbols(nb::module_& m) {
 
     nb::class_<Lookup>(m, "Lookup")
         .def_static("name", &Lookup::name, "syntax"_a, "context"_a, "flags"_a, "result"_a)
-        .def_static("unqualified", &Lookup::unqualified, byrefint, "scope"_a, "name"_a,
-                    "flags"_a = LookupFlags::None)
-        .def_static("unqualifiedAt", &Lookup::unqualifiedAt, byrefint, "scope"_a, "name"_a,
-                    "location"_a, "sourceRange"_a, "flags"_a = LookupFlags::None)
-        .def_static("findClass", &Lookup::findClass, byrefint, "name"_a, "context"_a,
-                    "requireInterfaceClass"_a = std::optional<DiagCode>{})
-        .def_static("getContainingClass", &Lookup::getContainingClass, byrefint, "scope"_a)
+        .def_static(
+            "unqualified",
+            [](const Symbol& scopeSym, std::string_view name, bitmask<LookupFlags> flags) {
+                if (!scopeSym.isScope())
+                    throw nb::type_error("Expected a Scope symbol");
+                return nb::cast(Lookup::unqualified(scopeSym.as<Scope>(), name, flags),
+                                byrefint, nb::cast(&scopeSym));
+            },
+            "scope"_a, "name"_a, "flags"_a = LookupFlags::None)
+        .def_static(
+            "unqualifiedAt",
+            [](const Symbol& scopeSym, std::string_view name, LookupLocation location,
+               SourceRange sourceRange, bitmask<LookupFlags> flags) {
+                if (!scopeSym.isScope())
+                    throw nb::type_error("Expected a Scope symbol");
+                return nb::cast(
+                    Lookup::unqualifiedAt(scopeSym.as<Scope>(), name, location, sourceRange, flags),
+                    byrefint, nb::cast(&scopeSym));
+            },
+            "scope"_a, "name"_a, "location"_a, "sourceRange"_a,
+            "flags"_a = LookupFlags::None)
+        .def_static("findClass", &Lookup::findClass, byref, "name"_a, "context"_a,
+                    "requireInterfaceClass"_a = std::optional<DiagCode>{},
+                    nb::keep_alive<0, 2>())
+        .def_static(
+            "getContainingClass",
+            [](const Symbol& scopeSym) {
+                if (!scopeSym.isScope())
+                    throw nb::type_error("Expected a Scope symbol");
+                return nb::cast(Lookup::getContainingClass(scopeSym.as<Scope>()),
+                                byrefint, nb::cast(&scopeSym));
+            },
+            "scope"_a)
         .def_static("getVisibility", &Lookup::getVisibility, "symbol"_a)
         .def_static("isVisibleFrom", &Lookup::isVisibleFrom, "symbol"_a, "scope"_a)
         .def_static("isAccessibleFrom", &Lookup::isAccessibleFrom, "target"_a, "sourceScope"_a)
@@ -106,15 +132,15 @@ void registerSymbols(nb::module_& m) {
         .def_ro("kind", &Symbol::kind)
         .def_ro("name", &Symbol::name)
         .def_ro("location", &Symbol::location)
-        .def_prop_ro("parentScope", &Symbol::getParentScope)
-        .def_prop_ro("syntax", &Symbol::getSyntax)
+        .def_prop_ro("parentScope", &Symbol::getParentScope, byrefint)
+        .def_prop_ro("syntax", &Symbol::getSyntax, byrefint)
         .def_prop_ro("isScope", &Symbol::isScope)
         .def_prop_ro("isType", &Symbol::isType)
         .def_prop_ro("isValue", &Symbol::isValue)
-        .def_prop_ro("declaredType", &Symbol::getDeclaredType)
-        .def_prop_ro("declaringDefinition", &Symbol::getDeclaringDefinition)
+        .def_prop_ro("declaredType", &Symbol::getDeclaredType, byrefint)
+        .def_prop_ro("declaringDefinition", &Symbol::getDeclaringDefinition, byrefint)
         .def_prop_ro("randMode", &Symbol::getRandMode)
-        .def_prop_ro("nextSibling", &Symbol::getNextSibling)
+        .def_prop_ro("nextSibling", &Symbol::getNextSibling, byrefint)
         .def_prop_ro("sourceLibrary", &Symbol::getSourceLibrary)
         .def_prop_ro("hierarchicalPath", &Symbol::getHierarchicalPath)
         .def_prop_ro("lexicalPath", &Symbol::getLexicalPath)
@@ -124,6 +150,8 @@ void registerSymbols(nb::module_& m) {
              nb::overload_cast<LookupLocation>(&Symbol::isDeclaredBefore, nb::const_), "location"_a)
         .def("visit", &pyASTVisit<Symbol>, "f"_a = nb::none(), "lookup_table"_a = nb::none(),
              PyASTVisitor::doc)
+        .def("__eq__", [](const Symbol& self, const Symbol& other) { return &self == &other; })
+        .def("__hash__", [](const Symbol& self) { return std::hash<const Symbol*>()(&self); })
         .def("__repr__", [](const Symbol& self) {
             return fmt::format("Symbol(SymbolKind.{}, \"{}\")", toString(self.kind), self.name);
         });
@@ -136,6 +164,12 @@ void registerSymbols(nb::module_& m) {
         .def_prop_ro("containingInstance", &Scope::getContainingInstance)
         .def_prop_ro("compilationUnit", &Scope::getCompilationUnit)
         .def_prop_ro("isUninstantiated", &Scope::isUninstantiated)
+        .def("__eq__", [](const Scope& self, const Scope& other) { return &self == &other; })
+        .def("__hash__", [](const Scope& self) { return std::hash<const Scope*>()(&self); })
+        .def("__repr__", [](const Scope& self) {
+            const Symbol& sym = self.asSymbol();
+            return fmt::format("Scope(SymbolKind.{}, \"{}\")", toString(sym.kind), sym.name);
+        })
         .def(
             "find", [](const Scope& self, std::string_view arg) { return self.find(arg); },
             byrefint)
@@ -393,7 +427,7 @@ void registerSymbols(nb::module_& m) {
              byrefint, "port"_a);
 
     scopeClass<InstanceBodySymbol, Symbol>(m, "InstanceBodySymbol")
-        .def_ro("parentInstance", &InstanceBodySymbol::parentInstance)
+        .def_ro("parentInstance", &InstanceBodySymbol::parentInstance, byrefint)
         .def_prop_ro("parameters",
                      [](const InstanceBodySymbol& self) {
                          // getParameters() yields ParameterSymbolBase pointers, which
@@ -403,16 +437,16 @@ void registerSymbols(nb::module_& m) {
                          // subobject instead. For ParameterSymbol or TypeParameterSymbol that
                          // Symbol is the concrete object at offset 0, so the Symbol type_hook
                          // downcasts it to the concrete parameter symbol type in Python. The
-                         // symbols are exposed non-owning (byref); they live in the
+                         // symbols are exposed non-owning (byrefint) tied to self; they live in the
                          // compilation arena. Appending directly avoids an intermediate
                          // std::vector.
                          nb::list result;
                          for (const ParameterSymbolBase* param : self.getParameters())
-                             result.append(nb::cast(&param->symbol, byref));
+                             result.append(nb::cast(&param->symbol, byrefint, nb::cast(&self)));
                          return result;
                      })
-        .def_prop_ro("portList", &InstanceBodySymbol::getPortList)
-        .def_prop_ro("definition", &InstanceBodySymbol::getDefinition)
+        .def_prop_ro("portList", &InstanceBodySymbol::getPortList, byrefint)
+        .def_prop_ro("definition", &InstanceBodySymbol::getDefinition, byrefint)
         .def("findPort", &InstanceBodySymbol::findPort, byrefint, "portName"_a)
         .def("hasSameType", &InstanceBodySymbol::hasSameType, "other"_a);
 

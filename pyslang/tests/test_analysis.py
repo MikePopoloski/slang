@@ -620,6 +620,9 @@ endmodule
     assert len(procedures) == 1
     assert procedures[0].analyzedSymbol is not None
 
+    del procedures, compilation, tree
+    gc.collect()
+
 
 def test_listener_cyclic_gc():
     """Test that cyclic references involving AnalysisManager and Python listeners can be collected."""
@@ -648,5 +651,5 @@ endmodule
     owner.manager.analyze(compilation)
     assert len(owner.procs) == 1
 
-    del owner
+    del owner, compilation, tree
     gc.collect()
