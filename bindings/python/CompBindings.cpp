@@ -36,17 +36,13 @@ namespace {
 ///      references are released without relying on a C++ destructor (a direct
 ///      Compilation() instantiates the base type, not a trampoline subclass, so
 ///      any extra C++ member destructor would not run).
-void keepAliveInDict(Compilation& self, nb::handle obj) {
+void keepAliveInDict(nb::handle self, nb::handle obj) {
     static constexpr const char* key = "_pyslang_keepalive";
-    nb::object pySelf = nb::find(self);
-    if (!pySelf.is_valid())
-        throw std::runtime_error("Compilation Python object not found for keep-alive");
-
     nb::list lst;
-    if (nb::hasattr(pySelf, key))
-        lst = nb::borrow<nb::list>(nb::getattr(pySelf, key));
+    if (nb::hasattr(self, key))
+        lst = nb::borrow<nb::list>(nb::getattr(self, key));
     else
-        nb::setattr(pySelf, key, lst);
+        nb::setattr(self, key, lst);
     lst.append(obj);
 }
 
@@ -230,18 +226,18 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .def("getRoot", nb::overload_cast<>(&Compilation::getRoot), byrefint)
         .def(
             "addSystemSubroutine",
-            [](Compilation& self, nb::object pySub) {
+            [](nb::handle self, nb::object pySub) {
                 auto sub = wrapSubroutine(pySub);
                 keepAliveInDict(self, pySub);
-                self.addSystemSubroutine(sub);
+                nb::cast<Compilation&>(self).addSystemSubroutine(sub);
             },
             "subroutine"_a)
         .def(
             "addSystemMethod",
-            [](Compilation& self, SymbolKind typeKind, nb::object pyMethod) {
+            [](nb::handle self, SymbolKind typeKind, nb::object pyMethod) {
                 auto sub = wrapSubroutine(pyMethod);
                 keepAliveInDict(self, pyMethod);
-                self.addSystemMethod(typeKind, sub);
+                nb::cast<Compilation&>(self).addSystemMethod(typeKind, sub);
             },
             "typeKind"_a, "method"_a)
         .def("getSystemSubroutine",

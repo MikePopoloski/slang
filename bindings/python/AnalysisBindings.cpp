@@ -233,7 +233,7 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
         .def_rw("maxCaseAnalysisSteps", &AnalysisOptions::maxCaseAnalysisSteps)
         .def_rw("maxLoopAnalysisSteps", &AnalysisOptions::maxLoopAnalysisSteps);
 
-    nb::class_<AnalyzedScope>(m, "AnalyzedScope")
+    nb::class_<AnalyzedScope>(m, "AnalyzedScope", nb::dynamic_attr())
         .def_prop_ro("scope", [](const AnalyzedScope& s) { return &s.scope; })
         .def_ro("procedures", &AnalyzedScope::procedures);
 
@@ -266,7 +266,9 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
                 self.listeners.push_back(cb);
                 self.manager.addListener([&self, idx](const AnalyzedProcedure& proc) {
                     nb::handle fn = self.listeners[idx];
-                    fn(nb::cast(&proc, nb::rv_policy::reference_internal, nb::find(&self)));
+                    nb::object pyProc = nb::cast(&proc, byref);
+                    nb::setattr(pyProc, "_manager", nb::find(&self));
+                    fn(pyProc);
                 });
             },
             "listener"_a)
@@ -277,7 +279,9 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
                 self.listeners.push_back(cb);
                 self.manager.addListener([&self, idx](const AnalyzedScope& scope) {
                     nb::handle fn = self.listeners[idx];
-                    fn(nb::cast(&scope, nb::rv_policy::reference_internal, nb::find(&self)));
+                    nb::object pyScope = nb::cast(&scope, byref);
+                    nb::setattr(pyScope, "_manager", nb::find(&self));
+                    fn(pyScope);
                 });
             },
             "listener"_a)
@@ -288,7 +292,9 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
                 self.listeners.push_back(cb);
                 self.manager.addListener([&self, idx](const AnalyzedAssertion& aa) {
                     nb::handle fn = self.listeners[idx];
-                    fn(nb::cast(&aa, nb::rv_policy::reference_internal, nb::find(&self)));
+                    nb::object pyAA = nb::cast(&aa, byref);
+                    nb::setattr(pyAA, "_manager", nb::find(&self));
+                    fn(pyAA);
                 });
             },
             "listener"_a)
@@ -352,7 +358,7 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
                      [](const AnalyzedProcedure::ImplicitEventReadSet& s)
                          -> std::span<const ReadRange> { return s.reads; });
 
-    nb::class_<AnalyzedProcedure>(m, "AnalyzedProcedure")
+    nb::class_<AnalyzedProcedure>(m, "AnalyzedProcedure", nb::dynamic_attr())
         .def_ro("analyzedSymbol", &AnalyzedProcedure::analyzedSymbol)
         .def_ro("parentProcedure", &AnalyzedProcedure::parentProcedure)
         .def_prop_ro("inferredClock", &AnalyzedProcedure::getInferredClock)
@@ -363,7 +369,7 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
         .def_prop_ro("implicitEventReadSets", &AnalyzedProcedure::getImplicitEventReadSets)
         .def_prop_ro("sensitivityList", &AnalyzedProcedure::getSensitivityList);
 
-    nb::class_<AnalyzedAssertion>(m, "AnalyzedAssertion")
+    nb::class_<AnalyzedAssertion>(m, "AnalyzedAssertion", nb::dynamic_attr())
         .def_ro("containingSymbol", &AnalyzedAssertion::containingSymbol)
         .def_ro("procedure", &AnalyzedAssertion::procedure)
         .def_ro("astNode", &AnalyzedAssertion::astNode)
