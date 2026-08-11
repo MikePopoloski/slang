@@ -609,12 +609,12 @@ endmodule
 
     procedures = []
 
-    def run_analysis():
+    def run_analysis(comp, procs):
         am = AnalysisManager()
-        am.addProcListener(lambda proc: procedures.append(proc))
-        am.analyze(compilation)
+        am.addProcListener(lambda proc: procs.append(proc))
+        am.analyze(comp)
 
-    run_analysis()
+    run_analysis(compilation, procedures)
     gc.collect()
 
     assert len(procedures) == 1
