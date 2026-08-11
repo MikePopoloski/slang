@@ -392,15 +392,16 @@ void registerSyntax(py::module_& syntax, py::module_& parsing) {
         .def("__str__", &SyntaxNode::toString)
         .def(
             "to_json",
-            [](const SyntaxNode& self, CSTJsonMode mode = CSTJsonMode::Full) {
+            [](const SyntaxNode& self, CSTJsonMode mode, const SourceManager* sourceManager) {
                 JsonWriter writer;
                 writer.setPrettyPrint(true);
                 CSTSerializer serializer(writer, mode);
-                serializer.serialize(self);
+                serializer.serialize(self, sourceManager);
                 return std::string(writer.view());
             },
-            "mode"_a = CSTJsonMode::Full,
-            "Convert this syntax node to JSON string with optional formatting mode");
+            "mode"_a = CSTJsonMode::Full, "sourceManager"_a = nullptr,
+            "Convert this syntax node to JSON string with optional formatting mode and source "
+            "manager");
 
     py::classh<IncludeMetadata>(m, "IncludeMetadata")
         .def(py::init<>())
