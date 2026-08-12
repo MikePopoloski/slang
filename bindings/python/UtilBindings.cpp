@@ -22,101 +22,100 @@
 
 namespace fs = std::filesystem;
 
-std::vector<py::object> argConverter(const Diagnostic& self) {
-    std::vector<py::object> results;
+std::vector<nb::object> argConverter(const Diagnostic& self) {
+    std::vector<nb::object> results;
     for (auto& argVar : self.args) {
         results.push_back(std::visit(
             [&](auto&& arg) {
                 using T = std::decay_t<decltype(arg)>;
                 if constexpr (std::is_same_v<T, Diagnostic::CustomArgType>)
-                    return py::cast(std::any_cast<const Type*>(arg.second), byrefint,
-                                    py::cast(&self));
+                    return nb::cast(std::any_cast<const Type*>(arg.second), byrefint,
+                                    nb::cast(&self));
                 else
-                    return py::cast(arg);
+                    return nb::cast(arg);
             },
             argVar));
     }
     return results;
 }
 
-std::string argFormatter(const DiagnosticEngine& self, py::object obj) {
+std::string argFormatter(const DiagnosticEngine& self, nb::object obj) {
     try {
-        auto arg = obj.cast<const Type*>();
+        auto arg = nb::cast<const Type*>(obj);
         return self.formatArg(Diagnostic::CustomArgType{SLANG_TYPEOF(const Type*), arg});
     }
-    catch (const py::cast_error&) {
-        auto arg = obj.cast<Diagnostic::Arg>();
+    catch (const nb::cast_error&) {
+        auto arg = nb::cast<Diagnostic::Arg>(obj);
         return self.formatArg(arg);
     }
 }
 
-void registerText(py::module_& m) {
-    py::native_enum<SourceManager::BufferKind>(m, "BufferKind", "enum.Enum")
+void registerText(nb::module_& m) {
+    nb::enum_<SourceManager::BufferKind>(m, "BufferKind")
         .value("Unknown", SourceManager::BufferKind::Unknown)
         .value("DesignFile", SourceManager::BufferKind::DesignFile)
         .value("LibraryFile", SourceManager::BufferKind::LibraryFile)
         .value("LibraryMap", SourceManager::BufferKind::LibraryMap)
         .value("IncludeFile", SourceManager::BufferKind::IncludeFile)
         .value("Macro", SourceManager::BufferKind::Macro)
-        .value("MacroArg", SourceManager::BufferKind::MacroArg)
-        .finalize();
+        .value("MacroArg", SourceManager::BufferKind::MacroArg);
 
-    py::classh<BufferID>(m, "BufferID")
-        .def(py::init<>())
-        .def_property_readonly("id", &BufferID::getId)
+    nb::class_<BufferID>(m, "BufferID")
+        .def(nb::init<>())
+        .def_prop_ro("id", &BufferID::getId)
         .def_static("getPlaceholder", &BufferID::getPlaceholder)
-        .def_property_readonly_static(
-            "placeholder", [](py::object /* self or cls */) { return BufferID::getPlaceholder(); })
-        .def(py::self == py::self)
-        .def(py::self != py::self)
-        .def(py::self < py::self)
-        .def(py::self <= py::self)
-        .def(py::self > py::self)
-        .def(py::self >= py::self)
-        .def(py::hash(py::self))
+        .def_prop_ro_static("placeholder",
+                            [](nb::object /* self or cls */) { return BufferID::getPlaceholder(); })
+        .def(nb::self == nb::self)
+        .def(nb::self != nb::self)
+        .def(nb::self < nb::self)
+        .def(nb::self <= nb::self)
+        .def(nb::self > nb::self)
+        .def(nb::self >= nb::self)
+        .def(nb::hash(nb::self))
         .def("__bool__", &BufferID::valid)
         .def("__repr__",
              [](const BufferID& self) { return fmt::format("BufferID({})", self.getId()); });
 
-    py::classh<SourceLocation>(m, "SourceLocation")
-        .def(py::init<>())
-        .def(py::init<BufferID, size_t>(), "buffer"_a, "offset"_a)
-        .def_property_readonly("buffer", &SourceLocation::buffer)
-        .def_property_readonly("offset", &SourceLocation::offset)
-        .def_readonly_static("NoLocation", &SourceLocation::NoLocation)
-        .def(py::self == py::self)
-        .def(py::self != py::self)
-        .def(py::self < py::self)
-        .def(py::self <= py::self)
-        .def(py::self > py::self)
-        .def(py::self >= py::self)
-        .def(py::hash(py::self))
+    nb::class_<SourceLocation>(m, "SourceLocation")
+        .def(nb::init<>())
+        .def(nb::init<BufferID, size_t>(), "buffer"_a, "offset"_a)
+        .def_prop_ro("buffer", &SourceLocation::buffer)
+        .def_prop_ro("offset", &SourceLocation::offset)
+        .def_ro_static("NoLocation", &SourceLocation::NoLocation)
+        .def(nb::self == nb::self)
+        .def(nb::self != nb::self)
+        .def(nb::self < nb::self)
+        .def(nb::self <= nb::self)
+        .def(nb::self > nb::self)
+        .def(nb::self >= nb::self)
+        .def(nb::hash(nb::self))
         .def("__bool__", &SourceLocation::valid)
         .def("__repr__", [](const SourceLocation& self) {
             return fmt::format("SourceLocation({}, {})", self.buffer().getId(), self.offset());
         });
 
-    py::classh<SourceRange>(m, "SourceRange")
-        .def(py::init<>())
-        .def(py::init<SourceLocation, SourceLocation>(), "startLoc"_a, "endLoc"_a)
-        .def_property_readonly("start", &SourceRange::start)
-        .def_property_readonly("end", &SourceRange::end)
-        .def(py::self == py::self)
-        .def(py::self != py::self);
+    nb::class_<SourceRange>(m, "SourceRange")
+        .def(nb::init<>())
+        .def(nb::init<SourceLocation, SourceLocation>(), "startLoc"_a, "endLoc"_a)
+        .def_prop_ro("start", &SourceRange::start)
+        .def_prop_ro("end", &SourceRange::end)
+        .def(nb::self == nb::self)
+        .def(nb::self != nb::self);
 
-    py::classh<SourceLibrary>(m, "SourceLibrary")
-        .def(py::init<>())
-        .def_readonly("name", &SourceLibrary::name);
+    nb::class_<SourceLibrary>(m, "SourceLibrary")
+        .def(nb::init<>())
+        .def_ro("name", &SourceLibrary::name);
 
-    py::classh<SourceBuffer>(m, "SourceBuffer")
-        .def(py::init<>())
-        .def_readonly("id", &SourceBuffer::id)
-        .def_readonly("library", &SourceBuffer::library, byrefint)
-        .def_readonly("data", &SourceBuffer::data)
+    nb::class_<SourceBuffer>(m, "SourceBuffer")
+        .def(nb::init<>())
+        .def_ro("id", &SourceBuffer::id)
+        .def_ro("library", &SourceBuffer::library, byrefint)
+        .def_ro("data", &SourceBuffer::data)
         .def("__bool__", &SourceBuffer::operator bool);
 
-    py::classh<SourceManager>(m, "SourceManager")
-        .def(py::init<>())
+    nb::class_<SourceManager>(m, "SourceManager")
+        .def(nb::init<>())
         .def(
             "addSystemDirectories",
             [](SourceManager& self, std::string_view path) {
@@ -158,11 +157,11 @@ void registerText(py::module_& m) {
         .def("getFullyExpandedLoc", &SourceManager::getFullyExpandedLoc, "location"_a)
         .def("getSourceText", &SourceManager::getSourceText, "buffer"_a)
         .def("assignText",
-             py::overload_cast<std::string_view, SourceLocation, const SourceLibrary*>(
+             nb::overload_cast<std::string_view, SourceLocation, const SourceLibrary*>(
                  &SourceManager::assignText),
              "text"_a, "includedFrom"_a = SourceLocation(), "library"_a = nullptr)
         .def("assignText",
-             py::overload_cast<std::string_view, std::string_view, SourceLocation,
+             nb::overload_cast<std::string_view, std::string_view, SourceLocation,
                                const SourceLibrary*>(&SourceManager::assignText),
              "path"_a, "text"_a, "includedFrom"_a = SourceLocation(), "library"_a = nullptr)
         .def(
@@ -173,7 +172,7 @@ void registerText(py::module_& m) {
                     throw fs::filesystem_error("", path, result.error());
                 return *result;
             },
-            "path"_a, "library"_a = py::none())
+            "path"_a, "library"_a = nb::none())
         .def(
             "readHeader",
             [](SourceManager& self, std::string_view path, SourceLocation includedFrom,
@@ -194,83 +193,86 @@ void registerText(py::module_& m) {
         .def("getAllBuffers", &SourceManager::getAllBuffers);
 }
 
-void registerDiagnostics(py::module_& m) {
+void registerDiagnostics(nb::module_& m) {
     EXPOSE_ENUM(m, ColumnUnit);
     EXPOSE_ENUM(m, DiagSubsystem);
     EXPOSE_ENUM(m, DiagnosticSeverity);
 
-    py::classh<DiagCode>(m, "DiagCode")
-        .def(py::init<>())
-        .def(py::init<DiagSubsystem, uint16_t>(), "subsystem"_a, "code"_a)
+    nb::class_<DiagCode>(m, "DiagCode")
+        .def(nb::init<>())
+        .def(nb::init<DiagSubsystem, uint16_t>(), "subsystem"_a, "code"_a)
         .def("getCode", &DiagCode::getCode)
         .def("getSubsystem", &DiagCode::getSubsystem)
-        .def(py::self == py::self)
-        .def(py::self != py::self)
-        .def(py::hash(py::self))
+        .def(nb::self == nb::self)
+        .def(nb::self != nb::self)
+        .def(nb::hash(nb::self))
         .def("__bool__", &DiagCode::valid)
         .def("__repr__",
              [](const DiagCode& self) { return fmt::format("DiagCode({})", toString(self)); });
 
     struct Diags {};
-    py::classh<Diags> diagHolder(m, "Diags");
+    nb::class_<Diags> diagHolder(m, "Diags");
     for (auto code : DiagCode::KnownCodes) {
-        diagHolder.def_property_readonly_static(std::string(toString(code)).c_str(),
-                                                [code](py::object) { return code; });
+        diagHolder.def_prop_ro_static(std::string(toString(code)).c_str(),
+                                      [code](nb::object) { return code; });
     }
 
-    py::classh<Diagnostic>(m, "Diagnostic")
-        .def(py::init<DiagCode, SourceLocation>(), "code"_a, "location"_a)
-        .def_readonly("code", &Diagnostic::code)
-        .def_readonly("location", &Diagnostic::location)
-        .def_readonly("symbol", &Diagnostic::symbol)
-        .def_readonly("ranges", &Diagnostic::ranges)
-        .def_property_readonly("args", &argConverter)
+    nb::class_<Diagnostic>(m, "Diagnostic")
+        .def(nb::init<DiagCode, SourceLocation>(), "code"_a, "location"_a)
+        .def_ro("code", &Diagnostic::code)
+        .def_ro("location", &Diagnostic::location)
+        .def_ro("symbol", &Diagnostic::symbol)
+        .def_ro("ranges", &Diagnostic::ranges)
+        .def_prop_ro("args", &argConverter)
         .def("isError", &Diagnostic::isError)
-        .def(py::self == py::self)
-        .def(py::self != py::self);
+        .def(nb::self == nb::self)
+        .def(nb::self != nb::self);
 
-    py::classh<Diagnostics>(m, "Diagnostics")
-        .def(py::init<>())
-        .def("add", py::overload_cast<DiagCode, SourceLocation>(&Diagnostics::add), byrefint,
+    nb::class_<Diagnostics>(m, "Diagnostics")
+        .def(nb::init<>())
+        .def("add", nb::overload_cast<DiagCode, SourceLocation>(&Diagnostics::add), byrefint,
              "code"_a, "location"_a)
-        .def("add", py::overload_cast<DiagCode, SourceRange>(&Diagnostics::add), byrefint, "code"_a,
+        .def("add", nb::overload_cast<DiagCode, SourceRange>(&Diagnostics::add), byrefint, "code"_a,
              "range"_a)
-        .def("add", py::overload_cast<const Symbol&, DiagCode, SourceLocation>(&Diagnostics::add),
+        .def("add", nb::overload_cast<const Symbol&, DiagCode, SourceLocation>(&Diagnostics::add),
              byrefint, "source"_a, "code"_a, "location"_a)
-        .def("add", py::overload_cast<const Symbol&, DiagCode, SourceRange>(&Diagnostics::add),
+        .def("add", nb::overload_cast<const Symbol&, DiagCode, SourceRange>(&Diagnostics::add),
              byrefint, "source"_a, "code"_a, "range"_a)
         .def("sort", &Diagnostics::sort, "sourceManager"_a)
         .def("__len__", [](const Diagnostics& self) { return self.size(); })
         .def("__getitem__",
              [](const Diagnostics& s, size_t i) {
                  if (i >= s.size()) {
-                     throw py::index_error();
+                     throw nb::index_error();
                  }
                  return s[i];
              })
         .def(
             "__iter__",
-            [](const Diagnostics& self) { return py::make_iterator(self.begin(), self.end()); },
-            py::keep_alive<0, 1>());
+            [](const Diagnostics& self) {
+                return nb::make_iterator(nb::type<Diagnostics>(), "DiagnosticsIterator",
+                                         self.begin(), self.end());
+            },
+            nb::keep_alive<0, 1>());
 
-    py::classh<DiagGroup>(m, "DiagGroup")
-        .def(py::init<const std::string&, const std::vector<DiagCode>&>(), "name"_a, "diags"_a)
+    nb::class_<DiagGroup>(m, "DiagGroup")
+        .def(nb::init<const std::string&, const std::vector<DiagCode>&>(), "name"_a, "diags"_a)
         .def("getName", &DiagGroup::getName)
         .def("getDiags", &DiagGroup::getDiags)
         .def("__repr__",
              [](const DiagGroup& self) { return fmt::format("DiagGroup({})", self.getName()); });
 
-    py::classh<DiagnosticEngine>(m, "DiagnosticEngine")
-        .def(py::init<const SourceManager&>(), py::keep_alive<1, 2>(), "sourceManager"_a)
+    nb::class_<DiagnosticEngine>(m, "DiagnosticEngine")
+        .def(nb::init<const SourceManager&>(), nb::keep_alive<1, 2>(), "sourceManager"_a)
         .def("addClient", &DiagnosticEngine::addClient, "client"_a)
         .def("clearClients", &DiagnosticEngine::clearClients)
-        .def("issue", py::overload_cast<const Diagnostic&>(&DiagnosticEngine::issue),
+        .def("issue", nb::overload_cast<const Diagnostic&>(&DiagnosticEngine::issue),
              "diagnostic"_a)
-        .def("issue", py::overload_cast<const Diagnostics&>(&DiagnosticEngine::issue),
+        .def("issue", nb::overload_cast<const Diagnostics&>(&DiagnosticEngine::issue),
              "diagnostics"_a)
-        .def_property_readonly("sourceManager", &DiagnosticEngine::getSourceManager)
-        .def_property_readonly("numErrors", &DiagnosticEngine::getNumErrors)
-        .def_property_readonly("numWarnings", &DiagnosticEngine::getNumWarnings)
+        .def_prop_ro("sourceManager", &DiagnosticEngine::getSourceManager)
+        .def_prop_ro("numErrors", &DiagnosticEngine::getNumErrors)
+        .def_prop_ro("numWarnings", &DiagnosticEngine::getNumWarnings)
         .def("clearCounts", &DiagnosticEngine::clearCounts)
         .def("setErrorLimit", &DiagnosticEngine::setErrorLimit, "limit"_a)
         .def("setIgnoreAllWarnings", &DiagnosticEngine::setIgnoreAllWarnings, "set"_a)
@@ -286,37 +288,35 @@ void registerDiagnostics(py::module_& m) {
         .def("getOptionName", &DiagnosticEngine::getOptionName, "code"_a)
         .def("findFromOptionName", &DiagnosticEngine::findFromOptionName, "optionName"_a)
         .def("findDiagGroup", &DiagnosticEngine::findDiagGroup, byrefint, "name"_a)
-        .def("clearMappings", py::overload_cast<>(&DiagnosticEngine::clearMappings))
+        .def("clearMappings", nb::overload_cast<>(&DiagnosticEngine::clearMappings))
         .def("clearMappings",
-             py::overload_cast<DiagnosticSeverity>(&DiagnosticEngine::clearMappings), "severity"_a)
+             nb::overload_cast<DiagnosticSeverity>(&DiagnosticEngine::clearMappings), "severity"_a)
         .def("formatMessage", &DiagnosticEngine::formatMessage, "diag"_a)
         .def("setWarningOptions", &DiagnosticEngine::setWarningOptions, "options"_a)
         .def("setMappingsFromPragmas",
-             py::overload_cast<>(&DiagnosticEngine::setMappingsFromPragmas))
+             nb::overload_cast<>(&DiagnosticEngine::setMappingsFromPragmas))
         .def("setMappingsFromPragmas",
-             py::overload_cast<BufferID>(&DiagnosticEngine::setMappingsFromPragmas), "buffer"_a)
+             nb::overload_cast<BufferID>(&DiagnosticEngine::setMappingsFromPragmas), "buffer"_a)
         .def("formatArg", argFormatter)
         .def_static("reportAll", &DiagnosticEngine::reportAll, "sourceManager"_a, "diag"_a);
 
-    py::classh<ReportedDiagnostic>(m, "ReportedDiagnostic")
-        .def_property_readonly("originalDiagnostic",
-                               [](const ReportedDiagnostic& self) {
-                                   return self.originalDiagnostic;
-                               })
-        .def_readonly("expansionLocs", &ReportedDiagnostic::expansionLocs)
-        .def_readonly("ranges", &ReportedDiagnostic::ranges)
-        .def_readonly("location", &ReportedDiagnostic::location)
-        .def_readonly("formattedMessage", &ReportedDiagnostic::formattedMessage)
-        .def_readonly("severity", &ReportedDiagnostic::severity)
-        .def_readonly("shouldShowIncludeStack", &ReportedDiagnostic::shouldShowIncludeStack);
+    nb::class_<ReportedDiagnostic>(m, "ReportedDiagnostic")
+        .def_prop_ro("originalDiagnostic",
+                     [](const ReportedDiagnostic& self) { return self.originalDiagnostic; })
+        .def_ro("expansionLocs", &ReportedDiagnostic::expansionLocs)
+        .def_ro("ranges", &ReportedDiagnostic::ranges)
+        .def_ro("location", &ReportedDiagnostic::location)
+        .def_ro("formattedMessage", &ReportedDiagnostic::formattedMessage)
+        .def_ro("severity", &ReportedDiagnostic::severity)
+        .def_ro("shouldShowIncludeStack", &ReportedDiagnostic::shouldShowIncludeStack);
 
-    py::classh<DiagnosticClient>(m, "DiagnosticClient")
+    nb::class_<DiagnosticClient>(m, "DiagnosticClient")
         .def("report", &DiagnosticClient::report, "diagnostic"_a)
         .def("setEngine", &DiagnosticClient::setEngine, "engine"_a)
         .def("showAbsPaths", &DiagnosticClient::showAbsPaths, "show"_a);
 
-    py::classh<TextDiagnosticClient, DiagnosticClient>(m, "TextDiagnosticClient")
-        .def(py::init<>())
+    nb::class_<TextDiagnosticClient, DiagnosticClient>(m, "TextDiagnosticClient")
+        .def(nb::init<>())
         .def("showColors", &TextDiagnosticClient::showColors, "show"_a)
         .def("showColumn", &TextDiagnosticClient::showColumn, "show"_a)
         .def("setColumnUnit", &TextDiagnosticClient::setColumnUnit, "unit"_a)
@@ -331,39 +331,41 @@ void registerDiagnostics(py::module_& m) {
         .def("getString", &TextDiagnosticClient::getString);
 }
 
-void registerUtil(py::module_& m) {
-    py::classh<BumpAllocator>(m, "BumpAllocator").def(py::init<>());
+void registerUtil(nb::module_& m) {
+    nb::class_<BumpAllocator>(m, "BumpAllocator").def(nb::init<>());
 
-    py::classh<Bag>(m, "Bag")
-        .def(py::init<>())
-        .def(py::init([](py::list list) {
-                 Bag result;
-                 for (auto item : list) {
-                     auto type = py::type::of(item);
-                     if (type.is(py::type::of<LexerOptions>()))
-                         result.set(item.cast<LexerOptions>());
-                     else if (type.is(py::type::of<PreprocessorOptions>()))
-                         result.set(item.cast<PreprocessorOptions>());
-                     else if (type.is(py::type::of<ParserOptions>()))
-                         result.set(item.cast<ParserOptions>());
-                     else if (type.is(py::type::of<CompilationOptions>()))
-                         result.set(item.cast<CompilationOptions>());
-                     else
-                         throw py::type_error();
-                 }
-                 return result;
-             }),
-             "list"_a)
-        .def_property("lexerOptions", &Bag::get<LexerOptions>,
-                      py::overload_cast<const LexerOptions&>(&Bag::set<LexerOptions>))
-        .def_property("preprocessorOptions", &Bag::get<PreprocessorOptions>,
-                      py::overload_cast<const PreprocessorOptions&>(&Bag::set<PreprocessorOptions>))
-        .def_property("parserOptions", &Bag::get<ParserOptions>,
-                      py::overload_cast<const ParserOptions&>(&Bag::set<ParserOptions>))
-        .def_property("compilationOptions", &Bag::get<CompilationOptions>,
-                      py::overload_cast<const CompilationOptions&>(&Bag::set<CompilationOptions>));
+    nb::class_<Bag>(m, "Bag")
+        .def(nb::init<>())
+        .def(
+            "__init__",
+            [](Bag* self, nb::list list) {
+                Bag result;
+                for (auto item : list) {
+                    auto type = item.type();
+                    if (type.is(nb::type<LexerOptions>()))
+                        result.set(nb::cast<LexerOptions>(item));
+                    else if (type.is(nb::type<PreprocessorOptions>()))
+                        result.set(nb::cast<PreprocessorOptions>(item));
+                    else if (type.is(nb::type<ParserOptions>()))
+                        result.set(nb::cast<ParserOptions>(item));
+                    else if (type.is(nb::type<CompilationOptions>()))
+                        result.set(nb::cast<CompilationOptions>(item));
+                    else
+                        throw nb::type_error();
+                }
+                new (self) Bag(std::move(result));
+            },
+            "list"_a)
+        .def_prop_rw("lexerOptions", &Bag::get<LexerOptions>,
+                     nb::overload_cast<const LexerOptions&>(&Bag::set<LexerOptions>))
+        .def_prop_rw("preprocessorOptions", &Bag::get<PreprocessorOptions>,
+                     nb::overload_cast<const PreprocessorOptions&>(&Bag::set<PreprocessorOptions>))
+        .def_prop_rw("parserOptions", &Bag::get<ParserOptions>,
+                     nb::overload_cast<const ParserOptions&>(&Bag::set<ParserOptions>))
+        .def_prop_rw("compilationOptions", &Bag::get<CompilationOptions>,
+                     nb::overload_cast<const CompilationOptions&>(&Bag::set<CompilationOptions>));
 
-    py::classh<VersionInfo>(m, "VersionInfo")
+    nb::class_<VersionInfo>(m, "VersionInfo")
         .def_static("getMajor", &VersionInfo::getMajor)
         .def_static("getMinor", &VersionInfo::getMinor)
         .def_static("getPatch", &VersionInfo::getPatch)

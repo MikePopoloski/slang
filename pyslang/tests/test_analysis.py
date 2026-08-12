@@ -455,14 +455,13 @@ def _get_proc_block(code):
 
 
 def _analyze(code):
-    """Compile *code* and return (compilation, AnalyzedProcedure) for module m."""
-    compilation, _ = _get_proc_block(code)
-    procs = []
+    """Compile *code* and return AnalyzedProcedure for module m."""
+    compilation, proc_block = _get_proc_block(code)
     am = AnalysisManager()
-    am.addProcListener(lambda p: procs.append(p))
     am.analyze(compilation)
-    if procs:
-        return procs[0]
+    scope = am.getAnalyzedScope(proc_block.parentScope)
+    if scope and scope.procedures:
+        return scope.procedures[0]
     raise AssertionError("No AnalyzedProcedure for a ProceduralBlockSymbol found")
 
 
@@ -592,3 +591,65 @@ endmodule
     assert ier.statement is not None
     names = {rr.symbol.name for rr in ier.reads}
     assert names == {"a", "b"}
+
+
+def test_listener_lifetime_retention():
+    """Test that keeping a yielded AnalyzedProcedure keeps AnalysisManager alive without crashing."""
+    import gc
+
+    tree = SyntaxTree.fromText("""
+module m;
+    logic a, b, y;
+    always_comb y = a & b;
+endmodule
+""")
+    compilation = Compilation()
+    compilation.addSyntaxTree(tree)
+    compilation.getAllDiagnostics()
+
+    procedures = []
+
+    def run_analysis(comp, procs):
+        am = AnalysisManager()
+        am.addProcListener(lambda proc: procs.append(proc))
+        am.analyze(comp)
+
+    run_analysis(compilation, procedures)
+    gc.collect()
+
+    assert len(procedures) == 1
+    assert procedures[0].analyzedSymbol is not None
+
+    del procedures, compilation, tree
+    gc.collect()
+
+
+def test_listener_cyclic_gc():
+    """Test that cyclic references involving AnalysisManager and Python listeners can be collected."""
+    import gc
+
+    tree = SyntaxTree.fromText("""
+module m;
+    logic a, b, y;
+    always_comb y = a & b;
+endmodule
+""")
+    compilation = Compilation()
+    compilation.addSyntaxTree(tree)
+    compilation.getAllDiagnostics()
+
+    class ListenerOwner:
+        def __init__(self, manager):
+            self.manager = manager
+            self.procs = []
+            manager.addProcListener(self.on_proc)
+
+        def on_proc(self, proc):
+            self.procs.append(proc)
+
+    owner = ListenerOwner(AnalysisManager())
+    owner.manager.analyze(compilation)
+    assert len(owner.procs) == 1
+
+    del owner, compilation, tree
+    gc.collect()
