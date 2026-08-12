@@ -13,8 +13,17 @@
 
 #include "slang/ast/ASTVisitor.h"
 
+// Helpers to support --skip-file and --skip-path
 #define NEEDS_SKIP_SYMBOL(__symbol)                            \
     if (skip(sourceManager->getFileName((__symbol).location))) \
+        return;
+
+#define NEEDS_SKIP_STATEMENT(__stmt)                                  \
+    if (skip(sourceManager->getFileName(__stmt.sourceRange.start()))) \
+        return;
+
+#define NEEDS_SKIP_NODE(__node)                                              \
+    if (skip(sourceManager->getFileName(__node.getFirstToken().location()))) \
         return;
 
 // Function that tries to get the name of the variable in an expression

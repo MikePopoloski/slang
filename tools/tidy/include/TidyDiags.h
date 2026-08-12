@@ -34,5 +34,7 @@ inline constexpr DiagCode EnforcePortPrefix(DiagSubsystem::Tidy, 19);
 inline constexpr DiagCode UndrivenRange(DiagSubsystem::Tidy, 20);
 inline constexpr DiagCode LoopBeforeResetCheck(DiagSubsystem::Tidy, 21);
 inline constexpr DiagCode NoCaseX(DiagSubsystem::Tidy, 22);
+inline constexpr DiagCode NoDefParam(DiagSubsystem::Tidy, 23);
+inline constexpr DiagCode TypedefEnums(DiagSubsystem::Tidy, 24);
 
 } // namespace slang::diag
