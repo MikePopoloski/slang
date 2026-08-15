@@ -96,26 +96,32 @@ if(SLANG_USE_MIMALLOC)
       FATAL_ERROR "mimalloc cannot be used with Windows shared lib builds")
   endif()
 
-  set(MI_BUILD_SHARED
-      OFF
-      CACHE INTERNAL "")
-  set(MI_BUILD_TESTS
-      OFF
-      CACHE INTERNAL "")
-  set(MI_SKIP_COLLECT_ON_EXIT
-      ON
-      CACHE INTERNAL "")
-  set(MI_USE_CXX
-      ON
-      CACHE INTERNAL "")
+  find_package(mimalloc 3.4 QUIET)
 
-  FetchContent_Declare(
-    mimalloc
-    GIT_REPOSITORY ${GITHUB_PREFIX}microsoft/mimalloc.git
-    GIT_TAG v3.4.5
-    GIT_SHALLOW ON
-    FIND_PACKAGE_ARGS 3.4)
-  FetchContent_MakeAvailable(mimalloc)
+  if(NOT mimalloc_FOUND)
+    message(STATUS "System mimalloc not found; fetching remote library...")
+
+    set(MI_BUILD_SHARED
+        OFF
+        CACHE INTERNAL "")
+    set(MI_BUILD_TESTS
+        OFF
+        CACHE INTERNAL "")
+    set(MI_SKIP_COLLECT_ON_EXIT
+        ON
+        CACHE INTERNAL "")
+    set(MI_USE_CXX
+        ON
+        CACHE INTERNAL "")
+
+    include(FetchContent)
+    FetchContent_Declare(
+      mimalloc
+      GIT_REPOSITORY ${GITHUB_PREFIX}microsoft/mimalloc.git
+      GIT_TAG v3.4.5
+      GIT_SHALLOW ON)
+    FetchContent_MakeAvailable(mimalloc)
+  endif()
 
   if(mimalloc_FOUND)
     if(TARGET mimalloc)
