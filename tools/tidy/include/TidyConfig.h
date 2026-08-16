@@ -38,6 +38,7 @@ public:
         std::vector<std::string> inputPortPrefix;
         std::vector<std::string> outputPortPrefix;
         std::vector<std::string> inoutPortPrefix;
+        bool allowNestedAnon;
     };
 
     /// Default TidyConfig constructor which will set the default check's configuration values
@@ -86,6 +87,7 @@ public:
             {"inputPortPrefix", joinVec(cfg.inputPortPrefix)},
             {"outputPortPrefix", joinVec(cfg.outputPortPrefix)},
             {"inoutPortPrefix", joinVec(cfg.inoutPortPrefix)},
+            {"allowNestedAnon", cfg.allowNestedAnon ? "true" : "false"},
         };
     }
 
@@ -173,6 +175,10 @@ private:
         }
         else if (configName == "inoutPortPrefix") {
             visit(checkConfigs.inoutPortPrefix);
+            return;
+        }
+        else if (configName == "allowNestedAnon") {
+            visit(checkConfigs.allowNestedAnon);
             return;
         }
         SLANG_THROW(std::invalid_argument(fmt::format("The check: {} does not exist", configName)));

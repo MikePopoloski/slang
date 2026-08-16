@@ -21,6 +21,7 @@ TidyConfig::TidyConfig() {
     checkConfigs.inputPortPrefix = {""};
     checkConfigs.outputPortPrefix = {""};
     checkConfigs.inoutPortPrefix = {""};
+    checkConfigs.allowNestedAnon = false;
 
     auto styleChecks = std::unordered_map<std::string, CheckOptions>();
     styleChecks.emplace("AlwaysCombNonBlocking", CheckOptions());
@@ -39,6 +40,7 @@ TidyConfig::TidyConfig() {
     styleChecks.emplace("NoCaseX", CheckOptions());
     styleChecks.emplace("NoDefParam", CheckOptions());
     styleChecks.emplace("TypedefEnums", CheckOptions());
+    styleChecks.emplace("TypedefStructUnion", CheckOptions());
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckOptions>();
