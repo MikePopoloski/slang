@@ -109,7 +109,10 @@ TEST_CASE("TidyParser: Set check config") {
     clkNameRegexString: "clock\S.*",
     resetIsActiveHigh: false,
     inputPortSuffix: _k,
-    inputPortSuffix: _p)");
+    inputPortSuffix: _p,
+    covergroupRegexString: "^covergroup_\S*",
+    coverpointRegexString: "^coverpoint_\S*",
+    crossRegexString: "^cross_coverpoint_\S*")");
     TidyConfigParser parser(config_str);
 
     auto config = parser.getConfig();
@@ -119,6 +122,9 @@ TEST_CASE("TidyParser: Set check config") {
     CHECK(config.getCheckConfigs().clkNameRegexString == "clock\\S.*");
     CHECK_FALSE(config.getCheckConfigs().resetIsActiveHigh);
     CHECK(config.getCheckConfigs().inputPortSuffix == std::vector<std::string>{"_p"});
+    CHECK(config.getCheckConfigs().covergroupRegexString == "^covergroup_\\S*");
+    CHECK(config.getCheckConfigs().coverpointRegexString == "^coverpoint_\\S*");
+    CHECK(config.getCheckConfigs().crossRegexString == "^cross_coverpoint_\\S*");
 }
 
 TEST_CASE("TidyParser: CheckConfigs and Checks") {

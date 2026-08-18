@@ -22,6 +22,12 @@ TidyConfig::TidyConfig() {
     checkConfigs.outputPortPrefix = {""};
     checkConfigs.inoutPortPrefix = {""};
     checkConfigs.allowNestedAnon = false;
+    checkConfigs.covergroupRegexString = "^cg_\\S*";
+    checkConfigs.covergroupRegexPattern = boost::regex(checkConfigs.covergroupRegexString);
+    checkConfigs.coverpointRegexString = "^cp_\\S*";
+    checkConfigs.coverpointRegexPattern = boost::regex(checkConfigs.coverpointRegexString);
+    checkConfigs.crossRegexString = "^cross_\\S*";
+    checkConfigs.crossRegexPattern = boost::regex(checkConfigs.crossRegexString);
 
     auto styleChecks = std::unordered_map<std::string, CheckOptions>();
     styleChecks.emplace("AlwaysCombNonBlocking", CheckOptions());
@@ -41,6 +47,9 @@ TidyConfig::TidyConfig() {
     styleChecks.emplace("NoDefParam", CheckOptions());
     styleChecks.emplace("TypedefEnums", CheckOptions());
     styleChecks.emplace("TypedefStructUnion", CheckOptions());
+    styleChecks.emplace("CovergroupName", CheckOptions{CheckStatus::DISABLED});
+    styleChecks.emplace("CoverpointName", CheckOptions{CheckStatus::DISABLED});
+    styleChecks.emplace("CrossName", CheckOptions{CheckStatus::DISABLED});
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckOptions>();

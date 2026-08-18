@@ -78,6 +78,9 @@ The available options are:
 |     **outputPortPrefix**      | [string] |       []           |
 |      **inoutPortPrefix**      | [string] |       []           |
 |      **allowNestedAnon**      |   bool   |       false        |
+|   **covergroupRegexString**   |  string  |     \"cg_\\S*\"    |
+|   **coverpointRegexString**   |  string  |    \"cp_\\S*\"     |
+|     **crossRegexString**      |  string  |   "cross_\\S*\"    |
 
 An example of a possible configuration file:
 
