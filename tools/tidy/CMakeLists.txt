@@ -32,7 +32,8 @@ add_library(
   src/synthesis/LoopBeforeResetCheck.cpp
   src/style/NoCaseX.cpp
   src/style/NoDefParam.cpp
-  src/style/TypedefEnums.cpp)
+  src/style/TypedefEnums.cpp
+  src/style/TypedefStructUnion.cpp)
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include)
 target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang fmt::fmt)

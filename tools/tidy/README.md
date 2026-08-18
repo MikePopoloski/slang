@@ -77,6 +77,7 @@ The available options are:
 |      **inputPortPrefix**      | [string] |       []           |
 |     **outputPortPrefix**      | [string] |       []           |
 |      **inoutPortPrefix**      | [string] |       []           |
+|      **allowNestedAnon**      |   bool   |       false        |
 
 An example of a possible configuration file:
 
