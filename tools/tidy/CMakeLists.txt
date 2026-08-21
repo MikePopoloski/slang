@@ -33,7 +33,10 @@ add_library(
   src/style/NoCaseX.cpp
   src/style/NoDefParam.cpp
   src/style/TypedefEnums.cpp
-  src/style/TypedefStructUnion.cpp)
+  src/style/TypedefStructUnion.cpp
+  src/style/CovergroupName.cpp
+  src/style/CoverpointName.cpp
+  src/style/CrossName.cpp)
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include)
 target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang fmt::fmt)

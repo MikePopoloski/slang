@@ -34,7 +34,8 @@ add_executable(
   NoCaseXTest.cpp
   NoDefParamTest.cpp
   TypedefEnumsTest.cpp
-  TypedefStructUnionTest.cpp)
+  TypedefStructUnionTest.cpp
+  CoverageNameTest.cpp)
 
 target_link_libraries(tidy_unittests PRIVATE Catch2::Catch2 slang_tidy_obj_lib)
 target_compile_definitions(tidy_unittests PRIVATE UNITTESTS)

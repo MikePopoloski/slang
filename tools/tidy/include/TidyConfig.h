@@ -39,6 +39,12 @@ public:
         std::vector<std::string> outputPortPrefix;
         std::vector<std::string> inoutPortPrefix;
         bool allowNestedAnon;
+        std::string covergroupRegexString;
+        boost::regex covergroupRegexPattern;
+        std::string coverpointRegexString;
+        boost::regex coverpointRegexPattern;
+        std::string crossRegexString;
+        boost::regex crossRegexPattern;
     };
 
     /// Default TidyConfig constructor which will set the default check's configuration values
@@ -88,6 +94,9 @@ public:
             {"outputPortPrefix", joinVec(cfg.outputPortPrefix)},
             {"inoutPortPrefix", joinVec(cfg.inoutPortPrefix)},
             {"allowNestedAnon", cfg.allowNestedAnon ? "true" : "false"},
+            {"covergroupRegexString", cfg.covergroupRegexString},
+            {"coverpointRegexString", cfg.coverpointRegexString},
+            {"crossRegexString", cfg.crossRegexString},
         };
     }
 
@@ -179,6 +188,21 @@ private:
         }
         else if (configName == "allowNestedAnon") {
             visit(checkConfigs.allowNestedAnon);
+            return;
+        }
+        else if (configName == "covergroupRegexString") {
+            visit(checkConfigs.covergroupRegexString);
+            checkConfigs.covergroupRegexPattern = boost::regex(checkConfigs.covergroupRegexString);
+            return;
+        }
+        else if (configName == "coverpointRegexString") {
+            visit(checkConfigs.coverpointRegexString);
+            checkConfigs.coverpointRegexPattern = boost::regex(checkConfigs.coverpointRegexString);
+            return;
+        }
+        else if (configName == "crossRegexString") {
+            visit(checkConfigs.crossRegexString);
+            checkConfigs.crossRegexPattern = boost::regex(checkConfigs.crossRegexString);
             return;
         }
         SLANG_THROW(std::invalid_argument(fmt::format("The check: {} does not exist", configName)));
