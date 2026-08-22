@@ -112,7 +112,8 @@ TEST_CASE("TidyParser: Set check config") {
     inputPortSuffix: _p,
     covergroupRegexString: "^covergroup_\S*",
     coverpointRegexString: "^coverpoint_\S*",
-    crossRegexString: "^cross_coverpoint_\S*")");
+    crossRegexString: "^cross_coverpoint_\S*",
+    enumRegexString: "[a-z_0-9]+_e")");
     TidyConfigParser parser(config_str);
 
     auto config = parser.getConfig();
@@ -125,6 +126,7 @@ TEST_CASE("TidyParser: Set check config") {
     CHECK(config.getCheckConfigs().covergroupRegexString == "^covergroup_\\S*");
     CHECK(config.getCheckConfigs().coverpointRegexString == "^coverpoint_\\S*");
     CHECK(config.getCheckConfigs().crossRegexString == "^cross_coverpoint_\\S*");
+    CHECK(config.getCheckConfigs().enumRegexString == "[a-z_0-9]+_e");
 }
 
 TEST_CASE("TidyParser: CheckConfigs and Checks") {

@@ -28,6 +28,8 @@ TidyConfig::TidyConfig() {
     checkConfigs.coverpointRegexPattern = boost::regex(checkConfigs.coverpointRegexString);
     checkConfigs.crossRegexString = "^cross_\\S*";
     checkConfigs.crossRegexPattern = boost::regex(checkConfigs.crossRegexString);
+    checkConfigs.enumRegexString = "[a-z_0-9]+_e";
+    checkConfigs.enumRegexPattern = boost::regex(checkConfigs.enumRegexString);
 
     auto styleChecks = std::unordered_map<std::string, CheckOptions>();
     styleChecks.emplace("AlwaysCombNonBlocking", CheckOptions());
@@ -50,6 +52,7 @@ TidyConfig::TidyConfig() {
     styleChecks.emplace("CovergroupName", CheckOptions{CheckStatus::DISABLED});
     styleChecks.emplace("CoverpointName", CheckOptions{CheckStatus::DISABLED});
     styleChecks.emplace("CrossName", CheckOptions{CheckStatus::DISABLED});
+    styleChecks.emplace("EnumName", CheckOptions());
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckOptions>();

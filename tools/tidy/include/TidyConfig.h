@@ -45,6 +45,8 @@ public:
         boost::regex coverpointRegexPattern;
         std::string crossRegexString;
         boost::regex crossRegexPattern;
+        std::string enumRegexString;
+        boost::regex enumRegexPattern;
     };
 
     /// Default TidyConfig constructor which will set the default check's configuration values
@@ -97,6 +99,7 @@ public:
             {"covergroupRegexString", cfg.covergroupRegexString},
             {"coverpointRegexString", cfg.coverpointRegexString},
             {"crossRegexString", cfg.crossRegexString},
+            {"enumRegexString", cfg.enumRegexString},
         };
     }
 
@@ -203,6 +206,11 @@ private:
         else if (configName == "crossRegexString") {
             visit(checkConfigs.crossRegexString);
             checkConfigs.crossRegexPattern = boost::regex(checkConfigs.crossRegexString);
+            return;
+        }
+        else if (configName == "enumRegexString") {
+            visit(checkConfigs.enumRegexString);
+            checkConfigs.enumRegexPattern = boost::regex(checkConfigs.enumRegexString);
             return;
         }
         SLANG_THROW(std::invalid_argument(fmt::format("The check: {} does not exist", configName)));

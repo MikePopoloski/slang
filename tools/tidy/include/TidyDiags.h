@@ -40,5 +40,6 @@ inline constexpr DiagCode TypedefStructUnion(DiagSubsystem::Tidy, 25);
 inline constexpr DiagCode CovergroupName(DiagSubsystem::Tidy, 26);
 inline constexpr DiagCode CoverpointName(DiagSubsystem::Tidy, 27);
 inline constexpr DiagCode CrossName(DiagSubsystem::Tidy, 28);
+inline constexpr DiagCode EnumName(DiagSubsystem::Tidy, 29);
 
 } // namespace slang::diag

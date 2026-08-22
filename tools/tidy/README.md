@@ -81,6 +81,7 @@ The available options are:
 |   **covergroupRegexString**   |  string  |     \"cg_\\S*\"    |
 |   **coverpointRegexString**   |  string  |    \"cp_\\S*\"     |
 |     **crossRegexString**      |  string  |   "cross_\\S*\"    |
+|      **enumRegexString**      |  string  | \"[a-z_0-9]+_e\"   |
 
 An example of a possible configuration file:
 
