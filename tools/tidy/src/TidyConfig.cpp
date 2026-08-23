@@ -30,6 +30,10 @@ TidyConfig::TidyConfig() {
     checkConfigs.crossRegexPattern = boost::regex(checkConfigs.crossRegexString);
     checkConfigs.enumRegexString = "[a-z_0-9]+_e";
     checkConfigs.enumRegexPattern = boost::regex(checkConfigs.enumRegexString);
+    checkConfigs.structRegexString = "[a-z_0-9]+_t";
+    checkConfigs.structRegexPattern = boost::regex(checkConfigs.structRegexString);
+    checkConfigs.unionRegexString = "[a-z_0-9]+_t";
+    checkConfigs.unionRegexPattern = boost::regex(checkConfigs.unionRegexString);
 
     auto styleChecks = std::unordered_map<std::string, CheckOptions>();
     styleChecks.emplace("AlwaysCombNonBlocking", CheckOptions());
@@ -53,6 +57,8 @@ TidyConfig::TidyConfig() {
     styleChecks.emplace("CoverpointName", CheckOptions{CheckStatus::DISABLED});
     styleChecks.emplace("CrossName", CheckOptions{CheckStatus::DISABLED});
     styleChecks.emplace("EnumName", CheckOptions());
+    styleChecks.emplace("StructName", CheckOptions());
+    styleChecks.emplace("UnionName", CheckOptions());
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckOptions>();

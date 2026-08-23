@@ -82,6 +82,8 @@ The available options are:
 |   **coverpointRegexString**   |  string  |    \"cp_\\S*\"     |
 |     **crossRegexString**      |  string  |   "cross_\\S*\"    |
 |      **enumRegexString**      |  string  | \"[a-z_0-9]+_e\"   |
+|     **structRegexString**     |  string  | \"[a-z_0-9]+_t\"   |
+|     **unionRegexString**      |  string  | \"[a-z_0-9]+_t\"   |
 
 An example of a possible configuration file:
 
