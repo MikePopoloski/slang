@@ -51,6 +51,8 @@ public:
         boost::regex structRegexPattern;
         std::string unionRegexString;
         boost::regex unionRegexPattern;
+        std::string typedefRegexString;
+        boost::regex typedefRegexPattern;
     };
 
     /// Default TidyConfig constructor which will set the default check's configuration values
@@ -106,6 +108,7 @@ public:
             {"enumRegexString", cfg.enumRegexString},
             {"structRegexString", cfg.structRegexString},
             {"unionRegexString", cfg.unionRegexString},
+            {"typedefRegexString", cfg.typedefRegexString},
         };
     }
 
@@ -227,6 +230,11 @@ private:
         else if (configName == "unionRegexString") {
             visit(checkConfigs.unionRegexString);
             checkConfigs.unionRegexPattern = boost::regex(checkConfigs.unionRegexString);
+            return;
+        }
+        else if (configName == "typedefRegexString") {
+            visit(checkConfigs.typedefRegexString);
+            checkConfigs.typedefRegexPattern = boost::regex(checkConfigs.typedefRegexString);
             return;
         }
         SLANG_THROW(std::invalid_argument(fmt::format("The check: {} does not exist", configName)));

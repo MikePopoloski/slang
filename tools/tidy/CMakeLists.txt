@@ -39,7 +39,8 @@ add_library(
   src/style/CrossName.cpp
   src/style/EnumName.cpp
   src/style/StructName.cpp
-  src/style/UnionName.cpp)
+  src/style/UnionName.cpp
+  src/style/TypedefName.cpp)
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include)
 target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang fmt::fmt)

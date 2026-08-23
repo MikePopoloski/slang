@@ -34,6 +34,8 @@ TidyConfig::TidyConfig() {
     checkConfigs.structRegexPattern = boost::regex(checkConfigs.structRegexString);
     checkConfigs.unionRegexString = "[a-z_0-9]+_t";
     checkConfigs.unionRegexPattern = boost::regex(checkConfigs.unionRegexString);
+    checkConfigs.typedefRegexString = "[a-z_0-9]+_t";
+    checkConfigs.typedefRegexPattern = boost::regex(checkConfigs.typedefRegexString);
 
     auto styleChecks = std::unordered_map<std::string, CheckOptions>();
     styleChecks.emplace("AlwaysCombNonBlocking", CheckOptions());
@@ -59,6 +61,7 @@ TidyConfig::TidyConfig() {
     styleChecks.emplace("EnumName", CheckOptions());
     styleChecks.emplace("StructName", CheckOptions());
     styleChecks.emplace("UnionName", CheckOptions());
+    styleChecks.emplace("TypedefName", CheckOptions());
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckOptions>();
