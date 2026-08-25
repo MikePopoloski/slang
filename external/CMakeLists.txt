@@ -112,9 +112,9 @@ if(SLANG_USE_MIMALLOC)
   FetchContent_Declare(
     mimalloc
     GIT_REPOSITORY ${GITHUB_PREFIX}microsoft/mimalloc.git
-    GIT_TAG v3.4.5
+    GIT_TAG v3.5.0
     GIT_SHALLOW ON
-    FIND_PACKAGE_ARGS 3.4)
+    FIND_PACKAGE_ARGS 3.5)
   FetchContent_MakeAvailable(mimalloc)
 
   if(mimalloc_FOUND)
@@ -148,9 +148,9 @@ if(SLANG_INCLUDE_TESTS)
   FetchContent_Declare(
     Catch2
     GIT_REPOSITORY ${GITHUB_PREFIX}catchorg/Catch2.git
-    GIT_TAG v3.15.3
+    GIT_TAG v3.16.0
     GIT_SHALLOW ON
-    FIND_PACKAGE_ARGS 3.15)
+    FIND_PACKAGE_ARGS 3.16)
   FetchContent_MakeAvailable(Catch2)
 
   if(Catch2_FOUND)
