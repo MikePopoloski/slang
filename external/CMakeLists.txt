@@ -148,9 +148,9 @@ if(SLANG_INCLUDE_TESTS)
   FetchContent_Declare(
     Catch2
     GIT_REPOSITORY ${GITHUB_PREFIX}catchorg/Catch2.git
-    GIT_TAG v3.15.3
+    GIT_TAG v3.16.0
     GIT_SHALLOW ON
-    FIND_PACKAGE_ARGS 3.15)
+    FIND_PACKAGE_ARGS 3.16)
   FetchContent_MakeAvailable(Catch2)
 
   if(Catch2_FOUND)
