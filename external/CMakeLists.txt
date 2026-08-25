@@ -112,9 +112,9 @@ if(SLANG_USE_MIMALLOC)
   FetchContent_Declare(
     mimalloc
     GIT_REPOSITORY ${GITHUB_PREFIX}microsoft/mimalloc.git
-    GIT_TAG v3.4.5
+    GIT_TAG v3.5.0
     GIT_SHALLOW ON
-    FIND_PACKAGE_ARGS 3.4)
+    FIND_PACKAGE_ARGS 3.5)
   FetchContent_MakeAvailable(mimalloc)
 
   if(mimalloc_FOUND)
