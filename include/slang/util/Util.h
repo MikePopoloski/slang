@@ -9,6 +9,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <source_location>
 #include <stdexcept>
 #include <string_view>
