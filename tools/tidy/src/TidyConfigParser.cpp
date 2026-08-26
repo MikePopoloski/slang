@@ -331,7 +331,7 @@ void TidyConfigParser::parseCheckConfigs() {
         auto isRegexMeta = [](char c) {
             return c == '.' || c == '^' || c == '$' || c == '*' || c == '+' || c == '?' ||
                    c == '{' || c == '}' || c == '[' || c == ']' || c == '\\' || c == '|' ||
-                   c == '(' || c == ')';
+                   c == '(' || c == ')' || c == '-';
         };
 
         auto isOptionValueChar = [](char c) { return isalnum(c) || c == '_'; };

@@ -81,6 +81,14 @@ The available options are:
 |   **covergroupRegexString**   |  string  |     \"cg_\\S*\"    |
 |   **coverpointRegexString**   |  string  |    \"cp_\\S*\"     |
 |     **crossRegexString**      |  string  |   "cross_\\S*\"    |
+|      **enumRegexString**      |  string  | \"[a-z_0-9]+_e\"   |
+|     **structRegexString**     |  string  | \"[a-z_0-9]+_t\"   |
+|     **unionRegexString**      |  string  | \"[a-z_0-9]+_t\"   |
+|    **typedefRegexString**     |  string  | \"[a-z_0-9]+_t\"   |
+
+`style-typedef-name` applies to all typedefs. If `style-enum-name`, `style-struct-name`,
+or `style-union-name` are enabled, those checks take precedence for the corresponding
+typedefs.
 
 An example of a possible configuration file:
 
