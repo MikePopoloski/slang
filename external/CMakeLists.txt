@@ -90,11 +90,10 @@ else()
   add_library(Boost::headers ALIAS boost_unordered)
 
   # slang uses boost::regex (in place of std::regex) as a header-only library.
-  # We fetch just the regex repo; boost.regex auto-detects standalone mode by
-  # the absence of <boost/config.hpp> and falls back to the C++ standard library
-  # for its dependencies. We don't add_subdirectory the fetched repo
-  # (SOURCE_SUBDIR pointed at a non-existent path makes
-  # FetchContent_MakeAvailable populate only).
+  # We fetch just the regex repo and force standalone mode (see below) so it
+  # falls back to the C++ standard library for its dependencies. We don't
+  # add_subdirectory the fetched repo (SOURCE_SUBDIR pointed at a non-existent
+  # path makes FetchContent_MakeAvailable populate only).
   message(STATUS "Using FetchContent for boost::regex (header-only)")
   FetchContent_Declare(
     boost_regex
@@ -107,6 +106,13 @@ else()
   target_include_directories(
     boost_unordered SYSTEM
     INTERFACE "$<BUILD_INTERFACE:${boost_regex_SOURCE_DIR}/include>")
+
+  # Force boost::regex standalone mode instead of relying on its auto-detection,
+  # which only kicks in when <boost/version.hpp> is absent. If a system boost is
+  # installed, auto-detection fails to enable standalone mode and boost::regex
+  # pulls in system boost headers that clash with our vendored boost_unordered.
+  target_compile_definitions(
+    boost_unordered INTERFACE "$<BUILD_INTERFACE:BOOST_REGEX_STANDALONE>")
 endif()
 
 # --- mimalloc ---
