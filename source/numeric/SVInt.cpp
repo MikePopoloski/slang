@@ -1516,7 +1516,7 @@ void SVInt::set(int32_t msb, int32_t lsb, const SVInt& value) {
 
     if (!hasUnknown() && value.hasUnknown()) {
         uint64_t* newData = new uint64_t[getNumWords(bitWidth, true)]();
-        memcpy(newData, getRawData(), getNumWords());
+        memcpy(newData, getRawData(), getNumWords() * WORD_SIZE);
 
         if (!isSingleWord())
             delete[] pVal;
