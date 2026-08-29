@@ -1297,6 +1297,29 @@ endfunction
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Integer format specifiers on null literal or chandle") {
+    // Regression: %d/%h/%x/%o/%b/%c on the null literal or a chandle previously aborted
+    // with an internal error (std::get on an invalid ConstantValue variant). The
+    // format-string checker permits these types for the integer specifiers, so they
+    // must format as their numeric value (zero for a null handle).
+    ScriptSession session;
+    CHECK(session.eval("$sformatf(\"%0d\", null)"s).str() == "0");
+    CHECK(session.eval("$sformatf(\"%0x\", null)"s).str() == "0");
+    CHECK(session.eval("$sformatf(\"%0o\", null)"s).str() == "0");
+    CHECK(session.eval("$sformatf(\"%0b\", null)"s).str() == "0");
+    CHECK(session.eval("$sformatf(\"%0h\", null)"s).str() == "0");
+    CHECK(session.eval("$sformatf(\"%c\", null)"s).str() == std::string(1, '\0'));
+
+    session.eval(R"(
+function automatic string f_chandle();
+    chandle ch = null;
+    return $sformatf("%0x", ch);
+endfunction
+)");
+    CHECK(session.eval("f_chandle()").str() == "0");
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Concat assignments") {
     ScriptSession session;
     session.eval("logic [2:0] foo;");
