@@ -21,7 +21,7 @@ if(NOT nanobind_FOUND)
   else()
     FetchContent_Declare(
       nanobind
-      GIT_REPOSITORY https://github.com/wjakob/nanobind.git
+      GIT_REPOSITORY ${SLANG_DEP_URL_PREFIX}wjakob/nanobind.git
       GIT_TAG v2.13.0
       GIT_SHALLOW ON
       FIND_PACKAGE_ARGS)
