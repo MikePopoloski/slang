@@ -627,6 +627,22 @@ TEST_CASE("Slicing") {
           "215'h728560c56c16d0b0be23da38038624767ffffffffffffffffffffd");
 }
 
+TEST_CASE("SVInt set promoting a known value to 4-state preserves high words") {
+    // Assigning an x/z into a bit/part-select of a known (2-state) value promotes
+    // it to 4-state; the promotion must copy every word of the old value, not just
+    // its low byte. Regression: the copy used a word count as a byte count, so any
+    // bit set above bit 7 was dropped when the value was widened.
+    SVInt v1 = "16'hff00"_si;
+    v1.set(0, 0, "1'bx"_si);
+    CHECK_THAT(v1, exactlyEquals("16'b111111110000000x"_si));
+
+    // Multi-word case: the high word must survive the promotion too.
+    SVInt v2(96, 0, false);
+    v2.set(95, 64, "32'hdeadbeef"_si);
+    v2.set(0, 0, "1'bx"_si);
+    CHECK_THAT(v2.slice(95, 64), exactlyEquals("32'hdeadbeef"_si));
+}
+
 TEST_CASE("SVInt misc functions") {
     CHECK("100'b111"_si.countLeadingZeros() == 97);
     CHECK("128'hffff000000000000ffff000000000000"_si.countLeadingOnes() == 16);
