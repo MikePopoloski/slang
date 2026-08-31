@@ -554,6 +554,14 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
         }
     }
 
+    // Make sure every enum value has been evaluated now, during elaboration.
+    // Some error paths above can skip computing a value (e.g. an enumerand with
+    // an erroneous initializer), which would otherwise leave it to be evaluated
+    // lazily later -- possibly during analysis when the compilation is frozen
+    // and evaluating / allocating new constants is no longer allowed.
+    for (auto& ev : enumType->values())
+        ev.getValue();
+
     return *resultType;
 }
 

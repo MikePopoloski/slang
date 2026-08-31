@@ -270,7 +270,7 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt, const Statement
             SmallVector<std::string_view> missing;
             for (auto& ev : caseType.getCanonicalType().as<EnumType>().values()) {
                 auto& val = ev.getValue();
-                if (!elems.contains(val))
+                if (val && !elems.contains(val))
                     missing.push_back(ev.name);
             }
 

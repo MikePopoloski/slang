@@ -665,3 +665,49 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CaseDup);
 }
+
+TEST_CASE("Case over enum with erroneous initializer -- GH #1940") {
+    auto& code = R"(
+module top;
+    typedef enum logic [1:0] {
+        S0 = 2'd0,
+        S1 = 2'd1,
+        S2 = 2'd2,
+        S3 = i + 2'd3
+    } state_t;
+
+    state_t state;
+
+    always_comb begin
+        case (state)
+            S0: state = S1;
+            S1: state = S2;
+            default: state = S0;
+        endcase
+    end
+endmodule
+)";
+
+    // The enum value 'S3' has an erroneous initializer, so it can't be
+    // evaluated. Analysis runs with the compilation frozen and previously
+    // tried to evaluate (and allocate) the enum value there, hitting an
+    // assertion. Manually drive the flow here since there is an error.
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto tree = SyntaxTree::fromText(code);
+    compilation.addSyntaxTree(tree);
+
+    auto compDiags = compilation.getAllDiagnostics();
+    REQUIRE(!compDiags.empty());
+    CHECK(compDiags.back().code == diag::UndeclaredIdentifier);
+
+    compilation.freeze();
+    analysisManager.analyze(compilation);
+    auto diags = analysisManager.getDiagnostics();
+
+    // 'S2' is a valid enum value that isn't handled; 'S3' is invalid (its
+    // initializer is erroneous) and should be ignored rather than reported.
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CaseEnumExplicit);
+}
