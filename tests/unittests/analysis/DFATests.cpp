@@ -1032,6 +1032,33 @@ endmodule
     CHECK_DIAGS_EMPTY;
 }
 
+TEST_CASE("Randsequence in unrolled for loop with side-effecting index -- GH #1941") {
+    // The for loop gets unrolled while the randsequence production body modifies
+    // the iteration variable via a side-effecting index (++i). This could bake in
+    // an out-of-bounds constant select, producing an lvalue path with no static
+    // prefix. Building a driver from such a path used to hit an internal assertion.
+    auto& code = R"(
+module t;
+  int counts[8];
+  initial begin
+    for (int i = 0; i < 10; ++i) begin
+      randsequence(main)
+        main: count_1;
+        count_1: { ++counts[++i]; };
+      endsequence
+    end
+    $finish;
+  end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
 TEST_CASE("DFA unsequenced expression warnings") {
     auto& code = R"(
 function void f1(input int a, output int b);

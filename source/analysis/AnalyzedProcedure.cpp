@@ -187,7 +187,13 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         }
 
         for (auto it = lvalue.assigned.begin(); it != lvalue.assigned.end(); ++it) {
+            // Value drivers require a non-null lsp; a stored lsp can re-evaluate to a
+            // path without a static prefix (e.g. an out-of-bounds constant select baked
+            // in by loop unrolling), so skip those as DriverTracker::addDrivers does.
             ValuePath path(**it, evalContext);
+            if (!path.lsp)
+                continue;
+
             auto driver = ValueDriver::create(context.alloc, driverKind, path, analyzedSymbol,
                                               DriverFlags::None);
             drivers.push_back(driver);
