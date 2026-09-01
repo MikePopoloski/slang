@@ -94,7 +94,7 @@ enum class SLANG_EXPORT DeclaredTypeFlags {
     /// A mask of flags that indicate additional type rules are needed to
     /// be checked after the type itself is resolved.
     NeedsTypeCheck = NetType | UserDefinedNetType | FormalArgMergeVar | Rand | DPIReturnType |
-                     DPIArg | RequireSequenceType | CoverageType | IfaceOrGenBlkVar
+        DPIArg | RequireSequenceType | CoverageType | IfaceOrGenBlkVar
 };
 SLANG_BITMASK(DeclaredTypeFlags, ImplicitInputNet)
 

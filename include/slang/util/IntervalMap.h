@@ -509,9 +509,9 @@ class IntervalMap {
         LeafSize = DesiredLeafSize > MinLeafSize ? DesiredLeafSize : MinLeafSize,
 
         RequestedRootLeafSize = N,
-        RootLeafSize = RequestedRootLeafSize == 0            ? LeafSize
-                       : RequestedRootLeafSize < MinLeafSize ? MinLeafSize
-                                                             : RequestedRootLeafSize
+        RootLeafSize = RequestedRootLeafSize == 0 ? LeafSize
+        : RequestedRootLeafSize < MinLeafSize     ? MinLeafSize
+                                                  : RequestedRootLeafSize
     };
     using Leaf = IntervalMapDetails::LeafNode<TKey, TValue, LeafSize, false>;
     using RootLeaf = IntervalMapDetails::LeafNode<TKey, TValue, RootLeafSize, true>;
