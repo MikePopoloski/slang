@@ -283,7 +283,7 @@ struct type_caster<std::span<T>> {
         return true;
     }
 
-    bool from_python(handle src, uint8_t flags, cleanup_list* cleanup) noexcept {
+    bool from_python(handle src, uint32_t flags, cleanup_list* cleanup) noexcept {
         // Attempt to reference a buffer, including np.ndarray and array.arrays.
         bool loaded;
         std::tie(loaded, value) = loadSpanFromBuffer<T>(src);
@@ -338,7 +338,7 @@ struct type_caster<not_null<Type>> {
         return true;
     }
 
-    bool from_python(handle src, uint8_t flags, cleanup_list* cleanup) noexcept {
+    bool from_python(handle src, uint32_t flags, cleanup_list* cleanup) noexcept {
         return caster.from_python(src, flags, cleanup);
     }
 
@@ -365,7 +365,7 @@ struct type_caster<bitmask<Type>> {
         return true;
     }
 
-    bool from_python(handle src, uint8_t flags, cleanup_list* cleanup) noexcept {
+    bool from_python(handle src, uint32_t flags, cleanup_list* cleanup) noexcept {
         return caster.from_python(src, flags, cleanup);
     }
 
@@ -396,7 +396,7 @@ struct syntax_list_caster_base {
         return true;
     }
 
-    bool from_python(handle src, uint8_t, cleanup_list*) noexcept {
+    bool from_python(handle src, uint32_t, cleanup_list*) noexcept {
         if (!PySequence_Check(src.ptr()))
             return false;
 
@@ -534,7 +534,7 @@ struct type_caster<TokenList> : syntax_list_caster_base<type_caster<TokenList>, 
 // base so the conversion still succeeds.
 inline const std::type_info* registeredOr(const std::type_info* concrete,
                                           const std::type_info* fallback) noexcept {
-    if (concrete && nb_type_lookup(concrete))
+    if (concrete && NB_CALL(nb_type_lookup)(NB_CTX, concrete))
         return concrete;
     return fallback;
 }

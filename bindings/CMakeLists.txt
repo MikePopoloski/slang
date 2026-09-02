@@ -22,7 +22,7 @@ if(NOT nanobind_FOUND)
     FetchContent_Declare(
       nanobind
       GIT_REPOSITORY ${SLANG_DEP_URL_PREFIX}wjakob/nanobind.git
-      GIT_TAG v2.13.0
+      GIT_TAG v3.0.1
       GIT_SHALLOW ON
       FIND_PACKAGE_ARGS)
     FetchContent_MakeAvailable(nanobind)
@@ -72,13 +72,16 @@ target_link_libraries(pyslang PRIVATE fmt::fmt)
 target_include_directories(pyslang PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/python)
 
 # NumericBindings.cpp uses a few private CPython APIs (_PyLong_NumBits /
-# _PyLong_AsByteArray / _PyLong_FromByteArray). On macOS, nanobind links
-# extension modules against an explicit allowlist of symbols
-# (nanobind/cmake/darwin-ld-cpython.sym), so these private symbols are reported
-# as undefined. Set to resolve Python symbols lazily at import time instead (as
-# pybind11 used), which lets the private symbols link.
+# _PyLong_AsByteArray / _PyLong_FromByteArray) that are not part of nanobind's
+# macOS symbol allowlist (nanobind/cmake/darwin-ld-cpython.sym). Add just these
+# to the linker's undefined-symbol allowlist so they resolve lazily at import
+# time. A blanket `-undefined dynamic_lookup` would also work, but it makes
+# nanobind's per-symbol `-U` entries redundant and triggers an ld warning. The
+# names carry an extra leading underscore for the Mach-O symbol mangling.
 if(APPLE)
-  target_link_options(pyslang PRIVATE -undefined dynamic_lookup)
+  target_link_options(
+    pyslang PRIVATE "LINKER:-U,__PyLong_NumBits"
+    "LINKER:-U,__PyLong_AsByteArray" "LINKER:-U,__PyLong_FromByteArray")
 endif()
 
 install(

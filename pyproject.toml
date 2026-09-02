@@ -37,7 +37,7 @@ Changelog = "https://github.com/MikePopoloski/slang/blob/master/CHANGELOG.md"
 test = ["pytest"]
 
 [build-system]
-requires = ["nanobind >= 2.0.0,<3", "scikit-build-core"]
+requires = ["nanobind >= 3.0.1,<4", "scikit-build-core"]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]

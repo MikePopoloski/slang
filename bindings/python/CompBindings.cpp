@@ -48,7 +48,7 @@ void keepAliveInDict(nb::handle self, nb::handle obj) {
 
 class PySimpleSystemSubroutine : public SimpleSystemSubroutine {
 public:
-    NB_TRAMPOLINE(SimpleSystemSubroutine, 1);
+    NB_TRAMPOLINE(SimpleSystemSubroutine);
 
     std::vector<const Type*> argTypes_;
     const Type* returnType_;
@@ -421,7 +421,7 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
 
     class PySystemSubroutine : public SystemSubroutine {
     public:
-        NB_TRAMPOLINE(SystemSubroutine, 5);
+        NB_TRAMPOLINE(SystemSubroutine);
 
         PySystemSubroutine(std::string name, SubroutineKind kind) :
             SystemSubroutine(std::move(name), kind) {}

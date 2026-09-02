@@ -1399,7 +1399,7 @@ void registerSyntaxFactory(nb::module_& m) {
                                 )
                             base_type = m[MEMBER_BASE_TYPE]
                             outf.write(
-                                f', nb::arg("{arg}") = static_cast<{base_type}*>(nullptr)'
+                                f', nb::arg("{arg}").none() = static_cast<{base_type}*>(nullptr)'
                             )
                             break
                 else:
