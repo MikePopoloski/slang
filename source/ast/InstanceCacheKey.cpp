@@ -38,7 +38,7 @@ InstanceCacheKey::InstanceCacheKey(const InstanceSymbol& symbol, bool& valid,
             auto [iface, modport] = conn->getIfaceConn();
             while (iface && iface->kind == SymbolKind::InstanceArray) {
                 auto& arr = iface->as<InstanceArraySymbol>();
-                if (arr.empty())
+                if (arr.elements.empty())
                     iface = nullptr;
                 else
                     iface = arr.elements[0];
