@@ -15,20 +15,23 @@ set(__get_git_version YES)
 # find the path to this module rather than the path to a calling list file
 get_filename_component(_gitversionmoddir ${CMAKE_CURRENT_LIST_FILE} PATH)
 
-# Update variables set in _refspecvar and _hashvar to the current git HEAD's ref and hash
-# If we are not operating in a standard repo, worktree, or sub-module these will be set to:
-#   'GITDIR-NOTFOUND'. This allows the upstream CMake to opt not to use this functionality.
+# Update variables set in _refspecvar and _hashvar to the current git HEAD's ref
+# and hash If we are not operating in a standard repo, worktree, or sub-module
+# these will be set to: 'GITDIR-NOTFOUND'. This allows the upstream CMake to opt
+# not to use this functionality.
 function(get_git_head_revision _refspecvar _hashvar)
-  # Start by checking we are operating in a git setup for slang
-  # This is equivalent to the previous check that the GIT_DIR begin relative to CMAKE_SOURCE_DIR
+  # Start by checking we are operating in a git setup for slang This is
+  # equivalent to the previous check that the GIT_DIR begin relative to
+  # CMAKE_SOURCE_DIR
   execute_process(
-      COMMAND "${GIT_EXECUTABLE}" rev-parse --show-toplevel
-      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-      OUTPUT_VARIABLE _git_toplevel RESULT_VARIABLE _result
-      ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+    COMMAND "${GIT_EXECUTABLE}" rev-parse --show-toplevel
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE _git_toplevel
+    RESULT_VARIABLE _result
+    ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   # We are not in a git project
-  if (NOT _result EQUAL 0)
+  if(NOT _result EQUAL 0)
     set(${_refspecvar}
         "GITDIR-NOTFOUND"
         PARENT_SCOPE)
@@ -38,12 +41,11 @@ function(get_git_head_revision _refspecvar _hashvar)
     return()
   endif()
 
-  # If we are in a vendored project
-  # Must be done after the return-value check to avoid RELATIVE_PATH erroring 
-  #   out when there is no _git_toplevel
+  # If we are in a vendored project Must be done after the return-value check to
+  # avoid RELATIVE_PATH erroring out when there is no _git_toplevel
   file(RELATIVE_PATH _relative_to_source_dir "${CMAKE_SOURCE_DIR}"
        "${_git_toplevel}")
-  if ("${_relative_to_source_dir}" MATCHES "[.][.]")
+  if("${_relative_to_source_dir}" MATCHES "[.][.]")
     set(${_refspecvar}
         "GITDIR-NOTFOUND"
         PARENT_SCOPE)
@@ -53,16 +55,17 @@ function(get_git_head_revision _refspecvar _hashvar)
     return()
   endif()
 
-  # Directly use git rev-parse to get the head file for the current branch
-  # Works in plain repos, worktrees, and submodules
+  # Directly use git rev-parse to get the head file for the current branch Works
+  # in plain repos, worktrees, and submodules
   execute_process(
-      COMMAND "${GIT_EXECUTABLE}" rev-parse --git-path HEAD
-      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-      OUTPUT_VARIABLE HEAD_SOURCE_FILE RESULT_VARIABLE _result
-      ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+    COMMAND "${GIT_EXECUTABLE}" rev-parse --git-path HEAD
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE HEAD_SOURCE_FILE
+    RESULT_VARIABLE _result
+    ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   # Check the command found a valid HEAD file
-  if (NOT _result EQUAL 0 OR NOT EXISTS "${HEAD_SOURCE_FILE}")
+  if(NOT _result EQUAL 0 OR NOT EXISTS "${HEAD_SOURCE_FILE}")
     set(${_refspecvar}
         "GITDIR-NOTFOUND"
         PARENT_SCOPE)
@@ -74,10 +77,11 @@ function(get_git_head_revision _refspecvar _hashvar)
 
   # Now find the GIT_DIR using rev-parse
   execute_process(
-      COMMAND "${GIT_EXECUTABLE}" rev-parse --git-common-dir
-      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-      OUTPUT_VARIABLE GIT_DIR RESULT_VARIABLE _result
-      ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+    COMMAND "${GIT_EXECUTABLE}" rev-parse --git-common-dir
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE GIT_DIR
+    RESULT_VARIABLE _result
+    ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   if(NOT _result EQUAL 0 OR "${GIT_DIR}" STREQUAL "")
     set(${_refspecvar}
@@ -90,8 +94,8 @@ function(get_git_head_revision _refspecvar _hashvar)
   endif()
 
   # Absolutize the GIT_DIR and HEAD_SOURCE_FILE
-  get_filename_component(GIT_DIR "${GIT_DIR}" ABSOLUTE
-                         BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+  get_filename_component(GIT_DIR "${GIT_DIR}" ABSOLUTE BASE_DIR
+                         "${CMAKE_CURRENT_SOURCE_DIR}")
   get_filename_component(HEAD_SOURCE_FILE "${HEAD_SOURCE_FILE}" ABSOLUTE
                          BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
