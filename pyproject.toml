@@ -25,6 +25,8 @@ classifiers = [
     "Topic :: Software Development :: Compilers",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
+requires-python = ">=3.11"
+dependencies = ["nanobind-backend >= 1.0"]
 
 [project.urls]
 Homepage = "https://sv-lang.com/"
@@ -37,7 +39,13 @@ Changelog = "https://github.com/MikePopoloski/slang/blob/master/CHANGELOG.md"
 test = ["pytest"]
 
 [build-system]
-requires = ["nanobind >= 3.0.1,<4", "scikit-build-core"]
+# nanobind-backend is needed at build time so that nanobind's stub generator can
+# import the (split-mode) extension while producing pyslang.pyi.
+requires = [
+    "nanobind >= 3.0.1,<4",
+    "nanobind-backend >= 1.0",
+    "scikit-build-core",
+]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
@@ -47,6 +55,9 @@ sdist.exclude = [".github", "./build", "./install", "./tests", "./tools"]
 wheel.packages = ["pyslang/pyslang"]
 wheel.install-dir = "pyslang"
 wheel.license-files = ["LICENSE"]
+# Split-mode extensions target the stable ABI; tag the wheel as cp311-abi3 so a
+# single wheel per platform covers Python 3.11+.
+wheel.py-api = "cp311"
 
 [tool.scikit-build.cmake.define]
 SLANG_INCLUDE_TESTS = "OFF"
@@ -57,7 +68,9 @@ SLANG_INCLUDE_PYLIB = "ON"
 archs = ["auto64"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
-skip = ["cp38-*", "cp39-*", "*musllinux*"]
+# A single abi3 build per platform covers all newer Python versions.
+build = "cp311-*"
+skip = ["*musllinux*"]
 build-verbosity = 1
 test-command = "pytest {project}/pyslang/tests"
 test-extras = ["test"]

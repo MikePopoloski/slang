@@ -44,10 +44,23 @@ add_custom_command(
   DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
   COMMENT "Generating syntax bindings")
 
-# Add the pyslang module via nanobind
+# Add the pyslang module via nanobind, built in "split mode": the compiled
+# nanobind runtime (libnanobind) is provided at runtime by the separate
+# `nanobind-backend` PyPI package instead of being linked in. This targets the
+# stable ABI (abi3), so a single wheel per platform covers all supported Python
+# versions. See https://nanobind.readthedocs.io/en/latest/split_mode.html
+#
+# The stable ABI floor is pinned to 3.11 (rather than nanobind's 3.10 default)
+# because pyslang.h's std::span buffer caster uses the Python buffer protocol
+# (PyObject_GetBuffer / Py_buffer), which only became part of the limited API in
+# CPython 3.11. Keep this in sync with `wheel.py-api` / `requires-python` in
+# pyproject.toml.
 nanobind_add_module(
   pyslang
-  NB_STATIC
+  BACKEND_MODULE
+  nanobind_backend
+  STABLE_ABI_VERSION
+  3.11
   python/AnalysisBindings.cpp
   python/ASTBindings.cpp
   python/CompBindings.cpp
@@ -71,19 +84,6 @@ target_link_libraries(pyslang PUBLIC slang::slang)
 target_link_libraries(pyslang PRIVATE fmt::fmt)
 target_include_directories(pyslang PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/python)
 
-# NumericBindings.cpp uses a few private CPython APIs (_PyLong_NumBits /
-# _PyLong_AsByteArray / _PyLong_FromByteArray) that are not part of nanobind's
-# macOS symbol allowlist (nanobind/cmake/darwin-ld-cpython.sym). Add just these
-# to the linker's undefined-symbol allowlist so they resolve lazily at import
-# time. A blanket `-undefined dynamic_lookup` would also work, but it makes
-# nanobind's per-symbol `-U` entries redundant and triggers an ld warning. The
-# names carry an extra leading underscore for the Mach-O symbol mangling.
-if(APPLE)
-  target_link_options(
-    pyslang PRIVATE "LINKER:-U,__PyLong_NumBits"
-    "LINKER:-U,__PyLong_AsByteArray" "LINKER:-U,__PyLong_FromByteArray")
-endif()
-
 install(
   TARGETS pyslang
   COMPONENT pylib
@@ -96,8 +96,47 @@ install(
   COMPONENT pylib
   DESTINATION .)
 
-# Generate a Python stub (.pyi) for the compiled module using nanobind's
-# built-in stub generator, then install it alongside the module.
+# Generate a Python stub (.pyi) for the compiled module at build time using
+# nanobind's stub generator, then install it alongside the module.
+#
+# In split mode the generator must import the extension, which in turn imports
+# the compiled `nanobind_backend` module. If the build environment doesn't
+# already provide it (a wheel build installs it as a build dependency), fetch a
+# matching copy from PyPI into the build tree and add it to the stub import
+# path.
+set(pyslang_stub_python_path "$<TARGET_FILE_DIR:pyslang>")
+execute_process(
+  COMMAND "${Python_EXECUTABLE}" -c "import nanobind_backend"
+  RESULT_VARIABLE nanobind_backend_missing
+  OUTPUT_QUIET ERROR_QUIET)
+if(nanobind_backend_missing)
+  set(nanobind_backend_dir "${CMAKE_CURRENT_BINARY_DIR}/nanobind_backend")
+  # Re-probe with the build-tree copy on the path so reconfigures don't
+  # re-fetch.
+  execute_process(
+    COMMAND "${CMAKE_COMMAND}" -E env "PYTHONPATH=${nanobind_backend_dir}"
+            "${Python_EXECUTABLE}" -c "import nanobind_backend"
+    RESULT_VARIABLE nanobind_backend_absent
+    OUTPUT_QUIET ERROR_QUIET)
+  if(nanobind_backend_absent)
+    message(
+      STATUS
+        "pyslang: nanobind_backend not found; fetching it from PyPI for stub generation"
+    )
+    execute_process(
+      COMMAND "${Python_EXECUTABLE}" -m pip install --only-binary :all: --target
+              "${nanobind_backend_dir}" "nanobind-backend>=1.0"
+      RESULT_VARIABLE nanobind_backend_fetch_result)
+    if(NOT nanobind_backend_fetch_result EQUAL 0)
+      message(
+        FATAL_ERROR
+          "pyslang: failed to fetch nanobind-backend from PyPI. Install it into the "
+          "build environment (pip install nanobind-backend) and re-run CMake.")
+    endif()
+  endif()
+  list(APPEND pyslang_stub_python_path "${nanobind_backend_dir}")
+endif()
+
 nanobind_add_stub(
   pyslang_stub
   MODULE
@@ -105,7 +144,7 @@ nanobind_add_stub(
   OUTPUT
   ${CMAKE_CURRENT_BINARY_DIR}/pyslang.pyi
   PYTHON_PATH
-  $<TARGET_FILE_DIR:pyslang>
+  ${pyslang_stub_python_path}
   DEPENDS
   pyslang)
 

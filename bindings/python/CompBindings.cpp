@@ -86,9 +86,9 @@ public:
     }
 
     nb::object getObj() const {
-        PyObject* obj = PyWeakref_GET_OBJECT(pyWeak.ptr());
-        if (obj && obj != Py_None)
-            return nb::borrow(obj);
+        nb::object obj = pyWeak();
+        if (obj.is_valid() && !obj.is_none())
+            return obj;
         return nb::object();
     }
 

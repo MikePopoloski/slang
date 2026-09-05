@@ -21,32 +21,22 @@ static SVInt SVIntFromFloat(double value) {
 }
 
 static SVInt SVIntFromPyInt(const nb::int_& value) {
-    size_t bits = _PyLong_NumBits(value.ptr());
-    if (bits == size_t(-1))
-        throw nb::python_error();
-
+    // Number of bits needed to represent the magnitude (matches _PyLong_NumBits).
+    size_t bits = nb::cast<size_t>(value.attr("bit_length")());
     if (bits == 0)
         return SVInt::Zero;
 
     bits++; // always make room for a sign bit
     size_t numBytes = ((bits - 1) / 32 + 1) * 4;
-    std::vector<byte> mem(numBytes);
 
-    int r = -1;
-#if PY_VERSION_HEX < 0x030D0000
-    r = _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(value.ptr()),
-                            reinterpret_cast<unsigned char*>(mem.data()), numBytes, 1, 1);
-#else
-    // fix build error with python 3.13
-    r = _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(value.ptr()),
-                            reinterpret_cast<unsigned char*>(mem.data()), numBytes, 1, 1, 0);
-    // No exception is thrown here because it will be done later.
-#endif
+    // Obtain a little-endian two's complement byte image via the stable-ABI
+    // int.to_bytes() method. The private _PyLong_* helpers are unavailable
+    // under the limited API that split-mode (abi3) builds compile against.
+    nb::object raw = value.attr("to_bytes")(numBytes, "little", nb::arg("signed") = true);
+    nb::bytes mem = nb::steal<nb::bytes>(raw.release());
 
-    if (r == -1)
-        throw nb::python_error();
-
-    return SVInt(bitwidth_t(bits), mem, true);
+    auto ptr = reinterpret_cast<const byte*>(mem.c_str());
+    return SVInt(bitwidth_t(bits), std::span<const byte>(ptr, numBytes), true);
 }
 
 static nb::int_ PyIntFromSVInt(const SVInt& value) {
@@ -55,31 +45,29 @@ static nb::int_ PyIntFromSVInt(const SVInt& value) {
 
     uint32_t numWords = value.getNumWords();
     size_t numBytes = numWords * SVInt::WORD_SIZE;
-    PyObject* obj;
+    bool isSigned = value.isSigned();
 
-    if (value.isSigned() && value.isNegative()) {
+    std::vector<unsigned char> mem(numBytes);
+    memcpy(mem.data(), value.getRawPtr(), numBytes);
+
+    if (isSigned && value.isNegative()) {
         // Need to fill the top bits with 1's to guarantee the
         // correct representation in Python land.
-        std::vector<unsigned char> mem(numBytes);
-        memcpy(mem.data(), value.getRawPtr(), numBytes);
-
         uint64_t word = value.getRawPtr()[numWords - 1];
         uint32_t wordBits = value.getBitWidth() % SVInt::BITS_PER_WORD;
         if (wordBits > 0)
             word |= ~uint64_t(0ULL) << wordBits;
 
         memcpy(mem.data() + numBytes - SVInt::WORD_SIZE, &word, SVInt::WORD_SIZE);
-        obj = _PyLong_FromByteArray(mem.data(), numBytes, 1, value.isSigned());
-    }
-    else {
-        obj = _PyLong_FromByteArray(reinterpret_cast<const unsigned char*>(value.getRawPtr()),
-                                    numBytes, 1, value.isSigned());
     }
 
-    if (!obj)
-        throw nb::python_error();
-
-    return nb::steal<nb::int_>(obj);
+    // Convert the little-endian bytes to a Python int via the stable-ABI
+    // int.from_bytes() classmethod (see SVIntFromPyInt for why the private
+    // _PyLong_* helpers are avoided).
+    nb::handle intType = reinterpret_cast<PyObject*>(&PyLong_Type);
+    nb::bytes data(mem.data(), numBytes);
+    nb::object obj = intType.attr("from_bytes")(data, "little", nb::arg("signed") = isSigned);
+    return nb::steal<nb::int_>(obj.release());
 }
 
 void registerNumeric(nb::module_& m) {
