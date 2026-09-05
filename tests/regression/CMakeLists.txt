@@ -24,6 +24,7 @@ add_test(
 set_tests_properties(regression_cst_json_roundtrip
                      PROPERTIES DEPENDS regression_cst_json_gen)
 
+add_subdirectory(ast)
 add_subdirectory(driver)
 
 if(SLANG_INCLUDE_UVM_TEST)
