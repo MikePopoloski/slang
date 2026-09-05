@@ -6,6 +6,7 @@
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
+#include "slang/diagnostics/WaiverManager.h"
 #include "slang/parsing/Lexer.h"
 #include "slang/text/Json.h"
 #include "slang/text/SourceManager.h"
@@ -517,6 +518,70 @@ TEST_CASE("DiagnosticEngine stuff") {
     CHECK(client->count == 10); // includes 2 warnings and 1 fatal
 }
 
+TEST_CASE("DiagnosticClient receives notes with their parent") {
+    class TestClient : public DiagnosticClient {
+    public:
+        int count = 0;
+        size_t noteCount = 0;
+        std::string message;
+        std::string noteMessage;
+
+        void report(const ReportedDiagnostic& diag) final {
+            count++;
+            noteCount = diag.notes.size();
+            message = diag.formattedMessage;
+            if (!diag.notes.empty())
+                noteMessage = diag.notes[0].formattedMessage;
+        }
+    };
+
+    auto& sourceManager = getSourceManager();
+    auto buffer = sourceManager.assignText("diagnostic-client-notes.sv", "x");
+    auto location = SourceLocation(buffer.id, 0);
+
+    Diagnostic diagnostic(diag::ExpectedClosingQuote, location);
+    diagnostic.addNote(diag::NoteDeclarationHere, location);
+
+    DiagnosticEngine engine(sourceManager);
+    auto client = std::make_shared<TestClient>();
+    engine.addClient(client);
+    engine.issue(diagnostic);
+
+    CHECK(client->count == 1);
+    CHECK(client->noteCount == 1);
+    CHECK(client->message == "missing closing quote");
+    CHECK(client->noteMessage == "declared here");
+}
+
+TEST_CASE("Diagnostic notes are not waived") {
+    class TestClient : public DiagnosticClient {
+    public:
+        size_t noteCount = 0;
+
+        void report(const ReportedDiagnostic& diag) final { noteCount = diag.notes.size(); }
+    };
+
+    SourceManager sourceManager;
+    auto primaryBuffer = sourceManager.assignText("primary.sv", "x");
+    auto noteBuffer = sourceManager.assignText("waived-note.sv", "x");
+
+    DiagnosticEngine engine(sourceManager);
+    auto waiverManager = std::make_shared<WaiverManager>();
+    TempFile waiver("[[waivers]]\nfile = \"**/waived-note.sv\"\n", ".toml");
+    REQUIRE(waiverManager->loadFromFile(waiver.path, engine).empty());
+    engine.setWaiverManager(waiverManager);
+
+    auto client = std::make_shared<TestClient>();
+    engine.addClient(client);
+
+    Diagnostic diagnostic(diag::ExpectedClosingQuote, SourceLocation(primaryBuffer.id, 0));
+    diagnostic.addNote(diag::NoteDeclarationHere, SourceLocation(noteBuffer.id, 0));
+    engine.issue(diagnostic);
+
+    CHECK(client->noteCount == 1);
+    CHECK(waiverManager->getAppliedCount() == 0);
+}
+
 TEST_CASE("DiagnosticEngine::setWarningOptions") {
     auto options = std::vector{
         "everything"s, "none"s,     "error"s, "error=case-gen-dup"s, "no-error=empty-member"s,
@@ -643,6 +708,7 @@ TEST_CASE("JSON DiagnosticClient") {
 module m;
     int i = 1;;
     int j = q;
+    int q;
 endmodule
 )");
 
@@ -667,15 +733,130 @@ endmodule
   {
     "severity": "warning",
     "message": "extra ';' has no effect",
+    "code": "EmptyMember",
     "optionName": "empty-member",
     "location": "source:3:15",
+    "ranges": [
+      {
+        "start": {
+          "file": "source",
+          "line": 3,
+          "column": 15
+        },
+        "end": {
+          "file": "source",
+          "line": 3,
+          "column": 16
+        }
+      }
+    ],
     "symbolPath": "m"
   },
   {
     "severity": "error",
-    "message": "use of undeclared identifier 'q'",
+    "message": "identifier 'q' used before its declaration",
+    "code": "UsedBeforeDeclared",
     "location": "source:4:13",
-    "symbolPath": "m"
+    "ranges": [
+      {
+        "start": {
+          "file": "source",
+          "line": 4,
+          "column": 13
+        },
+        "end": {
+          "file": "source",
+          "line": 4,
+          "column": 14
+        }
+      }
+    ],
+    "symbolPath": "m",
+    "notes": [
+      {
+        "message": "declared here",
+        "code": "NoteDeclarationHere",
+        "location": "source:5:9"
+      }
+    ]
+  }
+])");
+}
+
+TEST_CASE("JSON DiagnosticClient maps ranges through macros") {
+    auto tree = SyntaxTree::fromText(R"(
+`define FOO(blah) blah.bar
+`define BAR(blah) `FOO(blah)
+
+module m;
+    struct { int i; } asdf;
+    int i = `BAR(asdf);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    REQUIRE(diagnostics.size() == 1);
+    REQUIRE(diagnostics[0].code == diag::UnknownMember);
+
+    DiagnosticEngine engine(tree->sourceManager());
+
+    JsonWriter writer;
+    writer.setPrettyPrint(true);
+    writer.startArray();
+
+    auto client = std::make_shared<JsonDiagnosticClient>(writer);
+    engine.addClient(client);
+    engine.issue(diagnostics[0]);
+
+    writer.endArray();
+
+    CHECK("\n"s + std::string(writer.view()) == R"(
+[
+  {
+    "severity": "error",
+    "message": "no member named 'bar' in 'struct{int i}'",
+    "code": "UnknownMember",
+    "location": "source:7:13",
+    "ranges": [
+      {
+        "start": {
+          "file": "source",
+          "line": 7,
+          "column": 13
+        },
+        "end": {
+          "file": "source",
+          "line": 7,
+          "column": 23
+        }
+      },
+      {
+        "start": {
+          "file": "source",
+          "line": 7,
+          "column": 18
+        },
+        "end": {
+          "file": "source",
+          "line": 7,
+          "column": 22
+        }
+      }
+    ],
+    "symbolPath": "m",
+    "macroStack": [
+      {
+        "name": "BAR",
+        "location": "source:3:19"
+      },
+      {
+        "name": "FOO",
+        "location": "source:2:24"
+      }
+    ]
   }
 ])");
 }
