@@ -206,7 +206,7 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
         .value("Other", DriverSource::Other);
 
     nb::enum_<DriverFlags>(m, "DriverFlags", nb::is_arithmetic())
-        .value("None", DriverFlags::None)
+        .value("None_", DriverFlags::None)
         .value("InputPort", DriverFlags::InputPort)
         .value("OutputPort", DriverFlags::OutputPort)
         .value("ClockVar", DriverFlags::ClockVar)
@@ -216,7 +216,7 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
         .value("ViaIndirectPort", DriverFlags::ViaIndirectPort);
 
     nb::enum_<AnalysisFlags>(m, "AnalysisFlags", nb::is_arithmetic())
-        .value("None", AnalysisFlags::None)
+        .value("None_", AnalysisFlags::None)
         .value("CheckUnused", AnalysisFlags::CheckUnused)
         .value("FullCaseUniquePriority", AnalysisFlags::FullCaseUniquePriority)
         .value("FullCaseFourState", AnalysisFlags::FullCaseFourState)

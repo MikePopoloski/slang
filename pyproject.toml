@@ -36,7 +36,7 @@ Issues = "https://github.com/MikePopoloski/slang/issues"
 Changelog = "https://github.com/MikePopoloski/slang/blob/master/CHANGELOG.md"
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest", "pyright",]
 
 [build-system]
 # nanobind-backend is needed at build time so that nanobind's stub generator can

@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
+import keyword
 import math
 import os
 from io import StringIO
@@ -1339,6 +1340,11 @@ void registerSyntaxNodes{i}(nb::module_& m) {{
             f.write(outf.getvalue())
 
 
+def pythonArgName(name):
+    """Return a version of a grammar member name that is usable as a Python argument."""
+    return name + "_" if keyword.iskeyword(name) else name
+
+
 def generatePyFactoryBindings(builddir, alltypes):
     """Generate Python bindings for SyntaxFactory class and all its methods."""
 
@@ -1388,7 +1394,8 @@ void registerSyntaxFactory(nb::module_& m) {
             # defined in pyslang.h (included by the generated files).
             outf.write(", byrefint")
 
-            for arg in typeinfo.argNames:
+            for index, arg in enumerate(typeinfo.argNames):
+                py_arg = pythonArgName(arg)
                 if arg in typeinfo.optionalMembers:
                     for m in typeinfo.combinedMembers:
                         if m[MEMBER_NAME] == arg:
@@ -1398,12 +1405,24 @@ void registerSyntaxFactory(nb::module_& m) {
                                     f" information (expected at index {MEMBER_BASE_TYPE})"
                                 )
                             base_type = m[MEMBER_BASE_TYPE]
-                            outf.write(
-                                f', nb::arg("{arg}").none() = static_cast<{base_type}*>(nullptr)'
+                            # Python does not permit a defaulted parameter before a required one.
+                            # This can happen for syntax nodes whose optional base-class member
+                            #   precedes required members introduced by the derived class.
+                            # Keep the argument nullable, but omit the default in that case.
+                            # Callers can still pass None explicitly.
+                            required_after = any(
+                                later not in typeinfo.optionalMembers
+                                for later in typeinfo.argNames[index + 1 :]
                             )
+                            default = (
+                                ""
+                                if required_after
+                                else (f" = static_cast<{base_type}*>(nullptr)")
+                            )
+                            outf.write(f', nb::arg("{py_arg}").none(){default}')
                             break
                 else:
-                    outf.write(f', "{arg}"_a')
+                    outf.write(f', "{py_arg}"_a')
 
             outf.write(")\n")
 

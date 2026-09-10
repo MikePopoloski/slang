@@ -272,7 +272,7 @@ endmodule
     driver = drivers[0]
     assert driver.kind == DriverKind.Continuous
     assert driver.source == DriverSource.Other
-    assert driver.flags == DriverFlags["None"]
+    assert driver.flags == DriverFlags["None_"]
 
 
 def test_value_path_bounds():

@@ -26,6 +26,7 @@
 #include <nanobind/trampoline.h>
 #include <optional>
 #include <span>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <vector>
@@ -48,19 +49,50 @@ using namespace slang::parsing;
 using namespace slang::syntax;
 using namespace slang::ast;
 
-#define EXPOSE_ENUM(handle, name)                                \
-    do {                                                         \
-        nb::enum_<name> e(handle, #name);                        \
-        for (auto member : name##_traits::values) {              \
-            std::string nameStr = std::string(toString(member)); \
-            if (nameStr == "None")                               \
-                nameStr = "None_";                               \
-            if (nameStr == "and")                                \
-                nameStr = "and_";                                \
-            if (nameStr == "or")                                 \
-                nameStr = "or_";                                 \
-            e.value(nameStr.c_str(), member);                    \
-        }                                                        \
+// The Python 3 hard keywords. Any name that collides with one of these gets a
+// trailing underscore appended; soft keywords like "match" are valid attribute
+// names and are left unchanged.
+inline constexpr std::string_view pythonKeywords[] = {
+    "False", "None",     "True",  "and",    "as",   "assert", "async",  "await",    "break",
+    "class", "continue", "def",   "del",    "elif", "else",   "except", "finally",  "for",
+    "from",  "global",   "if",    "import", "in",   "is",     "lambda", "nonlocal", "not",
+    "or",    "pass",     "raise", "return", "try",  "while",  "with",   "yield",
+};
+
+// For each name in the enum we need to sanatize it.
+// For simple Python Keywords we need to simply add '_' to the end.
+// For names which start with '$' prepend 's_' inplace of '$'.
+// For names which contain '$' replace '$' with '_'.
+inline std::string sanatize_name(const std::string& name) {
+    // A trailing underscore resolves collisions with Python keywords, e.g.
+    // "None" -> "None_", "with" -> "with_".
+    for (std::string_view keyword : pythonKeywords) {
+        if (name == keyword)
+            return name + "_";
+    }
+
+    // '$' is not a valid identifier character. A leading '$' is replaced with
+    // "s_" ("$bits" -> "s_bits") and any other '$' with '_' ("a$b" -> "a_b").
+    std::string result;
+    result.reserve(name.size() + 1);
+    for (size_t i = 0; i < name.size(); i++) {
+        if (name[i] != '$')
+            result.push_back(name[i]);
+        else if (i == 0)
+            result.append("s_");
+        else
+            result.push_back('_');
+    }
+    return result;
+}
+
+#define EXPOSE_ENUM(handle, name)                                               \
+    do {                                                                        \
+        nb::enum_<name> e(handle, #name);                                       \
+        for (auto member : name##_traits::values) {                             \
+            std::string nameStr = sanatize_name(std::string(toString(member))); \
+            e.value(nameStr.c_str(), member);                                   \
+        }                                                                       \
     } while (0)
 
 // nanobind's return-value policies. Unlike pybind11, nanobind returns raw
