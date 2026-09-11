@@ -123,7 +123,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_COMPILER": "clang++-22"
+        "CMAKE_CXX_COMPILER": "clang++-23"
       }
     },
     {
@@ -135,7 +135,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_COMPILER": "clang++-22",
+        "CMAKE_CXX_COMPILER": "clang++-23",
         "SLANG_INCLUDE_THREADTEST": "ON"
       }
     },
@@ -149,11 +149,11 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "CMAKE_CXX_COMPILER": "clang++-22",
+        "CMAKE_CXX_COMPILER": "clang++-23",
         "CMAKE_CXX_FLAGS": "-DSLANG_ASSERT_ENABLED -fsanitize=undefined,address -fno-sanitize-recover=undefined -fno-omit-frame-pointer -fno-common -Wno-deprecated-declarations",
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
         "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
-        "SLANG_CLANG_TIDY": "clang-tidy-22",
+        "SLANG_CLANG_TIDY": "clang-tidy-23",
         "SLANG_USE_MIMALLOC": "OFF"
       }
     },

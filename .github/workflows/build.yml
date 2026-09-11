@@ -45,10 +45,10 @@ jobs:
       if: ${{ startsWith(matrix.os, 'ubuntu-') }}
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo add-apt-repository "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main"
+        sudo add-apt-repository "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-23 main"
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt-get update
-        sudo apt-get install -y g++-16 g++-11 clang-22 clang-tidy-22
+        sudo apt-get install -y g++-16 g++-11 clang-23 clang-tidy-23
     - name: ccache
       uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
       with:
