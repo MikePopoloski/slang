@@ -15,7 +15,8 @@ namespace slang {
 
 class JsonWriter;
 
-/// A diagnostic client that serializes each diagnostic to JSON format.
+/// A diagnostic client that serializes diagnostics to JSON format, with associated
+/// notes nested under their parent diagnostic.
 class SLANG_EXPORT JsonDiagnosticClient : public DiagnosticClient {
 public:
     /// Constructs a new JsonDiagnosticClient that outputs to the given JsonWriter.
@@ -27,9 +28,7 @@ public:
 private:
     JsonWriter& writer;
 
-    void formatDiag(SourceLocation loc, std::span<const SourceRange> ranges,
-                    DiagnosticSeverity severity, std::string_view message,
-                    std::string_view optionName);
+    void writeDiagnostic(const ReportedDiagnosticInfo& diagnostic);
 };
 
 } // namespace slang

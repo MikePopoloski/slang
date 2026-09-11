@@ -97,6 +97,7 @@ private:
     bool includeExpansion = true;
     ShowHierarchyPathOption includeHierarchy = ShowHierarchyPathOption::Auto;
 
+    void writeDiagnostic(const ReportedDiagnosticInfo& diagnostic, DiagnosticSeverity severity);
     void formatDiag(SourceLocation loc, std::span<const SourceRange> ranges,
                     DiagnosticSeverity severity, std::string_view message,
                     std::string_view optionName);
