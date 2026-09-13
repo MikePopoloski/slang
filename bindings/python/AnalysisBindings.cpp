@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "PyAnalysisManager.h"
 #include "pyslang.h"
 
 #include "slang/analysis/AbstractFlowAnalysis.h"
@@ -158,13 +159,6 @@ protected:
         state.reachable = false;
         return state;
     }
-};
-
-struct PyAnalysisManager {
-    AnalysisManager manager;
-    std::vector<nb::object> listeners;
-
-    explicit PyAnalysisManager(AnalysisOptions options) : manager(std::move(options)) {}
 };
 
 static int py_analysis_manager_traverse(PyObject* self, visitproc visit, void* arg) {
