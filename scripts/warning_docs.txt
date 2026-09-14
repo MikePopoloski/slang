@@ -2907,7 +2907,7 @@ endmodule
 
 -Wunnamed-generate
 A generate block has no user-provided name. This is perfectly valid in SystemVerilog
-but many coding standards dictate that generate blocks alwayscbe given a name so this
+but many coding standards dictate that generate blocks always be given a name so this
 warning can be used to enforce that.
 ```
 module a;
