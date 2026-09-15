@@ -166,6 +166,7 @@ static const Symbol& unwrapTransparent(const Symbol& symbol) {
 static bool checkExportIsImported(const PackageSymbol& package, const PackageImportItemSyntax& item,
                                   const Symbol& exported) {
     auto lookupName = item.item.valueText();
+    SLANG_ASSERT(!lookupName.empty());
 
     auto notImported = [&] {
         package.addDiag(diag::PackageExportNotImported, item.item.location()) << lookupName;
@@ -287,10 +288,8 @@ const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
     // lookup would break packages that mutually export from each other.
     const ExplicitImportSymbol* eis = nullptr;
     auto& scopeNameMap = getNameMap();
-    // Either find the symbol defined in the scope, or it's explicit import
     if (auto it = scopeNameMap.find(lookupName); it != scopeNameMap.end()) {
         auto symbol = &unwrapTransparent(*it->second);
-
         switch (symbol->kind) {
             case SymbolKind::ExplicitImport:
                 // Items that are imported into a package are not made visible to
@@ -310,15 +309,14 @@ const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
 
     resolveExports();
 
-    // If it was explicit imported, check that it was exported via explicit, export all, or wildcard
-    // export.
+    // If it was explicitly imported, check that it was exported via explicit,
+    // export all, or wildcard export.
     if (eis) {
         auto imported = eis->importedSymbol();
         if (exportData && exportData->explicitExportSyms) {
             auto exportIt = exportData->explicitExportSyms->find(lookupName);
-            if (exportIt != exportData->explicitExportSyms->end() && exportIt->second == imported) {
+            if (exportIt != exportData->explicitExportSyms->end() && exportIt->second == imported)
                 return imported;
-            }
         }
 
         if (hasExportAll || (exportData && exportData->wildcardExportPackages &&
@@ -333,7 +331,7 @@ const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
     // explicitly exported -- e.g. `export p::x` where x was brought in via a
     // wildcard import, so it never became a named member of this scope.
     // explicitExportSyms only ever contains exports that resolveExports() has already
-    // confirmed are imported (see isImportedForExport), so no re-check is needed here.
+    // confirmed are imported (see checkExportIsImported), so no re-check is needed here.
     if (exportData && exportData->explicitExportSyms) {
         if (auto it = exportData->explicitExportSyms->find(lookupName);
             it != exportData->explicitExportSyms->end()) {

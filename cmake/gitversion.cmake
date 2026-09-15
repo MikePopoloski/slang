@@ -16,11 +16,11 @@ set(__get_git_version YES)
 get_filename_component(_gitversionmoddir ${CMAKE_CURRENT_LIST_FILE} PATH)
 
 # Update variables set in _refspecvar and _hashvar to the current git HEAD's ref
-# and hash If we are not operating in a standard repo, worktree, or sub-module
+# and hash. If we are not operating in a standard repo, worktree, or sub-module
 # these will be set to: 'GITDIR-NOTFOUND'. This allows the upstream CMake to opt
 # not to use this functionality.
 function(get_git_head_revision _refspecvar _hashvar)
-  # Start by checking we are operating in a git setup for slang This is
+  # Start by checking we are operating in a git setup for slang. This is
   # equivalent to the previous check that the GIT_DIR begin relative to
   # CMAKE_SOURCE_DIR
   execute_process(
@@ -30,8 +30,8 @@ function(get_git_head_revision _refspecvar _hashvar)
     RESULT_VARIABLE _result
     ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-  # We are not in a git project
   if(NOT _result EQUAL 0)
+    # We are not in a git project
     set(${_refspecvar}
         "GITDIR-NOTFOUND"
         PARENT_SCOPE)
@@ -41,8 +41,8 @@ function(get_git_head_revision _refspecvar _hashvar)
     return()
   endif()
 
-  # If we are in a vendored project Must be done after the return-value check to
-  # avoid RELATIVE_PATH erroring out when there is no _git_toplevel
+  # Check if we are in a vendored project. Must be done after the return-value
+  # check to avoid RELATIVE_PATH erroring out when there is no _git_toplevel.
   file(RELATIVE_PATH _relative_to_source_dir "${CMAKE_SOURCE_DIR}"
        "${_git_toplevel}")
   if("${_relative_to_source_dir}" MATCHES "[.][.]")
@@ -55,8 +55,8 @@ function(get_git_head_revision _refspecvar _hashvar)
     return()
   endif()
 
-  # Directly use git rev-parse to get the head file for the current branch Works
-  # in plain repos, worktrees, and submodules
+  # Directly use git rev-parse to get the head file for the current branch.
+  # Works in plain repos, worktrees, and submodules
   execute_process(
     COMMAND "${GIT_EXECUTABLE}" rev-parse --git-path HEAD
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"

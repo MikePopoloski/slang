@@ -311,9 +311,11 @@ std::optional<ReportedDiagnosticInfo> DiagnosticEngine::getReportedDiag(
                     return std::nullopt;
             }
         }
+
         if (waiverManager && (getDefaultSeverity(diagnostic.code) != DiagnosticSeverity::Note) &&
-            waiverManager->shouldWaive(diagnostic, loc, sourceManager, *this))
+            waiverManager->shouldWaive(diagnostic, loc, sourceManager, *this)) {
             return std::nullopt;
+        }
     }
 
     ReportedDiagnosticInfo report(diagnostic);

@@ -1407,7 +1407,7 @@ void registerSyntaxFactory(nb::module_& m) {
                             base_type = m[MEMBER_BASE_TYPE]
                             # Python does not permit a defaulted parameter before a required one.
                             # This can happen for syntax nodes whose optional base-class member
-                            #   precedes required members introduced by the derived class.
+                            # precedes required members introduced by the derived class.
                             # Keep the argument nullable, but omit the default in that case.
                             # Callers can still pass None explicitly.
                             required_after = any(

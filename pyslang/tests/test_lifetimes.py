@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+
 import gc
 
 from pyslang.ast import Compilation, Lookup, ScriptSession, SymbolKind

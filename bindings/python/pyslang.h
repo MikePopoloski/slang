@@ -59,11 +59,11 @@ inline constexpr std::string_view pythonKeywords[] = {
     "or",    "pass",     "raise", "return", "try",  "while",  "with",   "yield",
 };
 
-// For each name in the enum we need to sanatize it.
-// For simple Python Keywords we need to simply add '_' to the end.
-// For names which start with '$' prepend 's_' inplace of '$'.
+// For each name in the enum we need to sanitize it.
+// For simple Python keywords we need to simply add '_' to the end.
+// For names which start with '$' prepend 's_' in place of '$'.
 // For names which contain '$' replace '$' with '_'.
-inline std::string sanatize_name(const std::string& name) {
+inline std::string sanitizeName(const std::string& name) {
     // A trailing underscore resolves collisions with Python keywords, e.g.
     // "None" -> "None_", "with" -> "with_".
     for (std::string_view keyword : pythonKeywords) {
@@ -86,13 +86,13 @@ inline std::string sanatize_name(const std::string& name) {
     return result;
 }
 
-#define EXPOSE_ENUM(handle, name)                                               \
-    do {                                                                        \
-        nb::enum_<name> e(handle, #name);                                       \
-        for (auto member : name##_traits::values) {                             \
-            std::string nameStr = sanatize_name(std::string(toString(member))); \
-            e.value(nameStr.c_str(), member);                                   \
-        }                                                                       \
+#define EXPOSE_ENUM(handle, name)                                              \
+    do {                                                                       \
+        nb::enum_<name> e(handle, #name);                                      \
+        for (auto member : name##_traits::values) {                            \
+            std::string nameStr = sanitizeName(std::string(toString(member))); \
+            e.value(nameStr.c_str(), member);                                  \
+        }                                                                      \
     } while (0)
 
 // nanobind's return-value policies. Unlike pybind11, nanobind returns raw

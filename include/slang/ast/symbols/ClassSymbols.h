@@ -48,11 +48,6 @@ public:
     /// a pointer to that generic class definition.
     const GenericClassDefSymbol* genericClass = nullptr;
 
-    /// The depth of this specialization within a chain of specializations of
-    /// the same generic class. Used to bound runaway recursive specialization;
-    /// see GenericClassDefSymbol::getSpecializationImpl.
-    mutable uint32_t specializationDepth = 0;
-
     /// The list of generic parameters for this class specialization, if any.
     std::span<const Symbol* const> genericParameters;
 
@@ -205,6 +200,7 @@ private:
     mutable std::optional<const Expression*> baseConstructorCall;
     mutable std::optional<uint64_t> cachedBitstreamWidth;
     mutable std::optional<bool> cachedHasCycles;
+    mutable uint32_t specializationDepth = 0;
     SymbolIndex headerIndex;
 };
 

@@ -17,6 +17,7 @@ path = [
     "scripts/**",
     "tests/unittests/data/**",
     "tests/regression/**",
+    "tests/benchmarks/slang_args.yaml",
     "tools/**/README.md",
     ".github/**",
     ".vscode/**",
