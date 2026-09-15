@@ -1279,6 +1279,11 @@ analysis::AnalysisOptions Driver::getAnalysisOptions() const {
         if (value == true)
             ao.flags |= flag;
     }
+
+    // Set default flags, if not provided by the user.
+    if (!options.analysisFlags.at(AnalysisFlags::FullCaseUniquePriority).has_value())
+        ao.flags |= AnalysisFlags::FullCaseUniquePriority;
+
     return ao;
 }
 
