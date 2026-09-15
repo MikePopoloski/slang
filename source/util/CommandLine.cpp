@@ -653,7 +653,7 @@ std::string CommandLine::getHelpText(std::string_view overview, size_t maxWidth)
             }
             appendDescription(opt->desc);
         }
-        result += "\n";
+        result += '\n';
     };
 
     // The default (unnamed) group is always printed first, without a header, so

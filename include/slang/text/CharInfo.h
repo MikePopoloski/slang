@@ -53,8 +53,9 @@ constexpr bool isWhitespace(char c) {
         case '\r':
         case '\n':
             return true;
+        default:
+            return false;
     }
-    return false;
 }
 
 /// Returns whether the given character is considered a space or tab.

@@ -363,7 +363,7 @@ void formatStrength(std::string& result, const SVInt& value) {
         }
 
         if (i != 1)
-            result += " ";
+            result += ' ';
     }
 }
 

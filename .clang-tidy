@@ -52,6 +52,7 @@ Checks: >
     -clang-analyzer-optin.cplusplus.UninitializedObject,
     -clang-analyzer-security.ArrayBound,
     -clang-analyzer-optin.core.EnumCastOutOfRange,
+    -clang-analyzer-unix.cstring.UninitializedRead,
     -misc-non-private-member-variables-in-classes,
     -misc-no-recursion,
     -misc-const-correctness,

@@ -1208,7 +1208,7 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
                 return;
 
             if (!result.found)
-                result = originalResult;
+                result = std::move(originalResult);
         }
 
         if (!result.found && !result.hasError())
@@ -2343,7 +2343,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
     // We couldn't find anything. originalResult has any diagnostics issued by the first
     // downward lookup (if any), so it's fine to just return it as is. If we never found any
     // symbol originally, issue an appropriate error for that.
-    result = originalResult;
+    result = std::move(originalResult);
     if (!result.found && !result.hasError()) {
         reportUndeclared(scope, name, first.range,
                          flags | LookupFlags::NoUndeclaredErrorIfUninstantiated, true, result);

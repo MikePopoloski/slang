@@ -570,9 +570,9 @@ void CommandLine::addEnum(std::string_view name, std::optional<T>& value, std::s
         for (auto enumVal : Traits::values) {
             if (!validOptions.empty())
                 validOptions += ", ";
-            validOptions += "'";
+            validOptions += '\'';
             validOptions += CommandLine::toKebabCase(toString(enumVal));
-            validOptions += "'";
+            validOptions += '\'';
         }
         return validOptions;
     };
