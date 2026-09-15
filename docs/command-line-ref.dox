@@ -590,6 +590,30 @@ compatibility purposes.
 Allow top-level modules to have interface ports. SystemVerilog doesn't permit this, but some tools
 allow it anyway so this flag can be used for compatibility purposes.
 
+When a top-level module has interface ports, slang synthesizes default interface instances to
+connect to them. `$static_assert` statements written directly in the module body can pin the
+parameters of those interfaces to specific values or types, which is useful for driving analysis
+and language server features outside of a full design context. Two forms are recognized (the
+constraint may appear on either side of the `==`):
+
+@code{.sv}
+interface my_if #(parameter int WIDTH = 1, parameter type T = logic);
+    logic [WIDTH-1:0] data;
+    T value;
+endinterface
+
+module top(my_if intf);
+    $static_assert(intf.WIDTH == 8);              // pin a value parameter
+    $static_assert(type(intf.T) == type(byte));   // pin a type parameter
+endmodule
+@endcode
+
+Element selects are supported for interface array ports (e.g. `intf[0].WIDTH == 8`); the inferred
+value is applied to every element of the array. Only parameters actually declared by the interface
+can be overridden this way, and the constraint must match the parameter's kind (value vs. type).
+The pinned expression must be a constant with no hierarchical references. Assertions nested inside
+generate blocks are ignored, since their constraints are conditional on branch selection.
+
 `--allow-recursive-implicit-call`
 
 Allow implicit call expressions (ones that lack parentheses) to be recursive function calls.
