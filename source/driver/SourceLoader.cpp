@@ -29,7 +29,7 @@ SourceLoader::SourceLoader(SourceManager& sourceManager) : sourceManager(sourceM
     // in addition to anything the user provides.
     uniqueExtensions.emplace(".v"sv);
     uniqueExtensions.emplace(".sv"sv);
-    for (auto ext : uniqueExtensions)
+    for (const auto& ext : uniqueExtensions)
         searchExtensions.emplace_back(ext);
 }
 

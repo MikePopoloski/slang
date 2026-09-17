@@ -535,3 +535,11 @@ TEST_CASE("Driver basic with ParseOptions") {
     CHECK(driver.parseCommandLine(4, argv, parseOptions));
     CHECK(driver.processOptions());
 }
+
+TEST_CASE("SourceLoader owns uniqueSearchExtensions") {
+    TempFile commandFile("+libext+.v+.h+.V+.sv+\n");
+    Driver driver;
+    driver.addStandardArgs();
+    const char* argv[] = {"testfoo", "-f", commandFile.path.c_str(), "-f", commandFile.path.c_str()};
+    CHECK(driver.parseCommandLine(5, argv));
+}

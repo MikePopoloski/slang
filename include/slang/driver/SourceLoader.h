@@ -267,7 +267,7 @@ private:
     std::vector<std::string> dirPrefixes;
     std::vector<std::filesystem::path> searchDirectories;
     std::vector<std::filesystem::path> searchExtensions;
-    flat_hash_set<std::string_view> uniqueExtensions;
+    flat_hash_set<std::string> uniqueExtensions;
     flat_hash_map<BufferID, std::vector<std::string>> bufferWarningOptions;
     std::vector<std::string> errors;
     SyntaxTreeList libraryMapTrees;
