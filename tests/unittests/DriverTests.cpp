@@ -536,7 +536,7 @@ TEST_CASE("Driver basic with ParseOptions") {
     CHECK(driver.processOptions());
 }
 
-TEST_CASE("SourceLoader owns uniqueSearchExtensions") {
+TEST_CASE("SourceLoader owns strings in uniqueExtensions") {
     TempFile commandFile("+libext+.v+.h+.V+.sv+\n");
     Driver driver;
     driver.addStandardArgs();
