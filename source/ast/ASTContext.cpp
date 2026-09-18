@@ -409,7 +409,16 @@ const ExpressionSyntax* ASTContext::requireSimpleExpr(const PropertyExprSyntax& 
 }
 
 void ASTContext::noteReference(const ValueSymbol& symbol, bool isDottedAccess) const {
-    if (auto syntax = symbol.getSyntax(); syntax && !flags.has(ASTFlags::NoReference)) {
+    if (flags.has(ASTFlags::NoReference))
+        return;
+
+    // If requested, references from untaken generate branches (and other
+    // uninstantiated code) don't count towards unused / undriven checking.
+    auto& comp = getCompilation();
+    if (comp.hasFlag(CompilationFlags::IgnoreUntakenGenerateRefs) && scope->isUninstantiated())
+        return;
+
+    if (auto syntax = symbol.getSyntax()) {
         bool isLValue = flags.has(ASTFlags::LValue);
         if (isDottedAccess) {
             auto& type = symbol.getType();
@@ -417,7 +426,6 @@ void ASTContext::noteReference(const ValueSymbol& symbol, bool isDottedAccess) c
                 isLValue = false;
         }
 
-        auto& comp = getCompilation();
         comp.noteReference(*syntax, isLValue);
 
         if (isLValue && flags.has(ASTFlags::LAndRValue))
