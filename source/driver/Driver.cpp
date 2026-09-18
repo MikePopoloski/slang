@@ -389,6 +389,9 @@ void Driver::addStandardArgs() {
                 "--disallow-refs-to-unknown-instances",
                 "When using --ignore-unknown-modules, explicitly disallow references to ignored "
                 "module instances by issuing an error");
+    addCompFlag(CompilationFlags::IgnoreUntakenGenerateRefs, "--ignore-untaken-generate-refs",
+                "Don't count references inside untaken generate branches when checking "
+                "for unused or undriven nets, variables, and ports");
 
     cmdLine.add(
         "--color-diagnostics",

@@ -150,8 +150,15 @@ enum class SLANG_EXPORT CompilationFlags {
     /// (untaken generate branches and uninstantiated module instances) so that
     /// additional lints, like port and parameter name checks, can run on it.
     CheckUninstantiated = 1 << 21,
+
+    /// Don't count references to nets, variables, and ports that occur inside untaken
+    /// generate branches (or otherwise uninstantiated code) when determining whether
+    /// a symbol is unused or undriven. By default such references are counted so that
+    /// unused / undriven warnings only fire when a symbol is never used under any
+    /// parameterization of the design.
+    IgnoreUntakenGenerateRefs = 1 << 22,
 };
-SLANG_BITMASK(CompilationFlags, CheckUninstantiated)
+SLANG_BITMASK(CompilationFlags, IgnoreUntakenGenerateRefs)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {

@@ -184,7 +184,8 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .value("AllowArrayConcatAssignPattern", CompilationFlags::AllowArrayConcatAssignPattern)
         .value("AllowCrossAutoBinMax", CompilationFlags::AllowCrossAutoBinMax)
         .value("AllowInvalidTop", CompilationFlags::AllowInvalidTop)
-        .value("CheckUninstantiated", CompilationFlags::CheckUninstantiated);
+        .value("CheckUninstantiated", CompilationFlags::CheckUninstantiated)
+        .value("IgnoreUntakenGenerateRefs", CompilationFlags::IgnoreUntakenGenerateRefs);
 
     nb::class_<CompilationOptions>(ast, "CompilationOptions")
         .def(nb::init<>())

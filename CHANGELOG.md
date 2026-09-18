@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added [-Wmissing-else-clause](https://sv-lang.com/warning-ref.html#missing-else-clause) which warns about `if` statements that look like they were meant to be `else if` based on being on the same line as a previous `end` keyword
 * Added [-Wimplicit-net](https://sv-lang.com/warning-ref.html#implicit-net) which warns for each implicit net that is created (thanks to @hankhsu1996)
 * Added [-Wreal-case-eq](https://sv-lang.com/warning-ref.html#real-case-eq) which warns about using case equality operators ('===' and '!==') on `real` operands (thanks to @hankhsu1996)
+* Added `--ignore-untaken-generate-refs` which makes unused / undriven warnings ignore references that occur inside untaken generate branches, so that the warnings reflect the design as actually elaborated instead of any possible parameterization
 
 ### Improvements
 * Depfiles created by `--Mall` and `--Minclude` now include system-style included files (via angle brackets) in addition to user-style (via double quotes) (thanks to @AndrewNolte)

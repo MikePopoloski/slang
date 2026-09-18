@@ -300,6 +300,82 @@ endmodule
     CHECK_DIAGS_EMPTY;
 }
 
+TEST_CASE("Unused checking ignores untaken generate refs with flag") {
+    // See https://github.com/MikePopoloski/slang/issues/1602
+    auto& text = R"(
+module m1 #(parameter COND_A = 0) (output logic a);
+    if (COND_A) begin : cond_a
+        assign a = 0;
+    end
+    else begin : default_case
+    end
+endmodule
+
+module m2 #(parameter int SEL = 0) (output logic b);
+    case (SEL)
+        1: begin : sel1
+            assign b = 1;
+        end
+        default: begin : seldef
+        end
+    endcase
+endmodule
+
+module m3 #(parameter bit [3:0] P = 0) (output logic [3:0] c);
+    for (genvar i = 0; i < 4; i++) begin : index
+        if (P[i]) begin : valid
+            assign c[i] = 1'b1;
+        end
+    end
+endmodule
+
+module m4(output logic d);
+    int x;
+    if (0) begin : blk
+        assign x = 1;
+        assign d = x;
+    end
+endmodule
+
+// Reference tracking is keyed on the declaration, so a branch taken in any
+// instance of a module counts for all instances of that module.
+module m5 #(parameter COND = 0) (output logic e);
+    if (COND) begin : cond
+        assign e = 0;
+    end
+endmodule
+
+module top;
+    logic e1, e2;
+    m5 #(0) u5(.e(e1));
+    m5 #(1) u6(.e(e2));
+    initial $display(e1, e2);
+endmodule
+)";
+
+    // Default behavior: references in untaken generate blocks count, so no warnings.
+    {
+        Compilation compilation;
+        auto diags = analyze(text, compilation);
+        CHECK_DIAGS_EMPTY;
+    }
+
+    // With the flag, untaken branches are ignored.
+    {
+        CompilationOptions options;
+        options.flags |= CompilationFlags::IgnoreUntakenGenerateRefs;
+
+        Compilation compilation(options);
+        auto diags = analyze(text, compilation);
+        REQUIRE(diags.size() == 5);
+        CHECK(diags[0].code == diag::UndrivenPort);
+        CHECK(diags[1].code == diag::UndrivenPort);
+        CHECK(diags[2].code == diag::UndrivenPort);
+        CHECK(diags[3].code == diag::UndrivenPort);
+        CHECK(diags[4].code == diag::UnusedVariable);
+    }
+}
+
 TEST_CASE("No unused warning for error typed value") {
     auto& text = R"(
 module m;

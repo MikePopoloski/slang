@@ -566,7 +566,10 @@ Expression& ArbitrarySymbolExpression::fromSyntax(Compilation& comp, const NameS
     if (!symbol)
         return badExpr(comp, nullptr);
 
-    comp.noteReference(*symbol, context.flags.has(ASTFlags::LValue));
+    if (!comp.hasFlag(CompilationFlags::IgnoreUntakenGenerateRefs) ||
+        !context.scope->isUninstantiated()) {
+        comp.noteReference(*symbol, context.flags.has(ASTFlags::LValue));
+    }
 
     auto hierRef = HierarchicalReference::fromLookup(comp, result);
     return *comp.emplace<ArbitrarySymbolExpression>(*context.scope, *symbol, comp.getVoidType(),

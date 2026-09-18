@@ -820,6 +820,37 @@ When using `--ignore-unknown-modules`, explicitly disallow references to ignored
 instances by issuing an error. Otherwise such references will be silently ignored by
 inserting error nodes into the elaborated AST.
 
+`--ignore-untaken-generate-refs`
+
+By default, when checking for unused or undriven nets, variables, and ports (e.g. for
+`-Wunused-net`, `-Wundriven-port`, etc.), slang also counts references that occur inside untaken
+generate branches. This means those warnings only fire when a symbol is never used under any
+possible parameterization of the design, which avoids noise when linting shared parameterized
+code whose generate blocks are switched in and out by different consumers.
+
+Setting this flag causes references inside untaken generate branches (and any other code that is
+not actually instantiated in the design) to be ignored, so that the unused and undriven warnings
+reflect only the design as actually elaborated. For example:
+
+@code{.sv}
+module m #(parameter COND = 0) (output logic a);
+    if (COND) begin : gen_a
+        assign a = 0;
+    end
+endmodule
+@endcode
+
+Without this flag, no warning is issued for `a`. With this flag, slang reports:
+
+@code{.ansi}
+source.sv:1:52: warning: undriven output port 'a' [-Wundriven-port]
+module m #(parameter COND = 0) (output logic a);
+                                             ^
+@endcode
+
+Note that reference tracking is shared across all instances of a module, so if any instance
+in the design does take the generate branch that uses the symbol, no warning is issued.
+
 @section clr-warnings Warnings
 
 Warnings are diagnostic messages that report constructions that are not inherently illegal according to
