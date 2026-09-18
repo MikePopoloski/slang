@@ -29,6 +29,26 @@ Directives in test files
   // CHECK-LABEL: <pattern>   Resets the current scan position to the matching
                               line. Useful for separating sections.
 
+  // CHECK-DIAGS: <file>      Check JSON diagnostics in <file> against inline
+                              squiggle annotations. The file is normally
+                              produced with ``%slang --diag-json %t``.
+
+Inline diagnostic annotations are placed directly below the source line they
+describe. The ``//`` starts in column 1 and carets use their physical source
+columns, so they visually align with the highlighted text. Continuation ranges
+and notes identify their primary diagnostic with a ``- for`` suffix::
+
+        int scalar;
+    //      ^ NoteDeclarationHere declared here - for AssignmentPatternNoMember(scalar)
+        value = '{real: 1.0};
+    //          ^^ AssignmentPatternNoMember member 'scalar' is not covered by any assignment pattern key
+
+Multiple diagnostics on the same source line use one annotation line each.
+
+Pass ``--update-diags`` to generate or refresh these annotations from the JSON
+diagnostics emitted by each test's RUN command. Updated tests are rerun immediately
+to verify the generated expectations.
+
   // XFAIL: *                 Mark the test as expected to fail.
 
   // REQUIRES: llvm           Skip the test unless a requirement is satisfied.
@@ -54,6 +74,7 @@ Options
   --verbose, -v         Print each test command as it runs.
   --jobs, -j <N>        Run N tests in parallel (default: one per usable CPU).
   --filter <regex>      Run only tests whose paths match <regex>.
+  --update-diags        Rewrite inline diagnostic annotations from actual output.
   --no-color            Disable ANSI colour output.
 
 .lit-conf
@@ -81,6 +102,8 @@ Command-line arguments always override ``.lit-conf`` values for the same key.
 from __future__ import annotations
 
 import argparse
+import difflib
+import json
 import os
 import re
 import shlex
@@ -133,9 +156,11 @@ def yellow(t: str) -> str:
 # Matches any recognised directive comment.
 _DIRECTIVE_RE = re.compile(
     r"^\s*//\s*"
-    r"(RUN|CHECK(?:-NEXT|-NOT|-DAG|-LABEL)?|XFAIL|REQUIRES)"
+    r"(RUN|CHECK-DIAGS|CHECK(?:-NEXT|-NOT|-DAG|-LABEL)?|XFAIL|REQUIRES)"
     r"\s*:\s*(.*?)\s*$"
 )
+
+_DIAG_ANNOTATION_RE = re.compile(r"^//[ \t]*\^+(?:\s+.*?)?\s*$")
 
 
 @dataclass
@@ -150,6 +175,8 @@ class ParsedTest:
     path: Path
     run_lines: list[str] = field(default_factory=list)
     check_directives: list[CheckDirective] = field(default_factory=list)
+    diag_file: str | None = None
+    diag_lines: set[int] = field(default_factory=set)
     xfail: bool = False
     requires: list[str] = field(default_factory=list)
 
@@ -159,12 +186,22 @@ def parse_test_file(path: Path) -> ParsedTest:
     result = ParsedTest(path=path)
     with path.open(encoding="utf-8", errors="replace") as fh:
         for lineno, raw_line in enumerate(fh, start=1):
+            if _DIAG_ANNOTATION_RE.match(raw_line):
+                result.diag_lines.add(lineno)
+                continue
+
             m = _DIRECTIVE_RE.match(raw_line)
             if not m:
                 continue
             kind, body = m.group(1), m.group(2)
             if kind == "RUN":
                 result.run_lines.append(body)
+            elif kind == "CHECK-DIAGS":
+                if result.diag_file is not None:
+                    raise ValueError(
+                        f"{path}:{lineno}: multiple CHECK-DIAGS directives"
+                    )
+                result.diag_file = body
             elif kind == "XFAIL":
                 result.xfail = True
             elif kind == "REQUIRES":
@@ -202,6 +239,26 @@ def expand_substitutions(
     command = command.replace("%t", _quote_arg(str(tmp_file)))
     command = command.replace("%T", _quote_arg(str(tmp_dir)))
     return command
+
+
+def expand_substitution_value(
+    value: str,
+    *,
+    source_path: Path,
+    tmp_file: Path,
+    tmp_dir: Path,
+    slang_path: str,
+    user_defines: dict[str, str] | None = None,
+) -> str:
+    """Expand substitutions without shell quoting, for directive values."""
+    if user_defines:
+        for key, replacement in user_defines.items():
+            value = value.replace(f"%{key}", replacement)
+    value = value.replace("%slang", slang_path)
+    value = value.replace("%s", str(source_path))
+    value = value.replace("%t", str(tmp_file))
+    value = value.replace("%T", str(tmp_dir))
+    return value
 
 
 # ---------------------------------------------------------------------------
@@ -460,6 +517,287 @@ def run_checks(output: str, directives: list[CheckDirective]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Inline diagnostic verification
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, order=True)
+class DiagSegment:
+    line: int
+    start_column: int
+    end_column: int
+
+
+@dataclass
+class ActualDiagnostic:
+    code: str
+    message: str
+    segments: set[DiagSegment]
+
+
+class DiagCheckError(Exception):
+    """Raised when CHECK-DIAGS annotations don't match JSON diagnostics."""
+
+
+def _same_file(reported: str, test_path: Path) -> bool:
+    resolved_test = test_path.resolve()
+    try:
+        if Path(reported).resolve() == resolved_test:
+            return True
+    except OSError:
+        pass
+
+    # WASI reports host absolute paths without the leading slash. Resolving such
+    # a path on the host incorrectly treats it as relative to the current working
+    # directory, so also compare it against the root-relative spelling.
+    if not Path(reported).is_absolute():
+        reported_norm = os.path.normcase(os.path.normpath(reported))
+        test_norm = os.path.normcase(os.path.normpath(str(resolved_test)))
+        return reported_norm == test_norm.lstrip("/\\")
+
+    return False
+
+
+def _parse_location(location: str) -> tuple[str, int, int] | None:
+    try:
+        filename, line, column = location.rsplit(":", 2)
+        return filename, int(line), int(column)
+    except (AttributeError, TypeError, ValueError):
+        return None
+
+
+def _range_segments(
+    start: dict,
+    end: dict,
+    *,
+    test_path: Path,
+    source_lines: list[str],
+    diag_lines: set[int],
+) -> set[DiagSegment]:
+    if not _same_file(start.get("file", ""), test_path):
+        return set()
+    if not _same_file(end.get("file", ""), test_path):
+        return set()
+
+    try:
+        start_line = int(start["line"])
+        start_column = int(start["column"])
+        end_line = int(end["line"])
+        end_column = int(end["column"])
+    except (KeyError, TypeError, ValueError):
+        return set()
+
+    if (end_line, end_column) < (start_line, start_column):
+        return set()
+
+    result: set[DiagSegment] = set()
+    for lineno in range(start_line, end_line + 1):
+        if lineno in diag_lines or not 1 <= lineno <= len(source_lines):
+            continue
+
+        line_length = len(source_lines[lineno - 1])
+        segment_start = start_column if lineno == start_line else 1
+        segment_end = end_column if lineno == end_line else line_length + 1
+
+        # Multiline ranges include leading indentation and trailing whitespace on
+        # continuation lines. Squiggle only the visible source text so annotations
+        # remain useful and can physically align after the leading `//`.
+        line_text = source_lines[lineno - 1]
+        if segment_start == 1:
+            first_text_column = len(line_text) - len(line_text.lstrip()) + 1
+            segment_start = max(segment_start, first_text_column)
+        if segment_end == line_length + 1:
+            segment_end = min(segment_end, len(line_text.rstrip()) + 1)
+
+        segment_start = max(1, min(segment_start, line_length + 1))
+        segment_end = max(1, min(segment_end, line_length + 1))
+        if segment_end <= segment_start:
+            if start_line == end_line and start_column == end_column:
+                segment_end = segment_start + 1
+            else:
+                continue
+
+        result.add(DiagSegment(lineno, segment_start, segment_end))
+    return result
+
+
+def _load_json_diagnostics(diag_path: Path) -> list[dict]:
+    try:
+        with diag_path.open(encoding="utf-8") as fh:
+            json_diags = json.load(fh)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise DiagCheckError(
+            f"unable to read CHECK-DIAGS file {diag_path}: {exc}"
+        ) from exc
+
+    if not isinstance(json_diags, list):
+        raise DiagCheckError(f"CHECK-DIAGS file {diag_path} must contain a JSON array")
+
+    return [item for item in json_diags if isinstance(item, dict)]
+
+
+def _collect_actual_groups(
+    parsed: ParsedTest,
+    json_diags: list[dict],
+    source_lines: list[str],
+    diag_lines: set[int],
+) -> list[list[ActualDiagnostic]]:
+    def collect_actual(item: dict, group: list[ActualDiagnostic]) -> None:
+        location = _parse_location(item.get("location", ""))
+        if location and _same_file(location[0], parsed.path):
+            segments: set[DiagSegment] = set()
+            for source_range in item.get("ranges", []):
+                if isinstance(source_range, dict):
+                    segments.update(
+                        _range_segments(
+                            source_range.get("start", {}),
+                            source_range.get("end", {}),
+                            test_path=parsed.path,
+                            source_lines=source_lines,
+                            diag_lines=diag_lines,
+                        )
+                    )
+
+            if not segments:
+                _, line, column = location
+                segments.add(DiagSegment(line, column, column + 1))
+
+            group.append(
+                ActualDiagnostic(
+                    code=str(item.get("code", "")),
+                    message=str(item.get("message", "")),
+                    segments=segments,
+                )
+            )
+
+        for note in item.get("notes", []):
+            if isinstance(note, dict):
+                collect_actual(note, group)
+
+    actual_groups: list[list[ActualDiagnostic]] = []
+    for item in json_diags:
+        group: list[ActualDiagnostic] = []
+        collect_actual(item, group)
+        if group:
+            actual_groups.append(group)
+    return actual_groups
+
+
+def _diag_reference(
+    diagnostic: ActualDiagnostic,
+    source_lines: list[str],
+    *,
+    include_args: bool,
+) -> str:
+    if not include_args:
+        return diagnostic.code
+
+    args: list[str] = []
+    quoted_arg = re.search(r"(?<![A-Za-z0-9_$])'([^']+)'", diagnostic.message)
+    message_without_quotes = diagnostic.message
+    if quoted_arg:
+        args.append(quoted_arg.group(1))
+        message_without_quotes = (
+            diagnostic.message[: quoted_arg.start()]
+            + diagnostic.message[quoted_arg.end() :]
+        )
+
+    number_arg = re.search(
+        r"(?<![A-Za-z0-9_$'])-?\d+(?![A-Za-z0-9_$'])", message_without_quotes
+    )
+    if number_arg:
+        args.append(number_arg.group())
+
+    if not args:
+        segment = min(diagnostic.segments)
+        source_line = source_lines[segment.line - 1]
+        source_arg = source_line[segment.start_column - 1 : segment.end_column - 1]
+        source_arg = source_arg.strip()
+        if source_arg and len(source_arg) <= 32:
+            args.append(source_arg)
+
+    if not args:
+        return diagnostic.code
+    return f"{diagnostic.code}({', '.join(args)})"
+
+
+def _format_diag_annotation(segment: DiagSegment) -> str:
+    if segment.start_column < 3:
+        raise DiagCheckError(
+            "cannot generate an inline diagnostic annotation for a range before "
+            f"column 3 ({segment.line}:{segment.start_column})"
+        )
+    return (
+        "//"
+        + " " * (segment.start_column - 3)
+        + "^" * (segment.end_column - segment.start_column)
+    )
+
+
+def _generate_diag_expectations(parsed: ParsedTest, diag_path: Path) -> str:
+    """Generate the test file with canonical annotations from JSON diagnostics."""
+    json_diags = _load_json_diagnostics(diag_path)
+    old_text = parsed.path.read_text(encoding="utf-8", errors="replace")
+    source_lines = old_text.splitlines()
+    actual_groups = _collect_actual_groups(
+        parsed, json_diags, source_lines, parsed.diag_lines
+    )
+
+    annotations_by_line: dict[int, list[str]] = {}
+    for group in actual_groups:
+        reference = _diag_reference(group[0], source_lines, include_args=len(group) > 1)
+
+        for diagnostic_index, diagnostic in enumerate(group):
+            for index, segment in enumerate(sorted(diagnostic.segments)):
+                annotation = _format_diag_annotation(segment)
+                if index == 0:
+                    annotation += f" {diagnostic.code} {diagnostic.message}"
+                if diagnostic_index > 0 or index > 0:
+                    annotation += f" - for {reference}"
+                annotations_by_line.setdefault(segment.line, []).append(annotation)
+
+    output_lines: list[str] = []
+    for lineno, line in enumerate(source_lines, start=1):
+        if lineno in parsed.diag_lines:
+            continue
+        output_lines.append(line)
+        output_lines.extend(annotations_by_line.get(lineno, []))
+
+    return "\n".join(output_lines) + ("\n" if old_text.endswith("\n") else "")
+
+
+def run_diag_checks(parsed: ParsedTest, diag_path: Path) -> None:
+    """Check diagnostic annotations against the canonically generated file."""
+    old_text = parsed.path.read_text(encoding="utf-8", errors="replace")
+    new_text = _generate_diag_expectations(parsed, diag_path)
+    if new_text == old_text:
+        return
+
+    diff = difflib.unified_diff(
+        old_text.splitlines(),
+        new_text.splitlines(),
+        fromfile=str(parsed.path),
+        tofile=f"{parsed.path} (generated)",
+        lineterm="",
+    )
+    raise DiagCheckError(
+        "diagnostic annotations do not match; rerun with --update-diags\n"
+        + "\n".join(diff)
+    )
+
+
+def update_diags(parsed: ParsedTest, diag_path: Path) -> bool:
+    """Rewrite inline squiggle annotations to match JSON diagnostics."""
+    old_text = parsed.path.read_text(encoding="utf-8", errors="replace")
+    new_text = _generate_diag_expectations(parsed, diag_path)
+    if new_text == old_text:
+        return False
+
+    parsed.path.write_text(new_text, encoding="utf-8")
+    return True
+
+
+# ---------------------------------------------------------------------------
 # Single test execution
 # ---------------------------------------------------------------------------
 
@@ -483,6 +821,7 @@ def run_test(
     available_features: set[str],
     output_limit: int | None = 30,
     user_defines: dict[str, str] | None = None,
+    should_update_diags: bool = False,
 ) -> TestResult:
     start = time.monotonic()
 
@@ -574,6 +913,45 @@ def run_test(
                 status="FAIL",
                 elapsed=elapsed,
                 message=msg,
+                output=combined_output,
+            )
+
+    # --- Check inline diagnostic annotations ---------------------------------
+    if parsed.diag_file is not None:
+        diag_file = expand_substitution_value(
+            parsed.diag_file,
+            source_path=parsed.path.resolve(),
+            tmp_file=tmp_file,
+            tmp_dir=tmp_dir,
+            slang_path=slang_path,
+            user_defines=user_defines,
+        )
+        diag_path = Path(diag_file)
+        try:
+            if should_update_diags and update_diags(parsed, diag_path):
+                result = run_test(
+                    parse_test_file(parsed.path),
+                    slang_path=slang_path,
+                    slang_is_cmdline=slang_is_cmdline,
+                    tmp_dir=tmp_dir,
+                    verbose=verbose,
+                    available_features=available_features,
+                    output_limit=output_limit,
+                    user_defines=user_defines,
+                )
+                result.elapsed = time.monotonic() - start
+                if result.status == "PASS":
+                    result.message = "updated diagnostic expectations"
+                return result
+            run_diag_checks(parsed, diag_path)
+        except DiagCheckError as exc:
+            elapsed = time.monotonic() - start
+            status = "XFAIL" if parsed.xfail else "FAIL"
+            return TestResult(
+                path=parsed.path,
+                status=status,
+                elapsed=elapsed,
+                message=str(exc),
                 output=combined_output,
             )
 
@@ -819,6 +1197,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--filter", metavar="REGEX", help="Only run tests whose path matches REGEX"
     )
+    p.add_argument(
+        "--update-diags",
+        action="store_true",
+        help="Rewrite inline diagnostic annotations from actual output",
+    )
     p.add_argument("--no-color", action="store_true", help="Disable ANSI colour output")
     p.add_argument(
         "--define",
@@ -930,6 +1313,7 @@ def main(argv: list[str] | None = None) -> int:
                 available_features=available_features,
                 output_limit=None if total == 1 else 30,
                 user_defines=user_defines or None,
+                should_update_diags=args.update_diags,
             )
 
         if args.jobs > 1:
@@ -950,6 +1334,7 @@ def main(argv: list[str] | None = None) -> int:
                     available_features=available_features,
                     output_limit=None if total == 1 else 30,
                     user_defines=user_defines or None,
+                    should_update_diags=args.update_diags,
                 )
                 results.append(r)
                 _print_result(r, total, len(results), width)
@@ -969,7 +1354,9 @@ def _print_result(r: TestResult, total: int, done: int, width: int) -> None:
     rel = r.path.name
     print(f"[{done:>{width}}/{total}] {icon}  {rel}  ({r.elapsed:.2f}s)")
 
-    if r.status in ("FAIL", "XPASS") and r.message:
+    if r.status == "PASS" and r.message:
+        print(f"       {r.message}")
+    elif r.status in ("FAIL", "XPASS") and r.message:
         for line in r.message.splitlines():
             print(f"       {line}")
         print()
