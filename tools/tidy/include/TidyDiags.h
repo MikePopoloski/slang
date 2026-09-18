@@ -44,5 +44,6 @@ inline constexpr DiagCode EnumName(DiagSubsystem::Tidy, 29);
 inline constexpr DiagCode StructName(DiagSubsystem::Tidy, 30);
 inline constexpr DiagCode UnionName(DiagSubsystem::Tidy, 31);
 inline constexpr DiagCode TypedefName(DiagSubsystem::Tidy, 32);
+inline constexpr DiagCode StructFieldsInSameProcess(DiagSubsystem::Tidy, 33);
 
 } // namespace slang::diag

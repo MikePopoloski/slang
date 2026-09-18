@@ -39,7 +39,8 @@ add_executable(
   EnumNameTest.cpp
   StructNameTest.cpp
   UnionNameTest.cpp
-  TypedefNameTest.cpp)
+  TypedefNameTest.cpp
+  StructFieldsInSameProcessTest.cpp)
 
 target_link_libraries(tidy_unittests PRIVATE Catch2::Catch2 slang_tidy_obj_lib)
 target_compile_definitions(tidy_unittests PRIVATE UNITTESTS)
