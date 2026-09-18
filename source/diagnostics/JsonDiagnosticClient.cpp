@@ -54,6 +54,33 @@ void JsonDiagnosticClient::writeDiagnostic(const ReportedDiagnosticInfo& diag) {
                                       sourceManager->getLineNumber(loc), getColumnNumber(loc)));
     }
 
+    SmallVector<SourceRange> mappedRanges;
+    engine->mapSourceRanges(diag.location, diag.ranges, mappedRanges);
+    if (!mappedRanges.empty()) {
+        auto writeLocation = [&](SourceLocation loc) {
+            writer.startObject();
+            writer.writeProperty("file");
+            writer.writeValue(getFileName(loc));
+            writer.writeProperty("line");
+            writer.writeValue(uint64_t(sourceManager->getLineNumber(loc)));
+            writer.writeProperty("column");
+            writer.writeValue(uint64_t(getColumnNumber(loc)));
+            writer.endObject();
+        };
+
+        writer.writeProperty("ranges");
+        writer.startArray();
+        for (auto range : mappedRanges) {
+            writer.startObject();
+            writer.writeProperty("start");
+            writeLocation(range.start());
+            writer.writeProperty("end");
+            writeLocation(range.end());
+            writer.endObject();
+        }
+        writer.endArray();
+    }
+
     if (diag.shouldShowIncludeStack) {
         SmallVector<SourceLocation> includeStack;
         getIncludeStack(diag.location.buffer(), includeStack);
