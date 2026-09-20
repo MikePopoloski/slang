@@ -59,6 +59,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed ICE due to unbounded recursion of generic class specializations with changing param values (thanks to @EylonKrause)
 * Fixed a bug where SVInt::set() would drop high words when promoting from 2-state to 4-state, corrupting the value (thanks to @EylonKrause)
 * Fixed potentially incorrect instance caching when a module has an interface array port that is connected to different interface types (thanks to @hankhsu1996)
+* Fixed a potential crash when using the `--libext` flag (thanks to @x-Aksara-x)
+* Fixed JSON AST serialization of `randsequence` productions to include the statement bodies of code blocks
+* Fixed `-Wunused-subroutine` firing on subroutines named in an `export "DPI-C"` directive, since the export makes them reachable from C
 
 ### Tools & Bindings
 #### pyslang
@@ -72,6 +75,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added a "TypedefEnums" rule that warns about enums not declared via a typedef (thanks to @Ozzy1423)
 * Added a "TypedefStructUnion" rule that warns about structs and unions not declared via a typedef (thanks to @Ozzy1423)
 * Added new checks for naming of various constructs, configured via regex: cover groups, crosses, cover points, enums, structs, unions, typedefs (thanks to @Ozzy1423)
+* Added a "StructFieldsInSameProcess" rule that warns about struct fields being assigned from multiple processes (thanks to @spomata)
 
 
 ## [v11.0] - 2026-05-14
