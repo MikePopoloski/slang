@@ -1983,9 +1983,13 @@ void Compilation::checkDPIMethods(std::span<const SubroutineSymbol* const> dpiIm
             continue;
         }
 
+        // The export directive counts as a use of the subroutine, since it can be
+        // called from the C side; mark it referenced so it isn't flagged as unused.
+        auto& sub = symbol->as<SubroutineSymbol>();
+        noteReference(sub);
+
         // This check is a little verbose because we're avoiding issuing an error if the
         // functionOrTask keyword is invalid, i.e. not 'function' or 'task'.
-        auto& sub = symbol->as<SubroutineSymbol>();
         if ((sub.subroutineKind == SubroutineKind::Function &&
              syntax->functionOrTask.kind == TokenKind::TaskKeyword) ||
             (sub.subroutineKind == SubroutineKind::Task &&

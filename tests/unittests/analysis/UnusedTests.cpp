@@ -934,6 +934,27 @@ import "DPI-C" function void dpi_func(int i);
     CHECK(diags[5].code == diag::UnusedDPIImport);
 }
 
+TEST_CASE("DPI exported subroutines are not unused -- GH #1969") {
+    auto& text = R"(
+module m;
+    export "DPI-C" function sv_f;
+    export "DPI-C" task     sv_t;
+
+    function void sv_f(int x);
+        $display("f %0d", x);
+    endfunction
+
+    task sv_t(int x);
+        $display("t %0d", x);
+    endtask
+endmodule
+)";
+
+    Compilation compilation;
+    auto diags = analyze(text, compilation);
+    CHECK_DIAGS_EMPTY;
+}
+
 TEST_CASE("Unused class properties") {
     auto& text = R"(
 class C;
