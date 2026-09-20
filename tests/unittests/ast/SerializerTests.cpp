@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/text/Json.h"
+
+using Catch::Matchers::ContainsSubstring;
 
 std::string serialize(Compilation& comp, bool sourceInfo = false, bool detailedTypeInfo = false,
                       bool includeDefinitions = false) {
@@ -1838,4 +1841,41 @@ endmodule
     }
   ]
 })");
+}
+
+TEST_CASE("Serializing randsequence code block bodies") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int x;
+    initial begin
+        randsequence(main)
+            main : first := 2 { x = x + 2; } | second;
+            first : { x = x + 1; };
+            second : { x = x + 3; };
+        endsequence
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto result = serialize(compilation);
+
+    // The bodies of randsequence code blocks must be serialized (issue #1968).
+    CHECK_THAT(result, ContainsSubstring(R"("kind": "CodeBlock")"));
+
+    // The weight-clause code block should also include its statement body.
+    CHECK_THAT(result, ContainsSubstring(R"("codeBlock":)"));
+
+    // Each of the three code blocks (two productions plus one weight clause)
+    // contains a single assignment; these only appear when the bodies are
+    // serialized.
+    size_t assignments = 0;
+    for (size_t pos = result.find(R"("kind": "Assignment")"); pos != std::string::npos;
+         pos = result.find(R"("kind": "Assignment")", pos + 1)) {
+        assignments++;
+    }
+    CHECK(assignments == 3);
 }

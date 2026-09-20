@@ -2232,6 +2232,11 @@ void RandSeqProductionSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.endObject();
     };
 
+    auto writeCodeBlock = [&](std::string_view propName, const CodeBlockProd& codeBlock) {
+        if (auto stmt = codeBlock.block->tryGetStatement())
+            serializer.write(propName, *stmt);
+    };
+
     serializer.write("returnType", getReturnType());
 
     serializer.startArray("arguments");
@@ -2253,6 +2258,7 @@ void RandSeqProductionSymbol::serializeTo(ASTSerializer& serializer) const {
                     break;
                 case ProdKind::CodeBlock:
                     serializer.write("kind", "CodeBlock"sv);
+                    writeCodeBlock("body", *(const CodeBlockProd*)prod);
                     break;
                 case ProdKind::IfElse: {
                     auto& iep = *(const IfElseProd*)prod;
@@ -2299,6 +2305,9 @@ void RandSeqProductionSymbol::serializeTo(ASTSerializer& serializer) const {
 
         if (rule.weightExpr)
             serializer.write("weightExpr", *rule.weightExpr);
+
+        if (rule.codeBlock)
+            writeCodeBlock("codeBlock", *rule.codeBlock);
 
         serializer.write("isRandJoin", rule.isRandJoin);
         if (rule.randJoinExpr)
