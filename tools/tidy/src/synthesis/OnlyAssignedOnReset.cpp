@@ -109,7 +109,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::All
             AlwaysFFVisitor visitor(symbol.name, configs.resetName, configs.resetIsActiveHigh);
             drivers[0]->containingSymbol->visit(visitor);
             if (visitor.hasError()) {
-                diags.add(diag::RegisterNotAssignedOnReset,
+                diags.add(diag::OnlyAssignedOnReset,
                           visitor.getErrorLocation().value_or(symbol.location))
                     << symbol.name;
             }

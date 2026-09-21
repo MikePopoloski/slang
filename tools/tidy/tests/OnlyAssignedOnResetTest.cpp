@@ -293,3 +293,35 @@ endmodule
                                config);
     CHECK_FALSE(result);
 }
+
+TEST_CASE("OnlyAssignedOnReset: Reports its own diag code and message") {
+    std::string output;
+    auto result = runCheckTest("OnlyAssignedOnReset", R"(
+module top;
+    logic clk_i;
+    logic rst_ni;
+    logic a, b;
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (~rst_ni) begin
+            a <= '0;
+            b <= 1'b1;
+        end else begin
+            a <= 1'b1;
+        end
+    end
+endmodule
+)",
+                               {}, &output);
+
+    CHECK_FALSE(result);
+
+    // This check used to raise RegisterNotAssignedOnReset (SYNTHESIS-1), which
+    // gave it the wrong code, the wrong message and RegisterHasNoReset's
+    // configured severity.
+    CHECK("\n" + output == R"(
+source:10:13: warning: [SYNTHESIS-0] register 'b' is only assigned on reset
+            b <= 1'b1;
+            ^
+)");
+}
