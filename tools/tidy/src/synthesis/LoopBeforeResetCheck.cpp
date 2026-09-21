@@ -15,8 +15,7 @@ using namespace slang::analysis;
 
 namespace loop_before_reset_check {
 struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, VisitFlags::AllCanonical> {
-    explicit AlwaysFFVisitor(const std::string_view resetName, const bool resetIsActiveHigh) :
-        resetName(resetName), resetIsActiveHigh(resetIsActiveHigh) {};
+    explicit AlwaysFFVisitor(const std::string_view resetName) : resetName(resetName) {};
 
     void handle(const ForLoopStatement& statement) {
         // We found a for loop - check if it's at the top level (before reset check)
@@ -98,7 +97,6 @@ private:
     };
 
     const std::string_view resetName;
-    const bool resetIsActiveHigh;
     bool insideResetConditional = false;
     bool hasError = false;
     std::optional<SourceLocation> errorLocation;
@@ -132,7 +130,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::All
         if (!resetInSensitivityList.found())
             return;
 
-        AlwaysFFVisitor visitor(configs.resetName, configs.resetIsActiveHigh);
+        AlwaysFFVisitor visitor(configs.resetName);
         symbol.getBody().visit(visitor);
 
         if (visitor.getHasError()) {
