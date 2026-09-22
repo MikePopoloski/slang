@@ -17,13 +17,9 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::Sta
     void handle(const InstanceSymbol& instance) {
         std::string_view name = instance.name.empty() ? instance.getArrayName() : instance.name;
         std::string_view prefix = config.getCheckConfigs().moduleInstantiationPrefix;
-        if (instance.isModule() &&
-            !name.empty() &&
-            !instance.isTopLevel() &&
-            !skip(sourceManager->getFileName((instance).location)) &&
-            !name.starts_with(prefix))
-            diags.add(diag::EnforceModuleInstantiationPrefix, instance.location)
-                << name << prefix;
+        if (instance.isModule() && !name.empty() && !instance.isTopLevel() &&
+            !skip(sourceManager->getFileName((instance).location)) && !name.starts_with(prefix))
+            diags.add(diag::EnforceModuleInstantiationPrefix, instance.location) << name << prefix;
 
         visitDefault(instance);
     }
