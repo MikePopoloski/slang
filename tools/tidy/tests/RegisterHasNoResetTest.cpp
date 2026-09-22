@@ -205,3 +205,79 @@ endmodule
 )");
     CHECK(result);
 }
+
+TEST_CASE("RegisterHasNoReset: Active high reset, register not assigned on reset") {
+    TidyConfig config;
+    config.getCheckConfigs().resetName = "rst_i";
+    config.getCheckConfigs().resetIsActiveHigh = true;
+
+    auto result = runCheckTest("RegisterHasNoReset", R"(
+module top;
+    logic clk_i;
+    logic rst_i;
+    logic a, b;
+
+    always_ff @(posedge clk_i or posedge rst_i) begin
+        if (rst_i) begin
+            a <= '0;
+        end else begin
+            a <= 1'b1;
+            b <= 1'b1;
+        end
+    end
+endmodule
+)",
+                               config);
+    CHECK_FALSE(result);
+}
+
+TEST_CASE("RegisterHasNoReset: Active high reset, register always assigned") {
+    TidyConfig config;
+    config.getCheckConfigs().resetName = "rst_i";
+    config.getCheckConfigs().resetIsActiveHigh = true;
+
+    auto result = runCheckTest("RegisterHasNoReset", R"(
+module top;
+    logic clk_i;
+    logic rst_i;
+    logic a, b;
+
+    always_ff @(posedge clk_i or posedge rst_i) begin
+        if (rst_i) begin
+            a <= '0;
+            b <= '0;
+        end else begin
+            a <= 1'b1;
+            b <= 1'b1;
+        end
+    end
+endmodule
+)",
+                               config);
+    CHECK(result);
+}
+
+TEST_CASE("RegisterHasNoReset: Active low reset set explicitly") {
+    TidyConfig config;
+    config.getCheckConfigs().resetName = "rst_ni";
+    config.getCheckConfigs().resetIsActiveHigh = false;
+
+    auto result = runCheckTest("RegisterHasNoReset", R"(
+module top;
+    logic clk_i;
+    logic rst_ni;
+    logic a, b;
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (~rst_ni) begin
+            a <= '0;
+        end else begin
+            a <= 1'b1;
+            b <= 1'b1;
+        end
+    end
+endmodule
+)",
+                               config);
+    CHECK_FALSE(result);
+}

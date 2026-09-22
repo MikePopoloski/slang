@@ -13,7 +13,7 @@ TidyConfig::TidyConfig() {
     checkConfigs.clkNameRegexString = "clk\\S*|clock\\S*";
     checkConfigs.clkNameRegexPattern = boost::regex(checkConfigs.clkNameRegexString);
     checkConfigs.resetName = "rst_ni";
-    checkConfigs.resetIsActiveHigh = true;
+    checkConfigs.resetIsActiveHigh = false;
     checkConfigs.inputPortSuffix = {"_i"};
     checkConfigs.outputPortSuffix = {"_o"};
     checkConfigs.inoutPortSuffix = {"_io"};

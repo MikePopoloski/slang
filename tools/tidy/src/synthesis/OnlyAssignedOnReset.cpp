@@ -50,7 +50,10 @@ struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, VisitFlags::AllCanon
         auto resetStatement = &statement.ifTrue;
         auto noResetStatement = statement.ifFalse;
 
-        bool swapStatements = isResetNeg ? !resetIsActiveHigh : resetIsActiveHigh;
+        // ifTrue holds the reset branch only when the condition's negation matches the
+        // reset's active level (i.e. '!rst' for an active low reset, or 'rst' for an
+        // active high one). Otherwise the branches are the other way round.
+        bool swapStatements = isResetNeg == resetIsActiveHigh;
 
         if (swapStatements) {
             std::swap(resetStatement, noResetStatement);
@@ -106,7 +109,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::All
             AlwaysFFVisitor visitor(symbol.name, configs.resetName, configs.resetIsActiveHigh);
             drivers[0]->containingSymbol->visit(visitor);
             if (visitor.hasError()) {
-                diags.add(diag::RegisterNotAssignedOnReset,
+                diags.add(diag::OnlyAssignedOnReset,
                           visitor.getErrorLocation().value_or(symbol.location))
                     << symbol.name;
             }
