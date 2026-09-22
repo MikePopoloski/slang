@@ -12,8 +12,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * All integral types (not just packed arrays) are now allowed to be sliced across instance array port connections. The LRM is not clear about this but all commercial tools agree.
 
 ### Notable Breaking Changes
-* slang-tidy's `resetIsActiveHigh` check config was applied with inverted polarity by `synthesis-only-assigned-on-reset` and `synthesis-register-has-no-reset`: setting it to `true` made them treat the reset as active low, and vice versa. The option now means what its name says, and its default has changed from `true` to `false` so that it stays consistent with the default `resetName` of `rst_ni`. Configs that do not set `resetIsActiveHigh` are unaffected; configs that set it explicitly must flip the value to keep the previous behavior. Designs with an active high reset were silently not being checked at all and will now report diagnostics.
-* slang-tidy's `synthesis-only-assigned-on-reset` raised its diagnostics under `RegisterNotAssignedOnReset` (SYNTHESIS-1) instead of its own `OnlyAssignedOnReset` (SYNTHESIS-0), so its findings were reported with the wrong code, carried `synthesis-register-has-no-reset`'s message text, and picked up any severity configured for that other check. They are now reported under their own code, message and severity.
 * The minimum required CMake version to build slang is now 3.28
 * fmtlib is now a fully private dependency of slang, to avoid introducing transitive dependencies to downstream users that otherwise have no need for it. In general it should be possible to build slang fully self-contained, so that relying on it does not balloon your dependency tree. See [the docs](https://sv-lang.com/building.html#dependencies) for more details.
 * 3rd party dependencies now require an explicit CMake option to use a local system-installed version (e.g. SLANG_USE_SYSTEM_BOOST). Previously this tried to auto-detect system installations but it caused too many issues where there happened to be a local copy that was undesirable for whatever reason.
@@ -31,6 +29,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * `$static_assert` with type reference comparisons now shows a detailed resolution chain for type aliases when the assert fails (thanks to @AndrewNolte)
 * Library search (with `--libdir`) can now parse files in parallel when threading is enabled (thanks to @ebrevdo)
 * Help text for the slang tool has been reformatted and improved in minor ways
+* Improved diagnostics for missing assignment pattern elements (thanks to @AndrewNolte)
 
 ### Fixes
 * Fixed a potential crash when a single symbol has many (greater than 16) attributes declared (thanks to @AndrewNolte)
@@ -78,6 +77,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added a "TypedefStructUnion" rule that warns about structs and unions not declared via a typedef (thanks to @Ozzy1423)
 * Added new checks for naming of various constructs, configured via regex: cover groups, crosses, cover points, enums, structs, unions, typedefs (thanks to @Ozzy1423)
 * Added a "StructFieldsInSameProcess" rule that warns about struct fields being assigned from multiple processes (thanks to @spomata)
+* Fixed the `resetIsActiveHigh` config having inverted polarity, and changed default to `false` so that it stays consistent with the default `resetName` of `rst_ni` (thanks to @spomata)
+* Fixed the "OnlyAssignedOnReset" check to issue the right diagnostics (previously was erroneously using "RegisterNotAssignedOnReset") (thanks to @spomata)
 
 
 ## [v11.0] - 2026-05-14
