@@ -21,17 +21,30 @@ def extract_tokens(node, tokens):
     if node is None:
         return
 
+    # Text that comes from a macro expansion or an included file is serialized in addition
+    # to the directive that produced it (which occupies the same source position), so skip
+    # it to reconstruct the original, unexpanded source. This flag is set on both tokens
+    # and their plain-text trivia. Note directive trivia carry no "text" of their own, so
+    # even when they sit inside expanded content they are still recursed into below (the
+    # producing `include / macro usage lives there).
+    expanded = isinstance(node, dict) and node.get("fromExpansion")
+
     if isinstance(node, dict):
         # Check if this is a token node
         if "kind" in node and "text" in node:
-            # This is a token - add its text and trivia
+            # Always process trivia first (it may itself contain directive syntax, e.g.
+            # `ifdef branches whose disabled tokens hang off the directive, or the
+            # `include / macro usage that produced an expansion) followed by the token's
+            # own text.
             if "trivia" in node:
                 for trivia in node["trivia"]:
-                    if "text" in trivia:
-                        tokens.append(trivia["text"])
-            tokens.append(node["text"])
+                    extract_tokens(trivia, tokens)
+            if not expanded:
+                tokens.append(node["text"])
         else:
-            # This is a syntax node - recurse through all properties
+            # This is a syntax node (or a piece of trivia) - recurse through all
+            # properties. This covers directive trivia, whose content lives under a
+            # nested "syntax" node rather than a flat "text" field.
             for key, value in node.items():
                 if key in ["kind"]:  # Skip metadata
                     continue
