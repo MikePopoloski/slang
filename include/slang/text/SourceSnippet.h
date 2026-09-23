@@ -22,26 +22,23 @@ class FormatBuffer;
 /// Utility functions to generate highlighted source snippets.
 class SLANG_EXPORT SourceSnippet {
 public:
-    SourceSnippet(std::string_view sourceLine, uint32_t tabStop);
+    SourceSnippet(std::string_view sourceLine, uint32_t tabStop,
+                  std::span<const SourceRange> ranges, SourceLocation caretLoc, size_t col,
+                  SmallVectorBase<std::pair<size_t, size_t>>& invalidRanges);
 
-    /// Highlights specified source range in give source line
-    void highlightRange(SourceRange range, SourceLocation caretLoc, size_t col,
-                        std::string_view sourceLine);
-
-    /// Inserts caret into designated offset
-    void insertCaret(size_t offset);
-
-    /// Trims highlighted range.
-    void trimHighlight();
-
-    /// Prints source line and highlights source range in given buffer.
-    void printTo(FormatBuffer& out, TerminalColor highlightColor, bool leadingNewline = true);
+    /// Gets the source snippet line.
+    std::string getSnippetLine() { return snippetLine; }
+    /// Gets the highlighted line.
+    std::string getHighlightLine() { return highlightLine; }
 
 private:
+    void highlightRange(SourceRange range, SourceLocation caretLoc, size_t col,
+                        std::string_view sourceLine);
+    void insertCaret(size_t offset);
+    void trimHighlight();
     size_t getColumnForByte(size_t b) const;
 
     SmallVector<int> byteToColumn;
-    SmallVector<std::pair<size_t, size_t>, 4> invalidRanges;
     std::string snippetLine;
     std::string highlightLine;
 };

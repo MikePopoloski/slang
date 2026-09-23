@@ -167,13 +167,29 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, std::span<const Source
             // We might want to make the tab width configurable at some point,
             // but for now hardcode it to 8 to match the default on basically
             // every terminal.
-            SourceSnippet snippet(line, 8);
-            for (SourceRange range : ranges)
-                snippet.highlightRange(range, loc, col, line);
+            SmallVector<std::pair<size_t, size_t>, 4> invalidRanges;
+            SourceSnippet snippet(line, 8, ranges, loc, col, invalidRanges);
+            buffer->append("\n");
 
-            snippet.insertCaret(col);
-            snippet.trimHighlight();
-            snippet.printTo(*buffer, highlightColor);
+            if (invalidRanges.empty()) {
+                buffer->append(snippet.getSnippetLine());
+            }
+            else {
+                size_t index = 0;
+                std::string_view view = snippet.getSnippetLine();
+                for (auto [start, count] : invalidRanges) {
+                    SLANG_ASSERT(start >= index);
+                    buffer->append(view.substr(index, start - index));
+
+                    buffer->append(TextEmphasis::Reverse, view.substr(start, count));
+                    index = start + count;
+                }
+
+                buffer->append(view.substr(index));
+            }
+
+            buffer->append("\n");
+            buffer->append(fg(highlightColor), snippet.getHighlightLine());
         }
     }
 

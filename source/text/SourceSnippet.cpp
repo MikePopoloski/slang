@@ -91,7 +91,10 @@ static bool printableTextForNextChar(std::string_view sourceLine, size_t& index,
     return true;
 }
 
-SourceSnippet::SourceSnippet(std::string_view sourceLine, uint32_t tabStop) {
+SourceSnippet::SourceSnippet(std::string_view sourceLine, uint32_t tabStop,
+                             std::span<const SourceRange> ranges, SourceLocation caretLoc,
+                             size_t col,
+                             SmallVectorBase<std::pair<size_t, size_t>>& invalidRanges) {
     SLANG_ASSERT(!sourceLine.empty());
 
     byteToColumn.resize(sourceLine.size() + 1);
@@ -117,6 +120,12 @@ SourceSnippet::SourceSnippet(std::string_view sourceLine, uint32_t tabStop) {
 
     byteToColumn[sourceLine.size()] = (int)column;
     highlightLine = std::string(column, ' ');
+
+    for (SourceRange range : ranges)
+        highlightRange(range, caretLoc, col, sourceLine);
+
+    insertCaret(col);
+    trimHighlight();
 }
 
 size_t SourceSnippet::getColumnForByte(size_t b) const {
@@ -174,31 +183,6 @@ void SourceSnippet::insertCaret(size_t offset) {
 
 void SourceSnippet::trimHighlight() {
     highlightLine.erase(highlightLine.find_last_not_of(' ') + 1);
-}
-
-void SourceSnippet::printTo(FormatBuffer& out, TerminalColor highlightColor, bool leadingNewline) {
-    if (leadingNewline)
-        out.append("\n");
-
-    if (invalidRanges.empty()) {
-        out.append(snippetLine);
-    }
-    else {
-        size_t index = 0;
-        std::string_view view = snippetLine;
-        for (auto [start, count] : invalidRanges) {
-            SLANG_ASSERT(start >= index);
-            out.append(view.substr(index, start - index));
-
-            out.append(TextEmphasis::Reverse, view.substr(start, count));
-            index = start + count;
-        }
-
-        out.append(view.substr(index));
-    }
-
-    out.append("\n");
-    out.append(fg(highlightColor), highlightLine);
 }
 
 } // namespace slang
