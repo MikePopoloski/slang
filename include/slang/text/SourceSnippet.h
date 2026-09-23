@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-// SourceSnippet.h
-// Generating highlighted source snippets.
+//! @file SourceSnippet.h
+//! @brief Generating highlighted source snippets.
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -38,7 +38,6 @@ public:
     void printTo(FormatBuffer& out, TerminalColor highlightColor, bool leadingNewline = true);
 
 private:
-    /// Gets column number for given byte location.
     size_t getColumnForByte(size_t b) const;
 
     SmallVector<int> byteToColumn;

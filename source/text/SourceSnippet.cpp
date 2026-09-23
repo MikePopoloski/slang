@@ -5,7 +5,7 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/util/SourceSnippet.h"
+#include "slang/text/SourceSnippet.h"
 
 #include "../text/FormatBuffer.h"
 #include <ranges>

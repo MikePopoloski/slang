@@ -11,7 +11,7 @@
 #include <ranges>
 
 #include "slang/text/SourceManager.h"
-#include "slang/util/SourceSnippet.h"
+#include "slang/text/SourceSnippet.h"
 
 namespace slang {
 

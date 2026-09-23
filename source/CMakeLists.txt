@@ -114,13 +114,13 @@ add_library(
   text/Json.cpp
   text/SourceLocation.cpp
   text/SourceManager.cpp
+  text/SourceSnippet.cpp
   util/BumpAllocator.cpp
   util/CommandLine.cpp
   util/Fmt.cpp
   util/IntervalMap.cpp
   util/OS.cpp
   util/SmallVector.cpp
-  util/SourceSnippet.cpp
   util/String.cpp
   util/ThreadPool.cpp
   util/TimeTrace.cpp
