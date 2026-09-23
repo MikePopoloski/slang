@@ -27,7 +27,7 @@ public:
 
     void checkDefaultExpression() const;
 
-    static void fromLocalSyntax(const Scope& scope,
+    static void fromLocalSyntax(Scope& scope,
                                 const syntax::ParameterDeclarationStatementSyntax& syntax,
                                 SmallVectorBase<Symbol*>& results);
 

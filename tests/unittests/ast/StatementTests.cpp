@@ -610,7 +610,9 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+    auto diags =
+        compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings).filter({diag::ParamAlias});
+    REQUIRE(diags.empty());
 
     auto& foo = compilation.getRoot().lookupName<VariableSymbol>("m.asdf.foo");
     CHECK(foo.getType().getFixedRange() == ConstantRange{4, 2});
@@ -2393,7 +2395,7 @@ typedef union tagged {
 } Instr;
 
 function automatic int f2;
-    parameter Instr e = tagged Jmp tagged JmpC '{2, 2'(137)};
+    localparam Instr e = tagged Jmp tagged JmpC '{2, 2'(137)};
     int rf[3] = '{0, 0, 1};
     return e matches (tagged Jmp (tagged JmpC '{cc:.c,addr:.a})) &&& rf[c] != 0 ? int'(c + a) : 1;
 endfunction

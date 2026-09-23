@@ -605,7 +605,7 @@ TEST_CASE("v1800-2023: forward typedefs allowed in type operator and type param 
 typedef C;
 typedef C::T c_t;
 var type(C::T) foo;
-parameter type PT = C::T;
+localparam type PT = C::T;
 
 class C;
     typedef int T;
@@ -2363,7 +2363,7 @@ typedef int s;
 
 TEST_CASE("Unbounded literals can only be converted to simple bit vector types") {
     auto tree = SyntaxTree::fromText(R"(
-parameter real r = $;
+localparam real r = $;
 )");
 
     Compilation compilation;

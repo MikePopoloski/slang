@@ -18,6 +18,7 @@
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/parsing/TokenKind.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxVisitor.h"
 #include "slang/util/ScopeGuard.h"
@@ -26,27 +27,38 @@ namespace slang::ast {
 
 using namespace syntax;
 
-void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
+void ParameterSymbolBase::fromLocalSyntax(Scope& scope,
                                           const ParameterDeclarationStatementSyntax& syntax,
                                           SmallVectorBase<Symbol*>& results) {
     auto paramBase = syntax.parameter;
-    if (paramBase->kind == SyntaxKind::ParameterDeclaration) {
-        SmallVector<ParameterSymbol*> params;
-        ParameterSymbol::fromSyntax(scope, paramBase->as<ParameterDeclarationSyntax>(),
-                                    /* isLocal */ true, /* isPort */ false, params);
-        for (auto param : params) {
-            param->setAttributes(scope, syntax.attributes);
-            results.push_back(param);
-        }
-    }
-    else {
-        SmallVector<TypeParameterSymbol*> params;
-        TypeParameterSymbol::fromSyntax(scope, paramBase->as<TypeParameterDeclarationSyntax>(),
+    switch (paramBase->kind) {
+        case SyntaxKind::ParameterDeclaration: {
+            SmallVector<ParameterSymbol*> params;
+            ParameterSymbol::fromSyntax(scope, paramBase->as<ParameterDeclarationSyntax>(),
                                         /* isLocal */ true, /* isPort */ false, params);
-        for (auto param : params) {
-            param->setAttributes(scope, syntax.attributes);
-            results.push_back(param);
+            for (auto param : params) {
+                param->setAttributes(scope, syntax.attributes);
+                results.push_back(param);
+            }
+            break;
         }
+        case SyntaxKind::TypeParameterDeclaration: {
+            SmallVector<TypeParameterSymbol*> params;
+            TypeParameterSymbol::fromSyntax(scope, paramBase->as<TypeParameterDeclarationSyntax>(),
+                                            /* isLocal */ true, /* isPort */ false, params);
+            for (auto param : params) {
+                param->setAttributes(scope, syntax.attributes);
+                results.push_back(param);
+            }
+            break;
+        }
+        default:
+            SLANG_ASSERT(false);
+            break;
+    }
+
+    if (syntax.parameter->keyword.kind != parsing::TokenKind::LocalParamKeyword) {
+        scope.addDiag(diag::ParamAlias, syntax.parameter->keyword.location());
     }
 }
 

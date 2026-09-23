@@ -709,7 +709,7 @@ endmodule
 TEST_CASE("Unused typedefs") {
     auto& text = R"(
 class C;
-    parameter p = 1;
+    localparam p = 1;
 endclass
 
 module m;
@@ -846,8 +846,8 @@ package p;
 
     typedef int I;
 
-    parameter p = 1;
-    parameter type T = real;
+    localparam p = 1;
+    localparam type T = real;
 
     function void foo;
     endfunction

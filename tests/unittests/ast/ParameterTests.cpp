@@ -122,7 +122,7 @@ TEST_CASE("Type parameters") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter type foo_t = int, foo_t foo = 1) ();
     if (foo) begin
-        parameter type asdf = shortint, basdf = logic;
+        localparam type asdf = shortint, basdf = logic;
     end
 endmodule
 )");
@@ -135,12 +135,12 @@ endmodule
 TEST_CASE("Type parameters 2") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
-parameter type x_t = logic[3:0];
-parameter type y_t = logic[3:0];
+localparam type x_t = logic[3:0];
+localparam type y_t = logic[3:0];
 endpackage
 module m #(parameter type foo_t, foo_t foo = 1) ();
     if (foo) begin
-        parameter type asdf = shortint, basdf = logic;
+        localparam type asdf = shortint, basdf = logic;
     end
 endmodule
 
@@ -178,7 +178,7 @@ TEST_CASE("Type parameters 3") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter type foo_t, foo_t foo = 1) ();
     if (foo) begin
-        parameter type asdf = shortint, basdf = logic;
+        localparam type asdf = shortint, basdf = logic;
     end
 endmodule
 
@@ -239,7 +239,7 @@ TEST_CASE("Type parameters unset -- ok") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter type foo_t = int, foo_t foo = 1) ();
     if (foo) begin
-        parameter type asdf = shortint, basdf = logic;
+        localparam type asdf = shortint, basdf = logic;
     end
 endmodule
 
@@ -346,7 +346,7 @@ endmodule
 
 TEST_CASE("Param initialize self-reference") {
     auto tree = SyntaxTree::fromText(R"(
-parameter int foo = foo;
+localparam int foo = foo;
 )");
 
     Compilation compilation;
@@ -905,7 +905,7 @@ endmodule
 
 module n #(parameter int foo = 0);
     if (foo > 10) begin : bar
-        parameter baz = 6;
+        localparam baz = 6;
         n #(baz) n2();
     end
 endmodule
@@ -937,7 +937,7 @@ module m;
     defparam q.foo = 1;
 
     if (a == 6) begin : q
-        parameter foo = 0;
+        localparam foo = 0;
     end
 
     parameter b = 3;
@@ -1655,7 +1655,7 @@ endmodule
 TEST_CASE("Package value parameter missing initializer") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
-    parameter x;
+    localparam x;
 endpackage
 )");
 
@@ -1670,7 +1670,7 @@ endpackage
 TEST_CASE("Package type parameter missing initializer") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
-    parameter type T;
+    localparam type T;
 endpackage
 )");
 
@@ -1680,4 +1680,128 @@ endpackage
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BodyParamNoInitializer);
+}
+
+TEST_CASE("Param alias: global parameter") {
+    auto tree = SyntaxTree::fromText(R"(
+        parameter int p = 1;
+    )");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ParamAlias);
+}
+
+TEST_CASE("Param alias: global localparam") {
+    auto tree = SyntaxTree::fromText(R"(
+        localparam int p = 1;
+    )");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.empty());
+}
+
+TEST_CASE("Param alias: package parameter") {
+    auto tree = SyntaxTree::fromText(R"(
+        package m;
+            parameter int p = 1;
+            parameter type tp = int;
+        endpackage
+    )");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ParamAlias);
+    CHECK(diags[1].code == diag::ParamAlias);
+}
+
+TEST_CASE("Param alias: package localparam") {
+    auto tree = SyntaxTree::fromText(R"(
+        package m;
+            localparam int p = 1;
+            localparam type tp = int;
+        endpackage
+    )");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.empty());
+}
+
+TEST_CASE("Param alias: generate parameter") {
+    auto tree = SyntaxTree::fromText(R"(
+        module m;
+            if (1) begin : generated
+                parameter int p = 1;
+                parameter type tp = int;
+            end
+        endmodule
+    )");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ParamAlias);
+    CHECK(diags[1].code == diag::ParamAlias);
+}
+
+TEST_CASE("Param alias: generate localparam") {
+    auto tree = SyntaxTree::fromText(R"(
+        module m;
+            if (1) begin : generated
+                localparam int p = 1;
+                localparam type tp = int;
+            end
+        endmodule
+    )");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.empty());
+}
+
+TEST_CASE("Param alias: module parameter") {
+    auto tree = SyntaxTree::fromText(R"(
+        module m;
+            parameter int p = 1;
+            parameter type tp = int;
+        endmodule
+    )");
+
+    // This situation is fine.
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.empty());
+}
+
+TEST_CASE("Param alias: module localparam") {
+    auto tree = SyntaxTree::fromText(R"(
+        module m;
+            localparam int p = 1;
+            localparam type tp = int;
+        endmodule
+    )");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.empty());
 }

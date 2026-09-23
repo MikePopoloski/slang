@@ -598,6 +598,7 @@ warning init-self InitSelf "initializer of '{}' refers to itself"
 warning unnamed-generate UnnamedGenerate "generate block is unnamed"
 warning member-impl-not-found MemberImplNotFound "implementation not found in parent scope for '{}'"
 warning ref-arg-automatic RefArgAutomaticFunc "'ref' arguments can only be used in 'automatic' subroutines"
+warning param-alias ParamAlias "parameter is an alias for localparam in this context"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
