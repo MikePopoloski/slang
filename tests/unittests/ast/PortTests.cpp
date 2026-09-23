@@ -169,7 +169,7 @@ module m6(I.bar bar); endmodule
     checkIfacePort("m5", "a2", "K", "");
     checkIfacePort("m6", "bar", "I", "bar");
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::PortTypeNotInterfaceOrData);
     CHECK(diags[1].code == diag::VarWithInterfacePort);

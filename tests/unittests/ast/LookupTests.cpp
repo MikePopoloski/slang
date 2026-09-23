@@ -68,7 +68,7 @@ endmodule
     const auto& top = *compilation.getRoot().topInstances[0];
     const auto& gen_b = top.body.memberAt<GenerateBlockSymbol>(1);
     const auto& param = gen_b.memberAt<ParameterSymbol>(0);
-    CHECK(compilation.getSemanticDiagnostics().empty());
+    CHECK(compilation.getSemanticDiagnostics().filter(DefaultIgnoreWarnings).empty());
     CHECK(param.getValue().integer() == 12);
 
     // Lookup at (1); should return the local parameter
@@ -81,7 +81,7 @@ endmodule
     REQUIRE(symbol);
     CHECK(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol == &param);
-    CHECK(compilation.getSemanticDiagnostics().empty());
+    CHECK(compilation.getSemanticDiagnostics().filter(DefaultIgnoreWarnings).empty());
 
     // Lookup at (2); should return the package parameter
     context.lookupIndex = LookupLocation::before(param).getIndex();
@@ -122,7 +122,7 @@ endmodule
     CHECK(gen_b.find<ParameterSymbol>("foo").getValue().integer() == 4);
     CHECK(gen_b.find<ParameterSymbol>("bar").getValue().integer() == 12);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ImportNameCollision);
     REQUIRE(diags[0].notes.size() == 3);
@@ -379,7 +379,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::ConstEvalHierarchicalName);
     CHECK(diags[1].code == diag::ConstEvalHierarchicalName);
@@ -1579,7 +1579,7 @@ endmodule
     CHECK(m.find<ParameterSymbol>("j").getValue().integer() == 2);
     CHECK(m.find<ParameterSymbol>("k").getValue().integer() == 9);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::NonStaticClassProperty);
     CHECK(diags[1].code == diag::NonStaticClassMethod);

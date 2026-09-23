@@ -18,6 +18,7 @@
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/parsing/TokenKind.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxVisitor.h"
 #include "slang/util/ScopeGuard.h"
@@ -47,6 +48,10 @@ void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
             param->setAttributes(scope, syntax.attributes);
             results.push_back(param);
         }
+    }
+
+    if (syntax.parameter->keyword.kind != parsing::TokenKind::LocalParamKeyword) {
+        scope.addDiag(diag::PreferLocalparam, syntax.parameter->keyword.location());
     }
 }
 

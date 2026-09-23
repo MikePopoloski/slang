@@ -3914,8 +3914,9 @@ endfunction
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto diags = compilation.getAllDiagnostics().filter(
-        {diag::FloatBoolConv, diag::IntBoolConv, diag::RealCaseEq});
+    auto diags = compilation.getAllDiagnostics()
+                     .filter({diag::FloatBoolConv, diag::IntBoolConv, diag::RealCaseEq})
+                     .filter(DefaultIgnoreWarnings);
     if (!diags.empty()) {
         FAIL_CHECK(report(diags));
     }
