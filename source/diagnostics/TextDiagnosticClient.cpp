@@ -176,7 +176,7 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, std::span<const Source
             }
             else {
                 size_t index = 0;
-                std::string_view view = snippet.getSnippetLine();
+                std::string view = snippet.getSnippetLine();
                 for (auto [start, count] : invalidRanges) {
                     SLANG_ASSERT(start >= index);
                     buffer->append(view.substr(index, start - index));
