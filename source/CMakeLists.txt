@@ -120,6 +120,7 @@ add_library(
   util/IntervalMap.cpp
   util/OS.cpp
   util/SmallVector.cpp
+  util/SourceSnippet.cpp
   util/String.cpp
   util/ThreadPool.cpp
   util/TimeTrace.cpp
