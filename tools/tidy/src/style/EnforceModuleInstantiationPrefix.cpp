@@ -15,18 +15,13 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::Sta
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const InstanceSymbol& instance) {
-        NEEDS_SKIP_SYMBOL(instance)
-
-        if (!instance.isModule())
-            return;
-
+        std::string_view name = instance.name.empty() ? instance.getArrayName() : instance.name;
         std::string_view prefix = config.getCheckConfigs().moduleInstantiationPrefix;
-        for (auto& member : instance.body.members()) {
-            if (member.kind == SymbolKind::Instance && !member.name.starts_with(prefix)) {
-                diags.add(diag::EnforceModuleInstantiationPrefix, member.location)
-                    << member.name << prefix;
-            }
-        }
+        if (instance.isModule() && !name.empty() && !instance.isTopLevel() &&
+            !skip(sourceManager->getFileName((instance).location)) && !name.starts_with(prefix))
+            diags.add(diag::EnforceModuleInstantiationPrefix, instance.location) << name << prefix;
+
+        visitDefault(instance);
     }
 };
 } // namespace enforce_module_instantiation_prefix
