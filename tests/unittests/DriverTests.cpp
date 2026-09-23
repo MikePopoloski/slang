@@ -58,6 +58,21 @@ TEST_CASE("Driver valid column unit") {
     CHECK(driver.options.diagColumnUnit == ColumnUnit::Display);
 }
 
+TEST_CASE("Driver ignore untaken generate refs flag") {
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto filePath = findTestDir() + "test.sv";
+    const char* argv[] = {"testfoo", "--ignore-untaken-generate-refs", filePath.c_str()};
+    CHECK(driver.parseCommandLine(3, argv));
+    CHECK(driver.processOptions());
+    CHECK(driver.options.compilationFlags.at(CompilationFlags::IgnoreUntakenGenerateRefs) == true);
+
+    CHECK(driver.parseAllSources());
+    auto compilation = driver.createCompilation();
+    CHECK(compilation->hasFlag(CompilationFlags::IgnoreUntakenGenerateRefs));
+}
+
 TEST_CASE("Driver file preprocess -- obfuscation") {
     auto guard = OS::captureOutput();
 
