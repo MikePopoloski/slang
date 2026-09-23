@@ -7,6 +7,7 @@ add_subdirectory(driver)
 add_subdirectory(hier)
 add_subdirectory(reflect)
 add_subdirectory(rewriter)
+add_subdirectory(slang-unifdef)
 add_subdirectory(tidy)
 
 if(SLANG_INCLUDE_THREADTEST)

@@ -13,6 +13,10 @@ Directives in test files
                               commands for the file is collected and fed into
                               the CHECK engine below.
 
+  // CHECK-STDOUT: <path>     The complete stdout of all RUN commands must
+                              exactly match the contents of <path>.
+                              With --update, <path> is rewritten instead.
+
   // CHECK: <pattern>         A line in the output must match <pattern> (regex).
                               Patterns are matched in order of appearance.
 
@@ -45,7 +49,7 @@ and notes identify their primary diagnostic with a ``- for`` suffix::
 
 Multiple diagnostics on the same source line use one annotation line each.
 
-Pass ``--update-diags`` to generate or refresh these annotations from the JSON
+Pass ``--update`` to generate or refresh these annotations from the JSON
 diagnostics emitted by each test's RUN command. Updated tests are rerun immediately
 to verify the generated expectations.
 
@@ -56,10 +60,12 @@ to verify the generated expectations.
 Substitutions in RUN lines
 ---------------------------
   %s      Absolute path to the test source file.
+  %b      Absolute path to the test source file without its final suffix.
   %t      Path to a per-test temporary file (cleaned up after each test).
   %T      Temporary directory shared for the test run.
   %slang  Path to the slang binary (configurable via --slang).
-  %KEY    User-defined substitution introduced via --define KEY=VALUE.
+  %KEY    Custom value from --define KEY=VALUE, or a launcher-aware executable
+          from --tool KEY=PATH.
 
 Usage
 -----
@@ -71,10 +77,12 @@ Options
                         common build directories relative to the script location).
   --define KEY=VALUE    Define a custom substitution; %KEY in RUN lines is
                         replaced with VALUE. Can be specified multiple times.
+  --tool KEY=PATH       Define an executable %KEY substitution, automatically
+                        wrapping WebAssembly binaries with wasmtime.
   --verbose, -v         Print each test command as it runs.
   --jobs, -j <N>        Run N tests in parallel (default: one per usable CPU).
   --filter <regex>      Run only tests whose paths match <regex>.
-  --update-diags        Rewrite inline diagnostic annotations from actual output.
+  --update             Rewrite expected stdout files and inline diagnostic annotations.
   --no-color            Disable ANSI colour output.
 
 .lit-conf
@@ -156,7 +164,7 @@ def yellow(t: str) -> str:
 # Matches any recognised directive comment.
 _DIRECTIVE_RE = re.compile(
     r"^\s*//\s*"
-    r"(RUN|CHECK-DIAGS|CHECK(?:-NEXT|-NOT|-DAG|-LABEL)?|XFAIL|REQUIRES)"
+    r"(RUN|CHECK-DIAGS|CHECK(?:-STDOUT|-NEXT|-NOT|-DAG|-LABEL)?|XFAIL|REQUIRES)"
     r"\s*:\s*(.*?)\s*$"
 )
 
@@ -174,6 +182,7 @@ class CheckDirective:
 class ParsedTest:
     path: Path
     run_lines: list[str] = field(default_factory=list)
+    check_stdout: CheckDirective | None = None
     check_directives: list[CheckDirective] = field(default_factory=list)
     diag_file: str | None = None
     diag_lines: set[int] = field(default_factory=set)
@@ -206,6 +215,8 @@ def parse_test_file(path: Path) -> ParsedTest:
                 result.xfail = True
             elif kind == "REQUIRES":
                 result.requires.extend(r.strip() for r in body.split(","))
+            elif kind == "CHECK-STDOUT":
+                result.check_stdout = CheckDirective(kind, body, lineno)
             else:
                 result.check_directives.append(CheckDirective(kind, body, lineno))
     return result
@@ -225,17 +236,26 @@ def expand_substitutions(
     slang_path: str,
     slang_is_cmdline: bool,
     user_defines: dict[str, str] | None = None,
+    user_tools: dict[str, tuple[str, bool]] | None = None,
 ) -> str:
-    """Replace %s, %t, %T, %slang, and user-defined %KEY substitutions in a RUN-line command."""
+    """Replace lit substitutions in a RUN-line command."""
+    source_base_path = source_path.with_suffix("")
+
     # Apply user-defined substitutions before the built-in ones so that user
     # values cannot accidentally match built-in tokens like %s or %t.
     if user_defines:
         for key, value in user_defines.items():
             command = command.replace(f"%{key}", _quote_arg(value))
+    if user_tools:
+        for key, (value, is_cmdline) in user_tools.items():
+            command = command.replace(
+                f"%{key}", value if is_cmdline else _quote_arg(value)
+            )
     command = command.replace(
         "%slang", slang_path if slang_is_cmdline else _quote_arg(slang_path)
     )
     command = command.replace("%s", _quote_arg(str(source_path)))
+    command = command.replace("%b", _quote_arg(str(source_base_path)))
     command = command.replace("%t", _quote_arg(str(tmp_file)))
     command = command.replace("%T", _quote_arg(str(tmp_dir)))
     return command
@@ -256,6 +276,7 @@ def expand_substitution_value(
             value = value.replace(f"%{key}", replacement)
     value = value.replace("%slang", slang_path)
     value = value.replace("%s", str(source_path))
+    value = value.replace("%b", str(source_path.with_suffix("")))
     value = value.replace("%t", str(tmp_file))
     value = value.replace("%T", str(tmp_dir))
     return value
@@ -781,8 +802,7 @@ def run_diag_checks(parsed: ParsedTest, diag_path: Path) -> None:
         lineterm="",
     )
     raise DiagCheckError(
-        "diagnostic annotations do not match; rerun with --update-diags\n"
-        + "\n".join(diff)
+        "diagnostic annotations do not match; rerun with --update\n" + "\n".join(diff)
     )
 
 
@@ -818,10 +838,12 @@ def run_test(
     slang_is_cmdline: bool,
     tmp_dir: Path,
     verbose: bool,
+    update: bool,
     available_features: set[str],
     output_limit: int | None = 30,
     user_defines: dict[str, str] | None = None,
-    should_update_diags: bool = False,
+    diags_updated: bool = False,
+    user_tools: dict[str, tuple[str, bool]] | None = None,
 ) -> TestResult:
     start = time.monotonic()
 
@@ -864,6 +886,7 @@ def run_test(
             slang_path=slang_path,
             slang_is_cmdline=slang_is_cmdline,
             user_defines=user_defines,
+            user_tools=user_tools,
         )
         if os.name == "nt":
             # cmd.exe does not interpret single quotes as quoting characters;
@@ -928,16 +951,21 @@ def run_test(
         )
         diag_path = Path(diag_file)
         try:
-            if should_update_diags and update_diags(parsed, diag_path):
+            if update and not diags_updated and update_diags(parsed, diag_path):
+                # Annotations shift diagnostic locations. Verify them on the rerun
+                # and use its output when updating the expected stdout file.
                 result = run_test(
                     parse_test_file(parsed.path),
                     slang_path=slang_path,
                     slang_is_cmdline=slang_is_cmdline,
                     tmp_dir=tmp_dir,
                     verbose=verbose,
+                    update=update,
                     available_features=available_features,
                     output_limit=output_limit,
                     user_defines=user_defines,
+                    diags_updated=True,
+                    user_tools=user_tools,
                 )
                 result.elapsed = time.monotonic() - start
                 if result.status == "PASS":
@@ -954,6 +982,48 @@ def run_test(
                 message=str(exc),
                 output=combined_output,
             )
+
+    # --- Run CHECK-STDOUT directive ---------------------------------------------
+    if parsed.check_stdout is not None:
+        golden_file = expand_substitution_value(
+            parsed.check_stdout.pattern,
+            source_path=parsed.path.resolve(),
+            tmp_file=tmp_file,
+            tmp_dir=tmp_dir,
+            slang_path=slang_path,
+            user_defines=user_defines,
+        )
+
+        golden_path = Path(golden_file)
+        if update:
+            golden_path.parent.mkdir(parents=True, exist_ok=True)
+            golden_path.write_text(combined_output, encoding="utf-8")
+        else:
+            try:
+                expected = golden_path.read_text(encoding="utf-8")
+            except FileNotFoundError:
+                elapsed = time.monotonic() - start
+                msg = f"CHECK-STDOUT file not found: {golden_path}\n  rerun with --update to create it"
+                status = "XFAIL" if parsed.xfail else "FAIL"
+                return TestResult(
+                    path=parsed.path,
+                    status=status,
+                    elapsed=elapsed,
+                    message=msg,
+                    output=combined_output,
+                )
+
+            if combined_output != expected:
+                elapsed = time.monotonic() - start
+                msg = f"CHECK-STDOUT mismatch: {golden_path}\n  rerun with --update to refresh it"
+                status = "XFAIL" if parsed.xfail else "FAIL"
+                return TestResult(
+                    path=parsed.path,
+                    status=status,
+                    elapsed=elapsed,
+                    message=msg,
+                    output=combined_output,
+                )
 
     # --- Run CHECK directives -------------------------------------------------
     try:
@@ -1009,18 +1079,22 @@ def run_test(
 _TEST_EXTENSIONS = {".sv", ".v", ".lit"}
 
 
+def is_test_file(path: Path) -> bool:
+    return path.suffix in _TEST_EXTENSIONS and not path.name.endswith(".out.sv")
+
+
 def discover_tests(paths: list[Path], filter_re: re.Pattern | None) -> list[Path]:
     """Return all test files reachable from *paths* (files or directories)."""
     result: list[Path] = []
     for p in paths:
         if p.is_file():
-            if filter_re is None or filter_re.search(str(p)):
+            if is_test_file(p) and (filter_re is None or filter_re.search(str(p))):
                 result.append(p)
         elif p.is_dir():
             for root, _dirs, files in os.walk(p):
                 for name in sorted(files):
                     fp = Path(root) / name
-                    if fp.suffix in _TEST_EXTENSIONS and (
+                    if is_test_file(fp) and (
                         filter_re is None or filter_re.search(str(fp))
                     ):
                         result.append(fp)
@@ -1124,24 +1198,24 @@ def load_lit_conf(directory: Path) -> dict:
     return result
 
 
-def maybe_wrap_wasm_launcher(slang_bin: str) -> tuple[str, bool]:
+def maybe_wrap_wasm_launcher(executable: str) -> tuple[str, bool]:
     """Return (command, is_cmdline) and auto-wrap wasm binaries via wasmtime."""
-    p = Path(slang_bin)
+    p = Path(executable)
     if not p.is_file():
-        return slang_bin, False
+        return executable, False
 
     try:
         with p.open("rb") as fh:
             magic = fh.read(4)
     except OSError:
-        return slang_bin, False
+        return executable, False
 
     if magic != b"\0asm":
-        return slang_bin, False
+        return executable, False
 
     wasmtime = shutil.which("wasmtime")
     if not wasmtime:
-        return slang_bin, False
+        return executable, False
 
     tests_dir = (_SCRIPT_DIR.parent / "tests").resolve()
     cmd = " ".join(
@@ -1198,9 +1272,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--filter", metavar="REGEX", help="Only run tests whose path matches REGEX"
     )
     p.add_argument(
-        "--update-diags",
+        "--update",
         action="store_true",
-        help="Rewrite inline diagnostic annotations from actual output",
+        help="Rewrite expected stdout files and inline diagnostic annotations",
     )
     p.add_argument("--no-color", action="store_true", help="Disable ANSI colour output")
     p.add_argument(
@@ -1209,6 +1283,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="append",
         default=[],
         help="Define a custom %%KEY substitution for use in RUN lines (repeatable)",
+    )
+    p.add_argument(
+        "--tool",
+        metavar="KEY=PATH",
+        action="append",
+        default=[],
+        help="Define a launcher-aware executable %%KEY substitution (repeatable)",
     )
     return p.parse_args(argv)
 
@@ -1257,6 +1338,24 @@ def main(argv: list[str] | None = None) -> int:
         k, _, v = defn.partition("=")
         user_defines[k.strip()] = v
 
+    user_tools: dict[str, tuple[str, bool]] = {}
+    for tool in args.tool:
+        if "=" not in tool:
+            print(f"error: --tool {tool!r}: expected KEY=PATH format", file=sys.stderr)
+            return 1
+        k, _, v = tool.partition("=")
+        key = k.strip()
+        if not key or not v:
+            print(f"error: --tool {tool!r}: expected KEY=PATH format", file=sys.stderr)
+            return 1
+        if key in user_defines:
+            print(
+                f"error: substitution %{key} is both a --define and --tool",
+                file=sys.stderr,
+            )
+            return 1
+        user_tools[key] = maybe_wrap_wasm_launcher(v)
+
     filter_re: re.Pattern | None = None
     if args.filter:
         try:
@@ -1289,10 +1388,10 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, subprocess.SubprocessError):
         pass
 
-    # Each --define KEY=VALUE also registers KEY as an available feature so
-    # that tests can guard themselves with `// REQUIRES: KEY` and be skipped
-    # gracefully when the define is absent (e.g. when running outside ctest).
+    # Each named substitution also registers KEY as an available feature so tests can
+    # guard themselves with `// REQUIRES: KEY` and be skipped gracefully when absent.
     available_features.update(user_defines.keys())
+    available_features.update(user_tools.keys())
 
     results: list[TestResult] = []
     total = len(parsed_tests)
@@ -1310,10 +1409,11 @@ def main(argv: list[str] | None = None) -> int:
                 slang_is_cmdline=slang_is_cmdline,
                 tmp_dir=tmp_dir,
                 verbose=args.verbose,
+                update=args.update,
                 available_features=available_features,
                 output_limit=None if total == 1 else 30,
                 user_defines=user_defines or None,
-                should_update_diags=args.update_diags,
+                user_tools=user_tools or None,
             )
 
         if args.jobs > 1:
@@ -1331,10 +1431,11 @@ def main(argv: list[str] | None = None) -> int:
                     slang_is_cmdline=slang_is_cmdline,
                     tmp_dir=tmp_dir,
                     verbose=args.verbose,
+                    update=args.update,
                     available_features=available_features,
                     output_limit=None if total == 1 else 30,
                     user_defines=user_defines or None,
-                    should_update_diags=args.update_diags,
+                    user_tools=user_tools or None,
                 )
                 results.append(r)
                 _print_result(r, total, len(results), width)
