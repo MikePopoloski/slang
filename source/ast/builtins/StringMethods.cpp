@@ -9,6 +9,7 @@
 
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
+#include "slang/text/CharInfo.h"
 #include "slang/util/String.h"
 
 namespace slang::ast::builtins {
@@ -173,7 +174,7 @@ public:
 
 class StringAtoIMethod : public SimpleSystemSubroutine {
 public:
-    StringAtoIMethod(const Builtins& builtins, KnownSystemName knownNameId, int base) :
+    StringAtoIMethod(const Builtins& builtins, KnownSystemName knownNameId, LiteralBase base) :
         SimpleSystemSubroutine(knownNameId, SubroutineKind::Function, 0, {}, builtins.integerType,
                                true),
         base(base) {}
@@ -187,12 +188,42 @@ public:
         std::string str = cv.str();
         std::erase(str, '_');
 
-        int result = strToInt(str, nullptr, base).value_or(0);
-        return SVInt(32, uint64_t(result), true);
+        std::string_view text = str;
+        bool negative = text.starts_with('-');
+        if (negative)
+            text.remove_prefix(1);
+
+        SmallVector<logic_t> digits;
+        for (char c : text) {
+            if (!isDigit(c))
+                break;
+            digits.push_back(logic_t(getHexDigitValue(c)));
+        }
+
+        if (digits.empty())
+            return SVInt(32, 0, true);
+
+        // Parsing into 32 bits drops the high digits, which is the truncation LRM 6.16.9 allows.
+        auto result = SVInt::fromDigits(32, base, true, false, digits);
+        return negative ? -result : result;
     }
 
 private:
-    int base;
+    bool isDigit(char c) const {
+        switch (base) {
+            case LiteralBase::Binary:
+                return isBinaryDigit(c);
+            case LiteralBase::Octal:
+                return isOctalDigit(c);
+            case LiteralBase::Decimal:
+                return isDecimalDigit(c);
+            case LiteralBase::Hex:
+                return isHexDigit(c);
+        }
+        SLANG_UNREACHABLE;
+    }
+
+    LiteralBase base;
 };
 
 class StringAtoRealMethod : public SimpleSystemSubroutine {
@@ -268,10 +299,13 @@ void Builtins::registerStringMethods() {
     REGISTER(SymbolKind::StringType, StringCompare, *this, KnownSystemName::Compare, false);
     REGISTER(SymbolKind::StringType, StringCompare, *this, KnownSystemName::ICompare, true);
     REGISTER(SymbolKind::StringType, StringSubstr, *this);
-    REGISTER(SymbolKind::StringType, StringAtoI, *this, KnownSystemName::AToI, 10);
-    REGISTER(SymbolKind::StringType, StringAtoI, *this, KnownSystemName::AToHex, 16);
-    REGISTER(SymbolKind::StringType, StringAtoI, *this, KnownSystemName::AToOct, 8);
-    REGISTER(SymbolKind::StringType, StringAtoI, *this, KnownSystemName::AToBin, 2);
+    REGISTER(SymbolKind::StringType, StringAtoI, *this, KnownSystemName::AToI,
+             LiteralBase::Decimal);
+    REGISTER(SymbolKind::StringType, StringAtoI, *this, KnownSystemName::AToHex, LiteralBase::Hex);
+    REGISTER(SymbolKind::StringType, StringAtoI, *this, KnownSystemName::AToOct,
+             LiteralBase::Octal);
+    REGISTER(SymbolKind::StringType, StringAtoI, *this, KnownSystemName::AToBin,
+             LiteralBase::Binary);
     REGISTER(SymbolKind::StringType, StringAtoReal, *this);
     REGISTER(SymbolKind::StringType, StringItoA, *this, KnownSystemName::IToA,
              LiteralBase::Decimal);

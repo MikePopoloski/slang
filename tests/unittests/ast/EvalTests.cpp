@@ -1619,6 +1619,47 @@ TEST_CASE("Eval string methods") {
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Eval string to integer conversions") {
+    ScriptSession session;
+    auto conv = [&](auto str, auto method) {
+        return session.eval("string'(\""s + str + "\")." + method).integer();
+    };
+
+    // Values of 2^31 and above keep their low 32 bits in every base.
+    CHECK_THAT(conv("7fffffff", "atohex"), exactlyEquals("32'sh7fffffff"_si));
+    CHECK_THAT(conv("80000000", "atohex"), exactlyEquals("32'sh80000000"_si));
+    CHECK_THAT(conv("deadbeef", "atohex"), exactlyEquals("32'shdeadbeef"_si));
+    CHECK_THAT(conv("123456789", "atohex"), exactlyEquals("32'sh23456789"_si));
+    CHECK_THAT(conv("2147483648", "atoi"), exactlyEquals("32'sh80000000"_si));
+    CHECK_THAT(conv("4294967295", "atoi"), exactlyEquals("32'shffffffff"_si));
+    CHECK_THAT(conv("4294967296", "atoi"), exactlyEquals("32'sh0"_si));
+    CHECK_THAT(conv("37777777777", "atooct"), exactlyEquals("32'shffffffff"_si));
+    CHECK_THAT(conv("11111111111111111111111111111111", "atobin"),
+               exactlyEquals("32'shffffffff"_si));
+
+    // A leading minus is accepted, and the negated value is truncated the same way.
+    CHECK_THAT(conv("-5", "atoi"), exactlyEquals("32'shfffffffb"_si));
+    CHECK_THAT(conv("-ff", "atohex"), exactlyEquals("32'shffffff01"_si));
+    CHECK_THAT(conv("-2147483648", "atoi"), exactlyEquals("32'sh80000000"_si));
+    CHECK_THAT(conv("-2147483649", "atoi"), exactlyEquals("32'sh7fffffff"_si));
+
+    // Anything else ends the scan: a plus sign, a second minus, a space, and x or z digits.
+    CHECK_THAT(conv("+5", "atoi"), exactlyEquals("32'sh0"_si));
+    CHECK_THAT(conv("-", "atoi"), exactlyEquals("32'sh0"_si));
+    CHECK_THAT(conv("--5", "atoi"), exactlyEquals("32'sh0"_si));
+    CHECK_THAT(conv(" 5", "atoi"), exactlyEquals("32'sh0"_si));
+    CHECK_THAT(conv("0x1f", "atohex"), exactlyEquals("32'sh0"_si));
+    CHECK_THAT(conv("1z", "atohex"), exactlyEquals("32'sh1"_si));
+    CHECK_THAT(conv("19", "atooct"), exactlyEquals("32'sh1"_si));
+    CHECK_THAT(conv("102", "atobin"), exactlyEquals("32'sh2"_si));
+
+    // Underscores are skipped wherever they appear.
+    CHECK_THAT(conv("_5", "atoi"), exactlyEquals("32'sh5"_si));
+    CHECK_THAT(conv("-_5", "atoi"), exactlyEquals("32'shfffffffb"_si));
+
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Eval inside expressions") {
     ScriptSession session;
     session.eval("int i = 4;");
