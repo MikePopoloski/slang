@@ -17,8 +17,6 @@
 
 namespace slang {
 
-class FormatBuffer;
-
 /// Utility functions to generate highlighted source snippets.
 class SLANG_EXPORT SourceSnippet {
 public:
@@ -27,9 +25,10 @@ public:
                   SmallVectorBase<std::pair<size_t, size_t>>& invalidRanges);
 
     /// Gets the source snippet line.
-    std::string getSnippetLine() { return snippetLine; }
+    const std::string& getSnippetLine() const { return snippetLine; }
+
     /// Gets the highlighted line.
-    std::string getHighlightLine() { return highlightLine; }
+    const std::string& getHighlightLine() const { return highlightLine; }
 
 private:
     void highlightRange(SourceRange range, SourceLocation caretLoc, size_t col,
