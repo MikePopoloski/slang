@@ -39,18 +39,20 @@ def main():
 
     diags = {}
     groups = []
+    compats = []
     diaglist = []
     subsystem = "General"
     curgroup = None
+    curlist = None
 
     def parsegroup(elems):
         nonlocal curgroup
         for e in elems:
             if e == "}":
-                groups.append(curgroup)
+                curlist.append(curgroup)
                 curgroup = None
                 break
-            curgroup[1].append(e)
+            curgroup[-1].append(e)
 
     for line in [x.strip("\n") for x in inf]:
         if not line or line.startswith("//"):
@@ -65,9 +67,16 @@ def main():
                 diags[subsystem] = []
         elif parts[0] == "group":
             curgroup = (parts[1], [])
+            curlist = groups
             assert parts[2] == "="
             assert parts[3] == "{"
             parsegroup(parts[4:])
+        elif parts[0] == "compat":
+            curgroup = (parts[1], parts[2], [])
+            curlist = compats
+            assert parts[3] == "="
+            assert parts[4] == "{"
+            parsegroup(parts[5:])
         else:
             sev = parts[0]
             if sev == "warning":
@@ -85,6 +94,8 @@ def main():
             else:
                 raise ValueError(f"Invalid entry: {line}")
 
+    checkcompats(diags, compats)
+
     if args.docs:
         createdocs(
             args.outDir,
@@ -92,12 +103,13 @@ def main():
             args.slangBin,
             diags,
             groups,
+            compats,
         )
     else:
         for k, v in sorted(diags.items()):
             createheader(os.path.join(headerdir, k + "Diags.h"), k, v)
 
-        createsource(os.path.join(args.outDir, "DiagCode.cpp"), diags, groups)
+        createsource(os.path.join(args.outDir, "DiagCode.cpp"), diags, groups, compats)
         createallheader(os.path.join(headerdir, "AllDiags.h"), diags)
 
         doCheck = False
@@ -105,6 +117,18 @@ def main():
             diaglist = checkDiags(args.srcDir, diaglist)
             diaglist = checkDiags(args.incDir, diaglist)
             reportUnused(diaglist)
+
+
+def checkcompats(diags, compats):
+    options = {d[3] for v in diags.values() for d in v if d[3]}
+    for mode, sev, elems in compats:
+        if sev not in ("error", "warning", "ignored"):
+            raise ValueError(f"Invalid severity '{sev}' for compat mode '{mode}'")
+        for e in elems:
+            if e not in options:
+                raise ValueError(
+                    f"'{e}' in compat mode '{mode}' is not a known warning option"
+                )
 
 
 def createheader(path, subsys, diags):
@@ -134,7 +158,7 @@ namespace slang::diag {{
     writefile(path, output)
 
 
-def createsource(path, diags, groups):
+def createsource(path, diags, groups, compats):
     output = """//------------------------------------------------------------------------------
 // DiagCode.cpp
 // Generated diagnostic helpers
@@ -235,6 +259,29 @@ const DiagGroup* findDefaultDiagGroup(std::string_view name) {
     return nullptr;
 }
 
+static const flat_hash_map<std::string_view, std::vector<std::pair<DiagCode, DiagnosticSeverity>>> compatMap = {
+"""
+
+    compatMap = {}
+    for mode, sev, elems in compats:
+        entries = compatMap.setdefault(mode, [])
+        for e in elems:
+            entries.extend((d, sev.capitalize()) for d in optionMap[e])
+
+    for mode in sorted(compatMap):
+        elems = ", ".join(
+            f"{{diag::{e}, DiagnosticSeverity::{sev}}}" for e, sev in compatMap[mode]
+        )
+        output += f'    {{"{mode}"sv, {{ {elems} }}}},\n'
+
+    output += """};
+
+std::span<const std::pair<DiagCode, DiagnosticSeverity>> findCompatDiagSeverities(std::string_view mode) {
+    if (auto it = compatMap.find(mode); it != compatMap.end())
+        return it->second;
+    return {};
+}
+
 static const DiagCode AllGeneratedCodes[] = {
 """
 
@@ -270,7 +317,7 @@ def createallheader(path, diags):
     writefile(path, output)
 
 
-def createdocs(outDir, inpath, slangBin, diags, groups):
+def createdocs(outDir, inpath, slangBin, diags, groups, compats):
     class Opt:
         def __init__(self, name, category):
             self.name = name
@@ -364,6 +411,38 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
 
 """
 
+    compatModes = []
+    compatMap = {}
+    for mode, sev, elems in compats:
+        if mode not in compatModes:
+            compatModes.append(mode)
+        for e in elems:
+            compatMap[(mode, e)] = sev
+
+    def compatdoc(opt):
+        sevByMode = {m: compatMap.get((m, opt), "warning") for m in compatModes}
+        defaultSev = sevByMode.pop("Default", "warning")
+
+        result = ""
+        if defaultSev == "error":
+            result = (
+                "This diagnostic is an error by default but can be downgraded "
+                "to a warning for compatibility with other tools."
+            )
+
+        for sev in ("warning", "ignored"):
+            modes = [m for m, s in sevByMode.items() if s == sev and s != defaultSev]
+            if not modes:
+                continue
+
+            modestr = " and ".join(f"`--compat={m.lower()}`" for m in modes)
+            what = "a warning" if sev == "warning" else "ignored"
+            if result:
+                result += " "
+            result += f"It is {what} when using {modestr}."
+
+        return defaultSev, result
+
     groupMap = {}
     categories = {"Warning Groups": []}
     for g in groups:
@@ -414,10 +493,11 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
                 output += details.desc
                 output += " @n @n\n"
 
-                if opt in groupMap:
-                    groups = groupMap[opt]
-                    if "default" in groups:
-                        output += "This diagnostic is enabled by default. @n @n\n"
+                defaultSev, compatText = compatdoc(opt)
+                if defaultSev != "error" and "default" in groupMap.get(opt, ()):
+                    compatText = f"This diagnostic is enabled by default. {compatText}"
+                if compatText:
+                    output += compatText.strip() + " @n @n\n"
 
                 if details.example:
                     assert details.output

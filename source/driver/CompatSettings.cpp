@@ -9,16 +9,15 @@
 
 #include "slang/analysis/AnalysisOptions.h"
 #include "slang/ast/Compilation.h"
-#include "slang/diagnostics/AnalysisDiags.h"
-#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
-#include "slang/diagnostics/ExpressionsDiags.h"
-#include "slang/diagnostics/LexerDiags.h"
-#include "slang/diagnostics/LookupDiags.h"
-#include "slang/diagnostics/NumericDiags.h"
-#include "slang/diagnostics/ParserDiags.h"
-#include "slang/diagnostics/StatementsDiags.h"
-#include "slang/diagnostics/SysFuncsDiags.h"
+
+namespace slang {
+
+// Defined in the generated DiagCode.cpp file.
+std::span<const std::pair<DiagCode, DiagnosticSeverity>> findCompatDiagSeverities(
+    std::string_view mode);
+
+} // namespace slang
 
 namespace slang::driver {
 
@@ -83,82 +82,9 @@ std::span<const AnalysisFlags> CompatSettings::getAnalysisFlags() const {
 }
 
 void CompatSettings::configureDiagnostics(DiagnosticEngine& diagEngine) const {
-    // Some tools violate the standard in various ways, but in order to allow
-    // compatibility with these tools we change the respective errors into a
-    // suppressible warning that we promote to an error by default. This allows
-    // the user to turn this back into a warning, or turn it off altogether.
-
-    if (mode != CompatMode::All) {
-        for (auto d : {
-                 diag::DuplicateDefinition,
-                 diag::BadProceduralForce,
-                 diag::UnknownSystemName,
-                 diag::NonstandardHierarchicalCross,
-                 diag::NonstandardStringConcat,
-                 diag::NonstandardInside,
-                 diag::MixedVarAssigns,
-                 diag::MultipleContAssigns,
-                 diag::MultipleAlwaysAssigns,
-                 diag::MisplacedTrailingSeparator,
-                 diag::InitializerRequired,
-                 diag::ConcatWithStringInt,
-             }) {
-            diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
-        }
-    }
-
-    if (mode == CompatMode::Vcs || mode == CompatMode::All) {
-        // Ignore these warnings by default in compat mode.
-        for (auto d : {
-                 diag::StaticInitializerMustBeExplicit,
-                 diag::ImplicitConvert,
-                 diag::BadFinishNum,
-                 diag::NonstandardSysFunc,
-                 diag::NonstandardForeach,
-                 diag::ForeachCallExpr,
-                 diag::NonstandardDist,
-                 diag::NestedBlockComment,
-             }) {
-            diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Ignored);
-        }
-    }
-    else {
-        // These warnings are set to Error severity by default, unless we're in vcs compat mode.
-        // The user can always downgrade via warning options.
-        for (auto d : {
-                 diag::IndexOOB,
-                 diag::RangeOOB,
-                 diag::RangeWidthOOB,
-                 diag::ImplicitNamedPortTypeMismatch,
-                 diag::SplitDistWeightOp,
-                 diag::DPIPureTask,
-                 diag::SpecifyPathConditionExpr,
-                 diag::SolveBeforeDisallowed,
-                 diag::ForeachCallExpr,
-                 diag::DynamicNotProcedural,
-                 diag::QualifiersOnOutOfBlock,
-                 diag::MemberImplNotFound,
-                 diag::PackageImportInClass,
-                 diag::BareAssociativePattern,
-                 diag::DigitsLeadingUnderscore,
-                 diag::RefArgAutomaticFunc,
-                 diag::RangeSelectReversed,
-                 diag::NonstandardConstraintBlock,
-                 diag::FormatEmptyArg,
-                 diag::FormatTooManyArgs,
-                 diag::ClockVarTargetAssign,
-                 diag::CrossIdentInBinsof,
-                 diag::RefArgForkJoin,
-                 diag::CannotIndexScalar,
-                 diag::StringConstraintExpr,
-                 diag::VirtualArgNameMismatch,
-                 diag::ParameterDoesNotExist,
-                 diag::Redefinition,
-                 diag::RedefinitionDifferentType,
-             }) {
-            diagEngine.setBaselineSeverity(d, DiagnosticSeverity::Error);
-        }
-    }
+    // The per-mode severity overrides are defined in diagnostics.txt.
+    for (auto [code, severity] : findCompatDiagSeverities(toString(mode)))
+        diagEngine.setBaselineSeverity(code, severity);
 }
 
 } // namespace slang::driver

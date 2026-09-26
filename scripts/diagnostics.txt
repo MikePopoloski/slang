@@ -1356,3 +1356,31 @@ group parentheses = { bitwise-rel-precedence arith-in-shift logical-not-parenthe
 group unconnected-port = { unconnected-input-port unconnected-output-port unconnected-inout-port }
 group empty-connection = { empty-input-connection empty-output-connection empty-inout-connection }
 group shadow = { randomize-var-shadow shadow-value shadow-hierarchy shadow-property }
+
+// Following are per-compat-mode baseline severity overrides, applied by the driver based
+// on the selected --compat mode. Syntax is: compat <mode> <severity> = { <warning-option>... }
+
+compat Default error = { duplicate-definition bad-procedural-force unknown-sys-name
+                         nonstandard-hierarchical-cross nonstandard-string-concat nonstandard-inside
+                         mixed-var-assigns multiple-cont-assigns multiple-always-assigns
+                         misplaced-trailing-separator initializer-required string-int-concat index-oob
+                         range-oob range-width-oob implicit-port-type-mismatch split-distweight-op
+                         dpi-pure-task specify-condition-expr nested-solve-before foreach-call-expr
+                         dynamic-non-procedural qualifiers-on-out-of-block member-impl-not-found
+                         package-import-in-class nonstandard-bare-assoc-pattern literal-leading-underscore
+                         ref-arg-automatic range-select-reversed nonstandard-constraint-block format-empty-arg
+                         format-too-many-args clockvar-target-assign cross-ident-in-binsof
+                         ref-arg-in-fork-join cannot-index-scalar string-in-constraint
+                         virtual-arg-name-mismatch undefined-param-override redefinition
+                         redefinition-different-type }
+
+compat Vcs error = { duplicate-definition bad-procedural-force unknown-sys-name nonstandard-hierarchical-cross
+                     nonstandard-string-concat nonstandard-inside mixed-var-assigns multiple-cont-assigns
+                     multiple-always-assigns misplaced-trailing-separator initializer-required
+                     string-int-concat }
+
+compat Vcs ignored = { explicit-static implicit-conv finish-num nonstandard-sys-func nonstandard-foreach
+                       foreach-call-expr nonstandard-dist nested-comment }
+
+compat All ignored = { explicit-static implicit-conv finish-num nonstandard-sys-func nonstandard-foreach
+                       foreach-call-expr nonstandard-dist nested-comment }
