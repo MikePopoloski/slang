@@ -37,7 +37,7 @@ static const Type& getIndexedType(TTypeProvider& typeProvider, const ASTContext&
     const Type& ct = valueType.getCanonicalType();
     if (ct.isArray()) {
         auto& elemType = *ct.getArrayElementType();
-        if (valueType.kind == SymbolKind::PackedArrayType && valueType.isSigned())
+        if (ct.kind == SymbolKind::PackedArrayType && ct.isSigned())
             return elemType.makeUnsigned(typeProvider);
 
         return elemType;

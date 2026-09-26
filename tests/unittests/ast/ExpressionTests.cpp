@@ -309,6 +309,13 @@ TEST_CASE("Expression types") {
     CHECK(typeof("sla[0]") == "logic[7:0]");
     CHECK(typeof("arr4[0]") == "logic signed[7:0]");
 
+    // Selects of signed packed arrays are unsigned, even through a typedef.
+    declare("typedef logic signed [7:0] sl_t; sl_t slt;");
+    declare("typedef logic signed [2:0][7:0] sla_t; sla_t slat;");
+    CHECK(typeof("slt[0]") == "logic");
+    CHECK(typeof("slt[3:0]") == "logic[3:0]");
+    CHECK(typeof("slat[0]") == "logic[7:0]");
+
     // Casts
     declare("parameter int FOO = 1;");
     CHECK(typeof("(FOO + 2)'(b1)") == "bit[2:0]");
