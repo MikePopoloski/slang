@@ -989,3 +989,56 @@ endmodule
     CHECK(diags[2].code == diag::IncDecBit);
     CHECK(diags[3].code == diag::IncDecBit);
 }
+
+TEST_CASE("Effective width of masks, shifts, division, and concatenations") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [7:0] x;
+    logic [3:0] a;
+    logic signed [7:0] sx;
+    int i;
+    logic [3:0] y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11;
+    logic [7:0] z1;
+
+    // None of these truncate.
+    assign y1 = x & 8'h0F;
+    assign y2 = x >> 4;
+    assign y3 = x % 10;
+    assign z1 = {8'h00, x};
+    assign y4 = sx & 8'sh0F;
+    assign y5 = {4'b0, x[3:0]};
+    assign y6 = i[7:0] & 4'hF;
+    assign y7 = x[7:4] / x;
+
+    // These do.
+    assign y8 = x & -1;
+    assign y9 = x / 2;
+    assign y10 = x >> 3;
+    assign y11 = {1'b1, a};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diags;
+    for (auto& diag : compilation.getAllDiagnostics()) {
+        if (diag.code == diag::WidthTruncate)
+            diags.push_back(diag);
+    }
+
+    CHECK("\n" + report(diags) == R"(
+source:21:17: warning: implicit conversion truncates from 32 to 4 bits [-Wwidth-trunc]
+    assign y8 = x & -1;
+              ~ ^~~~~~
+source:22:17: warning: implicit conversion truncates from 32 to 4 bits [-Wwidth-trunc]
+    assign y9 = x / 2;
+              ~ ^~~~~
+source:23:18: warning: implicit conversion truncates from 8 to 4 bits [-Wwidth-trunc]
+    assign y10 = x >> 3;
+               ~ ^~~~~~
+source:24:18: warning: implicit conversion truncates from 5 to 4 bits [-Wwidth-trunc]
+    assign y11 = {1'b1, a};
+               ~ ^~~~~~~~~
+)");
+}

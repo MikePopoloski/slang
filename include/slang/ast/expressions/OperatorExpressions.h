@@ -252,6 +252,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
+    std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     bool isEquivalentImpl(const ConcatenationExpression& rhs) const;
 
     void serializeTo(ASTSerializer& serializer) const;
