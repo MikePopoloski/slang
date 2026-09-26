@@ -110,7 +110,7 @@ interface J; endinterface
 interface K; logic f; endinterface
 module L; endmodule
 
-parameter int I = 3;
+localparam int I = 3;
 typedef struct { logic f; } J;
 
 module m0(I a[3], b, input c); endmodule

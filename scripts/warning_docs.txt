@@ -1520,6 +1520,23 @@ module m;
 endmodule
 ```
 
+-Wparam-alias
+When used in a `generate` block, package, class body or compilation-unit scope, the
+`parameter` keyword is a synonym for `localparam`. It is clearer to use `localparam`
+directly in these cases because it does not incorrectly imply that the parameter can
+be changed.
+```
+module m;
+    localparam int a = 1; // Constant.
+    parameter  int b = 2; // Configurable.
+endmodule;
+
+package m;
+    localparam int a = 1; // Constant.
+    parameter  int b = 2; // Warning: this is actually constant too. Use localparam instead.
+endpackage;
+```
+
 @category Compatibility
 
 -Wdpi-spec

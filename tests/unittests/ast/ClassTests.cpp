@@ -22,7 +22,7 @@ class Packet;
     integer status;
     typedef enum { ERR_OVERFLOW = 10, ERR_UNDERFLOW = 1123} PCKT_TYPE;
     const integer buffer_size = 100;
-    parameter int bar = 99;
+    localparam int bar = 99;
 
     function new();
         command = 4'd0;
@@ -242,7 +242,7 @@ class C;
         return i + foo;
     endfunction
 
-    parameter int p = 4;
+    localparam int p = 4;
     enum { ASDF = 5 } asdf;
 endclass
 
@@ -1367,25 +1367,25 @@ interface class ABase;
 endclass
 
 interface class A extends ABase;
-    parameter type T1 = int;
+    localparam type T1 = int;
     pure virtual function bit foo;
 endclass
 
 interface class B extends A;
-    parameter int P1 = 1;
+    localparam int P1 = 1;
     pure virtual function bit foo;
 endclass
 
 interface class C;
-    parameter type T1 = logic;
-    parameter int P2 = 1;
+    localparam type T1 = logic;
+    localparam int P2 = 1;
     pure virtual function bit foo;
     pure virtual function logic bar;
 endclass
 
 interface class D extends A;
-    parameter int P1 = 2;
-    parameter int P2 = 1;
+    localparam int P1 = 2;
+    localparam int P2 = 1;
     pure virtual function logic foo;
 endclass
 
@@ -1399,10 +1399,10 @@ interface class F extends B;
 endclass
 
 interface class G extends A, B, C, D, E, F;
-    parameter int P2 = 3;
+    localparam int P2 = 3;
     pure virtual function logic bar;
 
-    parameter int baz = 1;
+    localparam int baz = 1;
 endclass
 )");
 

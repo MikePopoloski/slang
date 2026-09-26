@@ -22,7 +22,7 @@
 TEST_CASE("Explicit import lookup") {
     auto tree = SyntaxTree::fromText(R"(
 package Foo;
-    parameter int x = 4;
+    localparam int x = 4;
 endpackage
 
 import Foo::x;
@@ -47,7 +47,7 @@ import Foo::x;
 TEST_CASE("Wildcard import lookup 1") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
-    parameter int x = 4;
+    localparam int x = 4;
 endpackage
 
 module top;
@@ -55,7 +55,7 @@ module top;
 
     if (1) begin : gen_b
         // (2) A lookup here returns p::x
-        parameter int x = 12;
+        localparam int x = 12;
         // (1) A lookup here returns local x
     end
     int x;  // If we do a lookup at (2), this becomes an error
@@ -98,16 +98,16 @@ endmodule
 TEST_CASE("Wildcard import lookup 2") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
-    parameter int x = 4;
+    localparam int x = 4;
 endpackage
 
 module top;
     import p::*;
 
     if (1) begin : gen_b
-        parameter int foo = x;
-        parameter int x = 12;
-        parameter int bar = x;
+        localparam int foo = x;
+        localparam int x = 12;
+        localparam int bar = x;
     end
     int x;  // Should be an error here
 endmodule
@@ -192,7 +192,7 @@ module top;
     import p2::*;
     int x;
     if (1) begin : b
-        parameter int x = f();
+        localparam int x = f();
     end
     import p1::*;
 endmodule
@@ -255,7 +255,7 @@ endmodule
 TEST_CASE("Package lookup with path") {
     auto tree = SyntaxTree::fromText(R"(
 package pkg;
-    parameter int x = 42;
+    localparam int x = 42;
 endpackage
 )");
 
@@ -355,7 +355,7 @@ module m1;
 
     if (1) begin : foo
         int i;
-        parameter int j = 3;
+        localparam int j = 3;
     end
 
     localparam int j = foo.i;
@@ -410,7 +410,7 @@ TEST_CASE("Lookup location for constant function call") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
     typedef enum { SDF = 1 } asdf_t;
-    parameter int i = foo();
+    localparam int i = foo();
 
     function int foo;
         return SDF;
@@ -783,14 +783,14 @@ endmodule
 
 TEST_CASE("Compilation scope vs instantiation scope") {
     auto file1 = SyntaxTree::fromText(R"(
-parameter int foo = 42;
+localparam int foo = 42;
 
 module m;
     N n();
 endmodule
 )");
     auto file2 = SyntaxTree::fromText(R"(
-parameter int foo = 84;
+localparam int foo = 84;
 
 module N;
     localparam int baz = foo;
@@ -810,7 +810,7 @@ endmodule
 
 TEST_CASE("Unit scope disambiguation") {
     auto tree = SyntaxTree::fromText(R"(
-parameter int foo = 42;
+localparam int foo = 42;
 
 module m;
     localparam int foo = 19;
@@ -1356,12 +1356,12 @@ endmodule
 
 TEST_CASE("Parameter override type lookup") {
     auto tree1 = SyntaxTree::fromText(R"(
-parameter int blah = 42;
+localparam int blah = 42;
 module foo #(parameter int width = 1, parameter logic[width - 1 : 0] bar, parameter int baz = blah);
 endmodule
 )");
     auto tree2 = SyntaxTree::fromText(R"(
-parameter int bar = 255;
+localparam int bar = 255;
 module top;
     foo #(.width(8), .bar(bar)) f();
 endmodule
@@ -1537,7 +1537,7 @@ endmodule
 TEST_CASE("Class member access") {
     auto tree = SyntaxTree::fromText(R"(
 class C;
-    parameter int i = 4;
+    localparam int i = 4;
     enum { ASDF = 2 } asdf;
 
     int foo;
@@ -2308,7 +2308,7 @@ module m;
 endmodule
 
 package pkg;
-    parameter int baz = 3;
+    localparam int baz = 3;
 endpackage
 )");
 
@@ -2378,7 +2378,7 @@ endmodule
 
 TEST_CASE("Used-before-declared opt-in corner case of self-referential symbol") {
     auto tree = SyntaxTree::fromText(R"(
-parameter int i = 1;
+localparam int i = 1;
 
 module m;
     parameter int i = i;

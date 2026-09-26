@@ -1000,7 +1000,7 @@ function int foo;
     return i.bar;
 endfunction
 
-parameter p = foo();
+localparam p = foo();
 )");
 
     Compilation compilation;
@@ -1109,7 +1109,7 @@ endmodule
     SECTION("operand resolves in a package") {
         auto src = R"(
 package pkg;
-    parameter int REQUIRED = 2;
+    localparam int REQUIRED = 2;
 endpackage
 interface my_if #(parameter int MY_PARAM = 1);
     logic [MY_PARAM-1:0] data;

@@ -537,7 +537,7 @@ module Top;
 endmodule
 
 package Foo;
-    parameter int x = 4;
+    localparam int x = 4;
 endpackage
 )");
 
@@ -2502,7 +2502,7 @@ module rv_plic import rv_plic_reg_pkg::*; (
 endmodule
 
 package rv_plic_reg_pkg;
-    parameter int NumSrc = 64;
+    localparam int NumSrc = 64;
 endpackage
 
 module rv_plic_bind_fpv;

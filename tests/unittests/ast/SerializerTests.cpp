@@ -37,7 +37,7 @@ interface I;
 endinterface
 
 package p1;
-    parameter int BLAH = 1;
+    localparam int BLAH = 1;
 endpackage
 
 function int foo(int a, output logic b);

@@ -704,8 +704,8 @@ TEST_CASE("v1800-2023: covergroups with real values") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(
 real a, b;
-parameter real ZSTATE = -100.0;
-parameter int XSTATE = 100;
+localparam real ZSTATE = -100.0;
+localparam int XSTATE = 100;
 
 covergroup cg_real_value;
     cvp_a: coverpoint a {

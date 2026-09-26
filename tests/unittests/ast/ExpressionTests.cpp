@@ -2765,8 +2765,8 @@ endmodule
 
 TEST_CASE("String literal binary op const eval regress") {
     auto tree = SyntaxTree::fromText(R"(
-parameter string foo = "hello";
-parameter string bar = {foo, "0" | 5};
+localparam string foo = "hello";
+localparam string bar = {foo, "0" | 5};
 )");
 
     Compilation compilation;
@@ -3860,7 +3860,7 @@ endmodule
 
 TEST_CASE("More operator eval tests") {
     auto tree = SyntaxTree::fromText(R"(
-parameter p = foo();
+localparam p = foo();
 
 function automatic bit foo;
     shortreal a = 1.0;
