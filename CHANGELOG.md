@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Compatibility
+### Notable Breaking Changes
+### New Features
+### Improvements
+### Fixes
+
+
+## [v12.0] - 2026-09-29
+### Language Compatibility
 * Added `--allow-cross-auto-bin-max` (included in 'vcs' compat mode) which enables the `cross_auto_bin_max` legacy coverage option, for compatibility with (pre-IEEE) SystemVerilog 3.1a (thanks to @hankhsu1996)
 * ANSI input ports without an explicit port kind (net or var) are specified by the LRM to be nets. slang instead used to default them to variables, so that cases like `input int p` wouldn't error (since 2-state types are not valid for nets). Now they are defaulted to nets to match the LRM, with a carve out for the 2-state net type check to suppress the error for these implicit cases only. This behavior better matches the LRM and several commercial tools. `--infer-input-ports-as-vars` (included by default in 'vcs' compat mode) can be used to get the old behavior. (thanks to @likeamahoney)
 * Embedded class covergroups are now allowed to reference class members declared later in textual order. The LRM is not clear about this but all commercial tools agree.

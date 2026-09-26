@@ -33,7 +33,7 @@ if(NOT TARGET slang::slang)
   set_property(CACHE SLANG_EXAMPLE_METHOD PROPERTY STRINGS package subproject)
 
   if(SLANG_EXAMPLE_METHOD STREQUAL "package")
-    find_package(slang 11.0.0 REQUIRED)
+    find_package(slang 12.0.0 REQUIRED)
   elseif(SLANG_EXAMPLE_METHOD STREQUAL "subproject")
     # Note: this example just pulls the head master branch for slang, but a real
     # project would very likely pin this to a specific tag and only update when
