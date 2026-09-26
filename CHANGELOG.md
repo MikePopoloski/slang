@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed ICE due to unbounded recursion of generic class specializations with changing param values (thanks to @EylonKrause)
 * Fixed a bug where SVInt::set() would drop high words when promoting from 2-state to 4-state, corrupting the value (thanks to @EylonKrause)
 * Fixed potentially incorrect instance caching when a module has an interface array port that is connected to different interface types (thanks to @hankhsu1996)
+* Fixed constant evaluation of string ato* methods to work correctly for inputs larger than 2^31 (thanks to @hankhsu1996)
 * Fixed a potential crash when using the `--libext` flag (thanks to @x-Aksara-x)
 * Fixed JSON AST serialization of `randsequence` productions to include the statement bodies of code blocks
 * Fixed `-Wunused-subroutine` firing on subroutines named in an `export "DPI-C"` directive, since the export makes them reachable from C
@@ -79,6 +80,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added a "StructFieldsInSameProcess" rule that warns about struct fields being assigned from multiple processes (thanks to @spomata)
 * Fixed the `resetIsActiveHigh` config having inverted polarity, and changed default to `false` so that it stays consistent with the default `resetName` of `rst_ni` (thanks to @spomata)
 * Fixed the "OnlyAssignedOnReset" check to issue the right diagnostics (previously was erroneously using "RegisterNotAssignedOnReset") (thanks to @spomata)
+* Fixed the "EnforceModuleInstantiationPrefix" check to actually apply to non-top level modules (thanks to @nwistoffTT)
+
+#### slang-unifdef
+* Added a new tool that can be used to rewrite code as if certain macros were either defined or not defined, while leaving other idefs alone (thanks to @AndrewNolte)
 
 
 ## [v11.0] - 2026-05-14
