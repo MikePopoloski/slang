@@ -1,6 +1,5 @@
 # ~~~
-# SPDX-FileCopyrightText: Michael Popoloski
-# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Michael Popoloski SPDX-License-Identifier: MIT
 # ~~~
 
 # -------- Generate code
@@ -74,6 +73,7 @@ add_library(
   analysis/DataFlowAnalysis.cpp
   analysis/DFAResults.cpp
   analysis/DriverTracker.cpp
+  analysis/TautologicalCompare.cpp
   analysis/ValueDriver.cpp
   diagnostics/DiagnosticClient.cpp
   diagnostics/DiagnosticEngine.cpp

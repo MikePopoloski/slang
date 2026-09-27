@@ -26,6 +26,7 @@
 
 namespace slang::ast {
 
+class BinaryExpression;
 class CheckerInstanceSymbol;
 class Compilation;
 class Scope;
@@ -78,6 +79,10 @@ public:
 
     /// Issues a new diagnostic.
     Diagnostic& addDiag(const ast::Symbol& symbol, DiagCode code);
+
+    /// Returns true if the given location comes from the body of a macro
+    /// (as opposed to a macro argument or not being part of a macro expansion at all).
+    bool isFromMacroBody(SourceLocation location) const;
 };
 
 /// The analysis manager coordinates running various analyses on AST symbols.
@@ -282,6 +287,9 @@ private:
             else if constexpr (std::is_same_v<T, ast::AssertionInstanceExpression>) {
                 manager.analyzeAssertion(getDefaultClocking(), containingSymbol, expr);
             }
+            else if constexpr (std::is_same_v<T, ast::BinaryExpression>) {
+                visitBinary(expr);
+            }
 
             if constexpr (HasVisitExprs<T, NonProceduralExprVisitor>) {
                 expr.visitExprs(*this);
@@ -295,6 +303,7 @@ private:
 
         const ast::TimingControl* getDefaultClocking() const;
         void visitCall(const ast::CallExpression& expr);
+        void visitBinary(const ast::BinaryExpression& expr);
     };
 };
 

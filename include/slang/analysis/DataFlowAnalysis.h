@@ -10,6 +10,7 @@
 #include "slang/analysis/AbstractFlowAnalysis.h"
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/DFAResults.h"
+#include "slang/analysis/TautologicalCompare.h"
 #include "slang/analysis/ValueDriver.h"
 #include "slang/ast/ValuePath.h"
 
@@ -377,6 +378,8 @@ protected:
     }
 
     void handle(const BinaryExpression& expr) {
+        checkTautologicalCompare(expr);
+
         if (!OpInfo::isShortCircuit(expr.op)) {
             this->visitExpr(expr);
             return;
@@ -539,6 +542,9 @@ protected:
 private:
     detail::ExpressionSequenceChecker sequenceChecker;
 
+    // Expressions that have already been checked for tautological comparisons.
+    SmallSet<const Expression*, 2> checkedExprs;
+
     // Set to true while visiting an lvalue expression.
     bool isLValue = false;
 
@@ -576,6 +582,18 @@ private:
         sequenceChecker.currRegion = parentRegion;
         sequenceChecker.mergeSeq(firstRegion);
         sequenceChecker.mergeSeq(secondRegion);
+    }
+
+    void checkTautologicalCompare(const BinaryExpression& expr) {
+        if (!sequenceChecker.isEnabled() || !this->getState().reachable)
+            return;
+
+        // Unrolled loops visit their bodies multiple times;
+        // only check each expression once.
+        if (this->inUnrolledForLoop && !checkedExprs.insert(&expr).second)
+            return;
+
+        TautologicalCompare::check(context, this->rootSymbol, expr);
     }
 
     void handleTiming(const TimingControl& timing) {

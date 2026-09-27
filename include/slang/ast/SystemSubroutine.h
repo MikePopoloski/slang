@@ -87,9 +87,15 @@ public:
 
     /// @returns the effective width of the return value of the subroutine.
     ///
-    /// This is used to reduce false-positive width conversion warnings for
-    /// subroutines defined to return something like an `int` when in reality
-    /// they can only ever return 1 or 0.
+    /// This is used for subroutines defined to return something like an `int`
+    /// when in reality they can only ever return a small range of values,
+    /// such as 1 or 0. It's used to reduce false-positive width conversion
+    /// warnings, and also as a guaranteed bound on the returned value by
+    /// analysis passes, so it must not be an underestimate.
+    ///
+    /// The width is interpreted the same way as ConstantValue::getEffectiveWidth:
+    /// non-negative return values must fit in this many bits, and negative return
+    /// values must fit in this many bits including the sign bit.
     virtual std::optional<bitwidth_t> getEffectiveWidth() const { return {}; }
 
     /// Allows the subroutine to perform checking of the arguments in a call expression.

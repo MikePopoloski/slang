@@ -2936,6 +2936,88 @@ module parent;
 endmodule
 ```
 
+-Wtautological-self-compare
+Warns about comparisons of an expression with itself, which always evaluate
+to the same result. Comparisons like `==`, `<=`, and `>=` on four-state
+values are not diagnosed since they evaluate to X when the value has
+unknown bits.
+```
+module m;
+    int a;
+    initial begin
+        if (a < a) begin end
+    end
+endmodule
+```
+
+-Wtautological-range-compare
+Warns about comparisons against a constant that lies outside the range of
+values the other side of the comparison can take on, which means the
+comparison always has the same result.
+```
+module m;
+    logic [3:0] a;
+    byte b;
+    initial begin
+        if (a == 20) begin end
+        if (b < 200) begin end
+    end
+endmodule
+```
+
+-Wtautological-limit-compare
+Warns about comparisons against a constant at the very limit of the range of
+values the other side of the comparison can take on, such that the comparison
+always has the same result. A common source of this is checking whether an
+unsigned value is greater than or equal to zero.
+```
+module m;
+    logic [3:0] a;
+    initial begin
+        for (logic [3:0] i = 15; i >= 0; i--) begin end
+        if (a <= 15) begin end
+    end
+endmodule
+```
+
+-Wtautological-bitwise-compare
+Warns about equality comparisons against the result of a bitwise AND or OR
+with a constant mask that make it impossible for the comparison to succeed.
+```
+module m;
+    logic [3:0] a;
+    initial begin
+        if ((a & 4'h4) == 4'h8) begin end
+        if ((a | 4'h4) != 4'h1) begin end
+    end
+endmodule
+```
+
+-Wtautological-overlap-compare
+Warns about logical combinations of comparisons of the same expression against
+constants that always evaluate to the same result.
+```
+module m;
+    int a;
+    initial begin
+        if (a < 5 && a > 10) begin end
+        if (a != 1 || a != 2) begin end
+    end
+endmodule
+```
+
+-Wtautological-negation-compare
+Warns about logical combinations of an expression and its own negation, which
+always evaluate to the same result.
+```
+module m;
+    logic a;
+    initial begin
+        if (a || !a) begin end
+    end
+endmodule
+```
+
 -Wunknown-warning-option
 <ignored>
 

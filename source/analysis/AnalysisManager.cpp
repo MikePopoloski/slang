@@ -53,6 +53,11 @@ Diagnostic& AnalysisContext::addDiag(const Symbol& symbol, DiagCode code) {
     }
 }
 
+bool AnalysisContext::isFromMacroBody(SourceLocation location) const {
+    auto sm = manager->sourceManager;
+    return sm && sm->isMacroLoc(location) && !sm->isMacroArgLoc(location);
+}
+
 AnalysisManager::AnalysisManager(AnalysisOptions options, std::shared_ptr<ThreadPool> threadPool) :
     options(options), threadPool(std::move(threadPool)) {
 
@@ -498,6 +503,10 @@ void AnalysisManager::NonProceduralExprVisitor::visitCall(const CallExpression& 
 
     if (!drivers.empty())
         manager.driverTracker.add(state.context, state.driverAlloc, drivers);
+}
+
+void AnalysisManager::NonProceduralExprVisitor::visitBinary(const BinaryExpression& expr) {
+    TautologicalCompare::check(manager.getState().context, containingSymbol, expr);
 }
 
 } // namespace slang::analysis
