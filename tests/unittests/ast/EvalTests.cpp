@@ -1356,6 +1356,32 @@ endfunction
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Eval repeat loop with a real count") {
+    ScriptSession session;
+    session.eval(R"(
+function automatic int foo(real a);
+    int result = 0;
+    repeat (a)
+        result++;
+
+    return result;
+endfunction
+
+function automatic int bar(shortreal a);
+    int result = 0;
+    repeat (a)
+        result++;
+
+    return result;
+endfunction
+)");
+
+    CHECK(session.eval("foo(1.4)").integer() == 1);
+    CHECK(session.eval("foo(1.5)").integer() == 2);
+    CHECK(session.eval("bar(1.5)").integer() == 2);
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Eval while loop") {
     ScriptSession session;
     session.eval(R"(
