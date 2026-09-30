@@ -953,6 +953,18 @@ TEST_CASE("Dynamic string ops") {
     CHECK(session.eval("{\"Hi\",str2}").str() == "Hiaaaaa");
     CHECK(session.eval("str2 = {\"Hi\", \"Bye\"}").str() == "HiBye");
 
+    session.eval("localparam int zero = 0;");
+    session.eval("string str3 = \"x\";");
+    CHECK(session.eval("str3 = {0{str1}}").str() == "");
+    CHECK(session.eval("str3 = {zero{str1}}").str() == "");
+    CHECK(session.eval("str3 = {0{str1, \"Hi\"}}").str() == "");
+    CHECK(session.eval("str3 = {0{\"Hi\"}}").str() == "");
+    CHECK(session.eval("{0{str1}}").str() == "");
+    CHECK(session.eval("{{0{str1}}}").str() == "");
+    CHECK(session.eval("{\"x\", {0{str1}}, \"y\"}").str() == "xy");
+    CHECK(session.eval("{str1, {0{\"Hi\"}}, \"y\"}").str() == "ay");
+    CHECK(session.eval("{8'h41, {0{\"Hi\"}}}").integer() == 0x41);
+
     CHECK(session.eval("str1").str() == "a");
 
     session.eval("byte ba[] = \"asdf\";");
