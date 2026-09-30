@@ -257,7 +257,8 @@ Statement& RepeatLoopStatement::fromSyntax(Compilation& compilation,
 }
 
 ER RepeatLoopStatement::evalImpl(EvalContext& context) const {
-    auto cv = count.eval(context);
+    // The count is only required to be numeric, so it can be a real or shortreal here.
+    auto cv = count.eval(context).convertToInt();
     if (cv.bad())
         return ER::Fail;
 
