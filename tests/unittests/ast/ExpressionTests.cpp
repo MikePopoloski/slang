@@ -7,7 +7,6 @@
 #include "slang/ast/Expression.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/ConversionExpression.h"
-#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
@@ -16,7 +15,6 @@
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
-#include "slang/parsing/Parser.h"
 #include "slang/syntax/AllSyntax.h"
 
 TEST_CASE("Evaluate assignment expression") {
@@ -4362,6 +4360,31 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ReplicationZeroOutsideConcat);
+}
+
+TEST_CASE("String replication count zero") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    string s = "ab";
+    string q[$];
+    bit [7:0] w;
+    string r;
+    initial begin
+        q = {"a", {0{s}}};
+        w = {8'h41, {0{"ab"}}};
+        r = {{0{"ab"}}};
+        r = {8'h41, {0{s}}};
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::EmptyConcatNotAllowed);
+    CHECK(diags[1].code == diag::ConcatWithStringInt);
 }
 
 TEST_CASE("Unknown built-in method on string") {

@@ -14,7 +14,6 @@
 #include "slang/ast/Patterns.h"
 #include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/MiscExpressions.h"
-#include "slang/ast/statements/ConditionalStatements.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
@@ -1981,7 +1980,9 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& comp,
             }
             else {
                 Expression* expr = buffer[i];
-                if (expr->type->isString()) {
+
+                // Zero-width replication operands contribute nothing, so leave them unconverted.
+                if (expr->type->isString() || expr->type->isVoid()) {
                     selfDetermined(context, expr);
                 }
                 else {
@@ -2180,6 +2181,14 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
     }
 
+    // Converts any string literal operands to string and gives the result string type.
+    auto makeStringReplication = [&]() -> Expression& {
+        contextDetermined(context, right, result, compilation.getStringType(), {});
+        result->concat_ = right;
+        result->type = &compilation.getStringType();
+        return *result;
+    };
+
     // If the multiplier isn't constant this must be a string replication.
     EvalContext evalCtx(context, EvalFlags::CacheResults);
     if (ConstantValue leftVal = left.eval(evalCtx); !leftVal) {
@@ -2190,11 +2199,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
             return badExpr(compilation, result);
         }
 
-        contextDetermined(context, right, result, compilation.getStringType(), {});
-
-        result->concat_ = right;
-        result->type = &compilation.getStringType();
-        return *result;
+        return makeStringReplication();
     }
 
     std::optional<int32_t> count = context.evalInteger(left);
@@ -2206,8 +2211,18 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
     }
 
+    // A replication of a string is a string whatever the count, and a zero count yields the
+    // empty string (LRM Table 6-9).
+    if (right->type->isString())
+        return makeStringReplication();
+
     if (*count == 0) {
         if (!context.flags.has(ASTFlags::InsideConcatenation)) {
+            // Zero copies of string literals are the empty string here, rather than a zero-width
+            // integral (LRM Table 6-9).
+            if (right->isImplicitString())
+                return makeStringReplication();
+
             context.addDiag(diag::ReplicationZeroOutsideConcat, left.sourceRange);
             return badExpr(compilation, result);
         }
@@ -2220,11 +2235,6 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
 
     selfDetermined(context, right);
     result->concat_ = right;
-
-    if (right->type->isString()) {
-        result->type = &compilation.getStringType();
-        return *result;
-    }
 
     auto width = context.requireValidBitWidth(
         SVInt(32, uint64_t(*count), true) * right->type->getBitWidth(), syntax.sourceRange());
