@@ -258,7 +258,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 4);
     for (int i = 0; i < 4; i++) {
         CHECK(diags[i].code == diag::ConstEvalClassType);
@@ -1409,7 +1409,7 @@ endclass
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::VirtualReturnMismatch);
     CHECK(diags[1].code == diag::IfaceNameConflict);

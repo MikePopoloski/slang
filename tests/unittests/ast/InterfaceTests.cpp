@@ -1006,7 +1006,7 @@ parameter p = foo();
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstEvalVifType);
 }
@@ -1030,7 +1030,7 @@ TEST_CASE("Top-level iface port params from $static_assert") {
     };
     auto diagCodes = [](Compilation& c) {
         std::vector<DiagCode> codes;
-        for (auto& d : c.getAllDiagnostics())
+        for (auto& d : c.getAllDiagnostics().filter(DefaultIgnoreWarnings))
             codes.push_back(d.code);
         return codes;
     };

@@ -728,7 +728,7 @@ endmodule
 )";
 
     Compilation compilation;
-    auto diags = analyze(text, compilation);
+    auto diags = analyze(text, compilation).filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UnusedTypedef);
 }
@@ -870,7 +870,7 @@ endinterface
 )";
 
     Compilation compilation;
-    auto diags = analyze(text, compilation);
+    auto diags = analyze(text, compilation).filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::UnusedPackageVar);
     CHECK(diags[1].code == diag::UnusedPackageAssertionDecl);

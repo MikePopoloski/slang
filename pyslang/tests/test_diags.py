@@ -9,8 +9,8 @@ from pyslang import DiagnosticEngine
 
 def test_diag_args():
     text = """
-    parameter int X = pa_X::X;
-    parameter int unsigned Y = X;
+    localparam int X = pa_X::X;
+    localparam int unsigned Y = X;
     """
 
     compilation = Compilation()
