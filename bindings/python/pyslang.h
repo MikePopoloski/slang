@@ -119,7 +119,10 @@ static constexpr auto byrefint = nb::rv_policy::reference_internal;
 //
 // NOTE: a behavioral consequence is that `isinstance(x, Scope)` /
 // `isinstance(x, ParameterSymbolBase)` is False for these subclasses in Python,
-// since they no longer inherit the base type but only its methods.
+// since they no longer inherit the base type but only its methods. Scope-derived
+// symbols are still accepted wherever a Scope argument is expected, via an
+// implicit conversion registered alongside the Scope class binding (which can
+// also be invoked explicitly from Python as `Scope(symbol)`).
 template<typename Derived, typename... Extra>
 void addScopeMethods(nb::class_<Derived, Extra...>& cls) {
     cls.def_prop_ro("compilation",

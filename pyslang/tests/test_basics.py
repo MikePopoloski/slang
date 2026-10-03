@@ -3,7 +3,17 @@
 
 from pathlib import Path
 
-from pyslang.ast import Compilation, ScriptSession, SymbolKind
+import pytest
+from pyslang.analysis import AnalysisManager
+from pyslang.ast import (
+    ASTContext,
+    Compilation,
+    Lookup,
+    LookupLocation,
+    Scope,
+    ScriptSession,
+    SymbolKind,
+)
 from pyslang.parsing import LexerOptions, ParserOptions
 from pyslang.syntax import SyntaxKind, SyntaxTree
 
@@ -170,6 +180,36 @@ def test_symbol_inspection():
     assert t.isPackedArray
     assert t.bitWidth == 32
     assert str(t) == "logic[31:0]"
+
+
+def test_scope_symbol_conversion():
+    """Symbols that are scopes can be passed where a Scope is expected (#1988)."""
+    comp = Compilation()
+    comp.addSyntaxTree(SyntaxTree.fromText(testFile))
+
+    body = comp.getRoot().topInstances[0].body
+    port = body.find("i")
+    assert port.parentScope is not None
+
+    # Explicit conversion yields the same scope that members report as their parent.
+    scope = Scope(body)
+    assert isinstance(scope, Scope)
+    assert scope == port.parentScope
+    assert hash(scope) == hash(port.parentScope)
+    assert scope.find("i") == port
+
+    # Implicit conversion for both reference and pointer parameters.
+    assert port.parentScope == body
+    assert ASTContext(body, LookupLocation.max).scope == scope
+    assert LookupLocation(body, 0).scope == scope
+    assert Lookup.isVisibleFrom(port, body)
+    assert AnalysisManager().getAnalyzedScope(body) is None
+
+    # Symbols that aren't scopes are still rejected.
+    with pytest.raises(TypeError):
+        Scope(port)
+    with pytest.raises(TypeError):
+        ASTContext(port, LookupLocation.max)
 
 
 def test_string_to_ast_to_string_loop() -> None:
