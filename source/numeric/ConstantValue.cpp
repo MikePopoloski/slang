@@ -406,13 +406,41 @@ ConstantValue ConstantValue::convertToStr() const {
     if (isString())
         return *this;
 
+    // An unpacked array or queue of bytes is string-like: it provides one character
+    // per element, in order from the left bound to the right bound [21.2.1.8].
+    if (isUnpacked() || isQueue()) {
+        std::string result;
+        auto append = [&result](const ConstantValue& elem) {
+            if (!elem.isInteger())
+                return false;
+            result += elem.convertToStr().str();
+            return true;
+        };
+
+        if (isQueue()) {
+            for (auto& elem : *queue()) {
+                if (!append(elem))
+                    return nullptr;
+            }
+        }
+        else {
+            for (auto& elem : elements()) {
+                if (!append(elem))
+                    return nullptr;
+            }
+        }
+        return result;
+    }
+
     if (!isInteger())
         return nullptr;
 
     // Conversion is described in [6.16]: take each 8 bit chunk,
     // remove it if it's zero, otherwise add as character to the string.
-
-    const SVInt& val = integer();
+    // The characters of a string are bytes, a 2-state type, so x and z bits
+    // read as 0 [6.11.2], as they do in a bit-stream cast to a string.
+    SVInt val = integer();
+    val.flattenUnknowns();
     int32_t msb = int32_t(val.getBitWidth() - 1);
     int32_t extraBits = int32_t(val.getBitWidth() % 8);
 
