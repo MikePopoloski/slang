@@ -26,6 +26,7 @@
 namespace slang::ast {
 
 using namespace syntax;
+using namespace parsing;
 
 void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
                                           const ParameterDeclarationStatementSyntax& syntax,
@@ -50,9 +51,8 @@ void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
         }
     }
 
-    if (syntax.parameter->keyword.kind != parsing::TokenKind::LocalParamKeyword) {
-        scope.addDiag(diag::PreferLocalparam, syntax.parameter->keyword.location());
-    }
+    if (syntax.parameter->keyword.kind != TokenKind::LocalParamKeyword)
+        scope.addDiag(diag::PreferLocalparam, syntax.parameter->keyword.range());
 }
 
 void ParameterSymbolBase::checkDefaultExpression() const {
