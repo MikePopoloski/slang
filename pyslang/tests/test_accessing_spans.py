@@ -3,7 +3,13 @@
 
 """Test accessing `std::span` elements."""
 
-from pyslang.ast import Compilation, CompilationUnitSymbol, Symbol
+from pyslang.ast import (
+    Compilation,
+    CompilationUnitSymbol,
+    ExpressionKind,
+    Symbol,
+    SymbolKind,
+)
 from pyslang.parsing import Token, TokenKind, Trivia
 from pyslang.syntax import SyntaxTree
 
@@ -60,3 +66,27 @@ def test_token_construction() -> None:
     )
     assert isinstance(t2, Token)
     assert str(t2) == "'{"
+
+
+def test_span_of_values_does_not_corrupt_ast() -> None:
+    """Regression test for #1988: reading a span of by-value structs must not modify the AST."""
+    tree = SyntaxTree.fromText("""
+module m(output logic [7:0] o, input logic [7:0] a);
+    always_comb {>>{o}} = a;
+endmodule
+""")
+    compilation = Compilation()
+    compilation.addSyntaxTree(tree)
+
+    body = compilation.getRoot().topInstances[0].body
+    blocks = [m for m in body if m.kind == SymbolKind.ProceduralBlock]
+    lhs = blocks[0].body.expr.left
+
+    for _ in range(2):
+        streams = lhs.streams
+        assert len(streams) == 1
+        assert streams[0].operand.kind == ExpressionKind.NamedValue
+        assert streams[0].operand.symbol.name == "o"
+        assert streams[0].withExpr is None
+
+    assert len(compilation.getAllDiagnostics()) == 0
