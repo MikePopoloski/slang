@@ -191,7 +191,8 @@ void LValue::store(const ConstantValue& newValue) {
         auto& src = *newValue.queue();
         auto& dest = *target->queue();
 
-        u = std::min(u, int32_t(dest.size()));
+        // u is inclusive: clamp it to the last element, not one past it.
+        u = std::min(u, int32_t(dest.size()) - 1);
         for (int32_t i = std::max(l, 0); i <= u; i++)
             dest[size_t(i)] = src[size_t(i - l)];
     }
@@ -202,7 +203,8 @@ void LValue::store(const ConstantValue& newValue) {
         auto src = newValue.elements();
         auto dest = target->elements();
 
-        u = std::min(u, int32_t(dest.size()));
+        // u is inclusive: clamp it to the last element, not one past it.
+        u = std::min(u, int32_t(dest.size()) - 1);
         for (int32_t i = std::max(l, 0); i <= u; i++)
             dest[size_t(i)] = src[size_t(i - l)];
     }

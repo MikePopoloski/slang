@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "Builtins.h"
+#include <fmt/format.h>
 
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
@@ -185,19 +186,18 @@ public:
         if (!cv)
             return nullptr;
 
-        std::string str = cv.str();
-        std::erase(str, '_');
-
-        std::string_view text = str;
+        std::string_view text = cv.str();
         bool negative = text.starts_with('-');
         if (negative)
             text.remove_prefix(1);
 
+        // The scan takes digits and underscores but must start with a digit [6.16.9].
         SmallVector<logic_t> digits;
         for (char c : text) {
-            if (!isDigit(c))
+            if (isDigit(c))
+                digits.push_back(logic_t(getHexDigitValue(c)));
+            else if (c != '_' || digits.empty())
                 break;
-            digits.push_back(logic_t(getHexDigitValue(c)));
         }
 
         if (digits.empty())
@@ -238,8 +238,47 @@ public:
         if (!cv)
             return nullptr;
 
-        std::string str = cv.str();
-        std::erase(str, '_');
+        // The scan takes the longest prefix that is a real constant [6.16.10], which is
+        // much narrower than what strtod accepts: no leading whitespace, no hex floats,
+        // no inf or nan, and digits are required on both sides of a decimal point.
+        // Each run of digits can contain underscores but must start with a digit.
+        // A leading sign is accepted as an extension.
+        std::string_view text = cv.str();
+        std::string str;
+        size_t pos = 0;
+
+        auto atDigit = [&](size_t p) { return p < text.size() && isDecimalDigit(text[p]); };
+        auto scanDigits = [&] {
+            for (; pos < text.size() && (isDecimalDigit(text[pos]) || text[pos] == '_'); pos++) {
+                if (text[pos] != '_')
+                    str.push_back(text[pos]);
+            }
+        };
+
+        if (text.starts_with('-') || text.starts_with('+'))
+            str.push_back(text[pos++]);
+
+        if (!atDigit(pos))
+            return real_t(0.0);
+        scanDigits();
+
+        if (pos < text.size() && text[pos] == '.' && atDigit(pos + 1)) {
+            str.push_back(text[pos++]);
+            scanDigits();
+        }
+
+        if (pos < text.size() && (text[pos] == 'e' || text[pos] == 'E')) {
+            // The exponent only counts if it has digits.
+            size_t p = pos + 1;
+            if (p < text.size() && (text[p] == '-' || text[p] == '+'))
+                p++;
+
+            if (atDigit(p)) {
+                str.append(text.substr(pos, p - pos));
+                pos = p;
+                scanDigits();
+            }
+        }
 
         double result = strToDouble(str).value_or(0.0);
         return real_t(result);
@@ -282,7 +321,9 @@ public:
         if (!strCv || !valCv)
             return nullptr;
 
-        strCv.store(std::to_string(valCv.real()));
+        // realtoa is the inverse of atoreal [6.16.15], so use the shortest
+        // representation that reads back as the same value.
+        strCv.store(fmt::format("{}", double(valCv.real())));
         return NullConstant;
     }
 };

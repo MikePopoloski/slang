@@ -63,6 +63,10 @@ public:
         if (!result)
             return nullptr;
 
+        // The result is a string, which holds no "\0" characters [6.16]: $sformatf behaves
+        // like $sformat, whose output is assigned with the string literal rules [21.3.3],
+        // and those remove them. %c of 0 and the 32-bit units of %u and %z produce them.
+        std::erase(*result, '\0');
         return *result;
     }
 
