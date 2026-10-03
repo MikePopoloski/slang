@@ -6,10 +6,31 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Compatibility
+
 ### Notable Breaking Changes
+
 ### New Features
+* Added [-Wprefer-localparam](https://sv-lang.com/warning-ref.html#prefer-localparam) which warns about using `parameter` when it's actually a synonym of `localparam` (thanks to @Timmmm)
+* Added a family of tautological comparison warnings, modeled after the similarly named clang warnings and all controlled by the new `-Wtautological-compare` group:
+  * [-Wtautological-self-compare](https://sv-lang.com/warning-ref.html#tautological-self-compare) warns about comparing an expression with itself, like `a < a`
+  * [-Wtautological-range-compare](https://sv-lang.com/warning-ref.html#tautological-range-compare) warns about comparing against a constant outside the range of values the other side can take on, like `a == 20` where `a` is a 4-bit value
+  * [-Wtautological-limit-compare](https://sv-lang.com/warning-ref.html#tautological-limit-compare) warns about comparing against a constant at the limit of that range, like `a >= 0` where `a` is unsigned (this one is in `-Wextra`)
+  * [-Wtautological-bitwise-compare](https://sv-lang.com/warning-ref.html#tautological-bitwise-compare) warns about masks that make an equality impossible, like `(a & 4) == 8`
+  * [-Wtautological-overlap-compare](https://sv-lang.com/warning-ref.html#tautological-overlap-compare) warns about combinations of comparisons like `a != 1 || a != 2`
+  * [-Wtautological-negation-compare](https://sv-lang.com/warning-ref.html#tautological-negation-compare) warns about combinations like `a || !a`
+
 ### Improvements
+* The effective width calculation used to suppress width truncation warnings now takes into account masking with `&`, right shifts by a constant, division and modulus, and leading zeros in concatenations, which removes false positives for code like `logic [3:0] y = x & 8'h0F;`
+
 ### Fixes
+* Fixed ICE during constant evaluation of `repeat` loop with `real` count (thanks to @sifferman)
+* Fixed replication operator to allow a literal zero count when the operand is a string literal, resulting in the empty string (thanks to @hankhsu1996)
+* Fixed bit-selects and part-selects of signed packed arrays declared via a typedef incorrectly producing a signed result
+
+### Tools & Bindings
+#### pyslang
+* Fixed incorrect binding of properties that return spans, which could lead to crashes
+* Added implicit conversions to allow passing symbols to methods that expect Scopes (which was broken in the nanobind conversion)
 
 
 ## [v12.0] - 2026-09-29
@@ -30,7 +51,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added [-Wmissing-else-clause](https://sv-lang.com/warning-ref.html#missing-else-clause) which warns about `if` statements that look like they were meant to be `else if` based on being on the same line as a previous `end` keyword
 * Added [-Wimplicit-net](https://sv-lang.com/warning-ref.html#implicit-net) which warns for each implicit net that is created (thanks to @hankhsu1996)
 * Added [-Wreal-case-eq](https://sv-lang.com/warning-ref.html#real-case-eq) which warns about using case equality operators ('===' and '!==') on `real` operands (thanks to @hankhsu1996)
-* Added [-Wprefer-localparam](https://sv-lang.com/warning-ref.html#prefer-localparam) which warns about using `parameter` when it's actually a synonym of `localparam` (thanks to @Timmmm)
 
 ### Improvements
 * Depfiles created by `--Mall` and `--Minclude` now include system-style included files (via angle brackets) in addition to user-style (via double quotes) (thanks to @AndrewNolte)
