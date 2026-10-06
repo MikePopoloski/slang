@@ -1601,7 +1601,7 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
         items.emplace_back(di);
     }
 
-    auto result = comp.emplace<DistExpression>(comp.getVoidType(), pred, items.copy(comp),
+    auto result = comp.emplace<DistExpression>(comp.getLogicType(), pred, items.copy(comp),
                                                defaultWeight, syntax.sourceRange());
     if (bad)
         return badExpr(comp, result);

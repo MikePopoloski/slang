@@ -375,7 +375,7 @@ private:
 /// probabilities for that expression.
 ///
 /// This can't occur in normal expression code; it's used as part
-/// of constraints and properties (and always has the type 'void').
+/// of constraints and properties.
 class SLANG_EXPORT DistExpression final : public Expression {
 public:
     /// A weight to apply to a distribution.
