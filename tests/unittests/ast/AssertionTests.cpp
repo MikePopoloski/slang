@@ -73,7 +73,7 @@ module m;
     assert property (not a ##1 b);
     assert property (accept_on(b) sync_reject_on(c) sync_accept_on(d) reject_on(e) b ##1 c);
     assume property (if (b) a ##1 c else d ##1 e);
-    cover property (case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1 or b; endcase);
+    cover property (case (b) 1'b0: 1 ##1 b; 1'b1: a and b; default: 1 or b; endcase);
     restrict property (@(posedge b) ((b) and b) ##0 b);
 endmodule
 )");
@@ -1519,8 +1519,8 @@ endmodule
     test("if (1'b1) a ##1 c else d ##1 e");
     test("if (a) b intersect ##2 b", diag::SeqNoMatch);
     test("if (a) ##2 b intersect ##2 b");
-    test("case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1 |-> b; endcase");
-    test("case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1[*0] |-> b; endcase",
+    test("case (b) 1'b0: 1 ##1 b; 1'b1: a and b; default: 1 |-> b; endcase");
+    test("case (b) 1'b0: 1 ##1 b; 1'b1: a and b; default: 1[*0] |-> b; endcase",
          diag::SeqOnlyEmpty);
     test("disable iff (clk) a");
 }
@@ -1842,4 +1842,35 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AssertionExprType);
+}
+
+TEST_CASE("Property case item type checking") {
+    auto tree = SyntaxTree::fromText(R"(
+class C; endclass
+module m(input clk, input logic [3:0] a, input real r, input string s);
+    C c;
+    event ev;
+    int arr[2];
+    assert property (@(posedge clk) case (a) 4'd1, 5'd17: 1; default: clk; endcase);
+    assert property (@(posedge clk) case (a) ev: 1; endcase);
+    assert property (@(posedge clk) case (a) arr: 1; endcase);
+    assert property (@(posedge clk) case (c) null: 1; endcase);
+    assert property (@(posedge clk) case (r) 1.5, 2: 1; endcase);
+    assert property (@(posedge clk) case (s) "hi": 1; endcase);
+    assume property (@(posedge clk) case (a dist {0:=1, 1:=2}) 1: 1; endcase);
+    assume property (@(posedge clk) case (clk) a dist {0:=1}, 1'b1: 1; endcase);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::CaseOutsideRange);
+    CHECK(diags[1].code == diag::CaseTypeMismatch);
+    CHECK(diags[2].code == diag::NoCommonComparisonType);
+    CHECK(diags[3].code == diag::BadSetMembershipType);
+    CHECK(diags[4].code == diag::AssertionExprType);
+    CHECK(diags[5].code == diag::AssertionExprType);
 }

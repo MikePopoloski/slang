@@ -71,29 +71,32 @@ namespace slang::ast {
 using namespace parsing;
 using namespace syntax;
 
-static const Expression& bindExpr(const ExpressionSyntax& syntax, const ASTContext& context,
-                                  bool allowInstances = false, bool isBoolean = true) {
-    auto& expr = Expression::bind(syntax, context, ASTFlags::AssertionExpr);
+static const Expression& checkExprType(const Expression& expr, const ASTContext& context,
+                                       bool allowInstances, bool isBoolean) {
     if (expr.bad())
         return expr;
 
     if (allowInstances && (expr.type->isSequenceType() || expr.type->isPropertyType()))
         return expr;
 
-    if (expr.kind != ExpressionKind::Dist) {
-        if (!expr.type->isValidForSequence()) {
-            auto& comp = context.getCompilation();
-            context.addDiag(diag::AssertionExprType, expr.sourceRange) << *expr.type;
-            return *comp.emplace<InvalidExpression>(&expr, comp.getErrorType());
-        }
-
-        // This should always return true since we checked isValidForSequence above,
-        // but we call it to get bool conversion warnings issued.
-        if (isBoolean)
-            context.requireBooleanConvertible(expr);
+    if (!expr.type->isValidForSequence()) {
+        auto& comp = context.getCompilation();
+        context.addDiag(diag::AssertionExprType, expr.sourceRange) << *expr.type;
+        return *comp.emplace<InvalidExpression>(&expr, comp.getErrorType());
     }
 
+    // This should always return true since we checked isValidForSequence above,
+    // but we call it to get bool conversion warnings issued.
+    if (isBoolean)
+        context.requireBooleanConvertible(expr);
+
     return expr;
+}
+
+static const Expression& bindExpr(const ExpressionSyntax& syntax, const ASTContext& context,
+                                  bool allowInstances = false, bool isBoolean = true) {
+    auto& expr = Expression::bind(syntax, context, ASTFlags::AssertionExpr);
+    return checkExprType(expr, context, allowInstances, isBoolean);
 }
 
 const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
@@ -1627,8 +1630,33 @@ void ConditionalAssertionExpr::serializeTo(ASTSerializer& serializer) const {
 AssertionExpr& CaseAssertionExpr::fromSyntax(const CasePropertyExprSyntax& syntax,
                                              const ASTContext& context) {
     auto& comp = context.getCompilation();
-    auto& expr = bindExpr(*syntax.expr, context, /* allowInstances */ false, /* isBoolean */ false);
 
+    SmallVector<const ExpressionSyntax*> expressions;
+    for (auto item : syntax.items) {
+        if (item->kind == SyntaxKind::StandardPropertyCaseItem) {
+            for (auto es : item->as<StandardPropertyCaseItemSyntax>().expressions)
+                expressions.push_back(es);
+        }
+    }
+
+    ASTContext exprCtx(context);
+    exprCtx.flags |= ASTFlags::AssertionExpr;
+
+    SmallVector<const Expression*> bound;
+    bool bad = !Expression::bindMembershipExpressions(
+        exprCtx, TokenKind::CaseKeyword, /* requireIntegral */ false, /* unwrapUnpacked */ false,
+        /* allowTypeReferences */ false, /* allowValueRange */ false, *syntax.expr, expressions,
+        bound);
+
+    if (!bad) {
+        for (auto& b : bound) {
+            b = &checkExprType(*b, context, /* allowInstances */ false, /* isBoolean */ false);
+            bad |= b->bad();
+        }
+    }
+
+    auto boundIt = bound.begin();
+    auto expr = *boundIt++;
     const AssertionExpr* defCase = nullptr;
     SmallVector<ItemGroup, 4> items;
     for (auto item : syntax.items) {
@@ -1637,10 +1665,8 @@ AssertionExpr& CaseAssertionExpr::fromSyntax(const CasePropertyExprSyntax& synta
             auto& body = AssertionExpr::bind(*sci.expr, context);
 
             SmallVector<const Expression*> exprs;
-            for (auto es : sci.expressions) {
-                exprs.push_back(
-                    &bindExpr(*es, context, /* allowInstances */ false, /* isBoolean */ false));
-            }
+            for (size_t i = 0; i < sci.expressions.size(); i++)
+                exprs.push_back(*boundIt++);
 
             items.push_back(ItemGroup{exprs.copy(comp), &body});
         }
@@ -1654,7 +1680,10 @@ AssertionExpr& CaseAssertionExpr::fromSyntax(const CasePropertyExprSyntax& synta
         }
     }
 
-    return *comp.emplace<CaseAssertionExpr>(expr, items.copy(comp), defCase);
+    if (bad)
+        return badExpr(comp, nullptr);
+
+    return *comp.emplace<CaseAssertionExpr>(*expr, items.copy(comp), defCase);
 }
 
 bool CaseAssertionExpr::canSucceedVacuouslyImpl() const {
