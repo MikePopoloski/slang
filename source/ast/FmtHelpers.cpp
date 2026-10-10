@@ -28,16 +28,16 @@ static bool isValidForRaw(const Type& type) {
 
     if (type.isUnpackedUnion()) {
         auto& uut = type.getCanonicalType().as<UnpackedUnionType>();
-        for (auto& member : uut.members()) {
-            if (!isValidForRaw(member.as<FieldSymbol>().getType()))
+        for (auto field : uut.fields) {
+            if (!isValidForRaw(field->getType()))
                 return false;
         }
         return true;
     }
     else if (type.isUnpackedStruct()) {
         auto& ust = type.getCanonicalType().as<UnpackedStructType>();
-        for (auto& member : ust.members()) {
-            if (!isValidForRaw(member.as<FieldSymbol>().getType()))
+        for (auto field : ust.fields) {
+            if (!isValidForRaw(field->getType()))
                 return false;
         }
         return true;

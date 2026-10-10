@@ -2467,9 +2467,8 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             // Unpacked unions get "unwrapped" to their first member when streaming.
             if (argType->isUnpackedUnion() && !argType->isTaggedUnion()) {
                 auto& uu = argType->getCanonicalType().as<UnpackedUnionType>();
-                auto members = uu.members();
-                if (members.begin() != members.end())
-                    argType = &members.begin()->as<ValueSymbol>().getType();
+                if (!uu.fields.empty())
+                    argType = &uu.fields[0]->getType();
             }
 
             if (!argType->isBitstreamType(isDestination)) {
