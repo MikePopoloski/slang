@@ -1825,6 +1825,132 @@ endmodule
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
 }
 
+TEST_CASE("Upward call with different resolutions -- GH #1993") {
+    // OneArg.f needs an argument, so the call under B is in error. B is written second
+    // because that is the instance a shared body would hide.
+    auto tree = SyntaxTree::fromText(R"(
+module NoArg;
+    function automatic int f();
+        return 1;
+    endfunction
+endmodule
+
+module OneArg;
+    function automatic int f(int a);
+        return a;
+    endfunction
+endmodule
+
+module Caller;
+    initial $display("%0d", cfg.f());
+endmodule
+
+module A;
+    NoArg cfg();
+    Caller c();
+endmodule
+
+module B;
+    OneArg cfg();
+    Caller c();
+endmodule
+
+module top;
+    A a();
+    B b();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::TooFewArguments);
+}
+
+TEST_CASE("Upward call by simple name with different resolutions -- GH #1993") {
+    // The same as above, with the function found by its simple name in the
+    // instantiating module.
+    auto tree = SyntaxTree::fromText(R"(
+module Caller;
+    initial $display("%0d", f());
+endmodule
+
+module A;
+    function automatic int f();
+        return 1;
+    endfunction
+    Caller c();
+endmodule
+
+module B;
+    function automatic int f(int a);
+        return a;
+    endfunction
+    Caller c();
+endmodule
+
+module top;
+    A a();
+    B b();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::TooFewArguments);
+}
+
+TEST_CASE("Upward sequence and property with different resolutions -- GH #1993") {
+    // NoSeq declares neither, so both assertions under B are in error.
+    auto tree = SyntaxTree::fromText(R"(
+module HasSeq;
+    logic clk, x;
+    sequence s;
+        @(posedge clk) x;
+    endsequence
+    property p;
+        @(posedge clk) x;
+    endproperty
+endmodule
+
+module NoSeq;
+endmodule
+
+module User;
+    assert property (cfg.s);
+    assert property (cfg.p);
+endmodule
+
+module A;
+    HasSeq cfg();
+    User u();
+endmodule
+
+module B;
+    NoSeq cfg();
+    User u();
+endmodule
+
+module top;
+    A a();
+    B b();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::CouldNotResolveHierarchicalPath);
+    CHECK(diags[1].code == diag::CouldNotResolveHierarchicalPath);
+}
+
 TEST_CASE("Package export lookup") {
     auto tree = SyntaxTree::fromText(R"(
 package p1;
