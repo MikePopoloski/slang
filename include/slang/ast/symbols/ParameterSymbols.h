@@ -189,7 +189,7 @@ bool ParameterSymbolBase::allMatching(std::ranges::range auto&& leftParams,
         if (lp.kind == SymbolKind::Parameter) {
             auto& lv = lp.template as<ParameterSymbol>().getValue();
             auto& rv = rp.template as<ParameterSymbol>().getValue();
-            if (lv != rv)
+            if (!lv.isIdentical(rv))
                 return false;
         }
         else {

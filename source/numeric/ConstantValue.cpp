@@ -8,6 +8,7 @@
 #include "slang/numeric/ConstantValue.h"
 
 #include "../text/FormatBuffer.h"
+#include <algorithm>
 #include <ostream>
 
 #include "slang/numeric/MathUtils.h"
@@ -314,6 +315,66 @@ bool ConstantValue::hasUnknown() const {
             }
             else {
                 return false;
+            }
+        },
+        value);
+}
+
+bool ConstantValue::isIdentical(const ConstantValue& rhs) const {
+    auto identical = [](const ConstantValue& a, const ConstantValue& b) {
+        return a.isIdentical(b);
+    };
+
+    return std::visit(
+        [&](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::monostate>)
+                return rhs.bad();
+            else if constexpr (std::is_same_v<T, SVInt>) {
+                if (!rhs.isInteger())
+                    return false;
+
+                auto& ri = rhs.integer();
+                return arg.getBitWidth() == ri.getBitWidth() && arg.isSigned() == ri.isSigned() &&
+                       exactlyEqual(arg, ri);
+            }
+            else if constexpr (std::is_same_v<T, real_t>) {
+                return rhs.isReal() && std::bit_cast<uint64_t>(double(arg)) ==
+                                           std::bit_cast<uint64_t>(double(rhs.real()));
+            }
+            else if constexpr (std::is_same_v<T, shortreal_t>) {
+                return rhs.isShortReal() && std::bit_cast<uint32_t>(float(arg)) ==
+                                                std::bit_cast<uint32_t>(float(rhs.shortReal()));
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
+                return rhs.isNullHandle();
+            else if constexpr (std::is_same_v<T, ConstantValue::UnboundedPlaceholder>)
+                return rhs.isUnbounded();
+            else if constexpr (std::is_same_v<T, ConstantValue::Elements>)
+                return rhs.isUnpacked() && std::ranges::equal(arg, rhs.elements(), identical);
+            else if constexpr (std::is_same_v<T, std::string>)
+                return rhs.isString() && arg == rhs.str();
+            else if constexpr (std::is_same_v<T, ConstantValue::Map>) {
+                if (!rhs.isMap())
+                    return false;
+
+                auto& rm = *rhs.map();
+                return arg->defaultValue.isIdentical(rm.defaultValue) &&
+                       std::ranges::equal(*arg, rm, [](auto& a, auto& b) {
+                           return a.first.isIdentical(b.first) && a.second.isIdentical(b.second);
+                       });
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue::Queue>)
+                return rhs.isQueue() && std::ranges::equal(*arg, *rhs.queue(), identical);
+            else if constexpr (std::is_same_v<T, ConstantValue::Union>) {
+                if (!rhs.isUnion())
+                    return false;
+
+                auto& ru = rhs.unionVal();
+                return arg->activeMember == ru->activeMember && arg->value.isIdentical(ru->value);
+            }
+            else {
+                static_assert(always_false<T>::value, "Missing case");
             }
         },
         value);
