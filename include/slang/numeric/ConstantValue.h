@@ -182,6 +182,11 @@ public:
     SLANG_EXPORT friend std::partial_ordering operator<=>(const ConstantValue& lhs,
                                                           const ConstantValue& rhs);
 
+    /// Stricter equality, taking into account the representation of real values.
+    /// Two reals are exactly equal only if they have the same bits, so 0.0 and -0.0
+    /// are not, and a NaN is exactly equal to itself.
+    SLANG_EXPORT friend bool exactlyEqual(const ConstantValue& lhs, const ConstantValue& rhs);
+
 private:
     Variant value;
 };

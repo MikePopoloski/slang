@@ -85,8 +85,9 @@ bool InstanceCacheKey::operator==(const InstanceCacheKey& other) const {
         SLANG_ASSERT(lp->symbol.kind == rp->symbol.kind);
 
         if (lp->symbol.kind == SymbolKind::Parameter) {
-            if (lp->symbol.as<ParameterSymbol>().getValue() !=
-                rp->symbol.as<ParameterSymbol>().getValue()) {
+            // Values that compare equal can still behave differently in the body.
+            if (!exactlyEqual(lp->symbol.as<ParameterSymbol>().getValue(),
+                              rp->symbol.as<ParameterSymbol>().getValue())) {
                 return false;
             }
         }

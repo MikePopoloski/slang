@@ -1431,6 +1431,127 @@ endmodule
     CHECK(diags[0].code == diag::InfoTask);
 }
 
+TEST_CASE("Real parameters differing in sign of zero with instance caching") {
+    // 0.0 and -0.0 compare equal but $atan2 tells them apart,
+    // so each instance needs its own body.
+    auto tree = SyntaxTree::fromText(R"(
+typedef struct { int i; real r; } s_t;
+typedef union { real r; longint i; } u_t;
+
+function automatic u_t make_union(real r);
+    u_t u;
+    u.r = r;
+    return u;
+endfunction
+
+module m;
+    r #(0.0) r1();
+    r #(-0.0) r2();
+
+    sr #(0.0) sr1();
+    sr #(-0.0) sr2();
+
+    arr #('{1.0, 0.0}) arr1();
+    arr #('{1.0, -0.0}) arr2();
+
+    st #('{0, 0.0}) st1();
+    st #('{0, -0.0}) st2();
+
+    q #('{0.0}) q1();
+    q #('{-0.0}) q2();
+
+    aa #('{"k": 0.0}) aa1();
+    aa #('{"k": -0.0}) aa2();
+
+    aadef #('{default: 0.0}) aadef1();
+    aadef #('{default: -0.0}) aadef2();
+
+    un #(make_union(0.0)) un1();
+    un #(make_union(-0.0)) un2();
+endmodule
+
+module r #(parameter real p = 1.0);
+    if ($atan2(p, -1.0) < 0.0) begin : blk
+        $info("Hello");
+    end
+endmodule
+
+module sr #(parameter shortreal p = 1.0);
+    if ($atan2(p, -1.0) < 0.0) begin : blk
+        $info("Hello");
+    end
+endmodule
+
+module arr #(parameter real p[2] = '{1.0, 1.0});
+    if ($atan2(p[1], -1.0) < 0.0) begin : blk
+        $info("Hello");
+    end
+endmodule
+
+module st #(parameter s_t p = '{0, 1.0});
+    if ($atan2(p.r, -1.0) < 0.0) begin : blk
+        $info("Hello");
+    end
+endmodule
+
+module q #(parameter real p[$] = '{1.0});
+    if ($atan2(p[0], -1.0) < 0.0) begin : blk
+        $info("Hello");
+    end
+endmodule
+
+module aa #(parameter real p[string] = '{"k": 1.0});
+    if ($atan2(p["k"], -1.0) < 0.0) begin : blk
+        $info("Hello");
+    end
+endmodule
+
+module aadef #(parameter real p[string] = '{default: 1.0});
+    if ($atan2(p["missing"], -1.0) < 0.0) begin : blk
+        $info("Hello");
+    end
+endmodule
+
+module un #(parameter u_t p = make_union(1.0));
+    if ($atan2(p.r, -1.0) < 0.0) begin : blk
+        $info("Hello");
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 8);
+    for (auto& d : diags)
+        CHECK(d.code == diag::InfoTask);
+}
+
+TEST_CASE("NaN parameters with instance caching") {
+    // A NaN does not compare equal to itself, but two instances
+    // given the same NaN can still share a body.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    n #($bitstoreal(64'h7ff8000000000000)) n1();
+    n #($bitstoreal(64'h7ff8000000000000)) n2();
+    n #($bitstoreal(64'h7ff8000000000001)) n3();
+endmodule
+
+module n #(parameter real p = 1.0);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<InstanceSymbol>("m.n1").getCanonicalBody() == nullptr);
+    CHECK(root.lookupName<InstanceSymbol>("m.n2").getCanonicalBody() != nullptr);
+    CHECK(root.lookupName<InstanceSymbol>("m.n3").getCanonicalBody() == nullptr);
+}
+
 TEST_CASE("Multiple type parameters in declaration list regress") {
     auto tree = SyntaxTree::fromText(R"(
 bit failed = 1'b0;

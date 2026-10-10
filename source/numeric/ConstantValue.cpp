@@ -8,6 +8,7 @@
 #include "slang/numeric/ConstantValue.h"
 
 #include "../text/FormatBuffer.h"
+#include <algorithm>
 #include <ostream>
 
 #include "slang/numeric/MathUtils.h"
@@ -668,6 +669,53 @@ std::partial_ordering operator<=>(const ConstantValue& lhs, const ConstantValue&
             }
             else {
                 static_assert(always_false<T>::value, "Missing case");
+            }
+        },
+        lhs.value);
+}
+
+bool exactlyEqual(const ConstantValue& lhs, const ConstantValue& rhs) {
+    auto elementsEqual = [](const ConstantValue& a, const ConstantValue& b) {
+        return exactlyEqual(a, b);
+    };
+
+    return std::visit(
+        [&](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, real_t>) {
+                return rhs.isReal() && std::bit_cast<uint64_t>(double(arg)) ==
+                                           std::bit_cast<uint64_t>(double(rhs.real()));
+            }
+            else if constexpr (std::is_same_v<T, shortreal_t>) {
+                return rhs.isShortReal() && std::bit_cast<uint32_t>(float(arg)) ==
+                                                std::bit_cast<uint32_t>(float(rhs.shortReal()));
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue::Elements>) {
+                return rhs.isUnpacked() && std::ranges::equal(arg, rhs.elements(), elementsEqual);
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue::Map>) {
+                if (!rhs.isMap())
+                    return false;
+
+                auto& rm = *rhs.map();
+                return exactlyEqual(arg->defaultValue, rm.defaultValue) &&
+                       std::ranges::equal(*arg, rm, [](auto& a, auto& b) {
+                           return exactlyEqual(a.first, b.first) &&
+                                  exactlyEqual(a.second, b.second);
+                       });
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue::Queue>) {
+                return rhs.isQueue() && std::ranges::equal(*arg, *rhs.queue(), elementsEqual);
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue::Union>) {
+                if (!rhs.isUnion())
+                    return false;
+
+                auto& ru = rhs.unionVal();
+                return arg->activeMember == ru->activeMember && exactlyEqual(arg->value, ru->value);
+            }
+            else {
+                return lhs == rhs;
             }
         },
         lhs.value);
