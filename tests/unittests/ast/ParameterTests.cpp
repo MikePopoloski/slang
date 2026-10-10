@@ -1528,6 +1528,30 @@ endmodule
         CHECK(d.code == diag::InfoTask);
 }
 
+TEST_CASE("Implicitly typed parameters of different sizes with instance caching") {
+    // A parameter with no declared type takes the type of its value (6.20.2),
+    // so the same number at two sizes makes two different parameters.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    n #(4'd1) n1();
+    n #(8'd1) n2();
+endmodule
+
+module n #(parameter p = 1);
+    if ($bits(p) == 8) begin : blk
+        $info("Hello");
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfoTask);
+}
+
 TEST_CASE("NaN parameters with instance caching") {
     // A NaN does not compare equal to itself, but two instances
     // given the same NaN can still share a body.

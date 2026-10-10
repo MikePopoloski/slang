@@ -86,8 +86,8 @@ bool InstanceCacheKey::operator==(const InstanceCacheKey& other) const {
 
         if (lp->symbol.kind == SymbolKind::Parameter) {
             // Values that compare equal can still behave differently in the body.
-            if (!exactlyEqual(lp->symbol.as<ParameterSymbol>().getValue(),
-                              rp->symbol.as<ParameterSymbol>().getValue())) {
+            if (!lp->symbol.as<ParameterSymbol>().getValue().isIdentical(
+                    rp->symbol.as<ParameterSymbol>().getValue())) {
                 return false;
             }
         }
