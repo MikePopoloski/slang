@@ -476,8 +476,8 @@ static bool checkIndexType(const Type& type) {
     }
 
     // Check members recursively.
-    for (auto& member : ct.as<Scope>().members()) {
-        if (!checkIndexType(member.as<FieldSymbol>().getType()))
+    for (auto& field : ct.as<Scope>().membersOfType<FieldSymbol>()) {
+        if (!checkIndexType(field.getType()))
             return false;
     }
 
