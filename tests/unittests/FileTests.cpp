@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
+#include <atomic>
 #include <fstream>
+#include <thread>
 
 #include "slang/text/Glob.h"
 #include "slang/text/SourceManager.h"
@@ -225,4 +227,40 @@ TEST_CASE("Display column with tabs") {
     SourceLocation loc3(buffer.id, 2); // 'b' at byte 2 (after tab)
     // Tab at position 2 expands to next 8-boundary, which is column 9
     CHECK(manager.getDisplayColumnNumber(loc3) == 9);
+}
+
+TEST_CASE("Line number queried from several threads") {
+    // Each line is two bytes, so the last line starts at a known offset.
+    const size_t lineCount = 1000;
+    std::string text;
+    for (size_t i = 0; i < lineCount; i++)
+        text += "a\n";
+    const size_t lastLineOffset = (lineCount - 1) * 2;
+
+    // The first query for a buffer computes its line offsets. The threads spin
+    // until all of them are released so that their first queries overlap, and
+    // since that is still a matter of timing, many fresh managers are tried.
+    const size_t threadCount = 8;
+    for (int round = 0; round < 200; round++) {
+        SourceManager manager;
+        auto buffer = manager.assignText("test.sv", text);
+        REQUIRE(buffer);
+
+        std::atomic<bool> start = false;
+        std::vector<size_t> lines(threadCount);
+        {
+            std::vector<std::jthread> threads;
+            for (size_t i = 0; i < threadCount; i++) {
+                threads.emplace_back([&, i] {
+                    while (!start.load()) {
+                    }
+                    lines[i] = manager.getLineNumber(SourceLocation(buffer.id, lastLineOffset));
+                });
+            }
+            start = true;
+        }
+
+        for (size_t line : lines)
+            REQUIRE(line == lineCount);
+    }
 }

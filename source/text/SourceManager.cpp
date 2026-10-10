@@ -744,8 +744,11 @@ size_t SourceManager::getRawLineNumber(SourceLocation location, TLock& readLock)
         if constexpr (std::is_same_v<TLock, std::shared_lock<std::shared_mutex>>) {
             readLock.unlock();
 
+            // Another thread may have computed the offsets while we were
+            // waiting for the write lock, so check again now that we hold it.
             std::unique_lock<std::shared_mutex> writeLock(mutex);
-            computeLineOffsets(fd->mem, fd->lineOffsets);
+            if (fd->lineOffsets.empty())
+                computeLineOffsets(fd->mem, fd->lineOffsets);
 
             writeLock.unlock();
             readLock.lock();
