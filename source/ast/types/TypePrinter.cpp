@@ -444,13 +444,13 @@ void TypePrinter::appendFriendlyMembers(const Scope& scope) {
     const size_t startSize = buffer->size();
     bool first = true;
 
-    for (auto& member : scope.members()) {
+    for (auto& field : scope.membersOfType<FieldSymbol>()) {
         const size_t entryStart = buffer->size();
         if (!first)
             buffer->append(", ");
 
-        member.as<VariableSymbol>().getType().visit(*this, ""sv);
-        buffer->format(" {}", member.name);
+        field.getType().visit(*this, ""sv);
+        buffer->format(" {}", field.name);
 
         if (buffer->size() - startSize > options.friendlyMemberCharLimit) {
             buffer->resize(entryStart);
@@ -466,10 +466,9 @@ void TypePrinter::appendFriendlyMembers(const Scope& scope) {
 
 void TypePrinter::appendMembers(const Scope& scope) {
     buffer->append("{");
-    for (auto& member : scope.members()) {
-        auto& var = member.as<VariableSymbol>();
-        append(var.getType());
-        buffer->format(" {};", var.name);
+    for (auto& field : scope.membersOfType<FieldSymbol>()) {
+        append(field.getType());
+        buffer->format(" {};", field.name);
     }
     buffer->append("}");
 }

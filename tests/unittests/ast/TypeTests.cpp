@@ -1858,6 +1858,56 @@ endmodule
     CHECK(bar.getValue().integer() == 1);
 }
 
+TEST_CASE("Struct enum member is not a field") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct packed { enum logic [1:0] {A,B} i; logic j; } packed_t;
+    typedef struct { enum {C,D} i; int j; } unpacked_t;
+    typedef union { enum {E,F} i; int j; } union_t;
+
+    localparam string name = $typename(packed_t);
+
+    unpacked_t s;
+    union_t u;
+    int aa[unpacked_t];
+    int r;
+    initial begin
+        $display("%u", s);
+        $display("%u", u);
+        r = {>>{u}};
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& name = compilation.getRoot().lookupName<ParameterSymbol>("m.name");
+    CHECK(name.getValue().str() == "struct packed{enum{A=2'd0,B=2'd1}m.e$1 i;logic j;}m.packed_t");
+}
+
+TEST_CASE("Struct enum member in diagnostic type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct { enum {A,B} i; } asdf;
+    int q[$];
+    initial q = asdf;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:5:15: error: no implicit conversion from 'struct{enum{A, B} i}' to 'int$[$]'; explicit conversion exists, are you missing a cast?
+    initial q = asdf;
+            ~ ^ ~~~~
+)");
+}
+
 TEST_CASE("Type compatibility not based on syntax node alone") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(type t);
