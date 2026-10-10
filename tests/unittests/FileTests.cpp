@@ -229,6 +229,7 @@ TEST_CASE("Display column with tabs") {
     CHECK(manager.getDisplayColumnNumber(loc3) == 9);
 }
 
+#if defined(SLANG_USE_THREADS)
 TEST_CASE("Line number queried from several threads") {
     // Each line is two bytes, so the last line starts at a known offset.
     const size_t lineCount = 1000;
@@ -264,3 +265,4 @@ TEST_CASE("Line number queried from several threads") {
             REQUIRE(line == lineCount);
     }
 }
+#endif
