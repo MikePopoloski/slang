@@ -288,6 +288,9 @@ TEST_CASE("Real operators") {
     EVAL("9 ** 0.5", 3.0);
     EVAL("9.0 ** (1/2)", 1.0);
     EVAL("-3.0 ** 2.0", 9.0);
+    EVAL("1 ? 1.5 : 2.5", 1.5);
+    EVAL("'x ? 1.5 : 1.5", 1.5);
+    EVAL("'x ? 1.5 : 2.5", 0.0);
 #undef EVAL
 
 #define EVAL(expr, result) CHECK(session.eval(expr).integer() == (result))
@@ -691,13 +694,15 @@ TEST_CASE("Associative array eval") {
     CHECK(session.eval("-1 inside { arr2 }").integer() == 0);
     CHECK(session.eval("arr == arr2").integer() == 1);
 
-    cv = session.eval("'x ? arr : arr2");
-    CHECK(cv.map()->empty());
+    CHECK(session.eval("'x ? arr : arr2") == session.eval("arr"));
 
     session.eval("arr[\"bye\"] += 20;");
     CHECK(session.eval("arr[\"bye\"]").integer() == 19);
     CHECK(session.eval("arr[\"foo\"]").integer() == -1);
     CHECK(session.eval("arr[\"World\"]").integer() == 8);
+
+    cv = session.eval("'x ? arr : arr2");
+    CHECK(cv.map()->empty());
 
     CHECK(session.eval("arr.size").integer() == 3);
     CHECK(session.eval("arr.num").integer() == 3);
@@ -844,6 +849,11 @@ TEST_CASE("Unpacked struct eval") {
     CHECK(session.eval("(1 ? foo : bar) === foo").integer() == 1);
     CHECK(session.eval("('x ? foo : bar) === bar").integer() == 1);
 
+    session.eval("struct { int a; real r; } baz = '{3, 1.5};");
+    cv = session.eval("'x ? baz : baz");
+    CHECK(cv.elements()[0].integer() == 3);
+    CHECK(cv.elements()[1].real() == 1.5);
+
     NO_SESSION_ERRORS;
 }
 
@@ -984,6 +994,7 @@ TEST_CASE("Dynamic string ops") {
     CHECK(session.eval("1 ? \"C\" : str1").str() == "C");
     CHECK(session.eval("0 ? str2 : \"D\"").str() == "D");
     CHECK(session.eval("'x ? str2 : str1").str() == "");
+    CHECK(session.eval("'x ? str2 : str2").str() == "BA");
 
     session.eval("integer i = 5;");
     CHECK(session.eval("str1 = {5{\"Hi\"}}").str() == "HiHiHiHiHi");
