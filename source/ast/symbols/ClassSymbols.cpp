@@ -1192,7 +1192,7 @@ bool ClassSpecializationKey::operator==(const ClassSpecializationKey& other) con
         const ConstantValue* l = *lit;
         const ConstantValue* r = *rit;
         if (l && r) {
-            if (!(*l == *r))
+            if (!l->isIdentical(*r))
                 return false;
         }
         else {
