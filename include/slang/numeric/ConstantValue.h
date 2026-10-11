@@ -162,6 +162,13 @@ public:
     bool isFalse() const;
     bool hasUnknown() const;
 
+    /// Determines whether this value has the same representation as @a rhs,
+    /// which is stricter than comparing equal to it. Two integers are identical
+    /// only if they also have the same width and signedness, and two reals only
+    /// if they have the same bits, so 0.0 and -0.0 are not identical and a NaN
+    /// is identical to itself.
+    bool isIdentical(const ConstantValue& rhs) const;
+
     ConstantValue convertToInt() const;
     ConstantValue convertToInt(bitwidth_t width, bool isSigned, bool isFourState) const;
     ConstantValue convertToReal() const;
