@@ -3015,6 +3015,23 @@ TEST_CASE("Eval static cast type propagation") {
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Eval static cast to enum type propagation") {
+    ScriptSession session;
+    session.eval("typedef enum logic [2:0] { A, B, C } enum_t;");
+    session.eval("typedef enum { D, E } int_enum_t;");
+    session.eval("logic [1:0] x = 2'd3;");
+
+    CHECK(session.eval("enum_t'('1)").integer() == 7);
+    CHECK(session.eval("enum_t'(x + 2'd1)").integer() == 4);
+    CHECK(session.eval("enum_t'(1'b1 << 2)").integer() == 4);
+    CHECK(session.eval("enum_t'(4'd9)").integer() == 1);
+    CHECK(session.eval("enum_t'(E)").integer() == 1);
+    CHECK(session.eval("int_enum_t'(C)").integer() == 2);
+    CHECK(session.eval("int_enum_t'(2'sb11)").integer() == -1);
+
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Package eval regress -- GH #1410") {
     ScriptSession session;
     session.eval(R"(
