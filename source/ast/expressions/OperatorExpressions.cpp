@@ -1705,6 +1705,16 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
         if (cvl.isInteger() && cvr.isInteger())
             return SVInt::conditional(cp.integer(), cvl.integer(), cvr.integer());
 
+        // [11.4.11] says that both sides are compared for logical equivalence,
+        // and if they are equal the result is either of them. Only otherwise
+        // does the result depend on the type.
+        ConstantValue equal = OpInfo::eval(BinaryOperator::Equality, cvl, cvr);
+        if (!equal)
+            return nullptr;
+
+        if (equal.isTrue())
+            return cvl;
+
         auto combineArrays = [&](auto& result, auto& la, auto& ra) -> ConstantValue {
             ConstantValue defaultElement = type->getArrayElementType()->getDefaultValue();
 
