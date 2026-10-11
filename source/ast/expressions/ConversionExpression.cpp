@@ -380,11 +380,15 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
             << *operand->type << targetExpr.sourceRange << operand->sourceRange;
     }
 
-    if (type->isAssignmentCompatible(*operand->type)) {
+    // [10.8] says that a static cast is an assignment-like context, as if to a variable of
+    // the target type. That holds for a numeric operand even when it isn't assignment
+    // compatible with the target, which is the case when casting to an enum.
+    const bool isNumericCast = type->isNumeric() && operand->type->isNumeric();
+    if (isNumericCast || type->isAssignmentCompatible(*operand->type)) {
         // The type we propagate should use the sign of the operand, just like it
         // would if we were doing an implicit conversion via an assignment expression.
         auto propagatedType = type;
-        if (type->isNumeric() && operand->type->isNumeric()) {
+        if (isNumericCast) {
             propagatedType = OpInfo::binaryType(comp, type, operand->type, false,
                                                 /* signednessFromRt */ true);
         }
