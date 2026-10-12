@@ -107,13 +107,19 @@ struct Expression::EffectiveSignVisitor {
 };
 
 struct Expression::HierarchicalVisitor {
+    bool includeIfacePorts;
     bool any = false;
+
+    explicit HierarchicalVisitor(bool includeIfacePorts) : includeIfacePorts(includeIfacePorts) {}
 
     template<typename T>
     void visit(const T& expr) {
         if constexpr (std::is_base_of_v<Expression, T>) {
             if (expr.kind == ExpressionKind::HierarchicalValue) {
-                any = true;
+                if (includeIfacePorts ||
+                    !expr.template as<HierarchicalValueExpression>().ref.isViaIfacePort()) {
+                    any = true;
+                }
             }
             else if constexpr (HasVisitExprs<T, HierarchicalVisitor>) {
                 expr.visitExprs(*this);
@@ -732,7 +738,13 @@ bool Expression::isUnsizedInteger() const {
 }
 
 bool Expression::hasHierarchicalReference() const {
-    HierarchicalVisitor visitor;
+    HierarchicalVisitor visitor(/* includeIfacePorts */ true);
+    visit(visitor);
+    return visitor.any;
+}
+
+bool Expression::hasHierarchicalName() const {
+    HierarchicalVisitor visitor(/* includeIfacePorts */ false);
     visit(visitor);
     return visitor.any;
 }

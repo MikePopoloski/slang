@@ -1208,7 +1208,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                                           ASTFlags::AllowDataType | ASTFlags::TypeOperator);
 
             if (!expr.bad()) {
-                if (expr.hasHierarchicalReference() &&
+                if (expr.hasHierarchicalName() &&
                     !compilation.hasFlag(CompilationFlags::AllowHierarchicalConst)) {
                     context.addDiag(diag::TypeRefHierarchical, exprSyntax.sourceRange());
                 }
