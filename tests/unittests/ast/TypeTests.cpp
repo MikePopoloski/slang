@@ -2851,6 +2851,42 @@ endmodule
     CHECK(diags[0].code == diag::PackedMemberHasInitializer);
 }
 
+TEST_CASE("Unpacked struct member initializer must be constant") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int v = 3;
+    struct { int x = v; } s;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
+}
+
+TEST_CASE("Unpacked struct member initializer is its default value") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct { int x = 5; int y; } s_t;
+    function automatic int f();
+        s_t s;
+        return s.x + s.y;
+    endfunction
+    localparam int P = f();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& p = compilation.getRoot().lookupName<ParameterSymbol>("m.P");
+    CHECK(p.getValue().integer() == 5);
+}
+
 TEST_CASE("Packed union members must have the same width") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
