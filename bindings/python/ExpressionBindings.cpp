@@ -29,7 +29,6 @@ void registerExpressions(nb::module_& m) {
         .def_prop_ro("isUnsizedInteger", &Expression::isUnsizedInteger)
         .def_prop_ro("effectiveWidth", &Expression::getEffectiveWidth)
         .def_prop_ro("hasHierarchicalReference", &Expression::hasHierarchicalReference)
-        .def_prop_ro("hasHierarchicalName", &Expression::hasHierarchicalName)
         .def("eval", &Expression::eval, "context"_a)
         .def("evalLValue", &Expression::evalLValue, "context"_a)
         .def("isImplicitlyAssignableTo", &Expression::isImplicitlyAssignableTo, "compilation"_a,

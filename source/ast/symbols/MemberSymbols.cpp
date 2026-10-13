@@ -2390,7 +2390,7 @@ struct NetAliasVisitor {
                 case ExpressionKind::MemberAccess:
                 case ExpressionKind::ElementSelect:
                 case ExpressionKind::RangeSelect: {
-                    if (expr.hasHierarchicalName()) {
+                    if (expr.hasHierarchicalReference()) {
                         context.addDiag(diag::NetAliasHierarchical, expr.sourceRange);
                     }
                     else if (auto sym = expr.getSymbolReference()) {

@@ -314,14 +314,10 @@ public:
     /// Visits all symbols referenced by this expression and all subexpressions.
     void visitSymbolReferences(function_ref<void(const Expression&, const Symbol&)> callback) const;
 
-    /// Returns true if any subexpression of this expression is a hierarchical reference,
-    /// including a reference to a symbol through an interface port.
+    /// Returns true if any subexpression of this expression is a hierarchical reference.
+    /// [23.7] says a name that starts with an interface port is a select of that port
+    /// and not a hierarchical name, so such a name does not count.
     bool hasHierarchicalReference() const;
-
-    /// Returns true if any subexpression of this expression refers to a symbol by a
-    /// hierarchical name. [23.7] says a name that starts with an interface port is a
-    /// select of that port and not a hierarchical name.
-    bool hasHierarchicalName() const;
 
     /// Returns true if this expression is known to be within a pair of parentheses,
     /// and otherwise false.
