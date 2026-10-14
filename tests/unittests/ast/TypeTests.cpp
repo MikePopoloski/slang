@@ -3034,3 +3034,43 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpectedNetDelay);
 }
+
+TEST_CASE("Enum values declared in constructs with nested member lists") {
+    auto tree = SyntaxTree::fromText(R"(
+class B #(type T = int); endclass
+
+module m;
+    // Generate block condition
+    if ($bits(enum {GA, GB}) == 32) begin : g int y; end
+    localparam int x1 = GB;
+
+    // Class extends clause
+    class C extends B #(enum {CA, CB});
+        int x;
+    endclass
+    localparam int x2 = CB;
+
+    initial begin
+        int z;
+
+        // Statement expressions, with and without nested blocks
+        z = $bits(enum {SA, SB});
+        z = SA;
+        if ($bits(enum {TA, TB}) == 32) begin int y; end
+        z = TB;
+
+        // Randsequence productions with ports and code blocks
+        randsequence(main)
+            main : first second third;
+            enum {PA, PB} first(int x = 1) : { return PA; };
+            enum {QA, QB} second : { int y; y = 1; return QA; };
+            third : { int k = PB; int l = QB; };
+        endsequence
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

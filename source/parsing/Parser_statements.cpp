@@ -668,6 +668,10 @@ SyntaxList<SyntaxNode> Parser::parseBlockItems(TokenKind endKind, Token& end, bo
     bool sawStatement = false;
     bool erroredAboutDecls = false;
 
+    // Save off any pending preview node from an enclosing construct
+    // so that it doesn't get attached to one of our items.
+    auto savedPN = std::exchange(previewNode, nullptr);
+
     while (!isEndKeyword(kind) && kind != endKind && kind != TokenKind::EndOfFile) {
         SourceLocation loc = peek().location();
         SyntaxNode* newNode = nullptr;
@@ -714,6 +718,8 @@ SyntaxList<SyntaxNode> Parser::parseBlockItems(TokenKind endKind, Token& end, bo
         }
         kind = peek().kind;
     }
+
+    previewNode = savedPN;
 
     // parallel blocks can end in one of three join keywords
     if (endKind == TokenKind::JoinKeyword) {
@@ -1000,6 +1006,10 @@ ProductionSyntax& Parser::parseProduction() {
             dataType = &parseDataType(TypeOptions::AllowVoid);
     }
 
+    // If the production returns a declared enum type, save it off here
+    // so that we don't suck it into the port list.
+    auto savedPN = std::exchange(previewNode, nullptr);
+
     auto name = expect(TokenKind::Identifier);
     auto ports = parseFunctionPortList({});
     auto colon = expect(TokenKind::Colon);
@@ -1009,6 +1019,8 @@ ProductionSyntax& Parser::parseProduction() {
     parseList<isPossibleRsRule, isSemicolon>(buffer, TokenKind::Semicolon, TokenKind::Or, semi,
                                              RequireItems::True, diag::ExpectedRsRule,
                                              [this] { return &parseRsRule(); });
+
+    previewNode = savedPN;
 
     return factory.production(dataType, name, ports, colon, {alloc, buffer}, semi);
 }

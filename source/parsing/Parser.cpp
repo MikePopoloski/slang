@@ -432,6 +432,10 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
     Token closeBrace;
     SmallVector<StructUnionMemberSyntax*> buffer;
 
+    // Save off any pending preview node (e.g. an enum declared in an earlier
+    // ANSI port) so that it doesn't get attached to one of our members.
+    auto savedPN = std::exchange(previewNode, nullptr);
+
     if (openBrace.isMissing())
         closeBrace = missingToken(TokenKind::CloseBrace, openBrace.location());
     else {
@@ -482,6 +486,8 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
         if (buffer.empty() && !closeBrace.isMissing())
             addDiag(diag::ExpectedMember, closeBrace.location());
     }
+
+    previewNode = savedPN;
 
     auto dims = parseDimensionList();
     if (!packed) {

@@ -494,6 +494,10 @@ SyntaxList<TMember> Parser::parseMemberList(TokenKind endKind, Token& endToken,
     bool errored = false;
     bool anyLocalModules = false;
 
+    // Save off any pending preview node from an enclosing construct
+    // so that it doesn't get attached to one of our members.
+    auto savedPN = std::exchange(previewNode, nullptr);
+
     while (true) {
         auto kind = peek().kind;
         if (kind == TokenKind::EndOfFile || kind == endKind)
@@ -528,6 +532,7 @@ SyntaxList<TMember> Parser::parseMemberList(TokenKind endKind, Token& endToken,
     if (anyLocalModules)
         moduleDeclStack.pop_back();
 
+    previewNode = savedPN;
     endToken = expect(endKind);
     return SyntaxList<TMember>(alloc, members);
 }
