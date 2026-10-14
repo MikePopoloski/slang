@@ -2188,3 +2188,21 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UnknownInterface);
 }
+
+TEST_CASE("ANSI enum port followed by struct port") {
+    auto tree = SyntaxTree::fromText(R"(
+module top (input enum {A} p3, input struct packed {logic f;} p5,
+            input enum {B} p6, input struct packed {enum {C} g;} p7);
+    localparam int x = A;
+    localparam int y = B;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
+    CHECK(top.lookupName<NetSymbol>("p3").getType().isEnum());
+    CHECK(top.lookupName<NetSymbol>("p6").getType().isEnum());
+}

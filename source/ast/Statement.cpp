@@ -632,6 +632,9 @@ std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
                 }
                 break;
             default:
+                if (auto preview = item->previewNode())
+                    scope.addMembers(*preview);
+
                 findBlocks(scope, item->as<StatementSyntax>(), buffer, extraMembers, false);
                 break;
         }
