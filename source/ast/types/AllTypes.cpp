@@ -953,8 +953,13 @@ UnpackedStructType::UnpackedStructType(Compilation& compilation, SourceLocation 
 
 ConstantValue UnpackedStructType::getDefaultValueImpl() const {
     std::vector<ConstantValue> elements;
-    for (auto field : fields)
-        elements.emplace_back(field->getType().getDefaultValue());
+    for (auto field : fields) {
+        // [7.2.2] says a member's initializer is its default value.
+        if (auto init = field->getInitializer(); init && init->getConstant())
+            elements.emplace_back(*init->getConstant());
+        else
+            elements.emplace_back(field->getType().getDefaultValue());
+    }
 
     return elements;
 }
@@ -1012,9 +1017,11 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
     result->bitstreamWidth = bitstreamWidth;
     result->fields = fields.copy(comp);
     for (auto field : result->fields) {
-        // Force resolution of the initializer right away, otherwise nothing
-        // is required to force it later.
-        field->getInitializer();
+        // [7.2.2] says a member's initializer must be a constant expression.
+        // Evaluating it here checks that, and keeps the value for the
+        // type's default value.
+        if (auto init = field->getInitializer(); init && !init->bad())
+            context.eval(*init);
     }
 
     result->setSyntax(syntax);
