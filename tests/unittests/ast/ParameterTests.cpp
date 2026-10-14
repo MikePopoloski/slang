@@ -1826,3 +1826,26 @@ endpackage
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BodyParamNoInitializer);
 }
+
+TEST_CASE("Defparam inside instance array elements") {
+    auto tree = SyntaxTree::fromText(R"(
+module leaf #(parameter W = 1);
+  if (W != 8) $error("Unexpected value for W: %0d", W);
+endmodule
+
+module mid;
+  leaf l ();
+  defparam l.W = 8;
+endmodule
+
+module top;
+  mid m [1:0] ();
+  mid n [1:0][2:0] ();
+  mid s ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
