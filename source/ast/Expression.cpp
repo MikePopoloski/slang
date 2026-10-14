@@ -113,7 +113,8 @@ struct Expression::HierarchicalVisitor {
     void visit(const T& expr) {
         if constexpr (std::is_base_of_v<Expression, T>) {
             if (expr.kind == ExpressionKind::HierarchicalValue) {
-                any = true;
+                if (!expr.template as<HierarchicalValueExpression>().ref.isViaIfacePort())
+                    any = true;
             }
             else if constexpr (HasVisitExprs<T, HierarchicalVisitor>) {
                 expr.visitExprs(*this);

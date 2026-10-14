@@ -2386,10 +2386,14 @@ struct NetAliasVisitor {
         if constexpr (std::is_base_of_v<Expression, T>) {
             switch (expr.kind) {
                 case ExpressionKind::NamedValue:
+                case ExpressionKind::HierarchicalValue:
                 case ExpressionKind::MemberAccess:
                 case ExpressionKind::ElementSelect:
                 case ExpressionKind::RangeSelect: {
-                    if (auto sym = expr.getSymbolReference()) {
+                    if (expr.hasHierarchicalReference()) {
+                        context.addDiag(diag::NetAliasHierarchical, expr.sourceRange);
+                    }
+                    else if (auto sym = expr.getSymbolReference()) {
                         if (sym->kind != SymbolKind::Net) {
                             context.addDiag(diag::NetAliasNotANet, expr.sourceRange) << sym->name;
                         }
@@ -2414,9 +2418,6 @@ struct NetAliasVisitor {
                     }
                     break;
                 }
-                case ExpressionKind::HierarchicalValue:
-                    context.addDiag(diag::NetAliasHierarchical, expr.sourceRange);
-                    break;
                 default:
                     if constexpr (HasVisitExprs<T, NetAliasVisitor>)
                         expr.visitExprs(*this);
