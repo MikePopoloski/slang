@@ -1882,6 +1882,35 @@ endmodule
           }) == 2);
 }
 
+TEST_CASE("Query functions through an interface port") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I #(parameter int W = 12);
+    logic [W-1:0] data;
+endinterface
+
+module m(I i);
+    localparam int p1 = $bits(i.data);
+    localparam int p2 = $left(i.data);
+    localparam int p3 = $size(i.data);
+    wire [$bits(i.data)-1:0] w;
+endmodule
+
+module top;
+    I i();
+    m u(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<ParameterSymbol>("top.u.p1").getValue().integer() == 12);
+    CHECK(root.lookupName<ParameterSymbol>("top.u.p2").getValue().integer() == 11);
+    CHECK(root.lookupName<ParameterSymbol>("top.u.p3").getValue().integer() == 12);
+}
+
 TEST_CASE("$stacktrace function") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

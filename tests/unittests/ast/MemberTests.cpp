@@ -2134,6 +2134,47 @@ endmodule
     CHECK(diags[4].code == diag::NetAliasCommonNetType);
 }
 
+TEST_CASE("Net alias of a select by hierarchical name") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire [3:0] a;
+    wire [1:0] b;
+    alias m.a[1:0] = b;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NetAliasHierarchical);
+}
+
+TEST_CASE("Net alias through an interface port") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    wire [7:0] w;
+endinterface
+
+module m(I i, inout wire [7:0] x, inout wire [3:0] y);
+    alias i.w = x;
+    alias i.w[3:0] = y;
+endmodule
+
+module top;
+    I i();
+    wire [7:0] x;
+    wire [3:0] y;
+    m u(i, x, y);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Net alias overlap") {
     auto tree = SyntaxTree::fromText(R"(
 module overlap(inout wire [15:0] bus16, inout wire [11:0] low12, high12, inout wire [32:0] c, inout wire [16:0] b, inout wire [32:0] b2);

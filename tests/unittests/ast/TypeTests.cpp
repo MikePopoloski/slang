@@ -1777,6 +1777,27 @@ endmodule
     CHECK(diags[0].code == diag::TypeRefHierarchical);
 }
 
+TEST_CASE("Type reference through an interface port") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic [17:1] foo;
+endinterface
+
+module m(I i);
+    var type(i.foo) asdf = 1;
+endmodule
+
+module top;
+    I i();
+    m u(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Virtual interface parameter resolution regress GH #510") {
     auto tree = SyntaxTree::fromText(R"(
 interface I #(A=1);
