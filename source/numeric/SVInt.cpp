@@ -1368,7 +1368,7 @@ SVInt SVInt::operator%(const SVInt& rhs) const {
     }
 
     // otherwise, just do the remainder
-    return urem(*this, rhs, false);
+    return urem(*this, rhs, bothSigned);
 }
 
 SVInt SVInt::operator&(const SVInt& rhs) const {
@@ -2157,16 +2157,12 @@ void SVInt::buildDivideResult(SVInt* result, uint32_t* value, bitwidth_t bitWidt
     if (!result)
         return;
 
-    if (numWords == 1) {
-        uint64_t val = uint64_t(value[0]) | (uint64_t(value[1]) << (BITS_PER_WORD / 2));
-        *result = SVInt(bitWidth, val, signFlag);
-    }
-    else {
-        *result = SVInt(bitWidth, 0, signFlag);
-        for (uint32_t i = 0; i < numWords; i++)
-            result->pVal[i] = uint64_t(value[i * 2]) |
-                              (uint64_t(value[i * 2 + 1]) << (BITS_PER_WORD / 2));
-    }
+    // The value is an unsigned magnitude, so it must be zero extended
+    // even if the top bit of its highest word is set.
+    *result = SVInt(bitWidth, 0, signFlag);
+    uint64_t* dest = result->getRawData();
+    for (uint32_t i = 0; i < numWords; i++)
+        dest[i] = uint64_t(value[i * 2]) | (uint64_t(value[i * 2 + 1]) << (BITS_PER_WORD / 2));
 }
 
 SLANG_NO_SANITIZE("unsigned-integer-overflow")
@@ -2271,8 +2267,12 @@ SVInt SVInt::udiv(const SVInt& lhs, const SVInt& rhs, bool bothSigned) {
     if (lhsWords < rhsWords || lhs < rhs)
         return SVInt(lhs.bitWidth, 0, bothSigned);
     // X and Y are actually a single word
-    if (lhsWords == 1 && rhsWords == 1)
-        return SVInt(lhs.bitWidth, lhs.pVal[0] / rhs.pVal[0], bothSigned);
+    // (don't let the constructor sign extend the result; it's always positive)
+    if (lhsWords == 1 && rhsWords == 1) {
+        SVInt result(lhs.bitWidth, 0, bothSigned);
+        result.pVal[0] = lhs.pVal[0] / rhs.pVal[0];
+        return result;
+    }
 
     // compute it the hard way with the Knuth algorithm
     SVInt quotient;
@@ -2301,8 +2301,12 @@ SVInt SVInt::urem(const SVInt& lhs, const SVInt& rhs, bool bothSigned) {
     if (lhsWords < rhsWords || lhs < rhs)
         return lhs;
     // X and Y are actually a single word
-    if (lhsWords == 1)
-        return SVInt(lhs.bitWidth, lhs.pVal[0] % rhs.pVal[0], bothSigned);
+    // (don't let the constructor sign extend the result; it's always positive)
+    if (lhsWords == 1) {
+        SVInt result(lhs.bitWidth, 0, bothSigned);
+        result.pVal[0] = lhs.pVal[0] % rhs.pVal[0];
+        return result;
+    }
 
     // compute it the hard way with the Knuth algorithm
     SVInt remainder;
