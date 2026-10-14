@@ -361,8 +361,10 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor> {
     }
 
     void handle(const InstanceSymbol& symbol) {
-        if (symbol.name.empty() || symbol.body.flags.has(InstanceFlags::Uninstantiated) ||
-            hierarchyProblem) {
+        // Note: instance array elements have empty names, so only skip
+        // unnamed instances that aren't part of an array.
+        if ((symbol.name.empty() && symbol.arrayPath.empty()) ||
+            symbol.body.flags.has(InstanceFlags::Uninstantiated) || hierarchyProblem) {
             return;
         }
 
@@ -402,6 +404,14 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor> {
         inRecursiveInstance = wasInRecursive;
         if (inserted)
             activeInstances.erase(&symbol.getDefinition());
+    }
+
+    void handle(const InstanceArraySymbol& symbol) {
+        for (auto& member : symbol.members()) {
+            if (hierarchyProblem)
+                return;
+            member.visit(*this);
+        }
     }
 
     void handle(const GenerateBlockSymbol& symbol) {
