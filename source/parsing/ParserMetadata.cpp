@@ -42,6 +42,16 @@ public:
         visitDefault(syntax);
     }
 
+    void handle(const CheckerDeclarationSyntax& syntax) {
+        meta.checkerDecls.push_back(&syntax);
+        visitDefault(syntax);
+    }
+
+    void handle(const CheckerInstantiationSyntax& syntax) {
+        meta.checkerInstances.push_back(&syntax);
+        visitDefault(syntax);
+    }
+
     void handle(const BindDirectiveSyntax& syntax) {
         meta.hasBindDirectives = true;
         visitDefault(syntax);
@@ -183,6 +193,12 @@ void ParserMetadata::visitDeclaredSymbols(function_ref<void(std::string_view)> f
         if (!name.empty())
             func(name);
     }
+
+    for (auto checkerDecl : checkerDecls) {
+        std::string_view name = checkerDecl->name.valueText();
+        if (!name.empty())
+            func(name);
+    }
 }
 
 std::vector<std::string_view> ParserMetadata::getReferencedSymbols() const {
@@ -198,6 +214,15 @@ std::vector<std::string_view> ParserMetadata::getReferencedSymbols() const {
 void ParserMetadata::visitReferencedSymbols(function_ref<void(std::string_view)> func) const {
     for (auto name : globalInstances)
         func(name->type.valueText());
+
+    for (auto inst : checkerInstances) {
+        // Package-scoped checker names are already handled via classPackageNames.
+        if (inst->type->kind == SyntaxKind::IdentifierName) {
+            std::string_view name = inst->type->as<IdentifierNameSyntax>().identifier.valueText();
+            if (!name.empty())
+                func(name);
+        }
+    }
 
     for (auto idName : classPackageNames) {
         std::string_view name = idName->identifier.valueText();

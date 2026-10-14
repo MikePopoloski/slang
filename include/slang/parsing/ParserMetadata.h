@@ -46,6 +46,14 @@ struct SLANG_EXPORT ParserMetadata {
     /// A list of all class declarations parsed.
     std::vector<const syntax::ClassDeclarationSyntax*> classDecls;
 
+    /// A list of all checker declarations parsed.
+    std::vector<const syntax::CheckerDeclarationSyntax*> checkerDecls;
+
+    /// A list of *some* checker instantiations parsed. Checker instantiations
+    /// in non-procedural contexts are generally indistinguishable from module
+    /// instantiations and so are included in @a globalInstances instead.
+    std::vector<const syntax::CheckerInstantiationSyntax*> checkerInstances;
+
     /// A list of all interface port headers parsed.
     std::vector<const syntax::InterfacePortHeaderSyntax*> interfacePorts;
 
@@ -66,7 +74,7 @@ struct SLANG_EXPORT ParserMetadata {
     std::vector<std::string_view> getDeclaredSymbols() const;
 
     /// Visits top level symbols declared in this metadata, calling the provided function with the
-    /// name. This includes modules, classes, packages, and interfaces.
+    /// name. This includes modules, classes, packages, interfaces, and checkers.
     void visitDeclaredSymbols(function_ref<void(std::string_view)> func) const;
 
     /// Returns a list of all symbols from @a visitReferencedSymbols.

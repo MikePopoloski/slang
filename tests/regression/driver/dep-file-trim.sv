@@ -42,3 +42,14 @@
 // --depfile-trim with no --top specified warns that the result will always be empty.
 // RUN: %slang %testdir/dep-trim/moduleA.sv --parse-only --Mmodule - --depfile-trim 2>&1
 // CHECK: using --depfile-trim with no top modules
+
+// A file containing only a checker is kept when the checker is instantiated.
+// RUN: %slang %testdir/dep-trim/checker.sv %testdir/dep-trim/checker-user.sv --parse-only --Mmodule - --depfile-trim --top checkerUser 2>&1
+// CHECK-NOT: 'myChecker' not found in any source file
+// CHECK: checker.sv
+// CHECK-NEXT: checker-user.sv
+
+// A checker instantiated inside a procedural block is a dependency of the containing module.
+// RUN: %slang %testdir/dep-trim/checker.sv %testdir/dep-trim/checker-proc-user.sv --parse-only --Mmodule - --depfile-trim --top checkerProcUser 2>&1
+// CHECK: checker.sv
+// CHECK-NEXT: checker-proc-user.sv
