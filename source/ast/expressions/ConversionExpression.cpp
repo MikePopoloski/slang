@@ -515,7 +515,11 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
             if (value.isInteger()) {
                 auto& oldInt = value.integer();
                 auto& newInt = result.integer();
-                if (!oldInt.hasUnknown() && !newInt.hasUnknown() && oldInt != newInt) {
+                // SVInt equality zero extends unless both sides are signed, so
+                // also check whether the conversion flipped the numeric sign.
+                auto isNegative = [](const SVInt& v) { return v.isSigned() && v.isNegative(); };
+                if (!oldInt.hasUnknown() && !newInt.hasUnknown() &&
+                    (oldInt != newInt || isNegative(oldInt) != isNegative(newInt))) {
                     if (oldInt.getBitWidth() != newInt.getBitWidth()) {
                         addDiag(diag::ConstantConversion) << from << to << oldInt << newInt;
                     }

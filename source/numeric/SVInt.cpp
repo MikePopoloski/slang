@@ -256,6 +256,7 @@ SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool a
 
 SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, std::span<logic_t const> digits) {
     SVInt result = allocZeroed(bits, isSigned, false);
+    const uint32_t numWords = result.getNumWords();
 
     constexpr int charsPerWord = 18; // 18 decimal digits can fit in a 64-bit word
     const logic_t* d = digits.data();
@@ -281,7 +282,9 @@ SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, std::span<logic_t
         else {
             uint64_t carry = mulOne(result.pVal, result.pVal, count, maxWord);
             carry += addOne(result.pVal, result.pVal, count, word);
-            if (carry)
+
+            // Any carry out of the top word is truncated away.
+            if (carry && count < numWords)
                 result.pVal[count++] = carry;
         }
     };
@@ -305,6 +308,8 @@ SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, std::span<logic_t
 
     writeWord();
 
+    // If the value was too large for the given number of bits it gets truncated.
+    result.clearUnusedBits();
     return result;
 }
 
@@ -1477,9 +1482,9 @@ SVInt SVInt::slice(int32_t msb, int32_t lsb) const {
     uint32_t validSelectWidth = selectWidth - frontOOB - backOOB;
     SVInt result;
     if (selectWidth > 64 || unknownFlag || anyOOB)
-        result = SVInt::allocZeroed(selectWidth, signFlag, unknownFlag || anyOOB);
+        result = SVInt::allocZeroed(selectWidth, false, unknownFlag || anyOOB);
     else
-        result = SVInt(selectWidth, 0, signFlag);
+        result = SVInt(selectWidth, 0, false);
     bitcpy(result.getRawData(), frontOOB, getRawData(), validSelectWidth,
            frontOOB ? 0 : uint32_t(lsb));
 
@@ -2246,6 +2251,18 @@ void SVInt::divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32
     buildDivideResult(remainder, r, rhs.bitWidth, bothSigned, rhsWords);
 }
 
+bool SVInt::unsignedLess(const SVInt& lhs, const SVInt& rhs, uint32_t numWords) {
+    // Compares the magnitudes of two multi-word values, ignoring their sign flags.
+    // The caller has already ensured that rhs doesn't use more than numWords words.
+    // (Signed division passes the most negative value through as a positive magnitude,
+    // so we can't use operator< here.)
+    for (uint32_t i = numWords; i > 0; i--) {
+        if (lhs.pVal[i - 1] != rhs.pVal[i - 1])
+            return lhs.pVal[i - 1] < rhs.pVal[i - 1];
+    }
+    return false;
+}
+
 SVInt SVInt::udiv(const SVInt& lhs, const SVInt& rhs, bool bothSigned) {
     // At this point we have two values with the same bit widths, both positive,
     // and X's have been dealt with. Also, we know rhs isn't zero.
@@ -2264,7 +2281,7 @@ SVInt SVInt::udiv(const SVInt& lhs, const SVInt& rhs, bool bothSigned) {
     if (&lhs == &rhs)
         return SVInt(lhs.bitWidth, 1, bothSigned);
     // X / Y where X < Y
-    if (lhsWords < rhsWords || lhs < rhs)
+    if (lhsWords < rhsWords || unsignedLess(lhs, rhs, lhsWords))
         return SVInt(lhs.bitWidth, 0, bothSigned);
     // X and Y are actually a single word
     // (don't let the constructor sign extend the result; it's always positive)
@@ -2298,7 +2315,7 @@ SVInt SVInt::urem(const SVInt& lhs, const SVInt& rhs, bool bothSigned) {
     if (&lhs == &rhs)
         return SVInt(lhs.bitWidth, 0, bothSigned);
     // X % Y where X < Y
-    if (lhsWords < rhsWords || lhs < rhs)
+    if (lhsWords < rhsWords || unsignedLess(lhs, rhs, lhsWords))
         return lhs;
     // X and Y are actually a single word
     // (don't let the constructor sign extend the result; it's always positive)

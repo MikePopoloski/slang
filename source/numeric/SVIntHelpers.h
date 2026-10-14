@@ -369,7 +369,12 @@ static void mulKaratsuba(uint64_t* dst, const uint64_t* x, uint32_t xlen, const 
     t1.fill(0);
     mul(t1.get(), xh, xhSize, yh, yhSize);
     memset(dst, 0, (xlen + ylen) * sizeof(uint64_t));
-    memcpy(dst + 2 * shift, t1.get(), (xhSize + yhSize) * sizeof(uint64_t));
+
+    // If x is less than half the length of y then xh is empty and there is less
+    // room above 2 * shift than xhSize + yhSize. The product fits regardless,
+    // so we only copy what fits.
+    uint32_t highSize = std::min(xhSize + yhSize, xlen + ylen - 2 * shift);
+    memcpy(dst + 2 * shift, t1.get(), highSize * sizeof(uint64_t));
 
     TempBuffer<uint64_t, 128> t2(xlen + ylen);
     t2.fill(0);
@@ -721,7 +726,7 @@ static TVal toIEEE754(SVInt value) {
 
     constexpr int FullMantissa = MantissaBits + 1;
 
-    if (!word || bit >= FullMantissa) {
+    if (!word || bit > FullMantissa) {
         mantissa = value.getRawPtr()[word];
         if (bit > FullMantissa) {
             uint32_t shift = bit - FullMantissa;
@@ -731,12 +736,21 @@ static TVal toIEEE754(SVInt value) {
         }
     }
     else {
+        // The mantissa is split across this word and the one below it. If the top
+        // word holds exactly FullMantissa bits the shift is a full word, which
+        // must be special cased to avoid an out-of-range shift.
         uint64_t high = value.getRawPtr()[word] << (FullMantissa - bit);
         uint32_t shift = SVInt::BITS_PER_WORD - FullMantissa + bit;
-        uint64_t low = value.getRawPtr()[word - 1] >> shift;
-        mantissa = high | low;
+        uint64_t lowWord = value.getRawPtr()[word - 1];
+        if (shift == SVInt::BITS_PER_WORD) {
+            mantissa = high;
+            remainder = lowWord;
+        }
+        else {
+            mantissa = high | (lowWord >> shift);
+            remainder = lowWord & ((1ull << shift) - 1);
+        }
 
-        remainder = value.getRawPtr()[word - 1] & ((1ull << shift) - 1);
         halfway = 1ull << (shift - 1);
         word--;
     }
@@ -752,7 +766,7 @@ static TVal toIEEE754(SVInt value) {
             mantissa++;
         else {
             for (uint32_t i = word; i > 0; i--) {
-                if (value.getRawPtr()[word - 1] != 0) {
+                if (value.getRawPtr()[i - 1] != 0) {
                     mantissa++;
                     break;
                 }

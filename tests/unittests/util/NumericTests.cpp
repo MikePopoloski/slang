@@ -107,9 +107,16 @@ TEST_CASE("Construction") {
     CHECK_THAT("13'b1100xZ?01"_si[SVInt(8)], exactlyEquals(logic_t(1)));
     CHECK_THAT("13'b1100xZ?01"_si["999'd929293939393939393939"_si], exactlyEquals(logic_t::x));
     CHECK_THAT("13'b1100xZ?01"_si.slice(8, 2), exactlyEquals("7'b1100xZz"_si));
+    CHECK(!SVInt(8, 0xf0, true).slice(7, 4).isSigned());
+    CHECK(!SVInt(100, 0xf0, true).slice(7, 4).isSigned());
 
     // extra digits should truncate from the left
     CHECK("4'hxxffa"_si == 10);
+
+    // decimal digits that overflow a multi-word value should also truncate
+    CHECK("65'd1267650600228229401496703205376"_si.hash() == "65'd0"_si.hash());
+    CHECK("65'd999999999999999999999999999999999999999999999999999999999999"_si ==
+          "300'd999999999999999999999999999999999999999999999999999999999999"_si.trunc(65));
 
     // X and Z leading digits get extended out to the width of the integer
     CHECK_THAT("100'hx10"_si[99], exactlyEquals(logic_t::x));
@@ -263,6 +270,9 @@ TEST_CASE("Comparison") {
     CHECK(SVInt(-4) == -4);
     CHECK(SVInt((uint64_t)-4) != SVInt(9999, (uint64_t)-4, true));
     CHECK(SVInt(-4) == SVInt(9999, (uint64_t)-4, true));
+    CHECK(SVInt(8, 0xff, true) == SVInt(8, 0xff, false));
+    CHECK(SVInt(8, 0xff, true) == SVInt(16, 0xff, false));
+    CHECK(SVInt(8, 0xff, true) == SVInt(16, 0xffff, true));
     CHECK("12'b101"_si == 5);
     CHECK("12'b101"_si != 10);
     CHECK(!bool(!SVInt(4)));
@@ -427,6 +437,20 @@ TEST_CASE("Division") {
     CHECK(v7 % v7 == 0);
     CHECK(v7 % "19823'd234098234098234098235"_si == v7);
     CHECK(v7 % "19823'd11109832458345098"_si == "100'd2954368444538276"_si);
+
+    // The most negative value must be divided as a positive magnitude.
+    SVInt minVal = "128'sh80000000000000000000000000000000"_si;
+    SVInt minQuot = "128'sh2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_si;
+    CHECK(minVal / "128'sd3"_si == -minQuot);
+    CHECK(minVal / "-128'sd3"_si == minQuot);
+    CHECK(minVal % "128'sd3"_si == "-128'sd2"_si);
+    CHECK(minVal % "-128'sd3"_si == "-128'sd2"_si);
+
+    // Very uneven multiply (Karatsuba where one operand is less than half the other).
+    SVInt one20k = SVInt(20000, 1, false);
+    SVInt mulA = one20k.shl(511) - one20k;
+    SVInt mulB = one20k.shl(19199) - one20k;
+    CHECK(mulA * mulB == one20k.shl(19710) - one20k.shl(511) - one20k.shl(19199) + one20k);
 
     // Results with bit 63 set in a wider signed value must not be sign extended.
     CHECK("65'sh08000000000000000"_si / "65'sd1"_si == "65'sh08000000000000000"_si);
@@ -724,6 +748,16 @@ TEST_CASE("Double conversions") {
     CHECK("-112'sd9223372036854775808"_si.toDouble() == -9223372036854775808.0);
     CHECK("112'sd9223372036854775807"_si.toDouble() == 9223372036854775807.0);
     CHECK("-112'sd9223372036854775809"_si.toDouble() == -9223372036854775809.0);
+
+    // Rounding must look at bits more than one word below the mantissa,
+    // and at the next word when the top word holds exactly the mantissa bits.
+    SVInt one256 = SVInt(256, 1, false);
+    CHECK((one256.shl(200) + one256.shl(147) + one256).toDouble() ==
+          std::ldexp(1.0, 200) + std::ldexp(1.0, 148));
+    CHECK((one256.shl(116) + one256.shl(63) + one256.shl(62)).toDouble() ==
+          std::ldexp(1.0, 116) + std::ldexp(1.0, 64));
+    CHECK((one256.shl(87) + one256.shl(63) + one256.shl(62)).toFloat() ==
+          std::ldexp(1.0f, 87) + std::ldexp(1.0f, 64));
 
     CHECK("112'd18446744073709551615"_si.toDouble() == 18446744073709551615.0);
     CHECK("112'd18446744073709551616"_si.toDouble() == 18446744073709551616.0);
