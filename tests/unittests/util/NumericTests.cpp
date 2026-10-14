@@ -412,6 +412,11 @@ TEST_CASE("Division") {
     CHECK(v6 == 2);
     CHECK(v6.isSigned());
 
+    SVInt v6r = "7"_si % "3"_si;
+    CHECK(v6r == 1);
+    CHECK(v6r.isSigned());
+    CHECK(!("7"_si % "32'd3"_si).isSigned());
+
     SVInt v7 = "19823'd234098234098234098234"_si;
     CHECK("300'd0"_si / "10"_si == 0);
     CHECK(v7 / v7 == 1);
@@ -422,6 +427,15 @@ TEST_CASE("Division") {
     CHECK(v7 % v7 == 0);
     CHECK(v7 % "19823'd234098234098234098235"_si == v7);
     CHECK(v7 % "19823'd11109832458345098"_si == "100'd2954368444538276"_si);
+
+    // Results with bit 63 set in a wider signed value must not be sign extended.
+    CHECK("65'sh08000000000000000"_si / "65'sd1"_si == "65'sh08000000000000000"_si);
+    CHECK("-65'sh08000000000000000"_si / "65'sd1"_si == "-65'sh08000000000000000"_si);
+    CHECK("65'shffffffffffffffff"_si % "65'sh08000000000000001"_si == "65'sh7ffffffffffffffe"_si);
+    CHECK("-129'sh80000000000000000000000000000000"_si % "129'shffffffffffffffff"_si ==
+          "-129'sh8000000000000000"_si);
+    CHECK("129'sh80000000000000000000000000000000"_si % "129'shffffffffffffffff"_si ==
+          "129'sh8000000000000000"_si);
 
     // Test corner cases of the Knuth division algorithm that are rarely executed.
     testDiv("256'h1ffffffffffffffff"_si, "256'h1ffffffffffffffff"_si, "256'h0"_si);
