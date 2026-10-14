@@ -494,8 +494,13 @@ public:
     /// Equality operator; if either value is unknown the result is unknown.
     /// Otherwise, if bit lengths are unequal we extend the smaller one and then compare.
     logic_t operator==(const SVInt& rhs) const {
-        if (isSingleWord() && rhs.isSingleWord())
-            return logic_t(as<uint64_t>() == rhs.as<uint64_t>());
+        if (isSingleWord() && rhs.isSingleWord()) {
+            // Sign extend only if both sides are signed; otherwise compare the
+            // zero extended values (unused bits are always kept clear).
+            if (signFlag && rhs.signFlag)
+                return logic_t(as<uint64_t>() == rhs.as<uint64_t>());
+            return logic_t(val == rhs.val);
+        }
         return equalsSlowCase(rhs);
     }
 
@@ -630,6 +635,9 @@ private:
     // words.
     static void divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32_t rhsWords,
                        SVInt* quotient, SVInt* remainder);
+
+    // Compares magnitudes of two multi-word values, ignoring sign.
+    static bool unsignedLess(const SVInt& lhs, const SVInt& rhs, uint32_t numWords);
 
     // Unsigned division algorithm.
     static SVInt udiv(const SVInt& lhs, const SVInt& rhs, bool bothSigned);
