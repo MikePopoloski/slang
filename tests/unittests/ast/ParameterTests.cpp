@@ -336,7 +336,7 @@ endmodule
     };
 
     CHECK(typeof("a") == "logic[9:1]");
-    CHECK(typeof("b") == "logic[31:0]");
+    CHECK(typeof("b") == "logic[0:0]");
     CHECK(typeof("c") == "real");
     CHECK(typeof("d") == "logic signed[1:0]");
     CHECK(typeof("e") == "logic signed[31:0]");
@@ -1949,4 +1949,22 @@ TEST_CASE("Param alias: module localparam") {
 
     auto diags = compilation.getAllDiagnostics();
     REQUIRE(diags.empty());
+}
+
+TEST_CASE("Implicit param type inferred from unbased unsized literal") {
+    auto tree = SyntaxTree::fromText(R"(
+module sub #(P = 0, parameter signed Q = 0) ();
+  if (P > 2) $error("Unexpected value for P: %d", P);
+  if ($bits(P) != 1) $error("Unexpected width for P");
+  if ($bits(Q) != 1 || Q != -1) $error("Unexpected value for Q");
+endmodule
+
+module top;
+  sub #('1, '1) u_sub ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

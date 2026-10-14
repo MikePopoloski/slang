@@ -475,11 +475,17 @@ std::tuple<const Expression*, const Type*> Expression::bindImplicitParam(
 
     Expression& expr = create(comp, rhs, exprContext, extraFlags);
     const Type* lhsType = expr.type;
+
+    // Unsized integer literals infer a width of at least 32 bits, except for
+    // unbased unsized literals which are 1 bit when self-determined [5.7.1].
+    const bool isUnsized = expr.isUnsizedInteger() &&
+                           expr.kind != ExpressionKind::UnbasedUnsizedIntegerLiteral;
+
     if (it.signing) {
         // If signing is provided, the result is always integral but we infer the width.
         // If the type is non-integral or unsized, infer a width of 32.
         bitwidth_t bits = lhsType->getBitWidth();
-        if (!lhsType->isIntegral() || expr.isUnsizedInteger())
+        if (!lhsType->isIntegral() || isUnsized)
             bits = 32;
 
         bitmask<IntegralFlags> flags = IntegralFlags::FourState;
@@ -493,7 +499,7 @@ std::tuple<const Expression*, const Type*> Expression::bindImplicitParam(
         // If integral, infer using rules mentioned above. Otherwise just take the type.
         if (lhsType->isIntegral()) {
             bitwidth_t bits = lhsType->getBitWidth();
-            if (expr.isUnsizedInteger())
+            if (isUnsized)
                 bits = std::max(bits, 32u);
 
             // Keep the signed flag but force four state.
