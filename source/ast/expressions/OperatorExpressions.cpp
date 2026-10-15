@@ -2292,6 +2292,17 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     // If the multiplier isn't constant this must be a string replication.
     EvalContext evalCtx(context, EvalFlags::CacheResults);
     if (ConstantValue leftVal = left.eval(evalCtx); !leftVal) {
+        // Parameters in an uninstantiated body have no values (they are forced
+        // invalid), so a multiplier that names one cannot be evaluated, and an
+        // operand that names one counts as an implicit string. Neither says
+        // the replication is a string one: `{N{E}}` with integral parameters is
+        // an ordinary vector. Typing it `string` would make every integral use
+        // of it (`~{N{E}}`, `{N{E}} + 1`) report a spurious error in a body
+        // that is never elaborated, so give up on it quietly instead. A real
+        // string operand keeps the string replication.
+        if (context.scope->isUninstantiated() && !right->type->isString())
+            return badExpr(compilation, result);
+
         if (!right->isImplicitString()) {
             // They probably meant for this to be a constant (non-string) replication,
             // so do the normal error reporting for that case.
