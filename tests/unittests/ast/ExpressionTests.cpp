@@ -4733,3 +4733,28 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadValueRange);
 }
+
+TEST_CASE("Integral replication with parameter operands in an uninstantiated body") {
+    // Parameters of an uninstantiated module have no values, so `{N{E}}` must not
+    // be mistaken for a string replication (whose integral uses then report errors).
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter int unsigned N = 8, parameter logic E = 1'b0, parameter S = "ab")
+          (input logic [N-1:0] a, output logic [N-1:0] y, output logic [N-1:0] z);
+    assign y = a | ~{N{E}};
+    always_comb z = ({N{E}} + 1'b1) & ({N{E}} ? a : '0);
+    string s;
+    initial s = {N{S}};
+endmodule
+
+module top(input logic a, output logic b);
+    assign b = a;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("top");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
