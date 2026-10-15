@@ -766,6 +766,35 @@ class C; endclass
     }
 }
 
+TEST_CASE("Parser metadata -- checkers") {
+    auto tree = SyntaxTree::fromText(R"(
+checker myChecker(logic a, event clk);
+    assert property (@clk a);
+endchecker
+
+module m(input logic clk, a);
+    always @(posedge clk) begin
+        procChecker c(a, posedge clk);
+    end
+endmodule
+)");
+
+    CHECK(tree->diagnostics().empty());
+
+    auto checkMeta = [](const ParserMetadata& meta) {
+        auto declared = meta.getDeclaredSymbols();
+        CHECK(std::ranges::find(declared, "myChecker") != declared.end());
+
+        auto referenced = meta.getReferencedSymbols();
+        CHECK(std::ranges::find(referenced, "procChecker") != referenced.end());
+    };
+
+    // Check both the metadata collected by the parser and the
+    // metadata collected by walking the syntax tree.
+    checkMeta(tree->getMetadata());
+    checkMeta(ParserMetadata::fromSyntax(tree->root()));
+}
+
 TEST_CASE("Syntax rewriter -- replace preserves trivia") {
     auto tree = SyntaxTree::fromText(R"(
 module test(
