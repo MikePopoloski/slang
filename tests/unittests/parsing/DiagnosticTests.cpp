@@ -989,6 +989,30 @@ TEST_CASE("Diagnostic warning option corner cases") {
         auto engine = createEngine({"no-unknown-sys-name"s});
         CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Ignored);
     }
+    {
+        auto engine = createEngine({"no-error=unknown-sys-name"s, "none"s});
+        CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Ignored);
+    }
+    {
+        auto engine = createEngine({"none"s, "no-error=unknown-sys-name"s});
+        CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Ignored);
+    }
+    {
+        auto engine = createEngine({"unknown-sys-name"s, "no-error=unknown-sys-name"s, "none"s});
+        CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Warning);
+    }
+    {
+        auto engine = createEngine({"unknown-sys-name"s});
+        CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Error);
+    }
+    {
+        auto engine = createEngine({"default"s});
+        CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Error);
+    }
+    {
+        auto engine = createEngine({"default"s, "none"s});
+        CHECK(engine.getSeverity(diag::UnknownSystemName, {}) == DiagnosticSeverity::Error);
+    }
 }
 
 TEST_CASE("DiagnosticEngine::setBaselineSeverity -- global path") {
@@ -1042,4 +1066,22 @@ TEST_CASE("DiagnosticEngine::setBaselineSeverity -- per-unit path") {
     auto diags2 = engine2.setBufferWarningOptions(bufOpts);
     CHECK(diags2.empty());
     CHECK(engine2.getSeverity(diag::UnknownSystemName, loc) == DiagnosticSeverity::Ignored);
+
+    // A per-unit downgrade of a baseline error is a warning.
+    bufOpts[buf.id] = {"no-error=unknown-sys-name"s};
+    DiagnosticEngine engine3(sm);
+    engine3.setBaselineSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
+
+    auto diags3 = engine3.setBufferWarningOptions(bufOpts);
+    CHECK(diags3.empty());
+    CHECK(engine3.getSeverity(diag::UnknownSystemName, loc) == DiagnosticSeverity::Warning);
+
+    // Unless that unit also turns all warnings off.
+    bufOpts[buf.id] = {"no-error=unknown-sys-name"s, "none"s};
+    DiagnosticEngine engine4(sm);
+    engine4.setBaselineSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
+
+    auto diags4 = engine4.setBufferWarningOptions(bufOpts);
+    CHECK(diags4.empty());
+    CHECK(engine4.getSeverity(diag::UnknownSystemName, loc) == DiagnosticSeverity::Ignored);
 }

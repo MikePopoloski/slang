@@ -533,18 +533,53 @@ std::string DiagnosticEngine::reportAll(const SourceManager& sourceManager,
     return client->getString();
 }
 
+// What is known of one diagnostic when a set of -W options is applied.
+struct DiagnosticOptionState {
+    // The severity it had before these options, set through the API or by the baseline.
+    std::optional<DiagnosticSeverity> initial;
+    std::optional<bool> isOn;
+    std::optional<bool> isErrorByName;
+    std::optional<bool> isErrorByGroup;
+    bool onByDefault = false;
+
+    // Whether it is on and whether it is an error are answered apart. One that
+    // starts as an error stays one, even with all warnings off, unless it is
+    // downgraded by name; it is then a warning like any other.
+    std::optional<DiagnosticSeverity> resolve(bool warningsAsErrors) const {
+        const bool startsAsError = initial == DiagnosticSeverity::Error;
+        const bool isError = isErrorByName.value_or(startsAsError ||
+                                                    isErrorByGroup.value_or(warningsAsErrors));
+
+        bool on;
+        if (isOn)
+            on = *isOn;
+        else if (startsAsError)
+            on = isError || onByDefault;
+        else if (initial)
+            return initial;
+        else if (onByDefault)
+            on = true;
+        else
+            return std::nullopt;
+
+        if (!on)
+            return DiagnosticSeverity::Ignored;
+        return isError ? DiagnosticSeverity::Error : DiagnosticSeverity::Warning;
+    }
+};
+
 void DiagnosticEngine::parseWarningOptions(std::span<const std::string> options, Diagnostics& diags,
                                            bool includeDefault, ParsedOptions& results) {
     std::vector<std::pair<const DiagGroup*, bool>> groupEnables;
     std::vector<std::pair<DiagCode, bool>> codeEnables;
-    flat_hash_map<const DiagGroup*, bool> groupErrors;
+    std::vector<std::pair<const DiagGroup*, bool>> groupErrors;
     flat_hash_map<DiagCode, bool> codeErrors;
 
     auto findAndSet = [&](std::string_view name, bool set, const char* errorPrefix,
                           bool isExplicitError) {
         if (auto group = findDiagGroup(name)) {
             if (isExplicitError)
-                groupErrors[group] = set;
+                groupErrors.emplace_back(group, set);
             else
                 groupEnables.emplace_back(group, set);
 
@@ -597,56 +632,44 @@ void DiagnosticEngine::parseWarningOptions(std::span<const std::string> options,
         }
     }
 
-    auto handleGroup = [&](const DiagGroup* group, bool set, bool isDefault) {
-        DiagnosticSeverity severity;
-        if (!set)
-            severity = DiagnosticSeverity::Ignored;
-        else if (auto it = groupErrors.find(group); it != groupErrors.end())
-            severity = it->second ? DiagnosticSeverity::Error : DiagnosticSeverity::Warning;
-        else {
-            severity = results.warningsAsErrors ? DiagnosticSeverity::Error
-                                                : DiagnosticSeverity::Warning;
-        }
+    // Groups go first so that naming a diagnostic beats naming its group, and
+    // within each a later option beats an earlier one.
+    flat_hash_map<DiagCode, DiagnosticOptionState> states;
+    for (auto& [code, severity] : results.overrides)
+        states[code].initial = severity;
 
-        for (auto code : group->getDiags()) {
-            if (isDefault)
-                results.overrides.try_emplace(code, severity);
-            else
-                results.overrides.insert_or_assign(code, severity);
-        }
-    };
+    for (auto& [group, set] : groupEnables) {
+        for (auto code : group->getDiags())
+            states[code].isOn = set;
+    }
+    for (auto& [group, set] : groupErrors) {
+        for (auto code : group->getDiags())
+            states[code].isErrorByGroup = set;
+    }
+    for (auto& [code, set] : codeEnables)
+        states[code].isOn = set;
+    for (auto& [code, set] : codeErrors)
+        states[code].isErrorByName = set;
 
-    if (includeDefault) {
+    // The global options own the default set and add an entry for each of its
+    // diagnostics. Per-unit options only adjust the global ones, so they mark
+    // the diagnostics they already name and leave the rest to the global table.
+    if (!results.ignoreAll) {
         auto group = findDiagGroup("default"sv);
         SLANG_ASSERT(group);
-        handleGroup(group, true, /* isDefault */ true);
-    }
-
-    for (auto& [group, set] : groupEnables)
-        handleGroup(group, set, /* isDefault */ false);
-
-    // Special case for diagnostics with an explicit severity set by API that
-    // the user is now trying to downgrade to be not an error.
-    for (auto& [code, set] : codeErrors) {
-        if (!set) {
-            auto it = results.overrides.find(code);
-            if (it != results.overrides.end() && it->second == DiagnosticSeverity::Error)
-                it->second = DiagnosticSeverity::Warning;
+        for (auto code : group->getDiags()) {
+            if (includeDefault)
+                states[code].onByDefault = true;
+            else if (auto it = states.find(code); it != states.end())
+                it->second.onByDefault = true;
         }
     }
 
-    for (auto& [code, set] : codeEnables) {
-        if (!set) {
-            results.overrides[code] = DiagnosticSeverity::Ignored;
-        }
-        else if (auto it = codeErrors.find(code); it != codeErrors.end()) {
-            results.overrides[code] = it->second ? DiagnosticSeverity::Error
-                                                 : DiagnosticSeverity::Warning;
-        }
-        else {
-            results.overrides[code] = results.warningsAsErrors ? DiagnosticSeverity::Error
-                                                               : DiagnosticSeverity::Warning;
-        }
+    for (auto& [code, state] : states) {
+        if (auto severity = state.resolve(results.warningsAsErrors))
+            results.overrides.insert_or_assign(code, *severity);
+        else
+            results.overrides.erase(code);
     }
 }
 
