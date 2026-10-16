@@ -1194,6 +1194,17 @@ endmodule
     CHECK(attributes[0]->specs[0]->name.valueText() == "myattrib");
 }
 
+TEST_CASE("Parser::parseGuess of a member keyword that starts no member") {
+    for (auto text : {"default", "default: x = 1;", "global", "global x;", "virtual"}) {
+        CAPTURE(text);
+        auto tree = SyntaxTree::fromText(text);
+        CHECK(!tree->diagnostics().empty());
+    }
+
+    auto tree = SyntaxTree::fromText("virtual x;");
+    CHECK(tree->root().kind == SyntaxKind::VirtualInterfaceType);
+}
+
 TEST_CASE("Bind directive invalid name") {
     auto& text = R"(
 module m;
