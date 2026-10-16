@@ -190,8 +190,12 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// self-determined and diagnostics that would otherwise require a context
     /// (target) type are suppressed.
     UnknownPortConn = 1ull << 43,
+
+    /// Expressions are allowed to reference arrays of instances (and interface
+    /// port arrays) directly. This is used for the array query system functions.
+    AllowInstanceArray = 1ull << 44,
 };
-SLANG_BITMASK(ASTFlags, UnknownPortConn)
+SLANG_BITMASK(ASTFlags, AllowInstanceArray)
 
 /// Various flags that can be applied to a constant expression evaluation.
 enum class SLANG_EXPORT EvalFlags : uint8_t {

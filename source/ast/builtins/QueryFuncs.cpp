@@ -157,19 +157,19 @@ public:
     }
 };
 
-// As an extension, array query functions can be applied to an array of interface
-// instances (or an interface port array). The argument is bound the same way it would be
-// when assigned to a virtual interface array, which gives it an unpacked array type with
-// the dimensions of the instance array.
+// As an extension, array query functions can be applied to arrays of instances
+// (and interface port arrays). These are bound with an unpacked array type that
+// has the same dimensions as the instance array.
 static const Expression& bindArrayQueryArg(std::string_view name, const ASTContext& context,
                                            const ExpressionSyntax& syntax) {
-    if (auto expr = Expression::tryBindInterfaceRef(context, syntax, /* isInterfacePort */ false,
-                                                    /* isArrayQuery */ true)) {
-        if (!expr->bad() && expr->type->isUnpackedArray())
-            context.addDiag(diag::NonstandardIfaceArrayQuery, expr->sourceRange) << name;
-        return *expr;
+    auto& expr = Expression::bind(syntax, context,
+                                  ASTFlags::AllowDataType | ASTFlags::AllowInstanceArray);
+    if (expr.kind == ExpressionKind::ArbitrarySymbol && !expr.bad()) {
+        auto& sym = *expr.as<ArbitrarySymbolExpression>().symbol;
+        if (sym.kind == SymbolKind::InstanceArray || sym.kind == SymbolKind::InterfacePort)
+            context.addDiag(diag::NonstandardInstanceArrayQuery, expr.sourceRange) << name;
     }
-    return Expression::bind(syntax, context, ASTFlags::AllowDataType);
+    return expr;
 }
 
 class ArrayQueryFunction : public SystemSubroutine {

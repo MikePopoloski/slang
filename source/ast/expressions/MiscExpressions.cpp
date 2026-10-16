@@ -50,6 +50,44 @@ static std::string_view getNonValueName(const Symbol& symbol) {
     return symbol.name;
 }
 
+// Gets an unpacked array type with the same dimensions as the given array of
+// instances or interface port array, so that those dimensions can be queried.
+// Returns nullptr if the symbol is not such an array.
+static const Type* getInstanceArrayType(const ASTContext& context, const Symbol& symbol,
+                                        SourceRange sourceRange) {
+    auto& comp = context.getCompilation();
+    if (symbol.kind == SymbolKind::InterfacePort) {
+        auto dims = symbol.as<InterfacePortSymbol>().getDeclaredRange();
+        if (!dims)
+            return &comp.getErrorType();
+        if (dims->empty())
+            return nullptr;
+
+        return &FixedSizeUnpackedArrayType::fromDims(comp, context, comp.getVoidType(), *dims,
+                                                     sourceRange);
+    }
+
+    if (symbol.kind != SymbolKind::InstanceArray)
+        return nullptr;
+
+    // Multi-dimensional arrays are represented as nested instance arrays.
+    SmallVector<ConstantRange, 4> dims;
+    auto curr = &symbol;
+    do {
+        auto& array = curr->as<InstanceArraySymbol>();
+        if (array.elements.empty()) {
+            // An error has already been reported for this array.
+            return &comp.getErrorType();
+        }
+
+        dims.push_back(array.range);
+        curr = array.elements[0];
+    } while (curr->kind == SymbolKind::InstanceArray);
+
+    return &FixedSizeUnpackedArrayType::fromDims(comp, context, comp.getVoidType(), dims,
+                                                 sourceRange);
+}
+
 Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Symbol& symbol,
                                             const HierarchicalReference* hierRef,
                                             SourceRange sourceRange, bool constraintAllowed) {
@@ -153,6 +191,13 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
             return *comp.emplace<ArbitrarySymbolExpression>(*context.scope, symbol,
                                                             comp.getVoidType(), hierRef,
                                                             sourceRange);
+        }
+
+        if (flags.has(ASTFlags::AllowInstanceArray)) {
+            if (auto type = getInstanceArrayType(context, symbol, sourceRange)) {
+                return *comp.emplace<ArbitrarySymbolExpression>(*context.scope, symbol, *type,
+                                                                hierRef, sourceRange);
+            }
         }
 
         // An UninstantiatedDef is a placeholder for an instance (module, interface, etc.)

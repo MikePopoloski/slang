@@ -1384,8 +1384,7 @@ static const SyntaxNode* findOverrideNodeSource(const HierarchyOverrideNode& nod
 }
 
 Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
-                                            const ExpressionSyntax& syntax, bool isInterfacePort,
-                                            bool isArrayQuery) {
+                                            const ExpressionSyntax& syntax, bool isInterfacePort) {
     // Unwrap the expression; parentheses are superfluous.
     const ExpressionSyntax* expr = &syntax;
     while (expr->kind == SyntaxKind::ParenthesizedExpression)
@@ -1520,7 +1519,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         iface = &symbol->as<InstanceSymbol>().body;
     }
 
-    if (!isInterfacePort && !isArrayQuery) {
+    if (!isInterfacePort) {
         if (iface->hierarchyOverrideNode &&
             !comp.hasFlag(CompilationFlags::AllowVirtualIfaceWithOverride)) {
             auto& diag = context.addDiag(diag::VirtualIfaceDefparam, sourceRange);

@@ -2571,34 +2571,41 @@ endmodule
     CHECK(diags[1].code == diag::InvalidStringArg);
 }
 
-TEST_CASE("Array query functions on interface arrays") {
+TEST_CASE("Array query functions on instance arrays") {
     auto tree = SyntaxTree::fromText(R"(
 interface I #(parameter int W = 8);
     logic [W-1:0] data;
-    modport mp(input data);
 endinterface
+
+module leaf;
+endmodule
 
 module sink #(parameter int N = 1) (I b[N]);
     localparam int ps = $size(b);
+    localparam int pl = $left(b);
 endmodule
 
 module top;
     I ports[4]();
-    I two[2:5][3]();
     I desc[7:4]();
     defparam desc[4].W = 16;
+    leaf l[2:5][3]();
+    wire [3:0] y, a, c;
+    and g[3:0] (y, a, c);
 
-    sink #(.N($size(ports))) u(.b(ports));
+    sink #(.N($size(desc))) u(.b(desc));
 
     localparam int l1 = $left(ports);
     localparam int r1 = $right(ports);
     localparam int lo = $low(desc);
     localparam int hi = $high(desc);
     localparam int inc = $increment(desc);
-    localparam int d2 = $dimensions(two);
-    localparam int u2 = $unpacked_dimensions(two);
-    localparam int s2 = $size(two, 2);
-    localparam int mp = $size(ports.mp);
+    localparam int d2 = $dimensions(l);
+    localparam int u2 = $unpacked_dimensions(l);
+    localparam int s1 = $size(l);
+    localparam int s2 = $size(l, 2);
+    localparam int s3 = $size(l[3]);
+    localparam int gl = $left(g);
     localparam logic [31:0] rep = {$size(ports){8'ha5}};
 endmodule
 )");
@@ -2607,15 +2614,16 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 12);
+    REQUIRE(diags.size() == 15);
     for (auto& diag : diags)
-        CHECK(diag.code == diag::NonstandardIfaceArrayQuery);
+        CHECK(diag.code == diag::NonstandardInstanceArrayQuery);
 
     auto& root = compilation.getRoot();
     auto get = [&](std::string_view name) {
         return root.lookupName<ParameterSymbol>(name).getValue().integer();
     };
     CHECK(get("top.u.ps") == 4);
+    CHECK(get("top.u.pl") == 0);
     CHECK(get("top.l1") == 0);
     CHECK(get("top.r1") == 3);
     CHECK(get("top.lo") == 4);
@@ -2623,12 +2631,14 @@ endmodule
     CHECK(get("top.inc") == 1);
     CHECK(get("top.d2") == 2);
     CHECK(get("top.u2") == 2);
+    CHECK(get("top.s1") == 4);
     CHECK(get("top.s2") == 3);
-    CHECK(get("top.mp") == 4);
+    CHECK(get("top.s3") == 3);
+    CHECK(get("top.gl") == 3);
     CHECK(get("top.rep") == 0xa5a5a5a5);
 }
 
-TEST_CASE("Array query functions on interface arrays -- errors") {
+TEST_CASE("Array query functions on instance arrays -- errors") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
 endinterface
@@ -2637,17 +2647,15 @@ module leaf;
 endmodule
 
 module other;
-    I ifs[3]();
+    leaf l[3]();
 endmodule
 
 module top;
     I one();
-    leaf l[2]();
     other o();
 
     localparam int p1 = $size(one);
-    localparam int p2 = $size(l);
-    localparam int p3 = $size(o.ifs);
+    localparam int p2 = $size(o.l);
 endmodule
 )");
 
@@ -2655,9 +2663,8 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::BadSystemSubroutineArg);
-    CHECK(diags[1].code == diag::NotAValue);
-    CHECK(diags[2].code == diag::SysFuncHierarchicalNotAllowed);
-    CHECK(diags[3].code == diag::NonstandardIfaceArrayQuery);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::NotAValue);
+    CHECK(diags[1].code == diag::SysFuncHierarchicalNotAllowed);
+    CHECK(diags[2].code == diag::NonstandardInstanceArrayQuery);
 }
