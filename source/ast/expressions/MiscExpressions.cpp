@@ -390,6 +390,29 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
     return nullptr;
 }
 
+const ConstantValue* NamedValueExpression::evalLocalRef(EvalContext& context) const {
+    if (getConstant() || bad())
+        return nullptr;
+
+    switch (symbol.kind) {
+        case SymbolKind::Parameter:
+        case SymbolKind::EnumValue:
+        case SymbolKind::Specparam:
+            return nullptr;
+        default:
+            break;
+    }
+
+    ConstantValue* v = context.findLocal(&symbol);
+    if (!v)
+        return nullptr;
+
+    if (!checkConstant(context))
+        return &ConstantValue::Invalid;
+
+    return v;
+}
+
 LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
     if (!checkConstant(context))
         return nullptr;

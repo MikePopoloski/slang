@@ -13,8 +13,10 @@
 #include "slang/ast/Lookup.h"
 #include "slang/ast/TypeProvider.h"
 #include "slang/ast/expressions/CallExpression.h"
+#include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/CoverSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
@@ -211,8 +213,71 @@ bool ElementSelectExpression::isConstantSelect(EvalContext& context) const {
     return value().type->hasFixedRange() && !selector().eval(context).bad();
 }
 
+// True if evaluating the expression can't write to any variable.
+static bool isSideEffectFree(const Expression& expr) {
+    switch (expr.kind) {
+        case ExpressionKind::IntegerLiteral:
+        case ExpressionKind::RealLiteral:
+        case ExpressionKind::TimeLiteral:
+        case ExpressionKind::UnbasedUnsizedIntegerLiteral:
+        case ExpressionKind::NullLiteral:
+        case ExpressionKind::UnboundedLiteral:
+        case ExpressionKind::StringLiteral:
+        case ExpressionKind::NamedValue:
+            return true;
+        case ExpressionKind::UnaryOp: {
+            auto& unary = expr.as<UnaryExpression>();
+            switch (unary.op) {
+                case UnaryOperator::Preincrement:
+                case UnaryOperator::Predecrement:
+                case UnaryOperator::Postincrement:
+                case UnaryOperator::Postdecrement:
+                    return false;
+                default:
+                    return isSideEffectFree(unary.operand());
+            }
+        }
+        case ExpressionKind::BinaryOp: {
+            auto& binary = expr.as<BinaryExpression>();
+            return isSideEffectFree(binary.left()) && isSideEffectFree(binary.right());
+        }
+        case ExpressionKind::Conversion:
+            return isSideEffectFree(expr.as<ConversionExpression>().operand());
+        case ExpressionKind::ElementSelect: {
+            auto& select = expr.as<ElementSelectExpression>();
+            return isSideEffectFree(select.value()) && isSideEffectFree(select.selector());
+        }
+        case ExpressionKind::RangeSelect: {
+            auto& select = expr.as<RangeSelectExpression>();
+            return isSideEffectFree(select.value()) && isSideEffectFree(select.left()) &&
+                   isSideEffectFree(select.right());
+        }
+        case ExpressionKind::MemberAccess:
+            return isSideEffectFree(expr.as<MemberAccessExpression>().value());
+        default:
+            return false;
+    }
+}
+
+// Evaluates the value operand of a select. A local variable is read in place
+// rather than copied whole, unless one of the selectors evaluated after it
+// could write to it.
+static const ConstantValue* evalSelectValue(const Expression& value,
+                                            std::initializer_list<const Expression*> selectors,
+                                            EvalContext& context, ConstantValue& storage) {
+    if (value.kind == ExpressionKind::NamedValue &&
+        std::ranges::all_of(selectors, [](auto sel) { return isSideEffectFree(*sel); })) {
+        if (auto ref = value.as<NamedValueExpression>().evalLocalRef(context))
+            return ref;
+    }
+
+    storage = value.eval(context);
+    return &storage;
+}
+
 ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
-    ConstantValue cv = value().eval(context);
+    ConstantValue storage;
+    auto& cv = *evalSelectValue(value(), {&selector()}, context, storage);
     if (!cv)
         return nullptr;
 
@@ -233,9 +298,9 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
         if (valType.isUnpackedArray())
             return cv.elements()[size_t(range->left)];
         else {
-            cv = cv.integer().slice(range->left, range->right);
+            ConstantValue result = cv.integer().slice(range->left, range->right);
             // Make sure sign and four-statedness are correct.
-            return cv.convertToInt(type->getBitWidth(), type->isSigned(), type->isFourState());
+            return result.convertToInt(type->getBitWidth(), type->isSigned(), type->isFourState());
         }
     }
 
@@ -260,7 +325,7 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     if (valType.isString())
         return cv.getSlice(range->left, range->right, nullptr);
 
-    return std::move(cv).at(size_t(range->left));
+    return cv.at(size_t(range->left));
 }
 
 LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
@@ -678,7 +743,8 @@ bool RangeSelectExpression::isConstantSelect(EvalContext& context) const {
 }
 
 ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
-    ConstantValue cv = value().eval(context);
+    ConstantValue storage;
+    auto& cv = *evalSelectValue(value(), {&left(), &right()}, context, storage);
     if (!cv)
         return nullptr;
 
@@ -1214,7 +1280,8 @@ static bool checkPackedUnionTag(const Type& valueType, const SVInt& val, uint32_
 }
 
 ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
-    ConstantValue cv = value().eval(context);
+    ConstantValue storage;
+    auto& cv = *evalSelectValue(value(), {}, context, storage);
     if (!cv)
         return nullptr;
 
@@ -1264,10 +1331,10 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     else {
         int32_t io = (int32_t)field.bitOffset;
         int32_t width = (int32_t)type->getBitWidth();
-        cv = cv.integer().slice(width + io - 1, io);
+        ConstantValue result = cv.integer().slice(width + io - 1, io);
 
         // Make sure sign and four-statedness are correct.
-        return cv.convertToInt(type->getBitWidth(), type->isSigned(), type->isFourState());
+        return result.convertToInt(type->getBitWidth(), type->isSigned(), type->isFourState());
     }
 }
 

@@ -3130,3 +3130,61 @@ TEST_CASE("Eval scalar bit select") {
     CHECK(diags[1].code == diag::CannotIndexScalar);
     CHECK(diags[2].code == diag::CannotIndexScalar);
 }
+
+TEST_CASE("Eval selects of local variables") {
+    ScriptSession session;
+    session.eval(R"(
+function automatic int sum_unpacked;
+    int a[8];
+    int b[2];
+    int s = 0;
+    for (int i = 0; i < 8; i++) a[i] = i * 3;
+    for (int i = 0; i < 8; i++) s += a[i] + a[7 - i];
+    b = a[2:3];
+    return s + b[1];
+endfunction
+)");
+    CHECK(session.eval("sum_unpacked()").integer() == 177);
+
+    session.eval(R"(
+function automatic logic [5:0] packed_bits;
+    logic [3:0][7:0] p = {8'h12, 8'h34, 8'h56, 8'h78};
+    return {p[3][4], p[2][1], p[1][7:4]};
+endfunction
+)");
+    CHECK(session.eval("packed_bits()").integer() == 37);
+
+    session.eval(R"(
+typedef struct { int x; int y[2]; } s_t;
+function automatic int struct_member;
+    s_t s;
+    s.x = 5;
+    s.y[1] = 7;
+    return s.x * s.y[1];
+endfunction
+)");
+    CHECK(session.eval("struct_member()").integer() == 35);
+
+    // The value is read before the selector's side effect.
+    session.eval(R"(
+function automatic int side_effect_select;
+    int a[4] = '{0, 20, 30, 40};
+    return a[a[0]++];
+endfunction
+)");
+    CHECK(session.eval("side_effect_select()").integer() == 0);
+
+    session.eval(R"(
+function automatic int oob_select;
+    int a[4] = '{1, 2, 3, 4};
+    int i = 9;
+    return a[i];
+endfunction
+)");
+    CHECK(session.eval("oob_select()").integer() == 0);
+
+    auto diags = session.getDiagnostics();
+    INFO(report(diags));
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::IndexOOB);
+}

@@ -60,6 +60,12 @@ public:
     LValue evalLValueImpl(EvalContext& context) const;
     bool isEquivalentImpl(const NamedValueExpression& rhs) const;
 
+    /// If this expression names a local variable of the current call frame,
+    /// evaluates it without copying the value: returns a pointer to the
+    /// variable's current value, or to an invalid value if the evaluation
+    /// failed. Returns nullptr, having evaluated nothing, for any other symbol.
+    const ConstantValue* evalLocalRef(EvalContext& context) const;
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
 
 private:
