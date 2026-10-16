@@ -178,8 +178,11 @@ public:
     /// Tries to bind an interface reference into an expression for an interface port
     /// or a virtual interface assignment.
     /// Returns nullptr if unable to do so.
+    /// If @a isArrayQuery is set, the reference is only being used to query
+    /// array dimensions, so checks specific to virtual interfaces are skipped.
     static Expression* tryBindInterfaceRef(const ASTContext& context,
-                                           const ExpressionSyntax& syntax, bool isInterfacePort);
+                                           const ExpressionSyntax& syntax, bool isInterfacePort,
+                                           bool isArrayQuery = false);
 
     /// Specialized method for creating all of the expressions in a set membership check.
     /// This is used for case statements and the 'inside' operator.

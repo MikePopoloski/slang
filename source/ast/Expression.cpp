@@ -116,6 +116,11 @@ struct Expression::HierarchicalVisitor {
                 if (!expr.template as<HierarchicalValueExpression>().ref.isViaIfacePort())
                     any = true;
             }
+            else if (expr.kind == ExpressionKind::ArbitrarySymbol) {
+                auto& ref = expr.template as<ArbitrarySymbolExpression>().hierRef;
+                if (ref.target && !ref.isViaIfacePort())
+                    any = true;
+            }
             else if constexpr (HasVisitExprs<T, HierarchicalVisitor>) {
                 expr.visitExprs(*this);
             }
@@ -1379,7 +1384,8 @@ static const SyntaxNode* findOverrideNodeSource(const HierarchyOverrideNode& nod
 }
 
 Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
-                                            const ExpressionSyntax& syntax, bool isInterfacePort) {
+                                            const ExpressionSyntax& syntax, bool isInterfacePort,
+                                            bool isArrayQuery) {
     // Unwrap the expression; parentheses are superfluous.
     const ExpressionSyntax* expr = &syntax;
     while (expr->kind == SyntaxKind::ParenthesizedExpression)
@@ -1514,7 +1520,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         iface = &symbol->as<InstanceSymbol>().body;
     }
 
-    if (!isInterfacePort) {
+    if (!isInterfacePort && !isArrayQuery) {
         if (iface->hierarchyOverrideNode &&
             !comp.hasFlag(CompilationFlags::AllowVirtualIfaceWithOverride)) {
             auto& diag = context.addDiag(diag::VirtualIfaceDefparam, sourceRange);
