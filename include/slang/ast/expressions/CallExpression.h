@@ -176,6 +176,10 @@ private:
     static bool checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
                               SourceRange range);
 
+    bool isMemoizableCall(const EvalContext& context, const SubroutineSymbol& symbol) const;
+    ConstantValue evalCall(EvalContext& context, const SubroutineSymbol& symbol,
+                           std::span<const ConstantValue> args) const;
+
     const Expression* thisClass_;
     std::span<const Expression*> arguments_;
     LookupLocation lookupLocation;

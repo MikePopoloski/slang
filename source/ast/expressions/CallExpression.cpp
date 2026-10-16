@@ -694,6 +694,78 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
         args.emplace_back(std::move(v));
     }
 
+    // A top-level call (e.g. from a parameter initializer) of a function that is
+    // repeatedly called with the same arguments -- typically once per instance of
+    // the same module -- is evaluated only once; see isMemoizableCall.
+    if (isMemoizableCall(context, symbol)) {
+        auto& comp = context.getCompilation();
+        const uint8_t evalFlags = (context.flags & ~EvalFlags::CacheResults).bits();
+        const uint64_t astFlags = context.astCtx.flags.bits();
+        size_t argsHash = size_t(&symbol);
+        hash_combine(argsHash, evalFlags, astFlags);
+        for (auto& arg : args)
+            hash_combine(argsHash, arg.hash());
+
+        ConstantValue memoResult;
+        uint32_t memoSteps = 0;
+        if (comp.findConstCallResult(symbol, evalFlags, astFlags, args, argsHash, memoResult,
+                                     memoSteps)) {
+            // Replaying the step count keeps the step limit exact. If the call
+            // would hit the limit, evaluate it for real so that it fails the same way.
+            if (uint64_t(context.getSteps()) + memoSteps < comp.getOptions().maxConstexprSteps) {
+                context.addSteps(memoSteps);
+                return memoResult;
+            }
+            return evalCall(context, symbol, args);
+        }
+
+        const uint32_t stepsBefore = context.getSteps();
+        const uint32_t diagsBefore = context.getDiagCount();
+        context.takeCallSiteDependence();
+
+        ConstantValue result = evalCall(context, symbol, args);
+
+        // Only remember calls that are expensive enough to be worth it and whose
+        // evaluation is fully determined by the subroutine and argument values:
+        // no diagnostics (those must be issued at every call site) and no
+        // dependence on the call site's lookup location.
+        static constexpr uint32_t MinMemoSteps = 64;
+        const uint32_t steps = context.getSteps() - stepsBefore;
+        if (result && steps >= MinMemoSteps && context.getDiagCount() == diagsBefore &&
+            !context.takeCallSiteDependence()) {
+            comp.addConstCallResult(symbol, evalFlags, astFlags, args, argsHash, result, steps);
+        }
+        return result;
+    }
+
+    return evalCall(context, symbol, args);
+}
+
+bool CallExpression::isMemoizableCall(const EvalContext& context,
+                                      const SubroutineSymbol& symbol) const {
+    // Only calls made outside of any function body, with no evaluation state
+    // that the callee could observe.
+    if (context.inFunction() || context.getQueueTarget() || context.hasLValues())
+        return false;
+
+    // Class methods can read static class properties; tasks and subroutines with
+    // output arguments have effects beyond their return value.
+    if (symbol.subroutineKind != SubroutineKind::Function || symbol.thisVar ||
+        symbol.hasOutputArgs() ||
+        symbol.getParentScope()->asSymbol().kind == SymbolKind::ClassType) {
+        return false;
+    }
+
+    // A parameter referenced by the function must be declared before its call
+    // site (see NamedValueExpression::checkConstant). That holds at every call
+    // site for package parameters, unless the call is made from within a package;
+    // any other parameter reference marks the evaluation as call site dependent.
+    auto scope = lookupLocation.getScope();
+    return scope && scope->asSymbol().kind != SymbolKind::Package;
+}
+
+ConstantValue CallExpression::evalCall(EvalContext& context, const SubroutineSymbol& symbol,
+                                       std::span<const ConstantValue> args) const {
     // Push a new stack frame, push argument values as locals.
     if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
         return nullptr;
