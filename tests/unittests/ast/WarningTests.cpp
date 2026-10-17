@@ -1044,3 +1044,24 @@ source:24:18: warning: implicit conversion truncates from 5 to 4 bits [-Wwidth-t
                ~ ^~~~~~~~~
 )");
 }
+
+TEST_CASE("Conditional with non-constant matches is not constant folded") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+  int x = 5;
+  logic z1, z2, z3, z4;
+  assign z1 = x matches 5 ? 0 : 2;
+  initial z2 = x matches 5 ? 0 : 2;
+  assign z3 = x matches .* ? 0 : 2;
+  assign z4 = x matches 5 &&& x == 5 ? 0 : 2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::WidthTruncate);
+}
