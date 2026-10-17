@@ -3,6 +3,7 @@
 
 #include "Test.h"
 #include <fmt/format.h>
+#include <limits>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -1990,4 +1991,161 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Memoized constant function calls across instances") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    localparam int Scale = 3;
+    function automatic int sum(int n);
+        int s = 0;
+        for (int i = 0; i < n; i++) s += i * Scale;
+        return s;
+    endfunction
+    function automatic real inv(real x);
+        return 1.0 / x;
+    endfunction
+endpackage
+
+module leaf #(parameter int N = 1, parameter real X = 1.0);
+    localparam int S = p::sum(N);
+    localparam int T = p::sum(N) + p::sum(N);
+    localparam real I = p::inv(X);
+endmodule
+
+module top;
+    leaf #(.N(100), .X(0.0)) a();
+    leaf #(.N(100), .X(-0.0)) b();
+    leaf #(.N(200)) c();
+    for (genvar g = 0; g < 4; g++) begin : gen
+        leaf #(.N(100)) d();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto param = [&](std::string_view path) -> const ConstantValue& {
+        return compilation.getRoot().lookupName(path)->as<ParameterSymbol>().getValue();
+    };
+    CHECK(param("top.a.S").integer() == 14850);
+    CHECK(param("top.b.S").integer() == 14850);
+    CHECK(param("top.c.S").integer() == 59700);
+    CHECK(param("top.gen[3].d.S").integer() == 14850);
+    CHECK(param("top.a.T").integer() == 29700);
+    CHECK(param("top.c.T").integer() == 119400);
+
+    // +0.0 and -0.0 compare equal but are different arguments.
+    CHECK(double(param("top.a.I").real()) == std::numeric_limits<double>::infinity());
+    CHECK(double(param("top.b.I").real()) == -std::numeric_limits<double>::infinity());
+}
+
+TEST_CASE("Memoized constant function calls keep the step limit") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    function automatic int spin(int n);
+        int s = 0;
+        for (int i = 0; i < n; i++) s++;
+        return s;
+    endfunction
+endpackage
+
+module leaf;
+    localparam int A = p::spin(2000);
+    localparam int B = p::spin(2000) + p::spin(2000) + p::spin(2000) + p::spin(2000) +
+                       p::spin(2000);
+endmodule
+
+module top;
+    leaf l1();
+    leaf l2();
+endmodule
+)");
+
+    CompilationOptions co;
+    co.maxConstexprSteps = 8192;
+
+    Bag options;
+    options.set(co);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    // One call fits in the step budget, five in one expression don't, whether
+    // or not the calls after the first one are served from the memo.
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalExceededMaxSteps);
+
+    auto& l2a = compilation.getRoot().lookupName("top.l2.A")->as<ParameterSymbol>();
+    CHECK(l2a.getValue().integer() == 2000);
+}
+
+TEST_CASE("Memoized constant function calls keep call site diagnostics") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int A = f(10);
+    localparam int B = 5;
+    localparam int C = f(10);
+
+    function automatic int f(int n);
+        int s = 0;
+        for (int i = 0; i < n * 10; i++) s += B;
+        return s;
+    endfunction
+endmodule
+
+module top;
+    m m1();
+    m m2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // C's call is fine and A's call isn't, whichever is evaluated first.
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalIdUsedInCEBeforeDecl);
+
+    auto& c = compilation.getRoot().lookupName("top.m2.C")->as<ParameterSymbol>();
+    CHECK(c.getValue().integer() == 500);
+}
+
+TEST_CASE("Memoized constant function calls with aggregate arguments") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    function automatic int weigh(int a[3], string s, int q[$], int m[string], shortreal r);
+        int w = 0;
+        for (int i = 0; i < 40; i++) w += a[i % 3] + s.len() + q.size() + m.num() + int'(r);
+        return w;
+    endfunction
+endpackage
+
+module leaf #(parameter int K = 0);
+    localparam int A[3] = '{K, 2, 3};
+    localparam int Q[$] = '{1, 2};
+    localparam int M[string] = '{"a": 1, "b": K};
+    localparam int W = p::weigh(A, "xy", Q, M, 1.5);
+endmodule
+
+module top;
+    leaf #(1) l1a();
+    leaf #(1) l1b();
+    leaf #(2) l2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto w = [&](std::string_view path) {
+        return compilation.getRoot().lookupName(path)->as<ParameterSymbol>().getValue().integer();
+    };
+    CHECK(w("top.l1a.W") == w("top.l1b.W"));
+    CHECK(w("top.l1a.W") != w("top.l2.W"));
 }
