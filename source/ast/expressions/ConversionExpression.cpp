@@ -548,10 +548,14 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
     if (to.isFloating()) {
         auto result = to.getBitWidth() == 32 ? value.convertToShortReal() : value.convertToReal();
         if (checkImplicit && value.isInteger()) {
-            const bool differs = result.isReal()
-                                     ? (int64_t)result.real() != value.integer().as<int64_t>()
-                                     : (int32_t)result.shortReal() != value.integer().as<int32_t>();
-            if (differs)
+            // Convert back to the original integer type and see if we get the same value.
+            auto& oldInt = value.integer();
+            auto newInt = result.isReal()
+                              ? SVInt::fromDouble(oldInt.getBitWidth(), result.real(),
+                                                  oldInt.isSigned(), /* round */ false)
+                              : SVInt::fromFloat(oldInt.getBitWidth(), result.shortReal(),
+                                                 oldInt.isSigned(), /* round */ false);
+            if (!exactlyEqual(oldInt, newInt))
                 addDiag(diag::ConstantConversion) << from << to << value << result;
         }
         return result;

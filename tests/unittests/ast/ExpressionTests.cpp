@@ -4758,3 +4758,26 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Integer to real constant conversion warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam real a = 64'h8000_0000_0000_0000;
+    localparam shortreal b = 32'h8000_0000;
+    localparam shortreal c = 64'd1099511627776;
+    localparam real d = 128'd1 << 100;
+    localparam real e = -64'sd9223372036854775807;
+    localparam real f = 64'hFFFF_FFFF_FFFF_FFFF;
+    localparam shortreal g = 16777217;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ConstantConversion);
+    CHECK(diags[1].code == diag::ConstantConversion);
+    CHECK(diags[2].code == diag::ConstantConversion);
+}

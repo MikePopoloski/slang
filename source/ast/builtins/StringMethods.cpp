@@ -75,9 +75,9 @@ public:
         const std::string& str = strCv.str();
         int32_t index = indexCv.integer().as<int32_t>().value();
         if (index < 0 || size_t(index) >= str.length())
-            return SVInt(8, 0, false);
+            return SVInt(8, 0, true);
 
-        return SVInt(8, uint64_t(str[size_t(index)]), false);
+        return SVInt(8, uint8_t(str[size_t(index)]), true);
     }
 };
 
