@@ -2421,6 +2421,21 @@ module m;
 endmodule
 ```
 
+-Wnonstandard-instance-array-query
+The LRM only defines array query functions (`$size`, `$left`, `$dimensions`, etc) for
+data types and data objects, and an array of instances (modules, interfaces, primitives,
+etc) is neither. Some tools accept it anyway, using the declared dimensions of the
+instance array, so the error can be downgraded for compatibility.
+```
+module leaf;
+endmodule
+
+module m;
+    leaf l[4]();
+    localparam int n = $size(l);
+endmodule
+```
+
 -Wisunbounded-param-arg
 The SystemVerilog LRM 1800-2023 requires that the argument to the $isunbounded system
 function be a parameter name. This seems needlessly restrictive and conflicts with the

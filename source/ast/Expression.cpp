@@ -116,6 +116,11 @@ struct Expression::HierarchicalVisitor {
                 if (!expr.template as<HierarchicalValueExpression>().ref.isViaIfacePort())
                     any = true;
             }
+            else if (expr.kind == ExpressionKind::ArbitrarySymbol) {
+                auto& ref = expr.template as<ArbitrarySymbolExpression>().hierRef;
+                if (ref.target && !ref.isViaIfacePort())
+                    any = true;
+            }
             else if constexpr (HasVisitExprs<T, HierarchicalVisitor>) {
                 expr.visitExprs(*this);
             }

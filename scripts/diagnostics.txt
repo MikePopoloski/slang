@@ -1084,6 +1084,7 @@ warning finish-num BadFinishNum "finish argument must have value of 0, 1, or 2"
 warning missing-format MissingFormatSpecifier "missing format specifier"
 warning format-multibit-strength FormatMultibitStrength "formatting strength values for multi-bit nets is non-standard"
 warning nonstandard-sys-func NonstandardSysFunc "system function '{}' is non-standard"
+warning nonstandard-instance-array-query NonstandardInstanceArrayQuery "use of '{}' on an array of instances is non-standard"
 warning isunbounded-param-arg IsUnboundedParamArg "argument to $isunbounded must be the name of a parameter"
 warning dynamic-cast-const DynamicCastConst "$cast from {} to {} will always {}"
 warning bits-of-integer-constant BitsOfIntegerConstant "$bits of expression with type {} always returns '{}'; did you mean to use the constant value directly, or use $clog2?"
@@ -1326,7 +1327,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   cannot-index-scalar string-in-constraint virtual-arg-name-mismatch undefined-param-override
                   redefinition redefinition-different-type command-line tautological-self-compare
                   tautological-range-compare tautological-bitwise-compare tautological-overlap-compare
-                  tautological-negation-compare }
+                  tautological-negation-compare nonstandard-instance-array-query }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
@@ -1382,12 +1383,12 @@ compat Default error = { duplicate-definition bad-procedural-force unknown-sys-n
                          format-too-many-args clockvar-target-assign cross-ident-in-binsof
                          ref-arg-in-fork-join cannot-index-scalar string-in-constraint
                          virtual-arg-name-mismatch undefined-param-override redefinition
-                         redefinition-different-type }
+                         redefinition-different-type nonstandard-instance-array-query }
 
 compat Vcs error = { duplicate-definition bad-procedural-force unknown-sys-name nonstandard-hierarchical-cross
                      nonstandard-string-concat nonstandard-inside mixed-var-assigns multiple-cont-assigns
                      multiple-always-assigns misplaced-trailing-separator initializer-required
-                     string-int-concat }
+                     string-int-concat nonstandard-instance-array-query }
 
 compat Vcs ignored = { explicit-static implicit-conv finish-num nonstandard-sys-func nonstandard-foreach
                        foreach-call-expr nonstandard-dist nested-comment }

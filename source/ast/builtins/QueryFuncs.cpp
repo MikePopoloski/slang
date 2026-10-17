@@ -157,6 +157,21 @@ public:
     }
 };
 
+// As an extension, array query functions can be applied to arrays of instances
+// (and interface port arrays). These are bound with an unpacked array type that
+// has the same dimensions as the instance array.
+static const Expression& bindArrayQueryArg(std::string_view name, const ASTContext& context,
+                                           const ExpressionSyntax& syntax) {
+    auto& expr = Expression::bind(syntax, context,
+                                  ASTFlags::AllowDataType | ASTFlags::AllowInstanceArray);
+    if (expr.kind == ExpressionKind::ArbitrarySymbol && !expr.bad()) {
+        auto& sym = *expr.as<ArbitrarySymbolExpression>().symbol;
+        if (sym.kind == SymbolKind::InstanceArray || sym.kind == SymbolKind::InterfacePort)
+            context.addDiag(diag::NonstandardInstanceArrayQuery, expr.sourceRange) << name;
+    }
+    return expr;
+}
+
 class ArrayQueryFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
@@ -166,7 +181,7 @@ public:
     const Expression& bindArgument(size_t index, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
         if (index == 0)
-            return Expression::bind(syntax, unevaluatedContext(context), ASTFlags::AllowDataType);
+            return bindArrayQueryArg(name, unevaluatedContext(context), syntax);
         else
             return Expression::bind(syntax, context);
     }
@@ -498,7 +513,7 @@ public:
 
     const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
-        return Expression::bind(syntax, unevaluatedContext(context), ASTFlags::AllowDataType);
+        return bindArrayQueryArg(name, unevaluatedContext(context), syntax);
     }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
