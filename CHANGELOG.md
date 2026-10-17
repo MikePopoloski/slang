@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Compatibility
+* Array query functions (`$size`, `$left`, `$dimensions`, etc) are now allowed on arrays of instances (e.g. interface arrays). The LRM does not define these for instance arrays so this is an error by default, but it can be downgraded via [-Wnonstandard-instance-array-query](https://sv-lang.com/warning-ref.html#nonstandard-instance-array-query) (thanks to @likeamahoney)
+* Untyped parameters assigned an unbased unsized literal (like `'1`) are now one bit wide, to match the LRM
 
 ### Notable Breaking Changes
 
@@ -26,6 +28,41 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed ICE during constant evaluation of `repeat` loop with `real` count (thanks to @sifferman)
 * Fixed replication operator to allow a literal zero count when the operand is a string literal, resulting in the empty string (thanks to @hankhsu1996)
 * Fixed bit-selects and part-selects of signed packed arrays declared via a typedef incorrectly producing a signed result
+* Fixed constant evaluation of slice stores that run past the end of an array or queue writing one element past the end
+* Fixed constant conversion of integral values with X/Z bits to strings incorrectly removing bytes that have known 1 bits
+* Fixed `$sformatf` to accept unpacked arrays of `byte` for `%s` arguments and for the format string
+* Fixed `$sformatf` results incorrectly containing null characters (e.g. from `%c` of 0)
+* Fixed the string `atoi` family of methods to require the scan to start with a digit before accepting underscores
+* Fixed the string `atoreal` method to only accept a valid real constant, rather than everything `strtod` accepts
+* Fixed the string `realtoa` method to produce the shortest representation that reads back as the same value
+* Fixed a case where references through an interface port were considered hierarchical references, preventing them from being used in `$bits`, `type()`, and net alias expressions (thanks to @hankhsu1996)
+* Fixed instance caching incorrectly sharing bodies for instances that call subroutines or instantiate sequences / properties via upward name lookup (thanks to @hankhsu1996)
+* Fixed crashes on struct and union members that declare an inline enum type (thanks to @hankhsu1996)
+* Fixed instance caching incorrectly sharing a body between instances given `0.0` and `-0.0` as parameter values (thanks to @hankhsu1996)
+* Fixed instance caching incorrectly sharing a body between instances whose implicitly typed parameters are given the same integer at different widths or signedness (thanks to @hankhsu1996)
+* Fixed generic class specializations incorrectly being merged when their value parameters compare equal but are not identical (thanks to @hankhsu1996)
+* Fixed a race condition when computing line offsets for a file from multiple threads (thanks to @hankhsu1996)
+* Fixed sizing of the operand of a cast to an enum type; it now takes the enum's width as its context (thanks to @hankhsu1996)
+* Fixed constant evaluation of a conditional operator with an unknown condition to return the operand value when both operands are equal (thanks to @hankhsu1996)
+* Fixed struct member default values not being checked to be constant expressions (thanks to @hankhsu1996)
+* Fixed struct member default values not being used in the struct's default value (thanks to @hankhsu1996)
+* Fixed incorrect sign extension of division and remainder results on some constant integers wider than 64 bits
+* Fixed equality comparison of single-word integers with mixed signedness incorrectly sign extending, which also caused missed sign conversion warnings
+* Fixed slices of signed integers incorrectly producing a signed result
+* Fixed division and remainder of the most negative value of wide signed integers
+* Fixed multiplication of very large integers where one operand is less than half the size of the other
+* Fixed incorrect rounding when converting some wide integers to floating point
+* Fixed decimal literals that overflow a multi-word integer not being correctly truncated
+* Fixed several cases where an inline enum declaration would attach its values to the wrong scope (e.g. in ANSI port lists, class extends clauses, generate conditions, and randsequence productions)
+* Fixed handling of `defparam`s inside of instance arrays
+* Fixed `checker` declarations being ignored when calculating file dependencies for `--depfile-trim` and library file loading (thanks to @Timmmm)
+* Fixed spurious errors on integral uses of replications in uninstantiated module bodies (thanks to @vbtcl)
+* Fixed `$rtoi` on negative values
+* Fixed the sign of the result of the string `getc` method
+* Fixed incorrect precision loss warnings when converting integers wider than 64 bits to `real`
+* Fixed invalid constant folding of a conditional expression with a non-constant `matches` clause
+* Diagnostics that are errors by default and downgraded with `-Wno-error=` are now correctly turned off by `-Wnone`, while enabling them by name or group keeps them as errors (thanks to @hankhsu1996)
+* Fixed a crash in `SyntaxTree.fromText` when the text is a lone member keyword like `default` (thanks to @eanorige)
 
 ### Tools & Bindings
 #### pyslang
