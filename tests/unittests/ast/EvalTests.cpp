@@ -1717,6 +1717,8 @@ TEST_CASE("Eval string methods") {
     CHECK(session.eval("asdf.getc(3)").integer() == '1');
     CHECK(session.eval("asdf.getc(4)").integer() == 0);
     CHECK(session.eval("asdf.getc(0)").integer() == 'B');
+    session.eval("string hi = \"\\xff\";");
+    CHECK(session.eval("int'(hi.getc(0))").integer() == -1);
 
     CHECK(session.eval("asdf.compare(\"BaG2\")").integer() == -1);
     CHECK(session.eval("asdf.compare(\"BaG0\")").integer() == 1);
@@ -1841,6 +1843,10 @@ TEST_CASE("Real conversion functions") {
 
     CHECK(session.eval("$rtoi(123.678)").integer() == 123);
     CHECK(session.eval("$rtoi(50000000000.0)").integer() == -1539607552);
+    CHECK(session.eval("$rtoi(-3.7)").integer() == -3);
+    CHECK(session.eval("$rtoi(-0.5)").integer() == 0);
+    CHECK(session.eval("$rtoi(0.5)").integer() == 0);
+    CHECK(session.eval("$rtoi(-50000000000.0)").integer() == 1539607552);
 
     CHECK(session.eval("$itor(123)").real() == 123.0);
     CHECK(session.eval("$itor('x)").real() == 0.0);

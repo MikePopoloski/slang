@@ -61,7 +61,7 @@ public:
         if (!val)
             return nullptr;
 
-        return SVInt(32, (uint64_t)val.real(), true);
+        return SVInt::fromDouble(32, val.real(), true, /* round */ false);
     }
 };
 
