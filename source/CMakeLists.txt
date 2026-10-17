@@ -1,5 +1,6 @@
 # ~~~
-# SPDX-FileCopyrightText: Michael Popoloski SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
 # ~~~
 
 # -------- Generate code
