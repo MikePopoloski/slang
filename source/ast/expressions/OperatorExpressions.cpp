@@ -1629,11 +1629,14 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
     ConstantValue cp;
     for (auto& cond : conditions) {
         cp = cond.expr->eval(context);
-        if (cond.pattern)
-            cp = cond.pattern->eval(context, cp, CaseStatementCondition::Normal);
-
         if (cp.bad())
             return nullptr;
+
+        if (cond.pattern) {
+            cp = cond.pattern->eval(context, cp, CaseStatementCondition::Normal);
+            if (cp.bad())
+                return nullptr;
+        }
 
         if (!cp.isTrue())
             break;

@@ -3136,3 +3136,18 @@ TEST_CASE("Eval scalar bit select") {
     CHECK(diags[1].code == diag::CannotIndexScalar);
     CHECK(diags[2].code == diag::CannotIndexScalar);
 }
+
+TEST_CASE("Eval conditional with matches") {
+    ScriptSession session;
+    CHECK(session.eval("5 matches 5 ? 7 : 9").integer() == 7);
+    CHECK(session.eval("4 matches 5 ? 7 : 9").integer() == 9);
+    CHECK(session.eval("4 matches .* ? 7 : 9").integer() == 7);
+
+    // Non-constant matched expression must not fold.
+    session.eval("int x = 5;");
+    session.eval("localparam int P = x matches 5 ? 7 : 9;");
+
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
+}
