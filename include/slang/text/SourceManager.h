@@ -169,6 +169,10 @@ public:
     /// file expansion location. Otherwise just returns the location itself.
     SourceLocation getFullyExpandedLoc(SourceLocation location) const;
 
+    /// Build the fully expanded location range, from the start of the outermost
+    /// expansion containing the start of @a range to the end of the one containing its end.
+    SourceRange getFullyExpandedRange(SourceRange range) const;
+
     /// Gets the actual source text for a given file buffer.
     std::string_view getSourceText(BufferID buffer) const;
 
