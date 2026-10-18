@@ -1749,13 +1749,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::VacuousCover);
     CHECK(diags[1].code == diag::VacuousCover);
-    CHECK(diags[2].code == diag::VacuousCover);
+    CHECK(diags[2].code == diag::CaseDefault);
     CHECK(diags[3].code == diag::VacuousCover);
     CHECK(diags[4].code == diag::VacuousCover);
     CHECK(diags[5].code == diag::VacuousCover);
+    CHECK(diags[6].code == diag::VacuousCover);
 }
 
 TEST_CASE("Assertion instances in uninstantiated contexts -- GH #1512") {
@@ -1855,10 +1856,10 @@ module m(input clk, input logic [3:0] a, input real r, input string s);
     assert property (@(posedge clk) case (a) ev: 1; endcase);
     assert property (@(posedge clk) case (a) arr: 1; endcase);
     assert property (@(posedge clk) case (c) null: 1; endcase);
-    assert property (@(posedge clk) case (r) 1.5, 2: 1; endcase);
-    assert property (@(posedge clk) case (s) "hi": 1; endcase);
-    assume property (@(posedge clk) case (a dist {0:=1, 1:=2}) 1: 1; endcase);
-    assume property (@(posedge clk) case (clk) a dist {0:=1}, 1'b1: 1; endcase);
+    assert property (@(posedge clk) case (r) 1.5, 2: 1; default: clk; endcase);
+    assert property (@(posedge clk) case (s) "hi": 1; default: clk; endcase);
+    assume property (@(posedge clk) case (a dist {0:=1, 1:=2}) 1: 1; default: clk; endcase);
+    assume property (@(posedge clk) case (clk) a dist {0:=1}, 1'b1: 1; default: clk; endcase);
 endmodule
 )");
 
@@ -1873,4 +1874,20 @@ endmodule
     CHECK(diags[3].code == diag::BadSetMembershipType);
     CHECK(diags[4].code == diag::AssertionExprType);
     CHECK(diags[5].code == diag::AssertionExprType);
+}
+
+TEST_CASE("Property case missing default") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk, input logic [3:0] a);
+    assert property (@(posedge clk) case (a) 1: 1; endcase);
+    assert property (@(posedge clk) case (a) 1: 1; default: clk; endcase);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CaseDefault);
 }

@@ -1683,6 +1683,9 @@ AssertionExpr& CaseAssertionExpr::fromSyntax(const CasePropertyExprSyntax& synta
     if (bad)
         return badExpr(comp, nullptr);
 
+    if (!defCase)
+        context.addDiag(diag::CaseDefault, syntax.caseKeyword.range()) << "case"sv;
+
     return *comp.emplace<CaseAssertionExpr>(*expr, items.copy(comp), defCase);
 }
 

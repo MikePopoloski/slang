@@ -13,6 +13,7 @@
 #include "slang/ast/Expression.h"
 #include "slang/ast/Symbol.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/statements/ConditionalStatements.h"
 #include "slang/ast/statements/LoopStatements.h"
 #include "slang/ast/statements/MiscStatements.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -581,7 +582,16 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
             return;
     }
 
+    // Adds the condition value (or type, for type references) to a diagnostic.
+    auto addCondArgs = [&](Diagnostic& diag) {
+        if (condType)
+            diag << "type"sv << *condType;
+        else
+            diag << "value"sv << condVal;
+    };
+
     SourceRange matchRange;
+    const Expression* dupWarnedExpr = nullptr;
     bool found = false;
     bool warned = false;
 
@@ -593,6 +603,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
         // and collect the bound item expressions so they can be preserved on
         // the resulting block.
         bool currentFound = false;
+        const Expression* currentMatchExpr = nullptr;
         SourceRange currentMatchRange;
         auto& sci = item->as<StandardCaseItemSyntax>();
 
@@ -610,6 +621,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
 
             if (!currentFound && match) {
                 currentFound = true;
+                currentMatchExpr = expr;
                 currentMatchRange = expr->sourceRange;
             }
         }
@@ -628,8 +640,9 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
             // If we previously found a block, this block also matched, which we should warn about.
             if (currentFound && !warned) {
                 auto& diag = context.addDiag(diag::CaseGenerateDup, currentMatchRange);
-                diag << condVal;
+                addCondArgs(diag);
                 diag.addNote(diag::NotePreviousMatch, matchRange);
+                dupWarnedExpr = currentMatchExpr;
                 warned = true;
             }
 
@@ -640,6 +653,24 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
         }
     }
 
+    // Check the items for general lint issues. We skip reporting a duplicate
+    // for an item that we already warned about above as matching more than once.
+    if (condVal) {
+        auto addDiag = [&](DiagCode code, SourceRange range) -> Diagnostic& {
+            return context.addDiag(code, range);
+        };
+
+        auto dupFilter = [&](const Expression& expr, const ConstantValue&) {
+            return &expr != dupWarnedExpr;
+        };
+
+        EvalContext evalCtx(context);
+        CaseStatement::ItemAnalysis itemAnalysis;
+        CaseStatement::analyzeItems(evalCtx, CaseStatementCondition::Normal, *condExpr,
+                                    std::span(bound).subspan(1), defBlock != nullptr,
+                                    /* isStatement */ false, itemAnalysis, addDiag, dupFilter);
+    }
+
     if (defBlock) {
         // Only instantiated if no other blocks were instantiated.
         createCondGenBlock(compilation, *defBlock, context, constructIndex,
@@ -648,7 +679,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
     }
     else if (!found) {
         auto& diag = context.addDiag(diag::CaseGenerateNoBlock, condExpr->sourceRange);
-        diag << condVal;
+        addCondArgs(diag);
     }
 }
 

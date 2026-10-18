@@ -711,3 +711,61 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CaseEnumExplicit);
 }
+
+TEST_CASE("Property case item lint warnings") {
+    auto& code = R"(
+typedef enum logic [1:0] {A, B, C} e_t;
+module m(input clk, input e_t e, input logic [3:0] a);
+    assert property (@(posedge clk)
+        case (a) 4'd1, 4'd2: 1; 4'd1: 1; 4'b1x00: 1; default: clk; endcase);
+    assert property (@(posedge clk) case (e) A: 1; default: clk; endcase);
+    assert property (@(posedge clk) case (e) A, B: 1; C: clk; default: clk; endcase);
+
+    property p(x);
+        case (x) A, B: 1; default: clk; endcase
+    endproperty
+    assert property (@(posedge clk) p(e));
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::CaseDup);
+    CHECK(diags[1].code == diag::CaseItemUnknown);
+    CHECK(diags[2].code == diag::CaseEnumExplicit);
+    CHECK(diags[3].code == diag::CaseEnumExplicit);
+}
+
+TEST_CASE("Randsequence case item lint warnings") {
+    auto& code = R"(
+typedef enum logic [1:0] {A, B, C} e_t;
+module m(input e_t e, input logic [3:0] a);
+    initial begin
+        randsequence(main)
+            main: case (a) 4'b1x00: x; 4'd1: x; 4'd1: y; default: x; endcase;
+            x: {};
+            y: {};
+        endsequence
+        randsequence(main)
+            main: case (e) A: x; endcase
+                | case (e) A: x; default: x; endcase
+                | case (e) A, B, C: x; endcase;
+            x: {};
+        endsequence
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::CaseItemUnknown);
+    CHECK(diags[1].code == diag::CaseDup);
+    CHECK(diags[2].code == diag::CaseEnum);
+    CHECK(diags[3].code == diag::CaseEnumExplicit);
+}

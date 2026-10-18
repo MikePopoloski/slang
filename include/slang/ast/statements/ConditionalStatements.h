@@ -9,6 +9,11 @@
 
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/Statement.h"
+#include "slang/diagnostics/Diagnostics.h"
+#include "slang/numeric/ConstantValue.h"
+#include "slang/util/Function.h"
+#include "slang/util/SmallMap.h"
+#include "slang/util/SmallVector.h"
 
 namespace slang::ast {
 
@@ -122,6 +127,45 @@ public:
     static Statement& fromSyntax(Compilation& compilation,
                                  const syntax::CaseStatementSyntax& syntax,
                                  const ASTContext& context, StatementContext& stmtCtx);
+
+    /// The results of analyzing the item expressions of a case statement
+    /// or other case-like construct.
+    struct ItemAnalysis {
+        /// All constant item values, mapped to the first expression that has that value.
+        SmallMap<ConstantValue, const Expression*, 4> values;
+
+        /// The unique constant integer item values, in declaration order.
+        SmallVector<std::pair<SVInt, const Expression*>> integerItems;
+
+        /// Set to true if any of the items are not constant.
+        bool hasNonConstItems = false;
+    };
+
+    /// A callback used to issue diagnostics found while analyzing case items.
+    using ItemDiagFunc = function_ref<Diagnostic&(DiagCode, SourceRange)>;
+
+    /// A callback used to filter whether a duplicate item should be diagnosed.
+    using ItemDupFilter = function_ref<bool(const Expression&, const ConstantValue&)>;
+
+    /// Analyzes the item expressions of a case statement or other case-like construct
+    /// (case generate, property case, randsequence case), collecting their constant
+    /// values and optionally issuing lint diagnostics for duplicate items, missing
+    /// enum values, and literals with unknown bits that don't act as wildcards.
+    ///
+    /// @param evalContext The context to use for evaluating item expressions
+    /// @param condition The kind of case comparison performed
+    /// @param caseExpr The controlling case expression
+    /// @param items All of the item expressions, in declaration order
+    /// @param hasDefault True if the construct has a default item
+    /// @param isStatement True if this is an actual case statement, which means
+    ///                    it could be turned into a wildcard case if desired
+    /// @param result The results of the analysis
+    /// @param addDiag If provided, used to issue lint diagnostics
+    /// @param dupFilter If provided, used to decide whether to diagnose a given duplicate
+    static void analyzeItems(EvalContext& evalContext, CaseStatementCondition condition,
+                             const Expression& caseExpr, std::span<const Expression* const> items,
+                             bool hasDefault, bool isStatement, ItemAnalysis& result,
+                             ItemDiagFunc addDiag = {}, ItemDupFilter dupFilter = {});
 
     void serializeTo(ASTSerializer& serializer) const;
 

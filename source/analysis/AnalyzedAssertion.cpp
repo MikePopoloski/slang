@@ -10,6 +10,7 @@
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/ClockInference.h"
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/Enum.h"
@@ -704,6 +705,21 @@ struct AssertionVisitor {
     }
 
     VisitResult visit(const CaseAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
+        // Check the case items for lint issues.
+        SmallVector<const Expression*> allItems;
+        for (auto& item : expr.items)
+            allItems.append_range(item.expressions);
+
+        auto diagFunc = [&](DiagCode code, SourceRange range) -> Diagnostic& {
+            return addDiag(code, range);
+        };
+
+        EvalContext evalCtx(*parent.containingSymbol);
+        CaseStatement::ItemAnalysis itemAnalysis;
+        CaseStatement::analyzeItems(evalCtx, CaseStatementCondition::Normal, expr.expr, allItems,
+                                    expr.defaultCase != nullptr, /* isStatement */ false,
+                                    itemAnalysis, diagFunc);
+
         for (auto& item : expr.items)
             visitProperty(*item.body, outerClock, flags);
 

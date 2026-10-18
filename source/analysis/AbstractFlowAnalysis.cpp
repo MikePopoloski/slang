@@ -189,63 +189,43 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt, const Statement
     const bool wildcard = cond == CaseStatementCondition::WildcardXOrZ ||
                           cond == CaseStatementCondition::WildcardJustZ;
 
-    // Collect all constant case values, checking for duplicates and overlaps
-    // if we are looking for diagnostics.
-    bool hasNonConstItems = false;
-    SmallMap<ConstantValue, const Expression*, 4> elems;
+    // Collect all constant case values, issuing lint diagnostics for
+    // the items if we are looking for diagnostics.
+    SmallVector<const Expression*> allItems;
+    for (auto& g : stmt.items)
+        allItems.append_range(g.expressions);
+
+    auto addDiag = [&](DiagCode code, SourceRange range) -> Diagnostic& {
+        return diagnostics->add(rootSymbol, code, range);
+    };
+
+    // Don't warn about duplicates if there is a statically known branch
+    // and the duplicate does not match the known branch's value.
+    auto dupFilter = [&](const Expression&, const ConstantValue& value) {
+        return !isKnown || value == stmt.expr.eval(evalContext);
+    };
+
+    CaseStatement::ItemDiagFunc diagFunc;
+    if (diagnostics)
+        diagFunc = addDiag;
+
+    CaseStatement::ItemAnalysis itemAnalysis;
+    CaseStatement::analyzeItems(evalContext, cond, stmt.expr, allItems, stmt.defaultCase != nullptr,
+                                /* isStatement */ true, itemAnalysis, diagFunc, dupFilter);
+
+    // Save off the integer values for later use in building the decision
+    // DAG. One weird thing here: if the value has x bits and we're not in a
+    // casex statement we should ignore the item, since we won't check for
+    // coverage of x bits in the decision DAG and these clauses will show up
+    // as unreachable otherwise.
+    auto& elems = itemAnalysis.values;
+    const bool hasNonConstItems = itemAnalysis.hasNonConstItems;
     SmallVector<SVInt> intVals;
     SmallVector<const Expression*> itemExpressions;
-    for (auto& g : stmt.items) {
-        for (auto item : g.expressions) {
-            if (auto cv = item->eval(evalContext)) {
-                auto [it, inserted] = elems.emplace(std::move(cv), item);
-                if (!inserted) {
-                    if (diagnostics) {
-                        // Don't warn if there is a statically known branch and this duplicate
-                        // does not match the known branch's value.
-                        if (!isKnown || it->first == stmt.expr.eval(evalContext)) {
-                            auto& diag = diagnostics->add(rootSymbol, diag::CaseDup,
-                                                          item->sourceRange);
-                            diag << SemanticFacts::getCaseConditionStr(cond) << it->first;
-                            diag.addNote(diag::NotePreviousUsage, it->second->sourceRange);
-                        }
-                    }
-                }
-                else if (it->first.isInteger()) {
-                    // Save off the values for later use in building the decision
-                    // DAG. One weid thing here: if the value has x bits and we're
-                    // not in a casex statement we should ignore the item, since we
-                    // won't check for coverage of x bits in the decision DAG and these
-                    // clauses will show up as unreachable otherwise.
-                    auto& val = it->first.integer();
-                    if (cond != CaseStatementCondition::WildcardJustZ || val.countXs() == 0) {
-                        intVals.push_back(val.trunc(bitWidth));
-                        itemExpressions.push_back(item);
-                    }
-                }
-            }
-            else {
-                hasNonConstItems = true;
-            }
-
-            if (diagnostics && (cond == CaseStatementCondition::Normal ||
-                                cond == CaseStatementCondition::WildcardJustZ)) {
-                // If we're not in a wildcard case we should warn
-                // about integer literal items that have unknown bits.
-                // Similarly, if we're in a wildcard case with just Zs
-                // we should warn if we see Xs.
-                auto& unwrapped = item->unwrapImplicitConversions();
-                if (unwrapped.kind == ExpressionKind::IntegerLiteral) {
-                    auto& lit = unwrapped.as<IntegerLiteral>();
-                    if (cond == CaseStatementCondition::Normal && lit.getValue().hasUnknown()) {
-                        diagnostics->add(rootSymbol, diag::CaseNotWildcard, item->sourceRange);
-                    }
-                    else if (cond == CaseStatementCondition::WildcardJustZ &&
-                             lit.getValue().countXs() > 0) {
-                        diagnostics->add(rootSymbol, diag::CaseZWithX, item->sourceRange);
-                    }
-                }
-            }
+    for (auto& [val, item] : itemAnalysis.integerItems) {
+        if (cond != CaseStatementCondition::WildcardJustZ || val.countXs() == 0) {
+            intVals.push_back(val.trunc(bitWidth));
+            itemExpressions.push_back(item);
         }
     }
 
@@ -263,38 +243,6 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt, const Statement
             auto& diag = diagnostics->add(rootSymbol, diag::CaseNone, stmt.expr.sourceRange);
             diag << stmt.expr.eval(evalContext);
             diag << SemanticFacts::getCaseConditionStr(cond);
-        }
-
-        // Check for missing enum coverage.
-        if (caseType.isEnum()) {
-            SmallVector<std::string_view> missing;
-            for (auto& ev : caseType.getCanonicalType().as<EnumType>().values()) {
-                auto& val = ev.getValue();
-                if (val && !elems.contains(val))
-                    missing.push_back(ev.name);
-            }
-
-            if (!missing.empty()) {
-                std::string msg;
-                if (missing.size() == 1) {
-                    msg = fmt::format("value '{}'", missing[0]);
-                }
-                else if (missing.size() == 2) {
-                    msg = fmt::format("values '{}' and '{}'", missing[0], missing[1]);
-                }
-                else if (missing.size() == 3) {
-                    msg = fmt::format("values '{}', '{}', and '{}'", missing[0], missing[1],
-                                      missing[2]);
-                }
-                else {
-                    const size_t remainder = missing.size() - 3;
-                    msg = fmt::format("values '{}', '{}', '{}' (and {} other{})", missing[0],
-                                      missing[1], missing[2], remainder, remainder == 1 ? "" : "s");
-                }
-
-                auto code = stmt.defaultCase ? diag::CaseEnumExplicit : diag::CaseEnum;
-                diagnostics->add(rootSymbol, code, stmt.expr.sourceRange) << msg;
-            }
         }
 
         // If this is a wildcard case statement check for overlaps.
@@ -374,6 +322,21 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt, const Statement
         makeDecisionDag();
 
     return decisionDag->isExhaustive();
+}
+
+void FlowAnalysisBase::checkCaseItems(const Expression& caseExpr,
+                                      std::span<const Expression* const> items,
+                                      bool hasDefault) const {
+    if (!diagnostics)
+        return;
+
+    auto addDiag = [&](DiagCode code, SourceRange range) -> Diagnostic& {
+        return diagnostics->add(rootSymbol, code, range);
+    };
+
+    CaseStatement::ItemAnalysis itemAnalysis;
+    CaseStatement::analyzeItems(evalContext, CaseStatementCondition::Normal, caseExpr, items,
+                                hasDefault, /* isStatement */ false, itemAnalysis, addDiag);
 }
 
 namespace {

@@ -660,6 +660,80 @@ endmodule
     CHECK(it == diags.end());
 }
 
+TEST_CASE("Case generate item lint warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef enum logic [1:0] {A, B, C} e_t;
+module m #(parameter e_t P = A, parameter logic [3:0] Q = 2, parameter type T = int);
+    case (Q)
+        4'd1, 4'd1: begin : g1 end
+        4'd2: begin : g2 end
+        4'd2: begin : g3 end
+        4'd3, 4'd3: begin : g4 end
+        4'b1x00: begin : g5 end
+        5'd17: begin : g6 end
+        default: begin : g7 end
+    endcase
+
+    case (P)
+        A: begin : h1 end
+    endcase
+
+    case (P)
+        A: begin : i1 end
+        default: begin : i2 end
+    endcase
+
+    case (P)
+        A, B, C: begin : j1 end
+    endcase
+
+    case (type(T))
+        type(int): begin : k1 end
+        type(real): begin : k2 end
+    endcase
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == diag::CaseDup);
+    CHECK((it++)->code == diag::CaseGenerateDup);
+    CHECK((it++)->code == diag::CaseDup);
+    CHECK((it++)->code == diag::CaseItemUnknown);
+    CHECK((it++)->code == diag::CaseOutsideRange);
+    CHECK((it++)->code == diag::CaseEnum);
+    CHECK((it++)->code == diag::CaseEnumExplicit);
+    CHECK(it == diags.end());
+}
+
+TEST_CASE("Case generate type reference diagnostics") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter type T = int);
+    case (type(T)) type(int): begin : a end type(int): begin : b end endcase
+    case (type(T)) type(real): begin : c end endcase
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK("\n" + report(diags) == R"(
+source:3:45: warning: more than one case generate block matches the type 'T' (aka 'int') [-Wcase-gen-dup]
+    case (type(T)) type(int): begin : a end type(int): begin : b end endcase
+                                            ^~~~~~~~~
+source:3:20: note: previous match here
+    case (type(T)) type(int): begin : a end type(int): begin : b end endcase
+                   ^~~~~~~~~
+source:4:11: warning: no case generate expression matches the type 'T' (aka 'int') [-Wcase-gen-none]
+    case (type(T)) type(real): begin : c end endcase
+          ^~~~~~~
+)");
+}
+
 TEST_CASE("Conditional generate same name") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

@@ -51,6 +51,11 @@ protected:
     bool isFullyCovered(const CaseStatement& stmt, const Statement* knownBranch,
                         bool isKnown) const;
 
+    /// Issues lint diagnostics for the items of a case-like construct
+    /// that is not an actual case statement (such as a randsequence case).
+    void checkCaseItems(const Expression& caseExpr, std::span<const Expression* const> items,
+                        bool hasDefault) const;
+
     /// Tracking for how many steps we've taken while analyzing the body of a loop.
     uint32_t forLoopSteps = 0;
 
@@ -712,6 +717,11 @@ protected:
 
                             auto caseInitial = std::move(state);
                             auto caseFinal = (DERIVED).unreachableState();
+
+                            SmallVector<const Expression*> allItems;
+                            for (auto& item : cp.items)
+                                allItems.append_range(item.expressions);
+                            checkCaseItems(*cp.expr, allItems, cp.defaultItem.has_value());
 
                             for (auto& item : cp.items) {
                                 setState((DERIVED).copyState(caseInitial));

@@ -434,7 +434,8 @@ endmodule
 -Wcase-default
 A case statement is missing a 'default' label. This is not necessarily problematic,
 but some coding standards mandate that all case statements include a 'default' so
-this warning can be used to enforce that.
+this warning can be used to enforce that. This also applies to case property
+expressions, which succeed vacuously if no item matches and there is no default.
 ```
 module m;
     enum {A, B} e;
@@ -463,7 +464,8 @@ endmodule
 -Wcase-enum
 A case statement with an enum type condition does not include items
 that cover every enumerand. Note that this warning will not be
-issued if there is a 'default' label.
+issued if there is a 'default' label. This also applies to case generate
+constructs, case property expressions, and randsequence case productions.
 ```
 module m;
     enum {A, B} e;
@@ -478,7 +480,8 @@ endmodule
 -Wcase-enum-explicit
 A case statement with an enum type condition does not include items
 that cover every enumerand, regardless of whether there is a default
-label or not.
+label or not. This also applies to case generate constructs, case property
+expressions, and randsequence case productions.
 ```
 module m;
     enum {A, B} e;
@@ -494,7 +497,8 @@ endmodule
 -Wcase-dup
 A case statement contains more than one item with the same value.
 Case items are evaluated and selected in order and so the second
-one will never be matched.
+one will never be matched. This also applies to case generate constructs,
+case property expressions, and randsequence case productions.
 ```
 module m;
     int i;
@@ -543,7 +547,9 @@ endmodule
 -Wcase-not-wildcard
 A normal case statement has items with integer literals that contain X or Z bits.
 These bits don't count as wildcards, so the designer may have meant for this to
-be a 'casex' or 'casez' statement instead.
+be a 'casex' or 'casez' statement instead. This also applies to case generate
+constructs, case property expressions, and randsequence case productions, which
+have no wildcard form at all.
 ```
 module m;
     logic [2:0] a;

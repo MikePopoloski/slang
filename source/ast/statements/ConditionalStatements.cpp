@@ -7,10 +7,14 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/statements/ConditionalStatements.h"
 
+#include <fmt/format.h>
+
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/ast/expressions/LiteralExpressions.h"
+#include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/parsing/LexerFacts.h"
@@ -363,6 +367,86 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     }
 
     return *result;
+}
+
+void CaseStatement::analyzeItems(EvalContext& evalContext, CaseStatementCondition condition,
+                                 const Expression& caseExpr,
+                                 std::span<const Expression* const> items, bool hasDefault,
+                                 bool isStatement, ItemAnalysis& result, ItemDiagFunc addDiag,
+                                 ItemDupFilter dupFilter) {
+    for (auto item : items) {
+        if (auto cv = item->eval(evalContext)) {
+            auto [it, inserted] = result.values.emplace(std::move(cv), item);
+            if (!inserted) {
+                if (addDiag && (!dupFilter || dupFilter(*item, it->first))) {
+                    auto& diag = addDiag(diag::CaseDup, item->sourceRange);
+                    diag << SemanticFacts::getCaseConditionStr(condition) << it->first;
+                    diag.addNote(diag::NotePreviousUsage, it->second->sourceRange);
+                }
+            }
+            else if (it->first.isInteger()) {
+                result.integerItems.emplace_back(it->first.integer(), item);
+            }
+        }
+        else {
+            result.hasNonConstItems = true;
+        }
+
+        if (addDiag && (condition == CaseStatementCondition::Normal ||
+                        condition == CaseStatementCondition::WildcardJustZ)) {
+            // If we're not in a wildcard case we should warn
+            // about integer literal items that have unknown bits.
+            // Similarly, if we're in a wildcard case with just Zs
+            // we should warn if we see Xs.
+            auto& unwrapped = item->unwrapImplicitConversions();
+            if (unwrapped.kind == ExpressionKind::IntegerLiteral) {
+                auto& lit = unwrapped.as<IntegerLiteral>();
+                if (condition == CaseStatementCondition::Normal && lit.getValue().hasUnknown()) {
+                    // Only actual case statements can be turned into wildcard
+                    // cases, so the suggestion to do so is specific to them.
+                    addDiag(isStatement ? diag::CaseNotWildcard : diag::CaseItemUnknown,
+                            item->sourceRange);
+                }
+                else if (condition == CaseStatementCondition::WildcardJustZ &&
+                         lit.getValue().countXs() > 0) {
+                    addDiag(diag::CaseZWithX, item->sourceRange);
+                }
+            }
+        }
+    }
+
+    // Check for missing enum coverage.
+    auto& caseType = *caseExpr.type;
+    if (addDiag && caseType.isEnum()) {
+        SmallVector<std::string_view> missing;
+        for (auto& ev : caseType.getCanonicalType().as<EnumType>().values()) {
+            auto& val = ev.getValue();
+            if (val && !result.values.contains(val))
+                missing.push_back(ev.name);
+        }
+
+        if (!missing.empty()) {
+            std::string msg;
+            if (missing.size() == 1) {
+                msg = fmt::format("value '{}'", missing[0]);
+            }
+            else if (missing.size() == 2) {
+                msg = fmt::format("values '{}' and '{}'", missing[0], missing[1]);
+            }
+            else if (missing.size() == 3) {
+                msg = fmt::format("values '{}', '{}', and '{}'", missing[0], missing[1],
+                                  missing[2]);
+            }
+            else {
+                const size_t remainder = missing.size() - 3;
+                msg = fmt::format("values '{}', '{}', '{}' (and {} other{})", missing[0],
+                                  missing[1], missing[2], remainder, remainder == 1 ? "" : "s");
+            }
+
+            auto code = hasDefault ? diag::CaseEnumExplicit : diag::CaseEnum;
+            addDiag(code, caseExpr.sourceRange) << msg;
+        }
+    }
 }
 
 static bool checkMatch(CaseStatementCondition condition, const ConstantValue& cvl,

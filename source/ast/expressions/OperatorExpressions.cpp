@@ -152,6 +152,13 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
                     auto& diag = context.addDiag(diag::CaseOutsideRange, expr.sourceRange);
                     diag << keywordStr << *exprWidth << vw;
                 }
+                else if (exprWidth && valueWidth && *exprWidth > valueRes.type->getBitWidth()) {
+                    // Both sides are constant (which is always true for case generate
+                    // constructs, for example) but the item still can't fit in the type
+                    // of the case expression, so no value of that type could match it.
+                    auto& diag = context.addDiag(diag::CaseOutsideRange, expr.sourceRange);
+                    diag << keywordStr << *exprWidth << valueRes.type->getBitWidth();
+                }
             }
         }
     };
