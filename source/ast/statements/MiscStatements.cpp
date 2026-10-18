@@ -576,34 +576,40 @@ static bool isValidAssignLVal(const Expression& expr) {
     }
 }
 
-static bool isValidForceLVal(const Expression& expr, const ASTContext& context, bool inSelect) {
+// [10.6.2] disallows both a select of a variable and a net with a user-defined nettype
+// as a force / release target. Neither leaves the statement unusable, so both are
+// reported here and the statement is kept.
+static bool isValidForceLVal(const Expression& expr, const ASTContext& context,
+                             const Expression* select) {
     switch (expr.kind) {
         case ExpressionKind::NamedValue:
         case ExpressionKind::HierarchicalValue:
             if (auto sym = expr.getSymbolReference()) {
-                if (inSelect && VariableSymbol::isKind(sym->kind))
-                    return false;
-
-                if (sym->kind == SymbolKind::Net && !sym->as<NetSymbol>().netType.isBuiltIn())
+                if (select && VariableSymbol::isKind(sym->kind))
+                    context.addDiag(diag::BadProceduralForce, select->sourceRange);
+                else if (sym->kind == SymbolKind::Net && !sym->as<NetSymbol>().netType.isBuiltIn())
                     context.addDiag(diag::BadForceNetType, expr.sourceRange);
             }
             return true;
         case ExpressionKind::MemberAccess:
-            return isValidForceLVal(expr.as<MemberAccessExpression>().value(), context, true);
+            return isValidForceLVal(expr.as<MemberAccessExpression>().value(), context,
+                                    select ? select : &expr);
         case ExpressionKind::ElementSelect:
-            return isValidForceLVal(expr.as<ElementSelectExpression>().value(), context, true);
+            return isValidForceLVal(expr.as<ElementSelectExpression>().value(), context,
+                                    select ? select : &expr);
         case ExpressionKind::RangeSelect:
-            return isValidForceLVal(expr.as<RangeSelectExpression>().value(), context, true);
+            return isValidForceLVal(expr.as<RangeSelectExpression>().value(), context,
+                                    select ? select : &expr);
         case ExpressionKind::Concatenation:
             for (auto op : expr.as<ConcatenationExpression>().operands()) {
-                if (!isValidForceLVal(*op, context, false))
+                if (!isValidForceLVal(*op, context, nullptr))
                     return false;
             }
             return true;
         case ExpressionKind::Assignment: {
             auto& assign = expr.as<AssignmentExpression>();
             if (assign.isLValueArg())
-                return isValidForceLVal(assign.left(), context, inSelect);
+                return isValidForceLVal(assign.left(), context, select);
             return false;
         }
         default:
@@ -625,7 +631,7 @@ Statement& ProceduralAssignStatement::fromSyntax(Compilation& compilation,
     if (assign.kind == ExpressionKind::Assignment) {
         auto& lval = assign.as<AssignmentExpression>().left();
         if (isForce) {
-            if (!isValidForceLVal(lval, context, false)) {
+            if (!isValidForceLVal(lval, context, nullptr)) {
                 context.addDiag(diag::BadProceduralForce, lval.sourceRange);
                 return badStmt(compilation, result);
             }
@@ -664,7 +670,7 @@ Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
         return badStmt(compilation, result);
 
     if (isRelease) {
-        if (!isValidForceLVal(lvalue, ctx, false)) {
+        if (!isValidForceLVal(lvalue, ctx, nullptr)) {
             ctx.addDiag(diag::BadProceduralForce, lvalue.sourceRange);
             return badStmt(compilation, result);
         }
