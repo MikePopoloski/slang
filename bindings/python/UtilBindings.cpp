@@ -156,6 +156,8 @@ void registerText(nb::module_& m) {
         .def("getFullyOriginalRange", &SourceManager::getFullyOriginalRange, "range"_a)
         .def("getFullyExpandedLoc", &SourceManager::getFullyExpandedLoc, "location"_a)
         .def("getFullyExpandedRange", &SourceManager::getFullyExpandedRange, "range"_a)
+        .def("getMacroCallerLoc", &SourceManager::getMacroCallerLoc, "location"_a)
+        .def("getFileLoc", &SourceManager::getFileLoc, "location"_a)
         .def("getSourceText", &SourceManager::getSourceText, "buffer"_a)
         .def("assignText",
              nb::overload_cast<std::string_view, SourceLocation, const SourceLibrary*>(
