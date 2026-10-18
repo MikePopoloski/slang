@@ -1181,6 +1181,37 @@ endmodule
     CHECK(diags[5].code == diag::AutoFromNonProcedural);
 }
 
+TEST_CASE("Force of a variable select keeps its statement") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [7:0] v;
+    initial begin
+        force v[3] = 1'b1;
+        release v[3];
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& block = compilation.getRoot()
+                      .topInstances[0]
+                      ->body.membersOfType<ProceduralBlockSymbol>()
+                      .begin()
+                      ->getBody()
+                      .as<BlockStatement>();
+    auto& list = block.body.as<StatementList>();
+    REQUIRE(list.list.size() == 2);
+    CHECK(list.list[0]->kind == StatementKind::ProceduralAssign);
+    CHECK(list.list[1]->kind == StatementKind::ProceduralDeassign);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BadProceduralForce);
+    CHECK(diags[1].code == diag::BadProceduralForce);
+}
+
 TEST_CASE("Unexpected port decls") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
