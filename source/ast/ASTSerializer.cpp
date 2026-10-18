@@ -194,14 +194,23 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
 
             if (range.start() && range.end() && range.start() != SourceLocation::NoLocation &&
                 range.end() != SourceLocation::NoLocation) {
-                auto start = sm->getFullyExpandedLoc(range.start());
-                auto end = sm->getFullyExpandedLoc(range.end());
-                write("source_file_start", sm->getFileName(start));
-                write("source_file_end", sm->getFileName(end));
-                write("source_line_start", sm->getLineNumber(start));
-                write("source_line_end", sm->getLineNumber(end));
-                write("source_column_start", sm->getColumnNumber(start));
-                write("source_column_end", sm->getColumnNumber(end));
+                auto expanded = sm->getFullyExpandedRange(range);
+                write("source_file_start", sm->getFileName(expanded.start()));
+                write("source_file_end", sm->getFileName(expanded.end()));
+                write("source_line_start", sm->getLineNumber(expanded.start()));
+                write("source_line_end", sm->getLineNumber(expanded.end()));
+                write("source_column_start", sm->getColumnNumber(expanded.start()));
+                write("source_column_end", sm->getColumnNumber(expanded.end()));
+
+                if (sm->isMacroLoc(range.start()) || sm->isMacroLoc(range.end())) {
+                    auto original = sm->getFullyOriginalRange(range);
+                    write("source_original_file_start", sm->getFileName(original.start()));
+                    write("source_original_file_end", sm->getFileName(original.end()));
+                    write("source_original_line_start", sm->getLineNumber(original.start()));
+                    write("source_original_line_end", sm->getLineNumber(original.end()));
+                    write("source_original_column_start", sm->getColumnNumber(original.start()));
+                    write("source_original_column_end", sm->getColumnNumber(original.end()));
+                }
             }
         }
     }
@@ -344,9 +353,17 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         write("kind", toString(elem.kind));
         if (includeSourceInfo && elem.location && elem.location != SourceLocation::NoLocation) {
             if (auto sm = compilation.getSourceManager()) {
-                write("source_file", sm->getFileName(elem.location));
-                write("source_line", sm->getLineNumber(elem.location));
-                write("source_column", sm->getColumnNumber(elem.location));
+                auto expanded = sm->getFullyExpandedLoc(elem.location);
+                write("source_file", sm->getFileName(expanded));
+                write("source_line", sm->getLineNumber(expanded));
+                write("source_column", sm->getColumnNumber(expanded));
+
+                if (sm->isMacroLoc(elem.location)) {
+                    auto original = sm->getFullyOriginalLoc(elem.location);
+                    write("source_original_file", sm->getFileName(original));
+                    write("source_original_line", sm->getLineNumber(original));
+                    write("source_original_column", sm->getColumnNumber(original));
+                }
             }
         }
 
