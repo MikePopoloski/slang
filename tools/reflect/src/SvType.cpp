@@ -68,4 +68,8 @@ Type fromSize(const size_t size) {
         return SC_BV;
     // clang-format on
 }
+
+bool isScalar(const Type& cppType) {
+    return cppType == BOOL || cppType == U32 || cppType == U64;
+}
 } // namespace CppType
