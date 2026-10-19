@@ -170,7 +170,7 @@ void Driver::addStandardArgs() {
 
     cmdLine.setGroup("Include Paths and Macros");
     cmdLine.add(
-        "-I,--include-directory,+incdir",
+        "-I,-incdir,--include-directory,+incdir",
         [this](std::string_view value) {
             if (auto ec = sourceManager.addUserDirectories(value)) {
                 printWarning(fmt::format("include directory '{}': {}", value, ec.message()));
