@@ -1397,7 +1397,7 @@ bool Driver::runFullCompilation(bool quiet) {
 bool Driver::parseUnitListing(const SourceBuffer& buffer) {
     CommandLine unitCmdLine;
     std::vector<std::string> includes;
-    unitCmdLine.add("-I,--include-directory,+incdir", includes, "", "",
+    unitCmdLine.add("-I,-incdir,--include-directory,+incdir", includes, "", "",
                     CommandLineFlags::CommaList);
 
     std::vector<std::string> defines;
