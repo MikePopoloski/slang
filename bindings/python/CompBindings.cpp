@@ -151,7 +151,7 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
     EXPOSE_ENUM(ast, RandMode);
     EXPOSE_ENUM(ast, PrimitivePortDirection);
 
-    nb::enum_<PreprocessOutputFlags>(m, "PreprocessOutputFlags", nb::is_arithmetic())
+    nb::enum_<PreprocessOutputFlags>(m, "PreprocessOutputFlags", nb::is_arithmetic(), nb::is_flag())
         .value("None_", PreprocessOutputFlags::None)
         .value("IncludeComments", PreprocessOutputFlags::IncludeComments)
         .value("IncludeDirectives", PreprocessOutputFlags::IncludeDirectives)
@@ -164,7 +164,7 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .value("Typ", MinTypMax::Typ)
         .value("Max", MinTypMax::Max);
 
-    nb::enum_<CompilationFlags>(ast, "CompilationFlags", nb::is_arithmetic())
+    nb::enum_<CompilationFlags>(ast, "CompilationFlags", nb::is_arithmetic(), nb::is_flag())
         .value("None_", CompilationFlags::None)
         .value("AllowHierarchicalConst", CompilationFlags::AllowHierarchicalConst)
         .value("RelaxEnumConversions", CompilationFlags::RelaxEnumConversions)
