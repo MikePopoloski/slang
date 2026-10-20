@@ -1051,12 +1051,17 @@ TEST_CASE("sdf_annotate") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     string s;
+    real r;
     initial begin
         $sdf_annotate(s);
         $sdf_annotate("sdf", m);
         $sdf_annotate(s, m, "asdf", "test", "TOOL_CONTROL", "1.0:1.0:1.0", "FROM_MTM");
         $sdf_annotate(s, 123);
         $sdf_annotate(s, s);
+        $sdf_annotate("top.sdf", m, , , "MAXIMUM");
+        $sdf_annotate("top.sdf", , , , , "1.0:1.0:1.0");
+        $sdf_annotate("top.sdf", m, r);
+        $sdf_annotate(, m);
     end
 endmodule
 )");
@@ -1065,9 +1070,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::ExpectedModuleInstance);
     CHECK(diags[1].code == diag::ExpectedModuleInstance);
+    CHECK(diags[2].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[3].code == diag::EmptyArgNotAllowed);
 }
 
 TEST_CASE("Tracing automatic vars") {
