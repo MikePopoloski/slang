@@ -170,7 +170,7 @@ void Driver::addStandardArgs() {
 
     cmdLine.setGroup("Include Paths and Macros");
     cmdLine.add(
-        "-I,--include-directory,+incdir",
+        "-I,--incdir,--include-directory,+incdir",
         [this](std::string_view value) {
             if (auto ec = sourceManager.addUserDirectories(value)) {
                 printWarning(fmt::format("include directory '{}': {}", value, ec.message()));
@@ -1397,7 +1397,7 @@ bool Driver::runFullCompilation(bool quiet) {
 bool Driver::parseUnitListing(const SourceBuffer& buffer) {
     CommandLine unitCmdLine;
     std::vector<std::string> includes;
-    unitCmdLine.add("-I,--include-directory,+incdir", includes, "", "",
+    unitCmdLine.add("-I,--incdir,--include-directory,+incdir", includes, "", "",
                     CommandLineFlags::CommaList);
 
     std::vector<std::string> defines;
