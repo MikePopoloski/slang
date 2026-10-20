@@ -729,6 +729,8 @@ class SdfAnnotateTask : public SystemTaskBase {
 public:
     SdfAnnotateTask() : SystemTaskBase(KnownSystemName::SdfAnnotate) {}
 
+    bool allowEmptyArgument(size_t index) const final { return index != 0; }
+
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         if (argIndex == 1) {
@@ -763,8 +765,10 @@ public:
             return comp.getErrorType();
 
         for (size_t i = 0; i < args.size(); i++) {
-            if (i != 1 && !args[0]->type->canBeStringLike())
+            if (i != 1 && args[i]->kind != ExpressionKind::EmptyArgument &&
+                !args[i]->type->canBeStringLike()) {
                 return badArg(context, *args[i]);
+            }
         }
 
         return comp.getVoidType();
