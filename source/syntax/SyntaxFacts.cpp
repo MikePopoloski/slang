@@ -1158,10 +1158,6 @@ bool SyntaxFacts::isNotInConcatenationExpr(TokenKind kind) {
     }
 }
 
-bool SyntaxFacts::isPossibleLetPortItem(TokenKind kind) {
-    return kind == TokenKind::OpenParenthesis || kind == TokenKind::UntypedKeyword || isPossibleDataType(kind);
-}
-
 bool SyntaxFacts::isNotInParameterList(TokenKind kind) {
     return kind == TokenKind::OpenParenthesis || kind == TokenKind::Semicolon || kind == TokenKind::EndOfFile;
 }
@@ -1177,6 +1173,7 @@ bool SyntaxFacts::isPossiblePropertyPortItem(TokenKind kind) {
         case TokenKind::OutputKeyword:
         case TokenKind::InOutKeyword:
         case TokenKind::RefKeyword:
+        case TokenKind::UntypedKeyword:
             return true;
         default:
             return isPossibleDataType(kind);

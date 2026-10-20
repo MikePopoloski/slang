@@ -1891,3 +1891,26 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CaseDefault);
 }
+
+TEST_CASE("Untyped first formal argument of assertion items") {
+    auto tree = SyntaxTree::fromText(R"(
+checker c1(untyped a);
+endchecker
+
+module m;
+    sequence s1(untyped a);
+        a;
+    endsequence
+
+    property p1(untyped a);
+        a;
+    endproperty
+
+    let l1(untyped a) = a;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

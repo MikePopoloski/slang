@@ -272,9 +272,6 @@ public:
     /// @return true if the given token represents a possible vector digit.
     static bool isPossibleVectorDigit(TokenKind kind);
 
-    /// @return true if the given token represents a "let" port item.
-    static bool isPossibleLetPortItem(TokenKind kind);
-
     /// @return true if the given token represents a possible "trans" set.
     static bool isPossibleTransSet(TokenKind kind);
 
