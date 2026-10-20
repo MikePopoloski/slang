@@ -199,7 +199,7 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
         .value("Subroutine", DriverSource::Subroutine)
         .value("Other", DriverSource::Other);
 
-    nb::enum_<DriverFlags>(m, "DriverFlags", nb::is_arithmetic())
+    nb::enum_<DriverFlags>(m, "DriverFlags", nb::is_arithmetic(), nb::is_flag())
         .value("None_", DriverFlags::None)
         .value("InputPort", DriverFlags::InputPort)
         .value("OutputPort", DriverFlags::OutputPort)
@@ -209,7 +209,7 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
         .value("HasOverrideRange", DriverFlags::HasOverrideRange)
         .value("ViaIndirectPort", DriverFlags::ViaIndirectPort);
 
-    nb::enum_<AnalysisFlags>(m, "AnalysisFlags", nb::is_arithmetic())
+    nb::enum_<AnalysisFlags>(m, "AnalysisFlags", nb::is_arithmetic(), nb::is_flag())
         .value("None_", AnalysisFlags::None)
         .value("CheckUnused", AnalysisFlags::CheckUnused)
         .value("FullCaseUniquePriority", AnalysisFlags::FullCaseUniquePriority)
