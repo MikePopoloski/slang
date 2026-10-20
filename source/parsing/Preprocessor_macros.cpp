@@ -380,9 +380,6 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
         return {nullptr, Trivia()};
     }
 
-    // if this assert fires, we failed to fully expand nested macros at a previous point
-    SLANG_ASSERT(!currentMacroToken);
-
     // parse arguments if necessary
     MacroActualArgumentListSyntax* actualArgs = nullptr;
     if (macro.needsArgs()) {
@@ -391,11 +388,37 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
             return {nullptr, Trivia()};
     }
 
+    // We can be in the middle of returning tokens from a previous expansion if it
+    // contained a usage of a macro that wasn't defined at the time it was expanded,
+    // e.g. because the expansion itself contains a nested define of that macro.
+    // Save off the remaining tokens so we can splice them in after this expansion.
+    SmallVector<Token> prevTokens;
+    size_t prevIndex = 0;
+    if (currentMacroToken) {
+        prevIndex = size_t(currentMacroToken - expandedTokens.begin());
+        prevTokens = std::move(expandedTokens);
+        currentMacroToken = nullptr;
+    }
+
+    // If the macro expanded into any tokens at all (or we had leftovers
+    // from a previous expansion), set the pointer so that we'll pull from them next.
+    auto finish = [&](bool success) {
+        if (!success)
+            expandedTokens.clear();
+
+        expandedTokens.append_range(std::span(prevTokens).subspan(prevIndex));
+        if (!expandedTokens.empty())
+            currentMacroToken = expandedTokens.begin();
+
+        return std::pair{actualArgs, Trivia()};
+    };
+
     // Expand out the macro
+    expandedTokens.clear();
     SmallVector<Token, 32> buffer;
     MacroExpansion expansion{sourceManager, alloc, buffer, directive, true};
     if (!expandMacro(macro, expansion, actualArgs))
-        return {actualArgs, Trivia()};
+        return finish(false);
 
     // The macro is now expanded out into tokens, but some of those tokens might
     // be more macros that need to be expanded, or special characters that
@@ -414,7 +437,7 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
         // pass. This ensures that we don't miss expanding a constructed macro.
         const Token* ptr = tokens.data();
         if (!expandReplacementList(tokens, alreadyExpanded))
-            return {actualArgs, Trivia()};
+            return finish(false);
 
         // Now that all macros have been expanded, handle token concatenation and stringification.
         expandedTokens.clear();
@@ -425,12 +448,7 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
         tokens = expandedTokens;
     }
 
-    // if the macro expanded into any tokens at all, set the pointer
-    // so that we'll pull from them next
-    if (!expandedTokens.empty())
-        currentMacroToken = expandedTokens.begin();
-
-    return {actualArgs, Trivia()};
+    return finish(true);
 }
 
 bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,

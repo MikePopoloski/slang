@@ -3735,3 +3735,29 @@ endmodule
     std::string result = preprocess(text);
     CHECK(result == expected);
 }
+
+TEST_CASE("Macro usage of nested define within same expansion GH #2030") {
+    auto& text = R"(
+`define OUTER(n) \
+  `define INNER(x) (x + n) \
+  `define INNER2 `INNER(2) * `INNER(3) \
+  localparam PARAM = `INNER(1) + `INNER2;
+
+module test;
+  `OUTER(4)
+endmodule
+)";
+
+    auto& expected = R"(
+module test;
+
+
+
+  localparam PARAM = (1 + 4) + (2 + 4) * (3 + 4);
+endmodule
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
