@@ -273,14 +273,12 @@ std::optional<ReportedDiagnosticInfo> DiagnosticEngine::getReportedDiag(
     if (loc != SourceLocation::NoLocation) {
         while (sourceManager.isMacroLoc(loc)) {
             SourceLocation prevLoc = loc;
-            if (sourceManager.isMacroArgLoc(loc)) {
+            if (sourceManager.isMacroArgLoc(loc))
                 expansionLocs.push_back(sourceManager.getExpansionLoc(loc));
-                loc = sourceManager.getOriginalLoc(loc);
-            }
-            else {
+            else
                 expansionLocs.push_back(loc);
-                loc = sourceManager.getExpansionLoc(loc);
-            }
+
+            loc = sourceManager.getMacroCallerLoc(loc);
 
             if (checkMacroArgRanges(*this, prevLoc, diagnostic.ranges))
                 expansionLocs.clear();

@@ -3058,6 +3058,76 @@ endmodule
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("File location of macro body and macro argument tokens") {
+    diagnostics.clear();
+
+    std::string_view text = R"(
+`define BODY foo
+`define ARG(x) x
+`define OUTER(x) `ARG(x)
+`define INNER quux
+`define NEST `INNER
+`BODY `ARG(bar) `OUTER(baz) qux `NEST
+)";
+
+    auto& sm = getSourceManager();
+    Preprocessor preprocessor(sm, alloc, diagnostics);
+    preprocessor.pushSource(text, "test.sv");
+
+    size_t seen = 0;
+    while (true) {
+        Token token = preprocessor.next();
+        if (token.kind == TokenKind::EndOfFile)
+            break;
+
+        SourceLocation loc = token.location();
+        SourceLocation fileLoc = sm.getFileLoc(loc);
+        CHECK(sm.isFileLoc(fileLoc));
+        CHECK(sm.getLineNumber(fileLoc) == 7);
+
+        std::string_view name = token.valueText();
+        if (name == "foo") {
+            // A token from a macro body is attributed to where the macro is used,
+            // which is not where the body is written.
+            CHECK(sm.isMacroLoc(loc));
+            CHECK(sm.getColumnNumber(fileLoc) == 1);
+            CHECK(sm.getLineNumber(sm.getFullyOriginalLoc(loc)) == 2);
+            seen++;
+        }
+        else if (name == "bar") {
+            // A token from a macro argument is attributed to where the argument
+            // is written, which is not where the macro's expansion starts.
+            CHECK(sm.isMacroLoc(loc));
+            CHECK(sm.getColumnNumber(fileLoc) == 12);
+            CHECK(sm.getColumnNumber(sm.getFullyExpandedLoc(loc)) == 7);
+            seen++;
+        }
+        else if (name == "baz") {
+            // The same holds for an argument passed along to another macro,
+            // which takes one step per macro to reach the file.
+            CHECK(sm.isMacroLoc(loc));
+            CHECK(sm.isMacroLoc(sm.getMacroCallerLoc(loc)));
+            CHECK(sm.getColumnNumber(fileLoc) == 24);
+            seen++;
+        }
+        else if (name == "quux") {
+            // And for a macro body that is expanded from within another macro's body.
+            CHECK(sm.isMacroLoc(loc));
+            CHECK(sm.isMacroLoc(sm.getMacroCallerLoc(loc)));
+            CHECK(sm.getColumnNumber(fileLoc) == 33);
+            seen++;
+        }
+        else if (name == "qux") {
+            CHECK(fileLoc == loc);
+            CHECK(sm.getMacroCallerLoc(loc) == loc);
+            seen++;
+        }
+    }
+
+    CHECK(seen == 5);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Preprocessor: Include files expanded from within a macro") {
     getSourceManager().assignText("inc.svh", "parameter int WIDTH = 8");
 

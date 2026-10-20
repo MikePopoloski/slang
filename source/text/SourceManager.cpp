@@ -357,6 +357,18 @@ SourceRange SourceManager::getFullyExpandedRange(SourceRange range) const {
     return SourceRange(start, end);
 }
 
+SourceLocation SourceManager::getMacroCallerLoc(SourceLocation location) const {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    return getMacroCallerLocImpl(location, lock);
+}
+
+SourceLocation SourceManager::getFileLoc(SourceLocation location) const {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    while (isMacroLocImpl(location, lock))
+        location = getMacroCallerLocImpl(location, lock);
+    return location;
+}
+
 std::string_view SourceManager::getSourceText(BufferID buffer) const {
     std::shared_lock<std::shared_mutex> lock(mutex);
     auto info = getFileInfo(buffer, lock);
@@ -832,6 +844,17 @@ SourceLocation SourceManager::getOriginalLocImpl(SourceLocation location, TLock&
 
     SLANG_ASSERT(buffer.getId() < bufferEntries.size());
     return std::get<ExpansionInfo>(bufferEntries[buffer.getId()]).originalLoc + location.offset();
+}
+
+template<IsLock TLock>
+SourceLocation SourceManager::getMacroCallerLocImpl(SourceLocation location, TLock& lock) const {
+    if (!isMacroLocImpl(location, lock))
+        return location;
+
+    if (isMacroArgLocImpl(location, lock))
+        return getOriginalLocImpl(location, lock);
+
+    return getExpansionRangeImpl(location, lock).start();
 }
 
 void SourceManager::computeLineOffsets(const SmallVector<char>& buffer,
