@@ -41,7 +41,7 @@ void registerSymbols(nb::module_& m) {
     EXPOSE_ENUM(m, PulseStyleKind);
     EXPOSE_ENUM(m, SystemTimingCheckKind);
 
-    nb::enum_<LookupFlags>(m, "LookupFlags", nb::is_arithmetic())
+    nb::enum_<LookupFlags>(m, "LookupFlags", nb::is_arithmetic(), nb::is_flag())
         .value("None_", LookupFlags::None)
         .value("Type", LookupFlags::Type)
         .value("AllowDeclaredAfter", LookupFlags::AllowDeclaredAfter)
@@ -60,7 +60,7 @@ void registerSymbols(nb::module_& m) {
         .value("DisallowUnitReferences", LookupFlags::DisallowUnitReferences)
         .value("AllowUnnamedGenerate", LookupFlags::AllowUnnamedGenerate);
 
-    nb::enum_<LookupResultFlags>(m, "LookupResultFlags", nb::is_arithmetic())
+    nb::enum_<LookupResultFlags>(m, "LookupResultFlags", nb::is_arithmetic(), nb::is_flag())
         .value("None_", LookupResultFlags::None)
         .value("WasImported", LookupResultFlags::WasImported)
         .value("IsHierarchical", LookupResultFlags::IsHierarchical)
@@ -303,7 +303,7 @@ void registerSymbols(nb::module_& m) {
         .def_prop_ro("pathSource", &SpecparamSymbol::getPathSource)
         .def_prop_ro("pathDest", &SpecparamSymbol::getPathDest);
 
-    nb::enum_<VariableFlags>(m, "VariableFlags", nb::is_arithmetic())
+    nb::enum_<VariableFlags>(m, "VariableFlags", nb::is_arithmetic(), nb::is_flag())
         .value("None_", VariableFlags::None)
         .value("Const", VariableFlags::Const)
         .value("CompilerGenerated", VariableFlags::CompilerGenerated)
@@ -358,7 +358,7 @@ void registerSymbols(nb::module_& m) {
         .def_ro("visibility", &ClassPropertySymbol::visibility)
         .def_ro("randMode", &ClassPropertySymbol::randMode);
 
-    nb::enum_<MethodFlags>(m, "MethodFlags", nb::is_arithmetic())
+    nb::enum_<MethodFlags>(m, "MethodFlags", nb::is_arithmetic(), nb::is_flag())
         .value("None_", MethodFlags::None)
         .value("Virtual", MethodFlags::Virtual)
         .value("Pure", MethodFlags::Pure)

@@ -28,7 +28,7 @@ void registerAST(nb::module_& m) {
         .value("Skip", VisitAction::Skip)
         .value("Interrupt", VisitAction::Interrupt);
 
-    nb::enum_<EvalFlags>(m, "EvalFlags", nb::is_arithmetic())
+    nb::enum_<EvalFlags>(m, "EvalFlags", nb::is_arithmetic(), nb::is_flag())
         .value("None_", EvalFlags::None)
         .value("IsScript", EvalFlags::IsScript)
         .value("CacheResults", EvalFlags::CacheResults)
@@ -93,7 +93,7 @@ void registerAST(nb::module_& m) {
         .def("load", &LValue::load)
         .def("store", &LValue::store, "value"_a);
 
-    nb::enum_<ASTFlags>(m, "ASTFlags", nb::is_arithmetic())
+    nb::enum_<ASTFlags>(m, "ASTFlags", nb::is_arithmetic(), nb::is_flag())
         .value("None_", ASTFlags::None)
         .value("InsideConcatenation", ASTFlags::InsideConcatenation)
         .value("UnevaluatedBranch", ASTFlags::UnevaluatedBranch)

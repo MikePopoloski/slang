@@ -12,7 +12,7 @@
 #include "slang/syntax/AllSyntax.h"
 
 void registerTypes(nb::module_& m) {
-    nb::enum_<IntegralFlags>(m, "IntegralFlags", nb::is_arithmetic())
+    nb::enum_<IntegralFlags>(m, "IntegralFlags", nb::is_arithmetic(), nb::is_flag())
         .value("Unsigned", IntegralFlags::Unsigned)
         .value("TwoState", IntegralFlags::TwoState)
         .value("Signed", IntegralFlags::Signed)
@@ -307,7 +307,7 @@ void registerTypes(nb::module_& m) {
                      byrefint)
         .def_prop_ro("firstForwardDecl", &GenericClassDefSymbol::getFirstForwardDecl, byrefint);
 
-    nb::enum_<ConstraintBlockFlags>(m, "ConstraintBlockFlags", nb::is_arithmetic())
+    nb::enum_<ConstraintBlockFlags>(m, "ConstraintBlockFlags", nb::is_arithmetic(), nb::is_flag())
         .value("None_", ConstraintBlockFlags::None)
         .value("Pure", ConstraintBlockFlags::Pure)
         .value("Static", ConstraintBlockFlags::Static)
