@@ -128,9 +128,8 @@ void CommandLine::addInternal(std::string_view name, OptionStorage storage, std:
                 if (curr.empty())
                     SLANG_THROW(std::invalid_argument("Names must begin with '-' or '--'"));
             }
-            else if (curr.length() > 1) {
-                SLANG_THROW(std::invalid_argument("Long name requires '--' prefix"));
-            }
+            if (curr.empty())
+                SLANG_THROW(std::invalid_argument("Names must begin with '-', '+', or '--'"));
         }
 
         if (!optionMap.try_emplace(std::string(curr), option).second) {
