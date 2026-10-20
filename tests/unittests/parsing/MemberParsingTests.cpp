@@ -1870,3 +1870,18 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::TypeRefDeclVar);
 }
+
+TEST_CASE("Attributes on generate regions are allowed") {
+    auto& text = R"(
+module m #(parameter p = 1);
+    (* foo = p *)
+    generate
+        if (p) begin : a
+        end
+    endgenerate
+endmodule
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

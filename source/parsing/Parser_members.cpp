@@ -179,7 +179,8 @@ MemberSyntax* Parser::parseMemberImpl(AttrList attributes, SyntaxKind parentKind
     Token token = peek();
     switch (token.kind) {
         case TokenKind::GenerateKeyword: {
-            errorIfAttributes(attributes);
+            // Attributes on generate regions aren't allowed by the grammar
+            // but all other tools accept them, so we do too.
             auto keyword = consume();
 
             Token endgenerate;
