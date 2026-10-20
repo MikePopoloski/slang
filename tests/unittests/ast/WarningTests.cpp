@@ -218,6 +218,20 @@ module m;
         always_comb c[i] = $bits(c[i])'(i);
     end
 endmodule
+
+module width_adapter #(parameter int SRC_W = 1, parameter int DST_W = 1) (
+    input  logic [SRC_W-1:0] in,
+    output logic [DST_W-1:0] out
+);
+    // Not useless, width depends on a parameter.
+    assign out = DST_W'(in);
+    assign out = $bits(out)'(in);
+endmodule
+
+module top;
+    logic [0:0] a, b;
+    width_adapter #(.SRC_W(1), .DST_W(1)) u_same(.in(a), .out(b));
+endmodule
 )");
 
     Compilation compilation;

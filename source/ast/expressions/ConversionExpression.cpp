@@ -360,6 +360,8 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
     // - We weren't already in an assignment-like context of the correct type
     // - We're casting a genvar (people dislike seeing warnings about genvar operands)
     // - We're casting to a different typedef even if it's a matching underlying type
+    // - We're doing a size cast with a computed width (e.g. a parameter), since in generic
+    //   code the cast is only useless for some parameterizations
     auto isGenvar = [&] {
         if (auto sym = operand->getSymbolReference()) {
             return sym->kind == SymbolKind::Genvar || (sym->kind == SymbolKind::Parameter &&
@@ -372,7 +374,13 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
         return (type->isAlias() || operand->type->isAlias()) && type != operand->type;
     };
 
+    auto isComputedWidth = [&] {
+        return targetExpr.kind != ExpressionKind::DataType &&
+               targetExpr.kind != ExpressionKind::IntegerLiteral;
+    };
+
     if (type->isMatching(*operand->type) && !isGenvar() && !isDifferentTypedef() &&
+        !isComputedWidth() &&
         ((assignmentTarget && assignmentTarget->isMatching(*type) &&
           operand->kind != ExpressionKind::ConditionalOp) ||
          !actuallyNeededCast(*type, *operand))) {

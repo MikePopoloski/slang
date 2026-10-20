@@ -1013,6 +1013,8 @@ endmodule
 
 -Wuseless-cast
 An explicit cast converts an expression to the same type, so the cast does nothing.
+Size casts whose width is computed (for example from a parameter) are not reported, since in
+generic code the cast may only be redundant for some parameterizations.
 ```
 module m;
     int i, j;
