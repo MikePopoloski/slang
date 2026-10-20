@@ -1177,6 +1177,7 @@ bool SyntaxFacts::isPossiblePropertyPortItem(TokenKind kind) {
         case TokenKind::OutputKeyword:
         case TokenKind::InOutKeyword:
         case TokenKind::RefKeyword:
+        case TokenKind::UntypedKeyword:
             return true;
         default:
             return isPossibleDataType(kind);
