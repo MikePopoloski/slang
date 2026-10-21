@@ -50,7 +50,7 @@ void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) c
         fmt::format("static constexpr std::size_t _size = {};\n\n", type.getBitstreamWidth()));
 
     //** LOCAL **//
-    hppFile.addWithIndent("Type type;\n");
+    hppFile.addWithIndent("Type type {};\n");
 
     //** DEFAULT CONSTRUCTOR **//
     hppFile.addWithIndent(fmt::format("{}() = default;\n", type.name));

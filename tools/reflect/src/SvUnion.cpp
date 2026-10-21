@@ -34,7 +34,8 @@ void SvUnion::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlias
                                      : toString(cppType);
 
     // Create a sc bit vector to store the data of the Union
-    hppFile.addWithIndent(fmt::format("{} union_data;\n\n", cppTypeStr));
+    hppFile.addWithIndent(
+        fmt::format("{} union_data{};\n\n", cppTypeStr, CppType::isScalar(cppType) ? " {}" : ""));
 
     // Check if some headers need to be included
     for (const auto& member : type.getCanonicalType().as<slang::ast::Scope>().members()) {

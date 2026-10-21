@@ -45,13 +45,15 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
 
     //** MEMBERS DECLARATION **//
     for (const auto& [name, type] : members) {
+        // Non-scalar members are initialized by their own constructors
+        const auto init = type.isScalar() ? " {}" : "";
         if (type.isStructEnumOrUnion() && _namespace != type._namespace) {
             hppFile.addWithIndent(
-                fmt::format("{}::{} {};\n", type._namespace, type.toString(), name));
+                fmt::format("{}::{} {}{};\n", type._namespace, type.toString(), name, init));
             hppFile.addIncludeHeader(type._namespace);
         }
         else {
-            hppFile.addWithIndent(fmt::format("{} {};\n", type.toString(), name));
+            hppFile.addWithIndent(fmt::format("{} {}{};\n", type.toString(), name, init));
         }
     }
     hppFile.add("\n");
