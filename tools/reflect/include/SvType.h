@@ -15,6 +15,9 @@ enum Type { BOOL, U32, U64, SC_BV, STRUCT, ENUM, UNION };
 
 std::string toString(const Type& cppType);
 Type fromSize(size_t size);
+/// Whether the type is a builtin one, which is left uninitialized unless given a value (SystemC
+/// and generated types initialize themselves through their constructors)
+bool isScalar(const Type& cppType);
 } // namespace CppType
 
 class SvType {
@@ -30,6 +33,7 @@ public:
     [[nodiscard]] bool isStructEnumOrUnion() const {
         return this->isStruct() || this->isEnum() || this->isUnion();
     }
+    [[nodiscard]] bool isScalar() const { return CppType::isScalar(cppType); }
 
     [[nodiscard]] std::string toString() const;
     friend std::ostream& operator<<(std::ostream& os, const SvType& type);
