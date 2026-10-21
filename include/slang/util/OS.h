@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <atomic>
 #include <filesystem>
 #include <functional>
 
@@ -69,10 +70,9 @@ public:
     static auto captureOutput(
         std::function<void(std::string_view, bool)> callback = captureOutputStreams) {
 
-        outputCallback = std::move(callback);
-        capturedStdout.clear();
-        capturedStderr.clear();
-        return ScopeGuard([] { outputCallback = {}; });
+        clearCapturedOutput();
+        setOutputCallback(std::move(callback));
+        return ScopeGuard([] { setOutputCallback({}); });
     }
 
     static inline std::string capturedStdout;
@@ -93,16 +93,14 @@ private:
     OS() = default;
 
     // Default callback to record outputs
-    static void captureOutputStreams(std::string_view text, bool isStdout) {
-        if (isStdout)
-            capturedStdout += text;
-        else
-            capturedStderr += text;
-    }
+    static void captureOutputStreams(std::string_view text, bool isStdout);
 
-    static inline bool showColorsStdout = false;
-    static inline bool showColorsStderr = false;
-    static inline std::function<void(std::string_view, bool)> outputCallback;
+    static void clearCapturedOutput();
+    static void setOutputCallback(std::function<void(std::string_view, bool)> callback);
+
+    // These are atomic because multiple Drivers on different threads may set them.
+    static inline std::atomic<bool> showColorsStdout = false;
+    static inline std::atomic<bool> showColorsStderr = false;
 };
 
 } // namespace slang

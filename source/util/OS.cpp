@@ -43,10 +43,49 @@
 
 #include <fmt/color.h>
 #include <fstream>
+#include <memory>
+#include <mutex>
 
 namespace fs = std::filesystem;
 
 namespace slang {
+
+namespace {
+
+using OutputCallback = std::function<void(std::string_view, bool)>;
+
+// The output callback is held via shared_ptr so that it can be invoked
+// outside of the lock, which allows the callback itself to print.
+std::mutex outputMutex;
+std::shared_ptr<const OutputCallback> outputCallback;
+
+// Allows the common case of no installed callback to skip taking the lock.
+// The callback itself is always read under the lock, so relaxed ordering is
+// sufficient here.
+std::atomic<bool> hasOutputCallback = false;
+
+// Guards OS::capturedStdout and OS::capturedStderr.
+std::mutex captureMutex;
+
+// Returns true if the text was handled by the output callback.
+bool tryOutputCallback(std::string_view text, bool isStdout) {
+    if (!hasOutputCallback.load(std::memory_order_relaxed))
+        return false;
+
+    std::shared_ptr<const OutputCallback> callback;
+    {
+        std::scoped_lock lock(outputMutex);
+        callback = outputCallback;
+    }
+
+    if (!callback)
+        return false;
+
+    (*callback)(text, isStdout);
+    return true;
+}
+
+} // namespace
 
 #if defined(_WIN32)
 
@@ -299,10 +338,7 @@ std::error_code OS::readFile(const fs::path& path, SmallVector<char>& buffer) {
 
 void OS::writeFile(const fs::path& path, std::string_view contents) {
     if (path == "-") {
-        if (outputCallback) {
-            outputCallback(contents, /* isStdout */ true);
-        }
-        else {
+        if (!tryOutputCallback(contents, /* isStdout */ true)) {
             std::cout.write(contents.data(), (std::streamsize)contents.size());
             std::cout.flush();
         }
@@ -316,45 +352,37 @@ void OS::writeFile(const fs::path& path, std::string_view contents) {
 }
 
 void OS::print(std::string_view text) {
-    if (outputCallback) {
-        outputCallback(text, /* isStdout */ true);
-    }
-    else {
-        fmt::detail::print(stdout, fmt::detail::to_string_view(text));
-    }
+    if (tryOutputCallback(text, /* isStdout */ true))
+        return;
+
+    fmt::detail::print(stdout, fmt::detail::to_string_view(text));
 }
 
 void OS::print(const TextStyle& style, std::string_view text) {
-    if (outputCallback) {
-        outputCallback(text, /* isStdout */ true);
-    }
-    else if (showColorsStdout) {
+    if (tryOutputCallback(text, /* isStdout */ true))
+        return;
+
+    if (showColorsStdout)
         fmt::print(stdout, detail::toFmtTextStyle(style), "{}"sv, text);
-    }
-    else {
+    else
         fmt::detail::print(stdout, fmt::detail::to_string_view(text));
-    }
 }
 
 void OS::printE(std::string_view text) {
-    if (outputCallback) {
-        outputCallback(text, /* isStdout */ false);
-    }
-    else {
-        fmt::detail::print(stderr, fmt::detail::to_string_view(text));
-    }
+    if (tryOutputCallback(text, /* isStdout */ false))
+        return;
+
+    fmt::detail::print(stderr, fmt::detail::to_string_view(text));
 }
 
 void OS::printE(const TextStyle& style, std::string_view text) {
-    if (outputCallback) {
-        outputCallback(text, /* isStdout */ false);
-    }
-    else if (showColorsStderr) {
+    if (tryOutputCallback(text, /* isStdout */ false))
+        return;
+
+    if (showColorsStderr)
         fmt::print(stderr, detail::toFmtTextStyle(style), "{}"sv, text);
-    }
-    else {
+    else
         fmt::detail::print(stderr, fmt::detail::to_string_view(text));
-    }
 }
 
 void OS::printException(std::string_view format, std::string_view what) {
@@ -403,6 +431,30 @@ std::string OS::parseEnvVar(const char*& ptr, const char* end) {
         // This is not a possible variable name so just return what we have.
         return "$"s + c;
     }
+}
+
+void OS::captureOutputStreams(std::string_view text, bool isStdout) {
+    std::scoped_lock lock(captureMutex);
+    if (isStdout)
+        capturedStdout += text;
+    else
+        capturedStderr += text;
+}
+
+void OS::clearCapturedOutput() {
+    std::scoped_lock lock(captureMutex);
+    capturedStdout.clear();
+    capturedStderr.clear();
+}
+
+void OS::setOutputCallback(std::function<void(std::string_view, bool)> callback) {
+    std::shared_ptr<const OutputCallback> ptr;
+    if (callback)
+        ptr = std::make_shared<const OutputCallback>(std::move(callback));
+
+    std::scoped_lock lock(outputMutex);
+    hasOutputCallback.store(ptr != nullptr, std::memory_order_relaxed);
+    outputCallback = std::move(ptr);
 }
 
 int OS::getpid() {
