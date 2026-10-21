@@ -137,7 +137,7 @@ to be worked around.
 @section include-paths Include paths and macros
 
 ```
--I,--include-directory <dir-pattern>[,...]
+-I,--incdir,--include-directory <dir-pattern>[,...]
 +incdir+<dir>[+<dir>...]
 ```
 
