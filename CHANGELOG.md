@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Language Compatibility
 * Array query functions (`$size`, `$left`, `$dimensions`, etc) are now allowed on arrays of instances (e.g. interface arrays). The LRM does not define these for instance arrays so this is an error by default, but it can be downgraded via [-Wnonstandard-instance-array-query](https://sv-lang.com/warning-ref.html#nonstandard-instance-array-query) (thanks to @likeamahoney)
 * Untyped parameters assigned an unbased unsized literal (like `'1`) are now one bit wide, to match the LRM
+* Attributes are now allowed on generate regions; the LRM grammar does not permit them but all other tools accept them
 
 ### Notable Breaking Changes
 
@@ -23,8 +24,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Improvements
 * The effective width calculation used to suppress width truncation warnings now takes into account masking with `&`, right shifts by a constant, division and modulus, and leading zeros in concatenations, which removes false positives for code like `logic [3:0] y = x & 8'h0F;`
+* The [-Wcase-dup](https://sv-lang.com/warning-ref.html#case-dup), [-Wcase-enum](https://sv-lang.com/warning-ref.html#case-enum), [-Wcase-enum-explicit](https://sv-lang.com/warning-ref.html#case-enum-explicit), and [-Wcase-not-wildcard](https://sv-lang.com/warning-ref.html#case-not-wildcard) warnings now also apply to case generate constructs, case property expressions, and randsequence case productions
+* [-Wcase-type](https://sv-lang.com/warning-ref.html#case-type), [-Wcase-outside-range](https://sv-lang.com/warning-ref.html#case-outside-range), and [-Wcase-default](https://sv-lang.com/warning-ref.html#case-default) now apply to case property expressions
+* [-Wcase-outside-range](https://sv-lang.com/warning-ref.html#case-outside-range) now warns when both the case expression and the item are constant but the item can't fit in the type of the case expression (which makes it work for case generate constructs)
+* AST JSON source ranges now more correctly set source locations for nodes from expanded macros, and include additional location information about the original macro definition (thanks to @hankhsu1996)
+* [-Wuseless-cast](https://sv-lang.com/warning-ref.html#useless-cast) no longer warns about size casts whose width is computed (e.g. from a parameter), since such casts are only redundant for some parameterizations
 
 ### Fixes
+* Fixed [-Wcase-gen-dup](https://sv-lang.com/warning-ref.html#case-gen-dup) and [-Wcase-gen-none](https://sv-lang.com/warning-ref.html#case-gen-none) printing `<unset>` instead of the type when the case generate condition is a type reference
+* Fixed missing type checking of case property expression items against the case expression; incompatible types are now correctly reported as errors
+* `dist` expressions now have a result type of `logic` instead of `void`, matching the `inside` operator
+* Fixed `$sdf_annotate` to allow empty optional arguments and to correctly type check all of its string arguments
 * Fixed ICE during constant evaluation of `repeat` loop with `real` count (thanks to @sifferman)
 * Fixed replication operator to allow a literal zero count when the operand is a string literal, resulting in the empty string (thanks to @hankhsu1996)
 * Fixed bit-selects and part-selects of signed packed arrays declared via a typedef incorrectly producing a signed result
@@ -63,11 +73,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed invalid constant folding of a conditional expression with a non-constant `matches` clause
 * Diagnostics that are errors by default and downgraded with `-Wno-error=` are now correctly turned off by `-Wnone`, while enabling them by name or group keeps them as errors (thanks to @hankhsu1996)
 * Fixed a crash in `SyntaxTree.fromText` when the text is a lone member keyword like `default` (thanks to @eanorige)
+* Fixed the expansion of nested macros defined and referenced within the same outer macro invocation
+* Fixed a parse error when the first formal argument of a sequence, property, `let`, or checker is declared `untyped`
+* We now gracefully continue AST construction after encountering the suppressible bad-procedural-force error, instead of erroring out the whole statement (thanks to @hankhsu1996)
+* Fixed data races when constructing `Driver` objects concurrently on multiple threads, and when printing via the `OS` utility functions while output capture is installed or removed on another thread
 
 ### Tools & Bindings
 #### pyslang
 * Fixed incorrect binding of properties that return spans, which could lead to crashes
 * Added implicit conversions to allow passing symbols to methods that expect Scopes (which was broken in the nanobind conversion)
+* Fixed binding of flags enums to allow using expected operators on them (like `|`) (thanks to @XNinety9)
 
 
 ## [v12.0] - 2026-09-29
