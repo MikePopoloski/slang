@@ -74,7 +74,7 @@ bool tryOutputCallback(std::string_view text, bool isStdout) {
 
     std::shared_ptr<const OutputCallback> callback;
     {
-        std::scoped_lock lock(outputMutex);
+        std::scoped_lock<std::mutex> lock(outputMutex);
         callback = outputCallback;
     }
 
@@ -434,7 +434,7 @@ std::string OS::parseEnvVar(const char*& ptr, const char* end) {
 }
 
 void OS::captureOutputStreams(std::string_view text, bool isStdout) {
-    std::scoped_lock lock(captureMutex);
+    std::scoped_lock<std::mutex> lock(captureMutex);
     if (isStdout)
         capturedStdout += text;
     else
@@ -442,7 +442,7 @@ void OS::captureOutputStreams(std::string_view text, bool isStdout) {
 }
 
 void OS::clearCapturedOutput() {
-    std::scoped_lock lock(captureMutex);
+    std::scoped_lock<std::mutex> lock(captureMutex);
     capturedStdout.clear();
     capturedStderr.clear();
 }
@@ -452,7 +452,7 @@ void OS::setOutputCallback(std::function<void(std::string_view, bool)> callback)
     if (callback)
         ptr = std::make_shared<const OutputCallback>(std::move(callback));
 
-    std::scoped_lock lock(outputMutex);
+    std::scoped_lock<std::mutex> lock(outputMutex);
     hasOutputCallback.store(ptr != nullptr, std::memory_order_relaxed);
     outputCallback = std::move(ptr);
 }
