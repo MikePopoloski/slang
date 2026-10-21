@@ -79,8 +79,21 @@ static const TimingControl* findInferredClock(
         // inferred_clock call.
         auto scope = currSymbol.getParentScope();
         SLANG_ASSERT(scope);
-        if (scope->asSymbol().kind == SymbolKind::CheckerInstanceBody)
+        if (scope->asSymbol().kind == SymbolKind::CheckerInstanceBody) {
+            // For a non-procedural checker, the inferred clock comes from the
+            // default clocking in effect where the checker is instantiated,
+            // which is not necessarily the same as where it was declared.
+            auto& body = scope->asSymbol().as<CheckerInstanceBodySymbol>();
+            if (!body.isProcedural) {
+                auto instScope = body.getHierarchicalParent();
+                SLANG_ASSERT(instScope);
+                if (auto defClk = instScope->getCompilation().getDefaultClocking(*instScope))
+                    return &defClk->as<ClockingBlockSymbol>().getEvent();
+                return nullptr;
+            }
+
             return parentProcedure->getInferredClock();
+        }
     }
 
     return nullptr;

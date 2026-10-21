@@ -2410,3 +2410,38 @@ endmodule
     auto diags = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Checker inferred_clock default uses instantiation context") {
+    auto& text = R"(
+checker chk1(logic sig, event clock = $inferred_clock);
+    a1: assert property (@clock sig);
+endchecker
+
+// Default clocking does not extend into checker instances,
+// so this assertion has no clock.
+checker chk2(logic sig);
+    a1: assert property (sig);
+endchecker
+
+package pk;
+    checker chk3(logic sig, event clock = $inferred_clock);
+        a1: assert property (@clock sig);
+    endchecker
+endpackage
+
+module top;
+    logic clk, ok;
+    default clocking @(posedge clk); endclocking
+    chk1 c1(ok);
+    chk2 c2(ok);
+    pk::chk3 c3(ok);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssertionNoClock);
+}
