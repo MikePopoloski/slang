@@ -400,7 +400,7 @@ TEST_CASE("Tautological overlapping comparisons") {
 module m;
     int i;
     logic [3:0] a;
-    logic c;
+    logic b, c;
 
     always_comb begin
         c = i < 5 && i > 10;
@@ -411,6 +411,7 @@ module m;
         c = i == 1 || i != 1;
         c = 5 > i && 10 < i;
         c = a <= 3 && a >= 12;
+        c = b === 1'b0 || b !== 1'b0;
 
         // None of these warn.
         c = i >= 5 && i <= 10;
@@ -418,6 +419,9 @@ module m;
         c = i < 5 && a > 10;
         c = i == 1 || i == 2;
         c = i != 1 && i != 2;
+        c = b === 1'b1 || b === 1'b0;
+        c = b === 1'b1 || b != 1'b1;
+        c = b === 1'b1 || b !== 1'b0;
     end
 endmodule
 )";
@@ -452,6 +456,9 @@ source:14:19: warning: non-overlapping comparisons always evaluate to false [-Wt
 source:15:20: warning: non-overlapping comparisons always evaluate to false [-Wtautological-overlap-compare]
         c = a <= 3 && a >= 12;
             ~~~~~~ ^~ ~~~~~~~
+source:16:24: warning: overlapping comparisons always evaluate to true [-Wtautological-overlap-compare]
+        c = b === 1'b0 || b !== 1'b0;
+            ~~~~~~~~~~ ^~ ~~~~~~~~~~
 )");
 }
 

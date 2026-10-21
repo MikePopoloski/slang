@@ -681,6 +681,20 @@ private:
             isTautology = isDisjoint(*ls, *rs);
         }
         else {
+            // For four-state values, case equality is false for X/Z values,
+            // which aren't part of the domain, so the union doesn't cover them
+            // unless the other side is a case inequality (which is true for them).
+            auto isCaseEq = [](const ConstCompare& cc) {
+                return cc.op == BinaryOperator::CaseEquality;
+            };
+            auto isCaseNe = [](const ConstCompare& cc) {
+                return cc.op == BinaryOperator::CaseInequality;
+            };
+            if (lcc->valueExpr->type->isFourState() && (isCaseEq(*lcc) || isCaseEq(*rcc)) &&
+                !isCaseNe(*lcc) && !isCaseNe(*rcc)) {
+                return;
+            }
+
             // The union of the two sets covers the whole domain
             // if the intersection of their complements is empty.
             isTautology = isDisjoint(complement(*ls, domain), complement(*rs, domain));
