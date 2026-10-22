@@ -39,13 +39,17 @@ struct UndrivenRangeVisitor : public TidyVisitor,
     void handle(const VariableSymbol& symbol) {
 
         // If the variable has a fixed range, then determine if any ranges are
-        // undriven. Note that driver bit ranges are zero indexed, so we need to
-        // offset them by the lower bound of the variable's range.
+        // undriven. Driver bit ranges are zero indexed offsets over the whole
+        // variable. For a single dimension vector they are offset by the lower
+        // bound of the variable's range to report the declared bit indices; in
+        // any other case (multidimensional or unpacked arrays) the range is not
+        // in bits, so report the offsets themselves.
         if (symbol.getType().hasFixedRange()) {
             auto range = symbol.getType().getFixedRange();
+            auto width = (int)symbol.getType().getSelectableWidth();
 
-            int start = range.lower();
-            int end = range.upper();
+            int start = (int)range.width() == width ? range.lower() : 0;
+            int end = start + width - 1;
             int current = start;
 
             std::vector<ConstantRange> undriven;

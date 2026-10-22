@@ -117,3 +117,45 @@ source:4:33: warning: [SYNTHESIS-20] variable o_output has undriven bits: 3
                                 ^
 )");
 }
+
+TEST_CASE("Undriven range: unpacked array driven through a range select") {
+    auto result = runCheckTest("UndrivenRange", R"(
+module top(input logic [7:0] a [3:0], output logic [7:0] o [3:0]);
+  logic [7:0] d [3:0];
+  assign d[3:1] = a[3:1];
+  assign d[0] = '0;
+  assign o = d;
+endmodule
+)");
+    CHECK(result);
+}
+
+TEST_CASE("Undriven range: undriven last element of an unpacked array") {
+    // Driver bounds are bit offsets over the whole array, so the undriven
+    // element 0 of a [3:0] array is reported as its bit offsets
+    std::string output;
+    auto result = runCheckTest("UndrivenRange", R"(
+module top(input logic [7:0] a [3:0], output logic [7:0] o [3:0]);
+  logic [7:0] d [3:0];
+  assign d[3:1] = a[3:1];
+  assign o = d;
+endmodule
+)",
+                               {}, &output);
+    CHECK_FALSE(result);
+    CHECK(output.find("variable d has undriven bits: 24:31") != std::string::npos);
+}
+
+TEST_CASE("Undriven range: undriven upper elements of a packed multidimensional array") {
+    std::string output;
+    auto result = runCheckTest("UndrivenRange", R"(
+module top(input logic [15:0] a, output logic [3:0][7:0] o);
+  logic [3:0][7:0] q;
+  assign q[1:0] = a;
+  assign o = q;
+endmodule
+)",
+                               {}, &output);
+    CHECK_FALSE(result);
+    CHECK(output.find("variable q has undriven bits: 16:31") != std::string::npos);
+}

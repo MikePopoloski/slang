@@ -1621,3 +1621,27 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MixedVarAssigns);
 }
+
+TEST_CASE("Multi-assign overlapping a range select of an unpacked array") {
+    // The range select drives every element in it, not only the first one,
+    // whatever the direction of the array range.
+    auto& code = R"(
+module m(input logic [7:0] a [3:0], input logic [7:0] b [0:3], input logic [7:0] c);
+    logic [7:0] d [3:0];
+    assign d[3:1] = a[3:1];
+    assign d[1] = c;
+
+    logic [7:0] e [0:3];
+    assign e[1:3] = b[1:3];
+    assign e[3] = c;
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+    CHECK(diags[1].code == diag::MultipleContAssigns);
+}

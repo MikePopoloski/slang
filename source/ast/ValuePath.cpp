@@ -64,11 +64,12 @@ static std::optional<BitRange> computeBounds(SmallVector<const Expression*>& pat
 
         if (type->kind == SymbolKind::FixedSizeUnpackedArrayType) {
             // Unpacked arrays need their selection adjusted since they
-            // return a simple index instead of a bit offset.
-            type = &type->getArrayElementType()->getCanonicalType();
-            uint64_t elemWidth = type->getSelectableWidth();
+            // return a simple index instead of a bit offset. A range select
+            // covers `width` elements, not only the first one.
+            uint64_t elemWidth = type->getArrayElementType()->getSelectableWidth();
+            type = &elem.type->getCanonicalType();
             result.first += start * elemWidth;
-            result.second = result.first + elemWidth - 1;
+            result.second = result.first + width * elemWidth - 1;
         }
         else {
             type = &elem.type->getCanonicalType();
