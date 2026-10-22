@@ -117,3 +117,15 @@ source:4:33: warning: [SYNTHESIS-20] variable o_output has undriven bits: 3
                                 ^
 )");
 }
+
+TEST_CASE("Undriven range: unpacked array driven through a range select") {
+    auto result = runCheckTest("UndrivenRange", R"(
+module top(input logic [7:0] a [3:0], output logic [7:0] o [3:0]);
+  logic [7:0] d [3:0];
+  assign d[3:1] = a[3:1];
+  assign d[0] = '0;
+  assign o = d;
+endmodule
+)");
+    CHECK(result);
+}
