@@ -1242,8 +1242,8 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
             if (unionVal->activeMember) {
                 // Get the type of the member that is currently active.
                 auto& currType = valueType.as<UnpackedUnionType>()
-                                     .memberAt<FieldSymbol>(*unionVal->activeMember)
-                                     .getType()
+                                     .fields[*unionVal->activeMember]
+                                     ->getType()
                                      .getCanonicalType();
 
                 RecursiveStructMemberIterator rsmi(unionVal->value, currType);
