@@ -123,4 +123,8 @@ private:
     /// ignoring case and hyphens, so acronyms can be written either as one word
     /// (always-ff-blocking) or, as in older versions, letter by letter (always-f-f-blocking).
     static std::string resolveCheckName(const std::string& checkName);
+
+    /// Removes the comments from a config: everything from a '#' outside a quoted value to the
+    /// end of the line. The newlines are kept so line numbers in errors are unchanged.
+    static std::string stripComments(std::string_view config);
 };

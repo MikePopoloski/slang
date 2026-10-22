@@ -318,3 +318,36 @@ TEST_CASE("TidyParser: check names are printed with acronyms kept together") {
     CHECK(TidyConfigParser::unformatCheckName("EnforcePortSuffix") == "enforce-port-suffix");
     CHECK(TidyConfigParser::unformatCheckName("NoCaseX") == "no-case-x");
 }
+
+TEST_CASE("TidyParser: comments") {
+    auto config_str = std::string(R"(# Project slang-tidy configuration
+
+Checks:
+    # Style checks the design doesn't follow
+    -style-generate-named, # legacy code
+    -style-no-legacy-generate,
+    # synthesis-no-latches-on-design=error,
+
+    synthesis-register-has-no-reset=error # catches missing resets
+# End of checks
+
+CheckConfigs:
+    # Clock and reset
+    clkName: clk_i, # main clock
+
+    # resetName: rst_x,
+    resetIsActiveHigh: true
+# Trailing comment)");
+    TidyConfigParser parser(config_str);
+    auto config = parser.getConfig();
+
+    CHECK_FALSE(config.isCheckEnabled(slang::TidyKind::Style, "GenerateNamed"));
+    CHECK_FALSE(config.isCheckEnabled(slang::TidyKind::Style, "NoLegacyGenerate"));
+    CHECK(config.isCheckEnabled(slang::TidyKind::Synthesis, "NoLatchesOnDesign"));
+    CHECK_FALSE(config.getCheckSeverity(slang::TidyKind::Synthesis, "NoLatchesOnDesign"));
+    CHECK(config.getCheckSeverity(slang::TidyKind::Synthesis, "RegisterHasNoReset") ==
+          slang::DiagnosticSeverity::Error);
+    CHECK(config.getCheckConfigs().clkName == "clk_i");
+    CHECK(config.getCheckConfigs().resetName == "rst_ni");
+    CHECK(config.getCheckConfigs().resetIsActiveHigh);
+}

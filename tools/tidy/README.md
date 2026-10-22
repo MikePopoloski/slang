@@ -35,6 +35,8 @@ END                   ::= EOL* | EOF
 
 The syntax of the `.slang-tidy` file is similar to the syntax of the `.clang-tidy`. There are two main
 sections: `Checks` and `CheckConfigs`, that can appear as many times as needed in the config file.
+Comments start with `#` and extend to the end of the line, so a check can be commented out or a
+setting explained in place.
 
 The `Checks` section is a comma separated list of globs with an optional `-` prefix, that will enable or disable
 the specified check or group of checks.
@@ -105,13 +107,14 @@ An example of a possible configuration file:
 Checks:
     -*,
     synthesis-only-assigned-on-reset,
+    # synthesis-register-has-no-reset,
     style-enforce-port-suffix
 
 CheckConfigs:
     clkName: clk,
     clkNameRegexString: "clk_signal\S*|clock_port\S*",
     resetName: rst_i,
-    resetIsActiveHigh: true,
+    resetIsActiveHigh: true, # rst_i is active high
     inputPortSuffix: _k,
     outputPortSuffix: _p
 ```
