@@ -22,7 +22,9 @@ inline constexpr bool is_vector_v = is_vector<T>::value;
 TidyConfigParser::TidyConfigParser(const std::filesystem::path& path) {
     parserState = ParserState::Initial;
     filePath = path.string();
-    fileStream << std::ifstream(filePath).rdbuf();
+    std::stringstream content;
+    content << std::ifstream(filePath).rdbuf();
+    fileStream.str(stripComments(content.str()));
     line = 0;
     col = 0;
     parseFile();
@@ -31,10 +33,34 @@ TidyConfigParser::TidyConfigParser(const std::filesystem::path& path) {
 TidyConfigParser::TidyConfigParser(const std::string& config) {
     parserState = ParserState::Initial;
     filePath = "raw-string";
-    fileStream.str(config);
+    fileStream.str(stripComments(config));
     line = 0;
     col = 0;
     parseFile();
+}
+
+std::string TidyConfigParser::stripComments(std::string_view config) {
+    std::string result;
+    bool inComment = false;
+    bool inQuotes = false;
+    for (char c : config) {
+        if (c == '\n' || c == '\r') {
+            inComment = false;
+            inQuotes = false;
+        }
+        else if (inComment) {
+            continue;
+        }
+        else if (c == '"') {
+            inQuotes = !inQuotes;
+        }
+        else if (c == '#' && !inQuotes) {
+            inComment = true;
+            continue;
+        }
+        result += c;
+    }
+    return result;
 }
 
 char TidyConfigParser::nextChar() {
@@ -109,6 +135,12 @@ void TidyConfigParser::parseFile() {
 }
 
 void TidyConfigParser::parseInitial() {
+    // Skip blank lines (e.g. left by comments) before a section
+    while (peekChar() == '\n')
+        nextChar();
+    if (fileStream.eof())
+        return;
+
     char currentChar = peekChar();
     if (currentChar == 0)
         reportErrorAndExit("Unexpected end of file");
@@ -313,9 +345,11 @@ void TidyConfigParser::parseChecks() {
 
 void TidyConfigParser::parseCheckConfigs() {
     while (!fileStream.eof()) {
-        // Parse optional newline
-        if (peekChar() == '\n')
+        // Parse optional newlines
+        while (peekChar() == '\n')
             nextChar();
+        if (fileStream.eof())
+            return;
 
         // Parse option name
         std::string optionName;
