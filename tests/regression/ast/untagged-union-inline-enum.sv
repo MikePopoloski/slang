@@ -13,7 +13,7 @@ module m;
     localparam int X = f();
     function automatic int check(int value);
         if (value != 5)
-            $fatal(1, "inactive enum field has unexpected value");
+            $fatal(1, "inactive union field has unexpected value");
         return value;
     endfunction
     localparam int Checked = check(X);
