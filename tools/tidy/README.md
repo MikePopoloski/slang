@@ -54,8 +54,11 @@ Disable all: -*
 ```
 
 Each check identifier is composed of a group name, eg `style`, followed by a
-hyphen `-` and the check name in lower case with hyphens. See the output of
-`--print-descriptions` to see the available checks and their config keys.
+hyphen `-` and the check name in lower case with hyphens, keeping acronyms as
+one word (eg `style-always-ff-blocking` for `AlwaysFFBlocking`). See the output of
+`--print-descriptions` to see the available checks and their config keys. The
+spelling with acronyms split letter by letter used by older versions (eg
+`style-always-f-f-blocking`) is still accepted, with a warning.
 
 Additionally, each check or group of checks can specify a severity level that
 diagnostics are reported with. These levels are `ignore`, `info`, `warning`,

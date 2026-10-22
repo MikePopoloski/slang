@@ -3,6 +3,7 @@
 
 #include "TidyConfigParser.h"
 
+#include "TidyFactory.h"
 #include "fmt/format.h"
 #include <fstream>
 
@@ -422,11 +423,21 @@ void TidyConfigParser::toggleCheck(const std::string& groupName, const std::stri
     auto kind = slang::tidyKindFromStr(groupName);
     if (!kind)
         reportErrorAndExit(fmt::format("Group {} does not exist", groupName));
-    bool found = config.toggleCheck(kind.value(), formatCheckName(checkName), status, severity);
+    auto name = resolveCheckName(checkName);
+    bool found = !name.empty() && config.toggleCheck(kind.value(), name, status, severity);
 
-    if (!found)
+    if (!found) {
         reportWarning(
             fmt::format("Check name {} does not exist in group {}", checkName, groupName));
+        return;
+    }
+
+    auto lowerName = checkName;
+    std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+    if (auto canonical = unformatCheckName(name); lowerName != canonical) {
+        reportWarning(fmt::format("Check name {0}-{1} is deprecated, use {0}-{2} instead",
+                                  groupName, checkName, canonical));
+    }
 }
 
 void TidyConfigParser::parseConfigValue(std::string& config, std::string&& configValue) {
@@ -483,58 +494,38 @@ void TidyConfigParser::reportWarning(const std::string& str) const {
                                  filePath, line, col, str));
 }
 
-std::string TidyConfigParser::formatCheckName(const std::string& checkName) {
-    if (checkName.empty())
-        return "";
-    std::string capitalizedName;
-    capitalizedName.resize(checkName.size());
-    std::transform(checkName.begin(), checkName.end(), capitalizedName.begin(), ::tolower);
-    // Input string is expected to have the format a-b-c-d-e...
-    // Capitalize the first letter
-    capitalizedName[0] = static_cast<char>(::toupper(capitalizedName[0]));
-    if (std::count(capitalizedName.begin(), capitalizedName.end(), '-') == 0) {
-        // If there are no '-' on the name, we are done
-        return capitalizedName;
-    }
-
-    // Find all the '-' and capitalize the following char if exists
-    auto nameLength = checkName.size();
-    size_t pos = 0;
-    while (true) {
-        pos = capitalizedName.find('-', pos);
-        // If pos+1 does not exist, or we have not found anymore '-' we can break.
-        // Else capitalize the pos+1 letter
-        if (pos == std::string::npos || nameLength <= pos)
-            break;
-        else {
-            capitalizedName[pos + 1] = static_cast<char>(::toupper(capitalizedName[pos + 1]));
-            pos += 1;
+std::string TidyConfigParser::resolveCheckName(const std::string& checkName) {
+    auto normalize = [](const std::string& name) {
+        std::string result;
+        for (char ch : name) {
+            if (ch != '-')
+                result += static_cast<char>(::tolower(ch));
         }
-    }
+        return result;
+    };
 
-    // At this point the string should have the format Aa-Bb-Cc-....
-    // Remove the '-' from the string and we are done
-    size_t currentPos = 0;
-    size_t nextPos = capitalizedName.find('-');
-    std::string name;
-    while (nextPos != std::string::npos) {
-        name.append(capitalizedName.substr(currentPos, nextPos - currentPos));
-        currentPos = nextPos + 1;
-        nextPos = capitalizedName.find('-', currentPos);
+    auto key = normalize(checkName);
+    for (const auto& name : Registry::getRegisteredChecks()) {
+        if (normalize(name) == key)
+            return name;
     }
-    name.append(capitalizedName.substr(currentPos));
-    return name;
+    return "";
 }
 
 std::string TidyConfigParser::unformatCheckName(const std::string& name) {
     std::string result;
 
-    for (char ch : name) {
+    for (size_t i = 0; i < name.size(); i++) {
+        char ch = name[i];
         if (std::isupper(ch)) {
-            if (!result.empty()) {
+            // Start a new word at each capital letter, except inside an acronym:
+            // AlwaysFFBlocking is always-ff-blocking and OnlyANSIPortDecl is
+            // only-ansi-port-decl.
+            bool prevUpper = i > 0 && std::isupper(name[i - 1]);
+            bool nextLower = i + 1 < name.size() && std::islower(name[i + 1]);
+            if (!result.empty() && (!prevUpper || nextLower))
                 result += '-';
-            }
-            result += std::tolower(ch);
+            result += static_cast<char>(std::tolower(ch));
         }
         else {
             result += ch;

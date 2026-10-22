@@ -117,8 +117,10 @@ private:
     /// Return the DiagnosticSeverity type corresponding to name.
     auto getSeverity(std::string const& name) -> std::optional<slang::DiagnosticSeverity>;
 
-    /// The name format of the checks provided by the user are required to be: this-is-my-check
-    /// but the registered names in the TidyFactory are ThisIsMyCheck. This function translates from
-    /// the one provided by the user to the one expected by the Factory.
-    static std::string formatCheckName(const std::string& checkName);
+    /// The name format of the checks provided by the user is this-is-my-check but the registered
+    /// names in the TidyFactory are ThisIsMyCheck. This function returns the registered name the
+    /// one provided by the user refers to, or an empty string if there's none. Names are compared
+    /// ignoring case and hyphens, so acronyms can be written either as one word
+    /// (always-ff-blocking) or, as in older versions, letter by letter (always-f-f-blocking).
+    static std::string resolveCheckName(const std::string& checkName);
 };
