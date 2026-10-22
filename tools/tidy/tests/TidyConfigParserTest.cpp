@@ -6,6 +6,7 @@
 #include "TidyFactory.h"
 
 #include "slang/diagnostics/Diagnostics.h"
+#include "slang/util/OS.h"
 
 TEST_CASE("TidyParser: Enable all") {
     auto config_str = std::string(R"(Checks: *)");
@@ -274,4 +275,46 @@ TEST_CASE("TidyParser: single check various severities") {
           slang::DiagnosticSeverity::Error);
     CHECK(config.getCheckSeverity(slang::TidyKind::Style, "NoDotVarInPortConnection") ==
           slang::DiagnosticSeverity::Fatal);
+}
+
+TEST_CASE("TidyParser: check names with acronyms") {
+    auto guard = OS::captureOutput();
+    auto config_str = std::string(R"(Checks:
+    -*,
+    style-always-ff-blocking=error,
+    synthesis-always-ff-assignment-outside-conditional,
+    style-only-ansi-port-decl)");
+    TidyConfigParser parser(config_str);
+    auto config = parser.getConfig();
+
+    CHECK(config.isCheckEnabled(slang::TidyKind::Style, "AlwaysFFBlocking"));
+    CHECK(config.getCheckSeverity(slang::TidyKind::Style, "AlwaysFFBlocking") ==
+          slang::DiagnosticSeverity::Error);
+    CHECK(
+        config.isCheckEnabled(slang::TidyKind::Synthesis, "AlwaysFFAssignmentOutsideConditional"));
+    CHECK(config.isCheckEnabled(slang::TidyKind::Style, "OnlyANSIPortDecl"));
+    CHECK(OS::capturedStdout.empty());
+}
+
+TEST_CASE("TidyParser: deprecated check names with split acronyms") {
+    // Names generated before acronyms were kept together are still accepted
+    auto guard = OS::captureOutput();
+    auto config_str = std::string(R"(Checks:
+    -*,
+    style-always-f-f-blocking,
+    style-only-a-n-s-i-port-decl)");
+    TidyConfigParser parser(config_str);
+    auto config = parser.getConfig();
+
+    CHECK(config.isCheckEnabled(slang::TidyKind::Style, "AlwaysFFBlocking"));
+    CHECK(config.isCheckEnabled(slang::TidyKind::Style, "OnlyANSIPortDecl"));
+    CHECK(OS::capturedStdout.find("use style-always-ff-blocking instead") != std::string::npos);
+    CHECK(OS::capturedStdout.find("use style-only-ansi-port-decl instead") != std::string::npos);
+}
+
+TEST_CASE("TidyParser: check names are printed with acronyms kept together") {
+    CHECK(TidyConfigParser::unformatCheckName("AlwaysFFBlocking") == "always-ff-blocking");
+    CHECK(TidyConfigParser::unformatCheckName("OnlyANSIPortDecl") == "only-ansi-port-decl");
+    CHECK(TidyConfigParser::unformatCheckName("EnforcePortSuffix") == "enforce-port-suffix");
+    CHECK(TidyConfigParser::unformatCheckName("NoCaseX") == "no-case-x");
 }
