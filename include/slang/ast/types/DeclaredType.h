@@ -91,12 +91,15 @@ enum class SLANG_EXPORT DeclaredTypeFlags {
     /// type check is suppressed.
     ImplicitInputNet = 1 << 17,
 
+    /// Record explicitly referenced type names while resolving this declaration.
+    CollectTypeReferences = 1 << 18,
+
     /// A mask of flags that indicate additional type rules are needed to
     /// be checked after the type itself is resolved.
     NeedsTypeCheck = NetType | UserDefinedNetType | FormalArgMergeVar | Rand | DPIReturnType |
         DPIArg | RequireSequenceType | CoverageType | IfaceOrGenBlkVar
 };
-SLANG_BITMASK(DeclaredTypeFlags, ImplicitInputNet)
+SLANG_BITMASK(DeclaredTypeFlags, CollectTypeReferences)
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type. Optionally includes an

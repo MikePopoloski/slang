@@ -1997,6 +1997,48 @@ endmodule
     }
 }
 
+TEST_CASE("Bind type references are collected through every resolution entry point") {
+    auto tree = SyntaxTree::fromText(R"(
+module Probe #(parameter type T = bit);
+endmodule
+
+module Dut;
+    typedef bit [3:0] local_t;
+endmodule
+
+module top;
+    Dut dut();
+    bind dut Probe #(.T(local_t)) dut_probe();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto symbol = compilation.getRoot().lookupName("top.dut.dut_probe");
+    REQUIRE(symbol);
+    auto& instance = symbol->as<InstanceSymbol>();
+    auto& targetType = instance.body.find<TypeParameterSymbol>("T").targetType;
+    ASTContext context(*instance.getParentScope(), LookupLocation::before(instance),
+                       ASTFlags::BindInstantiation);
+
+    SECTION("getType") {
+        targetType.getType();
+    }
+
+    SECTION("forceResolveAt") {
+        targetType.forceResolveAt(context);
+    }
+
+    SECTION("resolveAt") {
+        targetType.resolveAt(context);
+    }
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BindTypeParamNotFound);
+}
+
 TEST_CASE("Binds with invalid qualified type params") {
     auto tree = SyntaxTree::fromText(R"(
 typedef bit word_t;

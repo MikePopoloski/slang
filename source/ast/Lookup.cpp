@@ -1116,8 +1116,8 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
     auto& scope = *context.scope;
     auto& compilation = scope.getCompilation();
     auto guard = ScopeGuard([&] {
-        if (compilation.activeBindTypeReferences)
-            compilation.noteBindTypeReference(syntax, result);
+        if (compilation.activeTypeReferences)
+            compilation.noteTypeReference(syntax, result);
     });
     result.nameRange = syntax.sourceRange();
 

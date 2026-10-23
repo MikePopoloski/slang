@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/types/DeclaredType.h"
 
+#include <optional>
+
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/Scope.h"
@@ -41,18 +43,8 @@ DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flag
 }
 
 const Type& DeclaredType::getType() const {
-    if (!type) {
-        auto context = getASTContext<false>();
-        if (parent.kind == SymbolKind::TypeParameter &&
-            flags.has(DeclaredTypeFlags::TypeOverridden) &&
-            context.flags.has(ASTFlags::BindInstantiation)) {
-            context.getCompilation().resolveBindTypeParam(parent.as<TypeParameterSymbol>(),
-                                                          context);
-        }
-        else {
-            resolveType(context, getASTContext<true>());
-        }
-    }
+    if (!type)
+        resolveType(getASTContext<false>(), getASTContext<true>());
     return *type;
 }
 
@@ -97,6 +89,10 @@ void DeclaredType::resolveType(const ASTContext& typeContext,
     SLANG_ASSERT(!evaluating);
     evaluating = true;
     auto guard = ScopeGuard([this] { evaluating = false; });
+
+    std::optional<Compilation::TypeReferenceCollector> collector;
+    if (flags.has(DeclaredTypeFlags::CollectTypeReferences))
+        collector.emplace(comp, *this);
 
     // If we are configured to infer implicit types, bind the initializer expression
     // first so that we can derive our type from whatever that happens to be.

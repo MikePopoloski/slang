@@ -584,10 +584,6 @@ public:
     /// These are later checked for correctness.
     void noteInstanceWithDefBind(const Symbol& instance);
 
-    /// Resolves a bound type parameter and records explicitly referenced type names
-    /// for subsequent validation against the scope containing the bind directive.
-    void resolveBindTypeParam(const TypeParameterSymbol& param, const ASTContext& context);
-
     /// Notes the presence of a DPI export directive. These will be checked for correctness
     /// but are otherwise unused by SystemVerilog code.
     void noteDPIExportDirective(const syntax::DPIExportSyntax& syntax, const Scope& scope);
@@ -838,21 +834,30 @@ public:
     /// @}
 
 private:
+    friend class DeclaredType;
     friend class Lookup;
     friend class Scope;
     friend struct DiagnosticVisitor;
 
-    struct BindTypeReference {
+    struct TypeReference {
         const syntax::NameSyntax* syntax;
         const Type* type;
     };
 
-    struct BindTypeReferenceCollector {
+    struct TypeReferenceCollector {
+        TypeReferenceCollector(Compilation& compilation, const DeclaredType& declaredType);
+        ~TypeReferenceCollector();
+        TypeReferenceCollector(const TypeReferenceCollector&) = delete;
+        TypeReferenceCollector& operator=(const TypeReferenceCollector&) = delete;
+
+        Compilation& compilation;
+        const DeclaredType& declaredType;
+        TypeReferenceCollector* previous;
         const syntax::DataTypeSyntax* syntax;
-        SmallVector<BindTypeReference> references;
+        SmallVector<TypeReference> references;
     };
 
-    void noteBindTypeReference(const syntax::NameSyntax& syntax, const LookupResult& result);
+    void noteTypeReference(const syntax::NameSyntax& syntax, const LookupResult& result);
 
     // Collected information about a resolved bind directive.
     struct ResolvedBind {
@@ -934,11 +939,10 @@ private:
     // for things like variables and nets.
     flat_hash_map<const syntax::SyntaxNode*, std::pair<bool, bool>> referenceStatusMap;
 
-    // Explicit type references in bound type parameter overrides. Collect these during
+    // Explicit type references in declarations that opt into collection. Collect these during
     // resolution so value references are distinguished from type names in their actual scope.
-    BindTypeReferenceCollector* activeBindTypeReferences = nullptr;
-    flat_hash_map<const TypeParameterSymbol*, std::span<const BindTypeReference>>
-        bindTypeReferences;
+    TypeReferenceCollector* activeTypeReferences = nullptr;
+    flat_hash_map<const DeclaredType*, std::span<const TypeReference>> typeReferences;
 
     // The name map for all module, interface, program, and primitive definitions.
     // The key is a combination of definition name + the scope in which it was declared.

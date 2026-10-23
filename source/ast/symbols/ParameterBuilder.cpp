@@ -10,6 +10,7 @@
 #include "slang/ast/ASTContext.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Scope.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
@@ -178,9 +179,17 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
 
         auto& tt = param->targetType;
         if (newInitializer) {
+            tt.addFlags(DeclaredTypeFlags::TypeOverridden);
+
+            // Bind overrides must validate explicit type names in both the source and target
+            // scopes.
+            if (!isFromConfig && newScope.asSymbol().kind == SymbolKind::InstanceBody &&
+                newScope.asSymbol().as<InstanceBodySymbol>().flags.has(InstanceFlags::FromBind)) {
+                tt.addFlags(DeclaredTypeFlags::CollectTypeReferences);
+            }
+
             // If this is a NameSyntax, the parser didn't know we were assigning to
             // a type parameter, so fix it up into a NamedTypeSyntax to get a type from it.
-            tt.addFlags(DeclaredTypeFlags::TypeOverridden);
             if (NameSyntax::isKind(newInitializer->kind)) {
                 auto nameSyntax = deepClone(newInitializer->as<NameSyntax>(), comp);
                 auto namedType = comp.emplace<NamedTypeSyntax>(*nameSyntax);

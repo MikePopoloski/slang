@@ -1136,29 +1136,26 @@ void Compilation::noteInstanceWithDefBind(const Symbol& instance) {
     instancesWithDefBinds[&def].push_back(&instance);
 }
 
-void Compilation::resolveBindTypeParam(const TypeParameterSymbol& param,
-                                       const ASTContext& context) {
-    BindTypeReferenceCollector collector{param.targetType.getTypeSyntax(), {}};
-    if (!collector.syntax) {
-        param.targetType.forceResolveAt(context);
-        return;
-    }
-
-    auto previous = activeBindTypeReferences;
-    activeBindTypeReferences = &collector;
-    auto guard = ScopeGuard([&] { activeBindTypeReferences = previous; });
-
-    param.targetType.forceResolveAt(context);
-    bindTypeReferences[&param] = collector.references.copy(*this);
+Compilation::TypeReferenceCollector::TypeReferenceCollector(Compilation& compilation,
+                                                            const DeclaredType& declaredType) :
+    compilation(compilation), declaredType(declaredType),
+    previous(compilation.activeTypeReferences), syntax(declaredType.getTypeSyntax()) {
+    SLANG_ASSERT(syntax);
+    compilation.activeTypeReferences = this;
 }
 
-void Compilation::noteBindTypeReference(const NameSyntax& syntax, const LookupResult& result) {
-    auto collector = activeBindTypeReferences;
+Compilation::TypeReferenceCollector::~TypeReferenceCollector() {
+    compilation.activeTypeReferences = previous;
+    compilation.typeReferences[&declaredType] = references.copy(compilation);
+}
+
+void Compilation::noteTypeReference(const NameSyntax& syntax, const LookupResult& result) {
+    auto collector = activeTypeReferences;
     if (!collector || !result.found || !result.found->isType() || result.hasError())
         return;
 
     // Lazy resolution can look up names from other declarations. Only record names
-    // written in the override, including cloned syntax for generic class arguments.
+    // written in the declaration, including cloned syntax for generic class arguments.
     bool isExplicit = false;
     for (const SyntaxNode* node = &syntax; node; node = node->parent) {
         if (node == collector->syntax) {
@@ -1169,9 +1166,10 @@ void Compilation::noteBindTypeReference(const NameSyntax& syntax, const LookupRe
 
     auto range = syntax.sourceRange();
     if (!isExplicit) {
-        auto overrideRange = collector->syntax->sourceRange();
-        isExplicit = range.start().buffer() == overrideRange.start().buffer() &&
-                     overrideRange.contains(range.start()) && range.end() <= overrideRange.end();
+        auto declarationRange = collector->syntax->sourceRange();
+        isExplicit = range.start().buffer() == declarationRange.start().buffer() &&
+                     declarationRange.contains(range.start()) &&
+                     range.end() <= declarationRange.end();
     }
 
     if (isExplicit && !std::ranges::any_of(collector->references, [&](auto& ref) {
@@ -2304,8 +2302,8 @@ void Compilation::checkBindTargetParams(const syntax::BindDirectiveSyntax& synta
                     auto& typeParam = param->symbol.as<TypeParameterSymbol>();
                     if (typeParam.targetType.getType().isError())
                         continue;
-                    auto it = bindTypeReferences.find(&typeParam);
-                    if (it == bindTypeReferences.end())
+                    auto it = typeReferences.find(&typeParam.targetType);
+                    if (it == typeReferences.end())
                         continue;
 
                     for (auto& ref : it->second) {
