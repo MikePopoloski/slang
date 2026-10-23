@@ -46,8 +46,10 @@ class Statement;
 class SubroutineSymbol;
 class Symbol;
 class SystemSubroutine;
+class TypeParameterSymbol;
 struct AssertionInstanceDetails;
 struct ConfigRule;
+struct LookupResult;
 struct ResolvedConfig;
 
 enum class IntegralFlags : uint8_t;
@@ -832,9 +834,30 @@ public:
     /// @}
 
 private:
+    friend class DeclaredType;
     friend class Lookup;
     friend class Scope;
     friend struct DiagnosticVisitor;
+
+    struct TypeReference {
+        const syntax::NameSyntax* syntax;
+        const Type* type;
+    };
+
+    struct TypeReferenceCollector {
+        TypeReferenceCollector(Compilation& compilation, const DeclaredType& declaredType);
+        ~TypeReferenceCollector();
+        TypeReferenceCollector(const TypeReferenceCollector&) = delete;
+        TypeReferenceCollector& operator=(const TypeReferenceCollector&) = delete;
+
+        Compilation& compilation;
+        const DeclaredType& declaredType;
+        TypeReferenceCollector* previous;
+        const syntax::DataTypeSyntax* syntax;
+        SmallVector<TypeReference> references;
+    };
+
+    void noteTypeReference(const syntax::NameSyntax& syntax, const LookupResult& result);
 
     // Collected information about a resolved bind directive.
     struct ResolvedBind {
@@ -915,6 +938,11 @@ private:
     // The value indicates whether the node has been used as an lvalue vs non-lvalue,
     // for things like variables and nets.
     flat_hash_map<const syntax::SyntaxNode*, std::pair<bool, bool>> referenceStatusMap;
+
+    // Explicit type references in declarations that opt into collection. Collect these during
+    // resolution so value references are distinguished from type names in their actual scope.
+    TypeReferenceCollector* activeTypeReferences = nullptr;
+    flat_hash_map<const DeclaredType*, std::span<const TypeReference>> typeReferences;
 
     // The name map for all module, interface, program, and primitive definitions.
     // The key is a combination of definition name + the scope in which it was declared.
