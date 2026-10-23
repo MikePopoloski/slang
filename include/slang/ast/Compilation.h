@@ -46,8 +46,10 @@ class Statement;
 class SubroutineSymbol;
 class Symbol;
 class SystemSubroutine;
+class TypeParameterSymbol;
 struct AssertionInstanceDetails;
 struct ConfigRule;
+struct LookupResult;
 struct ResolvedConfig;
 
 enum class IntegralFlags : uint8_t;
@@ -582,6 +584,10 @@ public:
     /// These are later checked for correctness.
     void noteInstanceWithDefBind(const Symbol& instance);
 
+    /// Resolves a bound type parameter and records explicitly referenced type names
+    /// for subsequent validation against the scope containing the bind directive.
+    void resolveBindTypeParam(const TypeParameterSymbol& param, const ASTContext& context);
+
     /// Notes the presence of a DPI export directive. These will be checked for correctness
     /// but are otherwise unused by SystemVerilog code.
     void noteDPIExportDirective(const syntax::DPIExportSyntax& syntax, const Scope& scope);
@@ -836,6 +842,18 @@ private:
     friend class Scope;
     friend struct DiagnosticVisitor;
 
+    struct BindTypeReference {
+        const syntax::NameSyntax* syntax;
+        const Type* type;
+    };
+
+    struct BindTypeReferenceCollector {
+        const syntax::DataTypeSyntax* syntax;
+        SmallVector<BindTypeReference> references;
+    };
+
+    void noteBindTypeReference(const syntax::NameSyntax& syntax, const LookupResult& result);
+
     // Collected information about a resolved bind directive.
     struct ResolvedBind {
         SmallVector<const Symbol*> instTargets;
@@ -915,6 +933,12 @@ private:
     // The value indicates whether the node has been used as an lvalue vs non-lvalue,
     // for things like variables and nets.
     flat_hash_map<const syntax::SyntaxNode*, std::pair<bool, bool>> referenceStatusMap;
+
+    // Explicit type references in bound type parameter overrides. Collect these during
+    // resolution so value references are distinguished from type names in their actual scope.
+    BindTypeReferenceCollector* activeBindTypeReferences = nullptr;
+    flat_hash_map<const TypeParameterSymbol*, std::span<const BindTypeReference>>
+        bindTypeReferences;
 
     // The name map for all module, interface, program, and primitive definitions.
     // The key is a combination of definition name + the scope in which it was declared.

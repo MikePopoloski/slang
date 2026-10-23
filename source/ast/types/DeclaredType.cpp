@@ -41,8 +41,18 @@ DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flag
 }
 
 const Type& DeclaredType::getType() const {
-    if (!type)
-        resolveType(getASTContext<false>(), getASTContext<true>());
+    if (!type) {
+        auto context = getASTContext<false>();
+        if (parent.kind == SymbolKind::TypeParameter &&
+            flags.has(DeclaredTypeFlags::TypeOverridden) &&
+            context.flags.has(ASTFlags::BindInstantiation)) {
+            context.getCompilation().resolveBindTypeParam(parent.as<TypeParameterSymbol>(),
+                                                          context);
+        }
+        else {
+            resolveType(context, getASTContext<true>());
+        }
+    }
     return *type;
 }
 

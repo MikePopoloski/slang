@@ -29,6 +29,7 @@
 #include "slang/parsing/LexerFacts.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/ScopeGuard.h"
 #include "slang/util/String.h"
 
 namespace slang::ast {
@@ -1113,6 +1114,11 @@ bool withinCovergroup(const Symbol& symbol, const Scope& initialScope) {
 void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<LookupFlags> flags,
                   LookupResult& result) {
     auto& scope = *context.scope;
+    auto& compilation = scope.getCompilation();
+    auto guard = ScopeGuard([&] {
+        if (compilation.activeBindTypeReferences)
+            compilation.noteBindTypeReference(syntax, result);
+    });
     result.nameRange = syntax.sourceRange();
 
     NameComponents name;

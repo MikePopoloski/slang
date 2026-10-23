@@ -1136,6 +1136,51 @@ void Compilation::noteInstanceWithDefBind(const Symbol& instance) {
     instancesWithDefBinds[&def].push_back(&instance);
 }
 
+void Compilation::resolveBindTypeParam(const TypeParameterSymbol& param,
+                                       const ASTContext& context) {
+    BindTypeReferenceCollector collector{param.targetType.getTypeSyntax(), {}};
+    if (!collector.syntax) {
+        param.targetType.forceResolveAt(context);
+        return;
+    }
+
+    auto previous = activeBindTypeReferences;
+    activeBindTypeReferences = &collector;
+    auto guard = ScopeGuard([&] { activeBindTypeReferences = previous; });
+
+    param.targetType.forceResolveAt(context);
+    bindTypeReferences[&param] = collector.references.copy(*this);
+}
+
+void Compilation::noteBindTypeReference(const NameSyntax& syntax, const LookupResult& result) {
+    auto collector = activeBindTypeReferences;
+    if (!collector || !result.found || !result.found->isType() || result.hasError())
+        return;
+
+    // Lazy resolution can look up names from other declarations. Only record names
+    // written in the override, including cloned syntax for generic class arguments.
+    bool isExplicit = false;
+    for (const SyntaxNode* node = &syntax; node; node = node->parent) {
+        if (node == collector->syntax) {
+            isExplicit = true;
+            break;
+        }
+    }
+
+    auto range = syntax.sourceRange();
+    if (!isExplicit) {
+        auto overrideRange = collector->syntax->sourceRange();
+        isExplicit = range.start().buffer() == overrideRange.start().buffer() &&
+                     overrideRange.contains(range.start()) && range.end() <= overrideRange.end();
+    }
+
+    if (isExplicit && !std::ranges::any_of(collector->references, [&](auto& ref) {
+            return ref.syntax->sourceRange() == range;
+        })) {
+        collector->references.push_back({&syntax, &result.found->as<Type>()});
+    }
+}
+
 void Compilation::noteDPIExportDirective(const DPIExportSyntax& syntax, const Scope& scope) {
     SLANG_ASSERT(!isFrozen());
 
@@ -2257,23 +2302,25 @@ void Compilation::checkBindTargetParams(const syntax::BindDirectiveSyntax& synta
             for (auto param : inst.body.getParameters()) {
                 if (param->symbol.kind == SymbolKind::TypeParameter) {
                     auto& typeParam = param->symbol.as<TypeParameterSymbol>();
-                    auto& type = typeParam.targetType.getType();
-                    if (typeParam.isOverridden() && type.isAlias() && !type.name.empty()) {
-                        // This is the case we need to check; the resolved type is
-                        // a named type alias, so we need to also resolve it in the bind
-                        // directive scope and make sure they match.
-                        auto result = Lookup::unqualified(scope, type.name, LookupFlags::Type);
-                        if (!result || !result->isType()) {
-                            auto ts = typeParam.getDeclaredType()->getTypeSyntax();
-                            SLANG_ASSERT(ts);
-                            scope.addDiag(diag::BindTypeParamNotFound, ts->sourceRange())
+                    if (typeParam.targetType.getType().isError())
+                        continue;
+                    auto it = bindTypeReferences.find(&typeParam);
+                    if (it == bindTypeReferences.end())
+                        continue;
+
+                    for (auto& ref : it->second) {
+                        auto& type = *ref.type;
+                        LookupResult result;
+                        Lookup::name(*ref.syntax, ASTContext(scope, LookupLocation::max),
+                                     LookupFlags::Type, result);
+
+                        if (!result.found || !result.found->isType() || result.hasError()) {
+                            scope.addDiag(diag::BindTypeParamNotFound, ref.syntax->sourceRange())
                                 << typeParam.name << type;
                         }
-                        else if (!result->as<Type>().isMatching(type)) {
-                            auto ts = typeParam.getDeclaredType()->getTypeSyntax();
-                            SLANG_ASSERT(ts);
-                            scope.addDiag(diag::BindTypeParamMismatch, ts->sourceRange())
-                                << typeParam.name << result->as<Type>() << type;
+                        else if (!result.found->as<Type>().isMatching(type)) {
+                            scope.addDiag(diag::BindTypeParamMismatch, ref.syntax->sourceRange())
+                                << typeParam.name << result.found->as<Type>() << type;
                         }
                     }
                 }
