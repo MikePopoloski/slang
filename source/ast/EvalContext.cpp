@@ -27,7 +27,9 @@ void EvalContext::reset() {
     diags.clear();
     warnings.clear();
     disableRange = {};
+    diagCount = 0;
     backtraceReported = false;
+    callSiteDependent = false;
 }
 
 ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue value) {
@@ -147,6 +149,7 @@ Diagnostics EvalContext::getAllDiagnostics() const {
 }
 
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceLocation location) {
+    diagCount++;
     const bool isError = getDefaultSeverity(code) >= DiagnosticSeverity::Error;
     auto& diag = isError ? diags.add(code, location) : warnings.add(code, location);
     reportStack(diag);
@@ -154,6 +157,7 @@ Diagnostic& EvalContext::addDiag(DiagCode code, SourceLocation location) {
 }
 
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceRange range) {
+    diagCount++;
     const bool isError = getDefaultSeverity(code) >= DiagnosticSeverity::Error;
     auto& diag = isError ? diags.add(code, range) : warnings.add(code, range);
     reportStack(diag);
