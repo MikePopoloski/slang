@@ -258,7 +258,7 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
             [](PyAnalysisManager& self, nb::object cb) {
                 size_t idx = self.listeners.size();
                 self.listeners.push_back(cb);
-                self.manager.addListener([&self, idx](const AnalyzedProcedure& proc) {
+                self.manager->addListener([&self, idx](const AnalyzedProcedure& proc) {
                     nb::handle fn = self.listeners[idx];
                     nb::object pyProc = nb::cast(&proc, byref);
                     nb::setattr(pyProc, "_manager", nb::find(&self));
@@ -271,7 +271,7 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
             [](PyAnalysisManager& self, nb::object cb) {
                 size_t idx = self.listeners.size();
                 self.listeners.push_back(cb);
-                self.manager.addListener([&self, idx](const AnalyzedScope& scope) {
+                self.manager->addListener([&self, idx](const AnalyzedScope& scope) {
                     nb::handle fn = self.listeners[idx];
                     nb::object pyScope = nb::cast(&scope, byref);
                     nb::setattr(pyScope, "_manager", nb::find(&self));
@@ -284,7 +284,7 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
             [](PyAnalysisManager& self, nb::object cb) {
                 size_t idx = self.listeners.size();
                 self.listeners.push_back(cb);
-                self.manager.addListener([&self, idx](const AnalyzedAssertion& aa) {
+                self.manager->addListener([&self, idx](const AnalyzedAssertion& aa) {
                     nb::handle fn = self.listeners[idx];
                     nb::object pyAA = nb::cast(&aa, byref);
                     nb::setattr(pyAA, "_manager", nb::find(&self));
@@ -295,38 +295,38 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
         .def(
             "analyze",
             [](PyAnalysisManager& self, const ast::Compilation& compilation) {
-                self.manager.analyze(compilation);
+                self.manager->analyze(compilation);
             },
             "compilation"_a, nb::keep_alive<1, 2>())
         .def(
             "getDrivers",
             [](const PyAnalysisManager& self, const ast::ValueSymbol& symbol) {
-                return self.manager.getDrivers(symbol);
+                return self.manager->getDrivers(symbol);
             },
             "symbol"_a, byrefint)
         .def(
-            "getDiagnostics", [](PyAnalysisManager& self) { return self.manager.getDiagnostics(); },
-            byrefint)
+            "getDiagnostics",
+            [](PyAnalysisManager& self) { return self.manager->getDiagnostics(); }, byrefint)
         .def(
             "getAnalyzedScope",
             [](const PyAnalysisManager& self, const ast::Scope& scope) {
-                return self.manager.getAnalyzedScope(scope);
+                return self.manager->getAnalyzedScope(scope);
             },
             "scope"_a, byrefint)
         .def(
             "getAnalyzedSubroutine",
             [](const PyAnalysisManager& self, const ast::SubroutineSymbol& symbol) {
-                return self.manager.getAnalyzedSubroutine(symbol);
+                return self.manager->getAnalyzedSubroutine(symbol);
             },
             "symbol"_a, byrefint)
         .def(
             "getAnalyzedAssertions",
             [](const PyAnalysisManager& self, const ast::Symbol& symbol) {
-                return self.manager.getAnalyzedAssertions(symbol);
+                return self.manager->getAnalyzedAssertions(symbol);
             },
             "symbol"_a, byrefint)
         .def_prop_ro("options", [](const PyAnalysisManager& self) -> const AnalysisOptions& {
-            return self.manager.getOptions();
+            return self.manager->getOptions();
         });
 
     nb::class_<ReadRange>(m, "ReadRange")

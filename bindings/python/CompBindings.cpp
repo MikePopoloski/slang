@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "PyAnalysisManager.h"
 #include "pyslang.h"
 
 #include "slang/analysis/AnalysisManager.h"
@@ -386,7 +387,12 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .def("createCompilation", &Driver::createCompilation, nb::keep_alive<0, 1>())
         .def("reportParseDiags", &Driver::reportParseDiags)
         .def("reportCompilation", &Driver::reportCompilation, "compilation"_a, "quiet"_a)
-        .def("runAnalysis", &Driver::runAnalysis, "compilation"_a)
+        .def(
+            "runAnalysis",
+            [](Driver& self, ast::Compilation& compilation) {
+                return new PyAnalysisManager(self.runAnalysis(compilation));
+            },
+            "compilation"_a, nb::rv_policy::take_ownership, nb::keep_alive<0, 2>())
         .def("reportDiagnostics", &Driver::reportDiagnostics, "quiet"_a)
         .def("runFullCompilation", &Driver::runFullCompilation, "quiet"_a = false)
         .def("setTerminalColorsEnabled", &Driver::setTerminalColorsEnabled, "enable"_a);
