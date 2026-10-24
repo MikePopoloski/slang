@@ -137,7 +137,7 @@ public:
                         break;
                     }
                     case SyntaxKind::ResetAllDirective:
-                        defaultNetType = TokenKind::Unknown;
+                        defaultNetType = TokenKind::WireKeyword;
                         unconnectedDrive = TokenKind::Unknown;
                         cellDefine = false;
                         timeScale = {};
@@ -151,7 +151,7 @@ public:
 
 private:
     SmallVector<flat_hash_set<std::string_view>, 4> moduleDeclStack;
-    TokenKind defaultNetType = TokenKind::Unknown;
+    TokenKind defaultNetType = TokenKind::WireKeyword;
     TokenKind unconnectedDrive = TokenKind::Unknown;
     bool cellDefine = false;
     std::optional<TimeScale> timeScale;

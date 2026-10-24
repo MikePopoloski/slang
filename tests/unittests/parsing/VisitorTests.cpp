@@ -762,8 +762,50 @@ class C; endclass
             CHECK(node.timeScale->base.unit == TimeUnit::Nanoseconds);
             CHECK(node.unconnectedDrive == TokenKind::Pull0Keyword);
             CHECK(node.cellDefine == true);
+            CHECK(node.defaultNetType == TokenKind::Unknown);
         }
     }
+}
+
+TEST_CASE("Syntax rewriting preserves default net type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input a, output b);
+    assign w = a;
+    assign b = w;
+endmodule
+
+`default_nettype none
+`resetall
+
+module n(input a, output b);
+    assign w = a;
+    assign b = w;
+endmodule
+)");
+
+    class Renamer : public SyntaxRewriter<Renamer> {
+    public:
+        void handle(const ModuleDeclarationSyntax& syntax) {
+            auto newMod = clone(syntax, alloc);
+            auto name = syntax.header->name.valueText() == "m" ? "m2" : "n2";
+            newMod->header->name = makeId(name, SingleSpace);
+            replace(syntax, *newMod);
+        }
+    };
+
+    auto newTree = Renamer().transform(tree);
+    auto& meta = newTree->getMetadata();
+    CHECK(meta.nodeMeta.size() == 2);
+    for (auto& [key, node] : meta.nodeMeta)
+        CHECK(node.defaultNetType == TokenKind::WireKeyword);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(newTree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ImplicitNet);
+    CHECK(diags[1].code == diag::ImplicitNet);
 }
 
 TEST_CASE("Syntax rewriter -- replace preserves trivia") {
