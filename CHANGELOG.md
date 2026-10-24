@@ -77,12 +77,28 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a parse error when the first formal argument of a sequence, property, `let`, or checker is declared `untyped`
 * We now gracefully continue AST construction after encountering the suppressible bad-procedural-force error, instead of erroring out the whole statement (thanks to @hankhsu1996)
 * Fixed data races when constructing `Driver` objects concurrently on multiple threads, and when printing via the `OS` utility functions while output capture is installed or removed on another thread
+* Fixed multiple driver detection for range selects of unpacked arrays, which were previously treated as driving only their first element (thanks to @spomata)
+* Fixed `$inferred_clock` in non-procedural checker instances to resolve using the default clocking in effect where the checker is instantiated, rather than where it was declared
+* Fixed sequence, property, and `let` instances passed as arguments to another instance of the same declaration (e.g. `s(a, s(b, c).triggered)`) being incorrectly reported as recursive
+* Fixed `default_nettype` information being lost when transforming a syntax tree with a `SyntaxRewriter`, which caused implicit nets to be incorrectly reported as errors
+* Fixed the check that type parameter overrides in `bind` directives resolve to the same types in both the target and directive scopes; it previously missed scoped names (e.g. `pkg::T`) and type names nested within more complex type expressions
 
 ### Tools & Bindings
 #### pyslang
 * Fixed incorrect binding of properties that return spans, which could lead to crashes
 * Added implicit conversions to allow passing symbols to methods that expect Scopes (which was broken in the nanobind conversion)
 * Fixed binding of flags enums to allow using expected operators on them (like `|`) (thanks to @XNinety9)
+* Fixed `Driver.runAnalysis` binding, which previously failed to return the resulting `AnalysisManager`
+
+#### slang-tidy
+* Config files now support comments, starting with `#` and running to the end of the line (thanks to @spomata)
+* Check names in config files now keep acronyms together (e.g. `style-always-ff-blocking` instead of `style-always-f-f-blocking`); the old spellings are still accepted but reported as deprecated (thanks to @spomata)
+* Fixed the "UndrivenRange" check incorrectly reporting bits driven by range selects of unpacked arrays as undriven, and missing undriven elements past the last driver in unpacked and multidimensional arrays (thanks to @spomata)
+
+#### slang-reflect
+* Fields of generated structs, unions, and enums are now value-initialized, so default-constructed objects start out zeroed (thanks to @spomata)
+* Fixed a crash when reflecting structs or unions that declare inline enum members
+* Fixed incorrect namespace qualification of union member conversion operators for non-user-defined types
 
 
 ## [v12.0] - 2026-09-29
