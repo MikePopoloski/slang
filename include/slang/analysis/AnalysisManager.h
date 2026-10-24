@@ -20,6 +20,7 @@
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/ConcurrentMap.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/Function.h"
 #include "slang/util/SmallMap.h"
 #include "slang/util/ThreadPool.h"
@@ -83,6 +84,26 @@ public:
     /// Returns true if the given location comes from the body of a macro
     /// (as opposed to a macro argument or not being part of a macro expansion at all).
     bool isFromMacroBody(SourceLocation location) const;
+
+    /// Interns a description of the elements of a dynamically sized array,
+    /// returning a copy that lives as long as this context. Equal descriptions
+    /// share one copy.
+    const ast::ElementStorage& keepElementStorage(ast::ElementStorage&& elements);
+
+private:
+    // The hash and the equality of the interned descriptions, both by contents.
+    struct ByContents {
+        using is_avalanching = void;
+
+        uint64_t operator()(const ast::ElementStorage* elements) const { return elements->hash(); }
+        bool operator()(const ast::ElementStorage* lhs, const ast::ElementStorage* rhs) const {
+            return *lhs == *rhs;
+        }
+    };
+
+    // The descriptions hold keys that need destroying, which alloc does not do.
+    TypedBumpAllocator<ast::ElementStorage> elementAlloc;
+    flat_hash_set<const ast::ElementStorage*, ByContents, ByContents> elementStorage;
 };
 
 /// The analysis manager coordinates running various analyses on AST symbols.

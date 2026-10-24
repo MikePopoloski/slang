@@ -127,7 +127,10 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
                 diag.addNote(diag::NoteCalledHere, taskCall->sourceRange);
             }
 
-            auto reportInferredDiag = [&](DiagCode code, const Expression& expr) {
+            auto reportInferredDiag = [&](DiagCode code, const Expression& lsp) {
+                // Definite assignment counts a write into the elements of a dynamically
+                // sized array as a write to the whole array, so the array is reported.
+                auto& expr = ValuePath::getFixedLayoutPrefix(lsp);
                 ValuePath path(expr, evalContext);
                 context.addDiag(procedure, code, expr.sourceRange) << path.toString(evalContext);
             };
@@ -190,6 +193,27 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             // Value drivers require a non-null lsp; a stored lsp can re-evaluate to a
             // path without a static prefix (e.g. an out-of-bounds constant select baked
             // in by loop unrolling), so skip those as DriverTracker::addDrivers does.
+            // A write into the elements of a dynamically sized array is taken from the
+            // element writes below, where writes to other elements don't absorb it.
+            ValuePath path(**it, evalContext);
+            if (!path.lsp || path.isLSPInElements())
+                continue;
+
+            auto driver = ValueDriver::create(context.alloc, driverKind, path, analyzedSymbol,
+                                              DriverFlags::None);
+            drivers.push_back(driver);
+        }
+    }
+
+    for (auto& [location, writes] : dfa.getElementWrites()) {
+        // Skip over automatic variables.
+        auto& symbol = location.getSymbol();
+        if (VariableSymbol::isKind(symbol.kind)) {
+            if (symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic)
+                continue;
+        }
+
+        for (auto it = writes.begin(); it != writes.end(); ++it) {
             ValuePath path(**it, evalContext);
             if (!path.lsp)
                 continue;

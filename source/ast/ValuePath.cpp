@@ -33,16 +33,53 @@ static bool isStaticProp(const Symbol& symbol) {
            symbol.as<ClassPropertySymbol>().lifetime == VariableLifetime::Static;
 }
 
+// An index into an array without a fixed range is part of a static prefix if it
+// is constant [11.5.3] and names an element the array can hold: an index that is
+// known and not negative, or a key that is known.
+static bool isElementIndex(const Type& arrayType, const Expression& index,
+                           EvalContext& evalContext) {
+    auto cv = index.eval(evalContext);
+    if (!cv || cv.hasUnknown())
+        return false;
+    return arrayType.isAssociativeArray() || !cv.integer().isNegative();
+}
+
+static bool extendsPrefix(const ElementSelectExpression& expr, EvalContext& evalContext) {
+    auto& valueType = *expr.value().type;
+    if (!valueType.isDynamicallySizedArray())
+        return expr.isConstantSelect(evalContext);
+    return isElementIndex(valueType, expr.selector(), evalContext);
+}
+
+static bool extendsPrefix(const RangeSelectExpression& expr, EvalContext& evalContext) {
+    auto& valueType = *expr.value().type;
+    if (!valueType.isDynamicallySizedArray())
+        return expr.isConstantSelect(evalContext);
+    return isElementIndex(valueType, expr.left(), evalContext) &&
+           isElementIndex(valueType, expr.right(), evalContext);
+}
+
 using BitRange = std::pair<uint64_t, uint64_t>;
 
+// Computes the bits that the selects in @a path cover, walking them from the root
+// outward. A select into the elements of a dynamically sized array leaves the storage
+// that holds the array: @a onElements is told the bits of the array there and the key
+// selected, which is empty except for an associative array, and the walk goes on in
+// the storage of those elements, which is laid out by index like an unpacked array.
+template<typename TOnElements>
 static std::optional<BitRange> computeBounds(SmallVector<const Expression*>& path, size_t skip,
-                                             EvalContext& evalContext, const Type& rootType) {
+                                             EvalContext& evalContext, const Type& rootType,
+                                             TOnElements&& onElements) {
     auto type = &rootType.getCanonicalType();
     BitRange result{0, type->getSelectableWidth() - 1};
 
     for (size_t i = path.size() - skip; i > 0; i--) {
         uint64_t start, width;
         auto& elem = *path[i - 1];
+        const bool isAssociative = type->kind == SymbolKind::AssociativeArrayType;
+        const bool isDynamicallySized = isAssociative ||
+                                        type->kind == SymbolKind::DynamicArrayType ||
+                                        type->kind == SymbolKind::QueueType;
         if (elem.kind == ExpressionKind::MemberAccess) {
             auto& member = elem.as<MemberAccessExpression>().member;
             if (member.kind != SymbolKind::Field)
@@ -52,6 +89,17 @@ static std::optional<BitRange> computeBounds(SmallVector<const Expression*>& pat
             start = field.bitOffset;
             width = elem.type->getSelectableWidth();
         }
+        else if (isAssociative) {
+            auto key = elem.as<ElementSelectExpression>().selector().eval(evalContext);
+            if (!key || key.hasUnknown())
+                return std::nullopt;
+
+            // Each key's element is a unit of storage of its own.
+            onElements(result, std::move(key));
+            result = {0, 0};
+            start = 0;
+            width = 1;
+        }
         else {
             auto elemRange = elem.evalSelector(evalContext, /* enforceBounds */ true);
             if (!elemRange)
@@ -60,9 +108,14 @@ static std::optional<BitRange> computeBounds(SmallVector<const Expression*>& pat
             SLANG_ASSERT(elemRange->left >= 0 && elemRange->right >= 0);
             start = (uint64_t)elemRange->lower();
             width = elemRange->width();
+
+            if (isDynamicallySized) {
+                onElements(result, ConstantValue());
+                result = {0, 0};
+            }
         }
 
-        if (type->kind == SymbolKind::FixedSizeUnpackedArrayType) {
+        if (type->kind == SymbolKind::FixedSizeUnpackedArrayType || isDynamicallySized) {
             // Unpacked arrays need their selection adjusted since they
             // return a simple index instead of a bit offset. A range select
             // covers `width` elements, not only the first one.
@@ -79,6 +132,14 @@ static std::optional<BitRange> computeBounds(SmallVector<const Expression*>& pat
     }
 
     return result;
+}
+
+// For selects known to stay in the storage that holds the root, such as those
+// of a packed type, which holds no dynamically sized array.
+static std::optional<BitRange> computeBounds(SmallVector<const Expression*>& path, size_t skip,
+                                             EvalContext& evalContext, const Type& rootType) {
+    return computeBounds(path, skip, evalContext, rootType,
+                         [](const BitRange&, ConstantValue&&) { SLANG_UNREACHABLE; });
 }
 
 template<typename T>
@@ -186,10 +247,10 @@ ValuePath::ValuePath(const Expression& initialExpr, EvalContext& evalContext) {
                     lsp = &elem;
                 break;
             case ExpressionKind::ElementSelect:
-                noteSelect(elem, elem.as<ElementSelectExpression>().isConstantSelect(evalContext));
+                noteSelect(elem, extendsPrefix(elem.as<ElementSelectExpression>(), evalContext));
                 break;
             case ExpressionKind::RangeSelect:
-                noteSelect(elem, elem.as<RangeSelectExpression>().isConstantSelect(evalContext));
+                noteSelect(elem, extendsPrefix(elem.as<RangeSelectExpression>(), evalContext));
                 break;
             case ExpressionKind::MemberAccess: {
                 // It's possible this is an access to a static class member,
@@ -218,12 +279,83 @@ ValuePath::ValuePath(const Expression& initialExpr, EvalContext& evalContext) {
     if (lsp) {
         SLANG_ASSERT(rootSymbol());
 
-        auto bounds = computeBounds(path, 0, evalContext, *rootExpr->type);
+        std::optional<BitRange> firstArray;
+        auto bounds = computeBounds(path, 0, evalContext, *rootExpr->type,
+                                    [&](const BitRange& arrayBounds, ConstantValue&&) {
+                                        if (!firstArray)
+                                            firstArray = arrayBounds;
+                                    });
         if (bounds)
-            lspBounds = *bounds;
+            lspBounds = firstArray.value_or(*bounds);
         else
             lsp = nullptr;
     }
+}
+
+// Gets the array that @a expr selects elements of, if it is a select into the
+// elements of a dynamically sized array.
+static const Expression* getSelectedArray(const Expression& expr) {
+    const Expression* value;
+    switch (expr.kind) {
+        case ExpressionKind::ElementSelect:
+            value = &expr.as<ElementSelectExpression>().value();
+            break;
+        case ExpressionKind::RangeSelect:
+            value = &expr.as<RangeSelectExpression>().value();
+            break;
+        default:
+            return nullptr;
+    }
+    return value->type->isDynamicallySizedArray() ? value : nullptr;
+}
+
+bool ValuePath::selectsIntoElements() const {
+    // A packed root holds no dynamically sized array.
+    if (rootExpr->type->isIntegral())
+        return false;
+
+    for (auto it = iterator(lsp); it != end(); ++it) {
+        if (getSelectedArray(*it))
+            return true;
+    }
+    return false;
+}
+
+const Expression& ValuePath::getFixedLayoutPrefix(const Expression& lsp) {
+    // Walking from the outermost select toward the root, the last array whose
+    // elements are selected is the first one entered from the root.
+    const Expression* result = &lsp;
+    for (auto it = iterator(&lsp); it != iterator(); ++it) {
+        if (auto array = getSelectedArray(*it))
+            result = array;
+    }
+    return *result;
+}
+
+StoragePlace ValuePath::getLSPPlace(
+    EvalContext& evalContext,
+    function_ref<const ElementStorage&(ElementStorage&&)> keepElements) const {
+    auto& symbol = *rootSymbol();
+    StoragePlace place{StorageLocation(symbol), lspBounds};
+
+    // The selects of the prefix, outermost first, leaving out the root.
+    SmallVector<const Expression*> components;
+    for (auto it = iterator(lsp); it != end(); ++it)
+        components.push_back(&*it);
+    components.pop_back();
+
+    ElementStorage elements{&symbol, {}};
+    auto bounds = computeBounds(components, 0, evalContext, *rootExpr->type,
+                                [&](const BitRange& arrayBounds, ConstantValue&& key) {
+                                    elements.steps.push_back({arrayBounds.first, std::move(key)});
+                                });
+
+    // A key that does not evaluate here leaves the place as the array as a whole.
+    if (bounds) {
+        place.location = StorageLocation(keepElements(std::move(elements)));
+        place.bitRange = *bounds;
+    }
+    return place;
 }
 
 void ValuePath::visitPaths(const Expression& expr, EvalContext& evalContext,
@@ -255,6 +387,20 @@ static const Expression& doClone(BumpAllocator& alloc, const Expression& expr,
         return std::nullopt;
     };
 
+    // A selector into an array without a fixed range is replaced by the integer it
+    // evaluates to, if any, so that the element it names stays known outside this
+    // evaluation context.
+    auto bake = [&](const Expression& array, const Expression& e) -> const Expression& {
+        if (array.type->hasFixedRange())
+            return e;
+
+        if (auto cv = e.eval(evalContext); cv.isInteger()) {
+            return *alloc.emplace<IntegerLiteral>(alloc, *e.type, cv.integer(),
+                                                  /* isDeclaredUnsized */ false, e.sourceRange);
+        }
+        return e;
+    };
+
     switch (expr.kind) {
         case ExpressionKind::ElementSelect: {
             auto& ese = expr.as<ElementSelectExpression>();
@@ -269,7 +415,8 @@ static const Expression& doClone(BumpAllocator& alloc, const Expression& expr,
             }
             return *alloc.emplace<ElementSelectExpression>(*expr.type,
                                                            const_cast<Expression&>(newVal),
-                                                           ese.selector(), expr.sourceRange);
+                                                           bake(ese.value(), ese.selector()),
+                                                           expr.sourceRange);
         }
         case ExpressionKind::RangeSelect: {
             auto& rse = expr.as<RangeSelectExpression>();
@@ -285,9 +432,9 @@ static const Expression& doClone(BumpAllocator& alloc, const Expression& expr,
                     return result;
                 }
             }
-            return *alloc.emplace<RangeSelectExpression>(rse.getSelectionKind(), *expr.type,
-                                                         const_cast<Expression&>(newVal),
-                                                         rse.left(), rse.right(), expr.sourceRange);
+            return *alloc.emplace<RangeSelectExpression>(
+                rse.getSelectionKind(), *expr.type, const_cast<Expression&>(newVal),
+                bake(rse.value(), rse.left()), bake(rse.value(), rse.right()), expr.sourceRange);
         }
         case ExpressionKind::MemberAccess: {
             auto& access = expr.as<MemberAccessExpression>();
@@ -379,8 +526,12 @@ bool ValuePath::overlaps(const ValuePath& other) const {
         if (lspBounds.first > other.lspBounds.second || lspBounds.second < other.lspBounds.first)
             return false;
 
-        if (isFullyStatic() && other.isFullyStatic())
+        // A prefix that goes on into the elements of a dynamically sized array
+        // has the bits of the whole array, which don't tell which element it is.
+        if (isFullyStatic() && other.isFullyStatic() && !isLSPInElements() &&
+            !other.isLSPInElements()) {
             return true;
+        }
     }
 
     return fullExpr->isEquivalentTo(*other.fullExpr);
@@ -493,7 +644,8 @@ static Expression* glueConnExpr(BumpAllocator& alloc, EvalContext& evalContext, 
                                 Expression* expr, SmallVector<const Expression*>& lspPath) {
     // First, replicate all of the selects for unpacked types. The only way that
     // types can mismatch here is for fixed size arrays, which can have differing
-    // ranges, so translate those along the way.
+    // ranges, so translate those along the way. A dynamically sized array is
+    // indexed from zero or by key on both sides, so its selects carry over as they are.
     size_t index = startIndex;
     for (; index < lspPath.size(); index++) {
         auto& ct = expr->type->getCanonicalType();
@@ -505,6 +657,21 @@ static Expression* glueConnExpr(BumpAllocator& alloc, EvalContext& evalContext, 
             auto& ma = elem->as<MemberAccessExpression>();
             expr = alloc.emplace<MemberAccessExpression>(*ma.type, *expr, ma.member,
                                                          ma.sourceRange);
+            continue;
+        }
+
+        if (ct.isDynamicallySizedArray()) {
+            if (elem->kind == ExpressionKind::ElementSelect) {
+                auto& ese = elem->as<ElementSelectExpression>();
+                expr = alloc.emplace<ElementSelectExpression>(*ese.type, *expr, ese.selector(),
+                                                              expr->sourceRange);
+            }
+            else {
+                auto& rse = elem->as<RangeSelectExpression>();
+                expr = alloc.emplace<RangeSelectExpression>(rse.getSelectionKind(), *rse.type,
+                                                            *expr, rse.left(), rse.right(),
+                                                            expr->sourceRange);
+            }
             continue;
         }
 
@@ -670,6 +837,20 @@ void ValuePath::iterator::increment() {
             expr = nullptr;
             break;
     }
+}
+
+size_t ElementStorage::Step::hash() const {
+    size_t h = 0;
+    hash_combine(h, arrayOffset, key.hash());
+    return h;
+}
+
+size_t ElementStorage::hash() const {
+    size_t h = 0;
+    hash_combine(h, symbol.get());
+    for (auto& step : steps)
+        hash_combine(h, step.hash());
+    return h;
 }
 
 } // namespace slang::ast

@@ -7,7 +7,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/ValuePath.h"
 #include "slang/util/ConcurrentMap.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/IntervalMap.h"
 
 namespace slang::ast {
@@ -102,7 +104,41 @@ public:
 private:
     using HierPortDriver = InstanceDriverState::HierPortDriver;
 
-    void addDriver(AnalysisContext& context, DriverAlloc& driverAlloc, SymbolDriverMap& driverMap,
+    // The drivers of one symbol. A driver into the elements of a dynamically sized
+    // array, such as a["k"][0], is kept in the storage of those elements, and is also
+    // noted at the bit of each array it goes through on the way (a in the symbol,
+    // a["k"] in the storage of a's elements), so that a write of a whole array finds
+    // it. Most symbols have drivers only in the symbol itself.
+    struct SymbolDrivers {
+        bool empty() const { return root.own.empty() && !root.elements; }
+
+        void insert(const ValueDriver& driver, const ast::StoragePlace& place,
+                    DriverAlloc& driverAlloc);
+
+        // Gets the drivers whose bits overlap @a place.
+        void getOverlapping(const ast::StoragePlace& place,
+                            SmallVector<const ValueDriver*>& results) const;
+
+        // Gets every driver, in the order of their bits in the symbol.
+        void getAll(std::vector<const ValueDriver*>& results) const;
+
+        struct Elements;
+        struct Storage {
+            SymbolDriverMap own;
+
+            // Allocated once a driver goes on into the elements of an array held here.
+            std::unique_ptr<Elements> elements;
+        };
+        struct Elements {
+            // Drivers into the elements, at the bit of the array they go through here.
+            SymbolDriverMap nested;
+            flat_hash_map<ast::ElementStorage::Step, Storage> storage;
+        };
+
+        Storage root;
+    };
+
+    void addDriver(AnalysisContext& context, DriverAlloc& driverAlloc, SymbolDrivers& drivers,
                    const ValueDriver& driver, SmallVector<HierPortDriver>& hierPortDrivers);
     void noteHierPortDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
                             const HierPortDriver& hierPortDriver);
@@ -115,7 +151,7 @@ private:
 
     void checkNetCollapsing(AnalysisContext& context, const ast::PortConnection& conn);
 
-    concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
+    concurrent_map<const ast::ValueSymbol*, SymbolDrivers> symbolDrivers;
     concurrent_map<const ast::InstanceBodySymbol*, InstanceDriverState> instanceMap;
     concurrent_map<const ast::ValueSymbol*, std::vector<const ValueDriver*>> indirectDrivers;
 };

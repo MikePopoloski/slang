@@ -217,10 +217,7 @@ void DriverTracker::addDrivers(AnalysisContext& context, DriverAlloc& driverAllo
 
 std::vector<const ValueDriver*> DriverTracker::getDrivers(const ValueSymbol& symbol) const {
     std::vector<const ValueDriver*> drivers;
-    symbolDrivers.cvisit(&symbol, [&drivers](auto& item) {
-        for (auto it = item.second.begin(); it != item.second.end(); ++it)
-            drivers.push_back(*it);
-    });
+    symbolDrivers.cvisit(&symbol, [&drivers](auto& item) { item.second.getAll(drivers); });
     return drivers;
 }
 
@@ -355,12 +352,26 @@ static bool handleOverlap(AnalysisContext& context, const ValueSymbol& symbol,
 }
 
 void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
-                              SymbolDriverMap& driverMap, const ValueDriver& driver,
+                              SymbolDrivers& drivers, const ValueDriver& driver,
                               SmallVector<HierPortDriver>& hierPortDrivers) {
     auto& symbol = driver.getSymbol();
-    auto bounds = driver.getBounds();
     auto scope = symbol.getParentScope();
     SLANG_ASSERT(scope);
+
+    // A driver into the elements of a dynamically sized array lies in those
+    // elements' storage, found by evaluating its selects. Every other driver
+    // lies in the symbol itself, which needs no evaluation.
+    auto getPlace = [&](const ValueDriver& vd) {
+        if (!vd.path.isLSPInElements())
+            return StoragePlace{StorageLocation(symbol), vd.getBounds()};
+
+        EvalContext evalCtx(*vd.containingSymbol);
+        return vd.path.getLSPPlace(evalCtx, [&](ElementStorage&& elements) -> auto& {
+            return context.keepElementStorage(std::move(elements));
+        });
+    };
+
+    auto place = getPlace(driver);
 
     // If this driver is made via an interface port connection we want to
     // note that fact as it represents a side effect for the instance that
@@ -382,7 +393,7 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
 
         // We don't do overlap detection for modports but we will still track them for downstream
         // users to query later.
-        driverMap.insert(bounds, &driver, driverAlloc);
+        drivers.insert(driver, place, driverAlloc);
         return;
     }
 
@@ -400,7 +411,7 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
         // connection expression that points somewhere else.
     }
 
-    if (driverMap.empty()) {
+    if (drivers.empty()) {
         // The first time we add a driver, check whether there is also an
         // initializer expression that should count as a driver as well.
         auto addInitializer = [&](DriverKind driverKind) {
@@ -412,7 +423,7 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
                                                   ValuePath(valExpr, evalCtx), scope->asSymbol(),
                                                   DriverFlags::Initializer);
 
-            driverMap.insert(initDriver->getBounds(), initDriver, driverAlloc);
+            drivers.insert(*initDriver, getPlace(*initDriver), driverAlloc);
         };
 
         switch (symbol.kind) {
@@ -430,8 +441,8 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
                 break;
         }
 
-        if (driverMap.empty()) {
-            driverMap.insert(bounds, &driver, driverAlloc);
+        if (drivers.empty()) {
+            drivers.insert(driver, place, driverAlloc);
             return;
         }
     }
@@ -466,8 +477,9 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
                (vd.source == DriverSource::Initial && allowDupInitialDrivers);
     };
 
-    auto end = driverMap.end();
-    for (auto it = driverMap.find(bounds); it != end; ++it) {
+    SmallVector<const ValueDriver*> overlapping;
+    drivers.getOverlapping(place, overlapping);
+    for (auto curr : overlapping) {
         // Check whether this pair of drivers overlapping constitutes a problem.
         // The conditions for reporting a problem are:
         // - If this is for a mix of input/output and inout ports, always report.
@@ -476,7 +488,6 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
         //      - Report if a mix of continuous and procedural assignments
         //      - Report if multiple continuous assignments
         bool isProblem = false;
-        auto curr = *it;
 
         if (curr->isUnidirectionalPort() != driver.isUnidirectionalPort()) {
             isProblem = true;
@@ -500,7 +511,61 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
         }
     }
 
-    driverMap.insert(bounds, &driver, driverAlloc);
+    drivers.insert(driver, place, driverAlloc);
+}
+
+void DriverTracker::SymbolDrivers::insert(const ValueDriver& driver, const StoragePlace& place,
+                                          DriverAlloc& driverAlloc) {
+    auto storage = &root;
+    for (auto& step : place.location.getSteps()) {
+        if (!storage->elements)
+            storage->elements = std::make_unique<Elements>();
+
+        storage->elements->nested.insert({step.arrayOffset, step.arrayOffset}, &driver,
+                                         driverAlloc);
+        storage = &storage->elements->storage[step];
+    }
+    storage->own.insert(place.bitRange, &driver, driverAlloc);
+}
+
+void DriverTracker::SymbolDrivers::getOverlapping(const StoragePlace& place,
+                                                  SmallVector<const ValueDriver*>& results) const {
+    auto add = [&](const SymbolDriverMap& map, std::pair<uint64_t, uint64_t> bounds) {
+        for (auto it = map.find(bounds); it != map.end(); ++it)
+            results.push_back(*it);
+    };
+
+    // A driver of a whole array on the way to the place covers it, as does one in
+    // the place's own storage at its bits, or one into the elements of an array
+    // at those bits.
+    auto storage = &root;
+    for (auto& step : place.location.getSteps()) {
+        add(storage->own, {step.arrayOffset, step.arrayOffset});
+        if (!storage->elements)
+            return;
+
+        auto it = storage->elements->storage.find(step);
+        if (it == storage->elements->storage.end())
+            return;
+        storage = &it->second;
+    }
+
+    add(storage->own, place.bitRange);
+    if (storage->elements)
+        add(storage->elements->nested, place.bitRange);
+}
+
+void DriverTracker::SymbolDrivers::getAll(std::vector<const ValueDriver*>& results) const {
+    if (!root.elements) {
+        for (auto it = root.own.begin(); it != root.own.end(); ++it)
+            results.push_back(*it);
+        return;
+    }
+
+    // Drivers into the elements of an array are ordered by the bit of that array.
+    auto bitOf = [](const ValueDriver* driver) { return driver->getBounds().first; };
+    std::ranges::merge(root.own, root.elements->nested, std::back_inserter(results), {}, bitOf,
+                       bitOf);
 }
 
 void DriverTracker::noteHierPortDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
