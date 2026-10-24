@@ -3,6 +3,7 @@
 
 from pathlib import Path
 
+from pyslang.analysis import AnalysisManager
 from pyslang.driver import CommandLineOptions, Driver
 
 from pyslang import BufferID
@@ -86,3 +87,21 @@ def test_parse_all_sources_without_buffer_change_cb(tmp_path):
     assert driver.parseAllSources()
     assert len(driver.syntaxTrees) == 1
     assert list(driver.sourceLoader.errors) == []
+
+
+def test_run_analysis(tmp_path):
+    top = tmp_path / "top.sv"
+    top.write_text("module m; int i; always_comb i = 1; endmodule\n")
+    driver = _create_driver(top)
+
+    assert driver.parseAllSources()
+    compilation = driver.createCompilation()
+    driver.reportCompilation(compilation, True)
+
+    am = driver.runAnalysis(compilation)
+    assert isinstance(am, AnalysisManager)
+    assert am.options is not None
+
+    i = compilation.getRoot().lookupName("m.i")
+    drivers = am.getDrivers(i)
+    assert len(drivers) == 1

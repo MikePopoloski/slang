@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <memory>
 #include <nanobind/nanobind.h>
 #include <vector>
 
@@ -22,9 +23,12 @@
 /// declared here so that other extension modules built on slang can accept an
 /// analysis manager as an argument and reach it through `manager`.
 struct PyAnalysisManager {
-    slang::analysis::AnalysisManager manager;
+    std::unique_ptr<slang::analysis::AnalysisManager> manager;
     std::vector<nanobind::object> listeners;
 
     explicit PyAnalysisManager(slang::analysis::AnalysisOptions options) :
-        manager(std::move(options)) {}
+        manager(std::make_unique<slang::analysis::AnalysisManager>(std::move(options))) {}
+
+    explicit PyAnalysisManager(std::unique_ptr<slang::analysis::AnalysisManager> manager) :
+        manager(std::move(manager)) {}
 };
