@@ -22,6 +22,7 @@
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/syntax/SyntaxVisitor.h"
 #include "slang/text/CharInfo.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/TimeTrace.h"
@@ -2235,6 +2236,73 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
     }
 }
 
+namespace {
+
+// Finds each name written in a bind type parameter override and checks that any
+// that refer to types resolve to matching types in both the target scope and the
+// scope containing the bind directive.
+struct BindTypeNameVisitor : public SyntaxVisitor<BindTypeNameVisitor> {
+    BindTypeNameVisitor(const TypeParameterSymbol& typeParam, const ASTContext& targetContext,
+                        const Scope& sourceScope) :
+        typeParam(typeParam), targetContext(targetContext), sourceScope(sourceScope) {}
+
+    void handle(const NameSyntax& syntax) {
+        // Enum values declared inside the override shadow outer names.
+        if (syntax.kind == SyntaxKind::IdentifierName &&
+            enumValueNames.contains(syntax.as<IdentifierNameSyntax>().identifier.valueText())) {
+            return;
+        }
+
+        constexpr auto flags = LookupFlags::Type | LookupFlags::NoUndeclaredError;
+
+        LookupResult targetResult;
+        Lookup::name(syntax, targetContext, flags, targetResult);
+        if (!targetResult.found || targetResult.hasError())
+            return;
+
+        if (!targetResult.found->isType()) {
+            // Value names can still have type names nested in their selectors.
+            for (auto& selector : targetResult.selectors) {
+                if (auto elemSel = std::get_if<0>(&selector))
+                    (*elemSel)->visit(*this);
+            }
+            return;
+        }
+
+        auto& targetType = targetResult.found->as<Type>();
+        LookupResult sourceResult;
+        Lookup::name(syntax, ASTContext(sourceScope, LookupLocation::max), flags, sourceResult);
+
+        if (!sourceResult.found || !sourceResult.found->isType() || sourceResult.hasError()) {
+            sourceScope.addDiag(diag::BindTypeParamNotFound, syntax.sourceRange())
+                << typeParam.name << targetType;
+        }
+        else if (auto& sourceType = sourceResult.found->as<Type>();
+                 !sourceType.isMatching(targetType)) {
+            sourceScope.addDiag(diag::BindTypeParamMismatch, syntax.sourceRange())
+                << typeParam.name << sourceType << targetType;
+        }
+    }
+
+    void handle(const EnumTypeSyntax& syntax) {
+        for (auto member : syntax.members)
+            enumValueNames.emplace(member->name.valueText());
+        visitDefault(syntax);
+    }
+
+    void handle(const AssignmentPatternItemSyntax& syntax) {
+        // Avoid visiting the key which can name a struct member.
+        syntax.expr->visit(*this);
+    }
+
+    const TypeParameterSymbol& typeParam;
+    const ASTContext& targetContext;
+    const Scope& sourceScope;
+    flat_hash_set<std::string_view> enumValueNames;
+};
+
+} // namespace
+
 void Compilation::checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax,
                                         const Scope& scope, const ResolvedBind& resolvedBind) {
     // This method checks the following rule from the LRM:
@@ -2257,24 +2325,15 @@ void Compilation::checkBindTargetParams(const syntax::BindDirectiveSyntax& synta
             for (auto param : inst.body.getParameters()) {
                 if (param->symbol.kind == SymbolKind::TypeParameter) {
                     auto& typeParam = param->symbol.as<TypeParameterSymbol>();
-                    auto& type = typeParam.targetType.getType();
-                    if (typeParam.isOverridden() && type.isAlias() && !type.name.empty()) {
-                        // This is the case we need to check; the resolved type is
-                        // a named type alias, so we need to also resolve it in the bind
-                        // directive scope and make sure they match.
-                        auto result = Lookup::unqualified(scope, type.name, LookupFlags::Type);
-                        if (!result || !result->isType()) {
-                            auto ts = typeParam.getDeclaredType()->getTypeSyntax();
-                            SLANG_ASSERT(ts);
-                            scope.addDiag(diag::BindTypeParamNotFound, ts->sourceRange())
-                                << typeParam.name << type;
-                        }
-                        else if (!result->as<Type>().isMatching(type)) {
-                            auto ts = typeParam.getDeclaredType()->getTypeSyntax();
-                            SLANG_ASSERT(ts);
-                            scope.addDiag(diag::BindTypeParamMismatch, ts->sourceRange())
-                                << typeParam.name << result->as<Type>() << type;
-                        }
+                    if (!typeParam.isOverridden())
+                        continue;
+
+                    if (auto ts = typeParam.getDeclaredType()->getTypeSyntax()) {
+                        ASTContext targetContext(*inst.getParentScope(),
+                                                 LookupLocation::before(inst),
+                                                 ASTFlags::BindInstantiation);
+                        BindTypeNameVisitor visitor(typeParam, targetContext, scope);
+                        ts->visit(visitor);
                     }
                 }
             }
