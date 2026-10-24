@@ -9,6 +9,7 @@
 
 #include <map>
 
+#include "slang/ast/ValuePath.h"
 #include "slang/util/Function.h"
 #include "slang/util/IntervalMap.h"
 #include "slang/util/SmallMap.h"
@@ -22,7 +23,6 @@ class Expression;
 class Statement;
 class Symbol;
 class TimingControl;
-class ValuePath;
 class ValueSymbol;
 
 } // namespace slang::ast
@@ -115,6 +115,14 @@ public:
     /// Gets lvalue state for the given symbol, or a nullptr if no state is tracked.
     const LValueSymbol* getLValue(const ast::ValueSymbol& symbol) const;
 
+    /// Writes into the elements of dynamically sized arrays, by the storage they
+    /// lie in, with the longest static prefix of a write to each range. The
+    /// lvalue state counts each of them too, as a write to the whole array.
+    using ElementWrites = SmallMap<ast::StorageLocation, SymbolLSPMap, 2>;
+
+    /// Gets the writes into the elements of dynamically sized arrays.
+    const ElementWrites& getElementWrites() const { return elementWrites; }
+
     using ReadSet = SmallMap<const ast::ValueSymbol*, SymbolBitMap, 2>;
 
     /// Gets all of the nets and variables that were read in the procedure,
@@ -144,6 +152,9 @@ protected:
     /// Tracks the assigned ranges of each variable across the entire procedure,
     /// even if not all branches assign to it.
     SmallVector<LValueSymbol> lvalues;
+
+    /// Writes into the elements of dynamically sized arrays across the entire procedure.
+    ElementWrites elementWrites;
 
     /// All of the nets and variables that have been read in the procedure.
     ReadSet rvalues;

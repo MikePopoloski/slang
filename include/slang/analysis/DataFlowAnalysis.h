@@ -634,22 +634,7 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValuePath& initialP
 
     sequenceChecker.noteUse(path, isLValue);
 
-    auto& symbol = *path.rootSymbol();
-    auto bounds = path.lspBounds;
-    if (isLValue) {
-        auto [it, inserted] = symbolToSlot.try_emplace(&symbol, (uint32_t)lvalues.size());
-        if (inserted) {
-            lvalues.emplace_back(symbol);
-            SLANG_ASSERT(lvalues.size() == symbolToSlot.size());
-        }
-
-        auto index = it->second;
-        if (index >= currState.assigned.size())
-            currState.assigned.resize(index + 1);
-
-        currState.assigned[index].unionWith(bounds, {}, bitMapAllocator);
-
-        auto& lspMap = lvalues[index].assigned;
+    auto noteWrite = [&](SymbolLSPMap& lspMap, std::pair<uint64_t, uint64_t> bounds) {
         for (auto lspIt = lspMap.find(bounds); lspIt != lspMap.end();) {
             // If we find an existing entry that completely contains
             // the new bounds we can just keep that one and ignore the
@@ -668,6 +653,48 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValuePath& initialP
             }
         }
         lspMap.insert(bounds, path.lsp, lspMapAllocator);
+    };
+
+    auto& symbol = *path.rootSymbol();
+    auto bounds = path.lspBounds;
+    if (isLValue) {
+        auto [it, inserted] = symbolToSlot.try_emplace(&symbol, (uint32_t)lvalues.size());
+        if (inserted) {
+            lvalues.emplace_back(symbol);
+            SLANG_ASSERT(lvalues.size() == symbolToSlot.size());
+        }
+
+        auto index = it->second;
+        if (index >= currState.assigned.size())
+            currState.assigned.resize(index + 1);
+
+        currState.assigned[index].unionWith(bounds, {}, bitMapAllocator);
+
+        // In the bits of the symbol, a write into the elements of a dynamically
+        // sized array covers the whole array. Its entry stands for no write of
+        // the whole array, though, so such a write replaces it.
+        auto& lspMap = lvalues[index].assigned;
+        const bool inElements = path.isLSPInElements();
+        if (!inElements) {
+            for (auto lspIt = lspMap.find(bounds); lspIt != lspMap.end(); ++lspIt) {
+                if (lspIt.bounds() == bounds &&
+                    &ValuePath::getFixedLayoutPrefix(**lspIt) != *lspIt) {
+                    lspMap.erase(lspIt, lspMapAllocator);
+                    break;
+                }
+            }
+        }
+        noteWrite(lspMap, bounds);
+
+        // A write into the elements is also kept in the storage of those
+        // elements, where a write to another element doesn't absorb it.
+        if (inElements) {
+            auto place = path.getLSPPlace(
+                this->getEvalContext(), [this](ElementStorage&& elements) -> auto& {
+                    return context.keepElementStorage(std::move(elements));
+                });
+            noteWrite(elementWrites[place.location], place.bitRange);
+        }
     }
     else if (!inAssertionActionBlock && !inTimingControlExpr) {
         rvalues[&symbol].unionWith(bounds, {}, bitMapAllocator);

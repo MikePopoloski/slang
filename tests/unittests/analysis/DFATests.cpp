@@ -196,6 +196,76 @@ source:10:13: warning: latch inferred for 's.b[1]' because it is not assigned on
 )");
 }
 
+TEST_CASE("Inferred latch for element writes of dynamically sized arrays") {
+    // For definite assignment, a write into the elements of a dynamically sized
+    // array is a write to the whole array, and is reported as one, at the first
+    // such write.
+    auto& code = R"(
+typedef int int_q[$];
+
+function automatic int_q f;
+    f[0] = 1;
+endfunction
+
+module m(input logic a, b, c);
+    int src[$];
+    int q1[$];
+    always_comb begin
+        q1 = src;
+        if (c) q1[0] = 1;
+    end
+
+    int q2[$];
+    always_comb begin
+        if (a) q2[0] = 1;
+        if (b) q2[1] = 2;
+    end
+
+    int q3[$];
+    always_latch begin
+        q3 = src;
+        q3[0] = 1;
+    end
+
+    int aa[int];
+    always_comb begin
+        if (a) aa[1] = 1;
+        if (b) aa[2] = 2;
+    end
+
+    typedef struct { int x; int q[$]; } s_t;
+    s_t s, t;
+    always_comb begin
+        if (c) begin
+            s = t;
+            s.q[0] = 1;
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:18:16: warning: latch inferred for 'q2' because it is not assigned on all control paths [-Winferred-latch]
+        if (a) q2[0] = 1;
+               ^~
+source:24:9: warning: combinational logic inferred for 'q3' because it is assigned on all control paths [-Winferred-comb]
+        q3 = src;
+        ^~
+source:30:16: warning: latch inferred for 'aa' because it is not assigned on all control paths [-Winferred-latch]
+        if (a) aa[1] = 1;
+               ^~
+source:38:13: warning: latch inferred for 's' because it is not assigned on all control paths [-Winferred-latch]
+            s = t;
+            ^
+)");
+}
+
 TEST_CASE("Data flow with class members") {
     auto& code = R"(
 class C;
@@ -1147,15 +1217,21 @@ TEST_CASE("DFA unsequenced expression dynamic selects") {
 module m;
     struct { logic a, b; } s[2];
     logic d[];
+    int aa[string];
+    int q[$];
     int i;
 
     initial begin
         {d[0], d[1]} = 2;
         i = s[i].a++ + s[i].b++;
+        i = aa["a"]++ + aa["b"];
+        i = q[0]++ + q[1];
 
         // These should still error.
         {d[0], d[0]} = 2;
         i = s[i].a++ + s[i].a++;
+        i = aa["a"]++ + aa["a"];
+        i = q[0]++ + q[0];
     end
 endmodule
 )";
@@ -1164,9 +1240,11 @@ endmodule
     AnalysisManager analysisManager;
 
     auto diags = analyze(code, compilation, analysisManager);
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::MultiWriteExpr);
     CHECK(diags[1].code == diag::MultiWriteExpr);
+    CHECK(diags[2].code == diag::ReadWriteExpr);
+    CHECK(diags[3].code == diag::ReadWriteExpr);
 }
 
 TEST_CASE("Fork loop var: basic for loop with join_none") {

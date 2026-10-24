@@ -1645,3 +1645,250 @@ endmodule
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);
 }
+
+TEST_CASE("Multi-assign to constant elements of dynamically sized arrays") {
+    // A constant index or key extends the longest static prefix into the
+    // elements of an associative array, a dynamic array, or a queue, so
+    // writes to different elements are independent, under always_latch and
+    // always_ff as under always_comb. `$`, a variable index, a negative index,
+    // a key with unknown bits, and a write of the whole array, even one after a
+    // write to an element, still cover every element.
+    auto& code = R"(
+module m(input logic clk, en);
+    int latched[string];
+    int clocked[$];
+    always_latch if (en) latched["out"] = 1;
+    always_ff @(posedge clk) clocked[0] = 1;
+    initial begin
+        latched["in"] = 1;
+        clocked[1] = 1;
+    end
+
+    int latchedSame[string];
+    int clockedSame[$];
+    always_latch if (en) latchedSame["k"] = 1;
+    always_ff @(posedge clk) clockedSame[0] = 1;
+    initial begin
+        latchedSame["k"] = 1;
+        clockedSame[0] = 1;
+    end
+
+    int byName[string];
+    int byNum[int];
+    int dyn[];
+    int q[$];
+    int slice[$];
+    always_comb begin
+        byName["out"] = 1;
+        byNum[1] = 1;
+        dyn[1] = 1;
+        q[1] = 1;
+        slice[0:1] = '{1, 2};
+    end
+    initial begin
+        byName["in"] = 1;
+        byNum[2] = 1;
+        dyn[2] = 1;
+        q[2] = 1;
+        slice[2] = 1;
+    end
+
+    struct { int tag; int byName[string]; } bag;
+    int nested[string][$];
+    int unrolled[];
+    always_comb begin
+        bag.byName["out"] = 1;
+        nested["a"][0] = 1;
+        for (int i = 0; i < 2; i++)
+            unrolled[i] = 1;
+    end
+    initial begin
+        bag.byName["in"] = 1;
+        bag.tag = 1;
+        nested["a"][1] = 1;
+        nested["b"] = '{1};
+        unrolled[2] = 1;
+    end
+
+    int sameKey[string];
+    int lastElem[$];
+    int notConst[];
+    int whole[];
+    int wholeElem[string][$];
+    int unrolledSame[];
+    int negative[];
+    int unknownKey[logic [1:0]];
+    int thenWhole[$];
+    int sliceSame[$];
+    int i;
+    always_comb begin
+        sliceSame[1:2] = '{1, 2};
+        thenWhole[1] = 1;
+        thenWhole = {};
+        sameKey["k"] = 1;
+        lastElem[1] = 1;
+        notConst[1] = 1;
+        whole[1] = 1;
+        wholeElem["k"][0] = 1;
+        for (int j = 0; j < 2; j++)
+            unrolledSame[j] = 1;
+        negative[-1] = 1;
+        unknownKey[2'bx1] = 1;
+    end
+    initial begin
+        sameKey["k"] = 1;
+        lastElem[$] = 1;
+        notConst[i] = 1;
+        whole = '{1, 2};
+        wholeElem["k"] = '{1};
+        unrolledSame[1] = 1;
+        negative[0] = 1;
+        unknownKey[2'b01] = 1;
+        thenWhole[2] = 1;
+        sliceSame[2] = 1;
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    std::vector<std::string> names;
+    for (auto& diag : diags) {
+        CHECK(diag.code == diag::MultipleAlwaysAssigns);
+        names.push_back(std::get<std::string>(diag.args[0]));
+    }
+    CHECK(names == std::vector<std::string>{"latchedSame[\"k\"]", "clockedSame[0]",
+                                            "sliceSame[1:2]", "thenWhole", "sameKey[\"k\"]",
+                                            "lastElem[1]", "notConst[1]", "whole[1]",
+                                            "wholeElem[\"k\"][0]", "unrolledSame[1]", "negative",
+                                            "unknownKey"});
+}
+
+TEST_CASE("Multi-assign to elements of dynamically sized arrays reached indirectly") {
+    // An element is told apart from another however its array is reached: from
+    // a function, by a hierarchical name, in an interface, through modport ports,
+    // or as a static class property. A member reached through a class handle has
+    // no static prefix past the handle and is not checked.
+    auto& code = R"(
+interface ifc;
+    int byName[string];
+    modport mp(output byName);
+endinterface
+
+module writerApart(ifc.mp p);
+    always_comb p.byName["out"] = 1;
+endmodule
+
+module middleApart(ifc.mp p);
+    writerApart w(p);
+endmodule
+
+module writerSame(ifc.mp p);
+    always_comb p.byName["out"] = 1;
+endmodule
+
+module middleSame(ifc.mp p);
+    writerSame w(p);
+endmodule
+
+module sub;
+    int local_q[$];
+    always_comb local_q[0] = 1;
+endmodule
+
+class C;
+    int q[$];
+    static int shared[string];
+    static int sharedSame[string];
+endclass
+
+module m;
+    int viaFunc[string];
+    function automatic void setOut();
+        viaFunc["out"] = 1;
+    endfunction
+    always_comb setOut();
+    initial viaFunc["in"] = 1;
+
+    int viaFuncSame[string];
+    function automatic void setSame();
+        viaFuncSame["k"] = 1;
+    endfunction
+    always_comb setSame();
+    initial viaFuncSame["k"] = 1;
+
+    sub s1();
+    sub s2();
+    initial s1.local_q[1] = 1;
+    initial s2.local_q[0] = 1;
+
+    ifc i();
+    always_comb i.byName["out"] = 1;
+    initial i.byName["in"] = 1;
+
+    ifc apart();
+    middleApart a(apart);
+    initial apart.byName["in"] = 1;
+
+    ifc same();
+    middleSame b(same);
+    initial same.byName["out"] = 1;
+
+    always_comb C::shared["out"] = 1;
+    initial C::shared["in"] = 1;
+    always_comb C::sharedSame["k"] = 1;
+    initial C::sharedSame["k"] = 1;
+
+    C c = new;
+    always_comb c.q[0] = 1;
+    initial c.q[0] = 2;
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    std::vector<std::string> names;
+    for (auto& diag : diags) {
+        CHECK(diag.code == diag::MultipleAlwaysAssigns);
+        names.push_back(std::get<std::string>(diag.args[0]));
+    }
+    CHECK(names == std::vector<std::string>{"byName[\"out\"]", "local_q[0]", "viaFuncSame[\"k\"]",
+                                            "sharedSame[\"k\"]"});
+}
+
+TEST_CASE("Multi-assign through a ref port to elements of a dynamically sized array") {
+    // A driver through a ref port lands on the element its select names in the
+    // connected variable, and the note points at the port connection.
+    auto& code = R"(
+module subApart(ref int arr[$]);
+    always_comb arr[0] = 1;
+endmodule
+
+module subSame(ref int arr[$]);
+    always_comb arr[0] = 1;
+endmodule
+
+module m;
+    int apart[$];
+    subApart s(apart);
+    initial apart[1] = 1;
+
+    int same[$];
+    subSame t(same);
+    initial same[0] = 1;
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+    REQUIRE(!diags[0].notes.empty());
+    CHECK(diags[0].notes[0].location.offset() == std::string_view(code).find("same);"));
+}

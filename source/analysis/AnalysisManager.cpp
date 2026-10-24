@@ -58,6 +58,15 @@ bool AnalysisContext::isFromMacroBody(SourceLocation location) const {
     return sm && sm->isMacroLoc(location) && !sm->isMacroArgLoc(location);
 }
 
+const ElementStorage& AnalysisContext::keepElementStorage(ElementStorage&& elements) {
+    if (auto it = elementStorage.find(&elements); it != elementStorage.end())
+        return **it;
+
+    auto kept = elementAlloc.emplace(std::move(elements));
+    elementStorage.insert(kept);
+    return *kept;
+}
+
 AnalysisManager::AnalysisManager(AnalysisOptions options, std::shared_ptr<ThreadPool> threadPool) :
     options(options), threadPool(std::move(threadPool)) {
 
