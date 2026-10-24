@@ -38,8 +38,8 @@ void SvUnion::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlias
         fmt::format("{} union_data{};\n\n", cppTypeStr, CppType::isScalar(cppType) ? " {}" : ""));
 
     // Check if some headers need to be included
-    for (const auto& member : type.getCanonicalType().as<slang::ast::Scope>().members()) {
-        const auto& variable = member.as<slang::ast::VariableSymbol>();
+    for (const auto& variable :
+         type.getCanonicalType().as<slang::ast::Scope>().membersOfType<slang::ast::FieldSymbol>()) {
 
         const auto variableName = isCppReserved(variable.name) ? fmt::format("_{}", variable.name)
                                                                : std::string(variable.name);
@@ -51,6 +51,13 @@ void SvUnion::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlias
 
         members.emplace_back(variableName, variableType);
     }
+
+    // Only user-defined types from other packages need a namespace qualifier
+    const auto qualifiedName = [&](const SvType& memberType) {
+        if (memberType.isStructEnumOrUnion() && _namespace != memberType._namespace)
+            return fmt::format("{}::{}", memberType._namespace, memberType.toString());
+        return memberType.toString();
+    };
 
     //** GENERATE DEFAULT CONSTRUCTOR **//
     hppFile.addWithIndent(fmt::format("{}() = default;\n\n", unionName));
@@ -103,30 +110,22 @@ void SvUnion::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlias
     if (!members.empty()) {
         std::set memberTypes = {cppTypeStr};
         for (const auto& [_, memberType] : members) {
-            auto memberTypeName = memberType.toString();
+            auto memberTypeName = qualifiedName(memberType);
 
             // Skip the serializer for this member if the type serializer has already been generated
             if (memberTypes.contains(memberTypeName))
                 continue;
             memberTypes.insert(memberTypeName);
 
-            if (_namespace != memberType._namespace)
-                hppFile.addWithIndent(fmt::format("operator {}::{}() const {{\n",
-                                                  memberType._namespace, memberTypeName));
-            else
-                hppFile.addWithIndent(fmt::format("operator {}() const {{\n", memberTypeName));
+            hppFile.addWithIndent(fmt::format("operator {}() const {{\n", memberTypeName));
 
             hppFile.increaseIndent();
 
             constexpr auto unionVariable = "union_data"sv;
 
             if (memberType.isStructEnumOrUnion()) {
-                if (_namespace != memberType._namespace)
-                    hppFile.addWithIndent(fmt::format("return {}::{}({});\n", memberType._namespace,
-                                                      memberTypeName, unionVariable));
-                else
-                    hppFile.addWithIndent(
-                        fmt::format("return {}({});\n", memberTypeName, unionVariable));
+                hppFile.addWithIndent(
+                    fmt::format("return {}({});\n", memberTypeName, unionVariable));
             }
             else {
                 if (unionSize > 64)
@@ -144,26 +143,17 @@ void SvUnion::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlias
     //** GENERATE EXPLICIT FUNCTIONS TO GET THE DIFFERENT UNION MEMBERS **//
     if (!members.empty()) {
         for (const auto& [memberName, memberType] : members) {
-            auto memberTypeName = memberType.toString();
+            auto memberTypeName = qualifiedName(memberType);
 
-            if (_namespace != memberType._namespace)
-                hppFile.addWithIndent(fmt::format("{}::{} {}() const {{\n", memberType._namespace,
-                                                  memberTypeName, memberName));
-            else
-                hppFile.addWithIndent(
-                    fmt::format("{} {}() const {{\n", memberTypeName, memberName));
+            hppFile.addWithIndent(fmt::format("{} {}() const {{\n", memberTypeName, memberName));
 
             hppFile.increaseIndent();
 
             constexpr auto unionVariable = "union_data"sv;
 
             if (memberType.isStructEnumOrUnion()) {
-                if (_namespace != memberType._namespace)
-                    hppFile.addWithIndent(fmt::format("return {}::{}({});\n", memberType._namespace,
-                                                      memberTypeName, unionVariable));
-                else
-                    hppFile.addWithIndent(
-                        fmt::format("return {}({});\n", memberTypeName, unionVariable));
+                hppFile.addWithIndent(
+                    fmt::format("return {}({});\n", memberTypeName, unionVariable));
             }
             else {
                 if (unionSize > 64)
@@ -190,11 +180,10 @@ void SvUnion::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlias
             hppFile.addWithIndent(fmt::format("ss << \" {0}\" << \" = \" << ", memberName));
 
         if (memberType.cppType == CppType::SC_BV)
-            hppFile.add(fmt::format("static_cast<{}::{}>(*this).to_string();\n",
-                                    memberType._namespace, memberType.name, memberName));
+            hppFile.add(
+                fmt::format("static_cast<{}>(*this).to_string();\n", qualifiedName(memberType)));
         else
-            hppFile.add(fmt::format("static_cast<{}::{}>(*this);\n", memberType._namespace,
-                                    memberType.name, memberName));
+            hppFile.add(fmt::format("static_cast<{}>(*this);\n", qualifiedName(memberType)));
 
         first = false;
     }
