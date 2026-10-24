@@ -1997,6 +1997,76 @@ endmodule
     }
 }
 
+TEST_CASE("Binds check cloned generic class type arguments") {
+    std::string sourceDeclaration = "typedef bit [3:0] local_t;";
+    size_t expectedDiags = 0;
+
+    SECTION("Matching type argument") {}
+
+    SECTION("Type argument differs between source and target scopes") {
+        sourceDeclaration = "typedef int local_t;";
+        // Both C#(local_t) and its cloned local_t argument must be checked.
+        expectedDiags = 2;
+    }
+
+    auto text = fmt::format(R"(
+class C #(parameter type U = int);
+endclass
+
+module Probe #(parameter type T = bit);
+endmodule
+
+module Dut;
+    typedef bit [3:0] local_t;
+endmodule
+
+module top;
+    {}
+    Dut dut();
+    bind dut Probe #(.T(C#(local_t))) dut_probe();
+endmodule
+)",
+                            sourceDeclaration);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(SyntaxTree::fromText(text));
+    auto& diags = compilation.getAllDiagnostics();
+    INFO(report(diags));
+    REQUIRE(diags.size() == expectedDiags);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::BindTypeParamMismatch);
+}
+
+TEST_CASE("Binds exclude type references from generic class defaults") {
+    auto tree = SyntaxTree::fromText(R"(
+package P;
+    typedef bit [3:0] hidden_t;
+    class C #(parameter type U = hidden_t);
+    endclass
+endpackage
+
+module Probe #(parameter type T = bit);
+endmodule
+
+module Dut;
+endmodule
+
+module top;
+    Dut dut();
+    bind dut Probe #(.T(P::C#())) dut_probe();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Resolve the override before full elaboration visits the generic class.
+    auto type = compilation.getRoot().lookupName("top.dut.dut_probe.T");
+    REQUIRE(type);
+    CHECK(type->as<Type>().isClass());
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Bind type references are collected through every resolution entry point") {
     auto tree = SyntaxTree::fromText(R"(
 module Probe #(parameter type T = bit);
@@ -2074,6 +2144,49 @@ bind top.dut Probe #(D::word_t) missing();
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::BindTypeParamMismatch);
     CHECK(diags[1].code == diag::BindTypeParamNotFound);
+}
+
+TEST_CASE("Binds skip type name checks for defaults and invalid overrides") {
+    std::string override;
+    std::optional<DiagCode> expectedDiag;
+
+    SECTION("Default type parameter") {}
+
+    SECTION("Override is not a type") {
+        override = "#(.T(1 + 1))";
+        expectedDiag = diag::BadTypeParamExpr;
+    }
+
+    SECTION("Override type cannot be resolved") {
+        override = "#(.T(missing_t))";
+        expectedDiag = diag::UndeclaredIdentifier;
+    }
+
+    auto text = fmt::format(R"(
+module Probe #(parameter type T = bit);
+endmodule
+
+module Dut;
+endmodule
+
+module top;
+    Dut dut();
+    bind dut Probe {} dut_probe();
+endmodule
+)",
+                            override);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(SyntaxTree::fromText(text));
+    auto& diags = compilation.getAllDiagnostics();
+    INFO(report(diags));
+    if (expectedDiag) {
+        REQUIRE(diags.size() == 1);
+        CHECK(diags[0].code == *expectedDiag);
+    }
+    else {
+        CHECK(diags.empty());
+    }
 }
 
 TEST_CASE("Binds with invalid type params") {
