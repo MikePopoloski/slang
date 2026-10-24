@@ -31,8 +31,8 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
     auto cppTypeStr = structSize > 64 ? fmt::format(fmt::runtime(toString(cppType)), structSize)
                                       : toString(cppType);
 
-    for (const auto& member : type.getCanonicalType().as<slang::ast::Scope>().members()) {
-        const auto& variable = member.as<slang::ast::VariableSymbol>();
+    for (const auto& variable :
+         type.getCanonicalType().as<slang::ast::Scope>().membersOfType<slang::ast::FieldSymbol>()) {
 
         auto variableName = isCppReserved(variable.name) ? fmt::format("_{}", variable.name)
                                                          : std::string(variable.name);

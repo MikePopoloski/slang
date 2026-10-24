@@ -116,3 +116,44 @@ endpackage
     CHECK_THAT(out, ContainsSubstring("BLUE = 4"));
     CHECK_THAT(out, ContainsSubstring("static constexpr std::size_t _size = 3;"));
 }
+
+TEST_CASE("Reflect: inline enum fields") {
+    auto out = reflect(R"(
+package p;
+    typedef struct packed {
+        enum logic [1:0] { E0, E1 } marker;
+        logic [3:0] a;
+    } s_t /* public */;
+    typedef union packed {
+        enum logic [3:0] { F0, F1 } marker;
+        logic [3:0] a;
+    } u_t /* public */;
+endpackage
+)");
+
+    // Anonymous enum types are mapped by width
+    CHECK_THAT(out, ContainsSubstring("std::uint32_t marker {};"));
+    CHECK_THAT(out, ContainsSubstring("static constexpr std::size_t marker_w = 2;"));
+    CHECK_THAT(out, ContainsSubstring("marker() const"));
+    CHECK_THAT(out, ContainsSubstring("a() const"));
+    CHECK_THAT(out, !ContainsSubstring("#include \".h\""));
+}
+
+TEST_CASE("Reflect: union member types are qualified only when needed") {
+    auto out = reflect(R"(
+package q;
+    typedef struct packed { logic [1:0] x; logic [1:0] y; } inner_t /* public */;
+endpackage
+package p;
+    typedef union packed { q::inner_t i; logic [3:0] a; } u_t /* public */;
+endpackage
+)");
+
+    CHECK_THAT(out, ContainsSubstring("q::inner_t i() const"));
+    CHECK_THAT(out, ContainsSubstring("operator q::inner_t() const"));
+    CHECK_THAT(out, ContainsSubstring("static_cast<q::inner_t>(*this)"));
+    CHECK_THAT(out, ContainsSubstring("\n        std::uint32_t a() const"));
+    CHECK_THAT(out, ContainsSubstring("static_cast<std::uint32_t>(*this)"));
+    CHECK_THAT(out, !ContainsSubstring("::std::uint32_t"));
+    CHECK_THAT(out, !ContainsSubstring("static_cast<::>"));
+}
