@@ -1747,6 +1747,375 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Binds with qualified type params") {
+    std::string text = R"(
+package P;
+    typedef bit [3:0] word_t;
+endpackage
+
+class C;
+    typedef P::word_t word_t;
+endclass
+
+module Probe #(parameter type T = bit)(input T a);
+endmodule
+
+module Dut(input P::word_t a);
+endmodule
+
+module top(input P::word_t a);
+    Dut dut(.a(a));
+endmodule
+)";
+
+    SECTION("Package-qualified type") {
+        text += "bind Dut Probe #(.T(P::word_t)) dut_probe(.a(a));";
+    }
+
+    SECTION("Package-qualified type with an unrelated unqualified type") {
+        text += R"(
+typedef int word_t;
+bind Dut Probe #(.T(P::word_t)) dut_probe(.a(a));
+)";
+    }
+
+    SECTION("Class-qualified type") {
+        text += R"(
+typedef int word_t;
+bind top.dut Probe #(C::word_t) dut_probe(.a(a));
+)";
+    }
+
+    Compilation compilation;
+    compilation.addSyntaxTree(SyntaxTree::fromText(text));
+    NO_COMPILATION_ERRORS;
+
+    auto type = compilation.getRoot().lookupName("top.dut.dut_probe.T");
+    REQUIRE(type);
+    CHECK(type->as<Type>().getBitWidth() == 4);
+}
+
+TEST_CASE("Binds with type reference params") {
+    auto tree = SyntaxTree::fromText(R"(
+module Probe #(parameter type T = bit)(input T a);
+endmodule
+
+module Dut #(parameter type T = bit[3:0])(input T a);
+endmodule
+
+module top(input bit[3:0] a);
+    Dut #(.T(bit[3:0])) dut(.a(a));
+    Dut #(.T(bit[7:0])) wide_dut(.a(8'b0));
+endmodule
+
+bind Dut Probe #(.T(type(a))) dut_probe(.a(a));
+bind top.dut Probe #(type(a)) instance_probe(.a(a));
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    for (auto name : {"top.dut.dut_probe.T", "top.dut.instance_probe.T"}) {
+        auto type = root.lookupName(name);
+        REQUIRE(type);
+        CHECK(type->as<Type>().getBitWidth() == 4);
+    }
+
+    auto wideType = root.lookupName("top.wide_dut.dut_probe.T");
+    REQUIRE(wideType);
+    CHECK(wideType->as<Type>().getBitWidth() == 8);
+}
+
+TEST_CASE("Binds check explicit type names in overrides") {
+    std::string sourceDeclarations = "typedef int local_t;";
+    std::string targetDeclarations = "typedef bit [3:0] local_t;";
+    std::string overrideType = "type(local_t)";
+    std::optional<DiagCode> expectedDiag;
+
+    SECTION("Type name is missing in the source scope") {
+        sourceDeclarations.clear();
+        expectedDiag = diag::BindTypeParamNotFound;
+    }
+
+    SECTION("Type name differs between source and target scopes") {
+        expectedDiag = diag::BindTypeParamMismatch;
+    }
+
+    SECTION("Type name matches in both scopes") {
+        sourceDeclarations = "typedef P::local_t local_t;";
+        targetDeclarations = "typedef P::local_t local_t;";
+    }
+
+    SECTION("Qualified type name") {
+        overrideType = "type(P::local_t)";
+    }
+
+    SECTION("A value name does not refer to the type of the same name in the source scope") {
+        targetDeclarations = "bit [3:0] local_t;";
+    }
+
+    SECTION("Nested type reference") {
+        sourceDeclarations.clear();
+        overrideType = "type(type(local_t))";
+        expectedDiag = diag::BindTypeParamNotFound;
+    }
+
+    SECTION("Cast type inside a type reference") {
+        sourceDeclarations.clear();
+        overrideType = "type(local_t'(a))";
+        expectedDiag = diag::BindTypeParamNotFound;
+    }
+
+    SECTION("Named type with packed dimensions") {
+        sourceDeclarations.clear();
+        overrideType = "local_t[1:0]";
+        expectedDiag = diag::BindTypeParamNotFound;
+    }
+
+    SECTION("Named member type inside a struct") {
+        sourceDeclarations.clear();
+        overrideType = "struct packed { local_t value; }";
+        expectedDiag = diag::BindTypeParamNotFound;
+    }
+
+    SECTION("Named member type inside an unpacked struct") {
+        sourceDeclarations.clear();
+        overrideType = "struct { local_t value; }";
+        expectedDiag = diag::BindTypeParamNotFound;
+    }
+
+    SECTION("An enum value shadows an outer type name") {
+        sourceDeclarations.clear();
+        overrideType = "struct packed { enum int { local_t = 1 } field; type(local_t) value; }";
+    }
+
+    auto text = fmt::format(R"(
+package P;
+    typedef bit [3:0] local_t;
+endpackage
+
+module Probe #(parameter type T = bit);
+endmodule
+
+module Dut(input bit [3:0] a);
+    {}
+endmodule
+
+module top(input bit [3:0] a);
+    {}
+    Dut dut(.a(a));
+    bind dut Probe #(.T({})) dut_probe();
+endmodule
+)",
+                            targetDeclarations, sourceDeclarations, overrideType);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(SyntaxTree::fromText(text));
+    if (expectedDiag) {
+        auto& diags = compilation.getAllDiagnostics();
+        REQUIRE(diags.size() == 1);
+        CHECK(diags[0].code == *expectedDiag);
+    }
+    else {
+        NO_COMPILATION_ERRORS;
+    }
+}
+
+TEST_CASE("Binds check cloned generic class type arguments") {
+    std::string sourceDeclaration = "typedef bit [3:0] local_t;";
+    size_t expectedDiags = 0;
+
+    SECTION("Matching type argument") {
+    }
+
+    SECTION("Type argument differs between source and target scopes") {
+        sourceDeclaration = "typedef int local_t;";
+        expectedDiags = 1;
+    }
+
+    auto text = fmt::format(R"(
+class C #(parameter type U = int);
+endclass
+
+module Probe #(parameter type T = bit);
+endmodule
+
+module Dut;
+    typedef bit [3:0] local_t;
+endmodule
+
+module top;
+    {}
+    Dut dut();
+    bind dut Probe #(.T(C#(local_t))) dut_probe();
+endmodule
+)",
+                            sourceDeclaration);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(SyntaxTree::fromText(text));
+    auto& diags = compilation.getAllDiagnostics();
+    INFO(report(diags));
+    REQUIRE(diags.size() == expectedDiags);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::BindTypeParamMismatch);
+}
+
+TEST_CASE("Binds exclude type references from generic class defaults") {
+    auto tree = SyntaxTree::fromText(R"(
+package P;
+    typedef bit [3:0] hidden_t;
+    class C #(parameter type U = hidden_t);
+    endclass
+endpackage
+
+module Probe #(parameter type T = bit);
+endmodule
+
+module Dut;
+endmodule
+
+module top;
+    Dut dut();
+    bind dut Probe #(.T(P::C#())) dut_probe();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Resolve the override before full elaboration visits the generic class.
+    auto type = compilation.getRoot().lookupName("top.dut.dut_probe.T");
+    REQUIRE(type);
+    CHECK(type->as<Type>().isClass());
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Bind type references are collected through every resolution entry point") {
+    auto tree = SyntaxTree::fromText(R"(
+module Probe #(parameter type T = bit);
+endmodule
+
+module Dut;
+    typedef bit [3:0] local_t;
+endmodule
+
+module top;
+    Dut dut();
+    bind dut Probe #(.T(local_t)) dut_probe();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto symbol = compilation.getRoot().lookupName("top.dut.dut_probe");
+    REQUIRE(symbol);
+    auto& instance = symbol->as<InstanceSymbol>();
+    auto& targetType = instance.body.find<TypeParameterSymbol>("T").targetType;
+    ASTContext context(*instance.getParentScope(), LookupLocation::before(instance),
+                       ASTFlags::BindInstantiation);
+
+    SECTION("getType") {
+        targetType.getType();
+    }
+
+    SECTION("forceResolveAt") {
+        targetType.forceResolveAt(context);
+    }
+
+    SECTION("resolveAt") {
+        targetType.resolveAt(context);
+    }
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BindTypeParamNotFound);
+}
+
+TEST_CASE("Binds with invalid qualified type params") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef bit word_t;
+
+class C;
+    typedef int word_t;
+endclass
+
+module Probe #(parameter type T = bit);
+endmodule
+
+module Dut;
+    class C;
+        typedef bit word_t;
+    endclass
+    class D;
+        typedef bit word_t;
+    endclass
+endmodule
+
+module top;
+    Dut dut();
+endmodule
+
+bind Dut Probe #(.T(C::word_t)) mismatch();
+bind top.dut Probe #(D::word_t) missing();
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BindTypeParamMismatch);
+    CHECK(diags[1].code == diag::BindTypeParamNotFound);
+}
+
+TEST_CASE("Binds skip type name checks for defaults and invalid overrides") {
+    std::string override;
+    std::optional<DiagCode> expectedDiag;
+
+    SECTION("Default type parameter") {
+    }
+
+    SECTION("Override is not a type") {
+        override = "#(.T(1 + 1))";
+        expectedDiag = diag::BadTypeParamExpr;
+    }
+
+    SECTION("Override type cannot be resolved") {
+        override = "#(.T(missing_t))";
+        expectedDiag = diag::UndeclaredIdentifier;
+    }
+
+    auto text = fmt::format(R"(
+module Probe #(parameter type T = bit);
+endmodule
+
+module Dut;
+endmodule
+
+module top;
+    Dut dut();
+    bind dut Probe {} dut_probe();
+endmodule
+)",
+                            override);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(SyntaxTree::fromText(text));
+    auto& diags = compilation.getAllDiagnostics();
+    INFO(report(diags));
+    if (expectedDiag) {
+        REQUIRE(diags.size() == 1);
+        CHECK(diags[0].code == *expectedDiag);
+    }
+    else {
+        CHECK(diags.empty());
+    }
+}
+
 TEST_CASE("Binds with invalid type params") {
     auto tree = SyntaxTree::fromText(R"(
 typedef enum { A, B } baz;
