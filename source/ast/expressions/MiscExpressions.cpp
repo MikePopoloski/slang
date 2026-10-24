@@ -885,7 +885,10 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             instance.isRecursive = true;
         }
 
-        if (currInst->argDetails)
+        // For argument expansions, continue the walk from the context where the actual
+        // argument was written. If it was written outside of any instance then there
+        // is nothing further to check.
+        if (currInst->argExpansionLoc)
             currInst = currInst->argDetails;
         else {
             SLANG_ASSERT(currInst->prevContext);

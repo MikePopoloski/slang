@@ -629,6 +629,92 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Instance passed as argument to the same sequence / property is not recursive") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(input logic clk, a, b, c, output logic y);
+    sequence s(x, y);
+        x ##1 y;
+    endsequence
+
+    property p1(x, property q);
+        x |=> q;
+    endproperty
+
+    property p2(x, property q);
+        x |-> q;
+    endproperty
+
+    property pq(x, property q);
+        q and nexttime pq(x, q);
+    endproperty
+
+    property pa(property q);
+        q and nexttime pb(q);
+    endproperty
+
+    property pb(property q);
+        q and nexttime pa(q);
+    endproperty
+
+    let l(x) = x + 1;
+    assign y = l(l(a));
+
+    c1: cover property (@(posedge clk) s(a, s(b, c).triggered));
+    a1: assert property (@(posedge clk) p2(a, p2(b, c)));
+    a2: assert property (@(posedge clk) not p1(a, p1(b, c)));
+    a3: assert property (@(posedge clk) pq(a, pq(b, c)));
+    a4: assert property (@(posedge clk) pa(pb(pa(c))));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Recursive property instance passed as argument still checked") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(input logic clk, a, b);
+    property prop_always(p);
+        p and (1'b1 |=> prop_always(p));
+    endproperty
+
+    property p1(x, property q);
+        x |=> q;
+    endproperty
+
+    property r(property q);
+        q;
+    endproperty
+
+    property pv(x);
+        r(x and pv(x));
+    endproperty
+
+    sequence t(y);
+        y;
+    endsequence
+
+    sequence sv(x);
+        t(sv(x));
+    endsequence
+
+    a1: assert property (@(posedge clk) not p1(a, prop_always(b)));
+    a2: assert property (@(posedge clk) pv(a));
+    c1: cover property (@(posedge clk) sv(a));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::RecursivePropNegation);
+    CHECK(diags[1].code == diag::RecursivePropTimeAdvance);
+    CHECK(diags[2].code == diag::RecursiveSequence);
+}
+
 TEST_CASE("Event argument to sequence instance") {
     auto tree = SyntaxTree::fromText(R"(
 logic x,y;
