@@ -12,6 +12,75 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixes
 
 
+## [v12.1] - 2026-10-25
+### Fixes
+* Fixed missing type checking of case property expression items against the case expression; incompatible types are now correctly reported as errors
+* `dist` expressions now have a result type of `logic` instead of `void`, matching the `inside` operator
+* Fixed `$sdf_annotate` to allow empty optional arguments and to correctly type check all of its string arguments
+* Fixed ICE during constant evaluation of `repeat` loop with `real` count (thanks to @sifferman)
+* Fixed replication operator to allow a literal zero count when the operand is a string literal, resulting in the empty string (thanks to @hankhsu1996)
+* Fixed bit-selects and part-selects of signed packed arrays declared via a typedef incorrectly producing a signed result
+* Fixed constant evaluation of slice stores that run past the end of an array or queue writing one element past the end
+* Fixed constant conversion of integral values with X/Z bits to strings incorrectly removing bytes that have known 1 bits
+* Fixed `$sformatf` to accept unpacked arrays of `byte` for `%s` arguments and for the format string
+* Fixed `$sformatf` results incorrectly containing null characters (e.g. from `%c` of 0)
+* Fixed the string `atoi` family of methods to require the scan to start with a digit before accepting underscores
+* Fixed the string `atoreal` method to only accept a valid real constant, rather than everything `strtod` accepts
+* Fixed the string `realtoa` method to produce the shortest representation that reads back as the same value
+* Fixed a case where references through an interface port were considered hierarchical references, preventing them from being used in `$bits`, `type()`, and net alias expressions (thanks to @hankhsu1996)
+* Fixed instance caching incorrectly sharing bodies for instances that call subroutines or instantiate sequences / properties via upward name lookup (thanks to @hankhsu1996)
+* Fixed crashes on struct and union members that declare an inline enum type (thanks to @hankhsu1996)
+* Fixed instance caching incorrectly sharing a body between instances given `0.0` and `-0.0` as parameter values (thanks to @hankhsu1996)
+* Fixed instance caching incorrectly sharing a body between instances whose implicitly typed parameters are given the same integer at different widths or signedness (thanks to @hankhsu1996)
+* Fixed generic class specializations incorrectly being merged when their value parameters compare equal but are not identical (thanks to @hankhsu1996)
+* Fixed a race condition when computing line offsets for a file from multiple threads (thanks to @hankhsu1996)
+* Fixed sizing of the operand of a cast to an enum type; it now takes the enum's width as its context (thanks to @hankhsu1996)
+* Fixed constant evaluation of a conditional operator with an unknown condition to return the operand value when both operands are equal (thanks to @hankhsu1996)
+* Fixed struct member default values not being checked to be constant expressions (thanks to @hankhsu1996)
+* Fixed struct member default values not being used in the struct's default value (thanks to @hankhsu1996)
+* Fixed incorrect sign extension of division and remainder results on some constant integers wider than 64 bits
+* Fixed equality comparison of single-word integers with mixed signedness incorrectly sign extending, which also caused missed sign conversion warnings
+* Fixed slices of signed integers incorrectly producing a signed result
+* Fixed division and remainder of the most negative value of wide signed integers
+* Fixed multiplication of very large integers where one operand is less than half the size of the other
+* Fixed incorrect rounding when converting some wide integers to floating point
+* Fixed decimal literals that overflow a multi-word integer not being correctly truncated
+* Fixed several cases where an inline enum declaration would attach its values to the wrong scope (e.g. in ANSI port lists, class extends clauses, generate conditions, and randsequence productions)
+* Fixed handling of `defparam`s inside of instance arrays
+* Fixed spurious errors on integral uses of replications in uninstantiated module bodies (thanks to @vbtcl)
+* Fixed `$rtoi` on negative values
+* Fixed the sign of the result of the string `getc` method
+* Fixed incorrect precision loss warnings when converting integers wider than 64 bits to `real`
+* Fixed invalid constant folding of a conditional expression with a non-constant `matches` clause
+* Fixed a crash in `SyntaxTree.fromText` when the text is a lone member keyword like `default` (thanks to @eanorige)
+* Fixed the expansion of nested macros defined and referenced within the same outer macro invocation
+* Fixed a parse error when the first formal argument of a sequence, property, `let`, or checker is declared `untyped`
+* We now gracefully continue AST construction after encountering the suppressible bad-procedural-force error, instead of erroring out the whole statement (thanks to @hankhsu1996)
+* Fixed multiple driver detection for range selects of unpacked arrays, which were previously treated as driving only their first element (thanks to @spomata)
+* Fixed `$inferred_clock` in non-procedural checker instances to resolve using the default clocking in effect where the checker is instantiated, rather than where it was declared
+* Fixed sequence, property, and `let` instances passed as arguments to another instance of the same declaration (e.g. `s(a, s(b, c).triggered)`) being incorrectly reported as recursive
+* Fixed a crash when selecting an inactive member of an unpacked union that declares an inline enum type
+* Fixed `default_nettype` information being lost when transforming a syntax tree with a `SyntaxRewriter`, which caused implicit nets to be incorrectly reported as errors
+* Fixed the check that type parameter overrides in `bind` directives resolve to the same types in both the target and directive scopes; it previously missed scoped names (e.g. `pkg::T`) and type names nested within more complex type expressions
+* Fixed the wildcard equality operators (`==?` and `!=?`) returning `x` when the left operand has an unknown bit, even though a known bit in another non-wildcard position differs (thanks to @marcobrambilla99)
+* Fixed packed arrays whose element type is a signed typedef, struct, or enum incorrectly being treated as signed; only packed arrays explicitly declared `signed` are signed (thanks to @sifferman)
+
+### Tools & Bindings
+#### pyslang
+* Fixed incorrect binding of properties that return spans, which could lead to crashes
+* Added implicit conversions to allow passing symbols to methods that expect Scopes (which was broken in the nanobind conversion)
+* Fixed binding of flags enums to allow using expected operators on them (like `|`) (thanks to @XNinety9)
+* Fixed `Driver.runAnalysis` binding, which previously failed to return the resulting `AnalysisManager`
+
+#### slang-tidy
+* Fixed the "UndrivenRange" check incorrectly reporting bits driven by range selects of unpacked arrays as undriven, and missing undriven elements past the last driver in unpacked and multidimensional arrays (thanks to @spomata)
+
+#### slang-reflect
+* Fields of generated structs, unions, and enums are now value-initialized, so default-constructed objects start out zeroed (thanks to @spomata)
+* Fixed a crash when reflecting structs or unions that declare inline enum members
+* Fixed incorrect namespace qualification of union member conversion operators for non-user-defined types
+
+
 ## [v12.0] - 2026-09-29
 ### Language Compatibility
 * Added `--allow-cross-auto-bin-max` (included in 'vcs' compat mode) which enables the `cross_auto_bin_max` legacy coverage option, for compatibility with (pre-IEEE) SystemVerilog 3.1a (thanks to @hankhsu1996)
