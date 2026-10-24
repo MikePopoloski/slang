@@ -2001,7 +2001,8 @@ TEST_CASE("Binds check cloned generic class type arguments") {
     std::string sourceDeclaration = "typedef bit [3:0] local_t;";
     size_t expectedDiags = 0;
 
-    SECTION("Matching type argument") {}
+    SECTION("Matching type argument") {
+    }
 
     SECTION("Type argument differs between source and target scopes") {
         sourceDeclaration = "typedef int local_t;";
@@ -2150,7 +2151,8 @@ TEST_CASE("Binds skip type name checks for defaults and invalid overrides") {
     std::string override;
     std::optional<DiagCode> expectedDiag;
 
-    SECTION("Default type parameter") {}
+    SECTION("Default type parameter") {
+    }
 
     SECTION("Override is not a type") {
         override = "#(.T(1 + 1))";
