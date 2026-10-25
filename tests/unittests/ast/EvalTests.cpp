@@ -3151,3 +3151,19 @@ TEST_CASE("Eval conditional with matches") {
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
 }
+
+TEST_CASE("Packed arrays of a named signed type are unsigned") {
+    ScriptSession session;
+    session.eval("typedef logic signed [3:0] operand_t;");
+    session.eval("operand_t [1:0] operands = '1;");
+    session.eval("logic [1:0][3:0] plain = '1;");
+    session.eval("logic signed [1:0][3:0] declared = '1;");
+    session.eval("struct packed signed { logic [3:0] f; } [1:0] structs = '1;");
+
+    CHECK(session.eval("operands + 16'sd0").integer() == 0x00ff);
+    CHECK(session.eval("operands[1:1] + 16'sd0").integer() == 0x000f);
+    CHECK(session.eval("plain + 16'sd0").integer() == 0x00ff);
+    CHECK(session.eval("declared + 16'sd0").integer() == -1);
+    CHECK(session.eval("structs + 16'sd0").integer() == 0x00ff);
+    NO_SESSION_ERRORS;
+}
