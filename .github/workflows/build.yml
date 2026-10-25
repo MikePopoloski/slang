@@ -50,7 +50,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y g++-16 g++-11 clang-23 clang-tidy-23
     - name: ccache
-      uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
+      uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
       with:
         key: ${{ matrix.preset }}
     - uses: konsumer/install-wasi-sdk@d728b7abb7ef7db1610039d9798a8270e23f56f8 # v1

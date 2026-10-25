@@ -14,9 +14,9 @@ jobs:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 0
-    - uses: bencherdev/bencher@8d75325c3bc59403a2186a056b472c4f49d42838 # v0.6.12
+    - uses: bencherdev/bencher@f80847436d7157936b40525db4c2a1064124f04a # v0.6.13
     - name: ccache
-      uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
+      uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
       with:
         key: benchmark-ubuntu
     - name: Configure and Build
