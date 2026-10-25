@@ -32,6 +32,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixes
 * Fixed [-Wcase-gen-dup](https://sv-lang.com/warning-ref.html#case-gen-dup) and [-Wcase-gen-none](https://sv-lang.com/warning-ref.html#case-gen-none) printing `<unset>` instead of the type when the case generate condition is a type reference
+* Fixed `checker` declarations being ignored when calculating file dependencies for `--depfile-trim` and library file loading (thanks to @Timmmm)
+* Diagnostics that are errors by default and downgraded with `-Wno-error=` are now correctly turned off by `-Wnone`, while enabling them by name or group keeps them as errors (thanks to @hankhsu1996)
+* Fixed data races when constructing `Driver` objects concurrently on multiple threads, and when printing via the `OS` utility functions while output capture is installed or removed on another thread
+
+### Tools & Bindings
+#### slang-tidy
+* Config files now support comments, starting with `#` and running to the end of the line (thanks to @spomata)
+* Check names in config files now keep acronyms together (e.g. `style-always-ff-blocking` instead of `style-always-f-f-blocking`); the old spellings are still accepted but reported as deprecated (thanks to @spomata)
+
+
+## [v12.1] - 2026-10-25
+### Fixes
 * Fixed missing type checking of case property expression items against the case expression; incompatible types are now correctly reported as errors
 * `dist` expressions now have a result type of `logic` instead of `void`, matching the `inside` operator
 * Fixed `$sdf_annotate` to allow empty optional arguments and to correctly type check all of its string arguments
@@ -65,23 +77,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed decimal literals that overflow a multi-word integer not being correctly truncated
 * Fixed several cases where an inline enum declaration would attach its values to the wrong scope (e.g. in ANSI port lists, class extends clauses, generate conditions, and randsequence productions)
 * Fixed handling of `defparam`s inside of instance arrays
-* Fixed `checker` declarations being ignored when calculating file dependencies for `--depfile-trim` and library file loading (thanks to @Timmmm)
 * Fixed spurious errors on integral uses of replications in uninstantiated module bodies (thanks to @vbtcl)
 * Fixed `$rtoi` on negative values
 * Fixed the sign of the result of the string `getc` method
 * Fixed incorrect precision loss warnings when converting integers wider than 64 bits to `real`
 * Fixed invalid constant folding of a conditional expression with a non-constant `matches` clause
-* Diagnostics that are errors by default and downgraded with `-Wno-error=` are now correctly turned off by `-Wnone`, while enabling them by name or group keeps them as errors (thanks to @hankhsu1996)
 * Fixed a crash in `SyntaxTree.fromText` when the text is a lone member keyword like `default` (thanks to @eanorige)
 * Fixed the expansion of nested macros defined and referenced within the same outer macro invocation
 * Fixed a parse error when the first formal argument of a sequence, property, `let`, or checker is declared `untyped`
 * We now gracefully continue AST construction after encountering the suppressible bad-procedural-force error, instead of erroring out the whole statement (thanks to @hankhsu1996)
-* Fixed data races when constructing `Driver` objects concurrently on multiple threads, and when printing via the `OS` utility functions while output capture is installed or removed on another thread
 * Fixed multiple driver detection for range selects of unpacked arrays, which were previously treated as driving only their first element (thanks to @spomata)
 * Fixed `$inferred_clock` in non-procedural checker instances to resolve using the default clocking in effect where the checker is instantiated, rather than where it was declared
 * Fixed sequence, property, and `let` instances passed as arguments to another instance of the same declaration (e.g. `s(a, s(b, c).triggered)`) being incorrectly reported as recursive
+* Fixed a crash when selecting an inactive member of an unpacked union that declares an inline enum type
 * Fixed `default_nettype` information being lost when transforming a syntax tree with a `SyntaxRewriter`, which caused implicit nets to be incorrectly reported as errors
 * Fixed the check that type parameter overrides in `bind` directives resolve to the same types in both the target and directive scopes; it previously missed scoped names (e.g. `pkg::T`) and type names nested within more complex type expressions
+* Fixed the wildcard equality operators (`==?` and `!=?`) returning `x` when the left operand has an unknown bit, even though a known bit in another non-wildcard position differs (thanks to @marcobrambilla99)
+* Fixed packed arrays whose element type is a signed typedef, struct, or enum incorrectly being treated as signed; only packed arrays explicitly declared `signed` are signed (thanks to @sifferman)
 
 ### Tools & Bindings
 #### pyslang
@@ -91,8 +103,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed `Driver.runAnalysis` binding, which previously failed to return the resulting `AnalysisManager`
 
 #### slang-tidy
-* Config files now support comments, starting with `#` and running to the end of the line (thanks to @spomata)
-* Check names in config files now keep acronyms together (e.g. `style-always-ff-blocking` instead of `style-always-f-f-blocking`); the old spellings are still accepted but reported as deprecated (thanks to @spomata)
 * Fixed the "UndrivenRange" check incorrectly reporting bits driven by range selects of unpacked arrays as undriven, and missing undriven elements past the last driver in unpacked and multidimensional arrays (thanks to @spomata)
 
 #### slang-reflect

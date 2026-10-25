@@ -29,7 +29,7 @@ include(gitversion)
 get_git_version(SLANG_VERSION_PATCH SLANG_GIT_PRERELEASE SLANG_VERSION_HASH)
 
 set(SLANG_VERSION_MAJOR 12)
-set(SLANG_VERSION_MINOR 0)
+set(SLANG_VERSION_MINOR 1)
 set(SLANG_VERSION_PRERELEASE
     "${SLANG_GIT_PRERELEASE}"
     CACHE STRING "Optional pre-release version segment (e.g. 'rc1')")
