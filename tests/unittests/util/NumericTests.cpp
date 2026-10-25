@@ -701,6 +701,13 @@ TEST_CASE("SVInt misc functions") {
     CHECK_THAT(condWildcardEqual("12'bxx101"_si, "5'bxx10x"_si), exactlyEquals(logic_t::x));
     CHECK_THAT(condWildcardEqual("5'bxx100"_si, "12'bxx101"_si), exactlyEquals(logic_t(0)));
     CHECK_THAT(condWildcardEqual("5'bxx10x"_si, "12'bxx101"_si), exactlyEquals(logic_t::x));
+    // A known non-wildcard bit that differs gives 0 even with lhs unknowns elsewhere
+    CHECK_THAT(condWildcardEqual("4'b1x10"_si, "4'b00z0"_si), exactlyEquals(logic_t(0)));
+    CHECK_THAT(condWildcardEqual("4'b0x10"_si, "4'b00z0"_si), exactlyEquals(logic_t::x));
+    // Same across words: the lhs unknown is in word 0, the differing bit (70) in word 1
+    CHECK_THAT(condWildcardEqual("100'h000000040000000000000000x"_si,
+                                 "100'h00000000000000000000000z0"_si),
+               exactlyEquals(logic_t(0)));
 
     CHECK(caseZWildcardEqual("5'b10110"_si, "5'b10110"_si));
     CHECK(!caseZWildcardEqual("5'b10010"_si, "5'b10110"_si));

@@ -2426,18 +2426,24 @@ logic_t condWildcardEqual(const SVInt& lhs, const SVInt& rhs) {
             return condWildcardEqual(lhs, rhs.extend(lhs.bitWidth, bothSigned));
     }
 
+    // Bits that are unknown on the rhs are wildcards. Any other bit that is known on both sides
+    // and differs makes the result false, even if the lhs has unknown bits elsewhere; the result
+    // is unknown only if no such bit exists and some lhs unknown bit is not a wildcard.
     uint32_t words = SVInt::getNumWords(rhs.bitWidth, false);
+    bool anyUnknown = false;
     for (uint32_t i = 0; i < words; ++i) {
-        // bitmask to avoid comparing the bits unknown on the rhs
         uint64_t mask = ~rhs.pVal[i + words];
-        if (lhs.unknownFlag && (lhs.getRawData()[i + words] & mask) != 0)
-            return logic_t::x;
+        if (lhs.unknownFlag) {
+            uint64_t lhsUnknown = lhs.getRawData()[i + words] & mask;
+            anyUnknown |= lhsUnknown != 0;
+            mask &= ~lhsUnknown;
+        }
 
         if ((lhs.getRawData()[i] & mask) != (rhs.pVal[i] & mask))
             return logic_t(false);
     }
 
-    return logic_t(true);
+    return anyUnknown ? logic_t::x : logic_t(true);
 }
 
 bool caseXWildcardEqual(const SVInt& lhs, const SVInt& rhs) {
