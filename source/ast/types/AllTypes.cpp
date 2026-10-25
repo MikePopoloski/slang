@@ -679,10 +679,17 @@ void EnumValueSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", getValue());
 }
 
+// [7.4.1] A packed array is signed only when declared signed, which slang records on its
+// scalar element. The sign of a typedef, struct, or enum element applies to that element alone.
+static bool isSignedArrayOf(const Type& elementType) {
+    return elementType.isSigned() && (elementType.kind == SymbolKind::ScalarType ||
+                                      elementType.kind == SymbolKind::PackedArrayType);
+}
+
 PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range,
                                  bitwidth_t fullWidth) :
     IntegralType(SymbolKind::PackedArrayType, "", SourceLocation(), fullWidth,
-                 elementType.isSigned(), elementType.isFourState()),
+                 isSignedArrayOf(elementType), elementType.isFourState()),
     elementType(elementType), range(range) {
 }
 
