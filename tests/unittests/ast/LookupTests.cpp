@@ -3039,6 +3039,60 @@ endmodule
     CHECK(diags[0].code == diag::PackageExportNotImported);
 }
 
+TEST_CASE("Package export must name the package the declaration was imported from") {
+    auto tree = SyntaxTree::fromText(R"(
+package p1;
+    localparam int a = 1, b = 2;
+endpackage
+
+package p2;
+    import p1::a;
+    import p1::b;
+    export p1::a;
+    export p1::b;
+endpackage
+
+package p3;
+    import p1::a;
+    export p2::a; // Error, imported from p1, not p2
+endpackage
+
+package p4;
+    import p1::*;
+    localparam int q = a;
+    export p2::a; // Error, there is no import from p2
+endpackage
+
+package p5;
+    import p1::a;
+    import p2::*;
+    export p2::a; // Fine, p2::a is the same declaration and is a candidate for import
+endpackage
+
+package p6;
+    import p1::*;
+    import p2::*;
+    localparam int q = a;
+    export p1::a;
+    export p2::a;
+    export p2::b;
+endpackage
+
+module m;
+    import p6::*;
+    localparam int r = a + b;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::PackageExportNotImported);
+    CHECK(diags[1].code == diag::PackageExportNotImported);
+}
+
 TEST_CASE("Upwards genblk collision") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

@@ -173,11 +173,37 @@ static bool checkExportIsImported(const PackageSymbol& package, const PackageImp
         return false;
     };
 
+    // [26.6] says that the declaration being exported must be imported from the
+    // same package named in the export. A wildcard import of that package makes
+    // the declaration a candidate for import, and the export counts as a reference
+    // to it, so that also works.
+    auto wildcardData = package.getWildcardImportData();
+    auto isWildcardCandidate = [&] {
+        if (!wildcardData)
+            return false;
+
+        for (auto import : wildcardData->wildcardImports) {
+            auto importPackage = import->getPackage();
+            if (importPackage && importPackage->name == item.package.valueText())
+                return importPackage->findForImport(lookupName) == &exported;
+        }
+        return false;
+    };
+
     auto& scopeNameMap = package.getNameMap();
     if (auto it = scopeNameMap.find(lookupName); it != scopeNameMap.end()) {
         auto& symbol = unwrapTransparent(*it->second);
-        if (auto ei = symbol.as_if<ExplicitImportSymbol>())
-            return ei->importedSymbol() == &exported ? true : notImported();
+        if (auto ei = symbol.as_if<ExplicitImportSymbol>()) {
+            // The import can be from a different package as long as it's for
+            // the same declaration and the named package also provides it.
+            if (ei->importedSymbol() != &exported)
+                return notImported();
+
+            if (ei->packageName == item.package.valueText() || isWildcardCandidate())
+                return true;
+
+            return notImported();
+        }
 
         auto& diag = package.addDiag(diag::Redefinition, symbol.location);
         diag << lookupName;
@@ -185,15 +211,11 @@ static bool checkExportIsImported(const PackageSymbol& package, const PackageImp
         return false;
     }
 
-    auto wildcardData = package.getWildcardImportData();
     if (!wildcardData)
         return notImported();
 
     if (auto it = wildcardData->importedSymbols.find(lookupName);
-        it != wildcardData->importedSymbols.end()) {
-        if (it->second == &exported)
-            return true;
-
+        it != wildcardData->importedSymbols.end() && it->second != &exported) {
         auto& diag = package.addDiag(diag::ImportNameCollision, item.item.range());
         diag << lookupName;
         diag.addNote(diag::NoteDeclarationHere, item.item.location());
@@ -201,15 +223,7 @@ static bool checkExportIsImported(const PackageSymbol& package, const PackageImp
         return false;
     }
 
-    for (auto import : wildcardData->wildcardImports) {
-        auto importPackage = import->getPackage();
-        if (!importPackage || importPackage->name != item.package.valueText())
-            continue;
-
-        return importPackage->findForImport(lookupName) == &exported ? true : notImported();
-    }
-
-    return notImported();
+    return isWildcardCandidate() ? true : notImported();
 }
 
 void PackageSymbol::resolveExports() const {
