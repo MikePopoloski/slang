@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Array query functions (`$size`, `$left`, `$dimensions`, etc) are now allowed on arrays of instances (e.g. interface arrays). The LRM does not define these for instance arrays so this is an error by default, but it can be downgraded via [-Wnonstandard-instance-array-query](https://sv-lang.com/warning-ref.html#nonstandard-instance-array-query) (thanks to @likeamahoney)
 * Untyped parameters assigned an unbased unsized literal (like `'1`) are now one bit wide, to match the LRM
 * Attributes are now allowed on generate regions; the LRM grammar does not permit them but all other tools accept them
+* `$bits` is no longer allowed on `real`, `shortreal`, and `realtime` values or on unpacked unions, since they are not bitstream types
+* The error for changing the visibility of an inherited virtual method is now downgradeable via [-Wvirtual-visibility-mismatch](https://sv-lang.com/warning-ref.html#virtual-visibility-mismatch)
 
 ### Notable Breaking Changes
 
@@ -35,6 +37,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed `checker` declarations being ignored when calculating file dependencies for `--depfile-trim` and library file loading (thanks to @Timmmm)
 * Diagnostics that are errors by default and downgraded with `-Wno-error=` are now correctly turned off by `-Wnone`, while enabling them by name or group keeps them as errors (thanks to @hankhsu1996)
 * Fixed data races when constructing `Driver` objects concurrently on multiple threads, and when printing via the `OS` utility functions while output capture is installed or removed on another thread
+* Fixed a crash when constructing an AST with an invalid class method specifier
+* Fixed randsequence `case` productions selecting the wrong production for items after one that lists more than one expression
+* Fixed slicing of packed port connections across multidimensional instance arrays whose dimensions have different sizes, which assigned the wrong bits to each instance
+* Fixed nested type operators like `type(type(x))` resolving to the type reference itself instead of the type of `x` when used in a type comparison or case statement
+* Fixed a crash when evaluating a `foreach` loop in a constant function whose trailing loop dimensions are skipped (e.g. `foreach (arr[i,])`)
+* Fixed string replications in constant expressions not being checked against the `--max-constant-size` limit, which allowed unbounded memory use
+* Fixed unsized literals whose high order bit is `x` or `z` (like `'hx3`) being zero-extended instead of extended with `x` or `z` to the size of the expression containing them
+* Fixed out of bounds bits of a part-select of a two-state vector reading as `x` instead of `0` in constant expressions
+* An indexed part-select whose base has `x` or `z` bits is now reported via the downgradeable [-Windex-oob](https://sv-lang.com/warning-ref.html#index-oob) like other out of bounds selects, instead of a hard error, and constant evaluation follows the LRM by reading the default value and ignoring writes
+* Fixed decimal literals consisting of an `x` or `z` digit followed by underscores (like `7'dz__`) being parsed as all `x`, and decimal literals with a known digit followed by an unknown one (like `7'd1z`) not being diagnosed
+* Fixed implicit named (`.name`) and wildcard (`.*`) port connections resolving names via wildcard imports that are declared after the instance, instead of the names visible at the point of the instance
+* Fixed modules, interfaces, and programs being able to reference the first compilation unit item declared after them, which the LRM disallows (all other later items were already correctly diagnosed)
+* Fixed package exports of the form `export p::x` not being diagnosed when `x` was imported from a different package than `p` (and is not a candidate for import from `p`), as required by the LRM
+* Fixed replicated assignment patterns for structs (like `'{3{-1}}`) converting every replica to the types of the first members instead of each member's own type, which produced malformed values and could crash constant evaluation. These patterns are now expanded into simple assignment patterns in the AST
+* Fixed `$countdrivers` rejecting a bit-select of a vector net and accepting a whole vector net; the LRM requires its argument to be a scalar net or a bit-select of a vector net
+* Fixed implicit named port connections (`.name`) connecting to an implicit net that is only created by a later connection of the same instantiation; the LRM requires the name to be declared prior to the connection
 
 ### Tools & Bindings
 #### slang-tidy
