@@ -2150,7 +2150,6 @@ struct { time a; enum bit [0:1] {red, yellow, blue} b; } record;
 localparam bit dynamic[] = '{1, 0};
 localparam shortint queue[$] = '{8, 1, 3};
 localparam byte asso[string] = '{ "Jon": 20, "Paul":22, "Al":23, default:-1 };
-union { int i[4]; bit [18:0] j; } u;
 )");
 
     CHECK(session.eval("$bits(str)").integer() == 40);
@@ -2161,7 +2160,6 @@ union { int i[4]; bit [18:0] j; } u;
     CHECK(session.eval("$bits(asso)").integer() == 24);
     CHECK(session.eval("$bits(\"abcefghijk\")").integer() == 80);
     CHECK(session.eval("$bits(0)").integer() == 32);
-    CHECK(session.eval("$bits(u)").integer() == 128);
 
     NO_SESSION_ERRORS;
 }
@@ -2747,11 +2745,6 @@ TEST_CASE("Tagged union eval") {
     CHECK(session.eval("v.a").integer().as<int8_t>() == -1);
 
     CHECK(session.eval("$bits(v)").integer() == 9);
-    CHECK(session.eval("$bits(u)").integer() == 64);
-
-    session.eval("union tagged { int a[]; real b; } w;");
-    session.eval("w = tagged a '{1, 2, 3, 4}");
-    CHECK(session.eval("$bits(w)").integer() == 128);
 
     auto diags = session.getDiagnostics();
     REQUIRE(diags.size() == 4);

@@ -1237,9 +1237,9 @@ TEST_CASE("Unpacked array/struct bit-streaming types") {
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 3);
-    CHECK(diags[0].code == diag::BadSystemSubroutineArg);
-    CHECK(diags[1].code == diag::BadSystemSubroutineArg);
-    CHECK(diags[2].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[0].code == diag::BitsNotBitstream);
+    CHECK(diags[1].code == diag::BitsNotBitstream);
+    CHECK(diags[2].code == diag::BitsNotBitstream);
 }
 
 TEST_CASE("Enum value out of range") {

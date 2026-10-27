@@ -1056,6 +1056,7 @@ error ArrayMethodIntegral "array method '{}' can only be called on unpacked arra
 error ArrayMethodComparable "array method '{}' can only be called on unpacked arrays of comparable values"
 error SysFuncNotConst "'{}' is not allowed in a constant context"
 error QueryOnDynamicType "array query function '{}' cannot be called on a dynamically sized type identifier"
+error BitsNotBitstream "$bits argument type {} is not a bit-stream type and so has no well-defined size in bits"
 error DimensionIndexInvalid "{} is not a valid dimension for {}"
 error DynamicDimensionIndex "cannot refer to a dynamically sized dimension with index {} greater than 1"
 error QueryOnAssociativeNonIntegral "'{}' cannot be called with an associative array with non-integral index type"

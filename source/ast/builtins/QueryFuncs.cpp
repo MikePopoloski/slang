@@ -38,8 +38,11 @@ public:
             return comp.getErrorType();
 
         auto& type = *args[0]->type;
-        if (!type.isBitstreamType() && !type.isFloating() && !type.isUnpackedUnion())
-            return badArg(context, *args[0]);
+        if (!type.isBitstreamType()) {
+            if (!type.isError())
+                context.addDiag(diag::BitsNotBitstream, args[0]->sourceRange) << type;
+            return comp.getErrorType();
+        }
 
         if (args[0]->kind == ExpressionKind::DataType && !type.isFixedSize()) {
             auto& diag = context.addDiag(diag::QueryOnDynamicType, args[0]->sourceRange) << name;

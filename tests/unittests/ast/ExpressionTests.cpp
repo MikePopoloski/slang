@@ -4781,3 +4781,29 @@ endmodule
     CHECK(diags[1].code == diag::ConstantConversion);
     CHECK(diags[2].code == diag::ConstantConversion);
 }
+
+TEST_CASE("Bits of non-bitstream types is an error") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    real r;
+    shortreal s;
+    struct { int a; real b; } st;
+    union { int a; real b; } u1;
+    union { int a; bit [18:0] b; } u2;
+    int a = $bits(r);
+    int b = $bits(s);
+    int c = $bits(realtime);
+    int d = $bits(st);
+    int e = $bits(u1);
+    int f = $bits(u2);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::BitsNotBitstream);
+}

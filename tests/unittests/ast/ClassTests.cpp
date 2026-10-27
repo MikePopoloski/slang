@@ -1643,7 +1643,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
-    CHECK(diags[0].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[0].code == diag::BitsNotBitstream);
     CHECK(diags[1].code == diag::QueryOnDynamicType);
     CHECK(diags[2].code == diag::BadConversion);
     CHECK(diags[3].code == diag::BadConversion);
