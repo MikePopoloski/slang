@@ -490,6 +490,45 @@ endmodule
     CHECK(totalWidth == 2);
 }
 
+TEST_CASE("Multidimensional instance array packed port slicing") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(input logic [11:0] a);
+    sub u [2:1][0:2] (.d(a));
+endmodule
+module sub (input logic [1:0] d);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& arr = compilation.getRoot().lookupName<InstanceArraySymbol>("top.u");
+    REQUIRE(arr.elements.size() == 2);
+
+    // The rightmost dimension varies fastest, so u[2][0] gets the most
+    // significant bits and u[1][2] gets the least significant bits.
+    auto checkMsb = [&](size_t i, size_t j, int32_t msb) {
+        auto& row = arr.elements[i]->as<InstanceArraySymbol>();
+        REQUIRE(row.elements.size() == 3);
+        auto& inst = row.elements[j]->as<InstanceSymbol>();
+        auto expr = inst.getPortConnections()[0]->getExpression();
+        REQUIRE(expr);
+
+        EvalContext ctx(ASTContext(compilation.getRoot(), LookupLocation::max));
+        auto& sel = expr->as<RangeSelectExpression>();
+        CHECK(sel.left().eval(ctx).integer() == msb);
+        CHECK(sel.right().eval(ctx).integer() == msb - 1);
+    };
+
+    checkMsb(1, 0, 11);
+    checkMsb(1, 1, 9);
+    checkMsb(1, 2, 7);
+    checkMsb(0, 0, 5);
+    checkMsb(0, 1, 3);
+    checkMsb(0, 2, 1);
+}
+
 TEST_CASE("Instance array packed struct port slicing -- GH #1883") {
     auto tree = SyntaxTree::fromText(R"(
 package pkg;
