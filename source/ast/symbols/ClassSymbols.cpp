@@ -1228,7 +1228,7 @@ ConstraintBlockSymbol::ConstraintBlockSymbol(Compilation& c, std::string_view na
 static void addSpecifierFlags(const SyntaxList<ClassSpecifierSyntax>& specifiers,
                               bitmask<ConstraintBlockFlags>& flags) {
     for (auto specifier : specifiers) {
-        if (!specifier->keyword.isMissing()) {
+        if (specifier->keyword && !specifier->keyword.isMissing()) {
             switch (specifier->keyword.kind) {
                 case TokenKind::InitialKeyword:
                     flags |= ConstraintBlockFlags::Initial;

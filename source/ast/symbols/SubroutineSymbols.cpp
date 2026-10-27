@@ -226,7 +226,7 @@ static std::pair<bitmask<MethodFlags>, Visibility> getMethodFlags(
     }
 
     for (auto specifier : proto.specifiers) {
-        if (!specifier->keyword.isMissing()) {
+        if (specifier->keyword && !specifier->keyword.isMissing()) {
             switch (specifier->keyword.kind) {
                 case TokenKind::InitialKeyword:
                     flags |= MethodFlags::Initial;

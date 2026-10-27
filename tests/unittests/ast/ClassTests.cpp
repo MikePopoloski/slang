@@ -4190,3 +4190,24 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MissingConstraintBlock);
 }
+
+TEST_CASE("Invalid class specifiers on constraints and methods") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+endclass
+
+class C extends A;
+    constraint :1 c;
+    constraint :foo d { }
+    virtual function :1 void f(); endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(!diags.empty());
+    for (auto& diag : diags)
+        CHECK(diag.isError());
+}
