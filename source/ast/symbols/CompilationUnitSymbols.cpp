@@ -451,8 +451,13 @@ DefinitionSymbol::DefinitionSymbol(const Scope& scope, LookupLocation lookupLoca
     defaultNetType(defaultNetType), unconnectedDrive(unconnectedDrive), cellDefine(cellDefine),
     syntaxTree(syntaxTree), sourceLibrary(getLibForDef(scope, syntaxTree)) {
 
+    // Our index is set such that lookups from within the definition (which happen
+    // after the definition's location) see only those members that come before
+    // the provided lookup location.
+    SLANG_ASSERT(uint32_t(lookupLocation.getIndex()) > 0);
+    setParent(scope, SymbolIndex(uint32_t(lookupLocation.getIndex()) - 1));
+
     // Extract and save various properties of the definition.
-    setParent(scope, lookupLocation.getIndex());
     setSyntax(syntax);
     setAttributes(scope, syntax.attributes);
 

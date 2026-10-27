@@ -486,6 +486,12 @@ endmodule
 
 TEST_CASE("Unused param defaults are still checked for correctness") {
     auto tree = SyntaxTree::fromText(R"(
+class C #(parameter int i = bar);
+endclass
+
+class D #(parameter int i = bar);
+endclass
+
 module top;
    m #(.T(int), .i(1), .j(new[3]), .k(tagged A)) m1();
 endmodule
@@ -497,12 +503,6 @@ module m;
     parameter union tagged {void A; int B;} k = tagged B foo;
     C #(3) c = new;
 endmodule
-
-class C #(parameter int i = bar);
-endclass
-
-class D #(parameter int i = bar);
-endclass
 )");
 
     Compilation compilation;

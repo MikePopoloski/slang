@@ -831,6 +831,67 @@ endmodule
     CHECK(baz.getValue().integer() == 42);
 }
 
+TEST_CASE("Unit scope names declared after a definition") {
+    auto tree = SyntaxTree::fromText(R"(
+localparam int a = 1;
+
+module m;
+    localparam int p1 = a;
+    localparam int p2 = b;
+    localparam int p3 = $unit::b;
+    initial f();
+endmodule
+
+interface I;
+    localparam int p4 = c;
+endinterface
+
+program P;
+    localparam int p5 = $unit::c;
+endprogram
+
+localparam int b = 2;
+localparam int c = 3;
+
+task f;
+endtask
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::UsedBeforeDeclared);
+    CHECK(diags[1].code == diag::UsedBeforeDeclared);
+    CHECK(diags[2].code == diag::UsedBeforeDeclared);
+    CHECK(diags[3].code == diag::UsedBeforeDeclared);
+}
+
+TEST_CASE("Nested definition lookup of preceding deferred members") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input wire clk);
+    clocking cb @(posedge clk);
+    endclocking
+
+    module n;
+        initial @(cb);
+    endmodule
+
+    n n1();
+endmodule
+
+module top;
+    wire clk;
+    m m1(clk);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Root scope disambiguation") {
     auto tree = SyntaxTree::fromText(R"(
 module n;

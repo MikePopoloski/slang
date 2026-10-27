@@ -983,7 +983,8 @@ void Scope::elaborate() const {
                 auto array = &GenerateBlockArraySymbol::fromSyntax(
                     compilation, member.node.as<LoopGenerateSyntax>(), symbol->getIndex(), context,
                     constructIndex);
-                insertMember(array, symbol, true);
+                auto members = {array};
+                insertMembers(members, symbol);
                 if (array->isUnnamed)
                     unnamedGenblks.push_back(array);
                 constructIndex++;
@@ -995,7 +996,8 @@ void Scope::elaborate() const {
                 auto block = &GenerateBlockSymbol::fromSyntax(*this,
                                                               member.node.as<GenerateBlockSyntax>(),
                                                               constructIndex);
-                insertMember(block, symbol, true);
+                auto members = {block};
+                insertMembers(members, symbol);
                 if (block->isUnnamed)
                     unnamedGenblks.push_back(block);
                 constructIndex++;
@@ -1121,8 +1123,10 @@ void Scope::elaborate() const {
             case SyntaxKind::ClassMethodDeclaration: {
                 auto subroutine = SubroutineSymbol::fromSyntax(
                     compilation, member.node.as<ClassMethodDeclarationSyntax>(), *this);
-                if (subroutine)
-                    insertMember(subroutine, symbol, true);
+                if (subroutine) {
+                    auto members = {subroutine};
+                    insertMembers(members, symbol);
+                }
                 break;
             }
             case SyntaxKind::EnumType:
@@ -1133,11 +1137,12 @@ void Scope::elaborate() const {
             case SyntaxKind::BindDirective:
                 compilation.noteBindDirective(member.node.as<BindDirectiveSyntax>(), *this);
                 break;
-            case SyntaxKind::ClockingDeclaration:
-                insertMember(&ClockingBlockSymbol::fromSyntax(
-                                 *this, member.node.as<ClockingDeclarationSyntax>()),
-                             symbol, true);
+            case SyntaxKind::ClockingDeclaration: {
+                auto members = {&ClockingBlockSymbol::fromSyntax(
+                    *this, member.node.as<ClockingDeclarationSyntax>())};
+                insertMembers(members, symbol);
                 break;
+            }
             default:
                 SLANG_UNREACHABLE;
         }
