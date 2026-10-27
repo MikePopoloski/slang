@@ -17,6 +17,7 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
+#include "slang/text/SourceManager.h"
 
 namespace slang::ast {
 
@@ -1168,9 +1169,22 @@ private:
             return emptyConnection(port);
         }
 
-        if (!symbol->isDeclaredBefore(lookupLocation).value_or(true) &&
-            !comp.hasFlag(CompilationFlags::AllowUseBeforeDeclare)) {
+        bool declaredBefore = symbol->isDeclaredBefore(lookupLocation).value_or(true);
 
+        // Implicit nets created by other connections of this same instantiation are
+        // visible at our lookup location, but for a .name connection the name must be
+        // declared prior to the connection itself [23.3.2.3], so check the actual source
+        // ordering. The LRM allows .* to be placed anywhere in the port list so we
+        // don't apply this to wildcard connections.
+        if (declaredBefore && !isWildcard && symbol->kind == SymbolKind::Net &&
+            symbol->template as<NetSymbol>().isImplicit) {
+            if (auto sm = comp.getSourceManager()) {
+                declaredBefore =
+                    sm->isBeforeInCompilationUnit(symbol->location, range.start()).value_or(true);
+            }
+        }
+
+        if (!declaredBefore && !comp.hasFlag(CompilationFlags::AllowUseBeforeDeclare)) {
             auto& diag = scope.addDiag(diag::UsedBeforeDeclared, range);
             diag << port.name;
             diag.addNote(diag::NoteDeclarationHere, symbol->location);

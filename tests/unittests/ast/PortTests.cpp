@@ -1326,6 +1326,33 @@ endmodule
     CHECK(diags[1].code == diag::InvalidRefArg);
 }
 
+TEST_CASE("Implicit named port connection to implicit net from later connection") {
+    auto tree = SyntaxTree::fromText(R"(
+module child(input wire source, input wire value);
+endmodule
+
+module top;
+    child c1(.value, .source(value));              // Error, value declared after .value
+    child c2(.source(v2), .value(v2), .*);         // Fine, not a .name connection
+    child c3(.source(value3), .value(), .*);       // Fine
+    child c4(.*, .source(value4));                 // Fine, .* can be anywhere
+    child c5(.value(), .source(s5)), c6(.source(s6), .value(s5));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    SmallVector<Diagnostic> errors;
+    for (auto& diag : compilation.getAllDiagnostics()) {
+        if (diag.isError())
+            errors.push_back(diag);
+    }
+
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0].code == diag::UsedBeforeDeclared);
+}
+
 TEST_CASE("Implicit named port connections look up names at the instance") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
