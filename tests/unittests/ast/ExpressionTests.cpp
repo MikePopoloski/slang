@@ -2484,6 +2484,33 @@ endmodule
     CHECK(e.getValue().integer() == 8);
 }
 
+TEST_CASE("Nested type reference operators") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    localparam int a = type(type(int)) == type(int);
+    localparam int b = type(type(i)) == type(int);
+    localparam int c = type(type(type(i))) != type(int);
+    localparam int d = $bits(type(type(i)));
+
+    case (type(type(i)))
+        type(int): begin: b1 end
+    endcase
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<ParameterSymbol>("m.a").getValue().integer() == 1);
+    CHECK(root.lookupName<ParameterSymbol>("m.b").getValue().integer() == 1);
+    CHECK(root.lookupName<ParameterSymbol>("m.c").getValue().integer() == 0);
+    CHECK(root.lookupName<ParameterSymbol>("m.d").getValue().integer() == 32);
+    CHECK(!root.lookupName<GenerateBlockSymbol>("m.b1").isUninstantiated);
+}
+
 TEST_CASE("Casting with type references") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

@@ -1203,8 +1203,13 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                                             context);
         }
         case SyntaxKind::TypeReference: {
+            // If the operand is itself a type reference, we want the type it
+            // refers to, not a type reference expression.
+            ASTContext exprContext = context;
+            exprContext.flags &= ~ASTFlags::AllowTypeReferences;
+
             auto& exprSyntax = *node.as<TypeReferenceSyntax>().expr;
-            auto& expr = Expression::bind(exprSyntax, context,
+            auto& expr = Expression::bind(exprSyntax, exprContext,
                                           ASTFlags::AllowDataType | ASTFlags::TypeOperator);
 
             if (!expr.bad()) {
