@@ -23,9 +23,12 @@ using namespace syntax;
 IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
                                bool isDeclaredUnsized, SourceRange sourceRange) :
     Expression(ExpressionKind::IntegerLiteral, type, sourceRange),
-    isDeclaredUnsized(isDeclaredUnsized),
-    valueStorage(value.getBitWidth(), value.isSigned(), value.hasUnknown()) {
+    isDeclaredUnsized(isDeclaredUnsized) {
+    setValue(alloc, value);
+}
 
+void IntegerLiteral::setValue(BumpAllocator& alloc, const SVInt& value) {
+    valueStorage = SVIntStorage(value.getBitWidth(), value.isSigned(), value.hasUnknown());
     if (value.isSingleWord())
         valueStorage.val = *value.getRawPtr();
     else {
@@ -87,6 +90,30 @@ ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {
     SVInt result = getValue();
     SLANG_ASSERT(result.getBitWidth() == type->getBitWidth());
     return result;
+}
+
+bool IntegerLiteral::propagateType(const ASTContext& context, const Type& newType, SourceRange,
+                                   ConversionKind) {
+    // [5.7.1] says that unsized unsigned literals whose high order bit
+    // is x or z are extended with x or z to the size of the expression.
+    // The LRM doesn't say the same for signed literals, but they get
+    // sign extended in signed contexts anyway, and all other tools also
+    // extend them in unsigned contexts, so we do the same.
+    // A two-state type would flatten those bits back to zero, so in that
+    // case we can just let a normal conversion happen.
+    auto value = getValue();
+    const bitwidth_t width = value.getBitWidth();
+    if (!isDeclaredUnsized || !newType.isFourState() || newType.getBitWidth() <= width ||
+        !value[int32_t(width - 1)].isUnknown()) {
+        return false;
+    }
+
+    // Sign extending copies the x or z of the high order bit.
+    value = value.sext(newType.getBitWidth());
+    value.setSigned(newType.isSigned());
+    setValue(context.getCompilation(), value);
+    type = &newType;
+    return true;
 }
 
 std::optional<bitwidth_t> IntegerLiteral::getEffectiveWidthImpl() const {
