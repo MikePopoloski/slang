@@ -2928,6 +2928,24 @@ struct {
     CHECK(diags[0].code == diag::ConstantConversion);
 }
 
+TEST_CASE("Replicated struct assignment pattern eval") {
+    ScriptSession session;
+    session.eval("struct { byte a; shortint b; int c; } s = '{3{-1}};");
+    CHECK(session.eval("s").toString() == "[-8'sd1,-16'sd1,-1]");
+    CHECK(session.eval("s.b").integer().getBitWidth() == 16);
+
+    session.eval("struct packed { logic [3:0] a; logic [7:0] b; } p = '{2{-1}};");
+    CHECK(session.eval("p").integer() == 4095);
+    CHECK(session.eval("p.b").integer() == 255);
+
+    session.eval("struct { int a; real b; int c; real d; } r = '{2{1, 2}};");
+    CHECK(session.eval("r.b").isReal());
+    CHECK(session.eval("r.d").real() == 2.0);
+    CHECK(session.eval("r.c").integer() == 1);
+
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("foreach loop extended name eval") {
     ScriptSession session;
     session.eval("typedef int rt[2][2];");
