@@ -76,6 +76,10 @@ TidyConfig::TidyConfig() {
     synthesisChecks.emplace("LoopBeforeResetCheck", CheckOptions());
     synthesisChecks.emplace("StructFieldsInSameProcess", CheckOptions());
     checkKinds.insert({slang::TidyKind::Synthesis, synthesisChecks});
+
+    auto assertionChecks = std::unordered_map<std::string, CheckOptions>();
+    assertionChecks.emplace("ConcurrentAssertHasFailAction", CheckOptions());
+    checkKinds.insert({slang::TidyKind::Assertion, assertionChecks});
 }
 
 void TidyConfig::addSkipFile(const std::string& path) {
