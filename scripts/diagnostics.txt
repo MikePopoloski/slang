@@ -398,7 +398,6 @@ error MethodArgDirectionMismatch "direction of method argument '{}' differs from
 error MemberDefinitionBeforeClass "definition of '{}' must come after its containing class '{}'"
 error MethodReturnTypeScoped "return type for out-of-block method '{}' must use class scope '{}::' to access nested type"
 error VirtualKindMismatch "mismatch between 'function' and 'task' declared in superclass method"
-error VirtualVisibilityMismatch "virtual method '{}' is '{}' but declared '{}' in superclass method"
 error VirtualReturnMismatch "return type {} of virtual method '{}' does not match {} declared in its superclass"
 error VirtualArgCountMismatch "virtual method '{}' has different number of arguments from its superclass method"
 error VirtualArgTypeMismatch "virtual method argument '{}' is of type {} which differs from {} given in its superclass method"
@@ -559,6 +558,7 @@ error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"
 warning undefined-param-override ParameterDoesNotExist "parameter '{}' does not exist in '{}'"
 warning virtual-arg-name-mismatch VirtualArgNameMismatch "virtual method argument name '{}' doesn't match '{}' given in its superclass method"
+warning virtual-visibility-mismatch VirtualVisibilityMismatch "virtual method '{}' is '{}' but declared '{}' in superclass method"
 warning warning-task WarningTask "$warning encountered{}"
 note InfoTask "$info encountered{}"
 note NoteComparisonReduces "comparison reduces to ({} {} {})"
@@ -1326,8 +1326,9 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   nonstandard-inside nonstandard-bare-assoc-pattern literal-leading-underscore ref-arg-automatic
                   string-int-concat range-select-reversed nonstandard-constraint-block format-empty-arg
                   format-too-many-args clockvar-target-assign cross-ident-in-binsof ref-arg-in-fork-join
-                  cannot-index-scalar string-in-constraint virtual-arg-name-mismatch undefined-param-override
-                  redefinition redefinition-different-type command-line tautological-self-compare
+                  cannot-index-scalar string-in-constraint virtual-arg-name-mismatch virtual-visibility-mismatch
+                  undefined-param-override redefinition redefinition-different-type command-line
+                  tautological-self-compare
                   tautological-range-compare tautological-bitwise-compare tautological-overlap-compare
                   tautological-negation-compare nonstandard-instance-array-query }
 
@@ -1384,8 +1385,8 @@ compat Default error = { duplicate-definition bad-procedural-force unknown-sys-n
                          ref-arg-automatic range-select-reversed nonstandard-constraint-block format-empty-arg
                          format-too-many-args clockvar-target-assign cross-ident-in-binsof
                          ref-arg-in-fork-join cannot-index-scalar string-in-constraint
-                         virtual-arg-name-mismatch undefined-param-override redefinition
-                         redefinition-different-type nonstandard-instance-array-query }
+                         virtual-arg-name-mismatch virtual-visibility-mismatch undefined-param-override
+                         redefinition redefinition-different-type nonstandard-instance-array-query }
 
 compat Vcs error = { duplicate-definition bad-procedural-force unknown-sys-name nonstandard-hierarchical-cross
                      nonstandard-string-concat nonstandard-inside mixed-var-assigns multiple-cont-assigns

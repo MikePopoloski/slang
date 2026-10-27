@@ -2196,6 +2196,21 @@ class Derived extends Base;
 endclass
 ```
 
+-Wvirtual-visibility-mismatch
+The LRM requires virtual method overrides to have the same visibility (local,
+protected, or public) as their superclass declaration. Some tools allow overrides
+to change visibility, so the error can be downgraded for compatibility.
+```
+class Base;
+  virtual protected function void f();
+  endfunction
+endclass
+class Derived extends Base;
+  virtual function void f();  // public != protected
+  endfunction
+endclass
+```
+
 -Wredefinition
 The LRM requires every identifier in a scope to have a unique definition.
 Some tools issue only a warning when a name is declared more than once in the
