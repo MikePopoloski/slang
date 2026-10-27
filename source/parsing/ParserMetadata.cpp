@@ -8,6 +8,7 @@
 #include "slang/parsing/ParserMetadata.h"
 
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxFacts.h"
 #include "slang/syntax/SyntaxVisitor.h"
 #include "slang/util/FlatMap.h"
 
@@ -31,6 +32,7 @@ public:
             syntax.separator.kind == TokenKind::DoubleColon) {
             meta.classPackageNames.push_back(&syntax.left->as<IdentifierNameSyntax>());
         }
+        visitDefault(syntax);
     }
 
     void handle(const PackageImportDeclarationSyntax& syntax) {
@@ -57,10 +59,8 @@ public:
         visitDefault(syntax);
     }
 
-    void handle(const InterfacePortHeaderSyntax& syntax) {
-        std::string_view name = syntax.nameOrKeyword.valueText();
-        if (name != "" && name != "interface")
-            meta.interfacePorts.push_back(&syntax);
+    void handle(const VirtualInterfaceTypeSyntax& syntax) {
+        meta.virtualInterfaceTypes.push_back(&syntax);
         visitDefault(syntax);
     }
 
@@ -175,30 +175,27 @@ ParserMetadata ParserMetadata::fromSyntax(const SyntaxNode& root) {
     return visitor.meta;
 }
 
-std::vector<std::string_view> ParserMetadata::getDeclaredSymbols() const {
+std::vector<std::string_view> ParserMetadata::getDeclaredSymbols(bool includeNested) const {
     std::vector<std::string_view> declared;
-    visitDeclaredSymbols([&](std::string_view name) { declared.push_back(name); });
+    visitDeclaredSymbols([&](std::string_view name) { declared.push_back(name); }, includeNested);
     return declared;
 }
 
-void ParserMetadata::visitDeclaredSymbols(function_ref<void(std::string_view)> func) const {
-    for (auto& [decl, _] : nodeMeta) {
-        std::string_view name = decl->header->name.valueText();
+void ParserMetadata::visitDeclaredSymbols(function_ref<void(std::string_view)> func,
+                                          bool includeNested) const {
+    auto visit = [&](const SyntaxNode& syntax, Token nameToken) {
+        if (!includeNested && syntax.parent && syntax.parent->kind != SyntaxKind::CompilationUnit)
+            return;
+        std::string_view name = nameToken.valueText();
         if (!name.empty())
             func(name);
-    }
-
-    for (auto classDecl : classDecls) {
-        std::string_view name = classDecl->name.valueText();
-        if (!name.empty())
-            func(name);
-    }
-
-    for (auto checkerDecl : checkerDecls) {
-        std::string_view name = checkerDecl->name.valueText();
-        if (!name.empty())
-            func(name);
-    }
+    };
+    for (auto& [decl, _] : nodeMeta)
+        visit(*decl, decl->header->name);
+    for (auto decl : classDecls)
+        visit(*decl, decl->name);
+    for (auto decl : checkerDecls)
+        visit(*decl, decl->name);
 }
 
 std::vector<std::string_view> ParserMetadata::getReferencedSymbols() const {
@@ -211,7 +208,8 @@ std::vector<std::string_view> ParserMetadata::getReferencedSymbols() const {
     return results;
 }
 
-void ParserMetadata::visitReferencedSymbols(function_ref<void(std::string_view)> func) const {
+void ParserMetadata::visitReferencedSymbols(function_ref<void(std::string_view)> func,
+                                            bool includePortNames) const {
     for (auto name : globalInstances)
         func(name->type.valueText());
 
@@ -238,10 +236,39 @@ void ParserMetadata::visitReferencedSymbols(function_ref<void(std::string_view)>
         }
     }
 
-    for (auto intf : interfacePorts) {
-        std::string_view name = intf->nameOrKeyword.valueText();
+    for (auto type : virtualInterfaceTypes) {
+        std::string_view name = type->name.valueText();
         if (!name.empty())
             func(name);
+    }
+
+    if (!includePortNames)
+        return;
+
+    auto visitPort = [&](const PortHeaderSyntax& header) {
+        std::string_view name;
+        if (auto port = header.as_if<VariablePortHeaderSyntax>())
+            name = SyntaxFacts::getSimpleTypeName(*port->dataType);
+        else if (auto port = header.as_if<InterfacePortHeaderSyntax>()) {
+            if (port->nameOrKeyword.kind == TokenKind::Identifier)
+                name = port->nameOrKeyword.valueText();
+        }
+        if (!name.empty())
+            func(name);
+    };
+    for (auto& [decl, _] : nodeMeta) {
+        if (auto ports = decl->header->ports) {
+            if (auto ansi = ports->as_if<AnsiPortListSyntax>()) {
+                for (auto port : ansi->ports) {
+                    if (auto implicitPort = port->as_if<ImplicitAnsiPortSyntax>())
+                        visitPort(*implicitPort->header);
+                }
+            }
+        }
+        for (auto member : decl->members) {
+            if (auto port = member->as_if<PortDeclarationSyntax>())
+                visitPort(*port->header);
+        }
     }
 }
 

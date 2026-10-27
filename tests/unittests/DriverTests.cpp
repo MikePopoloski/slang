@@ -3,6 +3,7 @@
 
 #include "Test.h"
 #include <boost_regex.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <fmt/format.h>
 #include <fstream>
 
@@ -543,4 +544,235 @@ TEST_CASE("SourceLoader owns strings in uniqueExtensions") {
     auto path = commandFile.path.string();
     const char* argv[] = {"testfoo", "-f", path.c_str(), "-f", path.c_str()};
     CHECK(driver.parseCommandLine(5, argv));
+}
+
+TEST_CASE("Driver dependencies distinguish top-level and nested declarations") {
+    auto reverseOrder = GENERATE(false, true);
+    auto trim = GENERATE(false, true);
+    auto topName = GENERATE("top", "Endpoint");
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.options.moduleDepfile = "-";
+    driver.options.depfileSort = true;
+    driver.options.depfileTrim = trim;
+    driver.options.topModules = {topName};
+
+    auto addTree = [&](std::string_view path, std::string_view text) {
+        driver.syntaxTrees.push_back(
+            SyntaxTree::fromFileInMemory(text, driver.sourceManager, "", path));
+    };
+    addTree("models.sv", R"(
+package helpers;
+    class Endpoint;
+    endclass
+    class Model;
+        static int value;
+    endclass
+    int initialValue = Model::value;
+endpackage
+package other;
+    class Endpoint;
+    endclass
+endpackage
+)");
+    addTree("top.sv", R"(
+module top;
+    Endpoint endpoint();
+    helpers::Endpoint model;
+    import other::Endpoint;
+    import helpers::Model;
+    int initialValue = Model::value;
+endmodule
+)");
+    addTree("endpoint.sv", R"(
+module Endpoint;
+    leaf child();
+endmodule
+)");
+    addTree("leaf.sv", "module leaf; endmodule\n");
+    addTree("unused.sv", "package unused; class Endpoint; endclass endpackage\n");
+
+    if (reverseOrder)
+        std::ranges::reverse(driver.syntaxTrees);
+
+    REQUIRE(driver.reportParseDiags());
+    driver.optionallyWriteDepFiles();
+    INFO(OS::capturedStderr);
+    CHECK(driver.diagEngine.getNumWarnings() == 0);
+
+    auto& output = OS::capturedStdout;
+    CHECK(stdoutContains("endpoint.sv\n"));
+    CHECK(stdoutContains("leaf.sv\n"));
+    CHECK(output.find("leaf.sv\n") < output.find("endpoint.sv\n"));
+    CHECK(stdoutContains("unused.sv\n") == !trim);
+
+    bool includesTop = !trim || topName == "top"sv;
+    CHECK(stdoutContains("models.sv\n") == includesTop);
+    CHECK(stdoutContains("top.sv\n") == includesTop);
+    if (includesTop) {
+        CHECK(output.find("endpoint.sv\n") < output.find("top.sv\n"));
+        CHECK(output.find("models.sv\n") < output.find("top.sv\n"));
+    }
+    CHECK(std::ranges::count(output, '\n') == 2 + 2 * int(includesTop) + int(!trim));
+}
+
+TEST_CASE("SourceLoader finds modules with names matching package classes") {
+    SourceManager sourceManager;
+    SourceLoader::SyntaxTreeList trees;
+    trees.push_back(SyntaxTree::fromText(R"(
+package helpers;
+    class Endpoint; endclass
+endpackage
+module top;
+    Endpoint endpoint();
+    helpers::Endpoint model;
+endmodule
+)",
+                                         sourceManager));
+
+    auto buffer = sourceManager.assignText("endpoint.sv", "module Endpoint; endmodule");
+    SourceLoader::loadTrees(
+        trees, [&](std::string_view name) { return name == "Endpoint" ? buffer : SourceBuffer(); },
+        sourceManager, {});
+
+    CHECK(trees.size() == 2);
+
+    Compilation compilation;
+    for (auto& tree : trees)
+        compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Driver dependencies retain virtual interface definitions") {
+    auto reverseOrder = GENERATE(false, true);
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.options.moduleDepfile = "-";
+    driver.options.depfileSort = true;
+    driver.options.depfileTrim = true;
+    driver.options.topModules = {"top"};
+
+    auto addTree = [&](std::string_view path, std::string_view text) {
+        driver.syntaxTrees.push_back(
+            SyntaxTree::fromFileInMemory(text, driver.sourceManager, "", path));
+    };
+    addTree("top.sv", "module top; models::Monitor monitor; endmodule\n");
+    addTree("models.sv", R"(
+package models;
+    class Monitor;
+        virtual interface plain_if plain;
+        virtual data_if #(.WIDTH(8)).sink data;
+    endclass
+endpackage
+)");
+    addTree("plain.sv", "interface plain_if; endinterface\n");
+    addTree("data.sv", R"(
+interface data_if #(parameter WIDTH = 1);
+    logic [WIDTH-1:0] value;
+    modport sink(input value);
+endinterface
+)");
+    addTree("unused.sv", "interface unused_if; endinterface\n");
+
+    if (reverseOrder)
+        std::ranges::reverse(driver.syntaxTrees);
+
+    REQUIRE(driver.reportParseDiags());
+    driver.optionallyWriteDepFiles();
+    INFO(OS::capturedStderr);
+    CHECK(driver.diagEngine.getNumWarnings() == 0);
+
+    auto& output = OS::capturedStdout;
+    CHECK(stdoutContains("plain.sv\n"));
+    CHECK(stdoutContains("data.sv\n"));
+    CHECK(stdoutContains("models.sv\n"));
+    CHECK(stdoutContains("top.sv\n"));
+    CHECK_FALSE(stdoutContains("unused.sv\n"));
+    CHECK(output.find("plain.sv\n") < output.find("models.sv\n"));
+    CHECK(output.find("data.sv\n") < output.find("models.sv\n"));
+    CHECK(output.find("models.sv\n") < output.find("top.sv\n"));
+    CHECK(std::ranges::count(output, '\n') == 4);
+}
+
+TEST_CASE("SourceLoader finds virtual interface definitions") {
+    SourceManager sourceManager;
+    SourceLoader::SyntaxTreeList trees;
+    trees.push_back(
+        SyntaxTree::fromText("module top; virtual bus_if bus; endmodule\n", sourceManager));
+
+    auto buffer = sourceManager.assignText("bus.sv", "interface bus_if; endinterface\n");
+    SourceLoader::loadTrees(
+        trees, [&](std::string_view name) { return name == "bus_if" ? buffer : SourceBuffer(); },
+        sourceManager, {});
+
+    CHECK(trees.size() == 2);
+
+    Compilation compilation;
+    for (auto& tree : trees)
+        compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("SourceLoader loads interfaces from instances without looking up port types") {
+    SourceManager sourceManager;
+    SourceLoader::SyntaxTreeList trees;
+    trees.push_back(SyntaxTree::fromText(R"(
+typedef logic data_t;
+module consumer(bus_if bus, bus_if.sink explicit_bus, input data_t value);
+endmodule
+module top;
+    bus_if bus();
+    consumer dut(bus, bus, 1'b0);
+endmodule
+)",
+                                         sourceManager));
+
+    auto buffer = sourceManager.assignText("bus.sv", R"(
+interface bus_if;
+    logic value;
+    modport sink(input value);
+endinterface
+)");
+    std::vector<std::string_view> lookups;
+    SourceLoader::loadTrees(trees,
+                            [&](std::string_view name) {
+                                lookups.push_back(name);
+                                return name == "bus_if" ? buffer : SourceBuffer();
+                            },
+                            sourceManager, {});
+
+    CHECK(lookups == std::vector<std::string_view>{"bus_if"});
+    CHECK(trees.size() == 2);
+
+    Compilation compilation;
+    for (auto& tree : trees)
+        compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Driver dependencies retain interfaces referenced by named ports") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.options.moduleDepfile = "-";
+    driver.options.depfileSort = true;
+    driver.options.depfileTrim = true;
+    driver.options.topModules = {"top"};
+
+    auto addTree = [&](std::string_view path, std::string_view text) {
+        driver.syntaxTrees.push_back(
+            SyntaxTree::fromFileInMemory(text, driver.sourceManager, "", path));
+    };
+    addTree("top.sv", "module top(bus_if bus); endmodule\n");
+    addTree("bus.sv", "interface bus_if; leaf child(); endinterface\n");
+    addTree("leaf.sv", "module leaf; endmodule\n");
+    addTree("unused.sv", "interface unused_if; endinterface\n");
+
+    REQUIRE(driver.reportParseDiags());
+    driver.optionallyWriteDepFiles();
+    INFO(OS::capturedStderr);
+    CHECK(driver.diagEngine.getNumWarnings() == 0);
+    CHECK(OS::capturedStdout == "leaf.sv\nbus.sv\ntop.sv\n");
 }

@@ -410,10 +410,12 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
 
     auto findMissingNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
         auto& meta = tree->getMetadata();
-        meta.visitReferencedSymbols([&](std::string_view name) {
-            if (!knownNames.contains(name) && missingNames.emplace(name).second)
-                worklist.push_back({name, nullptr});
-        });
+        meta.visitReferencedSymbols(
+            [&](std::string_view name) {
+                if (!knownNames.contains(name) && missingNames.emplace(name).second)
+                    worklist.push_back({name, nullptr});
+            },
+            /* includePortNames */ false);
     };
 
     // Initial pass: index existing trees and find what's missing
