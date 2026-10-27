@@ -28,6 +28,8 @@ public:
     SVInt getValue() const { return valueStorage; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange,
+                       ConversionKind conversionKind);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
     bool isEquivalentImpl(const IntegerLiteral& rhs) const;
@@ -43,6 +45,8 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::IntegerLiteral; }
 
 private:
+    void setValue(BumpAllocator& alloc, const SVInt& value);
+
     SVIntStorage valueStorage;
 };
 

@@ -246,6 +246,20 @@ TEST_CASE("Integer operators") {
     EVAL("5'bz01", "5'bzzz01"_si);
     EVAL("68'bz0000", "68'hzzzzzzzzzzzzzzzzz0"_si);
 
+    // Unsized literals with an unknown high order bit extend to the expression size
+    EVAL("'hx3 | 64'h0", "64'hxxxxxxxxxxxxxxx3"_si);
+    EVAL("1 ? 'hz : 40'h0", "40'hzzzzzzzzzz"_si);
+    EVAL("1 ? 'h3 : 40'h0", "40'h3"_si);
+    EVAL("64'('hx3)", "64'hxxxxxxxxxxxxxxx3"_si);
+    EVAL("1 ? 'hx3 : 40'h0", "40'hxxxxxxxxx3"_si);
+    EVAL("'shx3 | 64'h0", "64'hxxxxxxxxxxxxxxx3"_si);
+    EVAL("'shx3 | 64'sh0", "64'shxxxxxxxxxxxxxxx3"_si);
+    EVAL("1 ? 'shz : 40'h0", "40'hzzzzzzzzzz"_si);
+    session.eval("logic [63:0] xlit = 'hx3;");
+    session.eval("bit [63:0] blit = 'hx3;");
+    EVAL("xlit", "64'hxxxxxxxxxxxxxxx3"_si);
+    EVAL("blit", "64'h3"_si);
+
     // Unbased unsized literals
     EVAL("1 << '1", 2);
     EVAL("'1 + 65'b0", "65'h1ffffffffffffffff"_si);
