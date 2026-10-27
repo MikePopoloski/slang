@@ -2385,7 +2385,13 @@ ConstantValue ReplicationExpression::evalImpl(EvalContext& context) const {
             return nullptr;
         }
 
+        // String types have no fixed width so the size of the result
+        // hasn't been checked against the limit yet.
+        if (!context.checkBitCount(v.getBitstreamWidth() * uint64_t(*optCount), sourceRange))
+            return nullptr;
+
         std::string result;
+        result.reserve(v.str().size() * size_t(*optCount));
         for (int32_t i = 0; i < *optCount; i++)
             result.append(v.str());
 

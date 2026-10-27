@@ -1069,6 +1069,34 @@ endmodule
     CHECK(diags[1].code == diag::ConstEvalExceededMaxSize);
 }
 
+TEST_CASE("Consteval - string replication exceeds max size") {
+    auto tree = SyntaxTree::fromText(R"(
+function automatic int f1(int count);
+    string s = "abcd";
+    string t = {count{s}};
+    return t.len();
+endfunction
+
+module m;
+    localparam int i = f1(1000);
+    localparam int j = f1(1001);
+endmodule
+)");
+
+    CompilationOptions co;
+    co.maxConstantSize = 8 * 4000;
+
+    Compilation compilation(co);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalExceededMaxSize);
+
+    auto& i = compilation.getRoot().lookupName<ParameterSymbol>("m.i");
+    CHECK(i.getValue().integer() == 4000);
+}
+
 TEST_CASE("Consteval - enum used in constant function") {
     auto tree = SyntaxTree::fromText(R"(
 typedef enum { A, B } e_t;
