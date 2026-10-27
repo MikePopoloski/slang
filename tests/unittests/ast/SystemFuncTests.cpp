@@ -1181,7 +1181,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::PastNumTicksInvalid);
-    CHECK(diags[1].code == diag::NoGlobalClocking);
+    CHECK(diags[1].code == diag::MissingGlobalClocking);
     CHECK(diags[2].code == diag::SampledValueMatched);
     CHECK(diags[3].code == diag::SampledValueLocalVar);
     CHECK(diags[4].code == diag::GlobalSampledValueAssertionExpr);
@@ -1218,7 +1218,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::GlobalClockEventExpr);
-    CHECK(diags[1].code == diag::NoGlobalClocking);
+    CHECK(diags[1].code == diag::MissingGlobalClocking);
 }
 
 TEST_CASE("Global clocking in cached instance") {
@@ -1252,7 +1252,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::NoGlobalClocking);
+    CHECK(diags[0].code == diag::MissingGlobalClocking);
 }
 
 TEST_CASE("System call output args in disallowed context") {

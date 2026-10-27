@@ -1071,7 +1071,7 @@ error ExpectedVariableName "expected variable name"
 error ExpectedModuleInstance "expected module instance"
 error ArrayLocatorWithClause "'{}' requires 'with' expression for searching"
 error AutoVarTraced "automatic variable '{}' cannot be traced"
-error NoGlobalClocking "no global clocking is available in this scope"
+warning missing-global-clocking MissingGlobalClocking "no global clocking is available in this scope"
 error GlobalClockEventExpr "$global_clock system function can only be called as an event expression"
 error InferredValDefArg "the {} system function can only be used as the entire default value expression for a sequence or property formal argument"
 error PastNumTicksInvalid "'number_of_ticks' argument must be greater than or equal to 1"
@@ -1331,7 +1331,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   undefined-param-override redefinition redefinition-different-type command-line
                   tautological-self-compare
                   tautological-range-compare tautological-bitwise-compare tautological-overlap-compare
-                  tautological-negation-compare nonstandard-instance-array-query }
+                  tautological-negation-compare nonstandard-instance-array-query
+                  missing-global-clocking }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
@@ -1387,12 +1388,13 @@ compat Default error = { duplicate-definition bad-procedural-force unknown-sys-n
                          format-too-many-args clockvar-target-assign cross-ident-in-binsof
                          ref-arg-in-fork-join cannot-index-scalar string-in-constraint
                          virtual-arg-name-mismatch virtual-visibility-mismatch undefined-param-override
-                         redefinition redefinition-different-type nonstandard-instance-array-query }
+                         redefinition redefinition-different-type nonstandard-instance-array-query
+                         missing-global-clocking }
 
 compat Vcs error = { duplicate-definition bad-procedural-force unknown-sys-name nonstandard-hierarchical-cross
                      nonstandard-string-concat nonstandard-inside mixed-var-assigns multiple-cont-assigns
                      multiple-always-assigns misplaced-trailing-separator initializer-required
-                     string-int-concat nonstandard-instance-array-query }
+                     string-int-concat nonstandard-instance-array-query missing-global-clocking }
 
 compat Vcs ignored = { explicit-static implicit-conv finish-num nonstandard-sys-func nonstandard-foreach
                        foreach-call-expr nonstandard-dist nested-comment }
