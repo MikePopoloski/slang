@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/statements/ConditionalStatements.h"
 #include "slang/ast/statements/MiscStatements.h"
 #include "slang/ast/symbols/BlockSymbols.h"
@@ -1567,6 +1568,46 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("randsequence case items with multiple expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int x;
+    initial begin
+        randsequence (main)
+            main : case (x) 1, 2: a; 3, 4: b; 5: c; default: a; endcase;
+            a : { };
+            b : { };
+            c : { };
+        endsequence
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    const RandSeqProductionSymbol* mainProd = nullptr;
+    compilation.getRoot().visit(makeVisitor([&](auto&, const RandSeqProductionSymbol& prod) {
+        if (prod.name == "main")
+            mainProd = &prod;
+    }));
+    REQUIRE(mainProd);
+
+    auto rules = mainProd->getRules();
+    REQUIRE(rules.size() == 1);
+    REQUIRE(rules[0].prods.size() == 1);
+
+    auto& caseProd = rules[0].prods[0]->as<RandSeqProductionSymbol::CaseProd>();
+    REQUIRE(caseProd.items.size() == 3);
+    CHECK(caseProd.items[0].expressions.size() == 2);
+    CHECK(caseProd.items[0].item.target->name == "a");
+    CHECK(caseProd.items[1].expressions.size() == 2);
+    CHECK(caseProd.items[1].item.target->name == "b");
+    CHECK(caseProd.items[2].expressions.size() == 1);
+    CHECK(caseProd.items[2].item.target->name == "c");
 }
 
 TEST_CASE("randsequence errors") {
