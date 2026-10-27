@@ -1993,6 +1993,54 @@ endmodule
     CHECK(diags[3].code == diag::BadSystemSubroutineArg);
 }
 
+TEST_CASE("$countdrivers argument checking") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire s;
+    wire [3:0] v;
+    wire [1:0][3:0] p;
+    wire [3:0] a[2];
+    wire sa[2];
+    wire struct packed { logic a; logic b; } ps;
+    logic l;
+    logic [3:0] lv;
+
+    bit i;
+    initial begin
+        // Fine
+        i = $countdrivers(s);
+        i = $countdrivers(v[1]);
+        i = $countdrivers(v[l]);
+        i = $countdrivers(p[1][2]);
+        i = $countdrivers(a[0][3]);
+        i = $countdrivers(sa[1]);
+
+        // Not a scalar net or bit-select
+        i = $countdrivers(v);
+        i = $countdrivers(p[1]);
+        i = $countdrivers(v[2:1]);
+        i = $countdrivers(ps.b);
+
+        // Not nets
+        i = $countdrivers(l);
+        i = $countdrivers(lv[1]);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::ExpectedScalarNetRef);
+    CHECK(diags[1].code == diag::ExpectedScalarNetRef);
+    CHECK(diags[2].code == diag::ExpectedScalarNetRef);
+    CHECK(diags[3].code == diag::ExpectedScalarNetRef);
+    CHECK(diags[4].code == diag::ExpectedNetRef);
+    CHECK(diags[5].code == diag::ExpectedNetRef);
+}
+
 TEST_CASE("$sformat invalid %p call") {
     auto tree = SyntaxTree::fromText(R"(
 function void void_fn;

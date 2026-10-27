@@ -1085,6 +1085,7 @@ error PlaRangeInAscendingOrder "must specify dimensions in ascending order for P
 error SysFuncHierarchicalNotAllowed "hierarchical references are not allowed in calls to '{}'"
 error TypeIsNotAClass "{} is not a class type"
 error ExpectedNetRef "expected a reference to a net"
+error ExpectedScalarNetRef "expected a scalar net or a bit-select of a vector net"
 warning nonstandard-randomize NonstandardScopeRandomize "element select or member access in std::randomize argument is non-standard"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 warning finish-num BadFinishNum "finish argument must have value of 0, 1, or 2"

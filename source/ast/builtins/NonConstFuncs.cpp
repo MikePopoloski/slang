@@ -10,6 +10,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
@@ -533,9 +534,32 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 6))
             return comp.getErrorType();
 
-        auto sym = args[0]->getSymbolReference(/* allowPacked */ false);
-        if (!sym || sym->kind != SymbolKind::Net)
-            context.addDiag(diag::ExpectedNetRef, args[0]->sourceRange);
+        // [D.2] says the argument must be a scalar net or a bit-select of a vector net.
+        auto& arg = *args[0];
+        auto base = &arg;
+        while (true) {
+            if (base->kind == ExpressionKind::ElementSelect)
+                base = &base->as<ElementSelectExpression>().value();
+            else if (base->kind == ExpressionKind::RangeSelect)
+                base = &base->as<RangeSelectExpression>().value();
+            else if (base->kind == ExpressionKind::MemberAccess)
+                base = &base->as<MemberAccessExpression>().value();
+            else
+                break;
+        }
+
+        auto sym = base->getSymbolReference();
+        if (!sym || sym->kind != SymbolKind::Net) {
+            context.addDiag(diag::ExpectedNetRef, arg.sourceRange);
+        }
+        else {
+            const bool isBitSelect = arg.kind == ExpressionKind::ElementSelect &&
+                                     arg.as<ElementSelectExpression>().value().type->isIntegral();
+            if (!arg.type->isScalar() ||
+                (!isBitSelect && arg.getSymbolReference(/* allowPacked */ false) != sym)) {
+                context.addDiag(diag::ExpectedScalarNetRef, arg.sourceRange);
+            }
+        }
 
         return comp.getBitType();
     }
