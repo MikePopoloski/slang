@@ -29,26 +29,25 @@ public:
     void handle(const ScopedNameSyntax& syntax) {
         if (syntax.left->kind == SyntaxKind::IdentifierName &&
             syntax.separator.kind == TokenKind::DoubleColon) {
-            meta.classPackageNames.push_back(&syntax.left->as<IdentifierNameSyntax>());
+            meta.refs.push_back(syntax.left);
         }
+        visitDefault(syntax);
     }
 
-    void handle(const PackageImportDeclarationSyntax& syntax) {
-        meta.packageImports.push_back(&syntax);
-    }
+    void handle(const PackageImportDeclarationSyntax& syntax) { meta.refs.push_back(&syntax); }
 
     void handle(const ClassDeclarationSyntax& syntax) {
-        meta.classDecls.push_back(&syntax);
+        meta.decls.push_back(&syntax);
         visitDefault(syntax);
     }
 
     void handle(const CheckerDeclarationSyntax& syntax) {
-        meta.checkerDecls.push_back(&syntax);
+        meta.decls.push_back(&syntax);
         visitDefault(syntax);
     }
 
     void handle(const CheckerInstantiationSyntax& syntax) {
-        meta.checkerInstances.push_back(&syntax);
+        meta.refs.push_back(&syntax);
         visitDefault(syntax);
     }
 
@@ -57,10 +56,8 @@ public:
         visitDefault(syntax);
     }
 
-    void handle(const InterfacePortHeaderSyntax& syntax) {
-        std::string_view name = syntax.nameOrKeyword.valueText();
-        if (name != "" && name != "interface")
-            meta.interfacePorts.push_back(&syntax);
+    void handle(const VirtualInterfaceTypeSyntax& syntax) {
+        meta.refs.push_back(&syntax);
         visitDefault(syntax);
     }
 
@@ -85,7 +82,7 @@ public:
                 }
             }
             if (!found)
-                meta.globalInstances.push_back(&syntax);
+                meta.refs.push_back(&syntax);
         }
         visitDefault(syntax);
     }
@@ -180,73 +177,102 @@ ParserMetadata ParserMetadata::fromSyntax(const SyntaxNode& root) {
     return visitor.meta;
 }
 
-std::vector<std::string_view> ParserMetadata::getDeclaredSymbols() const {
+std::vector<std::string_view> ParserMetadata::getDeclaredSymbols(bool includeNested) const {
     std::vector<std::string_view> declared;
-    visitDeclaredSymbols([&](std::string_view name) { declared.push_back(name); });
+    visitDeclaredSymbols([&](std::string_view name) { declared.push_back(name); }, includeNested);
     return declared;
 }
 
-void ParserMetadata::visitDeclaredSymbols(function_ref<void(std::string_view)> func) const {
-    for (auto& [decl, _] : nodeMeta) {
-        std::string_view name = decl->header->name.valueText();
+void ParserMetadata::visitDeclaredSymbols(function_ref<void(std::string_view)> func,
+                                          bool includeNested) const {
+    auto visit = [&](const SyntaxNode& syntax, Token nameToken) {
+        if (!includeNested && syntax.parent && syntax.parent->kind != SyntaxKind::CompilationUnit)
+            return;
+        std::string_view name = nameToken.valueText();
         if (!name.empty())
             func(name);
-    }
-
-    for (auto classDecl : classDecls) {
-        std::string_view name = classDecl->name.valueText();
-        if (!name.empty())
-            func(name);
-    }
-
-    for (auto checkerDecl : checkerDecls) {
-        std::string_view name = checkerDecl->name.valueText();
-        if (!name.empty())
-            func(name);
+    };
+    for (auto& [decl, _] : nodeMeta)
+        visit(*decl, decl->header->name);
+    for (auto decl : decls) {
+        switch (decl->kind) {
+            case SyntaxKind::ClassDeclaration:
+                visit(*decl, decl->as<ClassDeclarationSyntax>().name);
+                break;
+            case SyntaxKind::CheckerDeclaration:
+                visit(*decl, decl->as<CheckerDeclarationSyntax>().name);
+                break;
+            default:
+                SLANG_UNREACHABLE;
+        }
     }
 }
 
 std::vector<std::string_view> ParserMetadata::getReferencedSymbols() const {
     flat_hash_set<std::string_view> seenDeps;
     std::vector<std::string_view> results;
-    visitReferencedSymbols([&](std::string_view name) {
+    visitReferencedSymbols([&](Token token) {
+        auto name = token.valueText();
         if (seenDeps.insert(name).second)
             results.push_back(name);
     });
     return results;
 }
 
-void ParserMetadata::visitReferencedSymbols(function_ref<void(std::string_view)> func) const {
-    for (auto name : globalInstances)
-        func(name->type.valueText());
-
-    for (auto inst : checkerInstances) {
-        // Package-scoped checker names are already handled via classPackageNames.
-        if (inst->type->kind == SyntaxKind::IdentifierName) {
-            std::string_view name = inst->type->as<IdentifierNameSyntax>().identifier.valueText();
-            if (!name.empty())
-                func(name);
+void ParserMetadata::visitReferencedSymbols(function_ref<void(Token)> func,
+                                            bool includeInterfacePorts) const {
+    auto visit = [&](Token token) {
+        if (!token.valueText().empty())
+            func(token);
+    };
+    for (auto ref : refs) {
+        switch (ref->kind) {
+            case SyntaxKind::HierarchyInstantiation:
+                visit(ref->as<HierarchyInstantiationSyntax>().type);
+                break;
+            case SyntaxKind::CheckerInstantiation:
+                // Scoped checker names are covered by their IdentifierName reference.
+                if (auto name =
+                        ref->as<CheckerInstantiationSyntax>().type->as_if<IdentifierNameSyntax>())
+                    visit(name->identifier);
+                break;
+            case SyntaxKind::IdentifierName:
+                visit(ref->as<IdentifierNameSyntax>().identifier);
+                break;
+            case SyntaxKind::PackageImportDeclaration:
+                for (auto item : ref->as<PackageImportDeclarationSyntax>().items)
+                    visit(item->package);
+                break;
+            case SyntaxKind::VirtualInterfaceType:
+                visit(ref->as<VirtualInterfaceTypeSyntax>().name);
+                break;
+            default:
+                SLANG_UNREACHABLE;
         }
     }
 
-    for (auto idName : classPackageNames) {
-        std::string_view name = idName->identifier.valueText();
-        if (!name.empty())
-            func(name);
-    }
+    if (!includeInterfacePorts)
+        return;
 
-    for (auto importDecl : packageImports) {
-        for (auto importItem : importDecl->items) {
-            std::string_view name = importItem->package.valueText();
-            if (!name.empty())
-                func(name);
+    auto visitPort = [&](const PortHeaderSyntax& header) {
+        if (auto interfacePort = header.as_if<InterfacePortHeaderSyntax>()) {
+            if (interfacePort->nameOrKeyword.kind == TokenKind::Identifier)
+                visit(interfacePort->nameOrKeyword);
         }
-    }
-
-    for (auto intf : interfacePorts) {
-        std::string_view name = intf->nameOrKeyword.valueText();
-        if (!name.empty())
-            func(name);
+    };
+    for (auto& [decl, _] : nodeMeta) {
+        if (auto ports = decl->header->ports) {
+            if (auto ansi = ports->as_if<AnsiPortListSyntax>()) {
+                for (auto port : ansi->ports) {
+                    if (auto implicitPort = port->as_if<ImplicitAnsiPortSyntax>())
+                        visitPort(*implicitPort->header);
+                }
+            }
+        }
+        for (auto member : decl->members) {
+            if (auto port = member->as_if<PortDeclarationSyntax>())
+                visitPort(*port->header);
+        }
     }
 }
 

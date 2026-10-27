@@ -226,8 +226,10 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         syntaxMetadata[n] = result;
     }
 
-    for (auto& inst : tree->getMetadata().globalInstances)
-        globalInstantiations.emplace(inst->type.valueText());
+    for (auto ref : tree->getMetadata().refs) {
+        if (auto inst = ref->as_if<HierarchyInstantiationSyntax>())
+            globalInstantiations.emplace(inst->type.valueText());
+    }
 
     if (node.kind == SyntaxKind::CompilationUnit) {
         for (auto member : node.as<CompilationUnitSyntax>().members)

@@ -1197,7 +1197,7 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
                                             finalSpecifier, name, parameterList, extendsClause,
                                             implementsClause, semi, members, endClass,
                                             endBlockName);
-    meta.classDecls.push_back(&result);
+    meta.decls.push_back(&result);
     return result;
 }
 
@@ -2402,7 +2402,7 @@ PackageImportDeclarationSyntax& Parser::parseImportDeclaration(AttrList attribut
                                                 [this] { return &parsePackageImportItem(); });
 
     auto& result = factory.packageImportDeclaration(attributes, keyword, {alloc, items}, semi);
-    meta.packageImports.push_back(&result);
+    meta.refs.push_back(&result);
     return result;
 }
 
@@ -2654,7 +2654,7 @@ CheckerDeclarationSyntax& Parser::parseCheckerDeclaration(AttrList attributes) {
 
     auto& result = factory.checkerDeclaration(attributes, keyword, name, portList, semi, members,
                                               end, blockName);
-    meta.checkerDecls.push_back(&result);
+    meta.decls.push_back(&result);
     return result;
 }
 
@@ -2826,7 +2826,7 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attri
     auto& ret = factory.hierarchyInstantiation(attributes, type, parameters, {alloc, items}, semi);
 
     if (addToInstances)
-        meta.globalInstances.push_back(&ret);
+        meta.refs.push_back(&ret);
     return ret;
 }
 
@@ -2929,7 +2929,7 @@ CheckerInstantiationSyntax& Parser::parseCheckerInstantiation(AttrList attribute
                                                [this] { return &parseHierarchicalInstance(); });
 
     auto& result = factory.checkerInstantiation(attributes, type, parameters, {alloc, items}, semi);
-    meta.checkerInstances.push_back(&result);
+    meta.refs.push_back(&result);
     return result;
 }
 

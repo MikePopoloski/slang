@@ -898,11 +898,17 @@ static std::string getProximatePathStr(const fs::path& path) {
 static std::vector<const SyntaxTree*> getSortedDependencies(
     Driver& driver, std::span<std::shared_ptr<SyntaxTree>> trees, bool trim) {
 
-    // Map all declared modules, classes, etc to their containing syntax trees.
+    // Map top-level declarations to their containing syntax trees. Keep nested
+    // names separately to avoid reporting local or imported references as missing files.
     flat_hash_map<std::string_view, const SyntaxTree*> nameToTree;
+    flat_hash_set<std::string_view> declaredNames;
     for (auto& tree : trees) {
-        for (auto name : tree->getMetadata().getDeclaredSymbols())
+        auto& meta = tree->getMetadata();
+        for (auto name : meta.getDeclaredSymbols())
             nameToTree.emplace(name, tree.get());
+
+        for (auto name : meta.getDeclaredSymbols(/* includeNested */ true))
+            declaredNames.emplace(name);
     }
 
     struct Deps {
@@ -924,7 +930,7 @@ static std::vector<const SyntaxTree*> getSortedDependencies(
                 if (seenTrees.insert(it->second).second)
                     deps.childTrees.push_back(it->second);
             }
-            else if (seenMissing.insert(ref).second) {
+            else if (!declaredNames.contains(ref) && seenMissing.insert(ref).second) {
                 deps.missingNames.push_back(ref);
                 missingToTree.emplace(ref, tree.get());
             }
@@ -1179,6 +1185,8 @@ void Driver::addParseOptions(Bag& bag) const {
     soptions.singleUnit = options.singleUnit == true;
     soptions.onlyLint = options.lintMode();
     soptions.librariesInheritMacros = options.librariesInheritMacros == true;
+    soptions.lookUpInterfacePorts = options.compilationFlags.at(
+                                        CompilationFlags::AllowTopLevelIfacePorts) == true;
 
     PreprocessorOptions ppoptions;
     ppoptions.predefines = options.defines;
