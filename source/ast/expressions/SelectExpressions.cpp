@@ -693,8 +693,15 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
         return value().type->getDefaultValue();
     }
 
-    return cv.getSlice(range->upper(), range->lower(),
-                       type->getArrayElementType()->getDefaultValue());
+    auto result = cv.getSlice(range->upper(), range->lower(),
+                              type->getArrayElementType()->getDefaultValue());
+
+    // Out of bounds bits are sliced out as X, so for two-state
+    // types we need to convert them to zero.
+    if (result.isInteger() && !type->isFourState())
+        result.integer().flattenUnknowns();
+
+    return result;
 }
 
 LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {

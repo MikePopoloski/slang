@@ -684,6 +684,39 @@ TEST_CASE("Queue read at the append index") {
     CHECK(diags[0].code == diag::ConstEvalDynamicArrayIndex);
 }
 
+TEST_CASE("Out of bounds part-select of two-state vector") {
+    ScriptSession session;
+    session.eval(R"(
+function automatic logic [3:0] f(int i);
+    bit [3:0] b = 4'b1010;
+    return b[i +: 4];
+endfunction
+)");
+    session.eval(R"(
+function automatic logic [3:0] g(int i);
+    logic [3:0] l = 4'b1010;
+    return l[i +: 4];
+endfunction
+)");
+    session.eval(R"(
+typedef bit [1:0][3:0] p_t;
+function automatic p_t h(int i);
+    p_t p = '{4'hA, 4'h5};
+    return p[i +: 2];
+endfunction
+)");
+
+    CHECK_THAT(session.eval("f(2)").integer(), exactlyEquals("4'b0010"_si));
+    CHECK_THAT(session.eval("f(-2)").integer(), exactlyEquals("4'b1000"_si));
+    CHECK_THAT(session.eval("g(2)").integer(), exactlyEquals("4'bxx10"_si));
+    CHECK_THAT(session.eval("h(1)").integer(), exactlyEquals("8'h0A"_si));
+
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 4);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::RangeOOB);
+}
+
 TEST_CASE("Associative array eval") {
     ScriptSession session;
     session.eval("integer arr[string] = '{\"Hello\":4, \"World\":8, default:-1};");
