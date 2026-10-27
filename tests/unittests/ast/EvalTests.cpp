@@ -1605,6 +1605,45 @@ endfunction
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Eval foreach loop with skipped trailing dimensions") {
+    ScriptSession session;
+    session.eval(R"(
+function automatic int foo();
+    int arr [2][3][4];
+    int q [$][2];
+    int result = 0;
+
+    foreach (arr[i,]) begin
+        result += 1;
+    end
+
+    foreach (arr[i,j,]) begin
+        if (j == 1)
+            continue;
+        result += 10;
+    end
+
+    foreach (arr[,j,]) begin
+        result += 100;
+    end
+
+    q.push_back('{1, 2});
+    q.push_back('{3, 4});
+    q.push_back('{5, 6});
+    foreach (q[i,]) begin
+        result += q[i][1] * 1000;
+        if (i == 1)
+            break;
+    end
+
+    return result;
+endfunction
+)");
+
+    CHECK(session.eval("foo()").integer() == 6000 + 300 + 40 + 2);
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Eval foreach loop dynamic") {
     ScriptSession session;
     session.eval(R"(
