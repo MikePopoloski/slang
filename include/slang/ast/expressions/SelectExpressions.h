@@ -101,7 +101,7 @@ public:
     bool isEquivalentImpl(const RangeSelectExpression& rhs) const;
 
     std::optional<ConstantRange> evalRange(EvalContext& context, const ConstantValue& val,
-                                           bool enforceBounds) const;
+                                           bool enforceBounds, bool& softFail) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

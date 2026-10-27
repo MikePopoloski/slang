@@ -3028,17 +3028,44 @@ endmodule
     CHECK(diags[3].code == diag::RangeSelectReversed);
     CHECK(diags[4].code == diag::ValueMustBePositive);
     CHECK(diags[5].code == diag::RangeOOB);
-    CHECK(diags[6].code == diag::IndexValueInvalid);
+    CHECK(diags[6].code == diag::IndexOOB);
     CHECK(diags[7].code == diag::RangeWidthOOB);
     CHECK(diags[8].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[9].code == diag::ValueMustBePositive);
     CHECK(diags[10].code == diag::RangeOOB);
     CHECK(diags[11].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
     CHECK(diags[12].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
-    CHECK(diags[13].code == diag::IndexValueInvalid);
+    CHECK(diags[13].code == diag::IndexOOB);
     CHECK(diags[14].code == diag::IndexValueInvalid);
-    CHECK(diags[15].code == diag::IndexValueInvalid);
+    CHECK(diags[15].code == diag::IndexOOB);
     CHECK(diags[16].code == diag::ConstEvalDynamicArrayRange);
+}
+
+TEST_CASE("Indexed part-select with constant unknown base") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [3:0] a;
+    wire [1:0] b = a[4'bx +: 2];
+    wire [1:0] c = a[4'b1z -: 2];
+    localparam bit [3:0] P = 4'b1010;
+    localparam logic [1:0] Q = P['x +: 2];
+    localparam logic [1:0] R = P[1 +: 2];
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::IndexOOB);
+    CHECK(diags[1].code == diag::IndexOOB);
+    CHECK(diags[2].code == diag::IndexOOB);
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<NetSymbol>("m.b").getType().getBitWidth() == 2);
+    CHECK(root.lookupName<ParameterSymbol>("m.Q").getValue().integer() == 0);
+    CHECK(root.lookupName<ParameterSymbol>("m.R").getValue().integer() == 1);
 }
 
 TEST_CASE("Index oob tryEval regress GH #602") {

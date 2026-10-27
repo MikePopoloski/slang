@@ -717,6 +717,41 @@ endfunction
         CHECK(diag.code == diag::RangeOOB);
 }
 
+TEST_CASE("Indexed part-select with unknown base") {
+    ScriptSession session;
+    session.eval(R"(
+function automatic logic [1:0] f(logic [3:0] i);
+    logic [3:0] l = 4'b1010;
+    return l[i +: 2];
+endfunction
+)");
+    session.eval(R"(
+function automatic logic [1:0] g(logic [3:0] i);
+    bit [3:0] b = 4'b1010;
+    return b[i -: 2];
+endfunction
+)");
+    session.eval(R"(
+function automatic logic [3:0] h(logic [3:0] i);
+    logic [3:0] l = 4'b1010;
+    l[i +: 2] = 2'b01;
+    return l;
+endfunction
+)");
+
+    CHECK_THAT(session.eval("f(4'bx)").integer(), exactlyEquals("2'bxx"_si));
+    CHECK_THAT(session.eval("f(4'b1z)").integer(), exactlyEquals("2'bxx"_si));
+    CHECK_THAT(session.eval("g(4'bx)").integer(), exactlyEquals("2'b00"_si));
+    CHECK_THAT(session.eval("h(4'bx)").integer(), exactlyEquals("4'b1010"_si));
+    CHECK_THAT(session.eval("h(4'd1)").integer(), exactlyEquals("4'b1010"_si));
+    CHECK_THAT(session.eval("h(4'd2)").integer(), exactlyEquals("4'b0110"_si));
+
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 4);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::IndexOOB);
+}
+
 TEST_CASE("Associative array eval") {
     ScriptSession session;
     session.eval("integer arr[string] = '{\"Hello\":4, \"World\":8, default:-1};");

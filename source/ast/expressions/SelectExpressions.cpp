@@ -543,15 +543,20 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
 
             // If the lhs is a known constant, we can check that now too.
             ConstantValue leftVal;
+            std::optional<int32_t> index;
             if (!context.inUnevaluatedBranch() && (leftVal = context.tryEval(left))) {
-                std::optional<int32_t> index = leftVal.integer().as<int32_t>();
+                index = leftVal.integer().as<int32_t>();
                 if (!index) {
-                    auto& diag = context.addDiag(diag::IndexValueInvalid, left.sourceRange);
+                    // Don't return an error -- this diagnostic can be suppressed
+                    // and the LRM defines what an invalid part-select resolves to.
+                    auto& diag = context.addDiag(diag::IndexOOB, left.sourceRange);
                     diag << leftVal;
                     diag << valueType;
-                    return badExpr(comp, result);
+                    result->warnedAboutRange = true;
                 }
+            }
 
+            if (index) {
                 auto range = ConstantRange::getIndexedRange(*index, *rv, valueRange.isDescending(),
                                                             selectionKind ==
                                                                 RangeSelectionKind::IndexedUp);
@@ -682,9 +687,10 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv)
         return nullptr;
 
-    auto range = evalRange(context, cv, /* enforceBounds */ false);
+    bool softFail = false;
+    auto range = evalRange(context, cv, /* enforceBounds */ false, softFail);
     if (!range)
-        return nullptr;
+        return softFail ? type->getDefaultValue() : nullptr;
 
     // If this is a queue, we didn't verify the ordering of the selection.
     // Check if it's reversed here and issue a warning if so.
@@ -713,9 +719,17 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!value().type->hasFixedRange())
         loadedVal = lval.load();
 
-    auto range = evalRange(context, loadedVal, /* enforceBounds */ false);
-    if (!range)
-        return nullptr;
+    bool softFail = false;
+    auto range = evalRange(context, loadedVal, /* enforceBounds */ false, softFail);
+    if (!range) {
+        if (!softFail)
+            return nullptr;
+
+        // Add an out of bounds entry so that reads will return the default
+        // and writes will be ignored.
+        lval.addIndexOutOfBounds(type->getDefaultValue());
+        return lval;
+    }
 
     if (value().type->isIntegral())
         lval.addBitSlice(*range);
@@ -727,7 +741,8 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
 
 std::optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& context,
                                                               const ConstantValue& val,
-                                                              bool enforceBounds) const {
+                                                              bool enforceBounds,
+                                                              bool& softFail) const {
     auto prevQ = context.getQueueTarget();
     if (val.isQueue())
         context.setQueueTarget(&val);
@@ -743,6 +758,16 @@ std::optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& conte
     std::optional<int32_t> li = cl.integer().as<int32_t>();
     std::optional<int32_t> ri = cr.integer().as<int32_t>();
     if (!li) {
+        // An indexed part-select with an invalid base (x / z bits or out of range)
+        // is out of bounds, which the LRM defines to read as the default value
+        // and to have no effect when written.
+        if (selectionKind != RangeSelectionKind::Simple) {
+            if (!warnedAboutRange)
+                context.addDiag(diag::IndexOOB, left().sourceRange) << cl << valueType;
+            softFail = true;
+            return std::nullopt;
+        }
+
         context.addDiag(diag::IndexValueInvalid, left().sourceRange) << cl << valueType;
         return std::nullopt;
     }
