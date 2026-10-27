@@ -274,7 +274,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
     int32_t offset = 0;
     for (size_t i = 0; i < arrayPath.size(); i++) {
         if (i > 0)
-            offset *= int32_t(instanceDims[i - 1].width());
+            offset *= int32_t(instanceDims[i].width());
 
         uint32_t index = arrayPath[i];
         if (!instanceDims[i].isDescending())
