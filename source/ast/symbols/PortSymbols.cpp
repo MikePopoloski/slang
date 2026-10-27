@@ -1148,7 +1148,16 @@ private:
         if (instance.body.flags.has(InstanceFlags::FromBind))
             flags |= LookupFlags::DisallowWildcardImport | LookupFlags::DisallowUnitReferences;
 
-        auto symbol = Lookup::unqualified(scope, port.name, flags);
+        // Look up the name as visible at the location of the instance, which
+        // matters if there is e.g. a later wildcard import that would otherwise
+        // shadow a compilation unit name. If there's nothing visible try again
+        // with the whole scope so that we can give a nicer error about using a
+        // name before it's declared.
+        auto symbol = Lookup::unqualifiedAt(scope, port.name, lookupLocation, range,
+                                            flags | LookupFlags::NoUndeclaredError);
+        if (!symbol)
+            symbol = Lookup::unqualified(scope, port.name, flags);
+
         if (!symbol) {
             // If this is a wildcard connection, we're allowed to use the port's default value,
             // if it has one.

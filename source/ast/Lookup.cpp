@@ -2074,9 +2074,19 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
 
             if (auto it = wildcardImportData->importedSymbols.find(name);
                 it != wildcardImportData->importedSymbols.end()) {
-                result.flags |= LookupResultFlags::WasImported;
-                result.found = it->second;
-                return;
+                // The symbol is only visible if one of the wildcard imports
+                // that provides it comes before our lookup location.
+                for (auto import : wildcardImportData->wildcardImports) {
+                    if (location < LookupLocation::after(*import))
+                        break;
+
+                    auto package = import->getPackage();
+                    if (package && package->findForImport(name) == it->second) {
+                        result.flags |= LookupResultFlags::WasImported;
+                        result.found = it->second;
+                        return;
+                    }
+                }
             }
         }
         else {

@@ -6,7 +6,9 @@
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/ValuePath.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
+#include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -1322,6 +1324,50 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::CantModifyConst);
     CHECK(diags[1].code == diag::InvalidRefArg);
+}
+
+TEST_CASE("Implicit named port connections look up names at the instance") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    parameter int value = 2;
+endpackage
+
+parameter int value = 1;
+
+module child(input int value);
+endmodule
+
+module top;
+    child c1(.value);
+    child c2(.*);
+    import p::*;
+    child c3(.value);
+    child c4(.*);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto getConnSymbol = [&](std::string_view path) {
+        auto& inst = compilation.getRoot().lookupName<InstanceSymbol>(path);
+        auto conn = inst.getPortConnection(inst.body.getPortList()[0]->as<PortSymbol>());
+        REQUIRE(conn);
+
+        auto expr = conn->getExpression();
+        REQUIRE(expr);
+        if (expr->kind == ExpressionKind::Conversion)
+            expr = &expr->as<ConversionExpression>().operand();
+        return &expr->as<NamedValueExpression>().symbol;
+    };
+
+    auto& unitValue = *compilation.getCompilationUnits()[0]->find("value");
+    auto& pkgValue = *compilation.getPackage("p")->find("value");
+    CHECK(getConnSymbol("top.c1") == &unitValue);
+    CHECK(getConnSymbol("top.c2") == &unitValue);
+    CHECK(getConnSymbol("top.c3") == &pkgValue);
+    CHECK(getConnSymbol("top.c4") == &pkgValue);
 }
 
 TEST_CASE("No default nettype warning") {
