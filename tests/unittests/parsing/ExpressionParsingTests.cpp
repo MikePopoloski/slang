@@ -950,6 +950,24 @@ int e = 4'sb1000;
     CHECK(diagnostics[2].code == diag::VectorLiteralOverflow);
 }
 
+TEST_CASE("Decimal literals with unknown digits") {
+    auto& text = R"(
+int a = 7'dz__;
+int b = 7'dx_;
+int c = 7'd1z;
+int d = 7'dz1;
+int e = 7'd1_x;
+int f = 7'dxx;
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 4);
+    CHECK(diagnostics[0].code == diag::DecimalDigitMultipleUnknown);
+    CHECK(diagnostics[1].code == diag::DecimalDigitMultipleUnknown);
+    CHECK(diagnostics[2].code == diag::DecimalDigitMultipleUnknown);
+    CHECK(diagnostics[3].code == diag::DecimalDigitMultipleUnknown);
+}
+
 TEST_CASE("Diagnosing missing base after signed specifier parsing") {
     auto& text = R"(
 int i = 's3;

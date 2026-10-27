@@ -34,6 +34,7 @@ NumberParser::NumberParser(Diagnostics& diagnostics, BumpAllocator& alloc,
 
 void NumberParser::startVector(Token baseToken, Token sizeToken) {
     hasUnknown = false;
+    hasDecimalDigits = false;
     valid = true;
     digits.clear();
     text.clear();
@@ -122,19 +123,24 @@ int NumberParser::append(Token token, bool isFirst) {
 
                 if (token.kind == TokenKind::IntegerLiteral) {
                     decimalValue = token.intValue();
+                    hasDecimalDigits = true;
                     break;
                 }
             }
 
-            // As mentioned above, this loop is just for checking errors.
+            // As mentioned above, this loop is mostly just for checking errors.
+            // The exception is an x or z digit followed by underscores.
             for (char c : chars) {
                 if (isLogicDigit(c) || isDecimalDigit(c)) {
-                    if (hasUnknown) {
+                    if (hasUnknown || (hasDecimalDigits && isLogicDigit(c))) {
                         addDiag(diag::DecimalDigitMultipleUnknown, location + index);
                         return -1;
                     }
 
-                    hasUnknown = isLogicDigit(c);
+                    if (isLogicDigit(c))
+                        addDigit(getLogicCharValue(c), 10);
+                    else
+                        hasDecimalDigits = true;
                 }
                 else if (c != '_') {
                     addDiag(diag::BadDecimalDigit, location + index);

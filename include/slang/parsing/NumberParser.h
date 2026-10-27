@@ -186,6 +186,7 @@ private:
     SourceLocation firstLocation;
     bool signFlag = false;
     bool hasUnknown = false;
+    bool hasDecimalDigits = false;
     bool valid = false;
     SVInt decimalValue;
     Diagnostics& diagnostics;

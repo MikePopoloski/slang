@@ -246,6 +246,13 @@ TEST_CASE("Integer operators") {
     EVAL("5'bz01", "5'bzzz01"_si);
     EVAL("68'bz0000", "68'hzzzzzzzzzzzzzzzzz0"_si);
 
+    // Decimal unknown digits followed by underscores
+    EVAL("7'dz__", "7'bzzzzzzz"_si);
+    EVAL("7'dZ_", "7'bzzzzzzz"_si);
+    EVAL("7'dx_", "7'bxxxxxxx"_si);
+    EVAL("7'd?__", "7'bzzzzzzz"_si);
+    EVAL("'dz_", "32'bzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"_si);
+
     // Unsized literals with an unknown high order bit extend to the expression size
     EVAL("'hx3 | 64'h0", "64'hxxxxxxxxxxxxxxx3"_si);
     EVAL("1 ? 'hz : 40'h0", "40'hzzzzzzzzzz"_si);
