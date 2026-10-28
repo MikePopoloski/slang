@@ -79,10 +79,12 @@ void MethodBuilder::addFlags(bitmask<MethodFlags> flags) {
 
 ClassBuilder::ClassBuilder(Compilation& compilation, std::string_view name) :
     compilation(compilation), type(*compilation.emplace<ClassType>(compilation, name, NL)) {
+    type.addBuiltInMethods(type);
 }
 
 ClassBuilder::ClassBuilder(Compilation& compilation, ClassType& existing) :
     compilation(compilation), type(existing) {
+    type.addBuiltInMethods(type);
 }
 
 MethodBuilder ClassBuilder::addMethod(std::string_view name, const Type& retType,

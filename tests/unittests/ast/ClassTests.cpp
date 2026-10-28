@@ -1888,6 +1888,131 @@ endmodule
     CHECK(diags[5].code == diag::TooManyArguments);
 }
 
+TEST_CASE("Built-in class methods of std package classes") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class Pool extends semaphore;
+    function new; super.new(1); endfunction
+    function void pre_randomize; super.pre_randomize(); endfunction
+    function void post_randomize; super.post_randomize(); endfunction
+    function void reseed; super.srandom(3); endfunction
+endclass
+
+class Box extends mailbox #(int);
+    function void post_randomize; super.post_randomize(); endfunction
+endclass
+
+class A;
+endclass
+
+class Ref extends weak_reference #(A);
+    function new(A a); super.new(a); endfunction
+    function void post_randomize; super.post_randomize(); endfunction
+endclass
+
+module m;
+    semaphore s = new;
+    mailbox #(int) mb = new;
+    mailbox #(int) mb2;
+    mailbox #(string) ms;
+    A a = new;
+    weak_reference #(A) w = new(a);
+    process p;
+    int i;
+    string st;
+
+    initial begin
+        i = s.randomize();
+        i = s.randomize() with { 1; };
+        s.pre_randomize();
+        s.post_randomize();
+        s.srandom(1);
+        s.set_randstate(s.get_randstate());
+        s.rand_mode(0);
+        s.constraint_mode(0);
+
+        i = mb.randomize();
+        mb.post_randomize();
+        st = mb.get_randstate();
+
+        i = w.randomize();
+        w.srandom(2);
+
+        p = process::self();
+        i = p.randomize();
+        p.post_randomize();
+        p.srandom(1);
+        p.set_randstate(p.get_randstate());
+    end
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    // Each class, and each specialization of mailbox, has one of each method.
+    auto countNamed = [](const ClassType& type, std::string_view name) {
+        return std::ranges::count_if(type.membersOfType<SubroutineSymbol>(),
+                                     [&](auto& sub) { return sub.name == name; });
+    };
+
+    auto& stdPkg = compilation.getStdPackage();
+    for (auto className : {"process"sv, "semaphore"sv}) {
+        auto& type = stdPkg.find<ClassType>(className);
+        for (auto method : {"randomize"sv, "post_randomize"sv, "srandom"sv, "set_randstate"sv})
+            CHECK(countNamed(type, method) == 1);
+    }
+
+    auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m").body;
+    auto classOf = [&](std::string_view name) -> const ClassType& {
+        return m.find<VariableSymbol>(name).getType().getCanonicalType().as<ClassType>();
+    };
+    CHECK(&classOf("mb") == &classOf("mb2"));
+    for (auto var : {"mb"sv, "ms"sv}) {
+        for (auto method : {"randomize"sv, "post_randomize"sv, "srandom"sv, "rand_mode"sv})
+            CHECK(countNamed(classOf(var), method) == 1);
+    }
+}
+
+TEST_CASE("Built-in class methods of interface classes") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class I;
+endclass
+
+class C implements I;
+    rand bit [3:0] v;
+    constraint c { v < 8; }
+endclass
+
+module m;
+    C c = new;
+    I h = c;
+    int i;
+
+    initial begin
+        i = h.randomize();
+        h.pre_randomize();
+        h.post_randomize();
+        h.srandom(1);
+
+        // Errors
+        h.rand_mode(0);
+        h.constraint_mode(0);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UnknownMember);
+    CHECK(diags[1].code == diag::UnknownMember);
+}
+
 TEST_CASE("Constraint items") {
     auto tree = SyntaxTree::fromText(R"(
 class A;

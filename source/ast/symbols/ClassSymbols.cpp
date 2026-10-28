@@ -200,7 +200,28 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
     for (auto member : syntax.items)
         addMembers(*member);
 
-    // All class types get some built-in methods.
+    addBuiltInMethods(scope);
+
+    // Give this class a "thisVar" that can be used by non-static class
+    // property initializers to refer to their own instance.
+    auto& comp = getCompilation();
+    auto tv = comp.emplace<VariableSymbol>("this", location, VariableLifetime::Automatic);
+    tv->setType(*this);
+    tv->flags |= VariableFlags::Const | VariableFlags::CompilerGenerated;
+    tv->setParent(*this);
+    thisVar = tv;
+
+    // This needs to happen last, otherwise setting "needs elaboration" before
+    // trying to access the name map can cause infinite recursion.
+    if (syntax.extendsClause || syntax.implementsClause)
+        setNeedElaboration();
+}
+
+void ClassType::addBuiltInMethods(const Scope& scope) {
+    // Every class has these methods, whether it was declared in source or built
+    // programmatically like the classes of the std package. [8.26.9] says that an
+    // interface class has randomize and the randomization hooks but not rand_mode
+    // or constraint_mode.
     auto& comp = getCompilation();
     auto& void_t = comp.getVoidType();
     auto& int_t = comp.getIntType();
@@ -241,28 +262,17 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
     if (srandom)
         srandom->addArg("seed", int_t);
 
-    auto rand_mode = makeFunc("rand_mode", void_t, false, MethodFlags::None,
-                              SubroutineKind::Function);
-    if (rand_mode)
-        rand_mode->addArg("on_ff", comp.getBitType());
+    if (!isInterface) {
+        auto rand_mode = makeFunc("rand_mode", void_t, false, MethodFlags::None,
+                                  SubroutineKind::Function);
+        if (rand_mode)
+            rand_mode->addArg("on_ff", comp.getBitType());
 
-    auto constraint_mode = makeFunc("constraint_mode", void_t, false, MethodFlags::None,
-                                    SubroutineKind::Function);
-    if (constraint_mode)
-        constraint_mode->addArg("on_ff", comp.getBitType());
-
-    // Give this class a "thisVar" that can be used by non-static class
-    // property initializers to refer to their own instance.
-    auto tv = comp.emplace<VariableSymbol>("this", location, VariableLifetime::Automatic);
-    tv->setType(*this);
-    tv->flags |= VariableFlags::Const | VariableFlags::CompilerGenerated;
-    tv->setParent(*this);
-    thisVar = tv;
-
-    // This needs to happen last, otherwise setting "needs elaboration" before
-    // trying to access the name map can cause infinite recursion.
-    if (syntax.extendsClause || syntax.implementsClause)
-        setNeedElaboration();
+        auto constraint_mode = makeFunc("constraint_mode", void_t, false, MethodFlags::None,
+                                        SubroutineKind::Function);
+        if (constraint_mode)
+            constraint_mode->addArg("on_ff", comp.getBitType());
+    }
 }
 
 void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const {

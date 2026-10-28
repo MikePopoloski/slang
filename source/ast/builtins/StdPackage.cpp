@@ -54,14 +54,9 @@ static const Symbol& createProcessClass(Compilation& c) {
     builder.addMethod("await", void_t, SubroutineKind::Task);
     builder.addMethod("suspend", void_t);
     builder.addMethod("resume", void_t);
-    builder.addMethod("get_randstate", c.getStringType());
 
-    auto srandom = builder.addMethod("srandom", void_t);
-    srandom.addArg("seed", c.getIntType());
-
-    auto set_randstate = builder.addMethod("set_randstate", void_t);
-    set_randstate.addArg("state", c.getStringType());
-
+    // srandom, get_randstate and set_randstate are the built-in methods every
+    // class has, which the builder has already added.
     return builder.type;
 }
 

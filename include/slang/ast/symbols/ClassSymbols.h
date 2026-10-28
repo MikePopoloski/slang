@@ -181,8 +181,10 @@ public:
 private:
     friend class Scope;
     friend class GenericClassDefSymbol;
+    friend class ClassBuilder;
 
     void populate(const Scope& scope, const syntax::ClassDeclarationSyntax& syntax);
+    void addBuiltInMethods(const Scope& scope);
     void inheritMembers(function_ref<void(const Symbol&)> insertCB) const;
     void handleExtends(const syntax::ExtendsClauseSyntax& extendsClause, const ASTContext& context,
                        function_ref<void(const Symbol&)> insertCB) const;

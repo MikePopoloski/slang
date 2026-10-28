@@ -55,7 +55,13 @@ public:
     /// The class type being constructed.
     ClassType& type;
 
+    /// Constructs a new class type with the given name, which starts with the
+    /// built-in methods that every class has (randomize, srandom, etc).
     ClassBuilder(Compilation& compilation, std::string_view name);
+
+    /// Adds the built-in methods that every class has to an existing class type,
+    /// such as a specialization of a built-in generic class, which must not
+    /// already have them.
     ClassBuilder(Compilation& compilation, ClassType& existing);
 
     /// Adds a method to the class with the given properties. The returned builder
