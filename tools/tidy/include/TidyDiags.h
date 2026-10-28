@@ -45,5 +45,6 @@ inline constexpr DiagCode StructName(DiagSubsystem::Tidy, 30);
 inline constexpr DiagCode UnionName(DiagSubsystem::Tidy, 31);
 inline constexpr DiagCode TypedefName(DiagSubsystem::Tidy, 32);
 inline constexpr DiagCode StructFieldsInSameProcess(DiagSubsystem::Tidy, 33);
+inline constexpr DiagCode ConcurrentAssertHasFailAction(DiagSubsystem::Tidy, 34);
 
 } // namespace slang::diag
