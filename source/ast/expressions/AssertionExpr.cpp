@@ -350,8 +350,7 @@ bool AssertionExpr::checkAssertionCall(const CallExpression& call, const ASTCont
     }
 
     if (call.isSystemCall()) {
-        auto& sub = *std::get<1>(call.subroutine).subroutine;
-        if (sub.hasOutputArgs) {
+        if (call.hasOutputArgs()) {
             context.addDiag(outArgCode, range);
             return false;
         }

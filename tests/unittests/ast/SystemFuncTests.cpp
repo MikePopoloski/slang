@@ -1038,6 +1038,8 @@ module m;
         j = $dist_chi_square(seed, 10);
         j = $dist_t(seed, 10);
         j = $dist_erlang(seed, 10, 20);
+        j = $random(seed);
+        j = $random;
     end
 endmodule
 )");
@@ -1045,6 +1047,28 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Distribution function seeds must be assignable") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int seed, j;
+    initial begin
+        j = $random(5);
+        j = $random(seed + 1);
+        j = $dist_uniform(5, 1, 2);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ExpressionNotAssignable);
+    CHECK(diags[1].code == diag::ExpressionNotAssignable);
+    CHECK(diags[2].code == diag::ExpressionNotAssignable);
 }
 
 TEST_CASE("sdf_annotate") {
@@ -1270,6 +1294,46 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::NonProceduralFuncArg);
+}
+
+TEST_CASE("System call output args that a call omits") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic clk);
+    int s, i, x, idx;
+    int aa[int];
+    string str;
+    wire n;
+
+    wire integer w1 = $random;
+    int w2, w4;
+    bit w3;
+    assign w2 = $random();
+    assign w3 = $countdrivers(n);
+    assign w4 = $sscanf(str, "%d");
+    a1: assert property (@(posedge clk) $random != 0);
+    always @($random) x = 1;
+
+    wire integer e1 = $random(s);
+    int e2, e3, e4;
+    assign e2 = $countdrivers(n, i);
+    assign e3 = $sscanf(str, "%d", i);
+    assign e4 = aa.first(idx);
+    a2: assert property (@(posedge clk) $random(s) != 0);
+    always @($random(s)) x = 2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::NonProceduralFuncArg);
+    CHECK(diags[1].code == diag::NonProceduralFuncArg);
+    CHECK(diags[2].code == diag::NonProceduralFuncArg);
+    CHECK(diags[3].code == diag::NonProceduralFuncArg);
+    CHECK(diags[4].code == diag::AssertionFuncArg);
+    CHECK(diags[5].code == diag::EventExpressionFuncArg);
 }
 
 TEST_CASE("Coverage system functions") {

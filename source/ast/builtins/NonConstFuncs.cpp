@@ -105,6 +105,9 @@ public:
         hasOutputArgs = true;
     }
 
+    // Every argument after the format is an output, and there may be none.
+    bool hasOutputArgsForCall(const Args& args) const final { return args.size() > 2; }
+
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
         if (argIndex >= 2)
@@ -236,10 +239,14 @@ public:
 
 class DistributionFunc : public SystemSubroutine {
 public:
-    DistributionFunc(KnownSystemName knownNameId, size_t numArgs) :
-        SystemSubroutine(knownNameId, SubroutineKind::Function), numArgs(numArgs) {
+    DistributionFunc(KnownSystemName knownNameId, size_t minArgs, size_t maxArgs) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), minArgs(minArgs),
+        maxArgs(maxArgs) {
         hasOutputArgs = true;
     }
+
+    // The seed is the only output, and $random allows it to be omitted.
+    bool hasOutputArgsForCall(const Args& args) const final { return !args.empty(); }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -251,12 +258,12 @@ public:
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
-        if (!checkArgCount(context, false, args, range, numArgs, numArgs))
+        if (!checkArgCount(context, false, args, range, minArgs, maxArgs))
             return comp.getErrorType();
 
-        for (size_t i = 0; i < numArgs; i++) {
-            if (!args[i]->type->isIntegral())
-                return badArg(context, *args[i]);
+        for (auto arg : args) {
+            if (!arg->type->isIntegral())
+                return badArg(context, *arg);
         }
 
         return comp.getIntType();
@@ -269,7 +276,8 @@ public:
     }
 
 private:
-    size_t numArgs;
+    size_t minArgs;
+    size_t maxArgs;
 };
 
 class SampledFunc : public SystemSubroutine {
@@ -519,6 +527,9 @@ public:
         hasOutputArgs = true;
     }
 
+    // Every argument after the net is an output, and all of them are optional.
+    bool hasOutputArgsForCall(const Args& args) const final { return args.size() > 1; }
+
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
         if (argIndex > 0) {
@@ -614,7 +625,6 @@ void Builtins::registerNonConstFuncs() {
     REGISTER(KnownSystemName::Time, timeType);
     REGISTER(KnownSystemName::STime, uintType);
     REGISTER(KnownSystemName::RealTime, realTimeType);
-    REGISTER(KnownSystemName::Random, intType, 0, intArg);
     REGISTER(KnownSystemName::URandom, uintType, 0, intArg);
     REGISTER(KnownSystemName::URandomRange, uintType, 1,
              std::vector<const Type*>{&uintType, &uintType});
@@ -636,14 +646,18 @@ void Builtins::registerNonConstFuncs() {
 
 #undef REGISTER
 
-#define FUNC(name, numArgs) addSystemSubroutine(std::make_shared<DistributionFunc>(name, numArgs))
-    FUNC(KnownSystemName::DistUniform, 3);
-    FUNC(KnownSystemName::DistNormal, 3);
-    FUNC(KnownSystemName::DistExponential, 2);
-    FUNC(KnownSystemName::DistPoisson, 2);
-    FUNC(KnownSystemName::DistChiSquare, 2);
-    FUNC(KnownSystemName::DistT, 2);
-    FUNC(KnownSystemName::DistErlang, 3);
+    // $random takes an optional seed that is an inout argument like the seeds of the
+    // distribution functions. See [20.14.1] and Annex N.
+#define FUNC(name, minArgs, maxArgs) \
+    addSystemSubroutine(std::make_shared<DistributionFunc>(name, minArgs, maxArgs))
+    FUNC(KnownSystemName::Random, 0, 1);
+    FUNC(KnownSystemName::DistUniform, 3, 3);
+    FUNC(KnownSystemName::DistNormal, 3, 3);
+    FUNC(KnownSystemName::DistExponential, 2, 2);
+    FUNC(KnownSystemName::DistPoisson, 2, 2);
+    FUNC(KnownSystemName::DistChiSquare, 2, 2);
+    FUNC(KnownSystemName::DistT, 2, 2);
+    FUNC(KnownSystemName::DistErlang, 3, 3);
 #undef FUNC
 
 #define FUNC(name) addSystemSubroutine(std::make_shared<ValueChangeFunc>(name))

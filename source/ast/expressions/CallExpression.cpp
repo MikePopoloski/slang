@@ -658,7 +658,7 @@ Expression& CallExpression::createSystemCall(
             return badExpr(compilation, expr);
     }
 
-    if (!checkOutputArgs(context, subroutine.hasOutputArgs, range))
+    if (!checkOutputArgs(context, expr->hasOutputArgs(), range))
         return badExpr(compilation, expr);
 
     if (syntax)
@@ -876,7 +876,7 @@ parsing::KnownSystemName CallExpression::getKnownSystemName() const {
 bool CallExpression::hasOutputArgs() const {
     if (subroutine.index() == 1) {
         auto& callInfo = std::get<1>(subroutine);
-        return callInfo.subroutine->hasOutputArgs;
+        return callInfo.subroutine->hasOutputArgsForCall(arguments());
     }
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
