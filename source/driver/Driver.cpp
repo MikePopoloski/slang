@@ -504,6 +504,10 @@ void Driver::addStandardArgs() {
     addAnalysisFlag(AnalysisFlags::AllowDupInitialDrivers, "--allow-dup-initial-drivers",
                     "Allow signals driven in an always_comb or always_ff block to also be driven "
                     "by initial blocks");
+    addAnalysisFlag(AnalysisFlags::AllowMultiDrivenDynamicallySizedArrays,
+                    "--allow-multi-driven-dynamically-sized-arrays",
+                    "Allow dynamic arrays, associative arrays, and queues to be driven from "
+                    "multiple always_comb/_ff blocks");
 
     cmdLine.add(
         "--cmd-ignore", [this](std::string_view value) { return cmdLine.addIgnoreCommand(value); },

@@ -48,7 +48,8 @@ static constexpr CompilationFlags allCompFlags[] = {
 };
 
 #define VCS_ANALYSIS_FLAGS \
-    AnalysisFlags::AllowMultiDrivenLocals
+    AnalysisFlags::AllowMultiDrivenLocals, \
+    AnalysisFlags::AllowMultiDrivenDynamicallySizedArrays
 
 static constexpr AnalysisFlags vcsAnalysisFlags[] = {VCS_ANALYSIS_FLAGS};
 static constexpr AnalysisFlags allAnalysisFlags[] = {
