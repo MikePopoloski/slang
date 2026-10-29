@@ -19,7 +19,8 @@ namespace slang {
 #define KIND(x)  \
     x(Synthesis) \
     x(Style)     \
-    x(Assertion)
+    x(Assertion) \
+    x(Constraint)
 SLANG_ENUM(TidyKind, KIND)
 #undef KIND
 // clang-format on
@@ -32,6 +33,8 @@ inline std::optional<slang::TidyKind> tidyKindFromStr(std::string str) {
         return slang::TidyKind::Style;
     if (str == "assertion")
         return slang::TidyKind::Assertion;
+    if (str == "constraint")
+        return slang::TidyKind::Constraint;
     return {};
 }
 
