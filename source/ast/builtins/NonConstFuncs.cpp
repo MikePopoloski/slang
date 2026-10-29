@@ -22,9 +22,9 @@ using namespace syntax;
 
 class FErrorFunc : public SystemSubroutine {
 public:
-    FErrorFunc() : SystemSubroutine(KnownSystemName::FError, SubroutineKind::Function) {
-        hasOutputArgs = true;
-    }
+    FErrorFunc() : SystemSubroutine(KnownSystemName::FError, SubroutineKind::Function) {}
+
+    bool hasOutputArgs(const Args&) const final { return true; }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -60,9 +60,9 @@ public:
 
 class FGetsFunc : public SystemSubroutine {
 public:
-    FGetsFunc() : SystemSubroutine(KnownSystemName::FGets, SubroutineKind::Function) {
-        hasOutputArgs = true;
-    }
+    FGetsFunc() : SystemSubroutine(KnownSystemName::FGets, SubroutineKind::Function) {}
+
+    bool hasOutputArgs(const Args&) const final { return true; }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -101,12 +101,10 @@ public:
     explicit ScanfFunc(bool isFscanf) :
         SystemSubroutine(isFscanf ? KnownSystemName::FScanf : KnownSystemName::SScanf,
                          SubroutineKind::Function),
-        isFscanf(isFscanf) {
-        hasOutputArgs = true;
-    }
+        isFscanf(isFscanf) {}
 
     // Every argument after the format is an output, and there may be none.
-    bool hasOutputArgsForCall(const Args& args) const final { return args.size() > 2; }
+    bool hasOutputArgs(const Args& args) const final { return args.size() > 2; }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -155,9 +153,9 @@ private:
 
 class FReadFunc : public SystemSubroutine {
 public:
-    FReadFunc() : SystemSubroutine(KnownSystemName::FRead, SubroutineKind::Function) {
-        hasOutputArgs = true;
-    }
+    FReadFunc() : SystemSubroutine(KnownSystemName::FRead, SubroutineKind::Function) {}
+
+    bool hasOutputArgs(const Args&) const final { return true; }
 
     bool allowEmptyArgument(size_t argIndex) const final { return argIndex == 2; }
 
@@ -241,12 +239,10 @@ class DistributionFunc : public SystemSubroutine {
 public:
     DistributionFunc(KnownSystemName knownNameId, size_t minArgs, size_t maxArgs) :
         SystemSubroutine(knownNameId, SubroutineKind::Function), minArgs(minArgs),
-        maxArgs(maxArgs) {
-        hasOutputArgs = true;
-    }
+        maxArgs(maxArgs) {}
 
     // The seed is the only output, and $random allows it to be omitted.
-    bool hasOutputArgsForCall(const Args& args) const final { return !args.empty(); }
+    bool hasOutputArgs(const Args& args) const final { return !args.empty(); }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -523,12 +519,11 @@ public:
 
 class CountDriversFunc : public SystemSubroutine {
 public:
-    CountDriversFunc() : SystemSubroutine(KnownSystemName::CountDrivers, SubroutineKind::Function) {
-        hasOutputArgs = true;
-    }
+    CountDriversFunc() :
+        SystemSubroutine(KnownSystemName::CountDrivers, SubroutineKind::Function) {}
 
     // Every argument after the net is an output, and all of them are optional.
-    bool hasOutputArgsForCall(const Args& args) const final { return args.size() > 1; }
+    bool hasOutputArgs(const Args& args) const final { return args.size() > 1; }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {

@@ -876,7 +876,7 @@ parsing::KnownSystemName CallExpression::getKnownSystemName() const {
 bool CallExpression::hasOutputArgs() const {
     if (subroutine.index() == 1) {
         auto& callInfo = std::get<1>(subroutine);
-        return callInfo.subroutine->hasOutputArgsForCall(arguments());
+        return callInfo.subroutine->hasOutputArgs(arguments());
     }
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);

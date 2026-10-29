@@ -96,19 +96,23 @@ UserDefinedSubroutine::UserDefinedSubroutine(std::unique_ptr<ast::Compilation> c
 
         // Set the parent scope so that return-type resolution can find enclosing scopes.
         const_cast<MethodPrototypeSymbol*>(proto)->setParent(compilation->getRootNoFinalize());
-
-        for (auto arg : proto->getArguments()) {
-            if (arg->direction != ArgumentDirection::In &&
-                (arg->direction != ArgumentDirection::Ref ||
-                 !arg->flags.has(VariableFlags::Const))) {
-                hasOutputArgs = true;
-                break;
-            }
-        }
     }
 }
 
 UserDefinedSubroutine::~UserDefinedSubroutine() = default;
+
+bool UserDefinedSubroutine::hasOutputArgs(const Args&) const {
+    if (!proto)
+        return false;
+
+    for (auto arg : proto->getArguments()) {
+        if (arg->direction != ArgumentDirection::In &&
+            (arg->direction != ArgumentDirection::Ref || !arg->flags.has(VariableFlags::Const))) {
+            return true;
+        }
+    }
+    return false;
+}
 
 const Expression& UserDefinedSubroutine::bindArgument(size_t argIndex, const ASTContext& context,
                                                       const ExpressionSyntax& syntax,

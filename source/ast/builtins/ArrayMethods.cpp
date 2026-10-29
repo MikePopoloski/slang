@@ -672,9 +672,9 @@ public:
 class AssocArrayTraversalMethod : public SystemSubroutine {
 public:
     explicit AssocArrayTraversalMethod(KnownSystemName knownNameId) :
-        SystemSubroutine(knownNameId, SubroutineKind::Function) {
-        hasOutputArgs = true;
-    }
+        SystemSubroutine(knownNameId, SubroutineKind::Function) {}
+
+    bool hasOutputArgs(const Args&) const final { return true; }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {

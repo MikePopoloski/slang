@@ -79,7 +79,6 @@ public:
         SimpleSystemSubroutine(sub.name, sub.kind, sub.requiredArgs_, sub.argTypes_,
                                *sub.returnType_, sub.isMethod_, sub.isFirstArgLValue_) {
         knownNameId = sub.knownNameId;
-        hasOutputArgs = sub.hasOutputArgs;
         withClauseMode = sub.withClauseMode;
         pyWeak = nb::steal(PyWeakref_NewRef(obj.ptr(), nullptr));
         if (!pyWeak.is_valid())
@@ -107,6 +106,14 @@ public:
         if (pyObj.is_valid() && nb::hasattr(pyObj, "allowClockingArgument"))
             return nb::cast<bool>(pyObj.attr("allowClockingArgument")(argIndex));
         return SimpleSystemSubroutine::allowClockingArgument(argIndex);
+    }
+
+    bool hasOutputArgs(const Args& args) const override {
+        nb::gil_scoped_acquire acquire;
+        nb::object pyObj = getObj();
+        if (pyObj.is_valid() && nb::hasattr(pyObj, "hasOutputArgs"))
+            return nb::cast<bool>(pyObj.attr("hasOutputArgs")(args));
+        return SimpleSystemSubroutine::hasOutputArgs(args);
     }
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
@@ -440,6 +447,8 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
             NB_OVERRIDE(allowClockingArgument, argIndex);
         }
 
+        bool hasOutputArgs(const Args& args) const override { NB_OVERRIDE(hasOutputArgs, args); }
+
         const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                        const ExpressionSyntax& syntax,
                                        const Args& previousArgs) const override {
@@ -474,10 +483,10 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .def_rw("name", &SystemSubroutine::name)
         .def_rw("kind", &SystemSubroutine::kind)
         .def_rw("knownNameId", &SystemSubroutine::knownNameId)
-        .def_rw("hasOutputArgs", &SystemSubroutine::hasOutputArgs)
         .def_rw("withClauseMode", &SystemSubroutine::withClauseMode)
         .def("allowEmptyArgument", &SystemSubroutine::allowEmptyArgument, "argIndex"_a)
         .def("allowClockingArgument", &SystemSubroutine::allowClockingArgument, "argIndex"_a)
+        .def("hasOutputArgs", &SystemSubroutine::hasOutputArgs, "args"_a)
         .def("bindArgument", &SystemSubroutine::bindArgument, byrefint, "argIndex"_a, "context"_a,
              "syntax"_a, "previousArgs"_a)
         .def("checkArguments", &SystemSubroutine::checkArguments, byrefint, "context"_a, "args"_a,

@@ -288,9 +288,9 @@ public:
 
 class StringOutputTask : public SystemTaskBase {
 public:
-    explicit StringOutputTask(KnownSystemName knownNameId) : SystemTaskBase(knownNameId) {
-        hasOutputArgs = true;
-    }
+    explicit StringOutputTask(KnownSystemName knownNameId) : SystemTaskBase(knownNameId) {}
+
+    bool hasOutputArgs(const Args&) const final { return true; }
 
     bool allowEmptyArgument(size_t index) const final { return index != 0; }
 
@@ -322,9 +322,9 @@ public:
 
 class StringFormatTask : public SystemTaskBase {
 public:
-    explicit StringFormatTask(KnownSystemName knownNameId) : SystemTaskBase(knownNameId) {
-        hasOutputArgs = true;
-    }
+    explicit StringFormatTask(KnownSystemName knownNameId) : SystemTaskBase(knownNameId) {}
+
+    bool hasOutputArgs(const Args&) const final { return true; }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -357,9 +357,9 @@ public:
 class ReadWriteMemTask : public SystemTaskBase {
 public:
     ReadWriteMemTask(KnownSystemName knownNameId, bool isInput) :
-        SystemTaskBase(knownNameId), isInput(isInput) {
-        hasOutputArgs = isInput;
-    }
+        SystemTaskBase(knownNameId), isInput(isInput) {}
+
+    bool hasOutputArgs(const Args&) const final { return isInput; }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -560,9 +560,9 @@ public:
 
 class CastTask : public SystemTaskBase {
 public:
-    explicit CastTask(KnownSystemName knownNameId) : SystemTaskBase(knownNameId) {
-        hasOutputArgs = true;
-    }
+    explicit CastTask(KnownSystemName knownNameId) : SystemTaskBase(knownNameId) {}
+
+    bool hasOutputArgs(const Args&) const final { return true; }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -687,9 +687,9 @@ public:
     StochasticTask(KnownSystemName knownNameId, SubroutineKind subroutineKind, size_t inputArgs,
                    size_t outputArgs) :
         SystemSubroutine(knownNameId, subroutineKind), inputArgs(inputArgs),
-        outputArgs(outputArgs) {
-        hasOutputArgs = outputArgs > 0;
-    }
+        outputArgs(outputArgs) {}
+
+    bool hasOutputArgs(const Args&) const final { return outputArgs > 0; }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -893,9 +893,9 @@ public:
 
 class SReadMemTask : public SystemTaskBase {
 public:
-    SReadMemTask(KnownSystemName knownNameId) : SystemTaskBase(knownNameId) {
-        hasOutputArgs = true;
-    }
+    SReadMemTask(KnownSystemName knownNameId) : SystemTaskBase(knownNameId) {}
+
+    bool hasOutputArgs(const Args&) const final { return true; }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -930,7 +930,9 @@ public:
 
 class DepositTask : public SystemTaskBase {
 public:
-    DepositTask() : SystemTaskBase(KnownSystemName::Deposit) { hasOutputArgs = true; }
+    DepositTask() : SystemTaskBase(KnownSystemName::Deposit) {}
+
+    bool hasOutputArgs(const Args&) const final { return true; }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
