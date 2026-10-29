@@ -41,9 +41,6 @@ public:
     /// The KnownSystemName enumeration value for this subroutine, if this is a built-in.
     KnownSystemName knownNameId = KnownSystemName::Unknown;
 
-    /// True if the subroutine has output (or ref / inout) args, and false otherwise.
-    bool hasOutputArgs = false;
-
     /// True if this subroutine halts execution and therefore never returns
     /// to the caller.
     bool neverReturns = false;
@@ -78,6 +75,10 @@ public:
     /// @returns true if the given argument is passed by reference,
     /// and false otherwise.
     virtual bool isArgByRef(size_t) const { return false; }
+
+    /// @returns true if a call with the given arguments passes output (or ref / inout)
+    /// args, and false otherwise.
+    virtual bool hasOutputArgs(const Args&) const { return false; }
 
     /// Allows the subroutine to perform custom argument binding for the given
     /// argument index.

@@ -38,6 +38,8 @@ public:
 
     ~UserDefinedSubroutine() override;
 
+    bool hasOutputArgs(const Args&) const final;
+
     const ast::Expression& bindArgument(size_t argIndex, const ast::ASTContext& context,
                                         const syntax::ExpressionSyntax& syntax,
                                         const Args& previousArgs) const final;

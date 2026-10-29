@@ -77,9 +77,9 @@ private:
 class ValuePlusArgsFunction : public SystemSubroutine {
 public:
     ValuePlusArgsFunction() :
-        SystemSubroutine(KnownSystemName::ValuePlusArgs, SubroutineKind::Function) {
-        hasOutputArgs = true;
-    }
+        SystemSubroutine(KnownSystemName::ValuePlusArgs, SubroutineKind::Function) {}
+
+    bool hasOutputArgs(const Args&) const final { return true; }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
