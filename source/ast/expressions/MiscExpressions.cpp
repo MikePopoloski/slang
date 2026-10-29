@@ -490,9 +490,16 @@ bool NamedValueExpression::checkConstant(EvalContext& context) const {
         // of the constant function. If the two locations are not in the same compilation
         // unit, assume that it's ok. Also if the reference is via a package import
         // that's fine too.
+        auto scope = symbol.getParentScope();
+        if (context.getStackDepth() == 1 &&
+            (!scope || scope->asSymbol().kind != SymbolKind::Package)) {
+            // The outcome depends on where the outermost call was made, so its
+            // result can't be reused at other call sites (see CallExpression::evalImpl).
+            context.noteCallSiteDependence();
+        }
+
         auto compare = symbol.isDeclaredBefore(frame.lookupLocation);
         if (!compare.value_or(true)) {
-            auto scope = symbol.getParentScope();
             if (!scope || scope->asSymbol().kind != SymbolKind::Package ||
                 scope == frame.lookupLocation.getScope()) {
 

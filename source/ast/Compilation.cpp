@@ -9,6 +9,7 @@
 
 #include "ElabVisitors.h"
 #include "builtins/Builtins.h"
+#include <bit>
 #include <fmt/format.h>
 #include <mutex>
 
@@ -1750,6 +1751,94 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
         numErrors++;
 
     return result;
+}
+
+// Value identity for memoization keys: unlike operator==, integers must also
+// agree on width and signedness, and reals on their exact bit patterns.
+static bool identicalValues(const ConstantValue& lhs, const ConstantValue& rhs) {
+    auto& lv = lhs.getVariant();
+    auto& rv = rhs.getVariant();
+    if (lv.index() != rv.index())
+        return false;
+
+    auto identicalRange = [](auto&& l, auto&& r) {
+        return std::ranges::equal(l, r, [](const ConstantValue& a, const ConstantValue& b) {
+            return identicalValues(a, b);
+        });
+    };
+
+    if (lhs.isInteger()) {
+        auto& l = lhs.integer();
+        auto& r = rhs.integer();
+        return l.getBitWidth() == r.getBitWidth() && l.isSigned() == r.isSigned() &&
+               l.hasUnknown() == r.hasUnknown() && exactlyEqual(l, r);
+    }
+    if (lhs.isReal())
+        return std::bit_cast<uint64_t>(double(lhs.real())) ==
+               std::bit_cast<uint64_t>(double(rhs.real()));
+    if (lhs.isShortReal())
+        return std::bit_cast<uint32_t>(float(lhs.shortReal())) ==
+               std::bit_cast<uint32_t>(float(rhs.shortReal()));
+    if (lhs.isUnpacked())
+        return identicalRange(lhs.elements(), rhs.elements());
+    if (lhs.isString())
+        return lhs.str() == rhs.str();
+    if (lhs.isMap()) {
+        auto& l = *lhs.map();
+        auto& r = *rhs.map();
+        return l.size() == r.size() && identicalValues(l.defaultValue, r.defaultValue) &&
+               std::ranges::equal(l, r, [](auto& a, auto& b) {
+                   return identicalValues(a.first, b.first) && identicalValues(a.second, b.second);
+               });
+    }
+    if (lhs.isQueue()) {
+        auto& l = *lhs.queue();
+        auto& r = *rhs.queue();
+        return l.maxBound == r.maxBound && identicalRange(l, r);
+    }
+    if (lhs.isUnion()) {
+        auto& l = *lhs.unionVal();
+        auto& r = *rhs.unionVal();
+        return l.activeMember == r.activeMember && identicalValues(l.value, r.value);
+    }
+
+    // Bad, null and unbounded values carry no payload.
+    return true;
+}
+
+bool Compilation::findConstCallResult(const SubroutineSymbol& subroutine, uint8_t evalFlags,
+                                      uint64_t astFlags, std::span<const ConstantValue> args,
+                                      size_t argsHash, ConstantValue& result,
+                                      uint32_t& steps) const {
+    std::unique_lock<std::mutex> lock(constCallMutex);
+    auto it = constCallMap.find(argsHash);
+    if (it == constCallMap.end())
+        return false;
+
+    for (auto entry : it->second) {
+        if (entry->subroutine == &subroutine && entry->evalFlags == evalFlags &&
+            entry->astFlags == astFlags && std::ranges::equal(entry->args, args, identicalValues)) {
+            result = entry->result;
+            steps = entry->steps;
+            return true;
+        }
+    }
+    return false;
+}
+
+void Compilation::addConstCallResult(const SubroutineSymbol& subroutine, uint8_t evalFlags,
+                                     uint64_t astFlags, std::span<const ConstantValue> args,
+                                     size_t argsHash, const ConstantValue& result, uint32_t steps) {
+    // Bound the memory spent on the memo; the limit only costs speed, never results.
+    static constexpr size_t MaxEntries = 1 << 16;
+
+    std::unique_lock<std::mutex> lock(constCallMutex);
+    if (constCallEntries.size() >= MaxEntries)
+        return;
+
+    auto& entry = constCallEntries.emplace_back(ConstCallEntry{
+        &subroutine, evalFlags, astFlags, {args.begin(), args.end()}, result, steps});
+    constCallMap[argsHash].push_back(&entry);
 }
 
 AssertionInstanceDetails* Compilation::allocAssertionDetails() {
