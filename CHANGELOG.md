@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Attributes are now allowed on generate regions; the LRM grammar does not permit them but all other tools accept them
 * `$bits` is no longer allowed on `real`, `shortreal`, and `realtime` values or on unpacked unions, since they are not bitstream types
 * The error for changing the visibility of an inherited virtual method is now downgradeable via [-Wvirtual-visibility-mismatch](https://sv-lang.com/warning-ref.html#virtual-visibility-mismatch)
+* The error when using global clock tasks like `$global_clock` and `$past_gclk` without a global clocking block in scope is now suppressible [-Wno-missing-global-clocking](https://sv-lang.com/warning-ref.html#missing-global-clocking) (thanks to @Timmmm)
 
 ### Notable Breaking Changes
 

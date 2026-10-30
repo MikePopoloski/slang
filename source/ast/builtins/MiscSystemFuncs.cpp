@@ -276,8 +276,7 @@ public:
 
         if (!comp.getGlobalClockingAndNoteUse(*context.scope)) {
             if (!context.scope->isUninstantiated())
-                context.addDiag(diag::NoGlobalClocking, range);
-            return comp.getErrorType();
+                context.addDiag(diag::MissingGlobalClocking, range);
         }
 
         return comp.getType(SyntaxKind::EventType);

@@ -2211,6 +2211,18 @@ class Derived extends Base;
 endclass
 ```
 
+-Wmissing-global-clocking
+A global clocking block must be visible from the scope of any task that uses it,
+for example `$global_clock` or `$past_gclk`. However some tools automatically
+provide this clock in a way that is invisible to Slang, e.g. Jasper via
+`elaborate -automatic_global_clock`. This is a warning with default error severity
+so you can suppress it in those cases.
+```
+module m(input logic a, b);
+  assert (@($global_clock) a != b);
+endmodule
+```
+
 -Wredefinition
 The LRM requires every identifier in a scope to have a unique definition.
 Some tools issue only a warning when a name is declared more than once in the
