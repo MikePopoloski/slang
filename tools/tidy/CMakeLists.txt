@@ -42,7 +42,8 @@ add_library(
   src/style/UnionName.cpp
   src/style/TypedefName.cpp
   src/synthesis/StructFieldsInSameProcess.cpp
-  src/assertion/ConcurrentAssertHasFailAction.cpp)
+  src/assertion/ConcurrentAssertHasFailAction.cpp
+  src/constraint/ConditionalOperatorPrecedence.cpp)
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include)
 target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang fmt::fmt)

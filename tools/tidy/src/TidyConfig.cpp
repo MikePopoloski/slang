@@ -80,6 +80,10 @@ TidyConfig::TidyConfig() {
     auto assertionChecks = std::unordered_map<std::string, CheckOptions>();
     assertionChecks.emplace("ConcurrentAssertHasFailAction", CheckOptions());
     checkKinds.insert({slang::TidyKind::Assertion, assertionChecks});
+
+    auto constraintChecks = std::unordered_map<std::string, CheckOptions>();
+    constraintChecks.emplace("ConditionalOperatorPrecedence", CheckOptions());
+    checkKinds.insert({slang::TidyKind::Constraint, constraintChecks});
 }
 
 void TidyConfig::addSkipFile(const std::string& path) {
