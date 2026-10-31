@@ -41,6 +41,7 @@ endmodule
     i = compilation.getRoot().lookupName("top.m1.i")
 
     analysisManager = AnalysisManager()
+    compilation.freeze()
     analysisManager.analyze(compilation)
 
     assert i is not None
@@ -191,7 +192,9 @@ endmodule
     assert proc_block is not None
 
     am = AnalysisManager()
+    compilation.freeze()
     am.analyze(compilation)
+    compilation.unfreeze()
 
     arr = root.lookupName("m.arr")
     drivers = am.getDrivers(arr)
@@ -264,6 +267,7 @@ endmodule
     c = root.lookupName("m.c")
 
     am = AnalysisManager()
+    compilation.freeze()
     am.analyze(compilation)
 
     drivers = am.getDrivers(c)
@@ -295,7 +299,9 @@ endmodule
     root = compilation.getRoot()
 
     am = AnalysisManager()
+    compilation.freeze()
     am.analyze(compilation)
+    compilation.unfreeze()
 
     data = root.lookupName("m.data")
     data_drivers = am.getDrivers(data)
@@ -458,6 +464,7 @@ def _analyze(code):
     """Compile *code* and return AnalyzedProcedure for module m."""
     compilation, proc_block = _get_proc_block(code)
     am = AnalysisManager()
+    compilation.freeze()
     am.analyze(compilation)
     scope = am.getAnalyzedScope(proc_block.parentScope)
     if scope and scope.procedures:
@@ -612,6 +619,7 @@ endmodule
     def run_analysis(comp, procs):
         am = AnalysisManager()
         am.addProcListener(lambda proc: procs.append(proc))
+        comp.freeze()
         am.analyze(comp)
 
     run_analysis(compilation, procedures)
@@ -648,6 +656,7 @@ endmodule
             self.procs.append(proc)
 
     owner = ListenerOwner(AnalysisManager())
+    compilation.freeze()
     owner.manager.analyze(compilation)
     assert len(owner.procs) == 1
 

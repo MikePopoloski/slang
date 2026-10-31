@@ -91,7 +91,12 @@ AnalysisManager am;
 am.addListener([](const AnalyzedProcedure& proc) {
     // called for each analyzed procedural block
 });
+
+// The compilation must be elaborated and frozen before it can be analyzed.
+comp.getAllDiagnostics();
+comp.freeze();
 am.analyze(comp);
+comp.unfreeze();
 @endcode
 
 @section diagnostics Diagnostics
@@ -199,11 +204,15 @@ a compiled design, add an `AnalysisManager`.
 
 using namespace slang::analysis;
 
-// Build and finalize the compilation first (see above).
-comp.getRoot(); // ensures elaboration is complete
+// Build the compilation first (see above). It must be fully elaborated, which
+// getAllDiagnostics() ensures, and then frozen for the duration of the analysis.
+comp.getAllDiagnostics();
+comp.freeze();
 
 AnalysisManager am;
 am.analyze(comp);
+
+comp.unfreeze();
 
 Diagnostics analysisDiags = am.getDiagnostics();
 for (auto& diag : analysisDiags)

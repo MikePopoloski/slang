@@ -139,8 +139,8 @@ public:
 
     /// Analyzes the given compilation and returns a representation of the design.
     ///
-    /// @note The provided compilation must be finalized and frozen
-    ///       before it can be analyzed.
+    /// @note The provided compilation must be fully elaborated (for example by
+    ///       calling `getAllDiagnostics` on it) and frozen before it can be analyzed.
     void analyze(const ast::Compilation& compilation);
 
     /// Returns all of the known drivers for the given symbol.
