@@ -492,8 +492,10 @@ Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
     auto result = compilation.emplace<WaitOrderStatement>(events.copy(compilation), ifTrue, ifFalse,
                                                           syntax.sourceRange());
 
-    if (!context.requireTimingAllowed(result->sourceRange))
+    if ((ifTrue && ifTrue->bad()) || (ifFalse && ifFalse->bad()) ||
+        !context.requireTimingAllowed(result->sourceRange)) {
         return badStmt(compilation, result);
+    }
 
     return *result;
 }
