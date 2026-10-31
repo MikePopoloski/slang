@@ -458,12 +458,17 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
 
     const bool allowDupInitialDrivers = context.manager->hasFlag(
         AnalysisFlags::AllowDupInitialDrivers);
+    const bool allowMultiDrivenDynamicallySizedArrays = context.manager->hasFlag(
+        AnalysisFlags::AllowMultiDrivenDynamicallySizedArrays);
 
     auto shouldIgnore = [&](const ValueDriver& vd) {
         // We ignore drivers from subroutines and from initializers.
-        // We also ignore initial blocks if the user has set a flag.
+        // We also ignore initial blocks and drivers of dynamically sized
+        // arrays if the user has set the corresponding flag.
         return vd.source == DriverSource::Subroutine || vd.flags.has(DriverFlags::Initializer) ||
-               (vd.source == DriverSource::Initial && allowDupInitialDrivers);
+               (vd.source == DriverSource::Initial && allowDupInitialDrivers) ||
+               (allowMultiDrivenDynamicallySizedArrays &&
+                vd.path.lsp->type->isDynamicallySizedArray());
     };
 
     auto end = driverMap.end();

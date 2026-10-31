@@ -495,6 +495,66 @@ endmodule
     CHECK_DIAGS_EMPTY;
 }
 
+TEST_CASE("Multi-driven dynamically sized array option to allow") {
+    auto& code = R"(
+module m;
+    int byName[string];
+    int sameKey[string];
+    int dyn[];
+    int q[$];
+    int whole[$];
+    int idx;
+    struct { int tag; int byName[string]; } bag;
+    int fixed[2];
+
+    always_comb begin
+        byName["out"] = 1;
+        sameKey["out"] = 1;
+        dyn[1] = 1;
+        q[idx] = 1;
+        whole = {};
+        bag.byName["out"] = 1;
+        bag.tag = 1;
+        fixed[1] = 1;
+    end
+
+    initial begin
+        byName["in"] = 1;
+        sameKey["out"] = 1;
+        dyn[2] = 1;
+        q[0] = 1;
+        whole[0] = 1;
+        bag.byName["in"] = 1;
+        bag.tag = 1;
+        fixed[1] = 1;
+    end
+endmodule
+)";
+
+    {
+        Compilation compilation;
+        AnalysisManager analysisManager;
+
+        auto diags = analyze(code, compilation, analysisManager);
+        REQUIRE(diags.size() == 8);
+        for (auto& diag : diags)
+            CHECK(diag.code == diag::MultipleAlwaysAssigns);
+    }
+
+    // Only the elements of dynamically sized arrays are let through;
+    // bag.tag and fixed[1] are still driven twice.
+    AnalysisOptions options;
+    options.flags |= AnalysisFlags::AllowMultiDrivenDynamicallySizedArrays;
+
+    Compilation compilation;
+    AnalysisManager analysisManager(options);
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
+}
+
 TEST_CASE("hierarchical driver errors") {
     auto& code = R"(
 interface I;

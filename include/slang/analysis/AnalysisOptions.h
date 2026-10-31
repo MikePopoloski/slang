@@ -68,8 +68,15 @@ enum class SLANG_EXPORT AnalysisFlags {
     /// variable for any partial select -- i.e. the sensitivity is derived from
     /// identifiers only, not from LSPs.
     ContAssignUsesLSPs = 1 << 8,
+
+    /// Signals driven by an always_comb or always_ff are normally not allowed to
+    /// be driven by any other process. The elements of dynamic arrays, associative
+    /// arrays, and queues have no fixed bit range to tell them apart, so a write to
+    /// any one of them counts as a write to the whole array. This flag lifts the
+    /// restriction for such arrays.
+    AllowMultiDrivenDynamicallySizedArrays = 1 << 9,
 };
-SLANG_BITMASK(AnalysisFlags, ContAssignUsesLSPs)
+SLANG_BITMASK(AnalysisFlags, AllowMultiDrivenDynamicallySizedArrays)
 
 /// Contains various options that can control analysis behavior.
 struct SLANG_EXPORT AnalysisOptions {
