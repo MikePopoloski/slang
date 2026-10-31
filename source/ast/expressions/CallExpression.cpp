@@ -532,7 +532,19 @@ Expression& CallExpression::createSystemCall(
             argContext.randomizeDetails = &randomizeDetails;
             if (firstArg) {
                 randomizeDetails.classType = &firstArg->type->getCanonicalType().as<ClassType>();
-                randomizeDetails.thisVar = firstArg->getSymbolReference();
+
+                // If randomizing some object other than 'this', create a variable
+                // to refer to it so that the handle expression itself (which may
+                // have side effects) is only evaluated once.
+                if (!firstArg->isThisHandle()) {
+                    auto tv = compilation.emplace<VariableSymbol>("this",
+                                                                  firstArg->sourceRange.start(),
+                                                                  VariableLifetime::Automatic);
+                    tv->setType(*firstArg->type);
+                    tv->flags |= VariableFlags::Const | VariableFlags::CompilerGenerated;
+                    tv->setParent(*context.scope);
+                    randomizeDetails.thisVar = tv;
+                }
             }
             else if (randomizeScope && randomizeScope->asSymbol().kind == SymbolKind::ClassType) {
                 randomizeDetails.classType = randomizeScope;
@@ -548,6 +560,7 @@ Expression& CallExpression::createSystemCall(
                 }
 
                 RandomizeCallInfo randInfo;
+                randInfo.thisVar = randomizeDetails.thisVar;
                 if (withClause->args) {
                     if (!argContext.randomizeDetails || !argContext.randomizeDetails->classType) {
                         argContext.addDiag(diag::NameListWithScopeRandomize,
@@ -625,6 +638,12 @@ Expression& CallExpression::createSystemCall(
             }
         }
 
+        if (randomizeDetails.thisVar && !withClause) {
+            RandomizeCallInfo randInfo;
+            randInfo.thisVar = randomizeDetails.thisVar;
+            callInfo.extraInfo = randInfo;
+        }
+
         if (withClause) {
             // Finally bind the inline constraint block if we have one.
             SLANG_ASSERT(withClause->constraints);
@@ -641,6 +660,7 @@ Expression& CallExpression::createSystemCall(
 
             auto& randInfo = std::get<2>(callInfo.extraInfo);
             randomizeDetails.nameRestrictions = randInfo.constraintRestrictions;
+            randomizeDetails.inConstraintBlock = true;
             randInfo.inlineConstraints = &Constraint::bind(*withClause->constraints, argContext);
         }
     }
@@ -897,6 +917,8 @@ void CallExpression::serializeTo(ASTSerializer& serializer) const {
         }
         else if (callInfo.extraInfo.index() == 2) {
             auto& randInfo = std::get<2>(callInfo.extraInfo);
+            if (randInfo.thisVar)
+                serializer.write("thisVar", *randInfo.thisVar);
             if (randInfo.inlineConstraints)
                 serializer.write("inlineConstraints", *randInfo.inlineConstraints);
 

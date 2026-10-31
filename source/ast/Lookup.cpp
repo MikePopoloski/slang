@@ -1688,6 +1688,17 @@ bool Lookup::findTempVar(const Scope& scope, const TempVarSymbol& symbol, const 
     return lookupDownward(nameParts, name, context, LookupFlags::None, result);
 }
 
+static bool isInstanceMember(const Symbol& symbol) {
+    switch (symbol.kind) {
+        case SymbolKind::ClassProperty:
+            return symbol.as<ClassPropertySymbol>().lifetime != VariableLifetime::Static;
+        case SymbolKind::Subroutine:
+            return !symbol.as<SubroutineSymbol>().flags.has(MethodFlags::Static);
+        default:
+            return false;
+    }
+}
+
 bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& syntax,
                                   bitmask<LookupFlags> flags, LookupResult& result) {
     int colonParts = 0;
@@ -1710,6 +1721,13 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
             return classScope;
 
         return *context.scope;
+    };
+
+    // If we're randomizing some other object via a handle, a non-static property
+    // inherited from a common base class refers to a different instance than
+    // the same property accessed via the enclosing class.
+    auto isOtherInstanceMember = [&](const Symbol& symbol) {
+        return details.thisVar && isInstanceMember(symbol);
     };
 
     NameComponents name = *first;
@@ -1737,10 +1755,12 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
             // Warn if the same identifier is also declared as a value in an enclosing
             // scope. This is a common source of bugs in testbench code: the programmer
             // may expect 'y' to refer to a local variable, but inside a randomize 'with'
-            // block it resolves to the class member instead.
-            if (result.found && result.found->isValue()) {
+            // block it resolves to the class member instead. Arguments of the
+            // randomize call can only name class members so there's no ambiguity.
+            if (details.inConstraintBlock && result.found && result.found->isValue()) {
                 auto localSym = Lookup::unqualified(*context.scope, name.text);
-                if (localSym && localSym->isValue() && localSym != result.found) {
+                if (localSym && localSym->isValue() &&
+                    (localSym != result.found || isOtherInstanceMember(*localSym))) {
                     auto& diag = result.addDiag(*context.scope, diag::RandomizeConstraintShadow,
                                                 name.range);
                     diag << name.text << classScope.asSymbol().name << name.text << name.text;
@@ -1750,11 +1770,35 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
 
             break;
         case SyntaxKind::ThisHandle:
-            result.found = details.thisVar;
-            if (!result.found)
-                result.found = findThisHandle(*context.scope, flags, name.range, result);
+            if (details.thisVar) {
+                // 'this' refers to the object being randomized, and 'this.foo'
+                // is the same as looking up 'foo' directly in the class.
+                result.found = details.thisVar;
+                if (nameParts.empty())
+                    break;
 
-            if (result.found && nameParts.back().kind == SyntaxKind::SuperHandle) {
+                if (nameParts.back().kind != SyntaxKind::SuperHandle) {
+                    auto& part = nameParts.back();
+                    name = part.name;
+                    result.found = classScope.find(name.text);
+                    if (!result.found) {
+                        auto& diag = result.addDiag(*context.scope, diag::UnknownClassMember,
+                                                    part.dotLocation);
+                        diag << name.text << name.range << classScope.asSymbol().name;
+                        Lookup::addTypoCorrectionNote(diag, name.text, classScope);
+                        return false;
+                    }
+
+                    nameParts.pop_back();
+                    break;
+                }
+            }
+            else {
+                result.found = findThisHandle(*context.scope, flags, name.range, result);
+            }
+
+            if (result.found && !nameParts.empty() &&
+                nameParts.back().kind == SyntaxKind::SuperHandle) {
                 // Handle "this.super.whatever" the same as if the user had just
                 // written "super.whatever".
                 name = nameParts.back().name;
@@ -1792,6 +1836,9 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
     }
 
     unwrapResult(*context.scope, result);
+    if (details.thisVar && result.found && isInstanceMember(*result.found))
+        result.flags |= LookupResultFlags::RandomizeTargetMember;
+
     return true;
 }
 

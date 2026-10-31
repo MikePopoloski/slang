@@ -14,6 +14,7 @@
 namespace slang::ast {
 
 class FormalArgumentSymbol;
+class VariableSymbol;
 
 /// Represents a subroutine call.
 class SLANG_EXPORT CallExpression final : public Expression {
@@ -34,6 +35,12 @@ public:
 
         /// Extra constraint restrictions that apply, if any.
         std::span<const std::string_view> constraintRestrictions;
+
+        /// If randomizing an object via a handle (other than 'this'), a compiler-generated
+        /// variable that refers to that object. It is bound once to the value of the first
+        /// argument when the call is made, and non-static members of the object referenced
+        /// in the argument list and inline constraints are accessed through it.
+        const VariableSymbol* thisVar = nullptr;
     };
 
     /// Additional context that applies to system subroutine calls.

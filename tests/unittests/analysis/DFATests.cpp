@@ -1113,6 +1113,36 @@ endmodule
     CHECK(diags[9].code == diag::ReadWriteExpr);
 }
 
+TEST_CASE("DFA unsequenced expression with class members") {
+    auto& code = R"(
+class A;
+    rand int x;
+    A other;
+    A next[4];
+
+    function void f();
+        int i;
+        i = x++ + x;
+        i = x++ + this.x;
+        i = this.x++ + x;
+        i = x++ + other.x; // ok
+
+        // The handle expression is evaluated only once.
+        i = other.next[i++].randomize() with { x < 1; this.x > 0; };
+    endfunction
+endclass
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ReadWriteExpr);
+    CHECK(diags[1].code == diag::ReadWriteExpr);
+    CHECK(diags[2].code == diag::ReadWriteExpr);
+}
+
 TEST_CASE("DFA unsequenced expression corner cases") {
     auto& code = R"(
 module m;

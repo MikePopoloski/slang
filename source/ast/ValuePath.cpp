@@ -33,6 +33,13 @@ static bool isStaticProp(const Symbol& symbol) {
            symbol.as<ClassPropertySymbol>().lifetime == VariableLifetime::Static;
 }
 
+// A member access is the root of a path if it's an access of a static
+// class property or of a property of the current instance via 'this'
+// (which is equivalent to referencing the property directly by name).
+static bool isRootMemberAccess(const MemberAccessExpression& access) {
+    return isStaticProp(access.member) || access.getThisMemberReference();
+}
+
 using BitRange = std::pair<uint64_t, uint64_t>;
 
 static std::optional<BitRange> computeBounds(SmallVector<const Expression*>& path, size_t skip,
@@ -192,10 +199,11 @@ ValuePath::ValuePath(const Expression& initialExpr, EvalContext& evalContext) {
                 noteSelect(elem, elem.as<RangeSelectExpression>().isConstantSelect(evalContext));
                 break;
             case ExpressionKind::MemberAccess: {
-                // It's possible this is an access to a static class member,
-                // in which case this is actually the root of the path.
+                // It's possible this is an access to a static class member
+                // or a member of 'this', in which case this is actually the
+                // root of the path.
                 auto& mae = elem.as<MemberAccessExpression>();
-                if (isStaticProp(mae.member)) {
+                if (isRootMemberAccess(mae)) {
                     rootExpr = &elem;
                     if (!lsp)
                         lsp = &elem;
@@ -343,7 +351,7 @@ static const Expression& doRetarget(BumpAllocator& alloc, const Expression& expr
         }
         case ExpressionKind::MemberAccess: {
             auto& access = expr.as<MemberAccessExpression>();
-            if (isStaticProp(access.member)) {
+            if (isRootMemberAccess(access)) {
                 // This is actually the root, so replace it instead of descending deeper.
                 // We're at the root; replace it and we're done.
                 SLANG_ASSERT(checkTypeMatch(*expr.type));
@@ -660,7 +668,7 @@ void ValuePath::iterator::increment() {
             break;
         case ExpressionKind::MemberAccess: {
             auto& mae = expr->as<MemberAccessExpression>();
-            if (isStaticProp(mae.member))
+            if (isRootMemberAccess(mae))
                 expr = nullptr;
             else
                 expr = &mae.value();

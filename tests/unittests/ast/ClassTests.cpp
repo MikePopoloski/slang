@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/symbols/ClassSymbols.h"
@@ -3998,6 +3999,206 @@ endclass
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Randomize constraint shadow of inherited property -- GH #2027") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand bit x;
+    static bit s;
+endclass
+
+class B extends A;
+endclass
+
+class C extends A;
+    B b;
+
+    task t();
+        bit rc;
+        // x refers to b.x, but this.x also exists -- warn
+        rc = b.randomize() with { x == local::x; };
+
+        // Randomizing ourselves, or a static property -- no warning
+        rc = this.randomize() with { x == 1; };
+        rc = randomize() with { x == 1; };
+        rc = b.randomize() with { s == 1; };
+    endtask
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RandomizeConstraintShadow);
+}
+
+TEST_CASE("Randomize arguments can name inherited properties") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+    static int s;
+endclass
+
+class P #(type T);
+    rand T p;
+endclass
+
+class B extends A;
+    rand int y;
+    function void f();
+        void'(randomize(x, y, s));
+        void'(this.randomize(x));
+    endfunction
+endclass
+
+class G extends P #(int);
+    function void f(G g);
+        void'(randomize(p));
+        void'(g.randomize(p));
+    endfunction
+endclass
+
+class C extends A;
+    int z;
+    function void f(B b, C c);
+        void'(b.randomize(x, y, s));
+        void'(c.randomize(x, z));
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Randomize arguments must be simple names of target properties") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+endclass
+
+class B extends A;
+    rand int y;
+endclass
+
+class C extends A;
+    int z;
+    function void f(B b, C c, A a);
+        void'(b.randomize(local::x));
+        void'(c.randomize(local::z));
+        void'(b.randomize(this.x));
+        void'(b.randomize(z));
+        void'(a.randomize(z));
+        void'(b.randomize((x)));
+        void'(this.randomize((x)));
+        void'(this.randomize(local::x));
+        void'(this.randomize(this.x));
+        void'(randomize(super.x));
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 10);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::ExpectedClassPropertyName);
+}
+
+TEST_CASE("Randomize shadow warning doesn't apply to arguments") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+    rand int y;
+endclass
+
+class B;
+    int x;
+    function void f(A a);
+        int y;
+        void'(a.randomize(x, y));
+        void'(a.randomize(x) with { y < 1; });
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Only the 'y' in the constraint block should warn.
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RandomizeConstraintShadow);
+}
+
+TEST_CASE("Randomize 'with' members are accessed via the handle -- GH #2027") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+    static int s;
+    function int lim(); return 3; endfunction
+endclass
+
+class C;
+    A arr[2];
+    function void f();
+        int rc;
+        rc = arr[0].randomize() with { x < lim(); this.x > 0; s == 1; };
+        rc = arr[1].randomize() with { this.nope == 1; };
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownClassMember);
+
+    auto& C = compilation.getRoot().compilationUnits[0]->lookupName<ClassType>("C");
+    auto& f = C.find<SubroutineSymbol>("f");
+    auto& stmt = f.getBody().as<StatementList>().list[1]->as<ExpressionStatement>();
+    auto& call = stmt.expr.as<AssignmentExpression>()
+                     .right()
+                     .unwrapImplicitConversions()
+                     .as<CallExpression>();
+    CHECK(call.arguments()[0]->kind == ExpressionKind::ElementSelect);
+
+    auto& sysInfo = std::get<CallExpression::SystemCallInfo>(call.subroutine);
+    auto& randInfo = std::get<CallExpression::RandomizeCallInfo>(sysInfo.extraInfo);
+    REQUIRE(randInfo.thisVar);
+    CHECK(&randInfo.thisVar->getType() == call.arguments()[0]->type);
+
+    auto& constraints = randInfo.inlineConstraints->as<ConstraintList>().list;
+    REQUIRE(constraints.size() == 3);
+
+    auto getOperands = [&](size_t i) {
+        auto& binary = constraints[i]->as<ExpressionConstraint>().expr.as<BinaryExpression>();
+        return std::pair{&binary.left().unwrapImplicitConversions(),
+                         &binary.right().unwrapImplicitConversions()};
+    };
+
+    // x, this.x, and the lim() method are all accessed via the call's 'this'
+    // variable (which refers to arr[0]) rather than re-evaluating arr[0].
+    auto isThisVar = [&](const Expression* expr) {
+        return expr && expr->kind == ExpressionKind::NamedValue &&
+               &expr->as<NamedValueExpression>().symbol == randInfo.thisVar;
+    };
+
+    auto [x, lim] = getOperands(0);
+    CHECK(isThisVar(&x->as<MemberAccessExpression>().value()));
+    CHECK(isThisVar(lim->as<CallExpression>().thisClass()));
+    CHECK(isThisVar(&getOperands(1).first->as<MemberAccessExpression>().value()));
+
+    // Static members are referenced directly.
+    CHECK(getOperands(2).first->kind == ExpressionKind::NamedValue);
 }
 
 TEST_CASE("Missing extern pre_randomize doesn't crash") {

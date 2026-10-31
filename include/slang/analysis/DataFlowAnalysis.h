@@ -218,7 +218,9 @@ protected:
                         auto guard = clearLValFlag();
                         this->visit(mae.value());
                     }
-                    else {
+                    else if (!mae.getThisMemberReference()) {
+                        // Accessing a member of 'this' is the same as referencing it
+                        // directly by name and so is not a dynamic access.
                         auto& valType = mae.value().type->getCanonicalType();
                         hasDynamicMemberAccess |= valType.isObjectHandleType() || valType.isVoid();
                     }

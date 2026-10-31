@@ -113,9 +113,14 @@ enum class SLANG_EXPORT LookupResultFlags : uint8_t {
     FromForwardTypedef = 1 << 4,
 
     /// The lookup was resolved through an interface port connection.
-    IfacePort = 1 << 5
+    IfacePort = 1 << 5,
+
+    /// The found symbol is a non-static member of an object being randomized
+    /// via a class handle in an inline constraint block, and so should be
+    /// accessed through that handle.
+    RandomizeTargetMember = 1 << 6
 };
-SLANG_BITMASK(LookupResultFlags, IfacePort)
+SLANG_BITMASK(LookupResultFlags, RandomizeTargetMember)
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.

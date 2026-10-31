@@ -636,3 +636,52 @@ source:19:31: warning: comparison of 4-bit unsigned value < 16 is always true [-
             ~~~~~~~~~~~~~~~~~ ^ ~~
 )");
 }
+
+TEST_CASE("Self-compare of class members via different handles -- GH #2027") {
+    auto code = R"(
+class A;
+    rand bit x;
+endclass
+
+class B extends A;
+endclass
+
+class C extends A;
+    B b;
+
+    function void f();
+        bit rc;
+        rc = x == this.x;
+        rc = b.x == b.x;
+
+        // None of these warn.
+        rc = x == b.x;
+        rc = b.randomize() with { x == local::x; };
+        rc = b.randomize() with { x == local::this.x; };
+
+        rc = b.randomize() with { this.x == x; };
+        rc = b.randomize() with { local::x == local::this.x; };
+    endfunction
+endclass
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:14:16: warning: self-comparison always evaluates to true [-Wtautological-self-compare]
+        rc = x == this.x;
+             ~ ^~ ~~~~~~
+source:15:18: warning: self-comparison always evaluates to true [-Wtautological-self-compare]
+        rc = b.x == b.x;
+             ~~~ ^~ ~~~
+source:22:42: warning: self-comparison always evaluates to true [-Wtautological-self-compare]
+        rc = b.randomize() with { this.x == x; };
+                                  ~~~~~~ ^~ ~
+source:23:44: warning: self-comparison always evaluates to true [-Wtautological-self-compare]
+        rc = b.randomize() with { local::x == local::this.x; };
+                                  ~~~~~~~~ ^~ ~~~~~~~~~~~~~
+)");
+}

@@ -28,6 +28,7 @@ class SubroutineSymbol;
 class TempVarSymbol;
 class Type;
 class ValueSymbol;
+class VariableSymbol;
 enum class RandMode;
 
 /// Specifies flags that control expression and statement creation.
@@ -288,9 +289,10 @@ public:
         /// The scope of the class type itself, if randomizing a class.
         const Scope* classType = nullptr;
 
-        /// If randomizing a class via a dotted handle access, this is
-        /// the the class handle symbol.
-        const Symbol* thisVar = nullptr;
+        /// If randomizing a class via a dotted handle access, this is a variable
+        /// that refers to the object being randomized. Non-static members of the
+        /// class referenced in the constraint block are accessed through it.
+        const VariableSymbol* thisVar = nullptr;
 
         /// A list of names to which class-scoped lookups are restricted.
         /// If empty, the lookup is unrestricted and all names are first
@@ -300,6 +302,10 @@ public:
         /// A set of variables for a scope randomize call that should be
         /// treated as a rand variable.
         flat_hash_set<const Symbol*> scopeRandVars;
+
+        /// True when binding the inline constraint block, as opposed
+        /// to the arguments of the randomize call.
+        bool inConstraintBlock = false;
     };
 
     /// If this context is for creating an inline constraint block for a randomize

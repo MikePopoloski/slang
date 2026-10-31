@@ -16,6 +16,7 @@
 namespace slang::ast {
 
 class ASTSerializer;
+class ClassPropertySymbol;
 class EvalContext;
 class InstanceSymbolBase;
 class Type;
@@ -310,6 +311,15 @@ public:
     ///                    symbol reference or whether to consider only unpacked structs
     ///                    and arrays.
     const Symbol* getSymbolReference(bool allowPacked = true) const;
+
+    /// Returns true if this expression is a reference to the implicit 'this'
+    /// handle of a class method, constraint block, or property initializer.
+    bool isThisHandle() const;
+
+    /// If this expression references a non-static property of the current class
+    /// instance, either directly by name or via an explicit 'this' handle (which
+    /// are equivalent), returns that property. Otherwise returns nullptr.
+    const ClassPropertySymbol* getThisMemberReference() const;
 
     /// Visits all symbols referenced by this expression and all subexpressions.
     void visitSymbolReferences(function_ref<void(const Expression&, const Symbol&)> callback) const;

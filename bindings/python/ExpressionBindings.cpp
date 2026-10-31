@@ -35,6 +35,8 @@ void registerExpressions(nb::module_& m) {
              "type"_a)
         .def("getSymbolReference", &Expression::getSymbolReference, byrefint,
              "allowPacked"_a = true)
+        .def_prop_ro("isThisHandle", &Expression::isThisHandle)
+        .def("getThisMemberReference", &Expression::getThisMemberReference, byrefint)
         .def("isEquivalentTo", &Expression::isEquivalentTo, "other"_a)
         .def("visit", &pyASTVisit<Expression>, "f"_a = nb::none(), "lookup_table"_a = nb::none(),
              PyASTVisitor::doc)
@@ -114,7 +116,8 @@ void registerExpressions(nb::module_& m) {
     nb::class_<CallExpression::RandomizeCallInfo>(callExpr, "RandomizeCallInfo")
         .def_ro("inlineConstraints", &CallExpression::RandomizeCallInfo::inlineConstraints)
         .def_ro("constraintRestrictions",
-                &CallExpression::RandomizeCallInfo::constraintRestrictions);
+                &CallExpression::RandomizeCallInfo::constraintRestrictions)
+        .def_ro("thisVar", &CallExpression::RandomizeCallInfo::thisVar, byrefint);
 
     nb::class_<CallExpression::SystemCallInfo>(callExpr, "SystemCallInfo")
         .def_ro("subroutine", &CallExpression::SystemCallInfo::subroutine, byrefint)

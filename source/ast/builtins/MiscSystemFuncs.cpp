@@ -17,6 +17,7 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/syntax/AllSyntax.h"
 
 namespace slang::ast::builtins {
 
@@ -145,7 +146,7 @@ public:
         // This can only be called via a special lookup on a class handle or as a local
         // class member, so we know either the this expression gives us the class type
         // or we can look it up from our current scope.
-        const Scope* ct;
+        const ClassType* ct;
         if (thisExpr)
             ct = &thisExpr->type->getCanonicalType().as<ClassType>();
         else
@@ -155,13 +156,7 @@ public:
             return comp.getErrorType();
 
         for (auto arg : methodArgs) {
-            if (arg->kind != ExpressionKind::NamedValue) {
-                context.addDiag(diag::ExpectedClassPropertyName, arg->sourceRange);
-                return comp.getErrorType();
-            }
-
-            auto sym = arg->getSymbolReference();
-            if (!sym || sym->kind != SymbolKind::ClassProperty || sym->getParentScope() != ct) {
+            if (!isPropertyName(*arg, *ct)) {
                 context.addDiag(diag::ExpectedClassPropertyName, arg->sourceRange);
                 return comp.getErrorType();
             }
@@ -177,6 +172,23 @@ public:
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
         return nullptr;
+    }
+
+private:
+    // Checks whether the given argument is the name of a property of the object
+    // being randomized, which can be declared in its class or in any base class.
+    // The grammar only allows simple identifiers here; those are looked up in the
+    // target class first, so any matching property is a member of the target object.
+    static bool isPropertyName(const Expression& arg, const ClassType& ct) {
+        if (!arg.syntax || arg.syntax->kind != SyntaxKind::IdentifierName)
+            return false;
+
+        auto sym = arg.getSymbolReference();
+        if (!sym || sym->kind != SymbolKind::ClassProperty)
+            return false;
+
+        auto& parent = sym->getParentScope()->asSymbol().as<ClassType>();
+        return &parent == &ct || ct.isDerivedFrom(parent);
     }
 };
 

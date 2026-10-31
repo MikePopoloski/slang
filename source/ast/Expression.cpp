@@ -244,8 +244,14 @@ private:
 struct Expression::EquivalentToVisitor {
     template<typename T>
     bool visit(const T& lhs, const Expression& rhs) {
-        if (lhs.kind != rhs.kind || !lhs.type->isMatching(*rhs.type))
+        if (!lhs.type->isMatching(*rhs.type))
             return false;
+
+        if (lhs.kind != rhs.kind) {
+            // A property referenced by name is the same as one accessed via 'this'.
+            auto prop = lhs.getThisMemberReference();
+            return prop && prop == rhs.getThisMemberReference();
+        }
 
         return lhs.isEquivalentImpl(rhs.as<T>());
     }
@@ -667,6 +673,50 @@ const Symbol* Expression::getSymbolReference(bool allowPacked) const {
     }
 }
 
+bool Expression::isThisHandle() const {
+    if (kind != ExpressionKind::NamedValue)
+        return false;
+
+    auto& sym = as<NamedValueExpression>().symbol;
+    auto scope = sym.getParentScope();
+    if (sym.kind != SymbolKind::Variable || !scope)
+        return false;
+
+    auto& parent = scope->asSymbol();
+    switch (parent.kind) {
+        case SymbolKind::Subroutine:
+            return parent.as<SubroutineSymbol>().thisVar == &sym;
+        case SymbolKind::ConstraintBlock:
+            return parent.as<ConstraintBlockSymbol>().thisVar == &sym;
+        case SymbolKind::ClassType:
+            return parent.as<ClassType>().thisVar == &sym;
+        default:
+            return false;
+    }
+}
+
+const ClassPropertySymbol* Expression::getThisMemberReference() const {
+    const Symbol* sym;
+    if (kind == ExpressionKind::NamedValue) {
+        sym = &as<NamedValueExpression>().symbol;
+    }
+    else if (kind == ExpressionKind::MemberAccess) {
+        auto& access = as<MemberAccessExpression>();
+        if (!access.value().isThisHandle())
+            return nullptr;
+        sym = &access.member;
+    }
+    else {
+        return nullptr;
+    }
+
+    if (sym->kind != SymbolKind::ClassProperty)
+        return nullptr;
+
+    auto& prop = sym->as<ClassPropertySymbol>();
+    return prop.lifetime == VariableLifetime::Static ? nullptr : &prop;
+}
+
 void Expression::visitSymbolReferences(
     function_ref<void(const Expression&, const Symbol&)> callback) const {
 
@@ -1057,7 +1107,16 @@ Expression& Expression::bindName(Compilation& comp, const NameSyntax& syntax,
             LookupResult result;
             if (Lookup::withinClassRandomize(context, syntax, flags, result)) {
                 result.reportDiags(context);
-                return bindLookupResult(comp, result, invocation, withClause, context);
+
+                // Members of the object being randomized are accessed via its handle.
+                Expression* accessViaExpr = nullptr;
+                if (result.flags.has(LookupResultFlags::RandomizeTargetMember)) {
+                    accessViaExpr = comp.emplace<NamedValueExpression>(
+                        *context.randomizeDetails->thisVar, result.nameRange);
+                }
+
+                return bindLookupResult(comp, result, invocation, withClause, context,
+                                        accessViaExpr);
             }
             else if (result.hasError()) {
                 result.reportDiags(context);

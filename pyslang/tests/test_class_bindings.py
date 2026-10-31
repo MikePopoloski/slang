@@ -2,9 +2,13 @@
 # SPDX-License-Identifier: MIT
 
 from pyslang.ast import (
+    BinaryExpression,
+    CallExpression,
     Compilation,
+    Expression,
     MethodFlags,
     SymbolKind,
+    VisitAction,
 )
 from pyslang.syntax import SyntaxTree
 
@@ -222,3 +226,45 @@ def test_constructor_flags():
     ctor = _find_method(_find_class(comp), "new")
     assert ctor is not None
     assert ctor.flags & MethodFlags.Constructor
+
+
+def test_this_member_references_and_randomize_this_var():
+    comp = _compile("""
+    class Foo;
+        rand int x;
+        Foo other;
+        function void f();
+            int r = this.x + x;
+            r = other.randomize() with { x < 1; };
+        endfunction
+    endclass
+    """)
+
+    this_handles = []
+    sums = []
+    randomize_infos = []
+
+    def visit(node):
+        if isinstance(node, Expression) and node.isThisHandle:
+            this_handles.append(node)
+        if isinstance(node, BinaryExpression) and node.left.getThisMemberReference():
+            sums.append(node)
+        if isinstance(node, CallExpression) and node.isSystemCall:
+            randomize_infos.append(node.subroutine.extraInfo)
+        return VisitAction.Advance
+
+    _find_method(_find_class(comp), "f").visit(visit)
+
+    assert len(this_handles) == 1
+
+    assert len(sums) == 1
+    left, right = sums[0].left, sums[0].right
+    assert left.kind != right.kind
+    assert left.isEquivalentTo(right)
+    assert left.getThisMemberReference().name == "x"
+    assert left.getThisMemberReference() == right.getThisMemberReference()
+
+    assert len(randomize_infos) == 1
+    this_var = randomize_infos[0].thisVar
+    assert this_var.name == "this"
+    assert this_var.type.name == "Foo"
