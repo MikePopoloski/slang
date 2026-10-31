@@ -84,6 +84,10 @@ TidyConfig::TidyConfig() {
     auto constraintChecks = std::unordered_map<std::string, CheckOptions>();
     constraintChecks.emplace("ConditionalOperatorPrecedence", CheckOptions());
     checkKinds.insert({slang::TidyKind::Constraint, constraintChecks});
+
+    auto uvmChecks = std::unordered_map<std::string, CheckOptions>();
+    uvmChecks.emplace("UserClassDerivesFromUVMBase", CheckOptions{CheckStatus::DISABLED});
+    checkKinds.insert({slang::TidyKind::UVM, uvmChecks});
 }
 
 void TidyConfig::addSkipFile(const std::string& path) {
