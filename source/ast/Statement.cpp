@@ -359,13 +359,15 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
 
 const Statement& Statement::bindItems(const SyntaxList<SyntaxNode>& items,
                                       const ASTContext& context, StatementContext& stmtCtx) {
+    bool anyBad = false;
     SmallVector<const Statement*> buffer;
     bindScopeInitializers(context, buffer);
 
     for (auto item : items) {
         if (StatementSyntax::isKind(item->kind)) {
-            buffer.push_back(&bind(item->as<StatementSyntax>(), context, stmtCtx,
-                                   /* inList */ true));
+            auto& stmt = bind(item->as<StatementSyntax>(), context, stmtCtx, /* inList */ true);
+            buffer.push_back(&stmt);
+            anyBad |= stmt.bad();
         }
     }
 
@@ -379,7 +381,11 @@ const Statement& Statement::bindItems(const SyntaxList<SyntaxNode>& items,
         range = {buffer.front()->sourceRange.start(), buffer.back()->sourceRange.end()};
 
     auto& comp = context.getCompilation();
-    return *comp.emplace<StatementList>(buffer.copy(comp), range);
+    auto result = comp.emplace<StatementList>(buffer.copy(comp), range);
+    if (anyBad)
+        return badStmt(comp, result);
+
+    return *result;
 }
 
 void Statement::bindScopeInitializers(const ASTContext& context,
@@ -699,10 +705,14 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
                                       bool addInitializers) {
     ASTContext context = sourceCtx;
     auto blockKind = SemanticFacts::getStatementBlockKind(syntax);
+
+    // If the block isn't allowed here we still bind its items below, so that any
+    // errors inside of it are reported and its nested blocks get consumed.
+    bool anyBad = false;
     if (context.flags.has(ASTFlags::Function | ASTFlags::Final)) {
         if (blockKind == StatementBlockKind::JoinAll || blockKind == StatementBlockKind::JoinAny) {
             context.addDiag(diag::TimingInFuncNotAllowed, syntax.end.range());
-            return badStmt(comp, nullptr);
+            anyBad = true;
         }
         else if (blockKind == StatementBlockKind::JoinNone) {
             // The "function body" flag does not propagate through fork-join_none
@@ -715,7 +725,7 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
         SLANG_ASSERT(proc);
         context.addDiag(diag::ForkJoinAlwaysComb, syntax.begin.range())
             << SemanticFacts::getProcedureKindStr(proc->procedureKind);
-        return badStmt(comp, nullptr);
+        anyBad = true;
     }
 
     // When entering a fork-join we clear any active loop flags, since the new
@@ -732,7 +742,6 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
         stmtCtx.flags &= ~StatementFlags::InLoop;
     }
 
-    bool anyBad = false;
     SmallVector<const Statement*> buffer;
 
     if (addInitializers)

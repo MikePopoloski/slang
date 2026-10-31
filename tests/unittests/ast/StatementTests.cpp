@@ -2716,3 +2716,98 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("Disallowed fork-join with nested blocks in multi-statement function") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int x;
+    function void f1;
+        x = 1;
+        fork
+            begin
+                int l;
+            end
+        join
+    endfunction
+
+    function void f2;
+        fork
+            for (int i = 0; i < 2; i++) x = i;
+        join_any
+        x = 1;
+    endfunction
+
+    function void f3;
+        x = 1;
+        fork
+            begin
+                int l;
+                foo = 1;
+                #1 l = 2;
+            end
+        join
+    endfunction
+
+    always_comb begin
+        x = 1;
+        fork
+            begin
+                int l;
+                bar = 1;
+            end
+        join
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[1].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
+    CHECK(diags[3].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[4].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[5].code == diag::ForkJoinAlwaysComb);
+    CHECK(diags[6].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Bad statements leaving nested blocks unbound") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int x;
+    event e;
+    logic clk;
+
+    task t1;
+        x = 1;
+        wait_order(e, foo) begin int l; end
+    endtask
+
+    task t2;
+        x = 1;
+        assert property (@(posedge clk) x) begin int l; end
+    endtask
+
+    task t3;
+        wait_order(e) wait_order(e, bar) begin int l; end
+    endtask
+
+    task t4;
+        wait_order(e) x = 1; else wait_order(e, baz) begin int l; end
+    endtask
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::ConcurrentAssertNotInProc);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
+    CHECK(diags[3].code == diag::UndeclaredIdentifier);
+}
