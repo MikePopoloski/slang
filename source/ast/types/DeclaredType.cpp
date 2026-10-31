@@ -33,6 +33,7 @@ using namespace parsing;
 using namespace syntax;
 
 static const Expression* NoInitializer = reinterpret_cast<const Expression*>(UINTPTR_MAX);
+static const Expression* BindingInitializer = reinterpret_cast<const Expression*>(UINTPTR_MAX - 1);
 
 DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags) :
     parent(parent), flags(flags), overrideIndex(0), evaluating(false), hasLink(false) {
@@ -442,9 +443,14 @@ void DeclaredType::resolveAt(const ASTContext& context) const {
             return;
     }
 
-    initializer = NoInitializer;
-    if (!initializerSyntax)
+    if (!initializerSyntax) {
+        initializer = NoInitializer;
         return;
+    }
+
+    // Mark the initializer as being bound, so that a symbol whose value is
+    // computed from it can tell a cycle through it from a missing initializer.
+    initializer = BindingInitializer;
 
     // Enums are special in that their initializers target the base type of the enum
     // instead of the actual enum type (which doesn't allow implicit conversions from
@@ -477,7 +483,14 @@ const Expression* DeclaredType::getInitializer() const {
     if (!initializer)
         resolveAt(getASTContext<true>());
 
-    return initializer == NoInitializer ? nullptr : initializer;
+    if (initializer == NoInitializer || initializer == BindingInitializer)
+        return nullptr;
+
+    return initializer;
+}
+
+bool DeclaredType::isBindingInitializer() const {
+    return initializer == BindingInitializer;
 }
 
 void DeclaredType::setFromDeclarator(const DeclaratorSyntax& decl) {
