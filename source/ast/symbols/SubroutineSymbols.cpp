@@ -69,37 +69,34 @@ std::pair<SubroutineSymbol*, bool> SubroutineSymbol::fromSyntax(
     bool outOfBlock) {
 
     // If this subroutine has a scoped name, it should be an out of block declaration.
-    // We shouldn't create a symbol now, since we need the class prototype to hook
-    // us in to the correct scope. Register this syntax with the compilation so that
-    // it can later be found by the prototype.
     auto proto = syntax.prototype;
     if (!outOfBlock && proto->name->kind == SyntaxKind::ScopedName) {
-        // Remember the location in the parent scope where we *would* have inserted this
-        // subroutine, for later use during lookup.
-        uint32_t index = 1;
-        if (auto last = parent.getLastMember())
-            index = (uint32_t)last->getIndex() + 1;
-
-        bool isExternIfaceMethod = false;
         auto& scopedName = proto->name->as<ScopedNameSyntax>();
         if (scopedName.separator.kind == TokenKind::DoubleColon) {
-            // This is an out-of-block class method implementation.
-            compilation.addOutOfBlockDecl(parent, scopedName, syntax, SymbolIndex(index));
-        }
-        else {
-            // Otherwise this is an interface method implementation.
-            // We should create the method like normal but not add it to
-            // the parent name map (because it can only be looked up via
-            // the interface instance).
-            auto [result, _] = SubroutineSymbol::fromSyntax(compilation, syntax, parent,
-                                                            /* outOfBlock */ true);
-            SLANG_ASSERT(result);
+            // This is an out-of-block class method implementation. We shouldn't
+            // create a symbol now, since we need the class prototype to hook
+            // us in to the correct scope. Register this syntax with the compilation
+            // so that it can later be found by the prototype.
+            //
+            // Remember the location in the parent scope where we *would* have inserted
+            // this subroutine, for later use during lookup.
+            uint32_t index = 1;
+            if (auto last = parent.getLastMember())
+                index = (uint32_t)last->getIndex() + 1;
 
-            result->setParent(parent, SymbolIndex(index));
-            compilation.addExternInterfaceMethod(*result);
-            isExternIfaceMethod = true;
+            compilation.addOutOfBlockDecl(parent, scopedName, syntax, SymbolIndex(index));
+            return {nullptr, false};
         }
-        return {nullptr, isExternIfaceMethod};
+
+        // Otherwise this is an interface method implementation. We should create
+        // the method like normal, but the caller should not add it to the parent
+        // name map (because it can only be looked up via the interface instance).
+        auto [result, _] = SubroutineSymbol::fromSyntax(compilation, syntax, parent,
+                                                        /* outOfBlock */ true);
+        SLANG_ASSERT(result);
+
+        compilation.addExternInterfaceMethod(*result);
+        return {result, true};
     }
 
     Token nameToken = proto->name->getLastToken();
@@ -868,6 +865,10 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
     proto->addExternImpl(*this);
     proto->checkMethodMatch(*scope, *this);
     prototype = proto;
+
+    // Calls go through the interface's method, so this is the only
+    // reference to the implementation that anything will ever make.
+    getCompilation().noteReference(*this);
 
     // If our connection goes through a modport that exports us we should register ourselves
     // as an implementation for that export to facilitate checking for missing exports later.
