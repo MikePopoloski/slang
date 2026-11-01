@@ -297,6 +297,29 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Modport export followed by a modport without exports") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic x;
+    modport a(export task t());
+    modport b(input x);
+endinterface
+
+module m(I.a i);
+    task i.t(); endtask
+endmodule
+
+module top;
+    I i();
+    m m1(i.a);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("modport direction checking") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
