@@ -275,7 +275,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::ModportDeclaration:
             addDeferredMembers(syntax);
-            hasModportExports = declaresModportExports(syntax.as<ModportDeclarationSyntax>());
+            hasModportExports |= declaresModportExports(syntax.as<ModportDeclarationSyntax>());
             break;
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration: {
