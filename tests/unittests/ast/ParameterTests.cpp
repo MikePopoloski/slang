@@ -659,6 +659,78 @@ endmodule
     CHECK(diags[4].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
 }
 
+TEST_CASE("Recursive parameter found while binding its initializer") {
+    auto tree = SyntaxTree::fromText(R"(
+localparam int cu = fcu();
+function logic [cu-1:0] fcu; return 1; endfunction
+
+package p;
+    localparam int a = f1();
+    function logic [a-1:0] f1; return 1; endfunction
+
+    localparam int b = f2(0);
+    function int f2(logic [b-1:0] x); return 1; endfunction
+
+    localparam int c = f3();
+    function int f3(int x = c); return x; endfunction
+
+    localparam int d = $bits(f4());
+    function logic [d-1:0] f4; return 1; endfunction
+
+    localparam int h = f5();
+    localparam int i = h;
+    function logic [i-1:0] f5; return 1; endfunction
+
+    typedef enum int { E = f6() } en;
+    function logic [E:0] f6; return 1; endfunction
+
+    typedef class C1;
+    localparam int e = C1::K;
+    class C1;
+        localparam int K = e;
+    endclass
+
+    typedef class C2;
+    localparam int g = $bits(C2::x);
+    class C2;
+        static logic [g-1:0] x;
+    endclass
+endpackage
+
+class C;
+    localparam int a = f();
+    static function logic [a-1:0] f; return 1; endfunction
+
+    typedef enum int { E = g() } e;
+    static function logic [E:0] g; return 1; endfunction
+endclass
+
+interface I;
+    localparam int a = f();
+    function logic [a-1:0] f; return 1; endfunction
+endinterface
+
+module m;
+    typedef enum int { E = f() } e;
+    function logic [E:0] f; return 1; endfunction
+
+    if (1) begin : gen
+        localparam int a = g();
+        function logic [a-1:0] g; return 1; endfunction
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 14);
+    for (auto& d : diags)
+        CHECK(d.code == diag::ConstEvalParamCycle);
+}
+
 TEST_CASE("Parameter ordering from const func") {
     auto tree = SyntaxTree::fromText(R"(
 module M;

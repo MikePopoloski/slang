@@ -134,7 +134,9 @@ const ConstantValue& ParameterSymbol::getValue(SourceRange referencingRange) con
         if (isFromConf)
             ctx.flags |= ASTFlags::ConfigParam;
 
-        if (evaluating) {
+        // Reaching the value again while it is evaluated, or while its
+        // initializer is bound, means the value depends on itself.
+        if (evaluating || getDeclaredType()->isBindingInitializer()) {
             SLANG_ASSERT(referencingRange.start());
 
             auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;

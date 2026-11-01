@@ -637,26 +637,28 @@ EnumValueSymbol& EnumValueSymbol::fromSyntax(Compilation& compilation,
 
 const ConstantValue& EnumValueSymbol::getValue(SourceRange referencingRange) const {
     if (!value) {
+        auto scope = getParentScope();
+        SLANG_ASSERT(scope);
+
+        // We set UnevaluatedBranch here so that we don't get any implicit
+        // conversion warnings, since we check those manually in the enum
+        // value creation path.
+        ASTContext ctx(*scope, LookupLocation::max, ASTFlags::UnevaluatedBranch);
+
+        // Reaching the value again while it is evaluated, or while its
+        // initializer is bound, means the value depends on itself.
+        if (evaluating || getDeclaredType()->isBindingInitializer()) {
+            SLANG_ASSERT(referencingRange.start());
+
+            auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
+            diag.addNote(diag::NoteReferencedHere, referencingRange) << referencingRange;
+            return ConstantValue::Invalid;
+        }
+
         // If no value has been explicitly set, try to set it
         // from our initializer.
         auto init = getInitializer();
         if (init) {
-            auto scope = getParentScope();
-            SLANG_ASSERT(scope);
-
-            // We set UnevaluatedBranch here so that we don't get any implicit
-            // conversion warnings, since we check those manually in the enum
-            // value creation path.
-            ASTContext ctx(*scope, LookupLocation::max, ASTFlags::UnevaluatedBranch);
-
-            if (evaluating) {
-                SLANG_ASSERT(referencingRange.start());
-
-                auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
-                diag.addNote(diag::NoteReferencedHere, referencingRange) << referencingRange;
-                return ConstantValue::Invalid;
-            }
-
             evaluating = true;
             auto guard = ScopeGuard([this] { evaluating = false; });
 

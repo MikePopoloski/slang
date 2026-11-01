@@ -199,6 +199,11 @@ public:
     /// This is used to detect cycles in the the type resolution process.
     bool isEvaluating() const { return evaluating; }
 
+    /// Returns true if the initializer is in the process of being bound.
+    /// This is used to detect cycles through the initializer of a symbol
+    /// whose value is computed from it.
+    bool isBindingInitializer() const;
+
     /// Sets a separate, later position in the parent scope for creating the
     /// declared type and initializer. This is used for merged port symbols
     /// because their declared I/O location and symbol location may differ.
