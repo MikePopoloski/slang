@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Attributes are now allowed on generate regions; the LRM grammar does not permit them but all other tools accept them
 * `$bits` is no longer allowed on `real`, `shortreal`, and `realtime` values or on unpacked unions, since they are not bitstream types
 * The error for changing the visibility of an inherited virtual method is now downgradeable via [-Wvirtual-visibility-mismatch](https://sv-lang.com/warning-ref.html#virtual-visibility-mismatch)
+* Arguments to class `randomize` calls must now be simple names of properties of the object being randomized, as required by the LRM; forms like `(x)`, `local::x`, and `this.x` are errors
 
 ### Notable Breaking Changes
 
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   * [-Wtautological-bitwise-compare](https://sv-lang.com/warning-ref.html#tautological-bitwise-compare) warns about masks that make an equality impossible, like `(a & 4) == 8`
   * [-Wtautological-overlap-compare](https://sv-lang.com/warning-ref.html#tautological-overlap-compare) warns about combinations of comparisons like `a != 1 || a != 2`
   * [-Wtautological-negation-compare](https://sv-lang.com/warning-ref.html#tautological-negation-compare) warns about combinations like `a || !a`
+* Added a flag `--allow-multi-driven-dynamically-sized-arrays` which suppresses errors for dynamic arrays, associative arrays, and queues that are driven from multiple always_comb/always_ff blocks (thanks to @hankhsu1996)
 
 ### Improvements
 * The effective width calculation used to suppress width truncation warnings now takes into account masking with `&`, right shifts by a constant, division and modulus, and leading zeros in concatenations, which removes false positives for code like `logic [3:0] y = x & 8'h0F;`
@@ -53,11 +55,31 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed replicated assignment patterns for structs (like `'{3{-1}}`) converting every replica to the types of the first members instead of each member's own type, which produced malformed values and could crash constant evaluation. These patterns are now expanded into simple assignment patterns in the AST
 * Fixed `$countdrivers` rejecting a bit-select of a vector net and accepting a whole vector net; the LRM requires its argument to be a scalar net or a bit-select of a vector net
 * Fixed implicit named port connections (`.name`) connecting to an implicit net that is only created by a later connection of the same instantiation; the LRM requires the name to be declared prior to the connection
+* Fixed class `randomize` calls rejecting arguments that specify properties inherited from a base class
+* Fixed -Wrandomize-var-shadow firing on `randomize` arguments, which can only specify class members
+* Fixed `x` and `this.x` being treated as different variables by self-compare and unsequenced access checks
+* Fixed internal errors on `super` when it's not followed by a member name, and on equality comparisons where the left side is a `super` name that fails to resolve
+* Fixed names in `randomize` constraints being bound to interface instances in the enclosing scope, instead of to members of the class, when used in equality comparisons
+* Fixed `this` in `super.randomize()` inline constraints resolving against the derived class instead of the base class
+* Fixed properties named in the arguments of a class `randomize` call not being treated as random variables in its inline constraints, which led to false errors for e.g. `solve before` constraints
+* Fixed class `randomize` arguments not being checked for validity, so `const` properties and properties of types that can't be randomized are now errors. These arguments are also now considered to be assigned, which fixes false 'unused' warnings
+* Fixed `randomize() with ()`, with an empty identifier list, being treated as unrestricted
+* Fixed `rand_mode()` and `constraint_mode()` being rejected when called without arguments as a statement or in a `void` cast
+* Fixed `rand_mode()` being allowed to query the state of unpacked arrays and structs, and being available on selects of packed values
+* Fixed `rand_mode()` on `rand` object handles to apply to the handle variable itself instead of to the random variables within the object, and allowed querying its state
+* Fixed an internal assertion when a subroutine with more than one statement contains an invalid statement that has nested blocks, such as a `fork`-`join` in a function; statements inside a disallowed `fork` block are now also checked for errors
+* Fixed the `$random` function to bind its argument as an output instead of an input (thanks to @hankhsu1996)
+* Fixed the built-in `std` classes to have all of the built-in randomize methods that all classes should have (thanks to @hankhsu1996)
+* Interface classes should not have `rand_mode` and `constraint_mode` built-in methods on them (thanks to @hankhsu1996)
+* Fixed a bug where interfaces that contain a modport with export methods followed by another modport without export methods would lose track of their exports (thanks to @hankhsu1996)
 
 ### Tools & Bindings
 #### slang-tidy
 * Config files now support comments, starting with `#` and running to the end of the line (thanks to @spomata)
 * Check names in config files now keep acronyms together (e.g. `style-always-ff-blocking` instead of `style-always-f-f-blocking`); the old spellings are still accepted but reported as deprecated (thanks to @spomata)
+* Added a new `ConcurrentAssertHasFailAction` check that finds assertions without a fail action block (thanks to @vajeetha)
+* Added a new `ConditionalOperatorPrecedence` check that finds potentially misleading conditional operator usage (thanks to @vajeetha)
+* Added a new `UserClassDerivesFromUVMBase` check that finds classes that don't derive from UVM base classes (thanks to @svenka3)
 
 
 ## [v12.1] - 2026-10-25
