@@ -1885,8 +1885,8 @@ endmodule
     CHECK(diags[1].code == diag::InvalidRandomizeOverride);
     CHECK(diags[2].code == diag::InvalidRandomizeOverride);
     CHECK(diags[3].code == diag::BadAssignment);
-    CHECK(diags[4].code == diag::TooFewArguments);
-    CHECK(diags[5].code == diag::TooManyArguments);
+    CHECK(diags[4].code == diag::UnusedResult);
+    CHECK(diags[5].code == diag::BadAssignment);
 }
 
 TEST_CASE("Built-in class methods of std package classes") {
@@ -4536,4 +4536,379 @@ endclass
     REQUIRE(!diags.empty());
     for (auto& diag : diags)
         CHECK(diag.isError());
+}
+
+TEST_CASE("Bare super handles are errors") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+endclass
+
+class B extends A;
+endclass
+
+class C extends A;
+    function void f(B b);
+        if (super < 1) begin end
+        if (super == null) begin end
+        if (this.super < 1) begin end
+        void'(b.randomize() with { super < 1; });
+        void'(b.randomize() with { this.super < 1; });
+        void'(b.randomize() with { local::super < 1; });
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::ExpectedToken);
+    CHECK(diags[1].code == diag::ExpectedToken);
+    CHECK(diags[2].code == diag::SuperWithoutMember);
+    CHECK(diags[3].code == diag::ExpectedToken);
+    CHECK(diags[4].code == diag::SuperWithoutMember);
+    CHECK(diags[5].code == diag::SuperWithoutMember);
+}
+
+TEST_CASE("Equality with failed super lookups doesn't crash") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+endclass
+
+class B extends A;
+endclass
+
+class C;
+    function void f(B b);
+        // Valid; 'super' binds to the base class of B.
+        void'(b.randomize() with { super.x == 1; });
+
+        if (super.y == 1) begin end
+    endfunction
+endclass
+
+class D extends A;
+    function void f();
+        if (super.nope != 1) begin end
+    endfunction
+endclass
+
+module m;
+    int z;
+    initial if (super.y === 1) z = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::SuperNoBase);
+    CHECK(diags[1].code == diag::UnknownClassMember);
+    CHECK(diags[2].code == diag::SuperOutsideClass);
+}
+
+TEST_CASE("Randomize constraint names are not bound as interface instances") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+class A;
+    rand int i;
+endclass
+
+module m;
+    I i();
+    A a;
+    int r;
+    initial r = a.randomize() with { i == 1; };
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Randomize arguments are random variables in inline constraints") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+    int v;
+    function void f();
+        void'(randomize(v, x) with { solve v before x; });
+    endfunction
+endclass
+
+class B;
+    function void f(A a);
+        void'(a.randomize(v, x) with { solve v before x; });
+        void'(a.randomize(v) with { disable soft v; });
+        void'(a.randomize(v, x) with { unique {v, x}; });
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Randomize object handle is not a random variable") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+endclass
+
+class B;
+    A a;
+    function void f();
+        void'(a.randomize(x) with { solve local::a before x; });
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadSolveBefore);
+}
+
+TEST_CASE("rand_mode and constraint_mode forms") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+    rand int arr[4];
+    rand bit [7:0] pv;
+    rand struct { rand int a; } s;
+    constraint c { x > 0; }
+endclass
+
+module m;
+    A a;
+    int r;
+    initial begin
+        void'(a.x.rand_mode());
+        void'(a.c.constraint_mode());
+        r = a.arr[1].rand_mode();
+        r = a.s.a.rand_mode();
+        if (r != 0) a.x.rand_mode(1);
+        a.arr.rand_mode(0);
+        a.s.rand_mode(0);
+
+        r = a.arr.rand_mode();
+        r = a.s.rand_mode();
+        r = a.x.rand_mode(1);
+        a.pv[1].rand_mode(0);
+        a.pv[3:0].rand_mode(0);
+        r = a.pv[1].rand_mode();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::RandModeNotSingular);
+    CHECK(diags[1].code == diag::RandModeNotSingular);
+    CHECK(diags[2].code == diag::BadAssignment);
+    CHECK(diags[3].code == diag::InvalidMemberAccess);
+    CHECK(diags[4].code == diag::InvalidMemberAccess);
+    CHECK(diags[5].code == diag::InvalidMemberAccess);
+}
+
+TEST_CASE("Randomize dotted names bind to the class if the first name is found there") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+    int v;
+    typedef struct { int m; } T;
+    function int g();
+        return 1;
+    endfunction
+endclass
+
+class B;
+    function void f(A a);
+        struct { int f; } u;
+        struct { int f; } v;
+        struct { int f; } T;
+        struct { int f; } g;
+
+        // Not in the class, so found in the local scope.
+        void'(a.randomize() with { x < u.f; });
+
+        // These are all errors, even though the local variables would work.
+        void'(a.randomize() with { x < v.f; });
+        void'(a.randomize() with { x < T.f; });
+        void'(a.randomize() with { x < g.f; });
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::RandomizeConstraintShadow);
+    CHECK(diags[1].code == diag::InvalidMemberAccess);
+    CHECK(diags[2].code == diag::DotOnType);
+    CHECK(diags[3].code == diag::CouldNotResolveHierarchicalPath);
+}
+
+TEST_CASE("Randomize with empty identifier list") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+    rand int y;
+endclass
+
+class B;
+    function void f(A a);
+        int x;
+        void'(a.randomize() with () { x < 1; });
+        void'(a.randomize() with () { y < 1; });
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // x binds to the local without a shadow warning, y isn't found at all.
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Randomize arguments must be assignable and valid for rand") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    const int k = 1;
+    string str;
+    event ev;
+    A o;
+endclass
+
+class B;
+    function void f(A a);
+        void'(a.randomize(k));
+        void'(a.randomize(str));
+        void'(a.randomize(ev));
+        void'(a.randomize(o));
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::AssignmentToConstVar);
+    CHECK(diags[1].code == diag::InvalidRandType);
+    CHECK(diags[2].code == diag::InvalidRandType);
+}
+
+TEST_CASE("this in super.randomize constraints binds to the base class") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+endclass
+
+class C extends A;
+    int d;
+    function void f();
+        void'(super.randomize() with { this.x < 1; });
+        void'(super.randomize() with { this.d < 1; });
+        void'(this.randomize() with { this.d < 1; this.x < 1; });
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownClassMember);
+}
+
+TEST_CASE("rand_mode on aggregates and rand object handles") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef struct {
+    rand int a;
+    rand int ua[3];
+} S;
+
+class A;
+    rand int x;
+    rand int mda[2][3];
+    rand S s;
+    rand S sa[3];
+    rand A ro;
+    rand A ha[2];
+    A h;
+
+    function void objectForm();
+        h.rand_mode(0);
+    endfunction
+
+    function void variableForm();
+        ro.rand_mode(0);
+    endfunction
+endclass
+
+module m;
+    A a;
+    int r;
+    initial begin
+        // Omitting the index or member affects all of the elements.
+        a.mda.rand_mode(0);
+        a.mda[1].rand_mode(0);
+        a.s.rand_mode(0);
+        a.sa.rand_mode(0);
+        a.sa[1].rand_mode(0);
+        a.s.ua.rand_mode(0);
+
+        // Individual elements and members can be selected.
+        a.mda[1][2].rand_mode(0);
+        a.sa[1].a.rand_mode(0);
+        a.sa[1].ua[2].rand_mode(0);
+        r = a.mda[1][2].rand_mode();
+        r = a.sa[1].ua[2].rand_mode();
+
+        // Object handles can be queried, since they're singular.
+        a.ha.rand_mode(0);
+        a.ha[1].rand_mode(0);
+        r = a.ro.rand_mode();
+        r = a.ha[1].rand_mode();
+        a.ro.x.rand_mode(0);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& a = compilation.getRoot().compilationUnits[0]->lookupName<ClassType>("A");
+    auto isVariableForm = [&](std::string_view name) {
+        auto& sub = a.find(name)->as<SubroutineSymbol>();
+        return sub.getBody().as<ExpressionStatement>().expr.as<CallExpression>().isSystemCall();
+    };
+
+    // Applies to the rand handle variable itself, which is a system method call,
+    // vs the built-in class method that affects all of the object's variables.
+    CHECK(isVariableForm("variableForm"));
+    CHECK(!isVariableForm("objectForm"));
 }

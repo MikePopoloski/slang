@@ -887,9 +887,10 @@ static Expression* tryBindSpecialMethod(Compilation& compilation, const Expressi
         return nullptr;
 
     // There is a built-in 'rand_mode' method that is present on every 'rand' and 'randc'
-    // class property, and additionally on subelements of those properties.
+    // class property, and additionally on unpacked subelements of those properties.
     if (selector.name == "rand_mode"sv) {
-        if (sym->getRandMode() == RandMode::None)
+        auto randSym = expr.getSymbolReference(/* allowPacked */ false);
+        if (!randSym || randSym->getRandMode() == RandMode::None)
             return nullptr;
 
         return CallExpression::fromBuiltInMethod(compilation, SymbolKind::ClassProperty, expr,
@@ -961,6 +962,15 @@ Expression& MemberAccessExpression::fromSelector(
             auto& ct = type.as<ClassType>();
             if (auto base = ct.getBaseClass(); base && base->isError())
                 return badExpr(comp, &expr);
+
+            // A rand object handle is itself a random variable, so rand_mode on it applies
+            // to that variable instead of to the random variables within the object.
+            if (selector.name == "rand_mode"sv) {
+                if (auto result = tryBindSpecialMethod(comp, expr, selector, invocation, withClause,
+                                                       context)) {
+                    return *result;
+                }
+            }
 
             scope = &ct;
             break;

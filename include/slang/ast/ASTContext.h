@@ -295,13 +295,17 @@ public:
         const VariableSymbol* thisVar = nullptr;
 
         /// A list of names to which class-scoped lookups are restricted.
-        /// If empty, the lookup is unrestricted and all names are first
-        /// tried in class-scope.
+        /// Only used if @a isRestricted is true.
         std::span<const std::string_view> nameRestrictions;
 
-        /// A set of variables for a scope randomize call that should be
-        /// treated as a rand variable.
-        flat_hash_set<const Symbol*> scopeRandVars;
+        /// A set of variables that were named in the arguments of the randomize
+        /// call and should be treated as rand variables, even if not declared that way.
+        flat_hash_set<const Symbol*> randVarArgs;
+
+        /// True if the constraint block has a parenthesized identifier list,
+        /// in which case only names in that list (which may be empty) are
+        /// looked up in class-scope. Otherwise all names are tried there first.
+        bool isRestricted = false;
 
         /// True when binding the inline constraint block, as opposed
         /// to the arguments of the randomize call.

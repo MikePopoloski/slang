@@ -750,6 +750,13 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope,
 bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
                        NameComponents& name, bitmask<LookupFlags> flags, LookupResult& result,
                        const ASTContext& context) {
+    // We only get here without a following name if the prefix is a 'super' handle.
+    if (nameParts.empty()) {
+        result.found = nullptr;
+        result.addDiag(*context.scope, diag::SuperWithoutMember, name.range);
+        return false;
+    }
+
     // Unwrap the symbol if it's a type parameter, and bail early if it's an error type.
     const Symbol* symbol = std::exchange(result.found, nullptr);
     if (symbol) {
@@ -1183,6 +1190,9 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             result.found = nullptr;
             return;
         case SyntaxKind::SuperHandle:
+            // Unlike 'this', 'super' is only valid as the prefix of a member name.
+            result.addDiag(scope, diag::SuperWithoutMember, result.nameRange);
+            return;
         case SyntaxKind::ArrayUniqueMethod:
         case SyntaxKind::ArrayAndMethod:
         case SyntaxKind::ArrayOrMethod:
@@ -1740,10 +1750,9 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
             if (name.text.empty())
                 return false;
 
-            // If the nameRestrictions list is not empty, we have to verify that the
-            // first element is in the list. Otherwise, an empty list indicates that
-            // the lookup is unrestricted.
-            if (!details.nameRestrictions.empty()) {
+            // If the lookup is restricted we have to verify that the
+            // first element is in the list of allowed names.
+            if (details.isRestricted) {
                 if (std::ranges::find(details.nameRestrictions, name.text) ==
                     details.nameRestrictions.end()) {
                     return false;
@@ -1770,35 +1779,31 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
 
             break;
         case SyntaxKind::ThisHandle:
-            if (details.thisVar) {
-                // 'this' refers to the object being randomized, and 'this.foo'
-                // is the same as looking up 'foo' directly in the class.
-                result.found = details.thisVar;
-                if (nameParts.empty())
-                    break;
+            result.found = details.thisVar;
+            if (!result.found)
+                result.found = findThisHandle(*context.scope, flags, name.range, result);
 
-                if (nameParts.back().kind != SyntaxKind::SuperHandle) {
-                    auto& part = nameParts.back();
-                    name = part.name;
-                    result.found = classScope.find(name.text);
-                    if (!result.found) {
-                        auto& diag = result.addDiag(*context.scope, diag::UnknownClassMember,
-                                                    part.dotLocation);
-                        diag << name.text << name.range << classScope.asSymbol().name;
-                        Lookup::addTypoCorrectionNote(diag, name.text, classScope);
-                        return false;
-                    }
+            if (!result.found || nameParts.empty())
+                break;
 
-                    nameParts.pop_back();
-                    break;
+            // 'this' refers to the object being randomized, which might not have the same
+            // type as the enclosing class even without a thisVar (for super.randomize()).
+            // That makes 'this.foo' the same as looking up 'foo' directly in the class.
+            if (nameParts.back().kind != SyntaxKind::SuperHandle) {
+                auto& part = nameParts.back();
+                name = part.name;
+                result.found = classScope.find(name.text);
+                if (!result.found) {
+                    auto& diag = result.addDiag(*context.scope, diag::UnknownClassMember,
+                                                part.dotLocation);
+                    diag << name.text << name.range << classScope.asSymbol().name;
+                    Lookup::addTypoCorrectionNote(diag, name.text, classScope);
+                    return false;
                 }
+
+                nameParts.pop_back();
             }
             else {
-                result.found = findThisHandle(*context.scope, flags, name.range, result);
-            }
-
-            if (result.found && !nameParts.empty() &&
-                nameParts.back().kind == SyntaxKind::SuperHandle) {
                 // Handle "this.super.whatever" the same as if the user had just
                 // written "super.whatever".
                 name = nameParts.back().name;

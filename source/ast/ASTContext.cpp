@@ -447,8 +447,8 @@ RandMode ASTContext::getRandMode(const Symbol& symbol) const {
         return mode;
 
     if (randomizeDetails) {
-        if (auto it = randomizeDetails->scopeRandVars.find(&symbol);
-            it != randomizeDetails->scopeRandVars.end()) {
+        if (auto it = randomizeDetails->randVarArgs.find(&symbol);
+            it != randomizeDetails->randVarArgs.end()) {
             return RandMode::Rand;
         }
     }

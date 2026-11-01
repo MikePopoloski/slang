@@ -209,20 +209,26 @@ public:
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
-        // The number of arguments required is 1 if called as a task
-        // and 0 if called as a function.
+        // With an argument this is a void function that sets the mode.
+        // Without one it returns the current mode as an int.
         auto& comp = context.getCompilation();
-        size_t numArgs = context.flags.has(ASTFlags::TopLevelStatement) ? 1 : 0;
-        if (!checkArgCount(context, true, args, range, numArgs, numArgs))
+        if (!checkArgCount(context, true, args, range, 0, 1))
             return comp.getErrorType();
 
-        if (numArgs) {
+        if (args.size() > 1) {
             // First argument is integral.
             if (!args[1]->type->isIntegral())
                 return badArg(context, *args[1]);
+
+            return comp.getVoidType();
         }
 
-        return numArgs ? comp.getVoidType() : comp.getIntType();
+        if (knownNameId == KnownSystemName::RandMode && !args[0]->type->isSingular()) {
+            context.addDiag(diag::RandModeNotSingular, args[0]->sourceRange);
+            return comp.getErrorType();
+        }
+
+        return comp.getIntType();
     }
 
     // Return type is 'int' but the actual value is always either 0 or 1

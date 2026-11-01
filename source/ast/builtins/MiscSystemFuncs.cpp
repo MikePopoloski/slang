@@ -127,6 +127,16 @@ public:
         withClauseMode = WithClauseMode::Randomize;
     }
 
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax,
+                                   const Args& previousArgs) const final {
+        // The named properties get assigned to, unless this is the special 'null' argument.
+        if (syntax.kind == SyntaxKind::NullLiteralExpression)
+            return SystemSubroutine::bindArgument(argIndex, context, syntax, previousArgs);
+
+        return Expression::bindLValue(syntax, context);
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression* thisExpr) const final {
         bool isMethod = thisExpr != nullptr;
@@ -160,6 +170,15 @@ public:
                 context.addDiag(diag::ExpectedClassPropertyName, arg->sourceRange);
                 return comp.getErrorType();
             }
+
+            // Properties don't have to be declared rand, so their
+            // types haven't necessarily been checked yet.
+            auto sym = arg->getSymbolReference();
+            auto& type = sym->as<ClassPropertySymbol>().getType();
+            if (sym->getRandMode() == RandMode::None &&
+                !type.isValidForRand(RandMode::Rand, comp.languageVersion())) {
+                context.addDiag(diag::InvalidRandType, arg->sourceRange) << type << "rand"sv;
+            }
         }
 
         return comp.getIntType();
@@ -180,7 +199,11 @@ private:
     // The grammar only allows simple identifiers here; those are looked up in the
     // target class first, so any matching property is a member of the target object.
     static bool isPropertyName(const Expression& arg, const ClassType& ct) {
-        if (!arg.syntax || arg.syntax->kind != SyntaxKind::IdentifierName)
+        if (arg.kind != ExpressionKind::Assignment)
+            return false;
+
+        auto& name = arg.as<AssignmentExpression>().left();
+        if (!name.syntax || name.syntax->kind != SyntaxKind::IdentifierName)
             return false;
 
         auto sym = arg.getSymbolReference();

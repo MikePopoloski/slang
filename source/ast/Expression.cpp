@@ -1444,6 +1444,11 @@ static const SyntaxNode* findOverrideNodeSource(const HierarchyOverrideNode& nod
 
 Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
                                             const ExpressionSyntax& syntax, bool isInterfacePort) {
+    // Names in class randomize constraints are looked up in the class first, and
+    // neither instances nor virtual interfaces are valid in a constraint anyway.
+    if (!isInterfacePort && context.randomizeDetails && context.randomizeDetails->classType)
+        return nullptr;
+
     // Unwrap the expression; parentheses are superfluous.
     const ExpressionSyntax* expr = &syntax;
     while (expr->kind == SyntaxKind::ParenthesizedExpression)

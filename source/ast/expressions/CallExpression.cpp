@@ -648,18 +648,17 @@ Expression& CallExpression::createSystemCall(
             // Finally bind the inline constraint block if we have one.
             SLANG_ASSERT(withClause->constraints);
 
-            // For scope randomize calls we need to register the
-            // arg variables so they get treated as 'rand'.
-            if (!randomizeDetails.classType) {
-                for (auto arg : buffer) {
-                    auto sym = arg->getSymbolReference();
-                    if (sym)
-                        randomizeDetails.scopeRandVars.emplace(sym);
-                }
+            // Register the arg variables so they get treated as 'rand'. Scope randomize
+            // calls need this, and class randomize calls can name properties not declared
+            // as rand. Class calls also have the object handle as their first argument.
+            for (auto arg : std::span(buffer).subspan(firstArg ? 1 : 0)) {
+                if (auto sym = arg->getSymbolReference())
+                    randomizeDetails.randVarArgs.emplace(sym);
             }
 
             auto& randInfo = std::get<2>(callInfo.extraInfo);
             randomizeDetails.nameRestrictions = randInfo.constraintRestrictions;
+            randomizeDetails.isRestricted = withClause->args != nullptr;
             randomizeDetails.inConstraintBlock = true;
             randInfo.inlineConstraints = &Constraint::bind(*withClause->constraints, argContext);
         }
