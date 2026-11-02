@@ -955,6 +955,37 @@ endmodule
     CHECK_DIAGS_EMPTY;
 }
 
+TEST_CASE("Extern interface method implementations are not unused") {
+    auto& text = R"(
+interface I;
+    extern function int f();
+    extern forkjoin task t();
+endinterface
+
+module m(I i);
+    int read_by_f = 1;
+
+    function int i.f();
+        int unused_local;
+        return read_by_f;
+    endfunction
+
+    task i.t();
+    endtask
+endmodule
+
+module top;
+    I i();
+    m m1(i);
+endmodule
+)";
+
+    Compilation compilation;
+    auto diags = analyze(text, compilation);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnusedVariable);
+}
+
 TEST_CASE("Unused class properties") {
     auto& text = R"(
 class C;

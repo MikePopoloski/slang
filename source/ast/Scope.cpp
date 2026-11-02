@@ -282,12 +282,13 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             auto [subroutine, isExternIfaceMethod] = SubroutineSymbol::fromSyntax(
                 compilation, syntax.as<FunctionDeclarationSyntax>(), *this, /* outOfBlock */ false);
 
-            if (subroutine)
-                addMember(*subroutine);
-
             if (isExternIfaceMethod) {
+                linkMember(subroutine, lastMember, true);
                 setNeedElaboration();
                 isUncacheable = true;
+            }
+            else if (subroutine) {
+                addMember(*subroutine);
             }
             break;
         }
@@ -602,7 +603,7 @@ static bool canLookupByName(SymbolKind kind) {
     }
 }
 
-void Scope::insertMember(const Symbol* member, const Symbol* at, bool incrementIndex) const {
+void Scope::linkMember(const Symbol* member, const Symbol* at, bool incrementIndex) const {
     SLANG_ASSERT(!member->parentScope);
     SLANG_ASSERT(!member->nextInScope);
 
@@ -618,6 +619,10 @@ void Scope::insertMember(const Symbol* member, const Symbol* at, bool incrementI
     member->parentScope = this;
     if (!member->nextInScope)
         lastMember = member;
+}
+
+void Scope::insertMember(const Symbol* member, const Symbol* at, bool incrementIndex) const {
+    linkMember(member, at, incrementIndex);
 
     // Add to the name map if the symbol has a name and can be looked up
     // by name in the default namespace.

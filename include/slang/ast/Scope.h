@@ -275,6 +275,7 @@ private:
     friend class Compilation;
 
     void addDeferredMembers(const syntax::SyntaxNode& syntax);
+    void linkMember(const Symbol* member, const Symbol* at, bool incrementIndex) const;
     void elaborate() const;
     void handleNameConflict(const Symbol& member) const;
     void handleNameConflict(const Symbol& member, const Symbol*& existing) const;

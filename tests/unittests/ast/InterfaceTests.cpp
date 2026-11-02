@@ -320,6 +320,34 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Extern interface method bodies are checked") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    extern function int f();
+endinterface
+
+module m(I i);
+    function int f(); return 1; endfunction
+
+    function int i.f();
+        return undefined_name;
+    endfunction
+endmodule
+
+module top;
+    I i();
+    m m1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
 TEST_CASE("modport direction checking") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
