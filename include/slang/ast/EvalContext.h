@@ -168,6 +168,31 @@ public:
     /// Returns nullptr if there is no queue target active.
     const ConstantValue* getQueueTarget() const { return queueTarget; }
 
+    /// Gets the number of steps (statements) executed so far.
+    uint32_t getSteps() const { return steps; }
+
+    /// Accounts for @a count steps executed elsewhere on behalf of this context,
+    /// e.g. by a memoized constant function call. The caller must have checked
+    /// that the step limit is not reached.
+    void addSteps(uint32_t count) { steps += count; }
+
+    /// Gets the depth of the call stack.
+    size_t getStackDepth() const { return stack.size(); }
+
+    /// Gets the total number of diagnostics ever recorded by this context.
+    /// Unlike the stored diagnostics, this count never decreases.
+    uint32_t getDiagCount() const { return diagCount; }
+
+    /// Returns true if there are any lvalues on the lvalue stack.
+    bool hasLValues() const { return !lvalStack.empty(); }
+
+    /// Records that the evaluation of the outermost function call on the stack
+    /// depends on the lookup location of its call site.
+    void noteCallSiteDependence() { callSiteDependent = true; }
+
+    /// Gets and clears the call site dependence flag (see @a noteCallSiteDependence).
+    bool takeCallSiteDependence() { return std::exchange(callSiteDependent, false); }
+
     /// Dumps the contents of the call stack to a string for debugging.
     std::string dumpStack() const;
 
@@ -200,7 +225,9 @@ private:
     Diagnostics diags;
     Diagnostics warnings;
     SourceRange disableRange;
+    uint32_t diagCount = 0;
     bool backtraceReported = false;
+    bool callSiteDependent = false;
 };
 
 } // namespace slang::ast

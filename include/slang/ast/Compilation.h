@@ -7,7 +7,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <deque>
 #include <memory>
+#include <mutex>
 
 #include "slang/ast/ASTDiagMap.h"
 #include "slang/ast/InstanceCacheKey.h"
@@ -798,6 +800,29 @@ public:
         return constantAllocator.emplace(std::move(value));
     }
 
+    /// @}
+    /// @name Constant function call memoization
+    /// @{
+
+    /// Looks up the memoized result of an earlier top-level call of the constant
+    /// function @a subroutine with identical @a args and evaluation flags.
+    /// On a hit, copies the result to @a result, sets @a steps to the number of
+    /// evaluation steps the original call took, and returns true.
+    bool findConstCallResult(const SubroutineSymbol& subroutine, uint8_t evalFlags,
+                             uint64_t astFlags, std::span<const ConstantValue> args,
+                             size_t argsHash, ConstantValue& result, uint32_t& steps) const;
+
+    /// Records the result of a top-level call of the constant function @a subroutine,
+    /// for later lookup via @a findConstCallResult. The caller guarantees that the
+    /// evaluation produced no diagnostics and did not depend on its call site.
+    void addConstCallResult(const SubroutineSymbol& subroutine, uint8_t evalFlags,
+                            uint64_t astFlags, std::span<const ConstantValue> args, size_t argsHash,
+                            const ConstantValue& result, uint32_t steps);
+
+    /// @}
+    /// @name Allocation functions
+    /// @{
+
     /// Allocates a symbol map.
     SymbolMap* allocSymbolMap() {
         SLANG_ASSERT(!isFrozen());
@@ -944,6 +969,20 @@ private:
     // The name map for system methods.
     flat_hash_map<std::tuple<std::string_view, SymbolKind>, std::shared_ptr<SystemSubroutine>>
         methodMap;
+
+    // Memoized results of top-level constant function calls, keyed by a hash of
+    // the subroutine, the evaluation flags and the argument values.
+    struct ConstCallEntry {
+        const SubroutineSymbol* subroutine;
+        uint8_t evalFlags;
+        uint64_t astFlags;
+        std::vector<ConstantValue> args;
+        ConstantValue result;
+        uint32_t steps;
+    };
+    mutable std::mutex constCallMutex;
+    std::deque<ConstCallEntry> constCallEntries;
+    flat_hash_map<size_t, SmallVector<const ConstCallEntry*, 2>> constCallMap;
 
     // Map from instance bodies to side effects applied by them.
     flat_hash_map<const Symbol*, std::unique_ptr<InstanceSideEffects>> instanceSideEffectMap;
