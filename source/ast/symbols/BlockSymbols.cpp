@@ -886,7 +886,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         return *result;
 
     // Create storage for the iteration variable.
-    EvalContext evalContext(iterContext);
+    EvalContext evalContext(iterContext, EvalFlags::RequireConstant);
     evalContext.pushEmptyFrame();
 
     auto loopVal = evalContext.createLocal(&local, initialVal);

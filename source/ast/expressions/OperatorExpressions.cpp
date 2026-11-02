@@ -2300,7 +2300,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     };
 
     // If the multiplier isn't constant this must be a string replication.
-    EvalContext evalCtx(context, EvalFlags::CacheResults);
+    EvalContext evalCtx(context, EvalFlags::CacheResults | EvalFlags::RequireConstant);
     if (ConstantValue leftVal = left.eval(evalCtx); !leftVal) {
         // Parameters in an uninstantiated body have no values (they are forced
         // invalid), so a multiplier that names one cannot be evaluated, and an

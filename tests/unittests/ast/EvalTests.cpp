@@ -6,7 +6,9 @@
 #include <cmath>
 using Catch::Approx;
 
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/ScriptSession.h"
+#include "slang/ast/expressions/CallExpression.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 
@@ -2214,6 +2216,93 @@ endfunction
     auto diags = session.getDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstEvalStaticSkipped);
+}
+
+TEST_CASE("Speculative eval doesn't fold calls to functions with static variables") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic clk, output logic q, output logic r, output logic s);
+  function automatic int next_slot();
+    static int slot = 5;
+    slot = slot + 1;
+    return slot;
+  endfunction
+
+  function automatic logic [3:0] next_slot4();
+    static logic [3:0] slot = 4'd0;
+    slot = slot + 1;
+    return slot;
+  endfunction
+
+  function automatic int no_init();
+    static int count;
+    count++;
+    return count;
+  endfunction
+
+  function automatic int wrapped();
+    return next_slot();
+  endfunction
+
+  logic [15:0] pattern = 16'hB278;
+  always_ff @(posedge clk) begin
+    q <= pattern[next_slot()];
+    r <= pattern[next_slot4()] && next_slot() != 0;
+    s <= pattern[wrapped() +: 2] == 2'b0 && no_init() == 1;
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    int numCalls = 0;
+    compilation.getRoot().visit(makeVisitor([&](auto& v, const CallExpression& call) {
+        if (!call.isSystemCall()) {
+            numCalls++;
+            CHECK(call.getConstant() == nullptr);
+        }
+        v.visitDefault(call);
+    }));
+    CHECK(numCalls == 6);
+}
+
+TEST_CASE("Required constant contexts still eval functions with static variables") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  function automatic int f();
+    static int j = 5;
+    j++;
+    return j;
+  endfunction
+
+  localparam int p = f();
+  logic [f():0] dim;
+  logic [7:0] rep = {f(){1'b1}};
+
+  if (f() == 1) begin : g1 end
+  case (f()) 1: begin : g2 end endcase
+  for (genvar i = 0; i < f(); i++) begin : g3 end
+
+  $info("%0d", f());
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // The skipped-initializer warnings are all deduplicated to one location.
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConstEvalStaticSkipped);
+    CHECK(diags[1].code == diag::InfoTask);
+
+    auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m").body;
+    CHECK(m.find<ParameterSymbol>("p").getValue().integer() == 1);
+    CHECK(m.find<VariableSymbol>("dim").getType().getBitWidth() == 2);
+    CHECK(m.find("g1"));
+    CHECK(m.find("g2"));
+    CHECK(m.find("g3"));
 }
 
 TEST_CASE("Complicated lvalue path") {

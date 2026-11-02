@@ -217,9 +217,19 @@ enum class SLANG_EXPORT EvalFlags : uint8_t {
     /// For parameter evaluation, allow unbounded literals to evaluate to
     /// the placeholder value. Other expressions that have an unbounded literal
     /// without a queue target will return an invalid value.
-    AllowUnboundedPlaceholder = 1 << 3
+    AllowUnboundedPlaceholder = 1 << 3,
+
+    /// The expression being evaluated is required by the language to be a
+    /// constant expression, so constant function call semantics apply
+    /// (e.g. static variable initializers in functions are skipped).
+    ///
+    /// Without this flag the evaluation is speculative: it's being attempted
+    /// only to fold values or provide better diagnostics, and constructs that
+    /// would evaluate differently at runtime than during constant evaluation
+    /// (such as static variables in functions) cause evaluation to fail.
+    RequireConstant = 1 << 4
 };
-SLANG_BITMASK(EvalFlags, AllowUnboundedPlaceholder)
+SLANG_BITMASK(EvalFlags, RequireConstant)
 
 /// Information required to instantiate a sequence, property, or checker instance.
 struct SLANG_EXPORT AssertionInstanceDetails {

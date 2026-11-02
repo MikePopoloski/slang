@@ -33,7 +33,8 @@ void registerAST(nb::module_& m) {
         .value("IsScript", EvalFlags::IsScript)
         .value("CacheResults", EvalFlags::CacheResults)
         .value("SpecparamsAllowed", EvalFlags::SpecparamsAllowed)
-        .value("AllowUnboundedPlaceholder", EvalFlags::AllowUnboundedPlaceholder);
+        .value("AllowUnboundedPlaceholder", EvalFlags::AllowUnboundedPlaceholder)
+        .value("RequireConstant", EvalFlags::RequireConstant);
 
     nb::class_<EvalContext> evalCtx(m, "EvalContext");
     evalCtx

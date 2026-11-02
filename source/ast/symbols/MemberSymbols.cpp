@@ -649,7 +649,7 @@ std::optional<std::string_view> ElabSystemTaskSymbol::createMessage(
         return {};
 
     // Format the message to string.
-    EvalContext evalCtx(context);
+    EvalContext evalCtx(context, EvalFlags::RequireConstant);
     std::optional<std::string> str = FmtHelpers::formatDisplay(*context.scope, evalCtx, args);
     evalCtx.reportAllDiags();
 
@@ -2438,7 +2438,7 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
     SmallVector<const Expression*> buffer;
     ASTContext context(*scope, LookupLocation::after(*this),
                        ASTFlags::NonProcedural | ASTFlags::AllowInterconnect);
-    EvalContext evalCtx(context);
+    EvalContext evalCtx(context, EvalFlags::RequireConstant);
     NetAliasVisitor visitor(context, evalCtx);
     SmallVector<SmallVector<NetAlias>> netAliases;
     bitwidth_t bitWidth = 0;
