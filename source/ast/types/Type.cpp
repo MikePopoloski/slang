@@ -759,6 +759,98 @@ bool Type::implements(const Type& ifaceClass) const {
     return false;
 }
 
+// Finds the elaboration that a type declaration belongs to:
+// a class specialization or an instance body.
+static const Symbol* getElaborationRoot(const Type& type) {
+    auto scope = type.getParentScope();
+    while (scope) {
+        auto& sym = scope->asSymbol();
+        if (sym.kind == SymbolKind::InstanceBody ||
+            (sym.kind == SymbolKind::ClassType && sym.as<ClassType>().genericClass)) {
+            return &sym;
+        }
+        scope = sym.getParentScope();
+    }
+    return nullptr;
+}
+
+static bool isSameElaborationTarget(const Symbol& l, const Symbol& r) {
+    if (l.kind != r.kind)
+        return false;
+
+    if (l.kind == SymbolKind::InstanceBody) {
+        return &l.as<InstanceBodySymbol>().getDefinition() ==
+               &r.as<InstanceBodySymbol>().getDefinition();
+    }
+
+    return l.as<ClassType>().genericClass == r.as<ClassType>().genericClass;
+}
+
+bool Type::isMatchingAcrossElaborations(const Type& rhs) const {
+    if (isMatching(rhs))
+        return true;
+
+    auto& lt = getCanonicalType();
+    auto& rt = rhs.getCanonicalType();
+    if (lt.kind != rt.kind)
+        return false;
+
+    if (lt.isArray()) {
+        if (lt.hasFixedRange() && lt.getFixedRange() != rt.getFixedRange())
+            return false;
+
+        auto li = lt.getAssociativeIndexType();
+        auto ri = rt.getAssociativeIndexType();
+        if (bool(li) != bool(ri) || (li && !li->isMatchingAcrossElaborations(*ri)))
+            return false;
+
+        return lt.getArrayElementType()->isMatchingAcrossElaborations(*rt.getArrayElementType());
+    }
+
+    // Copies of one declaration come from the same syntax, in different
+    // elaborations of the same class or definition.
+    if (!lt.getSyntax() || lt.getSyntax() != rt.getSyntax())
+        return false;
+
+    auto lroot = getElaborationRoot(lt);
+    auto rroot = getElaborationRoot(rt);
+    if (!lroot || !rroot || !isSameElaborationTarget(*lroot, *rroot))
+        return false;
+
+    // The declaration may depend on parameters of its elaboration,
+    // so its contents still need to match.
+    if (lt.isEnum()) {
+        auto& le = lt.as<EnumType>();
+        auto& re = rt.as<EnumType>();
+        if (!le.baseType.isMatching(re.baseType))
+            return false;
+
+        auto lv = le.values();
+        auto rv = re.values();
+        auto rit = rv.begin();
+        for (auto& value : lv) {
+            if (rit == rv.end() || !value.getValue().isIdentical(rit->getValue()))
+                return false;
+            ++rit;
+        }
+        return rit == rv.end();
+    }
+
+    if (lt.isStruct() || lt.isUnion()) {
+        auto lr = lt.as<Scope>().membersOfType<FieldSymbol>();
+        auto rr = rt.as<Scope>().membersOfType<FieldSymbol>();
+        auto rit = rr.begin();
+        for (auto& field : lr) {
+            if (rit == rr.end() || !field.getType().isMatchingAcrossElaborations(rit->getType()))
+                return false;
+            ++rit;
+        }
+        return rit == rr.end();
+    }
+
+    return true;
+}
+
 bool Type::isIdenticalStructUnion(const Type& rhs) const {
     const Type& lt = getCanonicalType();
     const Type& rt = rhs.getCanonicalType();

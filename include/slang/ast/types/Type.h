@@ -279,6 +279,14 @@ public:
     /// same names and types in the same order.
     bool isIdenticalStructUnion(const Type& rhs) const;
 
+    /// Determines whether the given type matches this one, also allowing for the
+    /// two types to be copies of the same declaration made by different elaborations
+    /// of the same parent: specializations of the same generic class, or bodies of
+    /// instances of the same definition. Such copies are distinct types but are
+    /// interchangeable as long as their contents match. Array, struct, and union
+    /// types are compared through their element and field types.
+    bool isMatchingAcrossElaborations(const Type& rhs) const;
+
     /// Gets a combination of flags for integral types; for non-integral types,
     /// this returns all zeros.
     bitmask<IntegralFlags> getIntegralFlags() const;
