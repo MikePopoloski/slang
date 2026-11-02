@@ -1901,6 +1901,37 @@ void InsideExpression::serializeTo(ASTSerializer& serializer) const {
     }
 }
 
+// Returns true if the given concatenation consists of a single element and is
+// used (possibly nested within other single-element concatenations) as the
+// count of a replication, as in `{{4}{foo}}`. The width of the unsized integer
+// is irrelevant in that case so there's no reason to warn about it.
+static bool isReplicationCount(const ConcatenationExpressionSyntax& syntax) {
+    const SyntaxNode* node = &syntax;
+    while (true) {
+        auto& concat = node->as<ConcatenationExpressionSyntax>();
+        if (concat.expressions.size() != 1)
+            return false;
+
+        // Skip over any parentheses wrapping the concatenation.
+        auto parent = node->parent;
+        while (parent && parent->kind == SyntaxKind::ParenthesizedExpression) {
+            node = parent;
+            parent = node->parent;
+        }
+
+        if (!parent)
+            return false;
+
+        if (parent->kind == SyntaxKind::MultipleConcatenationExpression)
+            return parent->as<MultipleConcatenationExpressionSyntax>().expression == node;
+
+        if (parent->kind != SyntaxKind::ConcatenationExpression)
+            return false;
+
+        node = parent;
+    }
+}
+
 Expression& ConcatenationExpression::fromSyntax(Compilation& comp,
                                                 const ConcatenationExpressionSyntax& syntax,
                                                 const ASTContext& context,
@@ -2031,7 +2062,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& comp,
             break;
         }
 
-        if (arg->isUnsizedInteger() && !unsizedWarned) {
+        if (arg->isUnsizedInteger() && !unsizedWarned && !isReplicationCount(syntax)) {
             context.addDiag(diag::UnsizedInConcat, arg->sourceRange) << type.getBitWidth();
             unsizedWarned = true;
         }

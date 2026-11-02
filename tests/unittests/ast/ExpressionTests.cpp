@@ -4889,3 +4889,34 @@ endmodule
     for (auto& diag : diags)
         CHECK(diag.code == diag::BitsNotBitstream);
 }
+
+TEST_CASE("Unsized integer in replication count concat does not warn") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [3:0] foo;
+    logic [15:0] a;
+    logic [19:0] b;
+    logic [63:0] c;
+    logic [3:0] d;
+    logic [7:0] e;
+    logic [11:0] f, g, h;
+
+    assign a = {{4}{foo}};
+    assign b = {foo, {4{foo}}};
+    assign c = {1, 2};
+    assign d = {{{1}}{foo}};
+    assign e = {{1, 1'b0}{foo}};
+    assign f = {({3}){foo}};
+    assign g = {{({3})}{foo}};
+    assign h = {{(3)}{foo}};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UnsizedInConcat);
+    CHECK(diags[1].code == diag::UnsizedInConcat);
+}
