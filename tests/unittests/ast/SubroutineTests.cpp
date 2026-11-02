@@ -598,6 +598,24 @@ endfunction
     CHECK(diags[2].code == diag::UndeclaredIdentifier);
 }
 
+TEST_CASE("Function call cycle through a return type found via an earlier lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam p = $bits(f);
+    localparam int a = f();
+    function logic [a-1:0] f; return 1; endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UsedBeforeDeclared);
+    CHECK(diags[1].code == diag::RecursiveDefinition);
+}
+
 TEST_CASE("Extern interface method errors") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;

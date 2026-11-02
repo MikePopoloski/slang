@@ -1212,7 +1212,10 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
                     &syntax);
 
     if (!result.found) {
-        if (flags.has(LookupFlags::AlwaysAllowUpward)) {
+        // Don't search upward if we already found the name but couldn't use it
+        // (e.g. a function whose return type is still being resolved), since
+        // we'd just find the same symbol again.
+        if (flags.has(LookupFlags::AlwaysAllowUpward) && !result.hasError()) {
             LookupResult originalResult = result;
             if (!lookupUpward({}, name, context, flags, result))
                 return;
