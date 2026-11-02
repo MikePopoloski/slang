@@ -158,3 +158,60 @@ endmodule
     auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Multi-port with an invalid component still resolves all ports") {
+    auto tree = SyntaxTree::fromText(R"(
+module n ({b[1:4], a});
+    input tri0 a;
+    input tri1 [3:0] b;
+endmodule
+
+module top;
+    wire [1:0] c;
+    n n1(c);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RangeSelectReversed);
+
+    compilation.freeze();
+
+    AnalysisManager analysisManager;
+    analysisManager.analyze(compilation);
+}
+
+TEST_CASE("Modport expression drivers retargeted across interface instances with enums") {
+    auto& code = R"(
+interface J;
+    typedef enum logic [1:0] { A, B } e_t;
+    e_t [2:0] b;
+    enum logic [1:0] { C, D } [2:0] c;
+    struct packed { e_t x; } s;
+    e_t u[2];
+    modport m(output .R(b[1:0]), output .S(c), output .T(s), output .U(u[1]));
+endinterface
+
+module n(J.m j);
+    assign j.R = 0;
+    assign j.S = 0;
+    assign j.T = 0;
+    assign j.U = type(j.U)'(0);
+endmodule
+
+module top;
+    J j1(), j2();
+    n n1(j1), n2(j2);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}

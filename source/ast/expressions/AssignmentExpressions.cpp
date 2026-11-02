@@ -448,9 +448,7 @@ Expression& AssignmentExpression::fromComponents(
 }
 
 bool AssignmentExpression::isLValueArg() const {
-    return right().kind == ExpressionKind::EmptyArgument ||
-           (right().kind == ExpressionKind::Conversion &&
-            right().as<ConversionExpression>().operand().kind == ExpressionKind::EmptyArgument);
+    return right().unwrapImplicitConversions().kind == ExpressionKind::EmptyArgument;
 }
 
 ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
