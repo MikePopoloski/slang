@@ -2318,3 +2318,27 @@ endmodule
     CHECK(top.lookupName<NetSymbol>("p3").getType().isEnum());
     CHECK(top.lookupName<NetSymbol>("p6").getType().isEnum());
 }
+
+TEST_CASE("Multi-port connection conversion error with user-defined nettype") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef enum { A } e_t;
+nettype e_t nt1;
+
+module p({a, b});
+    input nt1 a, b;
+endmodule
+
+module top;
+    nettype logic signed [5:0] nt2;
+    nt2 c;
+    p p1({c, c});
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NoImplicitConversion);
+}

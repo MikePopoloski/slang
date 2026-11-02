@@ -1508,3 +1508,23 @@ endmodule
     auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Lvalue assignment pattern with multiple element conversions") {
+    auto& code = R"(
+module m;
+    typedef enum { A, B } e_t;
+    function automatic void foo;
+        logic [4:0] data[2];
+        e_t [4:0] a;
+        logic b, c, d, e, f;
+        '{ a, '{ b, c, d, e, f } } = data;
+    endfunction
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}

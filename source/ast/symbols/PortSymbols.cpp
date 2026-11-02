@@ -1041,7 +1041,7 @@ public:
             auto& e = Expression::buildPackedSelectTree(comp, *const_cast<Expression*>(expr), range,
                                                         context);
             auto subExpr = &bindExplicitConnection(e, port->direction, port->getType(), context,
-                                                   SourceRange());
+                                                   expr->sourceRange);
             results.push_back(comp.emplace<PortConnection>(*port, *subExpr));
         }
     }
@@ -1676,6 +1676,11 @@ const Type& MultiPortSymbol::getType() const {
     ASTContext context(*scope, LookupLocation::before(*this), ASTFlags::NonProcedural);
     bitwidth_t totalWidth = 0;
     bitmask<IntegralFlags> flags;
+
+    // Resolve every port up front, even if we bail out below, so that
+    // all of them get fully elaborated.
+    for (auto port : ports)
+        port->getType();
 
     for (auto port : ports) {
         auto& t = port->getType();

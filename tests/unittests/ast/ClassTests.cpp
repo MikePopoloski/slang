@@ -1419,6 +1419,38 @@ endclass
     CHECK(diags[4].code == diag::IfaceMethodHidden);
 }
 
+TEST_CASE("Interface class name conflict with inherited enum value") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class IntfBase #(type T = int);
+    typedef enum { A } e_t;
+    pure virtual function enum { B } f();
+endclass
+
+interface class IntfExt1 extends IntfBase#(bit);
+endclass
+
+interface class IntfExt2 extends IntfBase#(logic);
+endclass
+
+interface class IntfFinal extends IntfExt1, IntfExt2;
+    typedef int T;
+    typedef int e_t;
+    pure virtual function int f();
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::IfaceNameConflict);
+    CHECK(std::get<std::string>(diags[0].args[2]) == "IntfBase");
+    CHECK(diags[1].code == diag::IfaceNameConflict);
+    CHECK(std::get<std::string>(diags[1].args[2]) == "IntfBase");
+    CHECK(diags[2].code == diag::VirtualReturnMismatch);
+}
+
 TEST_CASE("Interface class diamond with generics") {
     auto tree = SyntaxTree::fromText(R"(
 interface class IntfBase #(type T = int);

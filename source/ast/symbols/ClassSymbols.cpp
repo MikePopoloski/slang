@@ -785,7 +785,11 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                         }
 
                         if (origExisting != origNew) {
+                            // Enum values have their enum type as a parent;
+                            // we want the class that declared them.
                             auto parent = existing.getParentScope();
+                            while (parent && parent->asSymbol().kind == SymbolKind::EnumType)
+                                parent = parent->asSymbol().getParentScope();
                             SLANG_ASSERT(parent);
 
                             auto& diag = context.addDiag(diag::IfaceNameConflict,
