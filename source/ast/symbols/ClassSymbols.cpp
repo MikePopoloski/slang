@@ -329,13 +329,35 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
         handleImplements(*classSyntax.implementsClause, context, insertCB);
 }
 
+bool ClassType::hasInvalidBaseClass() const {
+    // Members may be expected to come from any ancestor, so check the whole chain.
+    // Inheritance cycles are broken with an error base, so this always terminates.
+    auto curr = this;
+    while (true) {
+        auto base = curr->getBaseClass();
+        if (!base)
+            return false;
+
+        if (base->isError())
+            return !curr->resolvingBaseClass;
+
+        curr = base->as_if<ClassType>();
+        if (!curr)
+            return false;
+    }
+}
+
 void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const ASTContext& context,
                               function_ref<void(const Symbol&)> insertCB) const {
     // Set a sentinel value immediately to handle re-entrant elaboration.
     auto& comp = context.getCompilation();
     baseClass = &comp.getErrorType();
 
+    // The sentinel must not look like a failed base class to the lookup of the base
+    // class itself, or else undeclared names in the extends clause go unreported.
+    resolvingBaseClass = true;
     auto baseType = Lookup::findClass(*extendsClause.baseName, context);
+    resolvingBaseClass = false;
     if (!baseType)
         return;
 

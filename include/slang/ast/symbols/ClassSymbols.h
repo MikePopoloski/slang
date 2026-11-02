@@ -79,6 +79,11 @@ public:
         return baseClass;
     }
 
+    /// Returns true if this class or any of its ancestors declares a base class that
+    /// failed to resolve, which means that it may be missing members that it was
+    /// supposed to inherit.
+    bool hasInvalidBaseClass() const;
+
     /// Gets the list of interface classes that this class implements.
     /// If this class is itself an interface class, this is instead the list of
     /// interface classes that it extends from, if any.
@@ -203,6 +208,7 @@ private:
     mutable std::optional<uint64_t> cachedBitstreamWidth;
     mutable std::optional<bool> cachedHasCycles;
     mutable uint32_t specializationDepth = 0;
+    mutable bool resolvingBaseClass = false;
     SymbolIndex headerIndex;
 };
 

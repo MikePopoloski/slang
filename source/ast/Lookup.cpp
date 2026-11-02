@@ -2235,8 +2235,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         // Suppress errors when we fail to find a symbol inside a class that
         // had a problem resolving its base class, since the symbol may be
         // expected to be defined in the base.
-        auto baseClass = sym.as<ClassType>().getBaseClass();
-        if (baseClass && baseClass->isError())
+        if (sym.as<ClassType>().hasInvalidBaseClass())
             result.flags |= LookupResultFlags::SuppressUndeclared;
     }
 

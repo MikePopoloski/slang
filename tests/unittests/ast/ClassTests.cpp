@@ -4944,3 +4944,32 @@ endmodule
     CHECK(isVariableForm("variableForm"));
     CHECK(!isVariableForm("objectForm"));
 }
+
+TEST_CASE("Undeclared names in classes derived from an invalid base") {
+    auto tree = SyntaxTree::fromText(R"(
+class A extends Nope;
+endclass
+
+class B extends A;
+    function void f();
+        int x = foo;
+    endfunction
+endclass
+
+class C;
+    function void g();
+        int y = bar;
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(std::get<std::string>(diags[0].args[0]) == "Nope");
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(std::get<std::string>(diags[1].args[0]) == "bar");
+}
