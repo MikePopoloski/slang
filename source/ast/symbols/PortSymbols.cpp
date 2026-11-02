@@ -702,6 +702,7 @@ private:
             port->modport = info.modport;
 
             if (info.insertionPoint) {
+                port->declarationIndex = info.insertionPoint->getIndex();
                 comp.setAttributes(
                     *port, AttributeSymbol::fromSyntax(
                                info.attrs, scope,
@@ -1743,7 +1744,11 @@ std::optional<std::span<const ConstantRange>> InterfacePortSymbol::getDeclaredRa
     auto scope = getParentScope();
     SLANG_ASSERT(scope);
 
-    ASTContext context(*scope, LookupLocation::before(*this), ASTFlags::NonProcedural);
+    // Non-ANSI ports get their dimensions from the declaration in the body,
+    // which can see everything declared before it.
+    auto ll = uint32_t(declarationIndex) ? LookupLocation(scope, uint32_t(declarationIndex))
+                                         : LookupLocation::before(*this);
+    ASTContext context(*scope, ll, ASTFlags::NonProcedural);
 
     SmallVector<ConstantRange, 4> buffer;
     for (auto dimSyntax : syntax->as<DeclaratorSyntax>().dimensions) {

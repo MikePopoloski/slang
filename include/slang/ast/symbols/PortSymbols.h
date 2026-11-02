@@ -144,6 +144,10 @@ public:
     /// to any interface type. If true, @a interfaceDef will be nullptr.
     bool isGeneric = false;
 
+    /// For non-ANSI ports, the index in the parent scope of the port's declaration
+    /// in the body, which is where its dimensions get evaluated. Zero otherwise.
+    SymbolIndex declarationIndex{0};
+
     InterfacePortSymbol(std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::InterfacePort, name, loc) {}
 

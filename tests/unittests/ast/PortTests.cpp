@@ -2342,3 +2342,29 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::NoImplicitConversion);
 }
+
+TEST_CASE("Non-ANSI interface port dimensions see body declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I; endinterface
+
+module n(z, w);
+    localparam P = 2;
+    I z[P];
+    I w[Q];
+    localparam Q = 1;
+endmodule
+
+module top;
+    I i[2]();
+    I j[1]();
+    n n1(i, j);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UsedBeforeDeclared);
+}
