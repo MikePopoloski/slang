@@ -4945,6 +4945,37 @@ endmodule
     CHECK(!isVariableForm("objectForm"));
 }
 
+TEST_CASE("Class specializations with types declared in parameter defaults") {
+    auto tree = SyntaxTree::fromText(R"(
+class foo #(int N = 4, type T = struct packed { logic [N-1:0] x; },
+            type U = struct packed { T y; } [1:0], type V = struct { int z; });
+    static T t;
+    static U u;
+    static V v;
+endclass
+
+module m;
+    foo f;
+    foo #() g;
+    foo #(4) h;
+    foo #(5) i;
+    initial begin
+        $static_assert(type(f) == type(g));
+        $static_assert(type(f) == type(h));
+        $static_assert(type(f.t) == type(g.t));
+        $static_assert(type(f.u) == type(h.u));
+        $static_assert(type(f.v) == type(g.v));
+        $static_assert(type(f) != type(i));
+        $static_assert($bits(i.t) == 5);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Undeclared names in classes derived from an invalid base") {
     auto tree = SyntaxTree::fromText(R"(
 class A extends Nope;

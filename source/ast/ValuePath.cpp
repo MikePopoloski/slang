@@ -327,40 +327,14 @@ ValuePath ValuePath::clone(BumpAllocator& alloc, EvalContext& evalContext) const
     return ValuePath(clonedExpr, evalContext);
 }
 
-// Checks whether two types are the same for the purposes of retargeting.
-// Retargeting happens between instances that share a body, so a type declared
-// in one of them (like an enum) can be a distinct copy, from the same syntax,
-// of the type declared in the other.
-[[maybe_unused]] static bool isRetargetMatch(const Type& l, const Type& r) {
-    auto& lt = l.getCanonicalType();
-    auto& rt = r.getCanonicalType();
-    if (lt.isMatching(rt) || lt.isIdenticalStructUnion(rt))
-        return true;
-
-    if (lt.kind != rt.kind)
-        return false;
-
-    if (lt.getSyntax() && lt.getSyntax() == rt.getSyntax())
-        return true;
-
-    if (!lt.isArray())
-        return false;
-
-    if (lt.hasFixedRange() && lt.getFixedRange() != rt.getFixedRange())
-        return false;
-
-    auto li = lt.getAssociativeIndexType();
-    auto ri = rt.getAssociativeIndexType();
-    if (bool(li) != bool(ri) || (li && !isRetargetMatch(*li, *ri)))
-        return false;
-
-    return isRetargetMatch(*lt.getArrayElementType(), *rt.getArrayElementType());
-}
-
 static const Expression& doRetarget(BumpAllocator& alloc, const Expression& expr,
                                     const ValueSymbol& target) {
     auto checkTypeMatch = [&](const Type& symType) {
-        return isRetargetMatch(symType, target.getType());
+        // Retargeting happens between instances that share a body, so a type declared
+        // in one of them (like an enum) can be a copy of the one declared in the other.
+        auto& targetType = target.getType();
+        return symType.isMatchingAcrossElaborations(targetType) ||
+               symType.isIdenticalStructUnion(targetType);
     };
 
     switch (expr.kind) {

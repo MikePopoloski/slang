@@ -2063,3 +2063,36 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Instance caching with types declared in parameter defaults") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    n n1();
+    n n2();
+    n #(2) n3();
+    o o1();
+    o o2();
+    o #(2) o3();
+endmodule
+
+module n #(parameter int N = 1, type T = enum logic [N:0] { A } [1:0]);
+    T t;
+endmodule
+
+module o #(parameter int N = 1, type T = struct { enum { B = N } y; });
+    T t;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<InstanceSymbol>("m.n1").getCanonicalBody() == nullptr);
+    CHECK(root.lookupName<InstanceSymbol>("m.n2").getCanonicalBody() != nullptr);
+    CHECK(root.lookupName<InstanceSymbol>("m.n3").getCanonicalBody() == nullptr);
+    CHECK(root.lookupName<InstanceSymbol>("m.o1").getCanonicalBody() == nullptr);
+    CHECK(root.lookupName<InstanceSymbol>("m.o2").getCanonicalBody() != nullptr);
+    CHECK(root.lookupName<InstanceSymbol>("m.o3").getCanonicalBody() == nullptr);
+}

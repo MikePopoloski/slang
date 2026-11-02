@@ -1242,7 +1242,9 @@ bool ClassSpecializationKey::operator==(const ClassSpecializationKey& other) con
         const Type* l = *lit;
         const Type* r = *rit;
         if (l && r) {
-            if (!l->isMatching(*r))
+            // A type declared in the default value of a type parameter (like an
+            // inline enum or struct) is created anew in each specialization.
+            if (!l->isMatchingAcrossElaborations(*r))
                 return false;
         }
         else {
