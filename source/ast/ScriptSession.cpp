@@ -30,7 +30,7 @@ static Bag& createOptions(Bag& options) {
 ScriptSession::ScriptSession(Bag options) :
     options(std::move(options)), compilation(createOptions(this->options)),
     scope(compilation.createScriptScope()), astCtx(scope, LookupLocation::max),
-    evalContext(astCtx, EvalFlags::IsScript) {
+    evalContext(astCtx, EvalFlags::IsScript | EvalFlags::RequireConstant) {
     evalContext.pushEmptyFrame();
 }
 
