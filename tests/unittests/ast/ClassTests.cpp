@@ -629,6 +629,38 @@ endtask
     CHECK(diags[14].code == diag::MethodArgDirectionMismatch);
 }
 
+TEST_CASE("Out-of-block default values that need conversion to the argument type") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int x;
+    extern function void f1(byte bar = 1);
+    extern function void f2(int bar = $bits(x));
+    extern function void f3(real bar = 1);
+    extern function void f4(byte bar = 1);
+endclass
+
+function void C::f1(byte bar = 2);
+endfunction
+
+function void C::f2(int bar = 32);
+endfunction
+
+function void C::f3(real bar = 1);
+endfunction
+
+function void C::f4(byte bar = 1);
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MethodArgDefaultMismatch);
+    CHECK(diags[1].code == diag::MethodArgDefaultMismatch);
+}
+
 TEST_CASE("Out-of-block default value") {
     auto tree = SyntaxTree::fromText(R"(
 localparam int k = 1;

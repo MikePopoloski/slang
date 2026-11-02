@@ -394,9 +394,12 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
                 diag.addNote(diag::NoteDeclarationHere, pa->location);
                 return *result;
             }
-            else if (de->syntax && pe->syntax && !de->bad() && !pe->bad()) {
-                // Check for "syntactically identical" expressions.
-                if (!de->syntax->isEquivalentTo(*pe->syntax)) {
+            else if (!de->bad() && !pe->bad()) {
+                // Check for "syntactically identical" expressions. Implicit conversions
+                // to the argument type don't have syntax of their own, so look through them.
+                auto ds = de->unwrapImplicitConversions().syntax;
+                auto ps = pe->unwrapImplicitConversions().syntax;
+                if (ds && ps && !ds->isEquivalentTo(*ps)) {
                     auto& diag = parent.addDiag(diag::MethodArgDefaultMismatch, de->sourceRange);
                     diag << da->name;
                     diag.addNote(diag::NoteDeclarationHere, pa->location) << pe->sourceRange;
