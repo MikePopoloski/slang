@@ -144,8 +144,9 @@ std::pair<SubroutineSymbol*, bool> SubroutineSymbol::fromSyntax(
     else if (subroutineKind == SubroutineKind::Function &&
              proto->returnType->kind != SyntaxKind::VoidType) {
         // The function gets an implicit variable inserted that represents the return value.
+        // It has the same lifetime as the function's other variables (LRM 6.21, 13.4.1).
         auto implicitReturnVar = compilation.emplace<VariableSymbol>(result->name, result->location,
-                                                                     VariableLifetime::Automatic);
+                                                                     *lifetime);
         implicitReturnVar->getDeclaredType()->setLink(result->declaredReturnType);
         implicitReturnVar->flags |= VariableFlags::CompilerGenerated;
         result->addMember(*implicitReturnVar);
