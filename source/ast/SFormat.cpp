@@ -206,20 +206,21 @@ void formatInt(std::string& result, const SVInt& value, LiteralBase base,
         }
     }
 
-    auto doPad = [&] {
-        char pad = '0';
-        if (base == LiteralBase::Decimal)
-            pad = ' ';
+    char pad = '0';
+    if (base == LiteralBase::Decimal)
+        pad = ' ';
 
-        result.append(width - buffer.size(), pad);
-    };
+    // Leading zeros are always displayed [21.2.1.2], so only spaces
+    // can move to the right of a left-justified field.
+    bool padAfter = options.leftJustify && pad == ' ';
+    auto doPad = [&] { result.append(width - buffer.size(), pad); };
 
-    if (buffer.size() < width && !options.leftJustify)
+    if (buffer.size() < width && !padAfter)
         doPad();
 
     result.append(buffer.begin(), buffer.end());
 
-    if (buffer.size() < width && options.leftJustify)
+    if (buffer.size() < width && padAfter)
         doPad();
 }
 
@@ -254,13 +255,17 @@ static void formatChar(std::string& result, const SVInt& value) {
 
 static void formatString(std::string& result, const std::string& value,
                          const FormatOptions& options) {
-    if (options.width) {
-        uint32_t width = *options.width;
-        if (value.size() < width)
-            result.append(width - value.size(), ' ');
-    }
+    size_t padding = 0;
+    if (options.width && value.size() < *options.width)
+        padding = *options.width - value.size();
+
+    if (!options.leftJustify)
+        result.append(padding, ' ');
 
     result.append(value);
+
+    if (options.leftJustify)
+        result.append(padding, ' ');
 }
 
 static void formatRaw2(std::string& result, const ConstantValue& value) {
