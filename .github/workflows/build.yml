@@ -44,8 +44,10 @@ jobs:
     - name: Install dependencies
       if: ${{ startsWith(matrix.os, 'ubuntu-') }}
       run: |
-        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo add-apt-repository "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-23 main"
+        CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
+        sudo install -d -m 0755 /etc/apt/keyrings
+        sudo curl -fsSL --retry 5 --retry-all-errors -o /etc/apt/keyrings/llvm.asc https://apt.llvm.org/llvm-snapshot.gpg.key
+        echo "deb [signed-by=/etc/apt/keyrings/llvm.asc] http://apt.llvm.org/$CODENAME/ llvm-toolchain-$CODENAME-23 main" | sudo tee /etc/apt/sources.list.d/llvm.list
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt-get update
         sudo apt-get install -y g++-16 g++-11 clang-23 clang-tidy-23
