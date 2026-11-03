@@ -26,7 +26,13 @@ InstanceCacheKey::InstanceCacheKey(const InstanceSymbol& symbol, bool& valid,
     size_t h = 0;
     hash_combine(h, &symbol.getDefinition());
 
+    // Localparams are left out. Their values follow from the other parameters,
+    // and resolving one here could need this very instance, such as a
+    // localparam naming a virtual interface of the interface that declares it.
     for (auto param : symbol.body.getParameters()) {
+        if (param->isLocalParam())
+            continue;
+
         if (param->symbol.kind == SymbolKind::Parameter)
             hash_combine(h, param->symbol.as<ParameterSymbol>().getValue().hash());
         else
@@ -83,6 +89,8 @@ bool InstanceCacheKey::operator==(const InstanceCacheKey& other) const {
         auto lp = lparams[i];
         auto rp = rparams[i];
         SLANG_ASSERT(lp->symbol.kind == rp->symbol.kind);
+        if (lp->isLocalParam())
+            continue;
 
         if (lp->symbol.kind == SymbolKind::Parameter) {
             // Values that compare equal can still behave differently in the body.

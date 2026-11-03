@@ -148,7 +148,8 @@ public:
         const ConfigBlockSymbol* configBlock = nullptr, const ConfigRule* configRule = nullptr);
 
     /// Creates a placeholder instance for a virtual interface type declaration.
-    static const InstanceSymbol& createVirtual(
+    /// Returns nullptr if the instance would recurse without end.
+    static const InstanceSymbol* createVirtual(
         const ASTContext& context, SourceLocation loc, const DefinitionSymbol& definition,
         const syntax::ParameterValueAssignmentSyntax* paramAssignments);
 
@@ -173,6 +174,10 @@ private:
     mutable PointerMap* connectionMap = nullptr;
     mutable std::span<const PortConnection* const> connections;
     mutable const InstanceBodySymbol* canonicalBody = nullptr;
+
+    // For a virtual interface instance, its depth within a chain of virtual
+    // instances of the same interface, each created inside the one before it.
+    uint32_t virtualChainDepth = 0;
 };
 
 /// The body of a module, interface, or program instance, which acts as the scope for its members.

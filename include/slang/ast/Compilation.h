@@ -204,6 +204,10 @@ struct SLANG_EXPORT CompilationOptions {
     /// The maximum depth of recursive generic class specializations.
     uint32_t maxRecursiveClassSpecialization = 8;
 
+    /// The maximum depth of a chain of virtual instances of one interface,
+    /// each created inside the one before it.
+    uint32_t maxRecursiveVirtualInterface = 8;
+
     /// The maximum number of UDP coverage notes that will be generated for a single
     /// warning about missing edge transitions.
     uint32_t maxUDPCoverageNotes = 8;

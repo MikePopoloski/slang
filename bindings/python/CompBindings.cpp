@@ -210,6 +210,7 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .def_rw("maxEnumValues", &CompilationOptions::maxEnumValues)
         .def_rw("maxRecursiveClassSpecialization",
                 &CompilationOptions::maxRecursiveClassSpecialization)
+        .def_rw("maxRecursiveVirtualInterface", &CompilationOptions::maxRecursiveVirtualInterface)
         .def_rw("maxUDPCoverageNotes", &CompilationOptions::maxUDPCoverageNotes)
         .def_rw("errorLimit", &CompilationOptions::errorLimit)
         .def_rw("typoCorrectionLimit", &CompilationOptions::typoCorrectionLimit)

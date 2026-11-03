@@ -397,14 +397,15 @@ void TypePrinter::visit(const VirtualInterfaceType& type, std::string_view) {
 
     buffer->append(type.iface.getDefinition().name);
 
-    auto params = type.iface.body.getParameters();
-    if (!params.empty()) {
-        SmallVector<const Symbol*> paramSymbols(params.size(), UninitializedTag{});
-        for (auto param : params)
+    // Localparams are not part of the name, as for a class specialization.
+    SmallVector<const Symbol*> paramSymbols;
+    for (auto param : type.iface.body.getParameters()) {
+        if (!param->isLocalParam())
             paramSymbols.push_back(&param->symbol);
-
-        appendParameters(paramSymbols, true);
     }
+
+    if (!paramSymbols.empty())
+        appendParameters(paramSymbols, true);
 
     if (type.modport)
         buffer->format(".{}", type.modport->name);

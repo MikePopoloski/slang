@@ -1257,13 +1257,15 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
     }
 
     auto loc = syntax.name.location();
-    auto& iface = InstanceSymbol::createVirtual(context, loc, def->as<DefinitionSymbol>(),
-                                                syntax.parameters);
+    auto iface = InstanceSymbol::createVirtual(context, loc, def->as<DefinitionSymbol>(),
+                                               syntax.parameters);
+    if (!iface)
+        return comp.getErrorType();
 
     const ModportSymbol* modport = nullptr;
     std::string_view modportName = syntax.modport ? syntax.modport->member.valueText() : ""sv;
     if (!modportName.empty() && syntax.modport) {
-        auto sym = iface.body.find(modportName);
+        auto sym = iface->body.find(modportName);
         if (!sym || sym->kind != SymbolKind::Modport) {
             SLANG_ASSERT(syntax.modport);
             auto& diag = context.addDiag(diag::NotAModport, syntax.modport->member.range());
@@ -1275,7 +1277,7 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
         }
     }
 
-    return *comp.emplace<VirtualInterfaceType>(iface, modport, /* isRealIface */ false, loc);
+    return *comp.emplace<VirtualInterfaceType>(*iface, modport, /* isRealIface */ false, loc);
 }
 
 ConstantValue VirtualInterfaceType::getDefaultValueImpl() const {
