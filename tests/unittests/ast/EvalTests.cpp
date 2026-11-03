@@ -1334,6 +1334,15 @@ TEST_CASE("Eval sformatf") {
     CHECK(sformatf("%8B", "bar[7:0]") == "11111111");
     CHECK(sformatf("%8b", "baz") == "00000001");
 
+    // Only spaces move to the right of a left-justified field. Leading zeros are always
+    // displayed in the other radices [21.2.1.2].
+    CHECK(sformatf("%-d", "8'd5") == "5  ");
+    CHECK(sformatf("%-6h", "8'h1") == "000001");
+    CHECK(sformatf("%-6o", "8'o7") == "000007");
+    CHECK(sformatf("%-6b", "3'b101") == "000101");
+    CHECK(sformatf("%-h", "8'h1") == "01");
+    CHECK(sformatf("%-b", "4'b1") == "0001");
+
     CHECK(sformatf("%D", "1'bx") == "x");
     CHECK(sformatf("%X", "14'bx01010") == "xxXa");
     CHECK(sformatf("%h %o", "12'b001xxx101x01, 12'b001xxx101x01") == "XXX 1x5X");
@@ -1353,6 +1362,8 @@ TEST_CASE("Eval sformatf") {
     CHECK(sformatf("%3s", "\"abc\"") == "abc");
     CHECK(sformatf("%3s", "\"abcdef\"") == "abcdef");
     CHECK(sformatf("%3s", "str") == "blah");
+    CHECK(sformatf("%-3s%%", "\"a\"") == "a  %");
+    CHECK(sformatf("%-3s", "\"abcdef\"") == "abcdef");
     CHECK(sformatf("%0h", "str") == "626c6168");
 
     CHECK(sformatf("%c", "48") == "0");
