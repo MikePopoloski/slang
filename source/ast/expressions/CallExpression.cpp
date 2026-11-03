@@ -714,6 +714,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     }
 
     // Push a new stack frame, push argument values as locals.
+    const auto numSpeculativeDiags = context.getNumSpeculativeDiags();
     if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
         return nullptr;
 
@@ -736,8 +737,10 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     ConstantValue result = std::move(*context.findLocal(symbol.returnValVar));
     context.popFrame();
 
-    if (er == ER::Fail || er == ER::Disable)
+    if (er == ER::Fail || er == ER::Disable ||
+        context.getNumSpeculativeDiags() != numSpeculativeDiags) {
         return nullptr;
+    }
 
     SLANG_ASSERT(er == ER::Success || er == ER::Return);
     return result;

@@ -174,6 +174,11 @@ public:
     /// Gets the set of diagnostics that have been produced during constant evaluation.
     Diagnostics getAllDiagnostics() const;
 
+    /// Gets the number of diagnostics issued inside function calls during a
+    /// speculative evaluation (one without EvalFlags::RequireConstant).
+    /// Those diagnostics are discarded; the calls fail to evaluate instead.
+    uint32_t getNumSpeculativeDiags() const { return numSpeculativeDiags; }
+
     /// Records a diagnostic under the current evaluation context.
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
 
@@ -190,15 +195,18 @@ public:
     void reportStack(Diagnostic& diag) const;
 
 private:
+    bool discardDiag();
     void reportDiags(Diagnostics& diagSet);
 
     uint32_t steps = 0;
+    uint32_t numSpeculativeDiags = 0;
     const Symbol* disableTarget = nullptr;
     const ConstantValue* queueTarget = nullptr;
     SmallVector<Frame> stack;
     SmallVector<LValue*> lvalStack;
     Diagnostics diags;
     Diagnostics warnings;
+    Diagnostics speculativeDiags;
     SourceRange disableRange;
     bool backtraceReported = false;
 };
