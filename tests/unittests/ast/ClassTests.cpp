@@ -4306,3 +4306,33 @@ endclass
     for (auto& diag : diags)
         CHECK(diag.isError());
 }
+
+TEST_CASE("Enum value initializers can refer to this in methods") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int x;
+    function void f();
+        enum { A = $bits(this.x) } e;
+        begin
+            enum { B = $bits(this.x) + int'(A) } e2;
+        end
+    endfunction
+
+    static function void g();
+        enum { D = $bits(this.x) } e;
+    endfunction
+endclass
+
+module m;
+    enum { E = $bits(this) } e;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidThisHandle);
+    CHECK(diags[1].code == diag::InvalidThisHandle);
+}
