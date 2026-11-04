@@ -145,6 +145,9 @@ public:
 
     bool isEvaluating() const { return evaluating; }
 
+    /// Gets the scope in which the enum containing this value was declared.
+    const Scope* getDeclaringScope() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static EnumValueSymbol& fromSyntax(Compilation& compilation,
