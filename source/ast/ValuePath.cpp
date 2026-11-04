@@ -501,7 +501,8 @@ static void getComponents(const ValuePath& path, SmallVector<const Expression*>&
 }
 
 static Expression* glueConnExpr(BumpAllocator& alloc, EvalContext& evalContext, size_t startIndex,
-                                Expression* expr, SmallVector<const Expression*>& lspPath) {
+                                Expression* expr, SmallVector<const Expression*>& lspPath,
+                                std::optional<ConstantRange> firstSelection = {}) {
     // First, replicate all of the selects for unpacked types. The only way that
     // types can mismatch here is for fixed size arrays, which can have differing
     // ranges, so translate those along the way.
@@ -527,7 +528,9 @@ static Expression* glueConnExpr(BumpAllocator& alloc, EvalContext& evalContext, 
                 return targetDim.lower() + index;
         };
 
-        auto selection = elem->evalSelector(evalContext, /* enforceBounds */ true);
+        auto selection = index == startIndex && firstSelection
+                             ? firstSelection
+                             : elem->evalSelector(evalContext, /* enforceBounds */ true);
         SLANG_ASSERT(selection);
 
         selection->left = translateIndex(selection->left);
@@ -568,26 +571,74 @@ static bool expandRefPortConn(BumpAllocator& alloc, EvalContext& evalContext, co
     getComponents(path, pathElems);
 
     size_t elemsToRemove = 0;
+    bool fullyCovered = false;
+    std::optional<ConstantRange> firstSelection;
     if (internalConn) {
         SmallVector<const Expression*> internalPath;
         getComponents(ValuePath(*internalConn, evalContext), internalPath);
 
         // Remove the common prefix from the lsp path -- the remainder is the portion
         // of the expression that applies on top of the external connection. Note that
-        // the paths are in reverse order so we need to walk backwards.
+        // the paths are in reverse order so we need to walk backwards. Selectors are
+        // compared by value since they can be any constant expression.
         while (elemsToRemove < internalPath.size() && elemsToRemove < pathElems.size()) {
             auto l = internalPath[internalPath.size() - 1 - elemsToRemove];
             auto r = pathElems[pathElems.size() - 1 - elemsToRemove];
-            if (!l->isEquivalentTo(*r)) {
+            if (l->kind == ExpressionKind::MemberAccess ||
+                r->kind == ExpressionKind::MemberAccess) {
                 // This port is not applicable because the internal connection
                 // doesn't match the lsp and so assignments don't affect it.
+                if (l->kind != r->kind || &l->as<MemberAccessExpression>().member !=
+                                              &r->as<MemberAccessExpression>().member) {
+                    return false;
+                }
+                elemsToRemove++;
+                continue;
+            }
+
+            auto lsel = l->evalSelector(evalContext, /* enforceBounds */ true);
+            auto rsel = r->evalSelector(evalContext, /* enforceBounds */ true);
+            if (!lsel || !rsel || !lsel->overlaps(*rsel))
+                return false;
+
+            if (*lsel == *rsel && l->kind == r->kind) {
+                elemsToRemove++;
+                continue;
+            }
+
+            if (rsel->containsPoint(lsel->lower()) && rsel->containsPoint(lsel->upper())) {
+                // The lsp covers everything the internal connection selects.
+                fullyCovered = true;
+                break;
+            }
+
+            // The lsp selects part of a range selected by the internal connection.
+            // If that range is the end of the internal connection we can translate
+            // the selection to be relative to it and glue it onto the external
+            // connection. A partial overlap is only handled when it ends the lsp,
+            // since anything selected after it would be relative to a different range.
+            bool contained = lsel->containsPoint(rsel->lower()) &&
+                             lsel->containsPoint(rsel->upper());
+            if (elemsToRemove != internalPath.size() - 1 ||
+                (!contained && elemsToRemove != pathElems.size() - 1)) {
                 return false;
             }
-            elemsToRemove++;
+
+            auto sel = *rsel;
+            if (!contained) {
+                sel = lsel->intersect(*rsel);
+                if (sel.isDescending() != rsel->isDescending())
+                    sel = sel.reverse();
+            }
+            auto base = lsel->lower();
+            sel.left -= base;
+            sel.right -= base;
+            firstSelection = sel;
+            break;
         }
     }
 
-    if (elemsToRemove == pathElems.size()) {
+    if (fullyCovered || elemsToRemove == pathElems.size()) {
         // The entire lsp is covered by the internal connection, so the external
         // connection is the relevant expression.
         ValuePath::visitPaths(externalConn, evalContext, callback, /* skipSelectors */ true);
@@ -597,7 +648,8 @@ static bool expandRefPortConn(BumpAllocator& alloc, EvalContext& evalContext, co
         // glue the uncovered portion of the LSP onto the external connection.
         // The const_cast here is okay because we never mutate anything during analysis.
         auto newExpr = glueConnExpr(alloc, evalContext, elemsToRemove,
-                                    const_cast<Expression*>(&externalConn), pathElems);
+                                    const_cast<Expression*>(&externalConn), pathElems,
+                                    firstSelection);
         ValuePath::visitPaths(*newExpr, evalContext, callback, /* skipSelectors */ true);
     }
     return true;

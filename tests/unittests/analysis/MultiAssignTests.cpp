@@ -1412,6 +1412,93 @@ endmodule
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }
 
+TEST_CASE("Multi assign through ref port expressions with non-literal selects") {
+    auto& code = R"(
+typedef struct { logic [1:0] x; logic y; } s_t;
+
+module w1(ref .a(foo[0][1]));
+    localparam P = 1;
+    logic [1:0] foo[2][3];
+    assign foo[0][P][0] = 1;
+endmodule
+
+module w2(ref .a(foo[P][1]));
+    localparam P = 0;
+    logic [1:0] foo[2][3];
+    assign foo[0][1][1] = 1;
+endmodule
+
+module w3(ref .a(foo[0:1]));
+    logic foo[3];
+    assign foo[0] = 1;
+    assign foo[2] = 1;
+endmodule
+
+module w4(ref .a(foo[1:2]));
+    logic foo[3];
+    assign foo[0:1] = '{1, 1};
+endmodule
+
+module w5(ref .a(foo[2:1]));
+    localparam P = 2;
+    logic [1:0] foo[3:0];
+    assign foo[P][1] = 1;
+endmodule
+
+module w6(ref .a(foo[1]));
+    localparam P = 1;
+    s_t foo[2];
+    assign foo[P].x[0] = 1;
+    assign foo[0].y = 1;
+endmodule
+
+module w7(ref logic foo[2]);
+    assign foo[0:0] = '{1};
+endmodule
+
+module top;
+    logic [1:0] t1[1:0][3:1];
+    w1 u1(t1[1][1]);
+    assign t1[1][1][0] = 1;
+
+    logic [1:0] t2[1:0][3:1];
+    w2 u2(t2[1][1]);
+    assign t2[1][1][1] = 1;
+
+    logic t3[2];
+    w3 u3(t3);
+    assign t3[0] = 1;
+
+    logic t4[2];
+    w4 u4(t4);
+    assign t4[0] = 1;
+    assign t4[1] = 1;
+
+    logic [1:0] t5[1:2];
+    w5 u5(t5);
+    assign t5[1][1] = 1;
+    assign t5[2][0] = 1;
+
+    s_t t6;
+    w6 u6(t6);
+    assign t6.x[0] = 1;
+    assign t6.y = 1;
+
+    logic t7[2];
+    w7 u7(t7);
+    assign t7[0] = 1;
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 7);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::MultipleContAssigns);
+}
+
 TEST_CASE("Multi assign complicated modport expressions") {
     auto& code = R"(
 class C;

@@ -663,7 +663,7 @@ Expression& RangeSelectExpression::fromConstant(const TypeProvider& typeProvider
     }
 
     // This method is only called on expressions with a fixed range type.
-    SLANG_ASSERT(range.isDescending() == valueRange.isDescending());
+    SLANG_ASSERT(range.isDescending() == valueRange.isDescending() || range.width() == 1);
     SLANG_ASSERT(valueType.hasFixedRange());
 
     if (valueType.isUnpackedArray()) {
