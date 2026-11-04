@@ -1461,3 +1461,22 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CouldNotResolveHierarchicalPath);
 }
+
+TEST_CASE("Modport expressions can use values of enums declared in the interface") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    typedef enum logic [1:0] { A, B } e_t;
+    enum logic [1:0] { C, D } c;
+    logic [3:0] b;
+    modport m(input .x(b[B:0]), input .y(b[D:C]));
+endinterface
+
+module top;
+    I i();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -265,6 +265,12 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext
                 return;
         }
 
+        // Values of enums declared in the interface are fine.
+        if (symbol.kind == SymbolKind::EnumValue &&
+            symbol.as<EnumValueSymbol>().getDeclaringScope() == context.scope) {
+            return;
+        }
+
         if (hierVal || symbol.getParentScope() != context.scope) {
             auto& diag = context.addDiag(diag::ModportMemberParent, refExpr.sourceRange);
             diag << symbol.name;

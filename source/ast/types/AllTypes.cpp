@@ -635,6 +635,13 @@ EnumValueSymbol& EnumValueSymbol::fromSyntax(Compilation& compilation,
     return *ev;
 }
 
+const Scope* EnumValueSymbol::getDeclaringScope() const {
+    auto scope = getParentScope();
+    if (scope && scope->asSymbol().kind == SymbolKind::EnumType)
+        scope = scope->asSymbol().getParentScope();
+    return scope;
+}
+
 const ConstantValue& EnumValueSymbol::getValue(SourceRange referencingRange) const {
     if (!value) {
         auto scope = getParentScope();
