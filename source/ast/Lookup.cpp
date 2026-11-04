@@ -1032,10 +1032,12 @@ const Symbol* findThisHandle(const Scope& scope, bitmask<LookupFlags> flags, Sou
             return &parent->as<ClassType>();
     }
     else {
-        // Find the parent method, if we can.
+        // Find the parent method, if we can. Enum value initializers are bound
+        // inside the enum type, which is nested in whatever declared it.
         const Symbol* parent = &scope.asSymbol();
         while (parent->kind == SymbolKind::StatementBlock ||
-               parent->kind == SymbolKind::RandSeqProduction) {
+               parent->kind == SymbolKind::RandSeqProduction ||
+               parent->kind == SymbolKind::EnumType) {
             auto parentScope = parent->getParentScope();
             SLANG_ASSERT(parentScope);
             parent = &parentScope->asSymbol();
