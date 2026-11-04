@@ -3391,6 +3391,31 @@ TEST_CASE("Eval conditional with matches") {
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
 }
 
+TEST_CASE("Pattern variables in conditional expressions in constant functions") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    typedef union tagged { int A; void B; } u_t;
+
+    function automatic int f(u_t u);
+        return u matches tagged A .v &&& v > 2 ? (u matches tagged A .w ? v + w : 1) : 2;
+    endfunction
+
+    localparam int X = f(tagged A 5);
+    localparam int Y = f(tagged A 1);
+    localparam int Z = f(tagged B);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<ParameterSymbol>("top.X").getValue().integer() == 10);
+    CHECK(root.lookupName<ParameterSymbol>("top.Y").getValue().integer() == 2);
+    CHECK(root.lookupName<ParameterSymbol>("top.Z").getValue().integer() == 2);
+}
+
 TEST_CASE("Packed arrays of a named signed type are unsigned") {
     ScriptSession session;
     session.eval("typedef logic signed [3:0] operand_t;");

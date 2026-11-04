@@ -1455,7 +1455,11 @@ static const Pattern* createPattern(Compilation& comp, ASTContext& context,
             }
 
             // We just created this pattern var so the const_cast is safe.
-            const_cast<PatternVarSymbol*>(var)->nextTemp = std::exchange(context.firstTempVar, var);
+            // Like iterators, it isn't a member of the scope but it is parented
+            // there so that things like constant function checks can see where it lives.
+            auto mutVar = const_cast<PatternVarSymbol*>(var);
+            mutVar->nextTemp = std::exchange(context.firstTempVar, var);
+            mutVar->setParent(*context.scope);
 
             // We need to force resolution here because the pattern variable doesn't
             // live in a scope and so later attempts at touching it could cause normal
