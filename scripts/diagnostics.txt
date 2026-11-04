@@ -965,7 +965,7 @@ error MultiplePackedOpenArrays "cannot declare more than one packed dimension wh
 error RecursiveClassSpecialization "potentially infinitely recursive specialization of class '{}'"
 error RecursiveVirtualInterface "potentially infinitely recursive virtual instance of interface '{}'"
 error TypeRefVoid "cannot create a type reference to the 'void' type"
-warning enum-range EnumRangeLiteral "enum element ranges must be integer literals"
+error EnumRangeLiteral "enum element ranges must be integer literals"
 
 subsystem Lookup
 warning redefinition Redefinition "redefinition of '{}'"
@@ -1312,7 +1312,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
                   unknown-escape-code missing-top warning-task unsized-concat finish-num
-                  nonblocking-final constraint-missing missing-format dpi-spec enum-range udp-port-empty
+                  nonblocking-final constraint-missing missing-format dpi-spec udp-port-empty
                   lifetime-prototype net-inconsistent port-coercion empty-body reversed-range
                   invalid-source-encoding index-oob range-oob range-width-oob expected-protect-arg
                   unknown-protect-keyword expected-protect-keyword nested-protect-begin extra-protect-end

@@ -124,8 +124,8 @@ module m;
     enum logic [2:0] { I = 2, J = 1, K } e4;    // reuse of value
     enum logic [2:0] { L = 2, M = 2 } e5;       // reuse of value
     enum logic [2:0] { } e6;                    // no members
-    enum logic [2:0] { N[-1] } e7;              // negative range
-    enum logic [2:0] { O[3:-2] } e8;            // negative range
+    enum logic [2:0] { N[4'sb1111] } e7;        // negative range
+    enum logic [2:0] { O[3:4'sb1110] } e8;      // negative range
     enum logic [2:0] { P[3:2][2] } e9;          // multidimensional
     enum logic [2:0] { Q[2] = 3'b111 } e10;     // overflow
     enum logic [2:0] { R = 'x, S[1] } e11;      // incremented 'x not allowed
@@ -283,7 +283,7 @@ TEST_CASE("Enum range literal check") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     localparam int foo = 3;
-    enum { A[foo:1], B[foo] } asdf;
+    enum { A[foo:1], B[foo], C[foo+:2] } asdf;
 endmodule
 )");
 
@@ -291,9 +291,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::EnumRangeLiteral);
     CHECK(diags[1].code == diag::EnumRangeLiteral);
+    CHECK(diags[2].code == diag::EnumRangeLiteral);
 }
 
 TEST_CASE("Packed structs") {

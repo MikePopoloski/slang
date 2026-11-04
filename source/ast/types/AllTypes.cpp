@@ -265,25 +265,26 @@ EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& bas
     setParent(*context.scope, context.lookupIndex);
 }
 
-static void checkEnumRange(const ASTContext& context, const VariableDimensionSyntax& syntax) {
-    auto checkExpr = [&](const ExpressionSyntax& expr) {
-        if (expr.kind != SyntaxKind::IntegerLiteralExpression &&
-            expr.kind != SyntaxKind::IntegerVectorExpression) {
-            context.addDiag(diag::EnumRangeLiteral, expr.sourceRange());
-        }
+// Enum ranges must be integer literals.
+static bool isLiteralRange(const VariableDimensionSyntax& syntax) {
+    if (!syntax.specifier || syntax.specifier->kind != SyntaxKind::RangeDimensionSpecifier)
+        return false;
+
+    auto isLiteral = [](const ExpressionSyntax& expr) {
+        return expr.kind == SyntaxKind::IntegerLiteralExpression ||
+               expr.kind == SyntaxKind::IntegerVectorExpression;
     };
 
-    SLANG_ASSERT(syntax.specifier && syntax.specifier->kind == SyntaxKind::RangeDimensionSpecifier);
     auto& sel = *syntax.specifier->as<RangeDimensionSpecifierSyntax>().selector;
-    if (sel.kind == SyntaxKind::BitSelect) {
-        auto& expr = *sel.as<BitSelectSyntax>().expr;
-        checkExpr(expr);
-    }
-    else if (sel.kind == SyntaxKind::SimpleRangeSelect) {
+    if (sel.kind == SyntaxKind::BitSelect)
+        return isLiteral(*sel.as<BitSelectSyntax>().expr);
+
+    if (sel.kind == SyntaxKind::SimpleRangeSelect) {
         auto& range = sel.as<RangeSelectSyntax>();
-        checkExpr(*range.left);
-        checkExpr(*range.right);
+        return isLiteral(*range.left) && isLiteral(*range.right);
     }
+
+    return false;
 }
 
 const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax,
@@ -502,6 +503,11 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
                 context.addDiag(diag::EnumRangeMultiDimensional, member->dimensions.sourceRange());
             }
 
+            if (!isLiteralRange(*member->dimensions[0])) {
+                context.addDiag(diag::EnumRangeLiteral, member->dimensions[0]->sourceRange());
+                continue;
+            }
+
             auto dim = context.evalUnpackedDimension(*member->dimensions[0]);
             if (!dim.isRange())
                 continue;
@@ -513,9 +519,6 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
                                          member->dimensions[0]->sourceRange())) {
                 continue;
             }
-
-            // Enum ranges must be integer literals.
-            checkEnumRange(context, *member->dimensions[0]);
 
             // Check that this range won't exceed the member count limit.
             auto rangeWidth = dim.range.width();

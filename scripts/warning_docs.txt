@@ -1831,14 +1831,6 @@ but most tools allow it anyway as an extension.
 longint i = {1, 2};
 ```
 
--Wenum-range
-An enum member is specified as a range with values that are not integer literals.
-The LRM does not allow other constant expressions to be used here.
-```
-localparam int i = 1;
-typedef enum { A[i:3] } e_t;
-```
-
 -Wnested-solve-before
 A `solve before` constraint is nested inside another constraint. This is not allowed in
 SystemVerilog.
