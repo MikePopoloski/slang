@@ -399,26 +399,23 @@ const InstanceSymbol* InstanceSymbol::createVirtual(
     const ASTContext& context, SourceLocation loc, const DefinitionSymbol& definition,
     const ParameterValueAssignmentSyntax* paramAssignments) {
 
-    // A virtual interface type written inside an instance of the same interface,
-    // such as a parameter defaulting to it or a class property whose parameters
-    // grow by one each time, makes another instance that does the same, without
-    // end. Bound the chain by tracking each virtual instance's depth within it,
-    // as is done for generic class specializations.
+    // A virtual interface type written inside an instance, such as a parameter
+    // defaulting to a virtual instance of its own interface or a class property
+    // whose parameters grow by one each time, can make another instance that
+    // does the same, without end. A virtual instance is one deeper than the
+    // instance that declares it, so such a chain stops at the hierarchy's limit.
     auto& comp = context.getCompilation();
-    uint32_t chainDepth = 0;
+    uint32_t instanceDepth = 0;
     for (const Scope* scope = context.scope; scope;
          scope = scope->asSymbol().getHierarchicalParent()) {
         auto& sym = scope->asSymbol();
         if (sym.kind == SymbolKind::InstanceBody) {
-            auto& body = sym.as<InstanceBodySymbol>();
-            if (&body.getDefinition() == &definition) {
-                chainDepth = body.parentInstance->virtualChainDepth + 1;
-                break;
-            }
+            instanceDepth = sym.as<InstanceBodySymbol>().parentInstance->instanceDepth + 1;
+            break;
         }
     }
 
-    if (chainDepth > comp.getOptions().maxRecursiveVirtualInterface) {
+    if (instanceDepth > comp.getOptions().maxInstanceDepth) {
         context.addDiag(diag::RecursiveVirtualInterface, loc) << definition.name;
         return nullptr;
     }
@@ -429,8 +426,7 @@ const InstanceSymbol* InstanceSymbol::createVirtual(
         paramBuilder.setAssignments(*paramAssignments, /* isFromConfig */ false);
 
     auto& result = *comp.emplace<InstanceSymbol>(comp, definition.name, loc, definition,
-                                                 paramBuilder, InstanceFlags::None, 0u);
-    result.virtualChainDepth = chainDepth;
+                                                 paramBuilder, InstanceFlags::None, instanceDepth);
 
     // Set the parent pointer so that traversing upwards still works to find
     // the instantiation scope. This "virtual" instance never actually gets
@@ -1431,18 +1427,10 @@ bool InstanceBodySymbol::hasSameType(const InstanceBodySymbol& other) const {
     if (&definition != &other.definition)
         return false;
 
-    // Localparams are left out, as they are from a class specialization's
-    // parameters; their values follow from the other parameters.
-    auto nonlocalParams = [](std::span<const ParameterSymbolBase* const> params) {
-        SmallVector<const Symbol*> result;
-        for (auto param : params) {
-            if (!param->isLocalParam())
-                result.push_back(&param->symbol);
-        }
-        return result;
-    };
-    return ParameterSymbolBase::allMatching(nonlocalParams(parameters),
-                                            nonlocalParams(other.parameters));
+    auto nonlocal = std::views::filter([](auto& paramBase) { return !paramBase->isLocalParam(); });
+    auto getSym = std::views::transform([](auto& paramBase) { return &paramBase->symbol; });
+    return ParameterSymbolBase::allMatching(parameters | nonlocal | getSym,
+                                            other.parameters | nonlocal | getSym);
 }
 
 void InstanceBodySymbol::serializeTo(ASTSerializer& serializer) const {

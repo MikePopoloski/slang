@@ -175,11 +175,9 @@ private:
 
 bool ParameterSymbolBase::allMatching(std::ranges::range auto&& leftParams,
                                       std::ranges::range auto&& rightParams) {
-    if (leftParams.size() != rightParams.size())
-        return false;
-
-    for (auto li = leftParams.begin(), ri = rightParams.begin(); li != leftParams.end();
-         li++, ri++) {
+    auto li = leftParams.begin();
+    auto ri = rightParams.begin();
+    for (; li != leftParams.end() && ri != rightParams.end(); li++, ri++) {
 
         auto& lp = **li;
         auto& rp = **ri;
@@ -200,7 +198,7 @@ bool ParameterSymbolBase::allMatching(std::ranges::range auto&& leftParams,
         }
     }
 
-    return true;
+    return li == leftParams.end() && ri == rightParams.end();
 }
 
 } // namespace slang::ast

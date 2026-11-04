@@ -98,7 +98,8 @@ public:
     /// the parent instance's config rule if there is one up the stack.
     const ResolvedConfig* resolvedConfig = nullptr;
 
-    /// The depth of this instance within the design hierarchy.
+    /// The depth of this instance within the design hierarchy. A virtual
+    /// interface instance is one deeper than the instance that declares it.
     uint32_t instanceDepth;
 
     InstanceSymbol(std::string_view name, SourceLocation loc, InstanceBodySymbol& body,
@@ -174,10 +175,6 @@ private:
     mutable PointerMap* connectionMap = nullptr;
     mutable std::span<const PortConnection* const> connections;
     mutable const InstanceBodySymbol* canonicalBody = nullptr;
-
-    // For a virtual interface instance, its depth within a chain of virtual
-    // instances of the same interface, each created inside the one before it.
-    uint32_t virtualChainDepth = 0;
 };
 
 /// The body of a module, interface, or program instance, which acts as the scope for its members.
