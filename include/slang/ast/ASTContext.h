@@ -227,6 +227,9 @@ enum class SLANG_EXPORT EvalFlags : uint8_t {
     /// only to fold values or provide better diagnostics, and constructs that
     /// would evaluate differently at runtime than during constant evaluation
     /// (such as static variables in functions) cause evaluation to fail.
+    /// So do function calls whose evaluation issues a diagnostic; the
+    /// diagnostic would only exist because of the attempt, so it is
+    /// discarded rather than reported.
     RequireConstant = 1 << 4
 };
 SLANG_BITMASK(EvalFlags, RequireConstant)

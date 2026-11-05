@@ -2316,6 +2316,81 @@ endmodule
     CHECK(m.find("g3"));
 }
 
+TEST_CASE("Speculative eval doesn't fold calls that issue diagnostics") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(output logic [7:0] q, output logic r, output logic [1:0] r2, output logic [7:0] s,
+         output logic [7:0] t, output logic [7:0] u, output logic [7:0] w);
+  function automatic logic f(input logic [9:0] p0, input logic [1:0] p1);
+    return p0[p1];
+  endfunction
+
+  function automatic logic wrapped(input logic [1:0] p1);
+    return f(10'd5, p1);
+  endfunction
+
+  logic [15:0] pattern = 16'hB278;
+  always @(*) begin
+    q = f(10'd5, 2'b0z);
+    r = pattern[f(10'd5, 2'b0z)];
+    r2 = pattern[wrapped(2'bx1) +: 2];
+    s = 8'd1 << f(10'd5, 2'b0z);
+    t = f(10'd5, 2'b0z) ? 8'd1 : 8'd2;
+    u = f(10'd5, 2'd1);
+  end
+  assign w = f(10'd5, 2'b0z);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Nothing is reported from inside f. The widened calls get only the
+    // width warning that any call that isn't a constant gets.
+    auto diags = compilation.getAllDiagnostics().filter({diag::WidthExpand});
+    if (!diags.empty())
+        FAIL_CHECK(report(diags));
+
+    // Calls whose evaluation diagnoses the unknown index are not folded;
+    // the call with a known index still is. The visitor also walks into
+    // the body of wrapped, whose call to f has a non-constant argument.
+    int numCalls = 0;
+    compilation.getRoot().visit(makeVisitor([&](auto& v, const CallExpression& call) {
+        if (!call.isSystemCall()) {
+            numCalls++;
+            auto& arg = call.arguments().back()->unwrapImplicitConversions();
+            bool knownIndex = arg.kind == ExpressionKind::IntegerLiteral &&
+                              !arg.as<IntegerLiteral>().getValue().hasUnknown();
+            CHECK((call.getConstant() != nullptr) == knownIndex);
+        }
+        v.visitDefault(call);
+    }));
+    CHECK(numCalls == 8);
+}
+
+TEST_CASE("Required constant eval still reports diagnostics from function calls") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  function automatic logic f(input logic [9:0] p0, input logic [1:0] p1);
+    return p0[p1];
+  endfunction
+
+  localparam logic [7:0] p = f(10'd5, 2'b0z);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // The widening makes the conversion check try a speculative evaluation
+    // first; that must not keep the required one from reporting. Since the
+    // speculative attempt fails, the conversion also gets the width warning.
+    auto diags = compilation.getAllDiagnostics().filter({diag::WidthExpand});
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::IndexOOB);
+    REQUIRE(diags[0].notes.size() == 1);
+    CHECK(diags[0].notes[0].code == diag::NoteInCallTo);
+}
+
 TEST_CASE("Complicated lvalue path") {
     ScriptSession session;
     session.eval(R"(

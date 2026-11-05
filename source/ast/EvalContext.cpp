@@ -26,6 +26,8 @@ void EvalContext::reset() {
     lvalStack.clear();
     diags.clear();
     warnings.clear();
+    speculativeDiags.clear();
+    numSpeculativeDiags = 0;
     disableRange = {};
     backtraceReported = false;
 }
@@ -146,7 +148,23 @@ Diagnostics EvalContext::getAllDiagnostics() const {
     return results;
 }
 
+bool EvalContext::discardDiag() {
+    // A speculative evaluation doesn't report diagnostics from inside a
+    // function call, since they would exist only because we tried to fold
+    // the call. Just count them so that the call fails instead (see
+    // CallExpression::evalImpl), and keep only the latest one.
+    if (flags.has(EvalFlags::RequireConstant) || stack.empty() || !stack.back().subroutine)
+        return false;
+
+    numSpeculativeDiags++;
+    speculativeDiags.clear();
+    return true;
+}
+
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceLocation location) {
+    if (discardDiag())
+        return speculativeDiags.add(code, location);
+
     const bool isError = getDefaultSeverity(code) >= DiagnosticSeverity::Error;
     auto& diag = isError ? diags.add(code, location) : warnings.add(code, location);
     reportStack(diag);
@@ -154,6 +172,9 @@ Diagnostic& EvalContext::addDiag(DiagCode code, SourceLocation location) {
 }
 
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceRange range) {
+    if (discardDiag())
+        return speculativeDiags.add(code, range);
+
     const bool isError = getDefaultSeverity(code) >= DiagnosticSeverity::Error;
     auto& diag = isError ? diags.add(code, range) : warnings.add(code, range);
     reportStack(diag);
