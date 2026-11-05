@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * `$bits` is no longer allowed on `real`, `shortreal`, and `realtime` values or on unpacked unions, since they are not bitstream types
 * The error for changing the visibility of an inherited virtual method is now downgradeable via [-Wvirtual-visibility-mismatch](https://sv-lang.com/warning-ref.html#virtual-visibility-mismatch)
 * Arguments to class `randomize` calls must now be simple names of properties of the object being randomized, as required by the LRM; forms like `(x)`, `local::x`, and `this.x` are errors
+* The error when using global clock tasks like `$global_clock` and `$past_gclk` without a global clocking block in scope is now suppressible [-Wno-missing-global-clocking](https://sv-lang.com/warning-ref.html#missing-global-clocking) (thanks to @Timmmm)
 
 ### Notable Breaking Changes
 
