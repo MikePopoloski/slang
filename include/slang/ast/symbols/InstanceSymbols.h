@@ -98,7 +98,8 @@ public:
     /// the parent instance's config rule if there is one up the stack.
     const ResolvedConfig* resolvedConfig = nullptr;
 
-    /// The depth of this instance within the design hierarchy.
+    /// The depth of this instance within the design hierarchy. A virtual
+    /// interface instance is one deeper than the instance that declares it.
     uint32_t instanceDepth;
 
     InstanceSymbol(std::string_view name, SourceLocation loc, InstanceBodySymbol& body,
@@ -148,7 +149,8 @@ public:
         const ConfigBlockSymbol* configBlock = nullptr, const ConfigRule* configRule = nullptr);
 
     /// Creates a placeholder instance for a virtual interface type declaration.
-    static const InstanceSymbol& createVirtual(
+    /// Returns nullptr if the instance would recurse without end.
+    static const InstanceSymbol* createVirtual(
         const ASTContext& context, SourceLocation loc, const DefinitionSymbol& definition,
         const syntax::ParameterValueAssignmentSyntax* paramAssignments);
 

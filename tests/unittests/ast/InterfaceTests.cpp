@@ -965,6 +965,56 @@ endinterface
     CHECK(diags[0].code == diag::VirtualInterfaceIfaceMember);
 }
 
+TEST_CASE("Interface localparam naming a virtual interface of itself") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I #(parameter int W = 1);
+    localparam type V = virtual I #(W);
+endinterface
+
+module m;
+    I #(2) i();
+    virtual I #(2) a = i, b = a;
+    int c = a;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK("\n" + report(diags) == R"(
+source:9:11: error: value of type 'virtual interface I#(W=2)' cannot be assigned to type 'int'
+    int c = a;
+          ^ ~
+)");
+}
+
+TEST_CASE("Recursive virtual interface instances") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I #(parameter type V = virtual I);
+endinterface
+
+interface J #(parameter int W = 1);
+    class C;
+        virtual J #(.W(W + 1)) v;
+    endclass
+endinterface
+
+module m;
+    I i();
+    J j();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::RecursiveVirtualInterface);
+    CHECK(diags[1].code == diag::RecursiveVirtualInterface);
+}
+
 TEST_CASE("Interface containing virtual interface items in generate blocks") {
     auto tree = SyntaxTree::fromText(R"(
 interface A;

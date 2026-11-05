@@ -28,6 +28,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
+#include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/TimeTrace.h"
 #include "slang/util/TypeTraits.h"
@@ -394,18 +395,38 @@ InstanceSymbol& InstanceSymbol::createDefault(Compilation& comp, const Definitio
     return result;
 }
 
-const InstanceSymbol& InstanceSymbol::createVirtual(
+const InstanceSymbol* InstanceSymbol::createVirtual(
     const ASTContext& context, SourceLocation loc, const DefinitionSymbol& definition,
     const ParameterValueAssignmentSyntax* paramAssignments) {
+
+    // A virtual interface type written inside an instance, such as a parameter
+    // defaulting to a virtual instance of its own interface or a class property
+    // whose parameters grow by one each time, can make another instance that
+    // does the same, without end. A virtual instance is one deeper than the
+    // instance that declares it, so such a chain stops at the hierarchy's limit.
+    auto& comp = context.getCompilation();
+    uint32_t instanceDepth = 0;
+    for (const Scope* scope = context.scope; scope;
+         scope = scope->asSymbol().getHierarchicalParent()) {
+        auto& sym = scope->asSymbol();
+        if (sym.kind == SymbolKind::InstanceBody) {
+            instanceDepth = sym.as<InstanceBodySymbol>().parentInstance->instanceDepth + 1;
+            break;
+        }
+    }
+
+    if (instanceDepth > comp.getOptions().maxInstanceDepth) {
+        context.addDiag(diag::RecursiveVirtualInterface, loc) << definition.name;
+        return nullptr;
+    }
 
     ParameterBuilder paramBuilder(*context.scope, definition.name, definition.parameters);
     paramBuilder.setInstanceContext(context);
     if (paramAssignments)
         paramBuilder.setAssignments(*paramAssignments, /* isFromConfig */ false);
 
-    auto& comp = context.getCompilation();
     auto& result = *comp.emplace<InstanceSymbol>(comp, definition.name, loc, definition,
-                                                 paramBuilder, InstanceFlags::None, 0u);
+                                                 paramBuilder, InstanceFlags::None, instanceDepth);
 
     // Set the parent pointer so that traversing upwards still works to find
     // the instantiation scope. This "virtual" instance never actually gets
@@ -413,7 +434,7 @@ const InstanceSymbol& InstanceSymbol::createVirtual(
     result.setParent(*context.scope);
 
     // Allow the compilation to cache this virtual interface instance.
-    return comp.getOrAddVirtualIface(result);
+    return &comp.getOrAddVirtualIface(result);
 }
 
 Symbol& InstanceSymbol::createDefaultNested(const Scope& scope,
@@ -1406,8 +1427,10 @@ bool InstanceBodySymbol::hasSameType(const InstanceBodySymbol& other) const {
     if (&definition != &other.definition)
         return false;
 
+    auto nonlocal = std::views::filter([](auto& paramBase) { return !paramBase->isLocalParam(); });
     auto getSym = std::views::transform([](auto& paramBase) { return &paramBase->symbol; });
-    return ParameterSymbolBase::allMatching(parameters | getSym, other.parameters | getSym);
+    return ParameterSymbolBase::allMatching(parameters | nonlocal | getSym,
+                                            other.parameters | nonlocal | getSym);
 }
 
 void InstanceBodySymbol::serializeTo(ASTSerializer& serializer) const {
