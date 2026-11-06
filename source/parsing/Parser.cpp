@@ -243,10 +243,7 @@ PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
         if (!constKeyword && peek(1).kind == TokenKind::Dot &&
             peek(2).kind == TokenKind::Identifier && peek(3).kind == TokenKind::Identifier) {
             auto name = consume();
-            InterfacePortHeaderSyntax* header =
-                &factory.interfacePortHeader(name, parseDotMemberClause());
-            meta.interfacePorts.push_back(header);
-            return *header;
+            return factory.interfacePortHeader(name, parseDotMemberClause());
         }
 
         DataTypeSyntax* type;
@@ -573,8 +570,10 @@ DataTypeSyntax& Parser::parseDataType(bitmask<TypeOptions> options) {
             auto interfaceKeyword = consumeIf(TokenKind::InterfaceKeyword);
             auto name = expect(TokenKind::Identifier);
             auto parameters = parseParameterValueAssignment();
-            return factory.virtualInterfaceType(virtualKeyword, interfaceKeyword, name, parameters,
-                                                parseDotMemberClause());
+            auto& result = factory.virtualInterfaceType(virtualKeyword, interfaceKeyword, name,
+                                                        parameters, parseDotMemberClause());
+            meta.virtualInterfaceTypes.push_back(&result);
+            return result;
         }
         case TokenKind::UnitSystemName:
             return factory.namedType(parseName());

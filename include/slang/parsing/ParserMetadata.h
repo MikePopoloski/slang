@@ -54,8 +54,8 @@ struct SLANG_EXPORT ParserMetadata {
     /// instantiations and so are included in @a globalInstances instead.
     std::vector<const syntax::CheckerInstantiationSyntax*> checkerInstances;
 
-    /// A list of all interface port headers parsed.
-    std::vector<const syntax::InterfacePortHeaderSyntax*> interfacePorts;
+    /// A list of all virtual interface types parsed.
+    std::vector<const syntax::VirtualInterfaceTypeSyntax*> virtualInterfaceTypes;
 
     /// The EOF token, if one has already been consumed by the parser.
     /// Otherwise an empty token.
@@ -71,18 +71,23 @@ struct SLANG_EXPORT ParserMetadata {
     static ParserMetadata fromSyntax(const syntax::SyntaxNode& root);
 
     /// Returns a list of all symbols from @a visitDeclaredSymbols.
-    std::vector<std::string_view> getDeclaredSymbols() const;
+    std::vector<std::string_view> getDeclaredSymbols(bool includeNested = false) const;
 
-    /// Visits top level symbols declared in this metadata, calling the provided function with the
-    /// name. This includes modules, classes, packages, interfaces, and checkers.
-    void visitDeclaredSymbols(function_ref<void(std::string_view)> func) const;
+    /// Visits compilation-unit module, interface, program, package, class, and checker
+    /// declarations, calling the provided function with each unqualified name. If @a includeNested
+    /// is true, also includes declarations within other scopes.
+    void visitDeclaredSymbols(function_ref<void(std::string_view)> func,
+                              bool includeNested = false) const;
 
     /// Returns a list of all symbols from @a visitReferencedSymbols.
     std::vector<std::string_view> getReferencedSymbols() const;
 
     /// Visits all top level symbols referenced/used by this metadata, calling the provided
-    /// function for each symbol name.
-    void visitReferencedSymbols(function_ref<void(std::string_view)> func) const;
+    /// function for each symbol name, including virtual interface types.
+    /// If @a includePortNames is true, also includes explicit interface ports and ambiguous
+    /// variable port types that can resolve to interfaces or data types.
+    void visitReferencedSymbols(function_ref<void(std::string_view)> func,
+                                bool includePortNames = true) const;
 };
 
 } // namespace slang::parsing
