@@ -91,12 +91,16 @@ enum class SLANG_EXPORT DeclaredTypeFlags {
     /// type check is suppressed.
     ImplicitInputNet = 1 << 17,
 
+    /// The declared type is shared by the values of an enum, so it resolves to
+    /// the enum type itself without any packed dimensions given in its syntax.
+    EnumValues = 1 << 18,
+
     /// A mask of flags that indicate additional type rules are needed to
     /// be checked after the type itself is resolved.
     NeedsTypeCheck = NetType | UserDefinedNetType | FormalArgMergeVar | Rand | DPIReturnType |
         DPIArg | RequireSequenceType | CoverageType | IfaceOrGenBlkVar
 };
-SLANG_BITMASK(DeclaredTypeFlags, ImplicitInputNet)
+SLANG_BITMASK(DeclaredTypeFlags, EnumValues)
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type. Optionally includes an
@@ -129,6 +133,9 @@ public:
     /// Sets this declared type to link to the given type, taking on whatever
     /// type and initializer that target has.
     void setLink(const DeclaredType& target);
+
+    /// Gets the declared type that this one links to, if any.
+    const DeclaredType* getLinkTarget() const { return hasLink ? typeOrLink.link : nullptr; }
 
     /// Gets the type syntax that was previously set via @a setTypeSyntax -- if any.
     /// Otherwise returns nullptr.
@@ -195,9 +202,14 @@ public:
     /// @a setInitializerSyntax manually.
     void setFromDeclarator(const syntax::DeclaratorSyntax& decl);
 
-    /// Returns true if this declared type is in the process of being resolved.
+    /// Returns true if this declared type is in the process of being resolved,
+    /// or links to one that is and doesn't know its type yet.
     /// This is used to detect cycles in the the type resolution process.
-    bool isEvaluating() const { return evaluating; }
+    bool isEvaluating() const {
+        if (hasLink && !type)
+            return typeOrLink.link && typeOrLink.link->isEvaluating() && !typeOrLink.link->type;
+        return evaluating;
+    }
 
     /// Returns true if the initializer is in the process of being bound.
     /// This is used to detect cycles through the initializer of a symbol
@@ -230,6 +242,13 @@ public:
     /// Resolves the initializer using the given AST context, which could
     /// differ from the AST context that is used for type resolution.
     void resolveAt(const ASTContext& context) const;
+
+    /// Resolves the type, if it hasn't been already, using the given context
+    /// instead of one derived from the parent symbol.
+    void resolveTypeAt(const ASTContext& context) const {
+        if (!type)
+            resolveType(context, context);
+    }
 
     /// Forces resolution of both the type and the initializer using the given AST context
     /// instead of using the normal logic built into DeclaredType to determine the context.

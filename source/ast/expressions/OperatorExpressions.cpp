@@ -1482,12 +1482,21 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
     SmallVector<Condition> conditions;
     ASTContext trueContext = context;
 
+    // Enums after the first pattern can refer to pattern variables,
+    // which don't live in a scope, so we declare them as we go.
+    bool afterPattern = false;
     for (auto condSyntax : syntax.predicate->conditions) {
+        if (afterPattern)
+            trueContext.addTemporaryEnums(*condSyntax->expr);
+
         auto& cond = selfDetermined(comp, *condSyntax->expr, trueContext);
         bad |= cond.bad();
 
         const Pattern* pattern = nullptr;
         if (condSyntax->matchesClause) {
+            trueContext.addTemporaryEnums(*condSyntax->matchesClause);
+            afterPattern = true;
+
             pattern = createPattern(comp, trueContext, *condSyntax->matchesClause->pattern,
                                     *cond.type);
             bad |= pattern->bad();
@@ -1534,6 +1543,9 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
         leftFlags |= ASTFlags::StreamingAllowed;
         rightFlags |= ASTFlags::StreamingAllowed;
     }
+
+    if (afterPattern)
+        trueContext.addTemporaryEnums(*syntax.left);
 
     auto& left = create(comp, *syntax.left, trueContext, leftFlags, assignmentTarget);
     auto& right = create(comp, *syntax.right, context, rightFlags, assignmentTarget);

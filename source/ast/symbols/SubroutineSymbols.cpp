@@ -691,8 +691,7 @@ bitmask<MethodFlags> SubroutineSymbol::buildArguments(
     bitmask<MethodFlags> resultFlags;
 
     for (auto portBase : syntax.ports) {
-        if (auto preview = portBase->previewNode())
-            scope.addMembers(*preview);
+        scope.addEnumMembers(*portBase);
 
         if (portBase->kind == SyntaxKind::DefaultFunctionPort) {
             lastDirection = ArgumentDirection::In;

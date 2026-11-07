@@ -37,8 +37,9 @@ static const Expression* BindingInitializer = reinterpret_cast<const Expression*
 
 DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags) :
     parent(parent), flags(flags), overrideIndex(0), evaluating(false), hasLink(false) {
-    // If this assert fires you need to update Symbol::getDeclaredType
-    SLANG_ASSERT(parent.getDeclaredType() == this);
+    // If this assert fires you need to update Symbol::getDeclaredType.
+    // The type shared by the values of an enum isn't owned by any of them.
+    SLANG_ASSERT(parent.getDeclaredType() == this || flags.has(DeclaredTypeFlags::EnumValues));
 }
 
 const Type& DeclaredType::getType() const {
@@ -513,6 +514,8 @@ T DeclaredType::getASTContext() const {
         astFlags |= ASTFlags::AllowNetType;
     if (flags.has(DeclaredTypeFlags::DPIArg))
         astFlags |= ASTFlags::DPIArg;
+    if (flags.has(DeclaredTypeFlags::EnumValues))
+        astFlags |= ASTFlags::EnumValueType;
 
     const Scope* scope = parent.getParentScope();
     SLANG_ASSERT(scope);
@@ -562,7 +565,16 @@ T DeclaredType::getASTContext() const {
         location = LookupLocation::before(parent);
     }
 
-    return ASTContext(*scope, location, astFlags);
+    ASTContext context(*scope, location, astFlags);
+    if (flags.has(DeclaredTypeFlags::CoverageType)) {
+        // Coverpoint types and expressions can only see the covergroup's formal
+        // arguments, so any enums they declare get declared along with them.
+        auto syntax = IsInitializer ? initializerSyntax
+                                    : (hasLink ? nullptr : typeOrLink.typeSyntax);
+        if (syntax)
+            context.addTemporaryEnums(*syntax);
+    }
+    return context;
 }
 
 std::vector<EvaluatedDimension> DeclaredType::getResolvedDimensions() const {

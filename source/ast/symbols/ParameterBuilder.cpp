@@ -137,20 +137,6 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
         }
     };
 
-    auto handlePreviewNodes = [&](const SyntaxNode& syntax) {
-        // Two cases where we might have enum definitions to catch
-        // via the preview nodes; for parameter decl members,
-        // we need to look at the parent, and for port lists we
-        // should just look at the param itself.
-        if (auto preview = syntax.previewNode())
-            newScope.addMembers(*preview);
-
-        if (syntax.parent->kind == SyntaxKind::ParameterDeclarationStatement) {
-            if (auto preview = syntax.parent->previewNode())
-                newScope.addMembers(*preview);
-        }
-    };
-
     auto& comp = scope.getCompilation();
     const ExpressionSyntax* newInitializer = nullptr;
     bool isFromConfig = false;
@@ -168,8 +154,8 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
         param->setAttributes(scope, decl.attributes);
 
         if (decl.hasSyntax) {
-            handlePreviewNodes(*decl.typeSyntax);
             if (decl.typeDecl) {
+                newScope.addEnumMembers(*decl.typeDecl);
                 param->setTypeSyntax(*decl.typeDecl);
                 if (decl.typeDecl->assignment)
                     param->defaultValSyntax = decl.typeDecl->assignment->type;
@@ -242,7 +228,9 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
 
         if (decl.hasSyntax) {
             param->defaultValSyntax = decl.valueDecl;
-            handlePreviewNodes(*decl.valueSyntax);
+            newScope.addEnumMembers(*decl.valueDecl);
+            if (decl.valueDecl == *decl.valueSyntax->declarators.begin())
+                newScope.addEnumMembers(*decl.valueSyntax->type);
         }
 
         auto& declType = *param->getDeclaredType();

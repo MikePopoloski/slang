@@ -18,6 +18,7 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/PortSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
+#include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -29,6 +30,30 @@
 namespace slang::ast {
 
 using namespace syntax;
+
+void ASTContext::addTemporaryEnums(const SyntaxNode& syntax) {
+    if (!syntax.containsEnum())
+        return;
+
+    auto& comp = getCompilation();
+    auto enumScope = comp.emplace<StatementBlockSymbol>(comp, ""sv,
+                                                        syntax.getFirstToken().location(),
+                                                        StatementBlockKind::Sequential,
+                                                        VariableLifetime::Automatic);
+
+    // Lookups continue after our index, so stay just below our current location.
+    enumScope->setTemporaryParent(*scope, SymbolIndex(std::max(uint32_t(lookupIndex), 1u) - 1));
+    enumScope->addEnumMembers(syntax);
+
+    scope = enumScope;
+    lookupIndex = LookupLocation::max.getIndex();
+
+    // Create the enums right away, while we have the variables they can refer to.
+    for (auto& member : enumScope->membersOfType<TransparentMemberSymbol>()) {
+        if (auto value = member.wrapped.as_if<EnumValueSymbol>())
+            value->resolveEnum(*this);
+    }
+}
 
 const InstanceSymbolBase* ASTContext::getInstance() const {
     if (symbolCtx && symbolCtx->kind != SymbolKind::ProceduralBlock) {

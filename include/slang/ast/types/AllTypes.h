@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/Lookup.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/symbols/ValueSymbol.h"
 #include "slang/ast/types/Type.h"
@@ -18,6 +19,7 @@ namespace slang::ast {
 class FieldSymbol;
 class InstanceSymbol;
 class ModportSymbol;
+struct AssertionInstanceDetails;
 struct EvaluatedDimension;
 
 /// A base class for integral types, which include all scalar types, predefined integer types,
@@ -104,6 +106,20 @@ public:
 
 class EnumValueSymbol;
 
+/// Holds information about a declared enum, which is everything we need
+/// in order to create the actual type once something needs it.
+struct EnumDeclaration {
+    const syntax::EnumTypeSyntax& syntax;
+    const Scope& scope;
+
+    /// The values that have been declared for this enum. Their declared types all
+    /// link to a single shared one, which creates the enum type when it's resolved.
+    std::span<const EnumValueSymbol* const> values;
+
+    EnumDeclaration(const syntax::EnumTypeSyntax& syntax, const Scope& scope) :
+        syntax(syntax), scope(scope) {}
+};
+
 /// Represents an enumerated type.
 class SLANG_EXPORT EnumType final : public IntegralType, public Scope {
 public:
@@ -118,23 +134,32 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
+    /// Declares the values of the given enum in the given scope. The type itself, along
+    /// with the actual values, gets created the first time one of the values' types
+    /// is resolved.
+    static void declareValues(const Scope& scope, const syntax::EnumTypeSyntax& syntax,
+                              function_ref<void(const Symbol&)> insertCB);
+
     static const Type& fromSyntax(Compilation& compilation, const syntax::EnumTypeSyntax& syntax,
-                                  const ASTContext& context,
-                                  function_ref<void(const Symbol&)> insertCB);
-    static const Type& findDefinition(Compilation& compilation,
-                                      const syntax::EnumTypeSyntax& syntax,
-                                      const ASTContext& context);
+                                  const ASTContext& context);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumType; }
 
     std::ranges::subrange<specific_symbol_iterator<EnumValueSymbol>> values() const {
         return membersOfType<EnumValueSymbol>();
     }
+
+private:
+    static const Type& create(const EnumDeclaration& declaration, const ASTContext& context);
 };
 
 /// Represents an enumerated value / member.
 class SLANG_EXPORT EnumValueSymbol final : public ValueSymbol {
 public:
+    /// The declaration of the enum containing this value, if it was
+    /// created from syntax, which is used to create the enum on demand.
+    const EnumDeclaration* declaration = nullptr;
+
     EnumValueSymbol(std::string_view name, SourceLocation loc);
 
     /// Gets the value of the enum member.
@@ -145,13 +170,21 @@ public:
 
     bool isEvaluating() const { return evaluating; }
 
-    /// Gets the scope in which the enum containing this value was declared.
+    /// Creates the enum containing this value, if it hasn't been created already, using
+    /// the given context to find variables that only exist while binding some expression,
+    /// like iterators or assertion formal arguments.
+    void resolveEnum(const ASTContext& bindingContext) const;
+
+    /// Gets the scope in which the enum containing this value was declared,
+    /// looking through the temporary blocks used for enums declared inside
+    /// of expressions that are bound in isolation.
     const Scope* getDeclaringScope() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static EnumValueSymbol& fromSyntax(Compilation& compilation,
-                                       const syntax::DeclaratorSyntax& syntax, const Type& type,
+                                       const syntax::DeclaratorSyntax& syntax,
+                                       const EnumDeclaration& declaration,
                                        std::optional<int32_t> index);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumValue; }

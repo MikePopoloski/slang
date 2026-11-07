@@ -1365,6 +1365,11 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
 }
 
 static bool isWithinCovergroup(const Symbol& field, const Scope& usageScope) {
+    // Coverage options with inline enums are bound in a temporary unnamed block.
+    const Scope* usage = &usageScope;
+    while (usage->asSymbol().kind == SymbolKind::StatementBlock && usage->asSymbol().name.empty())
+        usage = usage->asSymbol().getParentScope();
+
     const Scope* scope = field.getParentScope();
     while (scope) {
         switch (scope->asSymbol().kind) {
@@ -1372,7 +1377,7 @@ static bool isWithinCovergroup(const Symbol& field, const Scope& usageScope) {
             case SymbolKind::CovergroupBody:
             case SymbolKind::Coverpoint:
             case SymbolKind::CoverCross:
-                return scope == &usageScope;
+                return scope == usage;
             default:
                 scope = scope->asSymbol().getParentScope();
                 break;

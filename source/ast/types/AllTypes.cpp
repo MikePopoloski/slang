@@ -261,11 +261,16 @@ EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& bas
 
     // Enum types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
-    // lookups.
-    setParent(*context.scope, context.lookupIndex);
+    // lookups. Lookups continue just after our index, so account for that to make sure
+    // that they stay source ordered.
+    auto index = context.lookupIndex;
+    if (index == LookupLocation::sourceOrdered.getIndex())
+        index = SymbolIndex(uint32_t(index) - 1);
+    setParent(*context.scope, index);
 }
 
-// Enum ranges must be integer literals.
+// Enum ranges must be integer literals, which is what allows
+// declaring enum values without having to do any lookups.
 static bool isLiteralRange(const VariableDimensionSyntax& syntax) {
     if (!syntax.specifier || syntax.specifier->kind != SyntaxKind::RangeDimensionSpecifier)
         return false;
@@ -287,9 +292,112 @@ static bool isLiteralRange(const VariableDimensionSyntax& syntax) {
     return false;
 }
 
-const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax,
-                                 const ASTContext& context,
-                                 function_ref<void(const Symbol&)> insertCB) {
+void EnumType::declareValues(const Scope& scope, const EnumTypeSyntax& syntax,
+                             function_ref<void(const Symbol&)> insertCB) {
+    auto& comp = scope.getCompilation();
+    ASTContext context(scope, LookupLocation::sourceOrdered);
+
+    auto decl = comp.emplace<EnumDeclaration>(syntax, scope);
+    SmallVector<EnumValueSymbol*> values;
+
+    auto addValue = [&](const DeclaratorSyntax& member, std::optional<int32_t> index, bool first) {
+        auto& ev = EnumValueSymbol::fromSyntax(comp, member, *decl, index);
+        ev.setParent(scope, context.lookupIndex);
+        if (first && member.initializer) {
+            ev.setInitializerSyntax(*member.initializer->expr,
+                                    member.initializer->equals.location());
+        }
+
+        values.push_back(&ev);
+        insertCB(ev);
+    };
+
+    const uint32_t maxEnumValues = comp.getOptions().maxEnumValues;
+    uint32_t enumValueCount = 0;
+
+    for (auto member : syntax.members) {
+        if (member->dimensions.empty()) {
+            if (enumValueCount >= maxEnumValues) {
+                auto& diag = context.addDiag(diag::EnumValueCountExceeded, member->sourceRange());
+                diag << enumValueCount + 1 << maxEnumValues;
+                break;
+            }
+            ++enumValueCount;
+            addValue(*member, std::nullopt, true);
+        }
+        else {
+            if (member->dimensions.size() > 1) {
+                context.addDiag(diag::EnumRangeMultiDimensional, member->dimensions.sourceRange());
+            }
+
+            if (!isLiteralRange(*member->dimensions[0])) {
+                context.addDiag(diag::EnumRangeLiteral, member->dimensions[0]->sourceRange());
+                continue;
+            }
+
+            auto dim = context.evalUnpackedDimension(*member->dimensions[0]);
+            if (!dim.isRange())
+                continue;
+
+            // Range must be positive.
+            if (!context.requirePositive(std::optional(dim.range.left),
+                                         member->dimensions[0]->sourceRange()) ||
+                !context.requirePositive(std::optional(dim.range.right),
+                                         member->dimensions[0]->sourceRange())) {
+                continue;
+            }
+
+            // Check that this range won't exceed the member count limit.
+            auto rangeWidth = dim.range.width();
+            if (rangeWidth > maxEnumValues - enumValueCount) {
+                auto& diag = context.addDiag(diag::EnumValueCountExceeded,
+                                             member->dimensions[0]->sourceRange());
+                diag << enumValueCount + rangeWidth << maxEnumValues;
+                continue;
+            }
+            enumValueCount += rangeWidth;
+
+            int32_t index = dim.range.left;
+            addValue(*member, index, true);
+
+            const bool down = dim.range.isDescending();
+            while (index != dim.range.right) {
+                index = down ? index - 1 : index + 1;
+                addValue(*member, index, false);
+            }
+        }
+    }
+
+    // All of the values link to a single declared type, which creates the enum when
+    // it gets resolved. It needs a parent symbol to know where to look up names; any
+    // of our values will do since they all live in the same place.
+    if (!values.empty()) {
+        auto valueType = comp.emplace<DeclaredType>(*values[0], DeclaredTypeFlags::EnumValues);
+        valueType->setTypeSyntax(syntax);
+        for (auto ev : values)
+            ev->getDeclaredType()->setLink(*valueType);
+    }
+
+    decl->values = values.ccopy(comp);
+    comp.noteEnumDeclaration(*decl);
+}
+
+// Copies the parts of a binding context that refer to variables that don't
+// live in any scope, returning true if there were any.
+static bool copyBindingVars(ASTContext& context, const ASTContext& bindingContext) {
+    context.firstTempVar = bindingContext.firstTempVar;
+    context.randomizeDetails = bindingContext.randomizeDetails;
+    context.assertionInstance = bindingContext.assertionInstance;
+    return context.firstTempVar || context.randomizeDetails || context.assertionInstance;
+}
+
+const Type& EnumType::create(const EnumDeclaration& decl, const ASTContext& typeContext) {
+    auto& comp = decl.scope.getCompilation();
+    auto& syntax = decl.syntax;
+
+    ASTContext context(decl.scope, LookupLocation::sourceOrdered);
+    const bool hasBindingVars = copyBindingVars(context, typeContext);
+
     const Type* base;
     const Type* cb;
     bitwidth_t bitWidth = 32;
@@ -358,6 +466,11 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
 
     auto resultType = cb->isError() ? cb : enumType;
 
+    // Now that we know our type, make it available right away because
+    // value initializers can refer to the type or to prior values.
+    for (auto ev : decl.values)
+        const_cast<EnumValueSymbol*>(ev)->setType(*resultType);
+
     // Enum values must be unique; this set and lambda are used to check that.
     SmallMap<SVInt, SourceLocation, 8> usedValues;
     auto checkValue = [&usedValues, &context](const ConstantValue& cv, SourceLocation loc) {
@@ -373,13 +486,19 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
     };
 
     // For enumerands that have an initializer, set it up appropriately.
-    auto setInitializer = [&](EnumValueSymbol& ev, const EqualsValueClauseSyntax& initializer) {
+    auto setInitializer = [&](EnumValueSymbol& ev) {
         // Clear our previous state in case there's an error and we need to exit early.
         first = false;
         previous = nullptr;
 
-        // Create the initializer expression.
-        ev.setInitializerSyntax(*initializer.expr, initializer.equals.location());
+        // Bind the initializer expression.
+        if (hasBindingVars) {
+            ASTContext evContext(*enumType, LookupLocation::before(ev),
+                                 ASTFlags::StaticInitializer);
+            copyBindingVars(evContext, typeContext);
+            ev.getDeclaredType()->resolveAt(evContext);
+        }
+
         auto initExpr = ev.getInitializer();
         SLANG_ASSERT(initExpr);
         if (initExpr->bad())
@@ -477,84 +596,23 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
         previousRange = range;
     };
 
-    const uint32_t maxEnumValues = comp.getOptions().maxEnumValues;
-    uint32_t enumValueCount = 0;
+    // Add all of the values before computing any of them, since an initializer
+    // can end up referring to a later value.
+    for (auto ev : decl.values)
+        enumType->addMember(*ev);
 
-    for (auto member : syntax.members) {
-        if (member->dimensions.empty()) {
-            if (enumValueCount >= maxEnumValues) {
-                auto& diag = context.addDiag(diag::EnumValueCountExceeded, member->sourceRange());
-                diag << enumValueCount + 1 << maxEnumValues;
-                break;
-            }
-            ++enumValueCount;
+    const DeclaratorSyntax* lastMember = nullptr;
+    for (auto evPtr : decl.values) {
+        auto& ev = *const_cast<EnumValueSymbol*>(evPtr);
 
-            auto& ev = EnumValueSymbol::fromSyntax(comp, *member, *resultType, std::nullopt);
-            enumType->addMember(ev);
-            insertCB(ev);
+        // For members with a range, only the first element gets the initializer.
+        auto& member = ev.getSyntax()->as<DeclaratorSyntax>();
+        if (&member != lastMember && member.initializer)
+            setInitializer(ev);
+        else
+            inferValue(ev, member.sourceRange());
 
-            if (member->initializer)
-                setInitializer(ev, *member->initializer);
-            else
-                inferValue(ev, member->sourceRange());
-        }
-        else {
-            if (member->dimensions.size() > 1) {
-                context.addDiag(diag::EnumRangeMultiDimensional, member->dimensions.sourceRange());
-            }
-
-            if (!isLiteralRange(*member->dimensions[0])) {
-                context.addDiag(diag::EnumRangeLiteral, member->dimensions[0]->sourceRange());
-                continue;
-            }
-
-            auto dim = context.evalUnpackedDimension(*member->dimensions[0]);
-            if (!dim.isRange())
-                continue;
-
-            // Range must be positive.
-            if (!context.requirePositive(std::optional(dim.range.left),
-                                         member->dimensions[0]->sourceRange()) ||
-                !context.requirePositive(std::optional(dim.range.right),
-                                         member->dimensions[0]->sourceRange())) {
-                continue;
-            }
-
-            // Check that this range won't exceed the member count limit.
-            auto rangeWidth = dim.range.width();
-            if (rangeWidth > maxEnumValues - enumValueCount) {
-                auto& diag = context.addDiag(diag::EnumValueCountExceeded,
-                                             member->dimensions[0]->sourceRange());
-                diag << enumValueCount + rangeWidth << maxEnumValues;
-                continue;
-            }
-            enumValueCount += rangeWidth;
-
-            // Set up the first element using the initializer. All other elements (if there are any)
-            // don't get the initializer.
-            int32_t index = dim.range.left;
-            {
-                auto& ev = EnumValueSymbol::fromSyntax(comp, *member, *resultType, index);
-                enumType->addMember(ev);
-                insertCB(ev);
-
-                if (member->initializer)
-                    setInitializer(ev, *member->initializer);
-                else
-                    inferValue(ev, member->sourceRange());
-            }
-
-            bool down = dim.range.isDescending();
-            while (index != dim.range.right) {
-                index = down ? index - 1 : index + 1;
-
-                auto& ev = EnumValueSymbol::fromSyntax(comp, *member, *resultType, index);
-                enumType->addMember(ev);
-                insertCB(ev);
-
-                inferValue(ev, member->sourceRange());
-            }
-        }
+        lastMember = &member;
     }
 
     // Make sure every enum value has been evaluated now, during elaboration.
@@ -562,59 +620,43 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
     // an erroneous initializer), which would otherwise leave it to be evaluated
     // lazily later -- possibly during analysis when the compilation is frozen
     // and evaluating / allocating new constants is no longer allowed.
-    for (auto& ev : enumType->values())
-        ev.getValue();
+    for (auto ev : decl.values)
+        ev->getValue();
 
     return *resultType;
 }
 
-static std::string_view getEnumValueName(Compilation& comp, std::string_view name, int32_t index) {
-    if (!name.empty()) {
-        SLANG_ASSERT(index >= 0);
-
-        size_t sz = (size_t)snprintf(nullptr, 0, "%d", index);
-        char* mem = (char*)comp.allocate(sz + name.size() + 1, 1);
-        memcpy(mem, name.data(), name.size());
-        snprintf(mem + name.size(), sz + 1, "%d", index);
-
-        name = std::string_view(mem, sz + name.size());
-    }
-    return name;
-}
-
-const Type& EnumType::findDefinition(Compilation& comp, const EnumTypeSyntax& syntax,
-                                     const ASTContext& context) {
-    // The enum type and all of its values should have already been created and
-    // added to the parent scope. We just need to find it so we can hook up our caller.
-    // To do that we're going to try to look up our first member, which should have
-    // the right type. If we don't find it we know an error must have occurred during
-    // type creation.
-    std::string_view name;
-    if (!syntax.members.empty()) {
-        auto member = *syntax.members.begin();
-        if (member->dimensions.empty())
-            name = member->name.valueText();
-        else {
-            auto dimList = member->dimensions[0];
-            auto dim = context.evalUnpackedDimension(*dimList);
-            if (dim.isRange()) {
-                SourceRange dimRange = dimList->sourceRange();
-                if (context.requirePositive(std::optional(dim.range.left), dimRange) &&
-                    context.requirePositive(std::optional(dim.range.right), dimRange)) {
-                    name = getEnumValueName(comp, member->name.valueText(), dim.range.lower());
-                }
-            }
-        }
+const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax,
+                                 const ASTContext& context) {
+    // The enum should have already been declared, either in the current scope or in one
+    // of its parents for types that are referenced from a nested scope, like the extends
+    // clause of a class. If all of its values had errors there's no point in creating a type.
+    const EnumDeclaration* decl = nullptr;
+    for (const Scope* scope = context.scope; scope && !decl;
+         scope = scope->asSymbol().getParentScope()) {
+        decl = comp.getEnumDeclaration(syntax, *scope);
     }
 
-    auto symbol = context.scope->find(name);
-    if (symbol && symbol->kind == SymbolKind::EnumValue) {
-        auto& type = symbol->as<EnumValueSymbol>().getType().getCanonicalType();
-        if (type.getSyntax() == &syntax)
-            return createPackedDims(context, &type, syntax.dimensions);
+    // If this fires, isEnumBoundary stopped at something that never got around to
+    // declaring the enums inside of it.
+    SLANG_ASSERT(decl);
+    if (!decl || decl->values.empty())
+        return comp.getErrorType();
+
+    // This is the declared type shared by our values, so create the enum itself.
+    if (context.flags.has(ASTFlags::EnumValueType))
+        return create(*decl, context);
+
+    // Otherwise get the enum from our values. We can get back here while resolving
+    // the base type, if it refers to something that's declared with this same enum
+    // type, which can't possibly work.
+    auto& valueType = *decl->values[0]->getDeclaredType();
+    if (valueType.isEvaluating()) {
+        context.addDiag(diag::RecursiveEnum, syntax.keyword.range());
+        return comp.getErrorType();
     }
 
-    return comp.getErrorType();
+    return createPackedDims(context, &valueType.getType(), syntax.dimensions);
 }
 
 void EnumType::serializeTo(ASTSerializer& serializer) const {
@@ -625,15 +667,23 @@ EnumValueSymbol::EnumValueSymbol(std::string_view name, SourceLocation loc) :
     ValueSymbol(SymbolKind::EnumValue, name, loc, DeclaredTypeFlags::InitializerCantSeeParent) {
 }
 
-EnumValueSymbol& EnumValueSymbol::fromSyntax(Compilation& compilation,
-                                             const DeclaratorSyntax& syntax, const Type& type,
+EnumValueSymbol& EnumValueSymbol::fromSyntax(Compilation& comp, const DeclaratorSyntax& syntax,
+                                             const EnumDeclaration& declaration,
                                              std::optional<int32_t> index) {
     std::string_view name = syntax.name.valueText();
-    if (index)
-        name = getEnumValueName(compilation, name, *index);
+    if (index && !name.empty()) {
+        SLANG_ASSERT(index >= 0);
 
-    auto ev = compilation.emplace<EnumValueSymbol>(name, syntax.name.location());
-    ev->setType(type);
+        size_t sz = (size_t)snprintf(nullptr, 0, "%d", *index);
+        char* mem = (char*)comp.allocate(sz + name.size() + 1, 1);
+        memcpy(mem, name.data(), name.size());
+        snprintf(mem + name.size(), sz + 1, "%d", *index);
+
+        name = std::string_view(mem, sz + name.size());
+    }
+
+    auto ev = comp.emplace<EnumValueSymbol>(name, syntax.name.location());
+    ev->declaration = &declaration;
     ev->setSyntax(syntax);
     return *ev;
 }
@@ -642,10 +692,30 @@ const Scope* EnumValueSymbol::getDeclaringScope() const {
     auto scope = getParentScope();
     if (scope && scope->asSymbol().kind == SymbolKind::EnumType)
         scope = scope->asSymbol().getParentScope();
+
+    while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock &&
+           scope->asSymbol().name.empty()) {
+        scope = scope->asSymbol().getParentScope();
+    }
     return scope;
 }
 
+void EnumValueSymbol::resolveEnum(const ASTContext& bindingContext) const {
+    // Our declared type links to the one shared by all of the values in our enum;
+    // resolving that one directly lets us give it the extra context.
+    if (auto valueType = getDeclaredType()->getLinkTarget()) {
+        ASTContext context = bindingContext;
+        context.flags |= ASTFlags::EnumValueType;
+        valueType->resolveTypeAt(context);
+    }
+}
+
 const ConstantValue& EnumValueSymbol::getValue(SourceRange referencingRange) const {
+    // Make sure our enum has been created, which computes our value
+    // (or at least sets up our initializer).
+    if (!value && declaration)
+        getType();
+
     if (!value) {
         auto scope = getParentScope();
         SLANG_ASSERT(scope);
@@ -896,8 +966,7 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
 
     SmallVector<FieldSymbol*> members;
     for (auto member : syntax.members) {
-        if (auto preview = member->previewNode())
-            structType->addMembers(*preview);
+        structType->addEnumMembers(*member);
 
         const Type& type = comp.getType(*member->type, context);
         structType->isFourState |= type.isFourState();
@@ -994,8 +1063,7 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
     uint64_t bitstreamWidth = 0;
     SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {
-        if (auto preview = member->previewNode())
-            result->addMembers(*preview);
+        result->addEnumMembers(*member);
 
         RandMode randMode = RandMode::None;
         switch (member->randomQualifier.kind) {
@@ -1074,8 +1142,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
     ASTContext context(*unionType, LookupLocation::max, parentContext.flags);
 
     for (auto member : syntax.members) {
-        if (auto preview = member->previewNode())
-            unionType->addMembers(*preview);
+        unionType->addEnumMembers(*member);
 
         const Type& type = comp.getType(*member->type, context);
         unionType->isFourState |= type.isFourState();
@@ -1183,8 +1250,7 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
 
     SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {
-        if (auto preview = member->previewNode())
-            result->addMembers(*preview);
+        result->addEnumMembers(*member);
 
         for (auto decl : member->declarators) {
             auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),

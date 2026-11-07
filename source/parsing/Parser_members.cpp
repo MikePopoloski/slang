@@ -480,10 +480,8 @@ MemberSyntax* Parser::parseSingleMember(SyntaxKind parentKind) {
     if (anyLocalModules)
         moduleDeclStack.pop_back();
 
-    if (result) {
+    if (result)
         checkMemberAllowed(*result, parentKind);
-        result->setPreviewNode(alloc, std::exchange(previewNode, nullptr));
-    }
 
     return result;
 }
@@ -495,10 +493,6 @@ SyntaxList<TMember> Parser::parseMemberList(TokenKind endKind, Token& endToken,
     bool errored = false;
     bool anyLocalModules = false;
 
-    // Save off any pending preview node from an enclosing construct
-    // so that it doesn't get attached to one of our members.
-    auto savedPN = std::exchange(previewNode, nullptr);
-
     while (true) {
         auto kind = peek().kind;
         if (kind == TokenKind::EndOfFile || kind == endKind)
@@ -509,8 +503,6 @@ SyntaxList<TMember> Parser::parseMemberList(TokenKind endKind, Token& endToken,
             checkMemberAllowed(*member, parentKind);
             members.push_back(member);
             errored = false;
-
-            member->setPreviewNode(alloc, std::exchange(previewNode, nullptr));
         }
         else {
             if (isCloseDelimOrKeyword(kind)) {
@@ -533,7 +525,6 @@ SyntaxList<TMember> Parser::parseMemberList(TokenKind endKind, Token& endToken,
     if (anyLocalModules)
         moduleDeclStack.pop_back();
 
-    previewNode = savedPN;
     endToken = expect(endKind);
     return SyntaxList<TMember>(alloc, members);
 }
@@ -560,7 +551,6 @@ MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
         if (peek(TokenKind::FunctionKeyword) || peek(TokenKind::TaskKeyword)) {
             auto& proto = parseFunctionPrototype(SyntaxKind::Unknown, FunctionOptions::IsPrototype);
             auto& msp = factory.modportSubroutinePort(proto);
-            msp.setPreviewNode(alloc, std::exchange(previewNode, nullptr));
             buffer.push_back(&msp);
         }
         else {
@@ -719,7 +709,6 @@ FunctionPortBaseSyntax& Parser::parseFunctionPort(bitmask<FunctionOptions> optio
 
     auto& result = factory.functionPort(attributes, constKeyword, direction, staticKeyword,
                                         varKeyword, dataType, *decl);
-    result.setPreviewNode(alloc, std::exchange(previewNode, nullptr));
     return result;
 }
 
@@ -828,11 +817,7 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
         addDiag(diag::ImplicitNotAllowed, name.getFirstToken().location());
     }
 
-    // If the function returns a declared enum type, save it off here
-    // so that we don't suck it into the port list.
-    auto savedPN = std::exchange(previewNode, nullptr);
     auto portList = parseFunctionPortList(options);
-    previewNode = savedPN;
 
     return factory.functionPrototype(keyword, specifiers, lifetime, *returnType, name, portList);
 }
@@ -848,10 +833,6 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
                                              options | FunctionOptions::AllowImplicitReturn,
                                              &isConstructor);
 
-    // If the function returns a declared enum type, save it off here
-    // so that we don't suck it into the body.
-    auto savedPN = std::exchange(previewNode, nullptr);
-
     auto semi = expect(TokenKind::Semicolon);
     auto items = parseBlockItems(endKind, end, isConstructor);
     auto endBlockName = parseNamedBlockClause();
@@ -860,7 +841,6 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
     if (nameToken.kind == TokenKind::Identifier || nameToken.kind == TokenKind::NewKeyword)
         checkBlockNames(nameToken, endBlockName);
 
-    previewNode = savedPN;
     return factory.functionDeclaration(functionKind, attributes, prototype, semi, items, end,
                                        endBlockName);
 }
@@ -2590,7 +2570,6 @@ AssertionItemPortSyntax& Parser::parseAssertionItemPort(SyntaxKind parentKind) {
 
     auto& result = factory.assertionItemPort(attributes, local, direction, *type, name, dimensions,
                                              defaultValue);
-    result.setPreviewNode(alloc, std::exchange(previewNode, nullptr));
     return result;
 }
 

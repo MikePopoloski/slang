@@ -215,3 +215,33 @@ endmodule
     auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Modport drivers retargeted across instances with an inline enum base type") {
+    auto tree = SyntaxTree::fromText(R"(
+interface J;
+    enum enum { Z } [1:0] { C, D } [2:0] c;
+    modport m(output .S(c));
+endinterface
+
+module n(J.m j);
+    assign j.S = 0;
+endmodule
+
+module top;
+    J j1(), j2();
+    n n1(j1), n2(j2);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpectedEnumBase);
+
+    compilation.freeze();
+
+    AnalysisManager analysisManager;
+    analysisManager.analyze(compilation);
+}

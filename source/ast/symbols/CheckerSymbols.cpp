@@ -50,8 +50,7 @@ CheckerSymbol& CheckerSymbol::fromSyntax(const Scope& scope,
         ArgumentDirection lastDir = ArgumentDirection::In;
 
         for (auto item : syntax.portList->ports) {
-            if (auto preview = item->previewNode())
-                result->addMembers(*preview);
+            result->addEnumMembers(*item);
 
             auto port = comp.emplace<AssertionPortSymbol>(item->name.valueText(),
                                                           item->name.location());
@@ -274,8 +273,7 @@ static const Symbol* createCheckerFormal(Compilation& comp, const AssertionPortS
                                          const ExpressionSyntax*& outputInitialSyntax,
                                          const ASTContext& context) {
     if (auto portSyntax = port.getSyntax()) {
-        if (auto preview = portSyntax->previewNode())
-            instance.addMembers(*preview);
+        instance.addEnumMembers(*portSyntax);
     }
 
     // Output ports are special; they aren't involved in the rewriting process,

@@ -55,17 +55,10 @@ SourceRange ConstTokenOrSyntax::range() const {
     return isNode() ? node()->sourceRange() : token().range();
 }
 
-void SyntaxNode::setPreviewNodeImpl(BumpAllocator& alloc, const SyntaxNode* node) {
-    if (parent.isTagged()) {
-        // We already have an indirection struct; just update the preview slot.
-        parent.getInfo()->previewNode = node;
-        return;
-    }
-
-    auto info = alloc.emplace<detail::SyntaxParentInfo>();
-    info->parent = parent.getRaw();
-    info->previewNode = node;
-    parent.setInfo(info);
+void SyntaxNode::markContainsEnum() {
+    // Once we find a marked node we know all of its parents are marked too.
+    for (auto node = this; node && !node->containsEnum(); node = node->parent)
+        node->parent.raw |= ParentRef::TagBit;
 }
 
 std::string SyntaxNode::toString() const {

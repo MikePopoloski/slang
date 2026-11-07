@@ -26,10 +26,8 @@ SyntaxNode& Parser::parseGuess() {
     // case nothing has been consumed and we fall through to the other guesses.
     if (isMember()) {
         bool anyLocalModules = false;
-        if (auto member = parseMember(SyntaxKind::CompilationUnit, anyLocalModules)) {
-            member->setPreviewNode(alloc, std::exchange(previewNode, nullptr));
+        if (auto member = parseMember(SyntaxKind::CompilationUnit, anyLocalModules))
             return *member;
-        }
     }
 
     // Try to parse as an expression if possible.
@@ -43,7 +41,6 @@ SyntaxNode& Parser::parseGuess() {
 
     // Now try to parse as a statement.
     auto& statement = parseStatement(/* allowEmpty */ true);
-    statement.setPreviewNode(alloc, std::exchange(previewNode, nullptr));
 
     // It might not have been a statement at all, in which case try a whole compilation unit
     if (statement.kind == SyntaxKind::EmptyStatement &&
@@ -89,7 +86,6 @@ AnsiPortListSyntax& Parser::parseAnsiPortList(Token openParen) {
                                                     [this] { return &parseAnsiPort(); });
 
     auto& result = factory.ansiPortList(openParen, {alloc, buffer}, closeParen);
-    result.setPreviewNode(alloc, std::exchange(previewNode, nullptr));
     return result;
 }
 
@@ -434,10 +430,6 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
     Token closeBrace;
     SmallVector<StructUnionMemberSyntax*> buffer;
 
-    // Save off any pending preview node (e.g. an enum declared in an earlier
-    // ANSI port) so that it doesn't get attached to one of our members.
-    auto savedPN = std::exchange(previewNode, nullptr);
-
     if (openBrace.isMissing())
         closeBrace = missingToken(TokenKind::CloseBrace, openBrace.location());
     else {
@@ -472,7 +464,6 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
 
             buffer.push_back(
                 &factory.structUnionMember(attributes, randomQualifier, type, declarators, semi));
-            buffer.back()->setPreviewNode(alloc, std::exchange(previewNode, nullptr));
 
             // If we failed to consume any tokens for this member, skip whatever token is
             // in the way, otherwise we will loop forever.
@@ -488,8 +479,6 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
         if (buffer.empty() && !closeBrace.isMissing())
             addDiag(diag::ExpectedMember, closeBrace.location());
     }
-
-    previewNode = savedPN;
 
     auto dims = parseDimensionList();
     if (!packed) {
@@ -565,7 +554,7 @@ DataTypeSyntax& Parser::parseDataType(bitmask<TypeOptions> options) {
             return parseStructUnion(SyntaxKind::UnionType);
         case TokenKind::EnumKeyword: {
             auto& result = parseEnum();
-            result.setPreviewNode(alloc, std::exchange(previewNode, &result));
+            meta.enumTypes.push_back(&result);
             return result;
         }
         case TokenKind::VirtualKeyword: {
@@ -1004,7 +993,6 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterPort() {
     else
         result = &parseParameterDecl(Token(), nullptr);
 
-    result->setPreviewNode(alloc, std::exchange(previewNode, nullptr));
     return *result;
 }
 

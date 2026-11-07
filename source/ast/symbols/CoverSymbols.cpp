@@ -103,6 +103,7 @@ const Expression& CoverageOptionSetter::getExpression() const {
             flags |= ASTFlags::StaticInitializer;
 
         ASTContext context(*scope, LookupLocation(scope, 3));
+        context.addTemporaryEnums(*syntax->expr);
         expr = &Expression::bind(*syntax->expr, context, flags);
         context.setAttributes(*expr, syntax->attributes);
 
@@ -382,7 +383,11 @@ const TimingControl* CovergroupType::getCoverageEvent() const {
             if (!arguments.empty())
                 ll = LookupLocation::after(*arguments.back());
 
+            // A 'with function sample' clause isn't bound here; its arguments are
+            // members of the covergroup, which declares any enums they have.
             ASTContext context(*this, ll);
+            if (evSyntax->kind != SyntaxKind::WithFunctionSample)
+                context.addTemporaryEnums(*evSyntax);
 
             if (evSyntax->kind == SyntaxKind::BlockCoverageEvent) {
                 event = &BlockEventListControl::fromSyntax(
@@ -604,6 +609,7 @@ void CoverageBinSymbol::resolve() const {
         ASTContext iterCtx = context;
         it->nextTemp = std::exchange(iterCtx.firstTempVar, it);
 
+        iterCtx.addTemporaryEnums(*withSyntax.expr);
         withExpr = &Expression::bind(*withSyntax.expr, iterCtx);
         iterCtx.requireBooleanConvertible(*withExpr);
 
@@ -860,6 +866,8 @@ const Expression* CoverpointSymbol::getIffExpr() const {
         }
         else {
             ASTContext context(*scope, LookupLocation::min);
+            if (auto iff = syntax->as<CoverpointSyntax>().iff)
+                context.addTemporaryEnums(*iff);
             iffExpr = bindIffExpr(syntax->as<CoverpointSyntax>().iff, context);
         }
     }
@@ -1011,6 +1019,8 @@ const Expression* CoverCrossSymbol::getIffExpr() const {
         }
         else {
             ASTContext context(*scope, LookupLocation::min);
+            if (auto iff = syntax->as<CoverCrossSyntax>().iff)
+                context.addTemporaryEnums(*iff);
             iffExpr = bindIffExpr(syntax->as<CoverCrossSyntax>().iff, context);
         }
     }
@@ -1216,6 +1226,7 @@ BinsSelectExpr& BinSelectWithFilterExpr::fromSyntax(const BinSelectWithFilterExp
         it->nextTemp = std::exchange(iterCtx.firstTempVar, it);
     }
 
+    iterCtx.addTemporaryEnums(*syntax.filter);
     auto& filter = Expression::bind(*syntax.filter, iterCtx);
     iterCtx.requireBooleanConvertible(filter);
 

@@ -48,6 +48,15 @@ public:
     /// Creates and adds one or more member symbols to the scope from the given syntax node.
     void addMembers(const syntax::SyntaxNode& syntax);
 
+    /// Declares the values of any enums underneath the given syntax node that belong
+    /// to this scope, stopping at anything that gets populated separately (such as nested
+    /// scopes and statements). This happens automatically for @a addMembers
+    void addEnumMembers(const syntax::SyntaxNode& syntax);
+
+    /// Does the same as @a addEnumMembers for each child of the given node, for nodes
+    /// that are themselves a boundary because they create this scope.
+    void addEnumChildren(const syntax::SyntaxNode& syntax);
+
     const Symbol& asSymbol() const { return *thisSym; }
 
     /// Gets the compilation that contains this scope.

@@ -195,8 +195,12 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// Expressions are allowed to reference arrays of instances (and interface
     /// port arrays) directly. This is used for the array query system functions.
     AllowInstanceArray = 1ull << 44,
+
+    /// The type being resolved is the type of an enum's values, which is the
+    /// enum type itself without any packed dimensions given in its syntax.
+    EnumValueType = 1ull << 45,
 };
-SLANG_BITMASK(ASTFlags, AllowInstanceArray)
+SLANG_BITMASK(ASTFlags, EnumValueType)
 
 /// Various flags that can be applied to a constant expression evaluation.
 enum class SLANG_EXPORT EvalFlags : uint8_t {
@@ -351,6 +355,12 @@ public:
 
     /// Indicates whether the AST creation is happening inside an unevaluated branch.
     bool inUnevaluatedBranch() const { return flags.has(ASTFlags::UnevaluatedBranch); }
+
+    /// Declares the enums in the given syntax in a new scope just for this context,
+    /// which then becomes the context's scope. This is for syntax that can refer to
+    /// variables that exist only while binding, like iterators, pattern variables, and
+    /// assertion formal arguments, so the enums are resolved right away using this context.
+    void addTemporaryEnums(const syntax::SyntaxNode& syntax);
 
     /// Gets the parent instance if this context is being used to bind expressions
     /// for an instantiation.

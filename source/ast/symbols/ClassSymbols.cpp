@@ -1449,11 +1449,14 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
             diag.addNote(diag::NoteDeclarationHere, location);
         }
 
+        context.addTemporaryEnums(*cds.block);
         constraint = &Constraint::bind(*cds.block, context);
         return *constraint;
     }
 
-    constraint = &Constraint::bind(*syntax->as<ConstraintDeclarationSyntax>().block, context);
+    auto& block = *syntax->as<ConstraintDeclarationSyntax>().block;
+    context.addTemporaryEnums(block);
+    constraint = &Constraint::bind(block, context);
     return *constraint;
 }
 

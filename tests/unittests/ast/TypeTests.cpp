@@ -14,6 +14,7 @@
 #include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/TypePrinter.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxRewriter.h"
 
 TEST_CASE("Enum declaration") {
     auto tree = SyntaxTree::fromText(R"(
@@ -2605,7 +2606,7 @@ endinterface
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::MethodArgTypeMismatch);
+    CHECK(diags[0].code == diag::MethodReturnMismatch);
     CHECK(diags[1].code == diag::MethodReturnMismatch);
 }
 
@@ -2685,7 +2686,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::EnumCircularBaseType);
+    CHECK(diags[0].code == diag::RecursiveDefinition);
 }
 
 TEST_CASE("getResolvedDimensions - no dims") {
@@ -3036,6 +3037,333 @@ endmodule
     CHECK(diags[0].code == diag::ExpectedNetDelay);
 }
 
+TEST_CASE("Inline enums used from nested scopes") {
+    auto tree = SyntaxTree::fromText(R"(
+class B #(type T = int);
+    T t;
+endclass
+
+class E extends B #(enum { A, C });
+    function automatic int get();
+        t = C;
+        return $bits(t);
+    endfunction
+endclass
+
+module m;
+    E e = new;
+    int i = e.t;
+    logic [$bits(e.t) - 1:0] v;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& v = root.lookupName<VariableSymbol>("m.v");
+    CHECK(v.getType().getBitWidth() == 32);
+}
+
+TEST_CASE("Inline enums in loops with attributes") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int y;
+    int a[2];
+    initial begin
+        (* x = $bits(enum { A }) *) for (int i = 0; i < 1; i++)
+            y = $bits(enum { B = $bits(i) }) + int'(B);
+        y = int'(A);
+
+        (* x = $bits(enum { C }) *) foreach (a[i])
+            y = $bits(enum { D = $bits(i) }) + int'(D);
+        y = int'(C);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Inline enums in generate loop headers") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    for (genvar i = 0; i < $bits(enum { A = $bits(i) }) - 30; i += int'(A) - 31) begin : g1
+        logic x;
+    end
+
+    genvar j;
+    for (j = 0; j < $bits(enum { B = $bits(j) }) - 30; j++) begin : g2
+        logic x;
+    end
+
+    for (genvar k = $bits(enum { C }) - 32; k < int'(C) + 1; k++) begin : g3
+        logic x;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName("m.g1[1].x") != nullptr);
+    CHECK(root.lookupName("m.g2[1].x") != nullptr);
+    CHECK(root.lookupName("m.g3[0].x") != nullptr);
+}
+
+TEST_CASE("Inline enums in generate loop headers can't escape") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    for (genvar i = 0; i < $bits(enum { A }); i += 32) begin : g
+        logic x;
+    end
+    int j = A;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Inline enums in assertion items") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [7:0] a;
+    logic b;
+    logic clk;
+
+    sequence s1;
+        int v = 1, w = $bits(enum { A = $bits(v) });
+        logic [int'(A) - 1:0] u;
+        (a == 8'd32, v = int'(A) + w);
+    endsequence
+
+    sequence s2(x);
+        int v = $bits(enum { B = $bits(x) });
+        enum { C, D } e;
+        (a == $bits(enum { E = $bits(v) }), e = D, v = int'(E) + int'(B));
+    endsequence
+
+    property p1(x);
+        int v = $bits(enum { F = $bits(x) });
+        @(posedge clk) (b, v = int'(F)) |-> a == $bits(enum { G = $bits(v) + $bits(x) });
+    endproperty
+
+    assert property (@(posedge clk) s1);
+    assert property (@(posedge clk) s2(a));
+    assert property (@(posedge clk) s2(b));
+    assert property (p1(a));
+    assert property (p1(b));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    INFO(report(diags));
+    for (auto& diag : diags)
+        CHECK(!diag.isError());
+}
+
+TEST_CASE("Inline enums in assertion items can't refer to later locals") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic clk;
+    sequence s;
+        int v = $bits(enum { A = $bits(w) }), w = 1;
+        1;
+    endsequence
+    assert property (@(posedge clk) s);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Inline enums in constructs that aren't member declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+class B #(int p = 1); endclass
+interface class I #(type T = int); endclass
+
+class C extends B #($bits(enum { C1 })) implements I #(enum { C2 });
+    rand int x;
+    int a[2];
+    constraint c1 { x == $bits(enum { C3 }); }
+    constraint c2 { x dist { $bits(enum { C4 }) := 1 }; }
+    constraint c3 { if (x == $bits(enum { C5 })) x == 1; }
+    constraint c4 { foreach (a[i]) a[i] == $bits(enum { C6 }); }
+    constraint c5;
+endclass
+
+constraint C::c5 { x == $bits(enum { C7 }); }
+
+module s #(int p = 1); endmodule
+
+module top;
+    localparam int p = 1;
+    int x;
+    logic clk, q;
+
+    if (p == 2) begin : a end
+    else if (p == $bits(enum { G1 }) - 31) begin : b
+        localparam int ok = 1;
+    end
+
+    if (p == 1) $info($bits(enum { G2 }));
+
+    case (p)
+        2: begin : c end
+        $bits(enum { G3 }) - 31: begin : d end
+    endcase
+
+    (* foo = $bits(enum { A1 }) *) wire w;
+    s #($bits(enum { A2 })) i1();
+    s i2[$bits(enum { A3 })]();
+
+    struct packed { logic a; } [$bits(enum { D1 }) - 1:0] sp;
+    union packed { logic a; bit b; } [$bits(enum { D2 }) - 1:0] up;
+
+    covergroup cg;
+        option.weight = $bits(enum { O1 });
+        type_option.goal = $bits(enum { O2 });
+        coverpoint x;
+    endgroup
+
+    clocking cb @(posedge clk);
+        input #($bits(enum { K1 })) q;
+    endclocking
+
+    C o;
+    initial begin
+        randsequence(main)
+            main : repeat($bits(enum { R1 })) a;
+            a : if ($bits(enum { R2 })) b else b;
+            b : case (x) $bits(enum { R3 }): d; default: d; endcase;
+            d : e($bits(enum { R4 }));
+            e(int i) : { x = i; };
+        endsequence
+
+        void'(o.randomize with { x == $bits(enum { R5 }); });
+
+        if (x matches 1 &&& x > $bits(enum { M1 })) x = 1;
+    end
+endmodule
+
+bind top s #($bits(enum { B1 })) i3();
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    INFO(report(diags));
+    for (auto& diag : diags)
+        CHECK(!diag.isError());
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName("top.b.ok") != nullptr);
+    CHECK(root.lookupName("top.d") != nullptr);
+    CHECK(root.lookupName<VariableSymbol>("top.sp").getType().getBitWidth() == 32);
+}
+
+TEST_CASE("Inline enums can't refer to later symbols in non-ANSI ports") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(q, p);
+    output int q = $bits(enum { X = $bits(p) }), p;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UsedBeforeDeclared);
+}
+
+TEST_CASE("Inline enums in extern declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+extern module m #(parameter int i = 1)(input logic a, enum { A = $bits(a) } b);
+
+class C;
+    extern function int f(logic a, enum { B = $bits(a) } b);
+endclass
+
+function int C::f(logic a, enum { B = $bits(a) } b);
+    return 0;
+endfunction
+
+module top;
+    import "DPI-C" function void g(int a, int b = $bits(enum { D = $bits(a) }));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    INFO(report(diags));
+    for (auto& diag : diags) {
+        if (diag.code != diag::MethodArgTypeMismatch)
+            CHECK(!diag.isError());
+    }
+}
+
+TEST_CASE("Inline enums in let declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    let l1(x = $bits(enum { A = 1 })) = x;
+    let l2(int x) = $bits(enum { B = $bits(x) });
+
+    int i = l1() + l2(1);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Inline enums in rewritten syntax trees") {
+    struct Rewriter : public SyntaxRewriter<Rewriter> {
+        void handle(const ModuleDeclarationSyntax& syntax) {
+            auto& newDecl = parse("enum { A, B } e = B;");
+            insertAtBack(syntax.members, newDecl);
+        }
+    };
+
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i = $bits(enum { C });
+    int j = C;
+endmodule
+)");
+
+    tree = Rewriter().transform(tree);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    auto& diags = compilation.getAllDiagnostics();
+    INFO(report(diags));
+    for (auto& diag : diags)
+        CHECK(!diag.isError());
+}
+
 TEST_CASE("Enum values declared in constructs with nested member lists") {
     auto tree = SyntaxTree::fromText(R"(
 class B #(type T = int); endclass
@@ -3074,4 +3402,497 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Inline enums can refer to prior symbols in all kinds of declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+module a(input enum { A1, A2 } p, input int w = 4,
+         input logic [$bits(enum { A3 = $bits(w) })-1:0] q,
+         input int r = $bits(enum { A4 = $bits(p) }));
+    enum { A5 = $bits(w) } e;
+    if (int'(A3) != 32) $error("A3");
+    if (int'(A5) != 32) $error("A5");
+    if ($bits(q) != 32) $error("q");
+endmodule
+
+module b(p, q, r);
+    parameter int W = 8;
+    input enum { B1, B2 } p;
+    enum { B3 = W } e;
+    input int q;
+    output int r = $bits(enum { B4 = $bits(q) + B3 });
+    if (int'(B4) != 40) $error("B4");
+endmodule
+
+interface i;
+    logic x;
+endinterface
+
+module c(i a, i b[$bits(enum { C1 })]);
+endmodule
+
+module d(a, b);
+    i a;
+    i b[$bits(enum { D1 })];
+endmodule
+
+nettype logic [3:0] nt;
+module f;
+    nt n1, n2 = $bits(enum { F1 = $bits(n1) });
+    if (int'(F1) != 4) $error("F1");
+endmodule
+
+typedef int myint;
+module g;
+    myint a = 1, b = $bits(enum { G1 = $bits(a) });
+    myint c = $bits(enum { G2 }), d = G2;
+    if (int'(G1) != 32) $error("G1");
+endmodule
+
+module h;
+    int a = 1, b = $bits(enum { H1 = $bits(a) });
+    wire [3:0] w, v = $bits(enum { H2 = $bits(w) });
+    if (int'(H1) != 32) $error("H1");
+    if (int'(H2) != 4) $error("H2");
+endmodule
+
+module j;
+    typedef struct packed {
+        logic [2:0] a;
+        logic [$bits(enum { J1 = $bits(a) }):0] b, c;
+        enum logic { J2 } d, e;
+    } s1;
+
+    typedef union packed {
+        logic [3:0] a;
+        logic [$bits(enum { J3 = $bits(a) })-29:0] b;
+    } u1;
+
+    typedef struct {
+        int a, b[$bits(enum { J4 = $bits(a) })];
+        enum { J5, J6 } c, d;
+    } s2;
+
+    typedef union {
+        int a, b[$bits(enum { J7 = $bits(a) })];
+        enum { J8 } c;
+    } u2;
+
+    s1 w;
+    u1 x;
+    s2 y;
+    u2 z;
+endmodule
+
+module l;
+    int a[3];
+    int y;
+    initial begin
+        foreach (a[i]) y = $bits(enum { L1 = $bits(i) });
+        lbl: foreach (a[i]) y = $bits(enum { L2 = $bits(i) }) + L2;
+        y = $bits(enum { L0 });
+        y = L0;
+        if (y) begin
+            y = $bits(enum { L01 });
+            for (int i = 0; i < 1; i++) y = L01;
+        end
+        if ($bits(enum { L3 })) for (int i = 0; i < 1; i++) y = L3 + $bits(enum { L4 = $bits(i) });
+        for (y = $bits(enum { L5 }); y < 1; y++) y = L5;
+        for (int i = 0, j = $bits(enum { L6 = $bits(i) }); i < $bits(enum { L7 = $bits(j) });
+             i += $bits(enum { L8 }))
+            y = L6 + L7 + L8;
+    end
+endmodule
+
+checker ck;
+    rand int x;
+    rand int y = $bits(enum { M1 = $bits(x) });
+endchecker
+
+class k1;
+    int x;
+    int y = $bits(enum { K1 = $bits(x) });
+    enum { K2 = $bits(x) } e;
+endclass
+
+module m;
+    task automatic t;
+        input int a;
+        input int b[$bits(enum { N1 = $bits(a) })];
+    endtask
+endmodule
+
+module top;
+    i ifa();
+    i ifb[32]();
+    logic [31:0] v1;
+    int v3, v4;
+
+    a a1(.p(), .w(), .q(v1), .r());
+    b b1(.p(), .q(v3), .r(v4));
+    c c1(ifa, ifb);
+    d d1(ifa, ifb);
+    f f1();
+    g g1();
+    h h1();
+    j j1();
+    l l1();
+    ck ck1();
+    m m1();
+    k1 k;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // There are some warnings here but those aren't what we're testing.
+    for (auto& diag : compilation.getAllDiagnostics())
+        CHECK(!diag.isError());
+}
+
+TEST_CASE("Inline enums can't refer to later symbols in a declaration") {
+    auto tree = SyntaxTree::fromText(R"(
+module a(input int p = $bits(enum { A1 = $bits(q) }), input int q);
+endmodule
+
+module b;
+    int x = $bits(enum { B1 = $bits(y) }), y;
+    int z = C1, w = $bits(enum { C1 });
+endmodule
+
+module top;
+    a a1(.q(1));
+    b b1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UsedBeforeDeclared);
+    CHECK(diags[1].code == diag::UsedBeforeDeclared);
+    CHECK(diags[2].code == diag::UsedBeforeDeclared);
+}
+
+TEST_CASE("Inline enums can refer to iterators and pattern variables") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef union tagged { int Valid; void Invalid; } maybe_t;
+
+class C;
+    rand int a[4];
+    int b[3];
+    constraint c1 {
+        foreach (a[i])
+            a[i] == b.sum() with (item + $bits(enum { A = $bits(i) + $bits(item) }) + A);
+    }
+endclass
+
+module m;
+    logic [3:0] x, y;
+    covergroup cg @(x);
+        cx: coverpoint x {
+            bins b1[] = {[0:15]} with (item < $bits(enum logic [$bits(item):0] { B }));
+            bins b2 = cx with (item > $bits(enum { E = $bits(item) }) - 32);
+        }
+        cy: coverpoint y;
+        cr: cross cx, cy {
+            bins c = binsof(cx) with (cx > $bits(enum { D = $bits(cy) }) - 32);
+        }
+    endgroup
+
+    function automatic int f(maybe_t m1, maybe_t m2);
+        int r;
+        if (m1 matches tagged Valid .v &&& m2 matches tagged Valid .w &&&
+            $bits(enum { G = $bits(v) + $bits(w) }) > 0)
+            r = $bits(enum { H = $bits(v) }) + H;
+        r += m1 matches tagged Valid .u &&& u > $bits(enum { I = $bits(u) }) - 40 ?
+             $bits(enum { J = $bits(u) }) + J : 0;
+        case (m1) matches
+            tagged Valid .z &&& (z < $bits(enum { K = $bits(z) })): r += K;
+            default:;
+        endcase
+        return r;
+    endfunction
+endmodule
+
+module top;
+    typedef union tagged { int Valid; void Invalid; } maybe_t;
+
+    function automatic int f1();
+        int q[$] = '{10, 20, 40, 50};
+        int r[$];
+        r = q.find(x) with (x > $bits(enum { C = $bits(x) }) + C - 34);
+        return r.size();
+    endfunction
+
+    function automatic int f2(maybe_t m);
+        if (m matches tagged Valid .v &&& v < $bits(enum logic [$bits(v):0] { E }))
+            return v + E + 100;
+        return 0;
+    endfunction
+
+    localparam int p1 = f1();
+    localparam int p2 = f2(tagged Valid (5));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    // The arithmetic in this test gives some warnings, which don't matter here.
+    auto& diags = compilation.getAllDiagnostics();
+    if (std::ranges::any_of(diags, [](auto& diag) { return diag.isError(); }))
+        FAIL_CHECK(report(diags));
+
+    auto& top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
+    CHECK(top.lookupName<ParameterSymbol>("p1").getValue().integer() == 2);
+    CHECK(top.lookupName<ParameterSymbol>("p2").getValue().integer() == 105);
+}
+
+TEST_CASE("Inline enums can't refer to iterators and pattern variables outside their scope") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef union tagged { int Valid; void Invalid; } maybe_t;
+module m;
+    int q[$];
+    int r[$];
+    function automatic int f(maybe_t m1);
+        int x;
+        // The right side of ?: can't see the pattern variable.
+        x = m1 matches tagged Valid .v ? 1 : $bits(enum { A = $bits(v) });
+        // Neither can the else branch of an if.
+        if (m1 matches tagged Valid .w) x = 1;
+        else x = $bits(enum { B = $bits(w) });
+        // Values from a with clause don't leak out.
+        r = q.find(it) with (it > $bits(enum { C = $bits(it) }));
+        return x + C;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Inline enums can see the scope their expression is bound in") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int x;
+    rand int arr[3];
+    extern constraint c;
+    constraint d { x < $bits(enum { D1 = $bits(x) }) + D1; }
+endclass
+
+constraint A::c { x < $bits(enum { C1 = $bits(x) }) + C1; }
+
+module m;
+    A a = new;
+    int r, y;
+    initial begin
+        r = a.randomize() with { x < $bits(enum { R1 = $bits(x) }) + R1; };
+        r = a.randomize() with (x) { x < $bits(enum { R2 = $bits(x) }) + R2; };
+        r = std::randomize(y) with { y < $bits(enum { R3 = $bits(y) }) + R3; };
+        randsequence (main)
+            main : first(1);
+            void first(int n = $bits(enum { S1 = $bits(n) })) :
+                if (n > $bits(enum { S2 = $bits(n) })) second else second
+                := ($bits(enum { S3 = $bits(n) }) + S3);
+            second : { };
+        endsequence
+    end
+
+    logic clk;
+
+    // A port connection creates an implicit net at its first use.
+    sub s($bits(enum { I1 = $bits(implicit_net) }));
+
+    int v;
+    covergroup cg;
+        option.weight = $bits(enum logic [1:1] { O0 }) + O0;
+        cp: coverpoint v {
+            bins zero = {0};
+            bins one = {$bits(enum { B1 = $bits(zero) })};
+            option.weight = $bits(enum logic [1:1] { O1 }) + O1;
+        }
+        e: coverpoint v {
+            option.weight = $bits(enum { O2 = $bits(option) });
+        }
+        cross cp, e iff (int'($bits(enum logic [1:1] { X1 })) + int'(X1)) {
+            option.weight = $bits(enum logic [1:1] { O3 }) + O3;
+        }
+        cp2: coverpoint v + int'($bits(enum logic [1:1] { X2 })) + int'(X2)
+                iff (int'($bits(enum logic [1:1] { X3 })) + int'(X3));
+        logic [int'($bits(enum logic [1:1] { X4 })) + int'(X4):0] cp3: coverpoint v;
+    endgroup
+
+    covergroup cg2 @(posedge clk iff (int'($bits(enum logic [1:1] { X5 })) + int'(X5)));
+    endgroup
+endmodule
+
+module sub(input int i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Referencing a coverage bin or a built-in option in a constant is an error, but
+    // each should be reported once, from the scope that owns the enum.
+    Diagnostics errors;
+    for (auto& diag : compilation.getAllDiagnostics()) {
+        if (diag.isError())
+            errors.push_back(diag);
+    }
+
+    REQUIRE(errors.size() == 2);
+    CHECK(errors[0].code == diag::NotAValue);
+    CHECK(errors[1].code == diag::NonStaticClassProperty);
+}
+
+TEST_CASE("Inline enums don't see declarations that come after them") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    localparam int X = 5;
+endpackage
+
+class A;
+    rand int x;
+endclass
+
+module m;
+    localparam int a = $bits(enum { W1 = X });
+    import p::*;
+
+    A obj = new;
+    int r, q;
+    initial begin
+        r = obj.randomize() with { x < $bits(enum { R1 = 1 }); };
+        q = R1;
+    end
+
+    int v;
+    covergroup cg;
+        cp: coverpoint v {
+            bins one = {$bits(enum { B1 = 1 })};
+        }
+        bad: coverpoint B1;
+    endgroup
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Inline enums in cover cross items") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [3:0] a, b;
+    covergroup cg;
+        cross a, b[$bits(enum logic [1:0] { X1 = 1 }):0] iff ($bits(enum { X2 = 1 }) > 0);
+    endgroup
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CoverCrossSelectNotAllowed);
+}
+
+TEST_CASE("Inline enums in attributes, port expressions, and modports") {
+    auto tree = SyntaxTree::fromText(R"(
+(* a1 = $bits(enum { A1 = 1 }) *) package p;
+endpackage
+
+(* a2 = $bits(enum { A2 = 1 }) *) interface I;
+    typedef enum logic [1:0] { E0, E1 } e_t;
+    logic [3:0] b, c;
+    modport mp(output .R(b[E1:0]), output .S(c[$bits(enum logic [1:1] { M1 }) + int'(M1):0]));
+endinterface
+
+module m({a[1:0], a[3:$bits(enum logic [2:1] { N1 }) + int'(N1)]}, .x(d[$bits(enum logic [1:1] { N2 }) + int'(N2):0]));
+    input [3:0] a;
+    input [3:0] d;
+
+    (* a3 = $bits(enum { A3 = 1 }) *) function void f; endfunction
+    (* a4 = $bits(enum { A4 = 1 }) *) if (1) begin : g end
+    (* a5 = $bits(enum { A5 = 1 }) *) covergroup cg; endgroup
+endmodule
+
+class C;
+    logic [4:0] x;
+    (* a6 = $bits(enum { A6 = 1 }) *) constraint c { 1; }
+    function int f();
+        return $bits(enum { T1 = $bits(this.x) }) + int'(T1);
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Inline enums in ANSI port expressions and covergroup sample arguments") {
+    // These are declared along with the rest of their scope's members,
+    // and must not also be declared again when their expressions are bound.
+    auto tree = SyntaxTree::fromText(R"(
+module m(input .a(b[$bits(enum logic [1:1] { P1 = 1'b1 }) + int'(P1):0]), input int c);
+    logic [3:0] b;
+    localparam int q = int'(P1);
+
+    covergroup cg with function sample(enum logic [1:0] { S0, S1 } x);
+        coverpoint x {
+            bins b = {S1};
+        }
+    endgroup
+
+    cg g = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& q = compilation.getRoot().lookupName<ParameterSymbol>("m.q");
+    CHECK(q.getValue().integer() == 1);
+}
+
+TEST_CASE("Inline enum values referenced before their initializers are bound") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum { A = int'(B) + 1, B = 1, C = D, D = D } e;
+    localparam int p = A;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowUseBeforeDeclare;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalParamCycle);
+
+    auto& p = compilation.getRoot().lookupName<ParameterSymbol>("m.p");
+    CHECK(p.getValue().integer() == 2);
 }

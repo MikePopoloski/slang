@@ -485,7 +485,9 @@ static const Expression* bindIteratorExpr(Compilation& compilation, std::string_
     it->nextTemp = std::exchange(iterCtx.firstTempVar, it);
     iterCtx.flags &= ~ASTFlags::StaticInitializer;
 
-    return &Expression::bind(*withClause.args->expressions[0], iterCtx);
+    auto& exprSyntax = *withClause.args->expressions[0];
+    iterCtx.addTemporaryEnums(exprSyntax);
+    return &Expression::bind(exprSyntax, iterCtx);
 }
 
 Expression& CallExpression::createSystemCall(
@@ -660,7 +662,10 @@ Expression& CallExpression::createSystemCall(
             randomizeDetails.nameRestrictions = randInfo.constraintRestrictions;
             randomizeDetails.isRestricted = withClause->args != nullptr;
             randomizeDetails.inConstraintBlock = true;
-            randInfo.inlineConstraints = &Constraint::bind(*withClause->constraints, argContext);
+            ASTContext constraintContext = argContext;
+            constraintContext.addTemporaryEnums(*withClause->constraints);
+            randInfo.inlineConstraints = &Constraint::bind(*withClause->constraints,
+                                                           constraintContext);
         }
     }
 

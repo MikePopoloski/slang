@@ -1811,6 +1811,23 @@ function int foo;
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Eval inline enums in script sessions") {
+    ScriptSession session;
+    session.eval("module top; endmodule");
+    session.eval("int x = $bits(enum logic [2:0] { A = 3'd5, B });");
+    CHECK(session.eval("x").integer() == 3);
+    CHECK(session.eval("int'(B)").integer() == 6);
+
+    session.eval("enum { C = 2, D } e = D;");
+    CHECK(session.eval("int'(e) + int'(C)").integer() == 5);
+
+    CHECK(session.eval("$bits(enum logic [1:0] { E = 2'd2 }) + int'(E)").integer() == 4);
+
+    session.eval("if (1) x = int'(F) + $bits(enum logic [3:0] { F = 4'd7 });");
+    CHECK(session.eval("x").integer() == 11);
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Eval enum methods") {
     ScriptSession session;
     session.eval("typedef enum { SDF = 2, BAR[5] = 4, BAZ = 99 } e_t;");

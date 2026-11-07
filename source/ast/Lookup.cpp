@@ -38,6 +38,7 @@ using namespace syntax;
 
 const LookupLocation LookupLocation::max{nullptr, UINT_MAX};
 const LookupLocation LookupLocation::min{nullptr, 0};
+const LookupLocation LookupLocation::sourceOrdered{nullptr, UINT_MAX - 2};
 
 LookupLocation LookupLocation::before(const Symbol& symbol) {
     return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex());
@@ -1109,6 +1110,13 @@ bool withinCovergroup(const Symbol& symbol, const Scope& initialScope) {
 
                 nextScope = nextScope->asSymbol().getParentScope();
                 break;
+            case SymbolKind::StatementBlock:
+                // Coverage options with inline enums are bound in a temporary
+                // unnamed block; look through it to the covergroup scope.
+                if (!nextScope->asSymbol().name.empty())
+                    return false;
+                nextScope = nextScope->asSymbol().getParentScope();
+                break;
             default:
                 nextScope = nullptr;
                 break;
@@ -1568,6 +1576,7 @@ std::pair<const ClassType*, bool> Lookup::getContainingClass(const Scope& scope)
             case SymbolKind::CovergroupType:
             case SymbolKind::Coverpoint:
             case SymbolKind::CoverCross:
+            case SymbolKind::EnumType:
                 return true;
             default:
                 return false;
@@ -1891,6 +1900,22 @@ bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& 
     return lookupDownward(nameParts, name, context, LookupFlags::None, result);
 }
 
+// Checks whether something declared at the given location comes before the reference
+// in the source, for lookups from inside an enum.
+static bool isBeforeInSource(const Scope& scope, SourceLocation declLoc,
+                             std::optional<SourceRange> sourceRange,
+                             const SyntaxNode* originalSyntax) {
+    auto sm = scope.getCompilation().getSourceManager();
+    auto loc = sourceRange ? sourceRange->start()
+                           : (originalSyntax ? originalSyntax->getFirstToken().location()
+                                             : SourceLocation());
+    if (!sm || !loc)
+        return true;
+
+    // Implicit nets are declared at their first use, so the same location is fine.
+    return declLoc == loc || sm->isBeforeInCompilationUnit(declLoc, loc).value_or(true);
+}
+
 void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLocation location,
                              std::optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                              SymbolIndex outOfBlockIndex, LookupResult& result,
@@ -1904,6 +1929,11 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         result.found = nullptr;
     };
 
+    // Lookups from inside an enum can't rely on member indices for ordering since the
+    // enum can be declared anywhere in the scope, so we compare source locations instead.
+    // These are rare, so check for them once up front and keep the work out of line.
+    const bool sourceOrdered = location.getIndex() == LookupLocation::sourceOrdered.getIndex();
+
     // Try a simple name lookup to see if we find anything.
     auto& nameMap = scope.getNameMap();
     const Symbol* symbol = nullptr;
@@ -1914,6 +1944,9 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         symbol = it->second;
 
         bool locationGood = LookupLocation::before(*symbol) < location;
+        if (sourceOrdered && locationGood && symbol->kind != SymbolKind::TransparentMember)
+            locationGood = isBeforeInSource(scope, symbol->location, sourceRange, originalSyntax);
+
         if (!locationGood) {
             // A type alias can have forward definitions, so check those locations as well.
             // The forward decls form a linked list that are always ordered by location,
@@ -2031,6 +2064,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                 if (auto sm = scope.getCompilation().getSourceManager(); sm && !skipLocationCheck) {
                     auto loc = originalSyntax->getFirstToken().location();
                     locationGood =
+                        wrapped.location == loc ||
                         sm->isBeforeInCompilationUnit(wrapped.location, loc).value_or(true);
                 }
             }
@@ -2135,8 +2169,11 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                 // The symbol is only visible if one of the wildcard imports
                 // that provides it comes before our lookup location.
                 for (auto import : wildcardImportData->wildcardImports) {
-                    if (location < LookupLocation::after(*import))
+                    if (location < LookupLocation::after(*import) ||
+                        (sourceOrdered &&
+                         !isBeforeInSource(scope, import->location, sourceRange, originalSyntax))) {
                         break;
+                    }
 
                     auto package = import->getPackage();
                     if (package && package->findForImport(name) == it->second) {
@@ -2156,8 +2193,11 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
             SmallSet<const Symbol*, 2> importDedup;
 
             for (auto import : wildcardImportData->wildcardImports) {
-                if (location < LookupLocation::after(*import))
+                if (location < LookupLocation::after(*import) ||
+                    (sourceOrdered &&
+                     !isBeforeInSource(scope, import->location, sourceRange, originalSyntax))) {
                     break;
+                }
 
                 auto package = import->getPackage();
                 if (!package) {

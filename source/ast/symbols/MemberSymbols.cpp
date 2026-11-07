@@ -265,7 +265,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext
                 return;
         }
 
-        // Values of enums declared in the interface are fine.
+        // Values of enums declared in the interface (or in the expression) are fine.
         if (symbol.kind == SymbolKind::EnumValue &&
             symbol.as<EnumValueSymbol>().getDeclaringScope() == context.scope) {
             return;
@@ -377,8 +377,9 @@ void ModportSymbol::fromSyntax(const ASTContext& context, const ModportDeclarati
                         modport->hasExports = true;
 
                     for (auto subPort : portList.ports) {
-                        if (auto preview = subPort->previewNode())
-                            modport->addMembers(*preview);
+                        // Imported prototypes can declare enums that match the
+                        // actual function, so they need to be kept separate.
+                        modport->addEnumChildren(*subPort);
 
                         switch (subPort->kind) {
                             case SyntaxKind::ModportNamedPort: {
@@ -1609,8 +1610,7 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
     std::optional<ArgumentDirection> lastDir;
 
     for (auto item : syntax.ports) {
-        if (auto preview = item->previewNode())
-            scope.addMembers(*preview);
+        scope.addEnumMembers(*item);
 
         auto port = comp.emplace<AssertionPortSymbol>(item->name.valueText(),
                                                       item->name.location());
@@ -1772,6 +1772,7 @@ LetDeclSymbol& LetDeclSymbol::fromSyntax(const Scope& scope, const LetDeclaratio
         AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
     result->ports = ports.copy(comp);
 
+    result->addEnumMembers(*syntax.expr);
     return *result;
 }
 
@@ -1938,9 +1939,7 @@ RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(const Scope& scope,
     }
 
     for (auto rule : syntax.rules) {
-        if (auto preview = rule->previewNode())
-            result->addMembers(*preview);
-
+        result->addEnumMembers(*rule);
         auto& ruleBlock = StatementBlockSymbol::fromSyntax(*result, *rule);
         result->addMember(ruleBlock);
     }

@@ -822,7 +822,7 @@ bool Type::isMatchingAcrossElaborations(const Type& rhs) const {
     if (lt.isEnum()) {
         auto& le = lt.as<EnumType>();
         auto& re = rt.as<EnumType>();
-        if (!le.baseType.isMatching(re.baseType))
+        if (!le.baseType.isMatchingAcrossElaborations(re.baseType))
             return false;
 
         auto lv = le.values();
@@ -1272,7 +1272,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::SequenceType:
             return compilation.getType(node.kind);
         case SyntaxKind::EnumType:
-            return EnumType::findDefinition(compilation, node.as<EnumTypeSyntax>(), context);
+            return EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), context);
         case SyntaxKind::StructType: {
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
             return structUnion.packed

@@ -192,8 +192,7 @@ void Scope::addDiags(const Diagnostics& diags) const {
 }
 
 void Scope::addMembers(const SyntaxNode& syntax) {
-    if (auto preview = syntax.previewNode())
-        addMembers(*preview);
+    addEnumMembers(syntax);
 
     switch (syntax.kind) {
         case SyntaxKind::ModuleDeclaration:
@@ -265,7 +264,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ClockingDeclaration:
             addDeferredMembers(syntax);
             break;
-        case SyntaxKind::EnumType:
         case SyntaxKind::UserDefinedNetDeclaration:
             addDeferredMembers(syntax);
             needsPrepass = true;
@@ -579,6 +577,205 @@ const Symbol* Scope::lookupName(std::string_view name, LookupLocation location,
     return result.found;
 }
 
+static bool isEnumBoundary(const SyntaxNode& syntax) {
+    // These all contain members or statements that will get their own
+    // chance to declare enums in the scope that ends up owning them.
+    switch (syntax.kind) {
+        case SyntaxKind::ModuleDeclaration:
+        case SyntaxKind::InterfaceDeclaration:
+        case SyntaxKind::ProgramDeclaration:
+        case SyntaxKind::PackageDeclaration:
+        case SyntaxKind::CheckerDeclaration:
+        case SyntaxKind::CovergroupDeclaration:
+        case SyntaxKind::SequenceDeclaration:
+        case SyntaxKind::PropertyDeclaration:
+        case SyntaxKind::LetDeclaration:
+        case SyntaxKind::GenerateRegion:
+        case SyntaxKind::GenerateBlock:
+        case SyntaxKind::AnonymousProgram:
+        case SyntaxKind::BindDirective:
+        case SyntaxKind::ExternModuleDecl:
+        case SyntaxKind::RsCodeBlock:
+        case SyntaxKind::ModportSubroutinePort:
+            return true;
+        case SyntaxKind::ConstraintDeclaration:
+            // Constraint bodies are bound in the constraint block, which may
+            // be far away from an out-of-block declaration.
+            return true;
+        case SyntaxKind::NonAnsiPortList:
+        case SyntaxKind::CoverageOption:
+            // These expressions are bound at a fixed location that can't see
+            // anything else in the scope, so their enums get declared when bound.
+            return true;
+        case SyntaxKind::WithClause:
+        case SyntaxKind::PatternCaseItem:
+            // These can see iterators or pattern variables, so they
+            // get declared wherever those get created.
+            return true;
+        default:
+            return StatementSyntax::isKind(syntax.kind);
+    }
+}
+
+static bool hasPattern(const ConditionalPredicateSyntax& predicate) {
+    return std::ranges::any_of(predicate.conditions,
+                               [](auto cond) { return cond->matchesClause != nullptr; });
+}
+
+void Scope::addEnumMembers(const SyntaxNode& syntax) {
+    if (!syntax.containsEnum())
+        return;
+
+    // Attributes are bound in the scope containing the thing they're attached to,
+    // even when that thing has a scope of its own.
+    auto addAttributes = [this](const SyntaxNode& node) {
+        if (MemberSyntax::isKind(node.kind)) {
+            for (auto attr : node.as<MemberSyntax>().attributes)
+                addEnumMembers(*attr);
+        }
+    };
+
+    if (isEnumBoundary(syntax)) {
+        addAttributes(syntax);
+        return;
+    }
+
+    auto addClause = [this](const SyntaxNode& clause) {
+        // If the clause is itself a conditional generate it's evaluated in
+        // this scope; anything else gets wrapped in an implicit block.
+        if (clause.kind == SyntaxKind::IfGenerate || clause.kind == SyntaxKind::CaseGenerate)
+            addEnumMembers(clause);
+    };
+
+    switch (syntax.kind) {
+        case SyntaxKind::ClassDeclaration: {
+            auto& classSyntax = syntax.as<ClassDeclarationSyntax>();
+            addAttributes(syntax);
+            if (classSyntax.extendsClause)
+                addEnumMembers(*classSyntax.extendsClause);
+            if (classSyntax.implementsClause)
+                addEnumMembers(*classSyntax.implementsClause);
+            return;
+        }
+        case SyntaxKind::StructType:
+        case SyntaxKind::UnionType:
+            // Members go in the struct, but its dimensions are outside of it.
+            for (auto dim : syntax.as<StructUnionTypeSyntax>().dimensions)
+                addEnumMembers(*dim);
+            return;
+        case SyntaxKind::FunctionDeclaration:
+        case SyntaxKind::TaskDeclaration:
+            // The body goes in the subroutine itself.
+            addAttributes(syntax);
+            addEnumMembers(*syntax.as<FunctionDeclarationSyntax>().prototype);
+            return;
+        case SyntaxKind::FunctionPrototype:
+            // The return type is visible to the parent, unlike the
+            // arguments which also go in the subroutine or prototype.
+            addEnumMembers(*syntax.as<FunctionPrototypeSyntax>().returnType);
+            return;
+        case SyntaxKind::ArrayOrRandomizeMethodExpression: {
+            // The arguments of an array method's with clause can see its iterator,
+            // and inline constraints can see members of the randomized object.
+            addEnumMembers(*syntax.as<ArrayOrRandomizeMethodExpressionSyntax>().method);
+            return;
+        }
+        case SyntaxKind::Coverpoint:
+        case SyntaxKind::CoverCross:
+            // Bins and options go in the coverpoint or cross itself. The rest is bound
+            // at a location that can only see the covergroup's formal arguments, so
+            // its enums get declared when it's bound.
+            addAttributes(syntax);
+            return;
+        case SyntaxKind::LoopConstraint:
+            // The body can see the iterators.
+            addEnumMembers(*syntax.as<LoopConstraintSyntax>().loopList);
+            return;
+        case SyntaxKind::BinSelectWithFilterExpr: {
+            // The filter can see iterators for the cross items.
+            auto& filter = syntax.as<BinSelectWithFilterExprSyntax>();
+            addEnumMembers(*filter.expr);
+            if (filter.matchesClause)
+                addEnumMembers(*filter.matchesClause);
+            return;
+        }
+        case SyntaxKind::ConditionalPredicate:
+            // Everything after the first pattern can see its variables.
+            for (auto cond : syntax.as<ConditionalPredicateSyntax>().conditions) {
+                addEnumMembers(*cond->expr);
+                if (cond->matchesClause)
+                    return;
+            }
+            return;
+        case SyntaxKind::ConditionalExpression: {
+            auto& cond = syntax.as<ConditionalExpressionSyntax>();
+            addEnumMembers(*cond.predicate);
+            for (auto attr : cond.attributes)
+                addEnumMembers(*attr);
+            if (!hasPattern(*cond.predicate))
+                addEnumMembers(*cond.left);
+            addEnumMembers(*cond.right);
+            return;
+        }
+        case SyntaxKind::LoopGenerate:
+            // The other expressions can see the genvar so they don't belong to us.
+            addAttributes(syntax);
+            addEnumMembers(*syntax.as<LoopGenerateSyntax>().initialExpr);
+            return;
+        case SyntaxKind::IfGenerate: {
+            auto& ifGen = syntax.as<IfGenerateSyntax>();
+            addAttributes(syntax);
+            addEnumMembers(*ifGen.condition);
+            addClause(*ifGen.block);
+            if (ifGen.elseClause)
+                addClause(*ifGen.elseClause->clause);
+            return;
+        }
+        case SyntaxKind::CaseGenerate: {
+            auto& caseGen = syntax.as<CaseGenerateSyntax>();
+            addAttributes(syntax);
+            addEnumMembers(*caseGen.condition);
+            for (auto item : caseGen.items) {
+                if (item->kind == SyntaxKind::StandardCaseItem) {
+                    auto& sci = item->as<StandardCaseItemSyntax>();
+                    for (auto expr : sci.expressions)
+                        addEnumMembers(*expr);
+                    addClause(*sci.clause);
+                }
+                else {
+                    addClause(*item->as<DefaultCaseItemSyntax>().clause);
+                }
+            }
+            return;
+        }
+        default:
+            break;
+    }
+
+    for (size_t i = 0; i < syntax.getChildCount(); i++) {
+        if (auto child = syntax.childNode(i))
+            addEnumMembers(*child);
+    }
+
+    if (syntax.kind == SyntaxKind::EnumType) {
+        EnumType::declareValues(*this, syntax.as<EnumTypeSyntax>(), [this](const Symbol& member) {
+            addMember(*compilation.emplace<TransparentMemberSymbol>(member));
+        });
+    }
+}
+
+void Scope::addEnumChildren(const SyntaxNode& syntax) {
+    if (!syntax.containsEnum())
+        return;
+
+    // Attributes on statements are special; they belong
+    // to the enclosing scope even if the statement has its own.
+    for (size_t i = 0; i < syntax.getChildCount(); i++) {
+        if (auto child = syntax.childNode(i); child && child->kind != SyntaxKind::AttributeInstance)
+            addEnumMembers(*child);
+    }
+}
+
 void Scope::addDeferredMembers(const SyntaxNode& syntax) {
     auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
     addMember(*sym);
@@ -604,7 +801,8 @@ static bool canLookupByName(SymbolKind kind) {
 }
 
 void Scope::linkMember(const Symbol* member, const Symbol* at, bool incrementIndex) const {
-    SLANG_ASSERT(!member->parentScope);
+    // The member may already have a parent scope without being linked into it; enum values
+    // are declared in their enclosing scope and later become members of their enum type.
     SLANG_ASSERT(!member->nextInScope);
 
     if (!at) {
@@ -850,16 +1048,6 @@ void Scope::elaborate() const {
                     NetSymbol::fromSyntax(context, node.as<UserDefinedNetDeclarationSyntax>(),
                                           nets);
                     insertMembers(nets, symbol);
-                    break;
-                }
-                case SyntaxKind::EnumType: {
-                    EnumType::fromSyntax(
-                        compilation, node.as<EnumTypeSyntax>(), context,
-                        [this, &symbol](const Symbol& member) {
-                            auto wrapped = compilation.emplace<TransparentMemberSymbol>(member);
-                            insertMember(wrapped, symbol, false);
-                            symbol = wrapped;
-                        });
                     break;
                 }
                 case SyntaxKind::DataDeclaration:
@@ -1134,7 +1322,6 @@ void Scope::elaborate() const {
                 }
                 break;
             }
-            case SyntaxKind::EnumType:
             case SyntaxKind::UserDefinedNetDeclaration:
             case SyntaxKind::DataDeclaration:
                 // Already handled above.
@@ -1501,7 +1688,6 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::ProgramDeclaration:
         case SyntaxKind::ClassMethodDeclaration:
-        case SyntaxKind::EnumType:
         case SyntaxKind::ClockingDeclaration:
             return 1;
         case SyntaxKind::SpecifyBlock:

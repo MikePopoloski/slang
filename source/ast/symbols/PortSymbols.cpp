@@ -1415,6 +1415,7 @@ const Type& PortSymbol::getType() const {
         if (syntax->kind == SyntaxKind::PortReference) {
             auto& prs = syntax->as<PortReferenceSyntax>();
             if (auto select = prs.select) {
+                context.addTemporaryEnums(*select);
                 internalExpr = &Expression::bindSelector(valExpr, *select, context);
                 type = internalExpr->type;
 
@@ -1449,6 +1450,8 @@ const Type& PortSymbol::getType() const {
                 astFlags |= ASTFlags::LAndRValue;
         }
 
+        // Any enums in the expression were declared in our scope along with the
+        // rest of the port list, and we can see all of them from here.
         ASTContext context(*scope, LookupLocation::max, astFlags);
         internalExpr = &Expression::bind(*eaps.expr, context);
         type = internalExpr->type;
@@ -1466,6 +1469,12 @@ const Type& PortSymbol::getType() const {
             internalExpr->visitSymbolReferences([&](const Expression& expr, const Symbol& symbol) {
                 if (expr.kind == ExpressionKind::MemberAccess)
                     return;
+
+                // Values of enums declared in this module (or in the expression) are fine.
+                if (symbol.kind == SymbolKind::EnumValue &&
+                    symbol.as<EnumValueSymbol>().getDeclaringScope() == scope) {
+                    return;
+                }
 
                 if (symbol.getParentScope() != scope || expr.kind != ExpressionKind::NamedValue) {
                     auto def = scope->asSymbol().getDeclaringDefinition();

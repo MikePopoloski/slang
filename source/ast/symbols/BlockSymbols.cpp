@@ -128,10 +128,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     // We'll only enter this function if we have variable decls.
     auto& comp = scope.getCompilation();
     const VariableSymbol* lastVar = nullptr;
+    result->addEnumChildren(syntax);
     for (auto init : syntax.initializers) {
-        if (auto preview = init->previewNode())
-            result->addMembers(*preview);
-
         auto& var = VariableSymbol::fromSyntax(comp, init->as<ForVariableDeclarationSyntax>(),
                                                lastVar);
 
@@ -148,6 +146,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const ForeachLoopStatementSyntax& syntax) {
     auto [name, loc] = getLabel(syntax, syntax.keyword.location());
     auto result = createBlock(scope, syntax, name, loc);
+    result->addEnumChildren(syntax);
     result->blocks = Statement::createAndAddBlockItems(*result, *syntax.statement,
                                                        /* labelHandled */ false);
 
@@ -164,11 +163,18 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     StatementBlockSymbol* first = nullptr;
     StatementBlockSymbol* curr = nullptr;
 
+    // The enclosing scope declares enums up to the first pattern. After that, each
+    // condition is bound in the block of the most recent pattern before it, and
+    // each pattern in its own block.
     for (auto cond : syntax.predicate->conditions) {
+        if (curr)
+            curr->addEnumMembers(*cond->expr);
+
         if (cond->matchesClause) {
             auto block = comp.emplace<StatementBlockSymbol>(
                 comp, ""sv, cond->matchesClause->getFirstToken().location(),
                 StatementBlockKind::Sequential, VariableLifetime::Automatic);
+            block->addEnumMembers(*cond->matchesClause);
 
             // Each block needs elaboration to collect pattern variables.
             block->setNeedElaboration();
@@ -217,6 +223,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                      StatementBlockKind::Sequential,
                                                      VariableLifetime::Automatic);
     result->setSyntax(syntax);
+    result->addEnumChildren(syntax);
     result->blocks = Statement::createAndAddBlockItems(*result, *syntax.statement,
                                                        /* labelHandled */ false);
 
@@ -233,8 +240,9 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                               VariableLifetime::Automatic);
 
     for (auto prod : syntax.productions) {
-        if (auto preview = prod->previewNode())
-            result->addMembers(*preview);
+        // Return types are visible here; arguments and rules go in the production.
+        if (prod->dataType)
+            result->addEnumMembers(*prod->dataType);
 
         if (prod->name.valueText().empty())
             continue;
@@ -256,9 +264,6 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     result->setNeedElaboration();
 
     for (auto prod : syntax.prods) {
-        if (auto preview = prod->previewNode())
-            result->addMembers(*preview);
-
         if (prod->kind == SyntaxKind::RsCodeBlock) {
             result->addMember(
                 StatementBlockSymbol::fromSyntax(scope, prod->as<RsCodeBlockSyntax>()));
@@ -406,9 +411,13 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::createProceduralBlock(
     result->stmtSyntax = &stmtSyntax;
 
     SmallVector<const SyntaxNode*> extraMembers;
+    SmallVector<const SyntaxNode*> enumSyntax;
     result->blocks = Statement::createBlockItems(scope, stmtSyntax, /* labelHandled */ false,
-                                                 extraMembers);
+                                                 extraMembers, enumSyntax);
 
+    // Enums go first so that the blocks can see them.
+    for (auto node : enumSyntax)
+        scope.addEnumMembers(*node);
     for (auto b : result->blocks)
         scope.addMember(*b);
     for (auto member : extraMembers)
@@ -871,6 +880,10 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
             local.setSyntax(*sx);
     }
     result->loopVariable = &local;
+
+    // Any enums in these expressions need to be able to see the loop variable.
+    iterScope.addEnumMembers(*syntax.stopExpr);
+    iterScope.addEnumMembers(*syntax.iterationExpr);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
     ASTContext iterContext(iterScope, LookupLocation::max);

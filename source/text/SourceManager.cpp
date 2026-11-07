@@ -275,6 +275,12 @@ bool SourceManager::isPreprocessedLoc(SourceLocation location) const {
 
 std::optional<bool> SourceManager::isBeforeInCompilationUnit(SourceLocation left,
                                                              SourceLocation right) const {
+    // Locations not backed by a buffer (e.g. compiler-generated symbols) can't be ordered.
+    if (!left || !right || left == SourceLocation::NoLocation ||
+        right == SourceLocation::NoLocation) {
+        return std::nullopt;
+    }
+
     // Simple check: if they're in the same buffer, just do an easy compare
     if (left.buffer() == right.buffer())
         return left.offset() < right.offset();

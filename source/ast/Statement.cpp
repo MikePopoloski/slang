@@ -417,17 +417,78 @@ Statement& Statement::badStmt(Compilation& compilation, const Statement* stmt) {
     return *compilation.emplace<InvalidStatement>(stmt);
 }
 
+// Determines whether the given statement will create a block
+// of its own, which takes care of any enums that it declares.
+static bool hasOwnBlock(const StatementSyntax& syntax, bool labelHandled) {
+    switch (syntax.kind) {
+        case SyntaxKind::SequentialBlockStatement:
+        case SyntaxKind::ParallelBlockStatement: {
+            // Block statements form their own hierarchy scope if:
+            // - They have a name (or a label)
+            // - They are unnamed but have variable declarations within them
+            auto& block = syntax.as<BlockStatementSyntax>();
+            if (block.blockName || block.label)
+                return true;
+
+            // If we find any decls at all, this block gets its own scope.
+            return std::ranges::any_of(block.items, [](auto item) {
+                return !StatementSyntax::isKind(item->kind) ||
+                       item->kind == SyntaxKind::CheckerInstanceStatement;
+            });
+        }
+        case SyntaxKind::ConditionalStatement:
+            // If any condition has a pattern, we need a block.
+            return std::ranges::any_of(
+                syntax.as<ConditionalStatementSyntax>().predicate->conditions,
+                [](auto cond) { return cond->matchesClause != nullptr; });
+        case SyntaxKind::ForLoopStatement: {
+            // For loops are special; if they declare variables, they get
+            // wrapped in an implicit block. Otherwise they are transparent.
+            auto& forLoop = syntax.as<ForLoopStatementSyntax>();
+            return (!forLoop.initializers.empty() &&
+                    forLoop.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) ||
+                   (syntax.label && !labelHandled);
+        }
+        case SyntaxKind::ForeachLoopStatement:
+        case SyntaxKind::RandSequenceStatement:
+            // These always create a block, but we need to check labelHandled
+            // here to make sure we don't infinitely recurse.
+            return !labelHandled;
+        default:
+            return false;
+    }
+}
+
 static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                        SmallVectorBase<const StatementBlockSymbol*>& results,
-                       SmallVector<const SyntaxNode*>& extraMembers, bool labelHandled) {
+                       SmallVector<const SyntaxNode*>& extraMembers,
+                       SmallVector<const SyntaxNode*>& enumSyntax, bool labelHandled) {
+    if (syntax.containsEnum() && !labelHandled) {
+        for (auto attr : syntax.attributes)
+            enumSyntax.push_back(attr);
+    }
+
     if (!labelHandled && hasSimpleLabel(syntax)) {
         results.push_back(&StatementBlockSymbol::fromLabeledStmt(scope, syntax));
         return;
     }
 
     auto recurse = [&](auto stmt) {
-        findBlocks(scope, *stmt, results, extraMembers, /* lableHandled */ false);
+        findBlocks(scope, *stmt, results, extraMembers, enumSyntax, /* lableHandled */ false);
     };
+
+    // Enums in this statement belong to the enclosing scope unless we create a new one.
+    // Attributes were handled above, and checker instances are handled below since
+    // they're members instead of statements. Nested statements will stop the search
+    // for enums, so they get handled when we recurse into them.
+    if (syntax.containsEnum() && syntax.kind != SyntaxKind::CheckerInstanceStatement &&
+        !hasOwnBlock(syntax, labelHandled)) {
+        for (size_t i = 0; i < syntax.getChildCount(); i++) {
+            auto child = syntax.childNode(i);
+            if (child && child->kind != SyntaxKind::AttributeInstance)
+                enumSyntax.push_back(child);
+        }
+    }
 
     switch (syntax.kind) {
         case SyntaxKind::ReturnStatement:
@@ -449,22 +510,10 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
 
         case SyntaxKind::SequentialBlockStatement:
         case SyntaxKind::ParallelBlockStatement: {
-            // Block statements form their own hierarchy scope if:
-            // - They have a name (or a label)
-            // - They are unnamed but have variable declarations within them
             auto& block = syntax.as<BlockStatementSyntax>();
-            if (block.blockName || block.label) {
+            if (hasOwnBlock(syntax, labelHandled)) {
                 results.push_back(&StatementBlockSymbol::fromSyntax(scope, block));
                 return;
-            }
-
-            for (auto item : block.items) {
-                // If we find any decls at all, this block gets its own scope.
-                if (!StatementSyntax::isKind(item->kind) ||
-                    item->kind == SyntaxKind::CheckerInstanceStatement) {
-                    results.push_back(&StatementBlockSymbol::fromSyntax(scope, block));
-                    return;
-                }
             }
 
             for (auto item : block.items)
@@ -493,19 +542,15 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             return;
         case SyntaxKind::ConditionalStatement: {
             auto& cond = syntax.as<ConditionalStatementSyntax>();
-            bool hasPattern = false;
-            for (auto condSyntax : cond.predicate->conditions) {
-                if (condSyntax->matchesClause) {
-                    hasPattern = true;
-                    break;
-                }
-            }
-
-            // If any condition has a pattern, we need a block.
-            if (hasPattern)
+            if (hasOwnBlock(syntax, labelHandled)) {
+                // The conditions are spread across a chain of nested blocks, so
+                // their enums go in the enclosing scope that all of them can see.
+                enumSyntax.push_back(cond.predicate);
                 results.push_back(&StatementBlockSymbol::fromSyntax(scope, cond));
-            else
+            }
+            else {
                 recurse(cond.statement);
+            }
 
             if (cond.elseClause)
                 recurse(&cond.elseClause->clause->as<StatementSyntax>());
@@ -611,6 +656,7 @@ std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
 
     SmallVector<const StatementBlockSymbol*> buffer;
     SmallVector<const SyntaxNode*> extraMembers;
+    SmallVector<const SyntaxNode*> enumSyntax;
     for (auto item : items) {
         switch (item->kind) {
             case SyntaxKind::DataDeclaration:
@@ -623,9 +669,7 @@ std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
                 scope.addMembers(*item);
                 break;
             case SyntaxKind::PortDeclaration:
-                if (auto preview = item->previewNode())
-                    scope.addMembers(*preview);
-
+                scope.addEnumMembers(*item);
                 if (scope.asSymbol().kind == SymbolKind::Subroutine) {
                     SmallVector<const FormalArgumentSymbol*> args;
                     FormalArgumentSymbol::fromSyntax(scope, item->as<PortDeclarationSyntax>(),
@@ -638,13 +682,15 @@ std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
                 }
                 break;
             default:
-                if (auto preview = item->previewNode())
-                    scope.addMembers(*preview);
-
-                findBlocks(scope, item->as<StatementSyntax>(), buffer, extraMembers, false);
+                findBlocks(scope, item->as<StatementSyntax>(), buffer, extraMembers, enumSyntax,
+                           false);
                 break;
         }
     }
+
+    // Enums go first so that the blocks can see them.
+    for (auto node : enumSyntax)
+        scope.addEnumMembers(*node);
 
     auto blocks = buffer.copy(scope.getCompilation());
     for (auto block : blocks)
@@ -657,10 +703,10 @@ std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
 
 std::span<const StatementBlockSymbol* const> Statement::createBlockItems(
     const Scope& scope, const StatementSyntax& syntax, bool labelHandled,
-    SmallVector<const SyntaxNode*>& extraMembers) {
+    SmallVector<const SyntaxNode*>& extraMembers, SmallVector<const SyntaxNode*>& enumSyntax) {
 
     SmallVector<const StatementBlockSymbol*> buffer;
-    findBlocks(scope, syntax, buffer, extraMembers, labelHandled);
+    findBlocks(scope, syntax, buffer, extraMembers, enumSyntax, labelHandled);
     return buffer.copy(scope.getCompilation());
 }
 
@@ -668,7 +714,12 @@ std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
     Scope& scope, const StatementSyntax& syntax, bool labelHandled) {
 
     SmallVector<const SyntaxNode*> extraMembers;
-    auto blocks = createBlockItems(scope, syntax, labelHandled, extraMembers);
+    SmallVector<const SyntaxNode*> enumSyntax;
+    auto blocks = createBlockItems(scope, syntax, labelHandled, extraMembers, enumSyntax);
+
+    // Enums go first so that the blocks can see them.
+    for (auto node : enumSyntax)
+        scope.addEnumMembers(*node);
     for (auto block : blocks)
         scope.addMember(*block);
     for (auto member : extraMembers)

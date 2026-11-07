@@ -266,6 +266,8 @@ private:
                BumpAllocator&& alloc, Diagnostics&& diagnostics, parsing::ParserMetadata&& metadata,
                parsing::PreprocessorMetadata&& preprocessorMetadata, Bag options);
 
+    void markEnums();
+
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager,
                                               std::span<const SourceBuffer> source,
                                               const Bag& options, MacroList inheritedMacros,

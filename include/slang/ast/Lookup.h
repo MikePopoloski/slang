@@ -149,6 +149,12 @@ public:
     /// A special location that should always compare before any other.
     static const LookupLocation min;
 
+    /// A special location that compares after anything declared in a scope, but only
+    /// finds symbols that come before the referencing syntax in the source. This is for
+    /// enums, which can't be given a precise position in the scope that declares them
+    /// since they can appear at any point inside of another declaration.
+    static const LookupLocation sourceOrdered;
+
     /// Default equality operator.
     bool operator==(const LookupLocation& other) const = default;
 

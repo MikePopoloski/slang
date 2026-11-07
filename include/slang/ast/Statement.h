@@ -181,9 +181,13 @@ public:
                                       const ASTContext& context, StatementContext& stmtCtx);
 
     /// Creates any symbols declared by the given statement syntax, such as local variables.
+    /// Members that need to be added to the scope (such as checker instances) are placed
+    /// in @a extraMembers, and syntax nodes whose enums belong to the scope are placed in
+    /// @a enumSyntax so the caller can declare them via @a Scope::addEnumMembers
     static std::span<const StatementBlockSymbol* const> createBlockItems(
         const Scope& scope, const StatementSyntax& syntax, bool labelHandled,
-        SmallVector<const syntax::SyntaxNode*>& extraMembers);
+        SmallVector<const syntax::SyntaxNode*>& extraMembers,
+        SmallVector<const syntax::SyntaxNode*>& enumSyntax);
 
     /// Creates any symbols declared by the given list of syntax nodes, such as local variables,
     /// and ignores any statement syntax nodes. The created symbols are added to the given scope.

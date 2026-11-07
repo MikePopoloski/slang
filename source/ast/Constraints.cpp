@@ -598,6 +598,7 @@ Constraint& ForeachConstraint::fromSyntax(const LoopConstraintSyntax& syntax,
             const_cast<IteratorSymbol*>(dim.loopVar)->setParent(*context.scope);
     }
 
+    iterCtx.addTemporaryEnums(*syntax.constraints);
     auto& body = Constraint::bind(*syntax.constraints, iterCtx);
     auto result = comp.emplace<ForeachConstraint>(*arrayRef, dims.copy(comp), body);
     if (body.bad())

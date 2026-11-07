@@ -1380,6 +1380,11 @@ void InstanceBodySymbol::finishElaboration(function_ref<void(const Symbol&)> ins
                 return;
             }
 
+            // The instantiation is resolved in this scope, not the one that contains the
+            // bind directive, so any enums it declares need to go here too. The const_cast
+            // is ok; this is the same as adding members via insertCB.
+            const_cast<InstanceBodySymbol*>(this)->addEnumMembers(*info.bindSyntax->instantiation);
+
             SmallVector<const Symbol*> instances;
             SmallVector<const Symbol*> implicitNets;
             if (info.bindSyntax->instantiation->kind == SyntaxKind::CheckerInstantiation) {

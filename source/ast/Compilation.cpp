@@ -14,6 +14,7 @@
 
 #include "slang/ast/ScriptSession.h"
 #include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/TypePrinter.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/Diagnostics.h"
@@ -1119,6 +1120,25 @@ std::span<const AttributeSymbol* const> Compilation::getAttributes(const void* p
         return {};
 
     return it->second;
+}
+
+void Compilation::noteEnumDeclaration(const EnumDeclaration& declaration) {
+#if SLANG_ASSERT_ENABLED
+    // Each enum should be declared by exactly one of the scopes that can see it; otherwise
+    // something walked into syntax that another scope (or a binding) is responsible for.
+    for (auto scope = declaration.scope.asSymbol().getParentScope(); scope;
+         scope = scope->asSymbol().getParentScope()) {
+        SLANG_ASSERT(!getEnumDeclaration(declaration.syntax, *scope));
+    }
+#endif
+
+    enumDeclarations.emplace(std::tuple{&declaration.syntax, &declaration.scope}, &declaration);
+}
+
+const EnumDeclaration* Compilation::getEnumDeclaration(const SyntaxNode& syntax,
+                                                       const Scope& scope) const {
+    auto it = enumDeclarations.find(std::tuple{&syntax, &scope});
+    return it == enumDeclarations.end() ? nullptr : it->second;
 }
 
 void Compilation::noteBindDirective(const BindDirectiveSyntax& syntax, const Scope& scope) {

@@ -11,6 +11,8 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/ast/symbols/BlockSymbols.h"
+#include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -787,16 +789,24 @@ bool AssertionInstanceExpression::checkAssertionArg(const PropertyExprSyntax& pr
 }
 
 static const AssertionExpr& bindAssertionBody(
-    const Symbol& symbol, const SyntaxNode& syntax, const ASTContext& context,
+    const Symbol& symbol, const SyntaxNode& syntax, const ASTContext& parentContext,
     SourceLocation outputLocalVarArgLoc, AssertionInstanceDetails& instance,
     SmallVectorBase<const LocalAssertionVarSymbol*>& localVars) {
+
+    // Enums declared in the body can depend on the arguments and local variables
+    // of this instance, so they get declared just for this instance.
+    ASTContext context = parentContext;
+    auto addEnums = [&](const SyntaxNode& node) { context.addTemporaryEnums(node); };
 
     auto createLocals = [&](auto& syntaxType, std::span<const AssertionPortSymbol* const> ports) {
         auto& scope = symbol.as<Scope>();
         for (auto varSyntax : syntaxType.variables) {
+            addEnums(*varSyntax->type);
+
             SmallVector<const LocalAssertionVarSymbol*> vars;
-            LocalAssertionVarSymbol::fromSyntax(*context.scope, *varSyntax, vars);
+            LocalAssertionVarSymbol::fromSyntax(*parentContext.scope, *varSyntax, vars);
             for (auto var : vars) {
+                addEnums(*var->getSyntax());
                 var->getDeclaredType()->forceResolveAt(context);
                 if (!var->name.empty()) {
                     auto [it, inserted] = instance.localVars.emplace(var->name, var);
@@ -830,6 +840,7 @@ static const AssertionExpr& bindAssertionBody(
     if (symbol.kind == SymbolKind::Sequence) {
         auto& sds = syntax.as<SequenceDeclarationSyntax>();
         createLocals(sds, symbol.as<SequenceSymbol>().ports);
+        addEnums(*sds.seqExpr);
 
         auto& result = AssertionExpr::bind(*sds.seqExpr, context);
         result.requireSequence(context);
@@ -847,6 +858,7 @@ static const AssertionExpr& bindAssertionBody(
     else {
         auto& pds = syntax.as<PropertyDeclarationSyntax>();
         createLocals(pds, symbol.as<PropertySymbol>().ports);
+        addEnums(*pds.propertySpec);
         return AssertionExpr::bind(*pds.propertySpec, context);
     }
 }

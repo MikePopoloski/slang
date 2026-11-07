@@ -64,6 +64,11 @@ public:
         visitDefault(syntax);
     }
 
+    void handle(const EnumTypeSyntax& syntax) {
+        meta.enumTypes.push_back(&syntax);
+        visitDefault(syntax);
+    }
+
     void handle(const DefParamSyntax& syntax) {
         meta.hasDefparams = true;
         visitDefault(syntax);

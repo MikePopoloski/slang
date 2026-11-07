@@ -25,6 +25,8 @@ SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAlloc
     metadata(ParserMetadata::fromSyntax(*root)) {
     if (preTransform && !metadata.eofToken)
         metadata.eofToken = preTransform->getMetadata().eofToken.deepClone(this->alloc);
+
+    markEnums();
 }
 
 SyntaxTree::~SyntaxTree() = default;
@@ -121,6 +123,13 @@ SyntaxTree::SyntaxTree(SyntaxNode* root, const SourceLibrary* library, SourceMan
     rootNode(root), library(library), sourceMan(sourceManager), alloc(std::move(alloc)),
     diagnosticsBuffer(std::move(diagnostics)), options_(std::move(options)),
     metadata(std::move(metadata)), preprocessorMetadata(std::move(preprocessorMetadata)) {
+    markEnums();
+}
+
+void SyntaxTree::markEnums() {
+    // const_cast is safe because the tree owns all of its nodes.
+    for (auto syntax : metadata.enumTypes)
+        const_cast<EnumTypeSyntax*>(syntax)->markContainsEnum();
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,

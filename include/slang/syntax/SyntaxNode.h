@@ -22,15 +22,6 @@ namespace slang::syntax {
 
 class SyntaxNode;
 
-namespace detail {
-
-struct SyntaxParentInfo {
-    SyntaxNode* parent = nullptr;
-    const SyntaxNode* previewNode = nullptr;
-};
-
-} // namespace detail
-
 /// A token pointer or a syntax node pointer.
 struct SLANG_EXPORT PtrTokenOrSyntax {
     PtrTokenOrSyntax(parsing::Token* token) :
@@ -134,24 +125,15 @@ public:
 
     /// @brief A small proxy that behaves like a `SyntaxNode*` but stores
     /// its pointer in a tagged form so that the low bit can be used to
-    /// indicate the rare presence of a "preview node" attached to this
-    /// node (see `previewNode()` below).
-    ///
-    /// When the low bit is clear, the stored value is a plain pointer
-    /// to the parent SyntaxNode. When set, the value points instead at
-    /// a `detail::SyntaxParentInfo` struct (allocated from the same
-    /// BumpAllocator that owns the syntax tree) which holds both the
-    /// real parent pointer and the preview node pointer.
+    /// indicate that an enum type is somewhere underneath this node
+    /// (see `containsEnum()` below).
     class ParentRef {
     public:
         ParentRef() = default;
         ParentRef(SyntaxNode* p) : raw(reinterpret_cast<uintptr_t>(p)) {}
 
         ParentRef& operator=(SyntaxNode* p) {
-            if (raw & TagBit)
-                reinterpret_cast<detail::SyntaxParentInfo*>(raw & ~TagBit)->parent = p;
-            else
-                raw = reinterpret_cast<uintptr_t>(p);
+            raw = reinterpret_cast<uintptr_t>(p) | (raw & TagBit);
             return *this;
         }
 
@@ -159,29 +141,12 @@ public:
         SyntaxNode* operator->() const { return get(); }
         SyntaxNode& operator*() const { return *get(); }
 
-        SyntaxNode* get() const {
-            if (raw & TagBit)
-                return reinterpret_cast<detail::SyntaxParentInfo*>(raw & ~TagBit)->parent;
-            return reinterpret_cast<SyntaxNode*>(raw);
-        }
+        SyntaxNode* get() const { return reinterpret_cast<SyntaxNode*>(raw & ~TagBit); }
 
     private:
         friend class SyntaxNode;
 
         static constexpr uintptr_t TagBit = 0x1u;
-
-        bool isTagged() const { return (raw & TagBit) != 0; }
-
-        SyntaxNode* getRaw() const { return reinterpret_cast<SyntaxNode*>(raw); }
-
-        detail::SyntaxParentInfo* getInfo() const {
-            SLANG_ASSERT(isTagged());
-            return reinterpret_cast<detail::SyntaxParentInfo*>(raw & ~TagBit);
-        }
-
-        void setInfo(detail::SyntaxParentInfo* info) {
-            raw = reinterpret_cast<uintptr_t>(info) | TagBit;
-        }
 
         uintptr_t raw = 0;
     };
@@ -193,42 +158,22 @@ public:
     /// tree does not have a parent (will be nullptr).
     ///
     /// This behaves like a `SyntaxNode*`, but internally tags its low
-    /// bit to record the (rare) presence of an attached preview node.
+    /// bit to record whether this node contains an enum type.
     /// See `ParentRef` above for details.
     ParentRef parent;
 
-    /// @brief Returns the optional "preview" syntax node associated
-    /// with this node, or nullptr if none.
+    /// @brief Returns true if this node is an enum type or has one somewhere
+    /// underneath it.
     ///
-    /// Preview nodes can be useful to know ahead of time when visiting
-    /// this node. The node, if set, is underneath this node in the
-    /// syntax tree.
+    /// Enums can be declared anywhere that a data type can appear, including deep
+    /// inside of expressions, but their values are members of the enclosing scope.
+    /// This makes it cheap to find them without having to walk all of the syntax.
     ///
-    /// For example, an enum declaration deep inside an expression tree
-    /// needs to be known up front to add its members to its parent scope.
-    ///
-    /// Preview nodes are very rare in practice, so we avoid storing a
-    /// dedicated pointer in every `SyntaxNode`. Instead, when one is
-    /// attached we allocate a small `detail::SyntaxParentInfo` struct
-    /// from the syntax tree's BumpAllocator and tag the parent pointer to
-    /// reach it.
-    const SyntaxNode* previewNode() const {
-        return parent.isTagged() ? parent.getInfo()->previewNode : nullptr;
-    }
+    /// This gets set when a syntax tree is created.
+    bool containsEnum() const { return (parent.raw & ParentRef::TagBit) != 0; }
 
-    /// Sets the preview node associated with this node. Passing
-    /// nullptr removes any existing preview node entry.
-    ///
-    /// The first time a preview node is attached to a particular
-    /// SyntaxNode, a small indirection struct is allocated from the
-    /// provided BumpAllocator. The allocator must be the same one
-    /// that owns the memory for this syntax tree, since the
-    /// indirection struct's lifetime is tied to it.
-    void setPreviewNode(BumpAllocator& alloc, const SyntaxNode* node) {
-        if (!node && !parent.isTagged())
-            return;
-        setPreviewNodeImpl(alloc, node);
-    }
+    /// Marks this node and all of its parents as containing an enum type.
+    void markContainsEnum();
 
     /// Print the node and all of its children to a string.
     std::string toString() const;
@@ -360,8 +305,6 @@ protected:
     explicit SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
 private:
-    void setPreviewNodeImpl(BumpAllocator& alloc, const SyntaxNode* node);
-
     ConstTokenOrSyntax getChild(size_t index) const;
     TokenOrSyntax getChild(size_t index);
     PtrTokenOrSyntax getChildPtr(size_t index);

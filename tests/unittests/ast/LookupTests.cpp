@@ -2888,11 +2888,43 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::EnumValueDuplicate);
-    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UsedBeforeDeclared);
     CHECK(diags[2].code == diag::ConstEvalParamCycle);
     CHECK(diags[3].code == diag::EnumValueDuplicate);
     CHECK(diags[4].code == diag::ConstEvalParamCycle);
     CHECK(diags[5].code == diag::ConstEvalIdUsedInCEBeforeDecl);
+}
+
+TEST_CASE("Enum base type cycles") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    enum logic [$bits(p::A):0] { A } a;
+endpackage
+
+class C;
+    typedef enum logic [$bits(C::B):0] { B } t;
+endclass
+
+module m;
+    enum logic [$bits(m.D):0] { D } d;
+    typedef enum logic [$bits(type(m.E)):0] { E } e_t;
+    enum logic [$bits(m.f2):0] { F } f1, f2;
+    enum logic [$bits(m.G):0] { H } g;
+    enum logic [$bits(m.g):0] { G } h;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::RecursiveDefinition);
+    CHECK(diags[1].code == diag::RecursiveDefinition);
+    CHECK(diags[2].code == diag::RecursiveDefinition);
+    CHECK(diags[3].code == diag::RecursiveDefinition);
+    CHECK(diags[4].code == diag::RecursiveEnum);
+    CHECK(diags[5].code == diag::RecursiveDefinition);
 }
 
 TEST_CASE("Instance range select lookup") {

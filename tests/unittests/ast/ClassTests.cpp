@@ -5008,6 +5008,81 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Class specializations with inline enums declared in parameter defaults") {
+    auto tree = SyntaxTree::fromText(R"(
+class foo #(int N = 2, type T = enum logic [N-1:0] { A, B }, type U = enum { C = N } [1:0]);
+    static T t;
+    static U u;
+endclass
+
+module m;
+    foo f;
+    foo #() g;
+    foo #(2) h;
+    foo #(3) i;
+    initial begin
+        $static_assert(type(f) == type(g));
+        $static_assert(type(f) == type(h));
+        $static_assert(type(f.t) == type(g.t));
+        $static_assert(type(f.u) == type(h.u));
+        $static_assert(type(f) != type(i));
+        $static_assert($bits(i.t) == 3);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Class parameters with inline enum declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+class base;
+    int base_val;
+    function void pre_randomize(); endfunction
+endclass
+
+class foo #(type T = enum { A, B }, parameter enum { C, D } p = D, int q = p,
+            type U = enum { E = q }) extends base;
+    T t;
+    U u;
+    int r = base_val;
+    function void post_randomize(); endfunction
+endclass
+
+class bar #(type T = enum { F }, int pre_randomize = F);
+endclass
+
+class baz #(localparam type T = enum { G }, type U = enum { H }) extends base;
+    T t = G;
+    U u = H;
+endclass
+
+class qux #(int n = 2, type T = enum { I[n] });
+endclass
+
+module top;
+    foo f1;
+    foo #(.T(int)) f2;
+    bar b;
+    baz c;
+    qux d;
+    function automatic int get();
+        return f1.r + f1.q;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidRandomizeOverride);
+    CHECK(diags[1].code == diag::EnumRangeLiteral);
+}
+
 TEST_CASE("Undeclared names in classes derived from an invalid base") {
     auto tree = SyntaxTree::fromText(R"(
 class A extends Nope;
@@ -5035,6 +5110,131 @@ endclass
     CHECK(std::get<std::string>(diags[0].args[0]) == "Nope");
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
     CHECK(std::get<std::string>(diags[1].args[0]) == "bar");
+}
+
+TEST_CASE("Inline enums in parameter declarations with multiple declarators") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(type T = enum { A }, U = enum { B }, parameter enum { C } v = C, w = C);
+    parameter enum { D } x = D, y = D;
+    localparam enum { E } z = E, q = E;
+    T t = A;
+    U u = B;
+endmodule
+
+class c #(type T = enum { A }, U = enum { B }, parameter enum { C } v = C, w = C);
+    localparam enum { E } z = E, q = E;
+    T t = A;
+    U u = B;
+endclass
+
+module top;
+    m m1();
+    c c1;
+    c #(.U(int)) c2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Inline enums can refer to prior declarators in the same parameter declaration") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    localparam type T = int, U = enum { P1 = $bits(T) };
+    parameter int a = 1, b = $bits(enum { P2 = a });
+endpackage
+
+localparam type T1 = int, U1 = enum { Q1 = $bits(T1) };
+
+class c #(type T = int, U = enum { B = $bits(T) }, int a = 2, b = $bits(enum { D = a }),
+          enum { E1, E2 } e = E2, f = E1);
+    localparam type V = byte, W = enum { G = $bits(V) };
+endclass
+
+module m #(type T = int, U = enum { B = $bits(T) }, parameter enum { E1, E2 } e = E2, f = E1);
+    parameter type V = byte, W = enum { G = $bits(V) };
+    localparam int c = 7, d = $bits(enum { H = c });
+
+    function automatic int func();
+        localparam type X = int, Y = enum { F1 = $bits(X) };
+        return F1;
+    endfunction
+
+    initial begin
+        localparam type X = int, Y = enum { S1 = $bits(X) };
+    end
+
+    if (1) begin : g
+        localparam type X = int, Y = enum { G1 = $bits(X) };
+    end
+
+    if (int'(B) != $bits(T)) $error("B");
+    if (int'(G) != 8) $error("G");
+    if (int'(H) != 7) $error("H");
+    if (int'(e) != 1 || int'(f) != 0) $error("e and f");
+endmodule
+
+interface i;
+    localparam type T = int, U = enum { I1 = $bits(T) };
+endinterface
+
+checker ck;
+    localparam type T = int, U = enum { K1 = $bits(T) };
+endchecker
+
+module top;
+    m m1();
+    m #(.T(longint)) m2();
+    i i1();
+    ck ck1();
+
+    if (int'(c#()::B) != 32) $error("c B");
+    if (int'(c#(.T(longint))::B) != 64) $error("c B override");
+    if (int'(c#(.a(3))::D) != 3) $error("c D");
+    if (int'(c#()::G) != 8) $error("c G");
+    if (int'(c#()::e) != 1 || int'(c#()::f) != 0) $error("c e and f");
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Inline enums can't refer to later declarators in a parameter declaration") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1 #(type U = enum { A = $bits(T) }, T = int);
+endmodule
+
+module m2;
+    localparam type U = enum { B = $bits(T) }, T = int;
+endmodule
+
+class c #(type U = enum { C = $bits(T) }, T = int);
+endclass
+
+module m3 #(type T = enum { D }, U = enum { D });
+endmodule
+
+module top;
+    m1 a();
+    m2 b();
+    c c1;
+    m3 d();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
+    CHECK(diags[3].code == diag::Redefinition);
 }
 
 TEST_CASE("Enum value initializers can refer to this in methods") {

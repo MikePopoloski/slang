@@ -57,6 +57,9 @@ struct SLANG_EXPORT ParserMetadata {
     /// A list of all interface port headers parsed.
     std::vector<const syntax::InterfacePortHeaderSyntax*> interfacePorts;
 
+    /// A list of all enum types parsed.
+    std::vector<const syntax::EnumTypeSyntax*> enumTypes;
+
     /// The EOF token, if one has already been consumed by the parser.
     /// Otherwise an empty token.
     Token eofToken;
