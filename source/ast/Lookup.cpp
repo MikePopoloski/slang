@@ -474,15 +474,6 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
                 symbol = body.find(modport->name);
                 SLANG_ASSERT(symbol);
             }
-
-            // If we're descending into a program instance, verify that
-            // the original scope for the lookup is also within a program.
-            if (body.getDefinition().definitionKind == DefinitionKind::Program &&
-                !isInProgram(context.scope->asSymbol())) {
-                SourceRange errorRange{name.range.start(),
-                                       (nameParts.rend() - 1)->name.range.end()};
-                result.addDiag(*context.scope, diag::IllegalReferenceToProgramItem, errorRange);
-            }
         }
         else if (symbol->kind == SymbolKind::GenerateBlock &&
                  symbol->as<GenerateBlockSymbol>().isUninstantiated) {
@@ -571,6 +562,15 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
                 // Types cannot be referenced hierarchically.
                 result.addDiag(*context.scope, diag::TypeHierarchical, name.range);
                 return false;
+            }
+
+            // Program signals (nets and variables declared within a program)
+            // cannot be referenced from outside of a program. Other kinds of
+            // symbols, such as parameters, are fine.
+            if ((symbol->kind == SymbolKind::Net || VariableSymbol::isKind(symbol->kind)) &&
+                isInProgram(*symbol) && !isInProgram(context.scope->asSymbol())) {
+                result.addDiag(*context.scope, diag::IllegalReferenceToProgramItem,
+                               result.nameRange);
             }
         }
         result.path.emplace_back(*symbol);

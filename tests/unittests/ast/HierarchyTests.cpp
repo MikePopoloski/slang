@@ -1502,6 +1502,45 @@ endmodule
     CHECK(diags[0].code == diag::IllegalReferenceToProgramItem);
 }
 
+TEST_CASE("Non-signal program items can be referenced from modules") {
+    auto tree = SyntaxTree::fromText(R"(
+program worker #(parameter int LIMIT = 2) ();
+    localparam int L = LIMIT * 2;
+    int v;
+    wire w;
+    if (1) begin : blk
+        logic q;
+        localparam int K = 3;
+    end
+    initial $display("%0d", LIMIT);
+endprogram
+
+module top;
+    worker w();
+    defparam w.LIMIT = 7;
+    int x = w.LIMIT;
+    int y = w.L;
+    int z = w.blk.K;
+    wire signed [31:0] a = w.v;
+    wire b = w.w;
+    wire c = w.blk.q;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::IllegalReferenceToProgramItem);
+    CHECK(diags[1].code == diag::IllegalReferenceToProgramItem);
+    CHECK(diags[2].code == diag::IllegalReferenceToProgramItem);
+
+    auto& w = compilation.getRoot().lookupName<InstanceSymbol>("top.w").body;
+    CHECK(w.find<ParameterSymbol>("LIMIT").getValue().integer() == 7);
+    CHECK(w.find<ParameterSymbol>("L").getValue().integer() == 14);
+}
+
 TEST_CASE("Anonymous programs") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
