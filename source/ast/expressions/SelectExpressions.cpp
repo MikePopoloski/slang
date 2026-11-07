@@ -1037,6 +1037,16 @@ Expression& MemberAccessExpression::fromSelector(
         return badExpr(comp, &expr);
     }
 
+    // The member's type might still be in the process of being resolved,
+    // if it's being accessed from within its own definition.
+    if (auto declaredType = member->getDeclaredType();
+        declaredType && declaredType->isEvaluating()) {
+        auto& diag = context.addDiag(diag::RecursiveDefinition, selector.nameRange);
+        diag << member->name;
+        diag.addNote(diag::NoteDeclarationHere, member->location);
+        return badExpr(comp, &expr);
+    }
+
     switch (member->kind) {
         case SymbolKind::Field: {
             auto& field = member->as<FieldSymbol>();

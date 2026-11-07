@@ -939,15 +939,16 @@ void unwrapResult(const Scope& scope, LookupResult& result, bool unwrapGenericCl
     if (!result.found)
         return;
 
-    if (result.flags.has(LookupResultFlags::IsHierarchical)) {
-        auto declaredType = result.found->getDeclaredType();
-        if (declaredType && declaredType->isEvaluating()) {
-            auto& diag = result.addDiag(scope, diag::RecursiveDefinition, result.nameRange);
-            diag << result.found->name;
-            diag.addNote(diag::NoteDeclarationHere, result.found->location);
-            result.found = nullptr;
-            return;
-        }
+    // Hierarchical and scoped names can reach a symbol whose type is still being resolved,
+    // which means it's being used from within its own definition. (Simple names have
+    // already been checked, since they need to account for declaration order.)
+    auto declaredType = result.found->getDeclaredType();
+    if (declaredType && declaredType->isEvaluating()) {
+        auto& diag = result.addDiag(scope, diag::RecursiveDefinition, result.nameRange);
+        diag << result.found->name;
+        diag.addNote(diag::NoteDeclarationHere, result.found->location);
+        result.found = nullptr;
+        return;
     }
 
     checkVisibility(*result.found, scope, result.nameRange, result);

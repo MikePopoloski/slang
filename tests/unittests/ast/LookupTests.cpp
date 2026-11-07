@@ -3217,6 +3217,43 @@ endmodule
     CHECK(diags[0].code == diag::RecursiveDefinition);
 }
 
+TEST_CASE("Scoped references to a symbol from within its own type") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    localparam logic [$bits(p::a):0] a = 1;
+endpackage
+
+class C;
+    static logic [$bits(C::b):0] b;
+    class D; static logic [$bits(C::D::c):0] c; endclass
+endclass
+
+class E #(int N = 1);
+    static logic [$bits(E#(1)::d):0] d;
+endclass
+
+typedef struct { int i; } s_t;
+class F;
+    static F h;
+    static logic [$bits(h.e):0] e;
+    static s_t s;
+    static logic [$bits(s.i):0] ok;
+endclass
+
+module m;
+    E #(1) e;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    for (auto& d : diags)
+        CHECK(d.code == diag::RecursiveDefinition);
+}
+
 TEST_CASE("Used-before-declared flag with parameters") {
     auto tree = SyntaxTree::fromText(R"(
 module m(
