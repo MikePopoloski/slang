@@ -10,6 +10,7 @@
 #include "TidyKind.h"
 #include <algorithm>
 #include <boost_regex.hpp>
+#include <filesystem>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <slang/util/TypeTraits.h>
@@ -84,6 +85,12 @@ public:
     // Adds a new path into the list of skipped paths
     void addSkipPath(const std::string& path);
     void addSkipPath(const std::vector<std::string>& paths);
+
+    // Returns true if the given file is located within one of the skipped paths
+    bool isInSkippedPath(const std::filesystem::path& file) const;
+
+    // Converts a user provided skip path into the canonical form used for matching
+    static std::filesystem::path canonicalizeSkipPath(const std::string& path);
 
     /// Serialise the tidy config for printing in the config file format.
     std::vector<std::pair<std::string, std::string>> serialise() const {

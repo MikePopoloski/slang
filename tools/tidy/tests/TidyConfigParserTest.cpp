@@ -351,3 +351,20 @@ CheckConfigs:
     CHECK(config.getCheckConfigs().resetName == "rst_ni");
     CHECK(config.getCheckConfigs().resetIsActiveHigh);
 }
+
+TEST_CASE("TidyConfig: skip paths match by directory prefix") {
+    TidyConfig config;
+    config.addSkipPath("rtl/vendor");
+    config.addSkipPath("other/dir/");
+
+    CHECK(config.isInSkippedPath("rtl/vendor/a.sv"));
+    CHECK(config.isInSkippedPath("rtl/vendor/sub/a.sv"));
+    CHECK(config.isInSkippedPath("other/dir/a.sv"));
+    CHECK(config.isInSkippedPath("rtl/./vendor/../vendor/a.sv"));
+
+    CHECK_FALSE(config.isInSkippedPath("rtl/a.sv"));
+    CHECK_FALSE(config.isInSkippedPath("rtl2/vendor/a.sv"));
+    CHECK_FALSE(config.isInSkippedPath("rtl/vendor2/a.sv"));
+    CHECK_FALSE(config.isInSkippedPath("other/a.sv"));
+    CHECK_FALSE(config.isInSkippedPath("rtl/vendor"));
+}

@@ -99,13 +99,45 @@ void TidyConfig::addSkipFile(const std::vector<std::string>& paths) {
         skipFiles.push_back(fs::path(path).filename().string());
 }
 
+fs::path TidyConfig::canonicalizeSkipPath(const std::string& path) {
+    std::error_code ec;
+    auto result = fs::weakly_canonical(fs::path(path), ec);
+    if (ec)
+        result = fs::path(path).lexically_normal();
+
+    // Drop any trailing separator so that "dir" and "dir/" are treated the same.
+    if (!result.has_filename() && result.has_relative_path())
+        result = result.parent_path();
+    return result;
+}
+
 void TidyConfig::addSkipPath(const std::string& path) {
-    skipPaths.push_back(fs::path(path).parent_path().string());
+    skipPaths.push_back(canonicalizeSkipPath(path).string());
 }
 
 void TidyConfig::addSkipPath(const std::vector<std::string>& paths) {
     for (const auto& path : paths)
-        skipPaths.push_back(fs::path(path).parent_path().string());
+        addSkipPath(path);
+}
+
+bool TidyConfig::isInSkippedPath(const fs::path& file) const {
+    if (skipPaths.empty())
+        return false;
+
+    std::error_code ec;
+    auto canonicalFile = fs::weakly_canonical(file, ec);
+    if (ec)
+        canonicalFile = file.lexically_normal();
+
+    for (const auto& skipPath : skipPaths) {
+        // The file is skipped if the skip path is a component-wise prefix of its path.
+        fs::path dir(skipPath);
+        auto [dirIt, fileIt] = std::mismatch(dir.begin(), dir.end(), canonicalFile.begin(),
+                                             canonicalFile.end());
+        if (dirIt == dir.end() && fileIt != canonicalFile.end())
+            return true;
+    }
+    return false;
 }
 
 void TidyConfig::toggleAl(CheckStatus status) {
