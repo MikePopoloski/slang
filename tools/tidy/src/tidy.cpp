@@ -252,6 +252,11 @@ int main(int argc, char** argv) {
 
         auto checkOk = check->check(compilation->getRoot(), *analysisManager);
         if (!checkOk) {
+            // Any errors are propagated to the return code, regardless of verbosity.
+            if (check->diagSeverity() == DiagnosticSeverity::Error ||
+                check->diagSeverity() == DiagnosticSeverity::Fatal) {
+                retCode = 1;
+            }
 
             if (!quiet) {
                 if (check->diagSeverity() == DiagnosticSeverity::Ignored) {
@@ -272,8 +277,6 @@ int main(int argc, char** argv) {
                     OS::print(TextEmphasis::Bold |
                                   fg(tdc.getSeverityColor(DiagnosticSeverity::Error)),
                               " FAIL\n");
-                    // Any errors are propagated to the return code.
-                    retCode = 1;
                 }
                 else {
                     SLANG_UNREACHABLE;
