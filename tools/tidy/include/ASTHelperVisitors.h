@@ -40,14 +40,11 @@ protected:
         config(Registry::getConfig()) {}
 
     [[nodiscard]] bool skip(std::string_view path) const {
-        auto file = std::filesystem::path(path).filename().string();
-        auto parentPath = weakly_canonical(std::filesystem::path(path).parent_path());
+        std::filesystem::path fsPath(path);
+        auto file = fsPath.filename().string();
         const auto& skipFiles = config.getSkipFiles();
-        const auto& skipPaths = config.getSkipPaths();
         return std::find(skipFiles.begin(), skipFiles.end(), file) != skipFiles.end() ||
-               std::find_if(skipPaths.begin(), skipPaths.end(), [&](auto& path) {
-                   return parentPath.string().find(path) != std::string::npos;
-               }) != skipPaths.end();
+               config.isInSkippedPath(fsPath);
     }
 
     slang::not_null<const slang::SourceManager*> sourceManager;

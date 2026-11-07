@@ -199,14 +199,12 @@ int main(int argc, char** argv) {
     }
 
     for (const auto& path : skippedPaths) {
-        // For skip-path, suppress warnings from files in the parent directory
-        auto parentDir = std::filesystem::path(path).parent_path().string();
-        if (!parentDir.empty()) {
-            if (auto ec = driver.diagEngine.addIgnorePaths(parentDir)) {
-                if (!superQuiet) {
-                    OS::printE(fmt::format("Warning: Failed to add ignore path for '{}': {}\n",
-                                           parentDir, ec.message()));
-                }
+        // For skip-path, suppress warnings from all files under the given directory
+        auto pattern = (TidyConfig::canonicalizeSkipPath(path) / "...").string();
+        if (auto ec = driver.diagEngine.addIgnorePaths(pattern)) {
+            if (!superQuiet) {
+                OS::printE(fmt::format("Warning: Failed to add ignore path for '{}': {}\n", path,
+                                       ec.message()));
             }
         }
     }
