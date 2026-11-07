@@ -1189,6 +1189,14 @@ void GenericClassDefSymbol::checkForwardDecls() const {
     }
 }
 
+SmallVector<const Type*> GenericClassDefSymbol::specializations() const {
+    SmallVector<const Type*> results;
+    results.reserve(specMap.size());
+    for (auto& [_, spec] : specMap)
+        results.push_back(spec);
+    return results;
+}
+
 void GenericClassDefSymbol::addParameterDecl(const DefinitionSymbol::ParameterDecl& decl) {
     paramDecls.push_back(decl);
 }
@@ -1197,8 +1205,8 @@ void GenericClassDefSymbol::serializeTo(ASTSerializer& serializer) const {
     if (firstForward)
         serializer.write("forward", *firstForward);
     serializer.startArray("specializations");
-    for (auto&& spec : specializations())
-        serializer.serialize(spec, /* inMembersArray */ true);
+    for (auto spec : specializations())
+        serializer.serialize(*spec, /* inMembersArray */ true);
     serializer.endArray();
 }
 

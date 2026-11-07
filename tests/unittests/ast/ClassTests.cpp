@@ -5066,3 +5066,24 @@ endmodule
     CHECK(diags[0].code == diag::InvalidThisHandle);
     CHECK(diags[1].code == diag::InvalidThisHandle);
 }
+
+TEST_CASE("Generic class specializations created while visiting specializations") {
+    std::string source = "class C #(int N = 0); function void f();\n";
+    for (int n = 2; n < 30; ++n)
+        source += "C#(" + std::to_string(n) + ") v" + std::to_string(n) + ";\n";
+    source += "endfunction endclass\nC#(0) a; C#(1) b;\n";
+
+    auto tree = SyntaxTree::fromText(source);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& unit = *compilation.getRoot().compilationUnits.front();
+    unit.find<VariableSymbol>("a").getType();
+    unit.find<VariableSymbol>("b").getType();
+
+    auto& generic = unit.find<GenericClassDefSymbol>("C");
+    CHECK(generic.numSpecializations() == 2);
+
+    NO_COMPILATION_ERRORS;
+    CHECK(generic.numSpecializations() == 30);
+}

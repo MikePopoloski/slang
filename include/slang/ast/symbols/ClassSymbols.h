@@ -270,10 +270,10 @@ public:
     /// Gets the number of specializations that have been made for this generic class.
     size_t numSpecializations() const { return specMap.size(); }
 
-    /// Gets an iterator to the specializations created for the generic class.
-    auto specializations() const {
-        return std::views::transform(specMap, [](auto& p) -> decltype(auto) { return *p.second; });
-    }
+    /// Gets a snapshot of the specializations created so far for the generic class.
+    /// A copy is returned because visiting or otherwise elaborating a specialization
+    /// can create new specializations, which would invalidate a live iterator.
+    SmallVector<const Type*> specializations() const;
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getFirstForwardDecl() const { return firstForward; }

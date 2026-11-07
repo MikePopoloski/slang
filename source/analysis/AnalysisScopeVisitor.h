@@ -189,8 +189,8 @@ struct AnalysisScopeVisitor {
 
     void visit(const GenericClassDefSymbol& symbol) {
         checkShadow(symbol);
-        for (auto& spec : symbol.specializations())
-            spec.visit(*this);
+        for (auto spec : symbol.specializations())
+            spec->visit(*this);
     }
 
     void visit(const NetType& symbol) {

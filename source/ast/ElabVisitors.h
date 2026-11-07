@@ -473,24 +473,21 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
         }
 
         // Visiting a specialization can trigger more specializations to be made for the
-        // same or other generic classes, so we need to be careful here when iterating.
+        // same or other generic classes, so keep going until nothing new shows up.
+        // specializations() returns a snapshot so it's safe to visit while iterating.
         SmallSet<const Type*, 8> visitedSpecs;
-        SmallVector<const Type*> toVisit;
         bool didSomething;
         do {
             didSomething = false;
-            for (auto symbol : genericClasses) {
-                for (auto& spec : symbol->specializations()) {
-                    if (visitedSpecs.emplace(&spec).second)
-                        toVisit.push_back(&spec);
+            // Note: genericClasses can grow while we iterate (from nested generic classes)
+            // so iterate by index.
+            for (size_t i = 0; i < genericClasses.size(); i++) {
+                for (auto spec : genericClasses[i]->specializations()) {
+                    if (visitedSpecs.emplace(spec).second) {
+                        spec->visit(*this);
+                        didSomething = true;
+                    }
                 }
-
-                for (auto spec : toVisit) {
-                    spec->visit(*this);
-                    didSomething = true;
-                }
-
-                toVisit.clear();
             }
         } while (didSomething);
 
