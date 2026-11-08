@@ -84,7 +84,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded `
             -DSLANG_INCLUDE_TESTS=OFF
-          cmake --build build -j8
+          cmake --build build -j8 --config Release
       - name: Azure login
         uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3.0.2
         with:
