@@ -531,7 +531,9 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
                     diag << selectionRange.left << selectionRange.right;
                     diag << valueType;
                 }
-                return badExpr(comp, result);
+                // Any diagnostic notwithstanding, reverse the range
+                // and allow the node be built
+                selectionRange = selectionRange.reverse();
             }
 
             if (!context.inUnevaluatedBranch())
@@ -618,7 +620,9 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
                     diag << selectionRange.left << selectionRange.right;
                     diag << valueType;
                 }
-                return badExpr(comp, result);
+                // Any diagnostic notwithstanding, reverse the range
+                // and allow the node be built
+                selectionRange = selectionRange.reverse();
             }
         }
         else {

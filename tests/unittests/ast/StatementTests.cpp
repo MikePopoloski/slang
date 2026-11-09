@@ -2811,3 +2811,67 @@ endmodule
     CHECK(diags[2].code == diag::UndeclaredIdentifier);
     CHECK(diags[3].code == diag::UndeclaredIdentifier);
 }
+
+namespace {
+
+struct BadNodeFinder : public ASTVisitor<BadNodeFinder, VisitFlags::AllGood | VisitFlags::Bad> {
+    bool found = false;
+
+    template<typename T>
+    void handle(const T& node) {
+        if constexpr (requires { node.bad(); }) {
+            if (node.bad()) {
+                found = true;
+                return;
+            }
+        }
+        this->visitDefault(node);
+    }
+};
+
+} // namespace
+
+TEST_CASE("Reversed range select keeps its enclosing statement") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic [1:0] d, output logic [1:0] y);
+    always_comb begin
+        y = d;
+        if (1'b1) y = d[0:1];
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    BadNodeFinder finder;
+    compilation.getRoot().visit(finder);
+    CHECK(!finder.found);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RangeSelectReversed);
+}
+
+TEST_CASE("Reversed range select on a dynamic array keeps its enclosing statement") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a[];
+    int b[2];
+    initial begin
+        if (1'b1) b = a[1:0];
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    BadNodeFinder finder;
+    compilation.getRoot().visit(finder);
+    CHECK(!finder.found);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RangeSelectReversed);
+}
