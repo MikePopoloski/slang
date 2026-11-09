@@ -691,6 +691,13 @@ public:
     /// Notes the existence of an assignment to a hierarchical reference.
     void noteHierarchicalAssignment(const HierarchicalReference& ref);
 
+    /// Notes that the given enum has been declared in its scope.
+    void noteEnumDeclaration(const EnumDeclaration& declaration);
+
+    /// Gets the declaration of the enum with the given syntax in the given scope, if any.
+    const EnumDeclaration* getEnumDeclaration(const syntax::SyntaxNode& syntax,
+                                              const Scope& scope) const;
+
     /// Registers and returns the given virtual interface instance with the compilation,
     /// or if it matches an already existing instance returns that one instead.
     const InstanceSymbol& getOrAddVirtualIface(const InstanceSymbol& instance);
@@ -707,13 +714,6 @@ public:
 
     /// Gets the next system ID to use for identifying enum types.
     int getNextEnumSystemId() { return nextEnumSystemId++; }
-
-    /// Notes that the given enum has been declared in its scope.
-    void noteEnumDeclaration(const EnumDeclaration& declaration);
-
-    /// Gets the declaration of the enum with the given syntax in the given scope, if any.
-    const EnumDeclaration* getEnumDeclaration(const syntax::SyntaxNode& syntax,
-                                              const Scope& scope) const;
 
     /// Gets the next system ID to use for identifying struct types.
     int getNextStructSystemId() { return nextStructSystemId++; }
@@ -959,6 +959,12 @@ private:
     // Map from pointers (to symbols, statements, expressions) to their associated attributes.
     flat_hash_map<const void*, std::span<const AttributeSymbol* const>> attributeMap;
 
+    // A map of enum syntax nodes and the scopes in which they've been declared. The same
+    // syntax can get declared in many scopes, such as one per instance of a module.
+    // This is only used when creating enum types, so it lives down here.
+    flat_hash_map<std::tuple<const syntax::SyntaxNode*, const Scope*>, const EnumDeclaration*>
+        enumDeclarations;
+
     struct SyntaxMetadata {
         const syntax::SyntaxTree* tree = nullptr;
         const NetType* defaultNetType = nullptr;
@@ -1092,12 +1098,6 @@ private:
     // The key is a combination of definition name + the scope in which it was declared.
     flat_hash_map<std::tuple<std::string_view, const Scope*>, const syntax::SyntaxNode*>
         externDefMap;
-
-    // A map of enum syntax nodes and the scopes in which they've been declared. The same
-    // syntax can get declared in many scopes, such as one per instance of a module.
-    // This is only used when creating enum types, so it lives down here.
-    flat_hash_map<std::tuple<const syntax::SyntaxNode*, const Scope*>, const EnumDeclaration*>
-        enumDeclarations;
 
     // A list of syntax trees that were parsed for CLI parameter override expressions.
     std::vector<std::shared_ptr<syntax::SyntaxTree>> paramOverrideTrees;

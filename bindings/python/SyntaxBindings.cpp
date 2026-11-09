@@ -370,6 +370,7 @@ void registerSyntax(nb::module_& syntax, nb::module_& parsing) {
         .def_prop_ro(
             "parent", [](const SyntaxNode& n) -> const SyntaxNode* { return n.parent; }, byrefint)
         .def_ro("kind", &SyntaxNode::kind)
+        .def_prop_ro("containsEnum", &SyntaxNode::containsEnum)
         .def("getFirstToken", &SyntaxNode::getFirstToken)
         .def("getLastToken", &SyntaxNode::getLastToken)
         .def("isEquivalentTo", &SyntaxNode::isEquivalentTo, "other"_a)

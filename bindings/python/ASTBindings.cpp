@@ -140,7 +140,8 @@ void registerAST(nb::module_& m) {
         .value("BindInstantiation", ASTFlags::BindInstantiation)
         .value("WildcardPortConn", ASTFlags::WildcardPortConn)
         .value("UnknownPortConn", ASTFlags::UnknownPortConn)
-        .value("AllowInstanceArray", ASTFlags::AllowInstanceArray);
+        .value("AllowInstanceArray", ASTFlags::AllowInstanceArray)
+        .value("EnumValueType", ASTFlags::EnumValueType);
 
     nb::class_<EvaluatedDimension>(m, "EvaluatedDimension")
         .def_ro("kind", &EvaluatedDimension::kind)

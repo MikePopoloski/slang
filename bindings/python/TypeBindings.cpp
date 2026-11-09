@@ -153,6 +153,7 @@ void registerTypes(nb::module_& m) {
         .def_prop_ro("initializerSyntax", &DeclaredType::getInitializerSyntax, byrefint)
         .def_prop_ro("initializerLocation", &DeclaredType::getInitializerLocation)
         .def_prop_ro("isEvaluating", &DeclaredType::isEvaluating)
+        .def_prop_ro("linkTarget", &DeclaredType::getLinkTarget, byrefint)
         .def_prop_ro("resolvedDimensions", &DeclaredType::getResolvedDimensions);
 
     nb::class_<IntegralType, Type>(m, "IntegralType")

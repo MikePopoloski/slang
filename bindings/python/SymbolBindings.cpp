@@ -72,11 +72,12 @@ void registerSymbols(nb::module_& m) {
         .def(nb::init<>())
         .def(nb::init<const Scope*, uint32_t>(), "scope"_a, "index"_a)
         .def_prop_ro("scope", &LookupLocation::getScope)
-        .def_prop_ro("index", &LookupLocation::getIndex)
+        .def_prop_ro("index", [](const LookupLocation& self) { return uint32_t(self.getIndex()); })
         .def_static("before", &LookupLocation::before, "symbol"_a)
         .def_static("after", &LookupLocation::after, "symbol"_a)
         .def_ro_static("max", &LookupLocation::max)
         .def_ro_static("min", &LookupLocation::min)
+        .def_ro_static("sourceOrdered", &LookupLocation::sourceOrdered)
         .def(nb::self == nb::self)
         .def(nb::self != nb::self);
 
@@ -270,7 +271,8 @@ void registerSymbols(nb::module_& m) {
         .def_prop_ro("initializer", &ValueSymbol::getInitializer);
 
     nb::class_<EnumValueSymbol, ValueSymbol>(m, "EnumValueSymbol")
-        .def_prop_ro("value", [](const EnumValueSymbol& self) { return self.getValue(); });
+        .def_prop_ro("value", [](const EnumValueSymbol& self) { return self.getValue(); })
+        .def_prop_ro("declaringScope", &EnumValueSymbol::getDeclaringScope, byrefint);
 
     nb::class_<ParameterSymbolBase>(m, "ParameterSymbolBase")
         .def_prop_ro("isLocalParam", &ParameterSymbolBase::isLocalParam)
