@@ -1335,3 +1335,49 @@ TEST_CASE("Visit all file") {
     compilation.freeze();
     analysisManager.analyze(compilation);
 }
+
+TEST_CASE("Syntax rewriting links new nodes to their new parents") {
+    struct Rewriter : public SyntaxRewriter<Rewriter> {
+        void handle(const ModuleDeclarationSyntax& syntax) {
+            if (syntax.header->name.valueText() == "n")
+                insertAtBack(syntax.members, parse("enum { A, B } e = B;"));
+        }
+    };
+
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i = $bits(enum { C });
+endmodule
+
+module n;
+    int j;
+endmodule
+)");
+
+    auto oldRoot = &tree->root();
+    auto newTree = Rewriter().transform(tree);
+    REQUIRE(&newTree->root() != oldRoot);
+    tree.reset();
+
+    // Every node's parent must be its parent in the new tree, and a node is
+    // marked as containing an enum only if it does.
+    std::function<bool(const SyntaxNode&)> check = [&](const SyntaxNode& node) {
+        bool hasEnum = node.kind == SyntaxKind::EnumType;
+        for (size_t i = 0; i < node.getChildCount(); i++) {
+            if (auto child = node.childNode(i)) {
+                CHECK(child->parent == &node);
+                hasEnum |= check(*child);
+            }
+        }
+        if (hasEnum)
+            CHECK(node.containsEnum());
+        return hasEnum;
+    };
+
+    CHECK(newTree->root().parent == nullptr);
+    check(newTree->root());
+
+    Compilation compilation;
+    compilation.addSyntaxTree(newTree);
+    NO_COMPILATION_ERRORS;
+}

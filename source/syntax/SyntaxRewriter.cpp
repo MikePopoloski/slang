@@ -205,19 +205,41 @@ struct CloneVisitor {
     template<typename T>
     SyntaxNode* visit(const T& node) {
         T* cloned = clone(node, alloc);
+        cloneChildren(node, *cloned);
 
+        // The shallow clone still points at the original node's parent, and the
+        // children we kept or inserted still point at their old parents, so wire
+        // everything up to the new tree. The cloned node's own parent gets set when
+        // its parent finishes, and the root's stays null.
+        //
+        // Also propagate the contains-enum mark up from children. Inserted nodes
+        // that came from another parsed tree are already marked, which would stop
+        // the new tree from marking their new ancestors.
+        cloned->parent = nullptr;
+        for (size_t i = 0; i < cloned->getChildCount(); i++) {
+            if (auto child = cloned->childNode(i)) {
+                child->parent = cloned;
+                if (child->containsEnum())
+                    cloned->markContainsEnum();
+            }
+        }
+        return cloned;
+    }
+
+    template<typename T>
+    void cloneChildren(const T& node, T& cloned) {
         // Discover any list-typed child slots so we can dispatch list-level
         // edits via the rewriter machinery. Most node types have no lists,
         // in which case we fall back to a simple flat-index walk.
         SmallVector<ListChildInfo, 2> srcLists, dstLists;
         getChildListInfo(const_cast<T&>(node), srcLists);
-        getChildListInfo(*cloned, dstLists);
+        getChildListInfo(cloned, dstLists);
 
         if (srcLists.empty()) {
             const size_t count = node.getChildCount();
             for (size_t i = 0; i < count; i++)
-                cloneChild(node, i, *cloned);
-            return cloned;
+                cloneChild(node, i, cloned);
+            return;
         }
 
         // Walk children in source order so that pending trivia (e.g. from a
@@ -236,13 +258,11 @@ struct CloneVisitor {
                 ++listIdx;
             }
             else {
-                cloneChild(node, srcIdx, *cloned, dstIdx);
+                cloneChild(node, srcIdx, cloned, dstIdx);
                 ++srcIdx;
                 ++dstIdx;
             }
         }
-
-        return cloned;
     }
 #ifdef _MSC_VER
 #    pragma warning(pop)
