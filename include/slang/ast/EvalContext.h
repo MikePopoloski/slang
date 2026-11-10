@@ -116,7 +116,9 @@ public:
 
     /// Indicates whether the results of evaluating expressions using this context
     /// can be cached in each expression's `constant` pointer.
-    bool cacheResults() const { return !inFunction() && flags.has(EvalFlags::CacheResults); }
+    bool cacheResults() const {
+        return !inFunction() && !speculativeCallDiags && flags.has(EvalFlags::CacheResults);
+    }
 
     /// If result caching is enabled, this method disables it and returns an
     /// object that when destructed will restore the previous caching mode.
@@ -190,6 +192,7 @@ public:
     void reportStack(Diagnostic& diag) const;
 
 private:
+    void noteDiagIssued();
     void reportDiags(Diagnostics& diagSet);
 
     uint32_t steps = 0;
@@ -201,6 +204,10 @@ private:
     Diagnostics warnings;
     SourceRange disableRange;
     bool backtraceReported = false;
+
+    // Set when a speculative evaluation (one without EvalFlags::RequireConstant)
+    // issues a diagnostic from within a function call. See noteDiagIssued.
+    bool speculativeCallDiags = false;
 };
 
 } // namespace slang::ast

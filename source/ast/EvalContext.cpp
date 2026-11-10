@@ -28,6 +28,7 @@ void EvalContext::reset() {
     warnings.clear();
     disableRange = {};
     backtraceReported = false;
+    speculativeCallDiags = false;
 }
 
 ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue value) {
@@ -146,7 +147,20 @@ Diagnostics EvalContext::getAllDiagnostics() const {
     return results;
 }
 
+void EvalContext::noteDiagIssued() {
+    // When speculatively evaluating an expression that isn't required to be
+    // constant, diagnostics from within a function body exist only because
+    // we tried to evaluate the call, so they shouldn't be reported here.
+    // The call's value is still fine to use, but we must stop caching results:
+    // caching is the only point at which a speculative evaluation reports its
+    // warnings, and a cached value would also prevent a later required
+    // evaluation of the same expression from issuing those diagnostics.
+    if (!flags.has(EvalFlags::RequireConstant) && !stack.empty() && stack.back().subroutine)
+        speculativeCallDiags = true;
+}
+
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceLocation location) {
+    noteDiagIssued();
     const bool isError = getDefaultSeverity(code) >= DiagnosticSeverity::Error;
     auto& diag = isError ? diags.add(code, location) : warnings.add(code, location);
     reportStack(diag);
@@ -154,6 +168,7 @@ Diagnostic& EvalContext::addDiag(DiagCode code, SourceLocation location) {
 }
 
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceRange range) {
+    noteDiagIssued();
     const bool isError = getDefaultSeverity(code) >= DiagnosticSeverity::Error;
     auto& diag = isError ? diags.add(code, range) : warnings.add(code, range);
     reportStack(diag);
