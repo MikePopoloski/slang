@@ -1110,6 +1110,10 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         }
     }
 
+    // A row with no input fields has already been diagnosed by the parser.
+    if (syntax.inputs.empty())
+        return;
+
     if (numPorts >= 2 && numInputs != numPorts - 1) {
         auto& diag = scope.addDiag(diag::UdpWrongInputCount, syntax.inputs.sourceRange());
         diag << numInputs;
