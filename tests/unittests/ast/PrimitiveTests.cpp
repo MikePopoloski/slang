@@ -409,6 +409,38 @@ endprimitive
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("UDP table rows with no input fields") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p1(output o, input a);
+  table
+    : 1 ;
+  endtable
+endprimitive
+
+primitive p2(output reg o, input a);
+  table
+    : 0 : 1 ;
+  endtable
+endprimitive
+
+primitive p3(output o, input a);
+  table
+    0 : 0 ;:
+  endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ExpectedUdpSymbol);
+    CHECK(diags[1].code == diag::ExpectedUdpSymbol);
+    CHECK(diags[2].code == diag::ExpectedUdpSymbol);
+    CHECK(diags[3].code == diag::ExpectedToken);
+}
+
 TEST_CASE("Primitive with large number of inputs") {
     auto tree = SyntaxTree::fromText(R"(
  primitive p(output o, input i0, i1, i2, i3, i4, i5, i6, i7,
