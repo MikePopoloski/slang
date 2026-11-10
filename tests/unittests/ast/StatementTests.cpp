@@ -670,6 +670,117 @@ endmodule
     CHECK(diags[1].code == diag::NotBooleanConvertible);
 }
 
+TEST_CASE("Case statement -- unevaluated items -- valid") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter int n = 4, parameter type T = logic[3:0]);
+    logic [n:1] v;
+    T t;
+    logic r;
+
+    function automatic logic f(logic [n:1] q);
+        case (n)
+            4: return q[4] ^ q[3];
+            5: return q[5] ^ q[3];
+            default: return q[8] ^ q[6];
+        endcase
+    endfunction
+
+    always_comb begin
+        r = f(v);
+
+        case (n)
+            1, 2, 3: r = v[7];
+            4, 5: r = v[n];
+            default: r = v[8];
+        endcase
+
+        casez (n)
+            32'b???1: r = v[5];
+            default: r = v[4];
+        endcase
+
+        case (n) inside
+            [5:6]: r = v[5];
+            default: r = v[4];
+        endcase
+
+        case (n > 4)
+            1'b1: begin
+                automatic logic [3:0] u;
+                u = v[5:2];
+                r = u[0];
+            end
+            default: ;
+        endcase
+
+        case (type(T))
+            type(logic[7:0]): r = t[7];
+            type(logic[3:0]): r = t[3];
+            default: ;
+        endcase
+    end
+endmodule
+
+module top;
+    m m4();
+    m #(5, logic[7:0]) m5();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Case statement -- unevaluated items -- invalid") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int n = 4;
+
+    logic [3:0] v;
+    logic r;
+    int k;
+    initial begin
+        // The selected item is checked as usual.
+        case (n)
+            4: r = v[4];
+            default: r = v[5];
+        endcase
+
+        // A non-constant item in front of the matching one
+        // means that we don't know which item is selected.
+        case (n)
+            k: r = v[6];
+            4: r = |v[5:4];
+            default: ;
+        endcase
+
+        // A non-constant item after the matching one doesn't matter.
+        case (n)
+            4: r = v[3];
+            k: r = v[7];
+            default: ;
+        endcase
+
+        case (k)
+            4: r = v[8];
+            default: r = v[0];
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::IndexOOB);
+    CHECK(diags[1].code == diag::IndexOOB);
+    CHECK(diags[2].code == diag::RangeOOB);
+    CHECK(diags[3].code == diag::IndexOOB);
+}
+
 TEST_CASE("Nonblocking assignment statement") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
