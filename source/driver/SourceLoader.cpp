@@ -399,6 +399,7 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
     };
 
     std::vector<PendingLoad> worklist;
+    auto srcOptions = optionBag.getOrDefault<SourceOptions>();
 
     auto addKnownNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
         auto& meta = tree->getMetadata();
@@ -410,10 +411,13 @@ void SourceLoader::loadTrees(SyntaxTreeList& syntaxTrees,
 
     auto findMissingNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
         auto& meta = tree->getMetadata();
-        meta.visitReferencedSymbols([&](std::string_view name) {
-            if (!knownNames.contains(name) && missingNames.emplace(name).second)
-                worklist.push_back({name, nullptr});
-        });
+        meta.visitReferencedSymbols(
+            [&](parsing::Token token) {
+                auto name = token.valueText();
+                if (!knownNames.contains(name) && missingNames.emplace(name).second)
+                    worklist.push_back({name, nullptr});
+            },
+            srcOptions.lookUpInterfacePorts);
     };
 
     // Initial pass: index existing trees and find what's missing

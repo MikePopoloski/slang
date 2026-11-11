@@ -31,31 +31,13 @@ struct SLANG_EXPORT ParserMetadata {
     /// (such as various bits of preprocessor state).
     std::vector<std::pair<const syntax::ModuleDeclarationSyntax*, Node>> nodeMeta;
 
-    /// A list of all instantiations of global modules/interfaces/programs.
-    /// This can be used to determine which modules should be considered as top-level
-    /// roots of the design, or to find references of a particular module.
-    std::vector<const syntax::HierarchyInstantiationSyntax*> globalInstances;
+    /// Class and checker declarations at any scope. Module-like declarations are in @a nodeMeta.
+    std::vector<const syntax::SyntaxNode*> decls;
 
-    /// A list of all names parsed that could represent a package or class name,
-    /// since they are simple names that appear on the left-hand side of a double colon.
-    std::vector<const syntax::IdentifierNameSyntax*> classPackageNames;
-
-    /// A list of all package import declarations parsed.
-    std::vector<const syntax::PackageImportDeclarationSyntax*> packageImports;
-
-    /// A list of all class declarations parsed.
-    std::vector<const syntax::ClassDeclarationSyntax*> classDecls;
-
-    /// A list of all checker declarations parsed.
-    std::vector<const syntax::CheckerDeclarationSyntax*> checkerDecls;
-
-    /// A list of *some* checker instantiations parsed. Checker instantiations
-    /// in non-procedural contexts are generally indistinguishable from module
-    /// instantiations and so are included in @a globalInstances instead.
-    std::vector<const syntax::CheckerInstantiationSyntax*> checkerInstances;
-
-    /// A list of all interface port headers parsed.
-    std::vector<const syntax::InterfacePortHeaderSyntax*> interfacePorts;
+    /// Potential dependency references: hierarchy and checker instantiations, identifier names
+    /// preceding a double colon, package import declarations, and virtual interface types.
+    /// Hierarchy instantiations are included only for global modules/interfaces/programs.
+    std::vector<const syntax::SyntaxNode*> refs;
 
     /// A list of all enum types parsed.
     std::vector<const syntax::EnumTypeSyntax*> enumTypes;
@@ -74,18 +56,23 @@ struct SLANG_EXPORT ParserMetadata {
     static ParserMetadata fromSyntax(const syntax::SyntaxNode& root);
 
     /// Returns a list of all symbols from @a visitDeclaredSymbols.
-    std::vector<std::string_view> getDeclaredSymbols() const;
+    std::vector<std::string_view> getDeclaredSymbols(bool includeNested = false) const;
 
-    /// Visits top level symbols declared in this metadata, calling the provided function with the
-    /// name. This includes modules, classes, packages, interfaces, and checkers.
-    void visitDeclaredSymbols(function_ref<void(std::string_view)> func) const;
+    /// Visits compilation-unit module, interface, program, package, class, and checker
+    /// declarations, calling the provided function with each unqualified name. If @a includeNested
+    /// is true, also includes declarations within other scopes.
+    void visitDeclaredSymbols(function_ref<void(std::string_view)> func,
+                              bool includeNested = false) const;
 
-    /// Returns a list of all symbols from @a visitReferencedSymbols.
+    /// Returns the unique symbol names from @a visitReferencedSymbols.
     std::vector<std::string_view> getReferencedSymbols() const;
 
     /// Visits all top level symbols referenced/used by this metadata, calling the provided
-    /// function for each symbol name.
-    void visitReferencedSymbols(function_ref<void(std::string_view)> func) const;
+    /// function with each name token, including virtual interface types. Tokens retain source
+    /// locations so callers can resolve dependencies relative to the referencing file.
+    /// If @a includeInterfacePorts is true, also includes explicit interface port types.
+    void visitReferencedSymbols(function_ref<void(Token)> func,
+                                bool includeInterfacePorts = true) const;
 };
 
 } // namespace slang::parsing

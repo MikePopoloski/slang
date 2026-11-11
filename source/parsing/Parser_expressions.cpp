@@ -769,7 +769,7 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
         }
 
         if (kind == TokenKind::DoubleColon && name->kind == SyntaxKind::IdentifierName)
-            meta.classPackageNames.push_back(&name->as<IdentifierNameSyntax>());
+            meta.refs.push_back(name);
 
         switch (previousKind) {
             case SyntaxKind::UnitScope:

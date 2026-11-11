@@ -837,6 +837,222 @@ endmodule
     checkMeta(ParserMetadata::fromSyntax(tree->root()));
 }
 
+TEST_CASE("Parser metadata distinguishes top-level and nested declarations") {
+    std::string_view text;
+    std::vector<std::string_view> expectedTopLevel;
+    std::vector<std::string_view> expectedDeclared;
+
+    SECTION("Compilation unit") {
+        text = R"(
+class RootClass;
+    class NestedClass; endclass
+endclass
+interface RootInterface;
+    class InterfaceClass; endclass
+endinterface
+package RootPackage;
+    class PackagedClass; endclass
+    checker PackagedChecker; endchecker
+endpackage
+checker RootChecker; endchecker
+`default_nettype none
+`timescale 1ns/1ps
+module RootModule;
+    module NestedModule; endmodule
+    class ModuleClass; endclass
+    checker ModuleChecker; endchecker
+    if (1) begin : blockName
+        class GeneratedClass; endclass
+    end
+endmodule
+program RootProgram; endprogram
+)";
+        expectedTopLevel = {"RootChecker", "RootClass",   "RootInterface",
+                            "RootModule",  "RootPackage", "RootProgram"};
+        expectedDeclared = {"GeneratedClass", "InterfaceClass", "ModuleChecker",   "ModuleClass",
+                            "NestedClass",    "NestedModule",   "PackagedChecker", "PackagedClass",
+                            "RootChecker",    "RootClass",      "RootInterface",   "RootModule",
+                            "RootPackage",    "RootProgram"};
+    }
+    SECTION("Standalone declaration") {
+        text = "class RootClass; class NestedClass; endclass endclass";
+        expectedTopLevel = {"RootClass"};
+        expectedDeclared = {"NestedClass", "RootClass"};
+    }
+
+    auto tree = SyntaxTree::fromText(text);
+    REQUIRE(tree->diagnostics().empty());
+
+    auto checkMeta = [&](const ParserMetadata& meta) {
+        auto topLevel = meta.getDeclaredSymbols();
+        std::ranges::sort(topLevel);
+        CHECK(topLevel == expectedTopLevel);
+
+        auto declared = meta.getDeclaredSymbols(/* includeNested */ true);
+        std::ranges::sort(declared);
+        CHECK(declared == expectedDeclared);
+
+        if (tree->root().kind == SyntaxKind::CompilationUnit) {
+            auto nested = std::ranges::find_if(meta.nodeMeta, [](auto& entry) {
+                return entry.first->header->name.valueText() == "NestedModule";
+            });
+            REQUIRE(nested != meta.nodeMeta.end());
+            CHECK(nested->second.defaultNetType == TokenKind::Unknown);
+            REQUIRE(nested->second.timeScale);
+            CHECK(nested->second.timeScale->base.unit == TimeUnit::Nanoseconds);
+        }
+    };
+    checkMeta(tree->getMetadata());
+    checkMeta(ParserMetadata::fromSyntax(tree->root()));
+}
+
+TEST_CASE("Parser metadata tracks virtual interface references") {
+    auto tree = SyntaxTree::fromText(R"(
+package models;
+    class Monitor;
+        virtual interface plain_if plain;
+        virtual data_if #(.WIDTH(settings::Width)).sink data;
+        typedef virtual alias_if alias_t;
+        function void set_port(virtual arg_if port); endfunction
+        typedef holder#(virtual nested_if)::value_t scoped_t;
+        typedef outer_pkg::holder#(inner_pkg::type_t)::value_t another_t;
+    endclass
+endpackage
+)");
+    REQUIRE(tree->diagnostics().empty());
+
+    auto checkMeta = [](const ParserMetadata& meta) {
+        CHECK(std::ranges::count(meta.refs, SyntaxKind::VirtualInterfaceType, &SyntaxNode::kind) ==
+              5);
+        auto expected = std::vector<std::string_view>{"alias_if",  "arg_if",    "data_if",
+                                                      "inner_pkg", "nested_if", "outer_pkg",
+                                                      "plain_if",  "settings"};
+        auto referenced = meta.getReferencedSymbols();
+        std::ranges::sort(referenced);
+        CHECK(referenced == expected);
+        CHECK(std::ranges::count(meta.refs, SyntaxKind::HierarchyInstantiation,
+                                 &SyntaxNode::kind) == 0);
+
+        referenced.clear();
+        meta.visitReferencedSymbols([&](Token token) { referenced.push_back(token.valueText()); },
+                                    false);
+        std::ranges::sort(referenced);
+        CHECK(referenced == expected);
+    };
+    checkMeta(tree->getMetadata());
+    checkMeta(ParserMetadata::fromSyntax(tree->root()));
+}
+
+TEST_CASE("Parser metadata distinguishes explicit interface ports from ambiguous port types") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(
+    plain_if bus,
+    explicit_if.mp explicit_bus,
+    input some_type value,
+    input var var_type other,
+    input types_pkg::type_t scoped,
+    input logic clk,
+    inherited,
+    interface generic_bus
+);
+endmodule
+module non_ansi(value, bus);
+    input old_type value;
+    legacy_if.sink bus;
+endmodule
+)");
+    REQUIRE(tree->diagnostics().empty());
+
+    auto checkMeta = [](const ParserMetadata& meta) {
+        auto referenced = meta.getReferencedSymbols();
+        std::ranges::sort(referenced);
+        CHECK(referenced == std::vector<std::string_view>{"explicit_if", "legacy_if", "types_pkg"});
+
+        std::vector<std::string_view> visited;
+        meta.visitReferencedSymbols([&](Token token) { visited.push_back(token.valueText()); });
+        std::ranges::sort(visited);
+        CHECK(visited == referenced);
+
+        visited.clear();
+        meta.visitReferencedSymbols([&](Token token) { visited.push_back(token.valueText()); },
+                                    false);
+        CHECK(visited == std::vector<std::string_view>{"types_pkg"});
+    };
+    checkMeta(tree->getMetadata());
+    checkMeta(ParserMetadata::fromSyntax(tree->root()));
+}
+
+TEST_CASE("Parser metadata retains reference locations in included files") {
+    SourceManager sm;
+    sm.setDisableProximatePaths(true);
+    auto includePath = (fs::temp_directory_path() / "slang_reference_tokens.svh").string();
+    auto rootPath = (fs::temp_directory_path() / "slang_reference_tokens.sv").string();
+    sm.assignText(includePath, R"(
+import wildcard_pkg::*, named_pkg::item;
+class Client;
+    virtual bus_if bus;
+    int value = settings::Width;
+endclass
+module consumer(plain_if bus, explicit_if.sink other, input some_type value);
+    module Local; endmodule
+    Local local_inst();
+    child child_inst();
+    initial begin
+        check_name check_inst();
+        check_pkg::check_member scoped_check();
+    end
+endmodule
+)");
+    auto tree = SyntaxTree::fromFileInMemory(
+        "`include \"slang_reference_tokens.svh\"\nmodule top; external inst(); endmodule\n", sm, "",
+        rootPath);
+    REQUIRE(tree->diagnostics().empty());
+
+    auto checkMeta = [&](const ParserMetadata& meta) {
+        std::vector<std::string_view> names;
+        meta.visitReferencedSymbols([&](Token token) {
+            auto name = token.valueText();
+            names.push_back(name);
+            auto loc = sm.getFullyExpandedLoc(token.location());
+            CHECK(sm.getFullPath(loc.buffer()) == (name == "external" ? rootPath : includePath));
+            CHECK(sm.getSourceText(loc.buffer()).substr(loc.offset(), token.rawText().size()) ==
+                  name);
+        });
+        std::ranges::sort(names);
+        CHECK(names == std::vector<std::string_view>{"bus_if", "check_name", "check_pkg", "child",
+                                                     "explicit_if", "external", "named_pkg",
+                                                     "settings", "wildcard_pkg"});
+    };
+    checkMeta(tree->getMetadata());
+    checkMeta(ParserMetadata::fromSyntax(tree->root()));
+}
+
+TEST_CASE("Scoped class references do not suppress top modules") {
+    auto tree = SyntaxTree::fromText(R"(
+package models;
+    class Model;
+        static int value;
+    endclass
+endpackage
+module top;
+    import models::Model;
+    int value = Model::value;
+    leaf inst();
+endmodule
+module Model; endmodule
+module leaf; endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    std::vector<std::string_view> topNames;
+    for (auto instance : compilation.getRoot().topInstances)
+        topNames.push_back(instance->name);
+    std::ranges::sort(topNames);
+    CHECK(topNames == std::vector<std::string_view>{"Model", "top"});
+}
+
 TEST_CASE("Syntax rewriter -- replace preserves trivia") {
     auto tree = SyntaxTree::fromText(R"(
 module test(

@@ -51,6 +51,9 @@ struct SLANG_EXPORT SourceOptions {
 
     /// If true, library files will inherit macro definitions from primary source files.
     bool librariesInheritMacros;
+
+    /// If true, search libraries for interface types named in explicit interface ports.
+    bool lookUpInterfacePorts = true;
 };
 
 /// @brief Handles loading and parsing of groups of source files
