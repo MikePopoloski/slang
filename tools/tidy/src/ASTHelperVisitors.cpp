@@ -3,6 +3,8 @@
 
 #include "ASTHelperVisitors.h"
 
+#include <set>
+
 #include "slang/syntax/AllSyntax.h"
 
 std::optional<std::string_view> getIdentifier(const slang::ast::Expression& expr) {
@@ -28,4 +30,24 @@ std::optional<slang::SourceLocation> getExpressionSourceLocation(
         return std::nullopt;
     }
     return expr.syntax->getFirstToken().location();
+}
+
+std::vector<const slang::ast::Symbol*> getOuterVariablesAssignedInAlways(
+    const slang::ast::ProceduralBlockSymbol& block) {
+    using namespace slang::ast;
+    if (block.isFromAssertion || block.procedureKind != ProceduralBlockKind::Always)
+        return {};
+
+    std::set<const Scope*> parentScopes;
+    for (auto scope = block.getHierarchicalParent(); scope;
+         scope = scope->asSymbol().getHierarchicalParent()) {
+        parentScopes.insert(scope);
+    }
+
+    CollectLHSSymbols visitor;
+    block.visit(visitor);
+    std::erase_if(visitor.symbols, [&](const Symbol* symbol) {
+        return !parentScopes.contains(symbol->getHierarchicalParent());
+    });
+    return visitor.symbols;
 }

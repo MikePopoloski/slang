@@ -140,9 +140,10 @@ endmodule
 module top (input logic clk_i, input logic data_d);
     wire net_ff = 1;
     logic assign_ff, comb_ff, always_q, blocking_q, data_q, data_n;
-    logic port_q, initial_q = 0, initial_d, other;
+    logic port_q, initial_q = 0, initial_d, other, old_increment_q;
     always_comb comb_ff = 1;
     always @(posedge clk_i) always_q <= data_d;
+    always @(posedge clk_i) old_increment_q++;
     always_ff @(posedge clk_i) begin
         blocking_q = data_d;
         {data_n, other} = 2'b0;
@@ -153,11 +154,11 @@ module top (input logic clk_i, input logic data_d);
 endmodule
 )") == R"(
 6:10: 'net_ff' has a flip-flop output suffix but is not driven by a nonblocking assignment inside always_ff
-16:12: 'assign_ff' has a flip-flop output suffix but is not driven by a nonblocking assignment inside always_ff
+17:12: 'assign_ff' has a flip-flop output suffix but is not driven by a nonblocking assignment inside always_ff
 9:17: 'comb_ff' has a flip-flop output suffix but is not driven by a nonblocking assignment inside always_ff
-10:29: 'always_q' has a flip-flop output suffix but is not driven by a nonblocking assignment inside always_ff
-13:10: 'data_n' has a flip-flop input suffix but is driven inside always_ff
-12:9: 'blocking_q' has a flip-flop output suffix but is not driven by a nonblocking assignment inside always_ff
+14:10: 'data_n' has a flip-flop input suffix but is driven inside always_ff
+11:29: 'old_increment_q' has a flip-flop output suffix but is not driven by a nonblocking assignment inside always_ff
+13:9: 'blocking_q' has a flip-flop output suffix but is not driven by a nonblocking assignment inside always_ff
 )");
 }
 

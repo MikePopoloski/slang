@@ -107,7 +107,9 @@ is the reset branch.
 or `style-union-name` are enabled, those checks take precedence for the corresponding
 typedefs.
 
-`style-dff-name` is disabled by default. It checks flip-flop names:
+`style-dff-name` is disabled by default. Enabling it also enables
+`style-always-comb-non-blocking`, `style-always-ff-blocking` and `style-no-old-always-syntax`,
+even if the configuration disables them. It checks flip-flop names:
 
 * Each nonblocking assignment inside an `always_ff` assigns a variable whose name ends with a
   suffix from **dffOutputSuffix**, from a variable whose name ends with a suffix from
@@ -117,7 +119,8 @@ typedefs.
 * An `always_ff` assigns a whole register, never part of one, such as a struct member
   `state_q.count`, an element `state_q[i]` or a bit range `data_q[3:0]`.
 * Only a nonblocking assignment inside an `always_ff` drives a variable with an output suffix;
-  an `assign`, an `always_comb` or a blocking assignment must not.
+  an `assign`, an `always_comb` or a blocking assignment must not. A register in a plain
+  `always` block is left to `style-no-old-always-syntax`.
 * An `always_ff` never increments or decrements a variable declared outside it, such as
   `count_q++`.
 * An `always_ff` never drives a variable with an input suffix, not even in a reset branch.

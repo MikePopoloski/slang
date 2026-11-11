@@ -154,8 +154,10 @@ private:
                 continue;
 
             const auto location = driver->getSourceRange().start();
-            if (driver->source != DriverSource::AlwaysFF)
-                reportIfFlipFlopOutputName(symbol, location);
+            if (driver->source != DriverSource::AlwaysFF) {
+                if (!isReportedByNoOldAlwaysSyntax(*driver))
+                    reportIfFlipFlopOutputName(symbol, location);
+            }
             else if (hasFlipFlopInputName) {
                 diags.add(diag::DFFName, location)
                     << symbol.name
@@ -163,6 +165,13 @@ private:
                                         "always_ff");
             }
         }
+    }
+
+    // DFFName forces on NoOldAlwaysSyntax, which already reports most plain always blocks.
+    static bool isReportedByNoOldAlwaysSyntax(const ValueDriver& driver) {
+        const auto& block = *driver.containingSymbol;
+        return block.kind == SymbolKind::ProceduralBlock &&
+               !getOuterVariablesAssignedInAlways(block.as<ProceduralBlockSymbol>()).empty();
     }
 
     void reportIfFlipFlopOutputName(const Symbol& symbol, SourceLocation location) {
@@ -284,7 +293,10 @@ public:
                "in " +
                fmt::format(fmt::emphasis::italic, "dffWaiveIfConditions") +
                " or whose left-hand side matches " +
-               fmt::format(fmt::emphasis::italic, "dffWaiveLhsRegexString") + " are not checked\n";
+               fmt::format(fmt::emphasis::italic, "dffWaiveLhsRegexString") +
+               " are not checked. Enabling this check also enables AlwaysCombNonBlocking, "
+               "AlwaysFFBlocking and NoOldAlwaysSyntax, which reports registers in plain always "
+               "blocks\n";
     }
     std::string shortDescription() const override {
         return "Enforces flip-flop input and output naming suffixes";

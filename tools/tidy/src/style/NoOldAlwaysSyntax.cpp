@@ -16,25 +16,8 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::All
     void handle(const ast::ProceduralBlockSymbol& symbol) {
         NEEDS_SKIP_SYMBOL(symbol)
 
-        if (symbol.isFromAssertion)
-            return;
-
-        if (symbol.procedureKind == ProceduralBlockKind::Always) {
-            // Parent scopes of the always block
-            std::set<const Scope*> scopes;
-            for (auto scope = symbol.getHierarchicalParent(); scope;
-                 scope = scope->asSymbol().getHierarchicalParent()) {
-                scopes.insert(scope);
-            }
-
-            // If there are assignments of variables that are declared outside the always block,
-            // issue the diagnostic
-            CollectLHSSymbols visitor;
-            symbol.visit(visitor);
-            for (auto& s : visitor.symbols)
-                if (scopes.contains(s->getHierarchicalParent()))
-                    diags.add(diag::NoOldAlwaysSyntax, symbol.location);
-        }
+        for ([[maybe_unused]] auto variable : getOuterVariablesAssignedInAlways(symbol))
+            diags.add(diag::NoOldAlwaysSyntax, symbol.location);
     }
 };
 } // namespace no_old_always_syntax

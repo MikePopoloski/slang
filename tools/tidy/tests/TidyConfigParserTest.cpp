@@ -151,6 +151,25 @@ TEST_CASE("TidyParser: Set check config lists with quoted values") {
     CHECK(config.getCheckConfigs().dffWaiveLhsRegexString == "(?i)mem.*");
 }
 
+TEST_CASE("TidyParser: style-dff-name forces on the always block style checks") {
+    auto config = TidyConfigParser(std::string(R"(Checks:
+    -*,
+    style-dff-name,
+    -style-always-ff-blocking)"))
+                      .getConfig();
+    CHECK(config.isCheckEnabled(slang::TidyKind::Style, "AlwaysCombNonBlocking"));
+    CHECK(config.isCheckEnabled(slang::TidyKind::Style, "AlwaysFFBlocking"));
+    CHECK(config.isCheckEnabled(slang::TidyKind::Style, "NoOldAlwaysSyntax"));
+    CHECK_FALSE(config.isCheckEnabled(slang::TidyKind::Style, "NoCaseX"));
+
+    config = TidyConfigParser(std::string(R"(Checks:
+    -*,
+    style-always-ff-blocking)"))
+                 .getConfig();
+    CHECK_FALSE(config.isCheckEnabled(slang::TidyKind::Style, "AlwaysCombNonBlocking"));
+    CHECK(config.isCheckEnabled(slang::TidyKind::Style, "AlwaysFFBlocking"));
+}
+
 TEST_CASE("TidyParser: CheckConfigs and Checks") {
     auto config_str = std::string(R"(CheckConfigs:
         clkName: clk,

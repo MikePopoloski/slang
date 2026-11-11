@@ -182,7 +182,13 @@ bool TidyConfig::toggleCheck(slang::TidyKind kind, const std::string& checkName,
 }
 
 bool TidyConfig::isCheckEnabled(slang::TidyKind kind, const std::string& checkName) const {
-    return checkKinds.at(kind).at(checkName).status == CheckStatus::ENABLED;
+    // DFFName relies on these checks to report the wrong kind of block or assignment, so it
+    // forces them on even if the user disabled them.
+    const bool isForcedByDFFName = (checkName == "AlwaysCombNonBlocking" ||
+                                    checkName == "AlwaysFFBlocking" ||
+                                    checkName == "NoOldAlwaysSyntax") &&
+                                   isCheckEnabled(slang::TidyKind::Style, "DFFName");
+    return checkKinds.at(kind).at(checkName).status == CheckStatus::ENABLED || isForcedByDFFName;
 }
 
 auto TidyConfig::getCheckSeverity(slang::TidyKind kind, const std::string& checkName) const
