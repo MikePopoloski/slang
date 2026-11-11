@@ -258,40 +258,20 @@ static CaseStatementCondition getCondition(TokenKind kind) {
     return condition;
 }
 
+static std::optional<bool> matchItem(EvalContext& context, CaseStatementCondition condition,
+                                     const ConstantValue& cv, const Type* condType,
+                                     const Expression& item);
+
 Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
                                      const ASTContext& context, StatementContext& stmtCtx) {
     if (syntax.matchesOrInside.kind == TokenKind::MatchesKeyword)
         return PatternCaseStatement::fromSyntax(compilation, syntax, context, stmtCtx);
 
     SmallVector<const ExpressionSyntax*> expressions;
-    SmallVector<const Statement*> statements;
-    const Statement* defStmt = nullptr;
-    bool bad = false;
-
     for (auto item : syntax.items) {
-        switch (item->kind) {
-            case SyntaxKind::StandardCaseItem: {
-                auto& sci = item->as<StandardCaseItemSyntax>();
-                auto& stmt = Statement::bind(sci.clause->as<StatementSyntax>(), context, stmtCtx);
-                for (auto es : sci.expressions)
-                    expressions.push_back(es);
-
-                statements.push_back(&stmt);
-                bad |= stmt.bad();
-                break;
-            }
-            case SyntaxKind::DefaultCaseItem:
-                // The parser already errored for duplicate defaults,
-                // so just ignore if it happens here.
-                if (!defStmt) {
-                    defStmt = &Statement::bind(
-                        item->as<DefaultCaseItemSyntax>().clause->as<StatementSyntax>(), context,
-                        stmtCtx);
-                    bad |= defStmt->bad();
-                }
-                break;
-            default:
-                SLANG_UNREACHABLE;
+        if (item->kind == SyntaxKind::StandardCaseItem) {
+            for (auto es : item->as<StandardCaseItemSyntax>().expressions)
+                expressions.push_back(es);
         }
     }
 
@@ -302,9 +282,9 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     bool allowTypeRefs = !isInside && keyword == TokenKind::CaseKeyword;
     bool allowValueRange = !wildcard;
 
-    bad |= !Expression::bindMembershipExpressions(context, keyword, wildcard, isInside,
-                                                  allowTypeRefs, allowValueRange, *syntax.expr,
-                                                  expressions, bound);
+    bool bad = !Expression::bindMembershipExpressions(context, keyword, wildcard, isInside,
+                                                      allowTypeRefs, allowValueRange, *syntax.expr,
+                                                      expressions, bound);
 
     auto condition = getCondition(syntax.caseKeyword.kind);
     auto check = getUniquePriority(syntax.uniqueOrPriority.kind);
@@ -318,29 +298,67 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
         condition = CaseStatementCondition::Inside;
     }
 
-    SmallVector<ItemGroup, 8> items;
-    SmallVector<const Expression*> group;
     auto boundIt = bound.begin();
-    auto stmtIt = statements.begin();
-
     auto expr = *boundIt++;
     bad |= expr->bad();
+
+    // If the case expression is constant we may know which item it selects.
+    // The statements of all other items are then unevaluated, just like the
+    // branch of an if statement that a constant condition doesn't take.
+    bool known = false;
+    const Expression* matchedExpr = nullptr;
+    if (!bad) {
+        EvalContext evalCtx(context);
+        const Type* condType = nullptr;
+        auto cv = expr->eval(evalCtx);
+        if (!cv && expr->kind == ExpressionKind::TypeReference)
+            condType = &expr->as<TypeReferenceExpression>().targetType;
+
+        known = cv || condType;
+        for (auto it = boundIt; known && !matchedExpr && it != bound.end(); it++) {
+            auto matched = matchItem(evalCtx, condition, cv, condType, **it);
+            if (!matched)
+                known = false;
+            else if (*matched)
+                matchedExpr = *it;
+        }
+    }
+
+    SmallVector<ItemGroup, 8> items;
+    SmallVector<const Expression*> group;
+    const Statement* defStmt = nullptr;
+    const ASTContext unevaluated = context.resetFlags(ASTFlags::UnevaluatedBranch);
 
     for (auto item : syntax.items) {
         switch (item->kind) {
             case SyntaxKind::StandardCaseItem: {
                 auto& sci = item->as<StandardCaseItemSyntax>();
+                bool selected = false;
                 for (size_t i = 0; i < sci.expressions.size(); i++) {
+                    selected |= *boundIt == matchedExpr;
                     bad |= (*boundIt)->bad();
                     group.push_back(*boundIt++);
                 }
 
-                items.push_back({group.copy(compilation), *stmtIt++});
+                auto& stmt = Statement::bind(sci.clause->as<StatementSyntax>(),
+                                             known && !selected ? unevaluated : context, stmtCtx);
+                items.push_back({group.copy(compilation), &stmt});
                 group.clear();
+                bad |= stmt.bad();
                 break;
             }
-            default:
+            case SyntaxKind::DefaultCaseItem:
+                // The parser already errored for duplicate defaults,
+                // so just ignore if it happens here.
+                if (!defStmt) {
+                    defStmt = &Statement::bind(
+                        item->as<DefaultCaseItemSyntax>().clause->as<StatementSyntax>(),
+                        known && matchedExpr ? unevaluated : context, stmtCtx);
+                    bad |= defStmt->bad();
+                }
                 break;
+            default:
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -478,6 +496,28 @@ static bool checkMatch(CaseStatementCondition condition, const ConstantValue& cv
     return cvl == cvr;
 }
 
+// Checks whether a case item matches the value (or the type) of the case expression.
+// Returns nullopt if that can't be determined at compile time.
+static std::optional<bool> matchItem(EvalContext& context, CaseStatementCondition condition,
+                                     const ConstantValue& cv, const Type* condType,
+                                     const Expression& item) {
+    if (item.kind == ExpressionKind::ValueRange) {
+        ConstantValue val = item.as<ValueRangeExpression>().checkInside(context, cv);
+        if (!val)
+            return std::nullopt;
+
+        return (bool)(logic_t)val.integer();
+    }
+
+    if (auto val = item.eval(context))
+        return checkMatch(condition, cv, val);
+
+    if (condType && item.kind == ExpressionKind::TypeReference)
+        return item.as<TypeReferenceExpression>().targetType.isMatching(*condType);
+
+    return std::nullopt;
+}
+
 std::pair<const Statement*, bool> CaseStatement::getKnownBranch(EvalContext& context) const {
     const Type* condType = nullptr;
     auto cv = expr.eval(context);
@@ -494,25 +534,11 @@ std::pair<const Statement*, bool> CaseStatement::getKnownBranch(EvalContext& con
 
     for (auto& group : items) {
         for (auto item : group.expressions) {
-            bool matched;
-            if (item->kind == ExpressionKind::ValueRange) {
-                ConstantValue val = item->as<ValueRangeExpression>().checkInside(context, cv);
-                if (!val)
-                    return {nullptr, false};
+            auto matched = matchItem(context, condition, cv, condType, *item);
+            if (!matched)
+                return {nullptr, false};
 
-                matched = (bool)(logic_t)val.integer();
-            }
-            else {
-                auto val = item->eval(context);
-                if (val)
-                    matched = checkMatch(condition, cv, val);
-                else if (condType && item->kind == ExpressionKind::TypeReference)
-                    matched = item->as<TypeReferenceExpression>().targetType.isMatching(*condType);
-                else
-                    return {nullptr, false};
-            }
-
-            if (matched) {
+            if (*matched) {
                 // If we already matched with a previous item, the only we reason
                 // we'd still get here is to check for uniqueness. The presence of
                 // another match means we failed the uniqueness check.
