@@ -95,27 +95,35 @@ public:
     /// Serialise the tidy config for printing in the config file format.
     std::vector<std::pair<std::string, std::string>> serialise() const {
         const auto& cfg = getCheckConfigs();
-        auto joinVec = [](const auto& vec) { return fmt::format("{}", fmt::join(vec, "|")); };
+        auto quote = [](const std::string& value) {
+            return value.empty() ? value : fmt::format("\"{}\"", value);
+        };
+        auto joinVec = [&](const auto& vec) {
+            std::vector<std::string> quotedValues;
+            for (const auto& value : vec)
+                quotedValues.push_back(quote(value));
+            return fmt::format("[{}]", fmt::join(quotedValues, ", "));
+        };
         return {
-            {"clkName", cfg.clkName},
-            {"resetName", cfg.resetName},
-            {"clkNameRegexString", cfg.clkNameRegexString},
-            {"resetIsActiveHigh", cfg.resetIsActiveHigh ? "true" : "false"},
+            {"clkName", quote(cfg.clkName)},
+            {"resetName", quote(cfg.resetName)},
+            {"clkNameRegexString", quote(cfg.clkNameRegexString)},
+            {"resetIsActiveHigh", quote(cfg.resetIsActiveHigh ? "true" : "false")},
             {"inputPortSuffix", joinVec(cfg.inputPortSuffix)},
             {"outputPortSuffix", joinVec(cfg.outputPortSuffix)},
             {"inoutPortSuffix", joinVec(cfg.inoutPortSuffix)},
-            {"moduleInstantiationPrefix", cfg.moduleInstantiationPrefix},
+            {"moduleInstantiationPrefix", quote(cfg.moduleInstantiationPrefix)},
             {"inputPortPrefix", joinVec(cfg.inputPortPrefix)},
             {"outputPortPrefix", joinVec(cfg.outputPortPrefix)},
             {"inoutPortPrefix", joinVec(cfg.inoutPortPrefix)},
-            {"allowNestedAnon", cfg.allowNestedAnon ? "true" : "false"},
-            {"covergroupRegexString", cfg.covergroupRegexString},
-            {"coverpointRegexString", cfg.coverpointRegexString},
-            {"crossRegexString", cfg.crossRegexString},
-            {"enumRegexString", cfg.enumRegexString},
-            {"structRegexString", cfg.structRegexString},
-            {"unionRegexString", cfg.unionRegexString},
-            {"typedefRegexString", cfg.typedefRegexString},
+            {"allowNestedAnon", quote(cfg.allowNestedAnon ? "true" : "false")},
+            {"covergroupRegexString", quote(cfg.covergroupRegexString)},
+            {"coverpointRegexString", quote(cfg.coverpointRegexString)},
+            {"crossRegexString", quote(cfg.crossRegexString)},
+            {"enumRegexString", quote(cfg.enumRegexString)},
+            {"structRegexString", quote(cfg.structRegexString)},
+            {"unionRegexString", quote(cfg.unionRegexString)},
+            {"typedefRegexString", quote(cfg.typedefRegexString)},
         };
     }
 

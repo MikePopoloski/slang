@@ -47,7 +47,7 @@ struct TidyConfigPrinter {
             populatedValues.push_back({name, value});
         }
         for (auto it = populatedValues.begin(); it != populatedValues.end(); ++it) {
-            result += fmt::format("  {}: \"{}\"", it->first, it->second);
+            result += fmt::format("  {}: {}", it->first, it->second);
             if (std::next(it) != populatedValues.end()) {
                 result += ",\n";
             }

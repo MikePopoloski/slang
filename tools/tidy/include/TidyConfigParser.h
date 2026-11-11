@@ -72,6 +72,10 @@ private:
         return c;
     }
 
+    /// Reads a value between double quotes into value and returns the character after the
+    /// closing quote. Whitespace inside the quotes is skipped like everywhere else.
+    char readQuotedValue(std::string& value);
+
     /// Parses config file and sets the state to parse checks or check configs
     void parseInitial();
 

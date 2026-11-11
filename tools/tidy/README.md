@@ -67,6 +67,8 @@ diagnostics are reported with. These levels are `ignore`, `info`, `warning`,
 `error` and `fatal`.
 
 The `CheckConfigs` is a dictionary like, `config: value`, comma separated list of options for the different checks.
+A list option takes values in brackets, such as `[_i, _in]`. A value in double quotes may hold
+characters such as `!` and `|`.
 The available options are:
 
 |            Config             |   Type   |      Default       |

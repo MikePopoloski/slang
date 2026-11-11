@@ -363,15 +363,11 @@ void TidyConfigParser::parseCheckConfigs() {
         // Parse multiple option values
         std::vector<std::string> optionValues;
 
-        auto isRegexMeta = [](char c) {
-            return c == '.' || c == '^' || c == '$' || c == '*' || c == '+' || c == '?' ||
-                   c == '{' || c == '}' || c == '[' || c == ']' || c == '\\' || c == '|' ||
-                   c == '(' || c == ')' || c == '-';
-        };
-
         auto isOptionValueChar = [](char c) { return isalnum(c) || c == '_'; };
-        auto isRegexOptionValueChar = [&](char c) {
-            return isalnum(c) || isRegexMeta(c) || c == '_';
+        auto readOptionValue = [&](std::string& optionValue) {
+            if (peekChar() == '"')
+                return readQuotedValue(optionValue);
+            return readIf(optionValue, isOptionValueChar);
         };
 
         if (peekChar() == '[') {
@@ -379,7 +375,7 @@ void TidyConfigParser::parseCheckConfigs() {
 
             do {
                 std::string optionValue;
-                currentChar = readIf(optionValue, isOptionValueChar);
+                currentChar = readOptionValue(optionValue);
                 if (!optionValue.empty())
                     optionValues.emplace_back(optionValue);
             } while (currentChar == ',');
@@ -391,18 +387,10 @@ void TidyConfigParser::parseCheckConfigs() {
             currentChar = nextChar();
         }
         else if (peekChar() == '"') {
-            currentChar = nextChar(); // skip '"'
-
             std::string optionValue;
-            currentChar = readIf(optionValue, isRegexOptionValueChar);
+            currentChar = readQuotedValue(optionValue);
             if (!optionValue.empty())
                 optionValues.emplace_back((optionValue));
-
-            if (currentChar != '"') {
-                reportErrorAndExit(
-                    fmt::format("Expected '\"' but found ({}){}", +currentChar, currentChar));
-            }
-            currentChar = nextChar();
         }
         else { // Parse single option value
             std::string optionValue;
@@ -429,6 +417,15 @@ void TidyConfigParser::parseCheckConfigs() {
                                            +currentChar, currentChar));
         }
     }
+}
+
+char TidyConfigParser::readQuotedValue(std::string& value) {
+    nextChar(); // skip '"'
+    char currentChar = readIf(value, [](char c) { return c != '"' && c != '\n' && c != 0; });
+    if (currentChar != '"')
+        reportErrorAndExit(
+            fmt::format("Expected '\"' but found ({}){}", +currentChar, currentChar));
+    return nextChar();
 }
 
 void TidyConfigParser::toggleAllChecks(TidyConfig::CheckStatus status) {
