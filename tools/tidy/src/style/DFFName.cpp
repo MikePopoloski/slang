@@ -50,6 +50,27 @@ std::string getTextWithoutWhitespace(const SyntaxNode& syntax) {
     return SyntaxPrinter().setIncludeTrivia(false).print(syntax).str();
 }
 
+// Returns the register that the left-hand side writes only part of, such as state_q for
+// state_q[i].count or data_q[3:0], or nothing when it writes a whole variable.
+const Symbol* getPartiallyAssignedRegister(const Expression& lhs) {
+    const Expression* expression = &lhs;
+    while (true) {
+        switch (expression->kind) {
+            case ExpressionKind::MemberAccess:
+                expression = &expression->as<MemberAccessExpression>().value();
+                break;
+            case ExpressionKind::ElementSelect:
+                expression = &expression->as<ElementSelectExpression>().value();
+                break;
+            case ExpressionKind::RangeSelect:
+                expression = &expression->as<RangeSelectExpression>().value();
+                break;
+            default:
+                return expression == &lhs ? nullptr : expression->getSymbolReference();
+        }
+    }
+}
+
 struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::AllCanonical> {
     const AnalysisManager& analysisManager;
     const TidyConfig::CheckConfigs& checkConfigs;
@@ -168,6 +189,16 @@ private:
             boost::regex_match(lhsText, checkConfigs.dffWaiveLhsRegexPattern))
             return;
 
+        const auto partiallyAssignedRegister = getPartiallyAssignedRegister(assignment.left());
+        if (partiallyAssignedRegister) {
+            diags.add(diag::DFFName, assignmentSyntax.left->sourceRange().start())
+                << lhsText
+                << fmt::format("is part of a register; assign the whole register '{}' in "
+                               "always_ff instead",
+                               partiallyAssignedRegister->name);
+            return;
+        }
+
         const auto [lhsNameWithoutStage, lhsStage] = splitPipelineStage(
             getVariableNameOutsideMacro(assignment.left()).value_or(""));
         const auto lhsNameBeforeSuffix = getNameBeforeSuffix(lhsNameWithoutStage, outputSuffix);
@@ -231,7 +262,8 @@ public:
                fmt::format(fmt::emphasis::italic, "dffInputSuffix") +
                ") and the same name before the suffix, such as data_q <= data_d. A trailing "
                "number marks a pipeline stage, which takes its value from the previous stage, "
-               "such as data_q2 <= data_q1. Variables with a flip-flop output suffix must not be "
+               "such as data_q2 <= data_q1. Assign a register as a whole, not one member, element "
+               "or bit range at a time. Variables with a flip-flop output suffix must not be "
                "driven anywhere else, and always_ff must not increment or decrement a variable "
                "declared outside it. Assignments in the true branch of an if whose condition is "
                "in " +

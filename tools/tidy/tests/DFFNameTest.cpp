@@ -119,7 +119,6 @@ module top (input logic clk_i);
     logic a_q, b, b_n, d_ff, f_ff, j_ff, k_ff;
     logic [3:0] b_n4;
     always_ff @(posedge clk_i) `A_q <= b_n;
-    always_ff @(posedge clk_i) mystruct.a_q <= b_n;
     always_ff @(posedge clk_i) d_ff <= mystruct.b_n;
     always_ff @(posedge clk_i) f_ff <= b_n4[2];
     always_ff @(posedge clk_i) j_ff <= `DEF_n;
@@ -127,10 +126,9 @@ module top (input logic clk_i);
 endmodule
 )") == R"(
 9:32: 'a_q' should be a variable whose name ends with one of ["_reg", "_r", "_ff", "_q"]
-10:32: 'mystruct.a_q' should be a variable whose name ends with one of ["_reg", "_r", "_ff", "_q"]
-11:40: 'mystruct.b_n' should be a variable whose name ends with one of ["_next", "_n", "_d"]
-12:40: 'b_n4[2]' should be a variable whose name ends with one of ["_next", "_n", "_d"]
-13:40: 'b_n' should be a variable whose name ends with one of ["_next", "_n", "_d"]
+10:40: 'mystruct.b_n' should be a variable whose name ends with one of ["_next", "_n", "_d"]
+11:40: 'b_n4[2]' should be a variable whose name ends with one of ["_next", "_n", "_d"]
+12:40: 'b_n' should be a variable whose name ends with one of ["_next", "_n", "_d"]
 )");
 }
 
@@ -222,5 +220,28 @@ endmodule
 8:52: '0' should be a variable whose name ends with one of ["_next", "_n", "_d"]
 9:54: '0' should be a variable whose name ends with one of ["_next", "_n", "_d"]
 9:71: '1' should be a variable whose name ends with one of ["_next", "_n", "_d"]
+)");
+}
+
+TEST_CASE("DFFName: Parts of registers are rejected") {
+    CHECK("\n" + getDFFNameWarnings(R"(
+module top (input logic clk_i, rst_ni, input logic [1:0] index, input logic [3:0] count_d);
+    typedef struct packed { logic [3:0] count; } inner_t;
+    typedef struct packed { inner_t inner; } state_t;
+    state_t whole_q, whole_d, nested_q, reset_q;
+    state_t [3:0] elements_q;
+    logic [3:0] slice_q, data_d;
+    logic [3:0] mem_q [4];
+    always_ff @(posedge clk_i) whole_q <= whole_d;
+    always_ff @(posedge clk_i) nested_q.inner.count <= count_d;
+    always_ff @(posedge clk_i) elements_q[index] <= whole_d;
+    always_ff @(posedge clk_i) slice_q[1:0] <= data_d[1:0];
+    always_ff @(posedge clk_i) mem_q[index] <= count_d;
+    always_ff @(posedge clk_i) if (!rst_ni) reset_q.inner <= '0;
+endmodule
+)") == R"(
+10:32: 'nested_q.inner.count' is part of a register; assign the whole register 'nested_q' in always_ff instead
+11:32: 'elements_q[index]' is part of a register; assign the whole register 'elements_q' in always_ff instead
+12:32: 'slice_q[1:0]' is part of a register; assign the whole register 'slice_q' in always_ff instead
 )");
 }

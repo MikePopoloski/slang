@@ -114,6 +114,8 @@ typedefs.
   **dffInputSuffix** and has the same name before the suffix, such as `data_q <= data_d`.
 * A number after the output suffix marks a pipeline stage, which takes its value from the
   previous stage, such as `data_q2 <= data_q1`.
+* An `always_ff` assigns a whole register, never part of one, such as a struct member
+  `state_q.count`, an element `state_q[i]` or a bit range `data_q[3:0]`.
 * Only a nonblocking assignment inside an `always_ff` drives a variable with an output suffix;
   an `assign`, an `always_comb` or a blocking assignment must not.
 * An `always_ff` never increments or decrements a variable declared outside it, such as
