@@ -56,6 +56,11 @@ public:
     const ConstantValue& getValue(SourceRange referencingRange = {}) const;
     void setValue(Compilation& compilation, ConstantValue value, bool needsCoercion);
 
+    /// Sets the value of this parameter from a pre-evaluated defparam override.
+    /// If the parameter is declared without a type, its type is inferred from the
+    /// value, as it would have been from an initializer expression [6.20.2].
+    void setDefParamValue(Compilation& compilation, ConstantValue value, bool isImplicitString);
+
     bool isImplicitString(SourceRange referencingRange) const;
     bool isOverridden() const;
 

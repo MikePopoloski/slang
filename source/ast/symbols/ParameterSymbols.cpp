@@ -198,6 +198,53 @@ void ParameterSymbol::setValue(Compilation& compilation, ConstantValue newValue,
     needsCoercion = newNeedsCoercion;
 }
 
+void ParameterSymbol::setDefParamValue(Compilation& compilation, ConstantValue newValue,
+                                       bool isImplicitString) {
+    // A parameter without a declared type takes the type of its final value,
+    // which includes defparam overrides [6.20.2] [23.10.1]. The defparam value
+    // was bound with the same inference rules as a normal initializer, so
+    // reconstruct the corresponding type from the value.
+    auto& declType = *getDeclaredType();
+    auto typeSyntax = declType.getTypeSyntax();
+    if (typeSyntax && typeSyntax->kind == SyntaxKind::ImplicitType) {
+        auto& its = typeSyntax->as<ImplicitTypeSyntax>();
+        if (its.dimensions.empty()) {
+            // If signing is given the value is always integral, otherwise
+            // the signedness comes from the value as well as the width.
+            const Type* newType = nullptr;
+            if (newValue.isInteger()) {
+                auto& sv = newValue.integer();
+                bool isSigned = its.signing ? its.signing.kind == TokenKind::SignedKeyword
+                                            : sv.isSigned();
+
+                bitmask<IntegralFlags> flags = IntegralFlags::FourState;
+                if (isSigned)
+                    flags |= IntegralFlags::Signed;
+                newType = &compilation.getType(sv.getBitWidth(), flags);
+            }
+            else if (!its.signing) {
+                if (newValue.isReal())
+                    newType = &compilation.getRealType();
+                else if (newValue.isShortReal())
+                    newType = &compilation.getShortRealType();
+                else if (newValue.isString())
+                    newType = &compilation.getStringType();
+            }
+
+            if (newType) {
+                // The default initializer no longer applies; like other overrides,
+                // it will only have its names checked (see checkDefaultExpression).
+                declType.clearInitializer();
+                declType.addFlags(DeclaredTypeFlags::InitializerOverridden);
+                declType.setType(*newType);
+                fromStringLit = !its.signing && isImplicitString;
+            }
+        }
+    }
+
+    setValue(compilation, std::move(newValue), /* needsCoercion */ false);
+}
+
 void ParameterSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", getValue());
     serializer.write("isLocal", isLocalParam());
@@ -447,6 +494,18 @@ void DefParamSymbol::resolve() const {
         auto [expr, type] = Expression::bindImplicitParam(*typeSyntax, exprSyntax, equalsRange,
                                                           context, typeContext);
         initializer = expr;
+
+        // The defparam value is evaluated separately and only the value is carried
+        // over to the target instance, so the type of an untyped parameter has to be
+        // reconstructable from that value. This isn't possible for things like
+        // unpacked arrays or structs, so disallow them.
+        auto& ct = type->getCanonicalType();
+        if (!ct.isError() && !ct.isIntegral() && !ct.isFloating() && !ct.isString()) {
+            context.addDiag(diag::DefParamImplicitType, exprSyntax.sourceRange())
+                << *type << param.name;
+            makeInvalid();
+            return;
+        }
     }
     else {
         initializer = &Expression::bindRValue(declType->getType(), exprSyntax, equalsRange,

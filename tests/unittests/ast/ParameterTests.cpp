@@ -2096,3 +2096,96 @@ endmodule
     CHECK(root.lookupName<InstanceSymbol>("m.o2").getCanonicalBody() != nullptr);
     CHECK(root.lookupName<InstanceSymbol>("m.o3").getCanonicalBody() == nullptr);
 }
+
+TEST_CASE("defparam on implicitly typed parameter infers type from value -- GH #2105") {
+    auto tree = SyntaxTree::fromText(R"(
+module child;
+    parameter mode = "short";
+    parameter r = 1;
+    parameter s = 4'sd3;
+    parameter [3:0] fixed = 1;
+    parameter signed sgn = 1;
+    parameter unsigned usgn = -1;
+
+    if ($bits(mode) != 104) $error("mode is %0d bits", $bits(mode));
+    if (mode != "a_longer_mode") $error("bad mode");
+endmodule
+
+module top;
+    child by_defparam ();
+    defparam by_defparam.mode = "a_longer_mode";
+    defparam by_defparam.r = 2.5;
+    defparam by_defparam.s = 64'd5;
+    defparam by_defparam.fixed = 4'd9;
+    defparam by_defparam.sgn = 16'sd5;
+    defparam by_defparam.usgn = 6'd5;
+    child #(.mode("a_longer_mode")) by_override ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& mode = root.lookupName<ParameterSymbol>("top.by_defparam.mode");
+    CHECK(mode.getType().toString() == "logic[103:0]");
+    CHECK(mode.isImplicitString({}));
+    CHECK(mode.getValue().integer() ==
+          root.lookupName<ParameterSymbol>("top.by_override.mode").getValue().integer());
+
+    auto& r = root.lookupName<ParameterSymbol>("top.by_defparam.r");
+    CHECK(r.getType().toString() == "real");
+    CHECK(r.getValue().real() == 2.5);
+
+    auto& s = root.lookupName<ParameterSymbol>("top.by_defparam.s");
+    CHECK(s.getType().toString() == "logic[63:0]");
+    CHECK(s.getValue().integer() == 5);
+
+    auto& fixed = root.lookupName<ParameterSymbol>("top.by_defparam.fixed");
+    CHECK(fixed.getType().toString() == "logic[3:0]");
+    CHECK(fixed.getValue().integer() == 9);
+
+    auto& sgn = root.lookupName<ParameterSymbol>("top.by_defparam.sgn");
+    CHECK(sgn.getType().toString() == "logic signed[15:0]");
+    CHECK(sgn.getValue().integer() == 5);
+
+    auto& usgn = root.lookupName<ParameterSymbol>("top.by_defparam.usgn");
+    CHECK(usgn.getType().toString() == "logic[5:0]");
+    CHECK(usgn.getValue().integer() == 5);
+}
+
+TEST_CASE("defparam on implicitly typed parameter with unsupported value type") {
+    auto tree = SyntaxTree::fromText(R"(
+module child;
+    parameter p = 1;
+    parameter q = 1;
+    parameter int r = 1;
+    localparam int x = p;
+endmodule
+
+module top;
+    typedef struct { int a; } s_t;
+    localparam int arr [2] = '{1, 2};
+    localparam s_t s = '{a: 1};
+
+    child c1 ();
+    defparam c1.p = arr;
+    defparam c1.q = s;
+    defparam c1.r = 3;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::DefParamImplicitType);
+    CHECK(diags[1].code == diag::DefParamImplicitType);
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<ParameterSymbol>("top.c1.p").getValue().bad());
+    CHECK(root.lookupName<ParameterSymbol>("top.c1.q").getValue().bad());
+    CHECK(root.lookupName<ParameterSymbol>("top.c1.r").getValue().integer() == 3);
+}

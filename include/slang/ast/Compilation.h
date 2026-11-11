@@ -286,6 +286,10 @@ struct SLANG_EXPORT HierarchyOverrideNode {
 
         /// The source defparam syntax node doing the overriding, if any (can be null).
         const syntax::SyntaxNode* defparam = nullptr;
+
+        /// Set to true if the overriding value is an implicit string
+        /// (i.e. it was derived from a string literal).
+        bool isImplicitString = false;
     };
 
     /// A map of parameters in the current scope to override.

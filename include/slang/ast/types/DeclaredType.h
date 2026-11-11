@@ -191,6 +191,13 @@ public:
         initializerLocation = loc;
     }
 
+    /// Clears any initializer syntax and resolved initializer expression.
+    void clearInitializer() {
+        initializer = nullptr;
+        initializerSyntax = nullptr;
+        initializerLocation = SourceLocation::NoLocation;
+    }
+
     /// Gets the initializer syntax previously set by @a setInitializerSyntax
     const syntax::ExpressionSyntax* getInitializerSyntax() const { return initializerSyntax; }
 

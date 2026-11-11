@@ -557,6 +557,7 @@ void Compilation::resolveDefParamsAndBinds() {
         const SyntaxNode* defparamSyntax = nullptr;
         ConstantValue value;
         std::string pathStr;
+        bool isImplicitString = false;
     };
     SmallVector<OverrideEntry, 4> overrides;
 
@@ -595,7 +596,8 @@ void Compilation::resolveDefParamsAndBinds() {
             auto node = getNodeFor(entry.path, c);
             auto [it, inserted] = node->paramOverrides.emplace(
                 entry.targetSyntax,
-                HierarchyOverrideNode::ParamOverride{entry.value, nullptr, entry.defparamSyntax});
+                HierarchyOverrideNode::ParamOverride{entry.value, nullptr, entry.defparamSyntax,
+                                                     entry.isImplicitString});
 
             if (!inserted && isFinal) {
                 SLANG_ASSERT(it->second.defparam);
@@ -648,7 +650,8 @@ void Compilation::resolveDefParamsAndBinds() {
             else {
                 overrides.push_back({OpaqueInstancePath(*target), target->getSyntax(),
                                      defparam->getSyntax(), defparam->getValue(),
-                                     target->getHierarchicalPath()});
+                                     target->getHierarchicalPath(),
+                                     defparam->getInitializer().isImplicitString()});
             }
         }
 
