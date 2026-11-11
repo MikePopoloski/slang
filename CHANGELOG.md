@@ -12,9 +12,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * `$bits` is no longer allowed on `real`, `shortreal`, and `realtime` values or on unpacked unions, since they are not bitstream types
 * The error for changing the visibility of an inherited virtual method is now downgradeable via [-Wvirtual-visibility-mismatch](https://sv-lang.com/warning-ref.html#virtual-visibility-mismatch)
 * Arguments to class `randomize` calls must now be simple names of properties of the object being randomized, as required by the LRM; forms like `(x)`, `local::x`, and `this.x` are errors
+* Parameters and other non-signal items declared in a program can now be referenced hierarchically from outside the program (including via `defparam`); only references to nets and variables declared in a program are errors, as specified by the LRM
+* Reversed range selects (diagnosed by [-Wrange-select-reversed](https://sv-lang.com/warning-ref.html#range-select-reversed)) are now treated as selecting entirely out of bounds: reads return the default value for the type and writes are ignored, instead of producing an invalid expression
 * The error when using global clock tasks like `$global_clock` and `$past_gclk` without a global clocking block in scope is now suppressible [-Wno-missing-global-clocking](https://sv-lang.com/warning-ref.html#missing-global-clocking) (thanks to @Timmmm)
 
 ### Notable Breaking Changes
+* Enum element ranges (like `enum { A[N] }`) must now be integer literals, as required by the LRM. Non-literal ranges were previously accepted with a warning; they are now a hard error and the `-Wenum-range` warning has been removed
 
 ### New Features
 * Added [-Wprefer-localparam](https://sv-lang.com/warning-ref.html#prefer-localparam) which warns about using `parameter` when it's actually a synonym of `localparam` (thanks to @Timmmm)
@@ -34,6 +37,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * [-Wcase-outside-range](https://sv-lang.com/warning-ref.html#case-outside-range) now warns when both the case expression and the item are constant but the item can't fit in the type of the case expression (which makes it work for case generate constructs)
 * AST JSON source ranges now more correctly set source locations for nodes from expanded macros, and include additional location information about the original macro definition (thanks to @hankhsu1996)
 * [-Wuseless-cast](https://sv-lang.com/warning-ref.html#useless-cast) no longer warns about size casts whose width is computed (e.g. from a parameter), since such casts are only redundant for some parameterizations
+* [-Wunsized-concat](https://sv-lang.com/warning-ref.html#unsized-concat) no longer warns about a single-element concatenation used as the count of a replication, like `{{4}{foo}}`
+* Statements in the items of a case statement with a constant case expression that are not selected are now treated as unevaluated, so they no longer report warnings like out of bounds selects, matching the behavior of untaken `if` branches and conditional operators (thanks to @likeamahoney)
 
 ### Fixes
 * Fixed [-Wcase-gen-dup](https://sv-lang.com/warning-ref.html#case-gen-dup) and [-Wcase-gen-none](https://sv-lang.com/warning-ref.html#case-gen-none) printing `<unset>` instead of the type when the case generate condition is a type reference
@@ -73,6 +78,32 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed the built-in `std` classes to have all of the built-in randomize methods that all classes should have (thanks to @hankhsu1996)
 * Interface classes should not have `rand_mode` and `constraint_mode` built-in methods on them (thanks to @hankhsu1996)
 * Fixed a bug where interfaces that contain a modport with export methods followed by another modport without export methods would lose track of their exports (thanks to @hankhsu1996)
+* Fixed parameters and enum values whose initializers depend on themselves through a function's return or argument types not being reported as recursive definitions (thanks to @hankhsu1996)
+* Fixed implementations of `extern` interface methods (e.g. `function int i.f()`) not being checked for errors or analyzed, which also caused false unused warnings (thanks to @hankhsu1996)
+* Fixed calls to functions with static variables being folded to a constant when evaluated speculatively (e.g. as a select index), which gave incorrect results for functions that modify that state
+* Fixed diagnostics from inside speculatively evaluated function calls (e.g. an out of bounds select in the function body) being reported at the call site
+* Fixed the implicit return value variable of static functions to have static lifetime
+* Fixed several internal assertions related to invalid syntax and to assignment patterns on the left-hand side of assignments
+* Fixed type parameters of class specializations and instances that default to a type declared inline (like an enum or struct) being treated as different types when the default is used in more than one place
+* Fixed an internal assertion on a function call cycle through the function's return type
+* Fixed false "default value must exactly match" errors for out-of-block method definitions whose default argument values need conversion to the argument type
+* Fixed names in the dimensions of non-ANSI interface port declarations being looked up at the wrong location, which made body declarations invisible to them
+* Fixed left-justified `%-` format fields of hex, octal, and binary values printing a different number, and of strings padding on the wrong side (thanks to @hankhsu1996)
+* Fixed infinite recursion on an interface that contains a virtual interface of itself; potentially infinite chains of virtual interface instances are now reported as an error (thanks to @hankhsu1996)
+* Fixed pattern variables declared in conditional expressions being rejected in constant functions as not declared locally
+* Fixed multiple driver checks through `ref` port expressions missing overlaps when selects use non-literal constant indices
+* Fixed `this` being disallowed in enum value initializers inside class methods
+* Fixed values of enums declared in an interface not being usable in that interface's modport expressions
+* Fixed an internal assertion when a scoped name (like `p::a` or `C::b`) or a member access refers to a symbol from within its own type; this is now reported as a recursive definition
+* Fixed a crash when lazily created class specializations are added while visiting the AST
+* Fixed an internal assertion when a UDP table row has no input fields
+* Fixed file dependency discovery for depfiles and library loading reporting nested or imported declarations as missing, and losing dependencies on interfaces used via virtual interfaces and explicit interface ports. Interface port types are now only looked up in libraries when `--allow-toplevel-iface-ports` is set (thanks to @AndrewNolte)
+* Fixed `defparam`s that target an untyped parameter to take on the type of the assigned value, as with parameter overrides, instead of the type of the parameter's default value
+* Fixed `defparam`s that assign a NaN real value or `$`
+* Reworked how enum values are elaborated to fix a variety of crashes and missing identifier bugs related to inline enum declarations
+* Undeclared base classes are now reported even while the class's own extends clause is being resolved, and follow-on errors in classes that derive (directly or indirectly) from a class with an invalid base are suppressed
+* The "in N instances" note on diagnostics now correctly counts instances declared in the same instantiation statement, instance arrays, and instances whose bodies were cached
+* The prebuilt Windows release binary is now built in the Release configuration; it was previously an unoptimized Debug build (thanks to @dirk-seynhaeve)
 
 ### Tools & Bindings
 #### slang-tidy
@@ -81,6 +112,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added a new `ConcurrentAssertHasFailAction` check that finds assertions without a fail action block (thanks to @vajeetha)
 * Added a new `ConditionalOperatorPrecedence` check that finds potentially misleading conditional operator usage (thanks to @vajeetha)
 * Added a new `UserClassDerivesFromUVMBase` check that finds classes that don't derive from UVM base classes (thanks to @svenka3)
+* Fixed skip paths in config files erroneously matching files in the parent directory and in sibling directories that share a name prefix
+* Fixed the return code being zero on failure when run with `--quiet`
 
 
 ## [v12.1] - 2026-10-25
