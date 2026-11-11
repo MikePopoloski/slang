@@ -122,7 +122,8 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::All
 
         const bool isLocal = symbol->kind == SymbolKind::Variable &&
                              symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic;
-        if (!isLocal &&
+        // checkDrivers already reports a flip-flop input name driven here.
+        if (!isLocal && !getNameBeforeSuffix(symbol->name, checkConfigs.dffInputSuffix) &&
             !boost::regex_match(std::string(symbol->name), checkConfigs.dffWaiveLhsRegexPattern)) {
             diags.add(diag::DFFName, operand.sourceRange.start())
                 << symbol->name
@@ -133,22 +134,33 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, VisitFlags::All
 
     void handle(const VariableSymbol& variable) {
         NEEDS_SKIP_SYMBOL(variable)
-        checkDriversOutsideAlwaysFF(variable);
+        checkDrivers(variable);
     }
 
     void handle(const NetSymbol& net) {
         NEEDS_SKIP_SYMBOL(net)
         if (net.getInitializer())
             reportIfFlipFlopOutputName(net, net.location);
-        checkDriversOutsideAlwaysFF(net);
+        checkDrivers(net);
     }
 
 private:
-    void checkDriversOutsideAlwaysFF(const ValueSymbol& symbol) {
+    void checkDrivers(const ValueSymbol& symbol) {
+        const bool hasFlipFlopInputName =
+            getNameBeforeSuffix(symbol.name, checkConfigs.dffInputSuffix) &&
+            !boost::regex_match(std::string(symbol.name), checkConfigs.dffWaiveLhsRegexPattern);
         for (const auto driver : analysisManager.getDrivers(symbol)) {
-            if (driver->source != DriverSource::AlwaysFF && !driver->isUnidirectionalPort() &&
-                !driver->flags.has(DriverFlags::Initializer)) {
-                reportIfFlipFlopOutputName(symbol, driver->getSourceRange().start());
+            if (driver->isUnidirectionalPort() || driver->flags.has(DriverFlags::Initializer))
+                continue;
+
+            const auto location = driver->getSourceRange().start();
+            if (driver->source != DriverSource::AlwaysFF)
+                reportIfFlipFlopOutputName(symbol, location);
+            else if (hasFlipFlopInputName) {
+                diags.add(diag::DFFName, location)
+                    << symbol.name
+                    << std::string_view("has a flip-flop input suffix but is driven inside "
+                                        "always_ff");
             }
         }
     }
@@ -199,11 +211,13 @@ private:
             return;
         }
 
-        const auto [lhsNameWithoutStage, lhsStage] = splitPipelineStage(
-            getVariableNameOutsideMacro(assignment.left()).value_or(""));
+        const auto lhsName = getVariableNameOutsideMacro(assignment.left()).value_or("");
+        const auto [lhsNameWithoutStage, lhsStage] = splitPipelineStage(lhsName);
         const auto lhsNameBeforeSuffix = getNameBeforeSuffix(lhsNameWithoutStage, outputSuffix);
         if (!lhsNameBeforeSuffix) {
-            reportMissingSuffix(*assignmentSyntax.left, lhsText, outputSuffix);
+            // checkDrivers already reports a flip-flop input name driven here.
+            if (!getNameBeforeSuffix(lhsName, inputSuffix))
+                reportMissingSuffix(*assignmentSyntax.left, lhsText, outputSuffix);
             return;
         }
 
@@ -263,9 +277,10 @@ public:
                ") and the same name before the suffix, such as data_q <= data_d. A trailing "
                "number marks a pipeline stage, which takes its value from the previous stage, "
                "such as data_q2 <= data_q1. Assign a register as a whole, not one member, element "
-               "or bit range at a time. Variables with a flip-flop output suffix must not be "
-               "driven anywhere else, and always_ff must not increment or decrement a variable "
-               "declared outside it. Assignments in the true branch of an if whose condition is "
+               "or bit range at a time. Variables with a flip-flop input suffix must not be driven "
+               "inside always_ff, and variables with a flip-flop output suffix must not be driven "
+               "anywhere else. always_ff must not increment or decrement a variable declared "
+               "outside it. Assignments in the true branch of an if whose condition is "
                "in " +
                fmt::format(fmt::emphasis::italic, "dffWaiveIfConditions") +
                " or whose left-hand side matches " +

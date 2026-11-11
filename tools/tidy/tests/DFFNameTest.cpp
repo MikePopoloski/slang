@@ -52,7 +52,7 @@ module top (input logic clk_i);
     always_ff @(posedge clk_i) _q <= d_n;
 endmodule
 )") == R"(
-4:32: 'a_n' should be a variable whose name ends with one of ["_reg", "_r", "_ff", "_q"]
+4:32: 'a_n' has a flip-flop input suffix but is driven inside always_ff
 5:39: 'b_q' should be a variable whose name ends with one of ["_next", "_n", "_d"]
 6:32: 'c_q' has a different name before its suffix than its input 'd_n'
 7:32: '_q' should be a variable whose name ends with one of ["_reg", "_r", "_ff", "_q"]
@@ -156,6 +156,7 @@ endmodule
 16:12: 'assign_ff' has a flip-flop output suffix but is not driven by a nonblocking assignment inside always_ff
 9:17: 'comb_ff' has a flip-flop output suffix but is not driven by a nonblocking assignment inside always_ff
 10:29: 'always_q' has a flip-flop output suffix but is not driven by a nonblocking assignment inside always_ff
+13:10: 'data_n' has a flip-flop input suffix but is driven inside always_ff
 12:9: 'blocking_q' has a flip-flop output suffix but is not driven by a nonblocking assignment inside always_ff
 )");
 }
@@ -179,6 +180,26 @@ endmodule
 6:11: 'down_q' is incremented or decremented inside always_ff; assign it with a nonblocking assignment instead
 7:9: 'other' is incremented or decremented inside always_ff; assign it with a nonblocking assignment instead
 10:18: '-neg_d' should be a variable whose name ends with one of ["_next", "_n", "_d"]
+)");
+}
+
+TEST_CASE("DFFName: Flip-flop inputs driven inside always_ff are rejected") {
+    CHECK("\n" + getDFFNameWarnings(R"(
+module top (input logic clk_i, rst_ni, input logic [3:0] a);
+    logic [3:0] blocking_d, increment_d, reset_d, mem_d, comb_d, comb_q;
+    always_ff @(posedge clk_i) begin
+        blocking_d = a;
+        increment_d++;
+        if (!rst_ni) reset_d <= '0;
+        mem_d = a;
+        comb_q <= comb_d;
+    end
+    always_comb comb_d = a;
+endmodule
+)") == R"(
+5:9: 'blocking_d' has a flip-flop input suffix but is driven inside always_ff
+6:9: 'increment_d' has a flip-flop input suffix but is driven inside always_ff
+7:22: 'reset_d' has a flip-flop input suffix but is driven inside always_ff
 )");
 }
 

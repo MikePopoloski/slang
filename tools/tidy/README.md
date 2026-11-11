@@ -120,6 +120,7 @@ typedefs.
   an `assign`, an `always_comb` or a blocking assignment must not.
 * An `always_ff` never increments or decrements a variable declared outside it, such as
   `count_q++`.
+* An `always_ff` never drives a variable with an input suffix, not even in a reset branch.
 
 An empty suffix list turns off its half of the check. Assignments in the true branch of an `if`
 whose condition is listed in **dffWaiveIfConditions** (compared without whitespace), and
