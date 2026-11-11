@@ -36,6 +36,12 @@ TidyConfig::TidyConfig() {
     checkConfigs.unionRegexPattern = boost::regex(checkConfigs.unionRegexString);
     checkConfigs.typedefRegexString = "[a-z_0-9]+_t";
     checkConfigs.typedefRegexPattern = boost::regex(checkConfigs.typedefRegexString);
+    checkConfigs.dffInputSuffix = {"_next", "_n", "_d"};
+    checkConfigs.dffOutputSuffix = {"_reg", "_r", "_ff", "_q"};
+    checkConfigs.dffWaiveIfConditions = {"!rst_ni", "flush_i", "!rst_ni||flush_i",
+                                         "flush_i||!rst_ni"};
+    checkConfigs.dffWaiveLhsRegexString = "(?i)mem.*";
+    checkConfigs.dffWaiveLhsRegexPattern = boost::regex(checkConfigs.dffWaiveLhsRegexString);
 
     auto styleChecks = std::unordered_map<std::string, CheckOptions>();
     styleChecks.emplace("AlwaysCombNonBlocking", CheckOptions());
@@ -62,6 +68,7 @@ TidyConfig::TidyConfig() {
     styleChecks.emplace("StructName", CheckOptions());
     styleChecks.emplace("UnionName", CheckOptions());
     styleChecks.emplace("TypedefName", CheckOptions());
+    styleChecks.emplace("DFFName", CheckOptions{CheckStatus::DISABLED});
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckOptions>();

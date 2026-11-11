@@ -48,5 +48,6 @@ inline constexpr DiagCode StructFieldsInSameProcess(DiagSubsystem::Tidy, 33);
 inline constexpr DiagCode ConcurrentAssertHasFailAction(DiagSubsystem::Tidy, 34);
 inline constexpr DiagCode ConditionalOperatorPrecedence(DiagSubsystem::Tidy, 35);
 inline constexpr DiagCode UserClassDerivesFromUVMBase(DiagSubsystem::Tidy, 36);
+inline constexpr DiagCode DFFName(DiagSubsystem::Tidy, 37);
 
 } // namespace slang::diag

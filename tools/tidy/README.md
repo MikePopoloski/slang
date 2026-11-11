@@ -92,6 +92,10 @@ The available options are:
 |     **structRegexString**     |  string  | \"[a-z_0-9]+_t\"   |
 |     **unionRegexString**      |  string  | \"[a-z_0-9]+_t\"   |
 |    **typedefRegexString**     |  string  | \"[a-z_0-9]+_t\"   |
+|      **dffInputSuffix**       | [string] |   [_next, _n, _d]  |
+|      **dffOutputSuffix**      | [string] | [_reg, _r, _ff, _q] |
+|   **dffWaiveIfConditions**    | [string] | [\"!rst_ni\", \"flush_i\", \"!rst_ni \|\| flush_i\", \"flush_i \|\| !rst_ni\"] |
+|  **dffWaiveLhsRegexString**   |  string  |   \"(?i)mem.*\"    |
 
 **resetIsActiveHigh** describes the reset polarity of the design under test: set it to
 `true` when the reset named by **resetName** is asserted high, and `false` when it is
@@ -102,6 +106,22 @@ is the reset branch.
 `style-typedef-name` applies to all typedefs. If `style-enum-name`, `style-struct-name`,
 or `style-union-name` are enabled, those checks take precedence for the corresponding
 typedefs.
+
+`style-dff-name` is disabled by default. It checks flip-flop names:
+
+* Each nonblocking assignment inside an `always_ff` assigns a variable whose name ends with a
+  suffix from **dffOutputSuffix**, from a variable whose name ends with a suffix from
+  **dffInputSuffix** and has the same name before the suffix, such as `data_q <= data_d`.
+* A number after the output suffix marks a pipeline stage, which takes its value from the
+  previous stage, such as `data_q2 <= data_q1`.
+* Only a nonblocking assignment inside an `always_ff` drives a variable with an output suffix;
+  an `assign`, an `always_comb` or a blocking assignment must not.
+* An `always_ff` never increments or decrements a variable declared outside it, such as
+  `count_q++`.
+
+An empty suffix list turns off its half of the check. Assignments in the true branch of an `if`
+whose condition is listed in **dffWaiveIfConditions** (compared without whitespace), and
+assignments whose left-hand side matches **dffWaiveLhsRegexString**, are not checked.
 
 An example of a possible configuration file:
 
