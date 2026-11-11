@@ -781,6 +781,44 @@ endmodule
     CHECK(diags[3].code == diag::IndexOOB);
 }
 
+TEST_CASE("Case statement -- unevaluated items -- no match, unique / priority") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int n = 4;
+
+    logic [3:0] v;
+    logic r;
+    initial begin
+        // Nothing matches and there's no default, so every item is unevaluated.
+        case (n)
+            5: r = v[5];
+            6: r = v[6];
+        endcase
+
+        // unique / priority don't change which item is selected.
+        unique case (n)
+            4: r = v[3];
+            5: r = v[5];
+        endcase
+
+        priority case (n)
+            4, 5: r = v[3];
+            default: r = v[7];
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Only lint warnings about the defaults; no out-of-bounds selects.
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::CaseDefault);
+    CHECK(diags[1].code == diag::CaseRedundantDefault);
+}
+
 TEST_CASE("Nonblocking assignment statement") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

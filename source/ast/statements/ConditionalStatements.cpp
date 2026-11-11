@@ -258,9 +258,56 @@ static CaseStatementCondition getCondition(TokenKind kind) {
     return condition;
 }
 
+static bool checkMatch(CaseStatementCondition condition, const ConstantValue& cvl,
+                       const ConstantValue& cvr) {
+    if (condition == CaseStatementCondition::Inside) {
+        // Unpacked arrays get unwrapped into their members for comparison.
+        if (cvr.isContainer()) {
+            for (auto& elem : cvr) {
+                if (checkMatch(condition, cvl, elem))
+                    return true;
+            }
+            return false;
+        }
+
+        // Otherwise, we do a wildcard comparison if both sides are integers
+        // and an equivalence comparison if not.
+        if (cvl.isInteger() && cvr.isInteger())
+            return (bool)condWildcardEqual(cvl.integer(), cvr.integer());
+    }
+    else if (condition != CaseStatementCondition::Normal) {
+        const SVInt& l = cvl.integer();
+        const SVInt& r = cvr.integer();
+        if (condition == CaseStatementCondition::WildcardJustZ)
+            return caseZWildcardEqual(l, r);
+        else
+            return caseXWildcardEqual(l, r);
+    }
+
+    return cvl == cvr;
+}
+
+// Checks whether a case item matches the value (or the type) of the case expression.
+// Returns nullopt if that can't be determined at compile time.
 static std::optional<bool> matchItem(EvalContext& context, CaseStatementCondition condition,
                                      const ConstantValue& cv, const Type* condType,
-                                     const Expression& item);
+                                     const Expression& item) {
+    if (item.kind == ExpressionKind::ValueRange) {
+        ConstantValue val = item.as<ValueRangeExpression>().checkInside(context, cv);
+        if (!val)
+            return std::nullopt;
+
+        return (bool)(logic_t)val.integer();
+    }
+
+    if (auto val = item.eval(context))
+        return checkMatch(condition, cv, val);
+
+    if (condType && item.kind == ExpressionKind::TypeReference)
+        return item.as<TypeReferenceExpression>().targetType.isMatching(*condType);
+
+    return std::nullopt;
+}
 
 Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
                                      const ASTContext& context, StatementContext& stmtCtx) {
@@ -308,7 +355,7 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     bool known = false;
     const Expression* matchedExpr = nullptr;
     if (!bad) {
-        EvalContext evalCtx(context);
+        EvalContext evalCtx(context, EvalFlags::CacheResults);
         const Type* condType = nullptr;
         auto cv = expr->eval(evalCtx);
         if (!cv && expr->kind == ExpressionKind::TypeReference)
@@ -327,7 +374,6 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     SmallVector<ItemGroup, 8> items;
     SmallVector<const Expression*> group;
     const Statement* defStmt = nullptr;
-    const ASTContext unevaluated = context.resetFlags(ASTFlags::UnevaluatedBranch);
 
     for (auto item : syntax.items) {
         switch (item->kind) {
@@ -340,8 +386,9 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                     group.push_back(*boundIt++);
                 }
 
+                auto flags = known && !selected ? ASTFlags::UnevaluatedBranch : ASTFlags::None;
                 auto& stmt = Statement::bind(sci.clause->as<StatementSyntax>(),
-                                             known && !selected ? unevaluated : context, stmtCtx);
+                                             context.resetFlags(flags), stmtCtx);
                 items.push_back({group.copy(compilation), &stmt});
                 group.clear();
                 bad |= stmt.bad();
@@ -351,9 +398,11 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                 // The parser already errored for duplicate defaults,
                 // so just ignore if it happens here.
                 if (!defStmt) {
+                    auto flags = known && matchedExpr ? ASTFlags::UnevaluatedBranch
+                                                      : ASTFlags::None;
                     defStmt = &Statement::bind(
                         item->as<DefaultCaseItemSyntax>().clause->as<StatementSyntax>(),
-                        known && matchedExpr ? unevaluated : context, stmtCtx);
+                        context.resetFlags(flags), stmtCtx);
                     bad |= defStmt->bad();
                 }
                 break;
@@ -465,57 +514,6 @@ void CaseStatement::analyzeItems(EvalContext& evalContext, CaseStatementConditio
             addDiag(code, caseExpr.sourceRange) << msg;
         }
     }
-}
-
-static bool checkMatch(CaseStatementCondition condition, const ConstantValue& cvl,
-                       const ConstantValue& cvr) {
-    if (condition == CaseStatementCondition::Inside) {
-        // Unpacked arrays get unwrapped into their members for comparison.
-        if (cvr.isContainer()) {
-            for (auto& elem : cvr) {
-                if (checkMatch(condition, cvl, elem))
-                    return true;
-            }
-            return false;
-        }
-
-        // Otherwise, we do a wildcard comparison if both sides are integers
-        // and an equivalence comparison if not.
-        if (cvl.isInteger() && cvr.isInteger())
-            return (bool)condWildcardEqual(cvl.integer(), cvr.integer());
-    }
-    else if (condition != CaseStatementCondition::Normal) {
-        const SVInt& l = cvl.integer();
-        const SVInt& r = cvr.integer();
-        if (condition == CaseStatementCondition::WildcardJustZ)
-            return caseZWildcardEqual(l, r);
-        else
-            return caseXWildcardEqual(l, r);
-    }
-
-    return cvl == cvr;
-}
-
-// Checks whether a case item matches the value (or the type) of the case expression.
-// Returns nullopt if that can't be determined at compile time.
-static std::optional<bool> matchItem(EvalContext& context, CaseStatementCondition condition,
-                                     const ConstantValue& cv, const Type* condType,
-                                     const Expression& item) {
-    if (item.kind == ExpressionKind::ValueRange) {
-        ConstantValue val = item.as<ValueRangeExpression>().checkInside(context, cv);
-        if (!val)
-            return std::nullopt;
-
-        return (bool)(logic_t)val.integer();
-    }
-
-    if (auto val = item.eval(context))
-        return checkMatch(condition, cv, val);
-
-    if (condType && item.kind == ExpressionKind::TypeReference)
-        return item.as<TypeReferenceExpression>().targetType.isMatching(*condType);
-
-    return std::nullopt;
 }
 
 std::pair<const Statement*, bool> CaseStatement::getKnownBranch(EvalContext& context) const {
