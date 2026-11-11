@@ -592,6 +592,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
             return false;
         }
 
+        // Diagnostics in the canonical body apply to this instance as well.
+        entry.canonicalBody->noteCachedReuse();
         return true;
     }
 

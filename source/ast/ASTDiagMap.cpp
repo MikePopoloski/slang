@@ -71,10 +71,13 @@ Diagnostics ASTDiagMap::coalesce(const SourceManager* sourceManager) {
             if (!symbol)
                 continue;
 
-            auto parent = symbol->as<InstanceBodySymbol>().parentInstance;
+            auto& body = symbol->as<InstanceBodySymbol>();
+            auto parent = body.parentInstance;
             SLANG_ASSERT(parent);
 
-            count++;
+            // Instances that reused this body from the instance cache
+            // also have this diagnostic.
+            count += 1 + body.getNumCachedReuses();
             if (auto scope = parent->getParentScope()) {
                 auto& sym = scope->asSymbol();
                 if (sym.kind != SymbolKind::Root && sym.kind != SymbolKind::CompilationUnit) {

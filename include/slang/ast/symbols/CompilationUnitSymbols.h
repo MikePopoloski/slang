@@ -228,8 +228,8 @@ public:
     /// in the visited design.
     size_t getInstanceCount() const { return instanceCount; }
 
-    /// Notes that the definition has been instantiated.
-    void noteInstantiated() const { instanceCount++; }
+    /// Notes that the definition has been instantiated @a count more times.
+    void noteInstantiated(size_t count = 1) const { instanceCount += count; }
 
     void serializeTo(ASTSerializer& serializer) const;
 

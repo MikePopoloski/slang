@@ -91,6 +91,9 @@ public:
     SmallSet<std::string_view, 8> implicitNetNames;
     const NetType& netType;
 
+    /// The number of instances created (including array elements).
+    size_t numCreated = 0;
+
 private:
     using DimIterator = SyntaxList<VariableDimensionSyntax>::const_iterator;
 
@@ -110,6 +113,7 @@ private:
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax,
                            const HierarchyOverrideNode* overrideNode) {
+        numCreated++;
         paramBuilder->setOverrides(overrideNode);
         auto [name, loc] = ast::detail::getNameLoc(syntax);
         auto inst = comp.emplace<InstanceSymbol>(comp, name, loc, *definition, *paramBuilder, flags,
@@ -690,6 +694,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         builder.reset(definition, paramBuilder, localConfig, defResult.configRoot,
                       instanceDepth + 1);
 
+        auto startCount = builder.numCreated;
         if (specificInstance) {
             results.push_back(builder.create(*specificInstance));
         }
@@ -698,6 +703,12 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             for (auto instanceSyntax : syntax.instances)
                 results.push_back(builder.create(*instanceSyntax));
         }
+
+        // The definition was noted as instantiated once above; count any additional
+        // instances (multiple in one statement, or array elements) so that diagnostics
+        // can tell when they apply to only some instances of the definition.
+        if (auto created = builder.numCreated - startCount; created > 1)
+            definition.noteInstantiated(created - 1);
     };
 
     // If we came here from a bind directive we need to make use

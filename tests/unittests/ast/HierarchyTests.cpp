@@ -847,6 +847,84 @@ source:16:16: error: use of undeclared identifier 'asdf'
 )");
 }
 
+TEST_CASE("Instance paths in errors for instances in the same statement") {
+    auto tree = SyntaxTree::fromText(R"(
+module leaf;
+    parameter p = 0;
+    localparam string s = p;
+endmodule
+
+module top;
+    leaf a (), b ();
+    defparam a.p = "abc";
+
+    leaf c [2] ();
+    defparam c[0].p = "abc";
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+  in 2 instances, e.g. top.b
+source:4:25: error: no implicit conversion from 'logic signed[31:0]' to 'string'; explicit conversion exists, are you missing a cast?
+    localparam string s = p;
+                        ^ ~
+)");
+}
+
+TEST_CASE("Instance paths in errors with cached instance bodies") {
+    auto tree = SyntaxTree::fromText(R"(
+module leaf #(parameter p = 0);
+    localparam string s = p;
+endmodule
+
+module top;
+    leaf a ();
+    leaf b ();
+    leaf #("abc") c ();
+    leaf d ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+  in 3 instances, e.g. top.a
+source:3:25: error: no implicit conversion from 'logic signed[31:0]' to 'string'; explicit conversion exists, are you missing a cast?
+    localparam string s = p;
+                        ^ ~
+)");
+
+    auto tree2 = SyntaxTree::fromText(R"(
+module leaf #(parameter p = 0);
+    localparam string s = p;
+endmodule
+
+module top;
+    leaf a ();
+    leaf b ();
+endmodule
+)");
+
+    Compilation compilation2;
+    compilation2.addSyntaxTree(tree2);
+
+    auto& diagnostics2 = compilation2.getAllDiagnostics();
+    std::string result2 = "\n" + report(diagnostics2);
+    CHECK(result2 == R"(
+source:3:25: error: no implicit conversion from 'logic signed[31:0]' to 'string'; explicit conversion exists, are you missing a cast?
+    localparam string s = p;
+                        ^ ~
+)");
+}
+
 TEST_CASE("Recursive modules -- if generate") {
     auto tree = SyntaxTree::fromText(R"(
 module bar #(parameter int c) ();

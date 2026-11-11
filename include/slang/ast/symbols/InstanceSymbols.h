@@ -210,6 +210,13 @@ public:
 
     bool hasSameType(const InstanceBodySymbol& other) const;
 
+    /// Gets the number of other instances that reuse this body via instance
+    /// caching, such that their own bodies were never elaborated.
+    uint32_t getNumCachedReuses() const { return numCachedReuses; }
+
+    /// Notes that another instance has reused this body via instance caching.
+    void noteCachedReuse() const { numCachedReuses++; }
+
     static InstanceBodySymbol& fromDefinition(
         Compilation& compilation, const DefinitionSymbol& definition, SourceLocation instanceLoc,
         bitmask<InstanceFlags> flags, const HierarchyOverrideNode* hierarchyOverrideNode,
@@ -234,6 +241,7 @@ private:
     const DefinitionSymbol& definition;
     mutable std::span<const Symbol* const> portList;
     std::span<const ParameterSymbolBase* const> parameters;
+    mutable uint32_t numCachedReuses = 0;
 };
 
 /// Represents an array of instances.
