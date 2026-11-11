@@ -409,7 +409,8 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .def_rw("numThreads", &SourceOptions::numThreads)
         .def_rw("singleUnit", &SourceOptions::singleUnit)
         .def_rw("onlyLint", &SourceOptions::onlyLint)
-        .def_rw("librariesInheritMacros", &SourceOptions::librariesInheritMacros);
+        .def_rw("librariesInheritMacros", &SourceOptions::librariesInheritMacros)
+        .def_rw("lookUpInterfacePorts", &SourceOptions::lookUpInterfacePorts);
 
     nb::class_<SourceLoader> sourceLoader(driver, "SourceLoader");
     sourceLoader.def(nb::init<SourceManager&>(), "sourceManager"_a)
