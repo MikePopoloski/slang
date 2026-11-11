@@ -2189,3 +2189,55 @@ endmodule
     CHECK(root.lookupName<ParameterSymbol>("top.c1.q").getValue().bad());
     CHECK(root.lookupName<ParameterSymbol>("top.c1.r").getValue().integer() == 3);
 }
+
+TEST_CASE("defparam with NaN value") {
+    auto tree = SyntaxTree::fromText(R"(
+module leaf;
+    parameter real p = 1.0;
+    parameter q = 1;
+endmodule
+
+module top;
+    leaf a ();
+    defparam a.p = $sqrt(-1.0);
+    defparam a.q = $sqrt(-1.0);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(std::isnan(root.lookupName<ParameterSymbol>("top.a.p").getValue().real()));
+    CHECK(std::isnan(root.lookupName<ParameterSymbol>("top.a.q").getValue().real()));
+}
+
+TEST_CASE("defparam with unbounded value") {
+    auto tree = SyntaxTree::fromText(R"(
+module leaf;
+    parameter p = 1;
+    parameter int q = 1;
+    if (!$isunbounded(p)) $error("p not unbounded");
+    if (!$isunbounded(q)) $error("q not unbounded");
+
+    logic clk, a, b;
+    assert property (@(posedge clk) a |-> ##[1:p] b);
+    assert property (@(posedge clk) a |-> ##[1:q] b);
+endmodule
+
+module top;
+    leaf l ();
+    defparam l.p = $;
+    defparam l.q = $;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<ParameterSymbol>("top.l.p").getType().isUnbounded());
+    CHECK(root.lookupName<ParameterSymbol>("top.l.q").getValue().isUnbounded());
+}

@@ -229,6 +229,8 @@ void ParameterSymbol::setDefParamValue(Compilation& compilation, ConstantValue n
                     newType = &compilation.getShortRealType();
                 else if (newValue.isString())
                     newType = &compilation.getStringType();
+                else if (newValue.isUnbounded())
+                    newType = &compilation.getUnboundedType();
             }
 
             if (newType) {
@@ -492,7 +494,8 @@ void DefParamSymbol::resolve() const {
     if (typeSyntax && typeSyntax->kind == SyntaxKind::ImplicitType) {
         ASTContext typeContext(*param.getParentScope(), LookupLocation::before(param));
         auto [expr, type] = Expression::bindImplicitParam(*typeSyntax, exprSyntax, equalsRange,
-                                                          context, typeContext);
+                                                          context, typeContext,
+                                                          ASTFlags::AllowUnboundedLiteral);
         initializer = expr;
 
         // The defparam value is evaluated separately and only the value is carried
@@ -500,7 +503,8 @@ void DefParamSymbol::resolve() const {
         // reconstructable from that value. This isn't possible for things like
         // unpacked arrays or structs, so disallow them.
         auto& ct = type->getCanonicalType();
-        if (!ct.isError() && !ct.isIntegral() && !ct.isFloating() && !ct.isString()) {
+        if (!ct.isError() && !ct.isIntegral() && !ct.isFloating() && !ct.isString() &&
+            !ct.isUnbounded()) {
             context.addDiag(diag::DefParamImplicitType, exprSyntax.sourceRange())
                 << *type << param.name;
             makeInvalid();
@@ -508,11 +512,12 @@ void DefParamSymbol::resolve() const {
         }
     }
     else {
-        initializer = &Expression::bindRValue(declType->getType(), exprSyntax, equalsRange,
-                                              context);
+        initializer = &Expression::bindRValue(declType->getType(), exprSyntax, equalsRange, context,
+                                              ASTFlags::AllowUnboundedLiteral);
     }
 
-    context.eval(*initializer);
+    // Like other parameter values, a defparam is allowed to assign '$' [6.20.7].
+    context.eval(*initializer, EvalFlags::AllowUnboundedPlaceholder);
     if (!initializer->getConstant())
         makeInvalid();
 }

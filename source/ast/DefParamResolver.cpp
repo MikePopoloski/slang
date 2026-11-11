@@ -826,7 +826,8 @@ void Compilation::resolveDefParamsAndBinds() {
                     return;
                 }
 
-                if (prevEntry.value != v.found[j]->getValue()) {
+                // Use isIdentical so that values like NaN still compare as settled.
+                if (!prevEntry.value.isIdentical(v.found[j]->getValue())) {
                     allSame = false;
                     if (i == options.maxDefParamSteps - 1)
                         root->addDiag(diag::DefParamCycle, getRange());
