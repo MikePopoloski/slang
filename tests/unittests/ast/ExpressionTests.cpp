@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
@@ -1848,7 +1849,7 @@ TEST_CASE("Stream expression with") {
         {"byte b[4] = '{default:0}; logic [39:0] a = {<<3{b with[2+:5]}};", diag::RangeOOB},
         {"byte b[3:0] = '{default:0}; int a = {<<3{b with[2+:3]}};", diag::RangeOOB},
         {"byte b[0:3] = '{default:0}; int a = {<<3{b with[2:5]}};", diag::RangeOOB},
-        {"byte b[]; int a = {<<3{b with[3:2]}};", diag::RangeSelectReversed},
+        {"byte b[]; int a; initial a = {<<3{b with[3:2]}};", diag::RangeSelectReversed},
         {"byte b[], c[4]; always {>>{b, {<<3{c with[b[0]:b[1]]}}}} = 9;", diag::BadStreamWithOrder},
         {"int a[],b[],c[];bit d;always {>>{b}}={<<{a with [2+:3],c,d}};", diag::BadStreamSize},
     };
@@ -4919,4 +4920,77 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::UnsizedInConcat);
     CHECK(diags[1].code == diag::UnsizedInConcat);
+}
+
+TEST_CASE("Reversed range selects are treated as out of bounds") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic [1:0] d, output logic [1:0] y);
+    always_comb begin
+        y = d;
+        if (1'b1) y = d[0:1];
+        if (1'b0) y = d[0:1];
+        y[0:1] = d;
+    end
+
+    logic [3:0][1:0] arr[2];
+    int i;
+    always_comb arr[0][i][0:1] = '0;
+
+    logic [1:0] z;
+    assign z = 1'b0 ? d[0:1] : d;
+
+    function automatic logic [7:0] f1;
+        logic [3:0] v = 4'b1010;
+        logic [1:0] w;
+        w = v[1:2];
+        return {v, 2'b00, w};
+    endfunction
+
+    function automatic logic [3:0] f2;
+        logic [3:0] v = 4'b1010;
+        v[1:2] = 2'b01;
+        return v;
+    endfunction
+
+    function automatic int f3;
+        int a[] = '{1, 2, 3};
+        int b[2] = '{4, 5};
+        b = a[1:0];
+        return b[0] + b[1];
+    endfunction
+
+    function automatic int f4;
+        int a[0:3] = '{1, 2, 3, 4};
+        int b[2] = '{4, 5};
+        b = a[2:1];
+        a[2:1] = '{7, 8};
+        return b[0] + b[1] + a[1] + a[2];
+    endfunction
+
+    localparam p1 = f1();
+    localparam p2 = f2();
+    localparam p3 = f3();
+    localparam p4 = f4();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& root = compilation.getRoot();
+    CHECK(exactlyEqual(root.lookupName<ParameterSymbol>("m.p1").getValue().integer(),
+                       "8'b101000xx"_si));
+    CHECK(root.lookupName<ParameterSymbol>("m.p2").getValue().integer() == 10);
+    CHECK(root.lookupName<ParameterSymbol>("m.p3").getValue().integer() == 0);
+    CHECK(root.lookupName<ParameterSymbol>("m.p4").getValue().integer() == 5);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 8);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::RangeSelectReversed);
+
+    // None of the selects (or their enclosing statements) should be invalid.
+    int count = 0;
+    root.visit(makeVisitor([&](auto&, const RangeSelectExpression&) { count++; }));
+    CHECK(count == 10);
 }

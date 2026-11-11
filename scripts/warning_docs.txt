@@ -2071,6 +2071,8 @@ endmodule
 -Wrange-select-reversed
 The ordering of a range select (ascending or descending) does not match the direction of
 the dimensions of the type being selected. Most tools error on this, but some allow it.
+slang treats such a selection as entirely out of bounds: reads return the default value
+for the type (all X for four-state types) and writes are ignored.
 ```
 module m;
     logic [63:0] a;

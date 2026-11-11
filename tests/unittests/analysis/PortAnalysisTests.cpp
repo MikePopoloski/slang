@@ -176,8 +176,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::RangeSelectReversed);
+    CHECK(diags[1].code == diag::PortWidthExpand);
 
     compilation.freeze();
 

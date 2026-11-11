@@ -531,11 +531,17 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
                     diag << selectionRange.left << selectionRange.right;
                     diag << valueType;
                 }
-                return badExpr(comp, result);
-            }
 
-            if (!context.inUnevaluatedBranch())
+                // The LRM doesn't specify behavior here; we treat the select as
+                // entirely out of bounds at runtime (reads yield the default value
+                // and writes are ignored), but the width is still well defined so
+                // we give it a type in the same direction as the value's range.
+                selectionRange = selectionRange.reverse();
+                result->warnedAboutRange = true;
+            }
+            else if (!context.inUnevaluatedBranch()) {
                 validateRange(selectionRange);
+            }
         }
         else {
             if (!context.requireGtZero(rv, right.sourceRange))
@@ -618,7 +624,11 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
                     diag << selectionRange.left << selectionRange.right;
                     diag << valueType;
                 }
-                return badExpr(comp, result);
+
+                // As above, treat this as out of bounds at runtime but
+                // still give it a well defined type.
+                selectionRange = selectionRange.reverse();
+                result->warnedAboutRange = true;
             }
         }
         else {
@@ -663,8 +673,14 @@ Expression& RangeSelectExpression::fromConstant(const TypeProvider& typeProvider
     }
 
     // This method is only called on expressions with a fixed range type.
-    SLANG_ASSERT(range.isDescending() == valueRange.isDescending() || range.width() == 1);
     SLANG_ASSERT(valueType.hasFixedRange());
+
+    // A reversed selection is treated as out of bounds when evaluated,
+    // but the type still follows the direction of the value's range.
+    if (range.isDescending() != valueRange.isDescending() && range.width() > 1 &&
+        valueRange.width() > 1) {
+        range = range.reverse();
+    }
 
     if (valueType.isUnpackedArray()) {
         result->type = &FixedSizeUnpackedArrayType::fromDim(alloc, context, elementType, range,
@@ -781,6 +797,27 @@ std::optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& conte
         result = {*li, *ri};
         if (checkRangeOverflow(result, context, sourceRange))
             return std::nullopt;
+
+        // A selection that is reversed relative to the value's range is
+        // treated as entirely out of bounds; reads return the default value
+        // and writes are ignored. A warning was already issued at bind time.
+        // Queues are handled separately by the caller.
+        if (result.width() > 1 && !valueType.isQueue()) {
+            bool reversed;
+            if (valueType.hasFixedRange()) {
+                auto valueRange = valueType.getFixedRange();
+                reversed = valueRange.width() > 1 &&
+                           result.isDescending() != valueRange.isDescending();
+            }
+            else {
+                reversed = result.isDescending();
+            }
+
+            if (reversed) {
+                softFail = true;
+                return std::nullopt;
+            }
+        }
     }
     else {
         bool isDescending = false;
