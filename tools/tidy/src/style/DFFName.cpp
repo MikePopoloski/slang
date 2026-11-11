@@ -192,6 +192,15 @@ private:
         return expression.as<ValueExpressionBase>().symbol.name;
     }
 
+    // Input ports follow the port naming rules, so they may feed a flip-flop under any name.
+    bool isInputPortName(const Expression& expression) const {
+        if (!getVariableNameOutsideMacro(expression))
+            return false;
+        const auto& symbol = expression.as<ValueExpressionBase>().symbol;
+        return std::ranges::any_of(analysisManager.getDrivers(symbol),
+                                   [](const auto driver) { return driver->isInputPort(); });
+    }
+
     void reportMissingSuffix(const ExpressionSyntax& syntax, const std::string& text,
                              const std::vector<std::string>& suffixes) {
         diags.add(diag::DFFName, syntax.sourceRange().start())
@@ -244,7 +253,7 @@ private:
             return;
         }
 
-        if (inputSuffix.empty())
+        if (inputSuffix.empty() || isInputPortName(rhs))
             return;
 
         const auto rhsNameBeforeSuffix = getNameBeforeSuffix(rhsName, inputSuffix);
@@ -294,7 +303,8 @@ public:
                fmt::format(fmt::emphasis::italic, "dffWaiveIfConditions") +
                " or whose left-hand side matches " +
                fmt::format(fmt::emphasis::italic, "dffWaiveLhsRegexString") +
-               " are not checked. Enabling this check also enables AlwaysCombNonBlocking, "
+               " are not checked. An input port may also feed a flip-flop, such as data_q <= "
+               "data_i. Enabling this check also enables AlwaysCombNonBlocking, "
                "AlwaysFFBlocking and NoOldAlwaysSyntax, which reports registers in plain always "
                "blocks\n";
     }

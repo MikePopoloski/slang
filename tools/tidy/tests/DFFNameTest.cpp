@@ -204,6 +204,20 @@ endmodule
 )");
 }
 
+TEST_CASE("DFFName: Input ports may feed a flip-flop") {
+    CHECK("\n" + getDFFNameWarnings(R"(
+module top (input logic clk_i, input logic [3:0] data_i);
+    logic [3:0] other_q, slice_q, local_value, local_q;
+    always_ff @(posedge clk_i) other_q <= data_i;
+    always_ff @(posedge clk_i) slice_q <= data_i[1:0];
+    always_ff @(posedge clk_i) local_q <= local_value;
+endmodule
+)") == R"(
+5:43: 'data_i[1:0]' should be a variable whose name ends with one of ["_next", "_n", "_d"]
+6:43: 'local_value' should be a variable whose name ends with one of ["_next", "_n", "_d"]
+)");
+}
+
 TEST_CASE("DFFName: Waive regex skips memories") {
     auto result = runCheckTest("DFFName", R"(
 module top (input logic clk_i, input logic [1:0] addr);

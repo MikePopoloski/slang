@@ -113,7 +113,8 @@ even if the configuration disables them. It checks flip-flop names:
 
 * Each nonblocking assignment inside an `always_ff` assigns a variable whose name ends with a
   suffix from **dffOutputSuffix**, from a variable whose name ends with a suffix from
-  **dffInputSuffix** and has the same name before the suffix, such as `data_q <= data_d`.
+  **dffInputSuffix** and has the same name before the suffix, such as `data_q <= data_d`. An
+  input port with any name may replace the input variable, such as `data_q <= data_i`.
 * A number after the output suffix marks a pipeline stage, which takes its value from the
   previous stage, such as `data_q2 <= data_q1`.
 * An `always_ff` assigns a whole register, never part of one, such as a struct member
