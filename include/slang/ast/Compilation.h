@@ -381,6 +381,28 @@ public:
     /// Gets all of the diagnostics produced during compilation.
     const Diagnostics& getAllDiagnostics();
 
+    /// Captures diagnostics issued while it is alive instead of adding them
+    /// to the compilation's main diagnostic set. Useful for getting
+    /// diagnostics from operations on an already-elaborated compilation,
+    /// such as binding an expression in a REPL. Captures can be nested.
+    class SLANG_EXPORT DiagnosticCapture {
+    public:
+        explicit DiagnosticCapture(Compilation& compilation);
+        ~DiagnosticCapture();
+
+        DiagnosticCapture(const DiagnosticCapture&) = delete;
+        DiagnosticCapture& operator=(const DiagnosticCapture&) = delete;
+
+        /// Returns the captured diagnostics and stops capturing.
+        Diagnostics finish();
+
+    private:
+        Compilation& compilation;
+        ASTDiagMap diagMap;
+        ASTDiagMap* prevCapture;
+        bool active = true;
+    };
+
     /// Queries if any errors have been issued on any scope within this compilation.
     bool hasIssuedErrors() const { return numErrors > 0; };
 
@@ -986,6 +1008,10 @@ private:
     // A map from diag code + location to the diagnostics that have occurred at that location.
     // This is used to collapse duplicate diagnostics across instantiations into a single report.
     ASTDiagMap diagMap;
+
+    // If non-null, diagnostics are redirected to this map instead of diagMap.
+    // Set by DiagnosticCapture while it's active.
+    ASTDiagMap* activeCapture = nullptr;
 
     // A list of libraries that control the order in which we search for cell bindings.
     std::vector<const SourceLibrary*> defaultLiblist;
