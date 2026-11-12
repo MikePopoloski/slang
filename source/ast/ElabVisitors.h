@@ -494,7 +494,10 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
         // Go back over and find generic classes that were never instantiated
         // and force an empty one to make sure we collect all diagnostics that
         // don't depend on parameter values.
-        for (auto symbol : genericClasses) {
+        // Note: genericClasses can grow while we iterate (from nested generic classes)
+        // so iterate by index.
+        for (size_t i = 0; i < genericClasses.size(); i++) {
+            auto symbol = genericClasses[i];
             if (symbol->numSpecializations() == 0)
                 symbol->getInvalidSpecialization().visit(*this);
         }
