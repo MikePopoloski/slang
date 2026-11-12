@@ -4336,3 +4336,21 @@ endmodule
     CHECK(diags[0].code == diag::InvalidThisHandle);
     CHECK(diags[1].code == diag::InvalidThisHandle);
 }
+
+TEST_CASE("Never-specialized generic classes that contain nested generic classes") {
+    // Forcing an invalid specialization of each never-specialized generic class during the final
+    // diagnostic pass reaches its nested generic class, which appends to the list of generic
+    // classes that is being iterated.
+    std::string source;
+    for (int n = 0; n < 40; ++n) {
+        auto s = std::to_string(n);
+        source += "class G" + s + " #(type T = int);\n";
+        source += "class Inner" + s + " #(type U = int); endclass\n";
+        source += "endclass\n";
+    }
+
+    auto tree = SyntaxTree::fromText(source);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
