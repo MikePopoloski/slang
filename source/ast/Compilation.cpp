@@ -1692,6 +1692,23 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     return *cachedSemanticDiagnostics;
 }
 
+Compilation::DiagnosticCapture::DiagnosticCapture(Compilation& compilation) :
+    compilation(compilation), prevCapture(compilation.activeCapture) {
+    compilation.activeCapture = &diagMap;
+}
+
+Compilation::DiagnosticCapture::~DiagnosticCapture() {
+    if (active)
+        compilation.activeCapture = prevCapture;
+}
+
+Diagnostics Compilation::DiagnosticCapture::finish() {
+    SLANG_ASSERT(active);
+    active = false;
+    compilation.activeCapture = prevCapture;
+    return diagMap.coalesce(compilation.sourceManager);
+}
+
 const Diagnostics& Compilation::getAllDiagnostics() {
     if (cachedAllDiagnostics)
         return *cachedAllDiagnostics;
@@ -1767,6 +1784,9 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
     const bool isError = diag.isError();
 
     bool isNew;
+    if (activeCapture)
+        return activeCapture->add(std::move(diag), isNew);
+
     auto& result = diagMap.add(std::move(diag), isNew);
     if (isNew && isError)
         numErrors++;

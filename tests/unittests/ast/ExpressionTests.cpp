@@ -4994,3 +4994,46 @@ endmodule
     root.visit(makeVisitor([&](auto&, const RangeSelectExpression&) { count++; }));
     CHECK(count == 10);
 }
+
+TEST_CASE("Compilation diagnostic capture") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    REQUIRE(compilation.getAllDiagnostics().empty());
+
+    auto& root = compilation.getRoot();
+    ASTContext context(root, LookupLocation::max);
+
+    auto syntax = SyntaxTree::fromText("undefinedVar");
+    auto& exprSyntax = syntax->root().as<ExpressionSyntax>();
+
+    Compilation::DiagnosticCapture capture(compilation);
+    auto& expr = Expression::bind(exprSyntax, context);
+    CHECK(expr.bad());
+
+    auto diags = capture.finish();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+
+    // Captured diagnostics don't affect the compilation.
+    CHECK(compilation.getAllDiagnostics().empty());
+
+    // Nested captures: inner gets diagnostics until it finishes.
+    Compilation::DiagnosticCapture outer(compilation);
+    {
+        auto syntax2 = SyntaxTree::fromText("(1 + 1) = 2");
+        auto& exprSyntax2 = syntax2->root().as<ExpressionSyntax>();
+
+        Compilation::DiagnosticCapture inner(compilation);
+        Expression::bind(exprSyntax2, context, ASTFlags::AssignmentAllowed);
+        auto innerDiags = inner.finish();
+        REQUIRE(innerDiags.size() == 1);
+        CHECK(innerDiags[0].code == diag::ExpressionNotAssignable);
+    }
+    CHECK(outer.finish().empty());
+}
