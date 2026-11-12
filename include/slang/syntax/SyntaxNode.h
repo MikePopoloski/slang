@@ -22,6 +22,10 @@ namespace slang::syntax {
 
 class SyntaxNode;
 
+namespace detail {
+struct CloneVisitor;
+}
+
 /// A token pointer or a syntax node pointer.
 struct SLANG_EXPORT PtrTokenOrSyntax {
     PtrTokenOrSyntax(parsing::Token* token) :
@@ -305,9 +309,12 @@ protected:
     explicit SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
 private:
+    friend struct detail::CloneVisitor;
+
     ConstTokenOrSyntax getChild(size_t index) const;
     TokenOrSyntax getChild(size_t index);
     PtrTokenOrSyntax getChildPtr(size_t index);
+    void setChild(size_t index, TokenOrSyntax child);
 };
 
 /// @brief Performs a shallow clone of the given syntax node.

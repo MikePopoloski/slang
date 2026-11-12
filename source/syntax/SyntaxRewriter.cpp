@@ -12,11 +12,7 @@
 #include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxListInfo.h"
 
-namespace {
-
-using namespace slang;
-using namespace slang::syntax;
-using namespace slang::syntax::detail;
+namespace slang::syntax::detail {
 
 struct CloneVisitor {
     BumpAllocator& alloc;
@@ -36,10 +32,6 @@ struct CloneVisitor {
         return triviaBuffer.copy(alloc);
     }
 
-#ifdef _MSC_VER
-#    pragma warning(push)
-#    pragma warning(disable : 4127) // conditional expression is constant
-#endif
     // Clone the contents of one list-typed child slot, applying any pending
     // edits (insertBefore/insertAfter on elements, replace/remove on elements,
     // listInsertAtFront/listInsertAtBack on the list, and removeToken/
@@ -47,8 +39,8 @@ struct CloneVisitor {
     // list via the type-erased `resetAll` thunk in @a dstList. Returns the
     // number of children written so the caller can advance its destination
     // flat index.
-    template<typename T>
-    size_t cloneList(const T& srcNode, const ListChildInfo& srcList, const ListChildInfo& dstList) {
+    size_t cloneList(const SyntaxNode& srcNode, const ListChildInfo& srcList,
+                     const ListChildInfo& dstList) {
         SmallVector<TokenOrSyntax, 8> listBuffer;
         bool skipSeparator = false;
         const void* listKey = srcList.listPtr;
@@ -112,7 +104,7 @@ struct CloneVisitor {
                 }
             }
             else {
-                listBuffer.push_back(child->visit(*this));
+                listBuffer.push_back(cloneNode(*child));
             }
 
             if (auto it = commits.insertAfter.find(child); it != commits.insertAfter.end()) {
@@ -147,39 +139,40 @@ struct CloneVisitor {
     // Apply pending changes to a single non-list child slot of the given node / index,
     // writing the result into `cloned` at flat index `dstIndex`. The two indices may differ
     // when the parent has list members whose sizes change between source and destination.
-    template<typename T>
-    void cloneChild(const T& node, size_t srcIndex, T& cloned, size_t dstIndex) {
-        auto child = node.childNode(srcIndex);
-        if (!child) {
-            if (node.getChild(srcIndex).isToken()) {
-                if (auto it = commits.tokenRemoveOrReplace.find(
-                        std::make_pair(static_cast<const void*>(&node), srcIndex));
-                    it != commits.tokenRemoveOrReplace.end()) {
-                    if (auto replaceChange = std::get_if<TokenReplaceChange>(&it->second)) {
-                        cloned.setChild(dstIndex, replaceChange->newToken);
-                    }
-                    else {
-                        auto removeChange = std::get_if<TokenRemoveChange>(&it->second);
-                        if (removeChange && removeChange->preserveTrivia) {
-                            this->previousTrivia = copyTrivia(node.childToken(srcIndex).trivia());
-                        }
-                        cloned.setChild(dstIndex, parsing::Token());
-                    }
+    void cloneChild(const SyntaxNode& node, size_t srcIndex, SyntaxNode& cloned, size_t dstIndex) {
+        auto origChild = node.getChild(srcIndex);
+        if (origChild.isToken()) {
+            auto token = origChild.token();
+            if (auto it = commits.tokenRemoveOrReplace.find(
+                    std::make_pair(static_cast<const void*>(&node), srcIndex));
+                it != commits.tokenRemoveOrReplace.end()) {
+                if (auto replaceChange = std::get_if<TokenReplaceChange>(&it->second)) {
+                    cloned.setChild(dstIndex, replaceChange->newToken);
                 }
                 else {
-                    if (this->previousTrivia.empty()) {
-                        cloned.setChild(dstIndex, node.childToken(srcIndex).deepClone(alloc));
+                    auto removeChange = std::get_if<TokenRemoveChange>(&it->second);
+                    if (removeChange && removeChange->preserveTrivia) {
+                        this->previousTrivia = copyTrivia(token.trivia());
                     }
-                    else {
-                        cloned.setChild(dstIndex,
-                                        node.childToken(srcIndex).deepClone(alloc).withTrivia(
-                                            alloc, this->previousTrivia));
-                        this->previousTrivia = {};
-                    }
+                    cloned.setChild(dstIndex, parsing::Token());
+                }
+            }
+            else {
+                if (this->previousTrivia.empty()) {
+                    cloned.setChild(dstIndex, token.deepClone(alloc));
+                }
+                else {
+                    cloned.setChild(dstIndex,
+                                    token.deepClone(alloc).withTrivia(alloc, this->previousTrivia));
+                    this->previousTrivia = {};
                 }
             }
             return;
         }
+
+        auto child = origChild.node();
+        if (!child)
+            return;
 
         if (auto it = commits.removeOrReplace.find(child); it != commits.removeOrReplace.end()) {
             if (auto replaceChange = std::get_if<ReplaceChange>(&it->second)) {
@@ -191,20 +184,12 @@ struct CloneVisitor {
             }
         }
         else {
-            cloned.setChild(dstIndex, child->visit(*this));
+            cloned.setChild(dstIndex, cloneNode(*child));
         }
     }
 
-    // Convenience overload used by the simple flat-index path for parents
-    // without list members; here srcIndex == dstIndex.
-    template<typename T>
-    void cloneChild(const T& node, size_t i, T& cloned) {
-        cloneChild(node, i, cloned, i);
-    }
-
-    template<typename T>
-    SyntaxNode* visit(const T& node) {
-        T* cloned = clone(node, alloc);
+    SyntaxNode* cloneNode(const SyntaxNode& node) {
+        SyntaxNode* cloned = clone(node, alloc);
         cloneChildren(node, *cloned);
 
         // The shallow clone still points at the original node's parent, and the
@@ -226,19 +211,18 @@ struct CloneVisitor {
         return cloned;
     }
 
-    template<typename T>
-    void cloneChildren(const T& node, T& cloned) {
+    void cloneChildren(const SyntaxNode& node, SyntaxNode& cloned) {
         // Discover any list-typed child slots so we can dispatch list-level
         // edits via the rewriter machinery. Most node types have no lists,
         // in which case we fall back to a simple flat-index walk.
         SmallVector<ListChildInfo, 2> srcLists, dstLists;
-        getChildListInfo(const_cast<T&>(node), srcLists);
+        getChildListInfo(const_cast<SyntaxNode&>(node), srcLists);
         getChildListInfo(cloned, dstLists);
 
         if (srcLists.empty()) {
             const size_t count = node.getChildCount();
             for (size_t i = 0; i < count; i++)
-                cloneChild(node, i, cloned);
+                cloneChild(node, i, cloned, i);
             return;
         }
 
@@ -264,14 +248,7 @@ struct CloneVisitor {
             }
         }
     }
-#ifdef _MSC_VER
-#    pragma warning(pop)
-#endif
 };
-
-} // namespace
-
-namespace slang::syntax::detail {
 
 std::shared_ptr<SyntaxTree> transformTree(BumpAllocator&& alloc,
                                           const std::shared_ptr<SyntaxTree>& tree,
@@ -279,7 +256,7 @@ std::shared_ptr<SyntaxTree> transformTree(BumpAllocator&& alloc,
                                           const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees,
                                           const SourceLibrary* library) {
     CloneVisitor visitor(alloc, commits);
-    SyntaxNode* root = tree->root().visit(visitor);
+    SyntaxNode* root = visitor.cloneNode(tree->root());
 
     // Steal ownership of any temporary syntax trees that the user created; once we return the
     // user expects that the newly transformed tree fully owns all of its memory.

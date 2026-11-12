@@ -36,6 +36,13 @@ struct GetChildVisitor {
     }
 };
 
+struct SetChildVisitor {
+    template<typename T>
+    void visit(T& node, size_t index, TokenOrSyntax child) {
+        node.setChild(index, child);
+    }
+};
+
 } // namespace
 
 namespace slang::syntax {
@@ -152,6 +159,11 @@ PtrTokenOrSyntax SyntaxNode::getChildPtr(size_t index) {
 TokenOrSyntax SyntaxNode::getChild(size_t index) {
     GetChildVisitor visitor;
     return visit(visitor, index);
+}
+
+void SyntaxNode::setChild(size_t index, TokenOrSyntax child) {
+    SetChildVisitor visitor;
+    visit(visitor, index, child);
 }
 
 SyntaxNode::token_iterator::token_iterator(const SyntaxNode* node) :
