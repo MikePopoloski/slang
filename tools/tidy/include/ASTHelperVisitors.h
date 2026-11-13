@@ -33,6 +33,12 @@ std::optional<std::string_view> getIdentifier(const slang::ast::Expression& expr
 std::optional<slang::SourceLocation> getExpressionSourceLocation(
     const slang::ast::Expression& expr);
 
+// Returns the variables declared outside a plain always block that the block assigns, one entry
+// per assignment, which style-no-old-always-syntax reports. Returns nothing for other kinds of
+// procedural block and for blocks that come from assertions.
+std::vector<const slang::ast::Symbol*> getOuterVariablesAssignedInAlways(
+    const slang::ast::ProceduralBlockSymbol& block);
+
 struct TidyVisitor {
 protected:
     explicit TidyVisitor(slang::Diagnostics& diagnostics) :

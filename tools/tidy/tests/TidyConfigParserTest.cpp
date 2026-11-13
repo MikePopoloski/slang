@@ -136,6 +136,40 @@ TEST_CASE("TidyParser: Set check config") {
     CHECK(config.getCheckConfigs().typedefRegexString == "[a-z_0-9]+_t");
 }
 
+TEST_CASE("TidyParser: Set check config lists with quoted values") {
+    auto config_str = std::string(R"(CheckConfigs:
+    dffOutputSuffix: [_q, "_reg"],
+    dffWaiveIfConditions: ["!rst_ni", "flush_i || !rst_ni"],
+    dffWaiveLhsRegexString: "(?i)mem.*")");
+    TidyConfigParser parser(config_str);
+
+    auto config = parser.getConfig();
+
+    CHECK(config.getCheckConfigs().dffOutputSuffix == std::vector<std::string>{"_q", "_reg"});
+    CHECK(config.getCheckConfigs().dffWaiveIfConditions ==
+          std::vector<std::string>{"!rst_ni", "flush_i||!rst_ni"});
+    CHECK(config.getCheckConfigs().dffWaiveLhsRegexString == "(?i)mem.*");
+}
+
+TEST_CASE("TidyParser: style-dff-name forces on the always block style checks") {
+    auto config = TidyConfigParser(std::string(R"(Checks:
+    -*,
+    style-dff-name,
+    -style-always-ff-blocking)"))
+                      .getConfig();
+    CHECK(config.isCheckEnabled(slang::TidyKind::Style, "AlwaysCombNonBlocking"));
+    CHECK(config.isCheckEnabled(slang::TidyKind::Style, "AlwaysFFBlocking"));
+    CHECK(config.isCheckEnabled(slang::TidyKind::Style, "NoOldAlwaysSyntax"));
+    CHECK_FALSE(config.isCheckEnabled(slang::TidyKind::Style, "NoCaseX"));
+
+    config = TidyConfigParser(std::string(R"(Checks:
+    -*,
+    style-always-ff-blocking)"))
+                 .getConfig();
+    CHECK_FALSE(config.isCheckEnabled(slang::TidyKind::Style, "AlwaysCombNonBlocking"));
+    CHECK(config.isCheckEnabled(slang::TidyKind::Style, "AlwaysFFBlocking"));
+}
+
 TEST_CASE("TidyParser: CheckConfigs and Checks") {
     auto config_str = std::string(R"(CheckConfigs:
         clkName: clk,

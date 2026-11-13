@@ -42,3 +42,15 @@ TEST_CASE("Round trip config file") {
 
     CHECK(filesEqual("tidy-config1", "tidy-config2"));
 }
+
+TEST_CASE("Round trip list config options") {
+    TidyConfig config;
+    config.getCheckConfigs().inputPortSuffix = {"_i", "_in"};
+    config.getCheckConfigs().inputPortPrefix = {"!in|"};
+    config.getCheckConfigs().inoutPortSuffix = {};
+
+    auto newConfig = TidyConfigParser(TidyConfigPrinter::dumpConfig(config)).getConfig();
+    CHECK(newConfig.getCheckConfigs().inputPortSuffix == std::vector<std::string>{"_i", "_in"});
+    CHECK(newConfig.getCheckConfigs().inputPortPrefix == std::vector<std::string>{"!in|"});
+    CHECK(newConfig.getCheckConfigs().inoutPortSuffix.empty());
+}

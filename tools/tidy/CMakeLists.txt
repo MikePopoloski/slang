@@ -41,6 +41,7 @@ add_library(
   src/style/StructName.cpp
   src/style/UnionName.cpp
   src/style/TypedefName.cpp
+  src/style/DFFName.cpp
   src/synthesis/StructFieldsInSameProcess.cpp
   src/assertion/ConcurrentAssertHasFailAction.cpp
   src/constraint/ConditionalOperatorPrecedence.cpp

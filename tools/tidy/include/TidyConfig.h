@@ -54,6 +54,11 @@ public:
         boost::regex unionRegexPattern;
         std::string typedefRegexString;
         boost::regex typedefRegexPattern;
+        std::vector<std::string> dffInputSuffix;
+        std::vector<std::string> dffOutputSuffix;
+        std::vector<std::string> dffWaiveIfConditions;
+        std::string dffWaiveLhsRegexString;
+        boost::regex dffWaiveLhsRegexPattern;
     };
 
     /// Default TidyConfig constructor which will set the default check's configuration values
@@ -95,27 +100,39 @@ public:
     /// Serialise the tidy config for printing in the config file format.
     std::vector<std::pair<std::string, std::string>> serialise() const {
         const auto& cfg = getCheckConfigs();
-        auto joinVec = [](const auto& vec) { return fmt::format("{}", fmt::join(vec, "|")); };
+        auto quote = [](const std::string& value) {
+            return value.empty() ? value : fmt::format("\"{}\"", value);
+        };
+        auto joinVec = [&](const auto& vec) {
+            std::vector<std::string> quotedValues;
+            for (const auto& value : vec)
+                quotedValues.push_back(quote(value));
+            return fmt::format("[{}]", fmt::join(quotedValues, ", "));
+        };
         return {
-            {"clkName", cfg.clkName},
-            {"resetName", cfg.resetName},
-            {"clkNameRegexString", cfg.clkNameRegexString},
-            {"resetIsActiveHigh", cfg.resetIsActiveHigh ? "true" : "false"},
+            {"clkName", quote(cfg.clkName)},
+            {"resetName", quote(cfg.resetName)},
+            {"clkNameRegexString", quote(cfg.clkNameRegexString)},
+            {"resetIsActiveHigh", quote(cfg.resetIsActiveHigh ? "true" : "false")},
             {"inputPortSuffix", joinVec(cfg.inputPortSuffix)},
             {"outputPortSuffix", joinVec(cfg.outputPortSuffix)},
             {"inoutPortSuffix", joinVec(cfg.inoutPortSuffix)},
-            {"moduleInstantiationPrefix", cfg.moduleInstantiationPrefix},
+            {"moduleInstantiationPrefix", quote(cfg.moduleInstantiationPrefix)},
             {"inputPortPrefix", joinVec(cfg.inputPortPrefix)},
             {"outputPortPrefix", joinVec(cfg.outputPortPrefix)},
             {"inoutPortPrefix", joinVec(cfg.inoutPortPrefix)},
-            {"allowNestedAnon", cfg.allowNestedAnon ? "true" : "false"},
-            {"covergroupRegexString", cfg.covergroupRegexString},
-            {"coverpointRegexString", cfg.coverpointRegexString},
-            {"crossRegexString", cfg.crossRegexString},
-            {"enumRegexString", cfg.enumRegexString},
-            {"structRegexString", cfg.structRegexString},
-            {"unionRegexString", cfg.unionRegexString},
-            {"typedefRegexString", cfg.typedefRegexString},
+            {"allowNestedAnon", quote(cfg.allowNestedAnon ? "true" : "false")},
+            {"covergroupRegexString", quote(cfg.covergroupRegexString)},
+            {"coverpointRegexString", quote(cfg.coverpointRegexString)},
+            {"crossRegexString", quote(cfg.crossRegexString)},
+            {"enumRegexString", quote(cfg.enumRegexString)},
+            {"structRegexString", quote(cfg.structRegexString)},
+            {"unionRegexString", quote(cfg.unionRegexString)},
+            {"typedefRegexString", quote(cfg.typedefRegexString)},
+            {"dffInputSuffix", joinVec(cfg.dffInputSuffix)},
+            {"dffOutputSuffix", joinVec(cfg.dffOutputSuffix)},
+            {"dffWaiveIfConditions", joinVec(cfg.dffWaiveIfConditions)},
+            {"dffWaiveLhsRegexString", quote(cfg.dffWaiveLhsRegexString)},
         };
     }
 
@@ -242,6 +259,24 @@ private:
         else if (configName == "typedefRegexString") {
             visit(checkConfigs.typedefRegexString);
             checkConfigs.typedefRegexPattern = boost::regex(checkConfigs.typedefRegexString);
+            return;
+        }
+        else if (configName == "dffInputSuffix") {
+            visit(checkConfigs.dffInputSuffix);
+            return;
+        }
+        else if (configName == "dffOutputSuffix") {
+            visit(checkConfigs.dffOutputSuffix);
+            return;
+        }
+        else if (configName == "dffWaiveIfConditions") {
+            visit(checkConfigs.dffWaiveIfConditions);
+            return;
+        }
+        else if (configName == "dffWaiveLhsRegexString") {
+            visit(checkConfigs.dffWaiveLhsRegexString);
+            checkConfigs.dffWaiveLhsRegexPattern = boost::regex(
+                checkConfigs.dffWaiveLhsRegexString);
             return;
         }
         SLANG_THROW(std::invalid_argument(fmt::format("The check: {} does not exist", configName)));

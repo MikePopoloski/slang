@@ -40,6 +40,7 @@ add_executable(
   StructNameTest.cpp
   UnionNameTest.cpp
   TypedefNameTest.cpp
+  DFFNameTest.cpp
   StructFieldsInSameProcessTest.cpp
   ConcurrentAssertHasFailActionTest.cpp
   ConditionalOperatorPrecedenceTest.cpp
