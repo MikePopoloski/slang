@@ -8,6 +8,8 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/LexerFacts.h"
 #include "slang/parsing/Parser.h"
+#include "slang/parsing/Preprocessor.h"
+#include "slang/text/SourceManager.h"
 
 namespace slang::parsing {
 
@@ -743,6 +745,15 @@ BlockStatementSyntax& Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind
     auto endName = parseNamedBlockClause();
 
     checkBlockNames(name, endName, label);
+
+    // Fork/join blocks are excluded because blocks are needed there to group
+    // statements into sequential processes.
+    if (blockKind == SyntaxKind::SequentialBlockStatement) {
+        for (auto item : items) {
+            checkUnnecessaryBlock(*item);
+        }
+    }
+
     return factory.blockStatement(blockKind, label, attributes, begin, name, items, end, endName);
 }
 
@@ -1189,6 +1200,43 @@ void Parser::checkMisleadingIndentation(const SyntaxNode& prevStmt, Token nextTo
     }
 
     addDiag(diag::MisleadingIndentation, nextToken.location()) << ctrlName;
+}
+
+void Parser::checkUnnecessaryBlock(const SyntaxNode& stmt) {
+    if (stmt.kind != SyntaxKind::SequentialBlockStatement) {
+        return;
+    }
+
+    auto& block = stmt.as<BlockStatementSyntax>();
+
+    // Skip if the block is totally broken anyway.
+    if (block.end.isMissing()) {
+        return;
+    }
+
+    // Named or labeled blocks create a scope that can be referenced hierarchically
+    // or disabled, and attributes may be meaningful to tools, so leave those alone.
+    //
+    // This also provides a convenient way to opt-out of this warning when you really do
+    // want to have the block.
+    if (block.label || block.blockName || !block.attributes.empty()) {
+        return;
+    }
+
+    // Skip blocks that contain variable declarations. Those can be useful to limit scope.
+    for (auto item : block.items) {
+        if (!StatementSyntax::isKind(item->kind) ||
+            item->kind == SyntaxKind::CheckerInstanceStatement) {
+            return;
+        }
+    }
+
+    // Skip macros, which may use begin .. end blocks for hygiene.
+    if (getPP().getSourceManager().isMacroLoc(block.begin.location())) {
+        return;
+    }
+
+    addDiag(diag::UnnecessaryBlock, block.begin.range());
 }
 
 } // namespace slang::parsing

@@ -837,6 +837,18 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
     auto items = parseBlockItems(endKind, end, isConstructor);
     auto endBlockName = parseNamedBlockClause();
 
+    // Function and task bodies containing a single statement are excluded because
+    // they could be ancient Verilog-1995 subroutines, where that was required.
+    // Empty statements (e.g. from `end;`) don't count.
+    auto numNonEmptyStatements = std::ranges::count_if(items, [](auto item) {
+        return StatementSyntax::isKind(item->kind) && item->kind != SyntaxKind::EmptyStatement;
+    });
+    if (numNonEmptyStatements != 1) {
+        for (auto item : items) {
+            checkUnnecessaryBlock(*item);
+        }
+    }
+
     Token nameToken = prototype.name->getLastToken();
     if (nameToken.kind == TokenKind::Identifier || nameToken.kind == TokenKind::NewKeyword)
         checkBlockNames(nameToken, endBlockName);

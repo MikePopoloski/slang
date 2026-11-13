@@ -986,7 +986,10 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnnecessaryBlock);
 }
 
 TEST_CASE("Parallel blocks -- invalid in constexpr") {
@@ -1977,7 +1980,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter({diag::UnnecessaryBlock});
     REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::EmptyBody);
     CHECK(diags[1].code == diag::EmptyBody);
@@ -2702,6 +2705,108 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MissingElseClause);
+}
+
+TEST_CASE("Unnecessary block warning") {
+    auto tree = SyntaxTree::fromText(R"(
+`define M(x) begin x = 1; end
+module m;
+    logic a;
+    logic b;
+    initial begin
+        // Warn: likely meant "end else begin".
+        if (a) begin
+            b = 0;
+        end begin
+            b = 1;
+        end
+
+        // Warn: bare block inside a block.
+        begin
+            b = 1;
+        end
+
+        // No warning: named and labeled blocks.
+        begin : named
+            b = 1;
+        end
+        lbl: begin
+            b = 1;
+        end
+
+        // No warning: block with declarations.
+        begin
+            int c;
+            c = 1;
+        end
+
+        // No warning: blocks inside fork/join.
+        fork
+            begin
+                b = 1;
+            end
+        join
+
+        // No warning: attributes.
+        (* foo *) begin
+            b = 1;
+        end
+
+        // No warning: macro expansion.
+        `M(b)
+    end
+
+    // No warning: single statement contexts.
+    initial begin
+        b = 1;
+    end
+    always_comb if (a) begin b = 1; end else begin b = 0; end
+
+    task t;
+        // Warn: bare block in a task body alongside another statement.
+        b = 0;
+        begin
+            b = 1;
+        end
+    endtask
+
+    // No warning: Verilog-1995 style function and task bodies.
+    function f;
+        input x;
+        begin
+            f = x;
+        end
+    endfunction
+    task t2;
+        input x;
+        begin
+            b = x;
+        end
+    endtask
+    function f2;
+        input x;
+        begin
+            f2 = x;
+        end;
+    endfunction
+
+    // Warn: lone nested block in a begin/end block.
+    initial begin
+        begin
+            b = 1;
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // The 'end;' above also produces an empty statement warning, which isn't relevant here.
+    auto diags = compilation.getAllDiagnostics().filter({diag::EmptyStatement});
+    REQUIRE(diags.size() == 4);
+    for (auto& d : diags)
+        CHECK(d.code == diag::UnnecessaryBlock);
 }
 
 TEST_CASE("Timing statement not allowed in function") {

@@ -838,6 +838,25 @@ module m;
 endmodule
 ```
 
+-Wunnecessary-block
+Unnecessary use of `begin`/`end` blocks, which may indicate a mistake as in the example below.
+This does not warn about potentially legitimate uses of blocks including named blocks,
+blocks in `fork`/`join`, macros, blocks containing declarations, or blocks that form
+the entire body of a function or task (required in Verilog-1995). If you really want a block
+(e.g. for visual grouping) the best way to disable this warning is to name the block.
+```
+module m;
+    logic rst, x;
+    initial begin
+        if (rst) begin
+            x = 0;
+        end begin // probably meant 'end else begin'
+            x = 1;
+        end
+    end
+endmodule
+```
+
 -Wcolon-plus
 A range select contains `':+'` which is parsed as a simple range `[a : +b]` where the right
 operand has unary plus applied. This is almost always a typo for the ascending part-select
