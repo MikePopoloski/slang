@@ -389,6 +389,47 @@ TEST_CASE("Conditional expression") {
     CHECK(cond.predicate->conditions[0]->expr->kind == SyntaxKind::LogicalOrExpression);
 }
 
+TEST_CASE("Conditional expression precedence vs implication") {
+    // The conditional operator binds tighter than -> and <->.
+    for (auto [op, kind] : {std::pair{"->", SyntaxKind::LogicalImplicationExpression},
+                            std::pair{"<->", SyntaxKind::LogicalEquivalenceExpression}}) {
+        auto text = fmt::format("a ? b : c {} d", op);
+        auto& expr = parseExpression(text);
+        CHECK(expr.toString() == text);
+        CHECK_DIAGNOSTICS_EMPTY;
+        REQUIRE(expr.kind == kind);
+        auto& bin = expr.as<BinaryExpressionSyntax>();
+        CHECK(bin.left->kind == SyntaxKind::ConditionalExpression);
+        CHECK(bin.right->kind == SyntaxKind::IdentifierName);
+    }
+
+    // The true branch is delimited by the colon.
+    auto& inTrue = parseExpression("a ? b -> c : d");
+    CHECK_DIAGNOSTICS_EMPTY;
+    REQUIRE(inTrue.kind == SyntaxKind::ConditionalExpression);
+    CHECK(inTrue.as<ConditionalExpressionSyntax>().left->kind ==
+          SyntaxKind::LogicalImplicationExpression);
+
+    // The right operand of an implication takes a conditional.
+    auto& onRight = parseExpression("a -> b ? c : d");
+    CHECK_DIAGNOSTICS_EMPTY;
+    REQUIRE(onRight.kind == SyntaxKind::LogicalImplicationExpression);
+    CHECK(onRight.as<BinaryExpressionSyntax>().right->kind == SyntaxKind::ConditionalExpression);
+
+    // Nested conditionals are right associative, and the implication follows them all.
+    auto& nested = parseExpression("a ? b : c ? d : e -> f");
+    CHECK_DIAGNOSTICS_EMPTY;
+    REQUIRE(nested.kind == SyntaxKind::LogicalImplicationExpression);
+    auto& outer = nested.as<BinaryExpressionSyntax>().left->as<ConditionalExpressionSyntax>();
+    CHECK(outer.right->kind == SyntaxKind::ConditionalExpression);
+
+    // Logical-or still binds tighter than the conditional.
+    auto& withOr = parseExpression("a ? b : c || d");
+    CHECK_DIAGNOSTICS_EMPTY;
+    REQUIRE(withOr.kind == SyntaxKind::ConditionalExpression);
+    CHECK(withOr.as<ConditionalExpressionSyntax>().right->kind == SyntaxKind::LogicalOrExpression);
+}
+
 TEST_CASE("Conditional expression (pattern matching)") {
     // check proper precedence
     auto& text = "foo matches 34 &&& foo ? 3 : 4";

@@ -372,6 +372,39 @@ TEST_CASE("Operator short circuiting") {
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Conditional operator precedence vs implication and equivalence") {
+    // The conditional operator binds tighter than -> and <-> (IEEE 1800-2023 Table 11-2).
+    // Each expression below evaluates differently depending on how it's grouped.
+    ScriptSession session;
+    session.eval("int a = 1, b = 0, c = 1, d = 0;");
+
+#define EVAL(expr, result) CHECK(session.eval(expr).integer() == (result))
+
+    // (a ? b : c) -> d, not a ? b : (c -> d)
+    EVAL("a ? b : c -> d", 1);
+    EVAL("a ? b : c <-> d", 1);
+
+    // Nested conditionals are grouped first: (1 ? 1 : (0 ? 1 : 0)) -> 0
+    EVAL("1 ? 1 : 0 ? 1 : 0 -> 0", 0);
+
+    // The conditional can still appear as the right operand: 0 -> (0 ? 0 : 0)
+    EVAL("0 -> 0 ? 0 : 0", 1);
+
+    // The true branch is delimited by the colon: a ? (b -> c) : d
+    EVAL("a ? b -> c : d", 1);
+
+    // Logical-or binds tighter than the conditional: 1 ? 0 : (1 || 1)
+    EVAL("1 ? 0 : 1 || 1", 0);
+
+    // Short circuiting follows the grouping: (1 ? 1 : 0) -> b++ must evaluate b++,
+    // whereas 1 ? 1 : (0 -> b++) would not.
+    session.eval("1 ? 1 : 0 -> b++");
+    EVAL("b", 1);
+
+#undef EVAL
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Assignments") {
     ScriptSession session;
     session.eval("struct packed { logic [2:0] a; logic b; } foo;");

@@ -177,8 +177,10 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
     // Handle conditional expressions (and their optional pattern matched predicate).
     // Only do this if we're not already within a conditional pattern context, and if
     // we're at the right precedence level (one lower than a logical-or) to take it.
-    int logicalOrPrecedence = getPrecedence(SyntaxKind::LogicalOrExpression);
-    if (!options.has(ExpressionOptions::PatternContext) && precedence < logicalOrPrecedence) {
+    // The conditional operator has a precedence level of its own, between the
+    // implication / equivalence operators and logical-or.
+    int conditionalPrecedence = getPrecedence(SyntaxKind::LogicalOrExpression) - 1;
+    if (!options.has(ExpressionOptions::PatternContext) && precedence <= conditionalPrecedence) {
         // If this is the start of a pattern predicate, check whether there's actually a
         // question mark coming up. Otherwise we might be a predicate inside a
         // statement which doesn't need the question.
@@ -193,10 +195,18 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
             if (options.has(ExpressionOptions::DisallowAttrs))
                 errorIfAttributes(attributes);
 
-            auto& lhs = parseSubExpression(options, logicalOrPrecedence - 1);
+            // The true branch is delimited by the colon, so it can hold any operator
+            // that binds tighter than an assignment. The false branch is an operand of
+            // the (right associative) conditional operator: it takes a nested conditional
+            // but not an implication or equivalence, which bind less tightly.
+            auto& lhs = parseSubExpression(options, conditionalPrecedence - 1);
             auto colon = expect(TokenKind::Colon);
-            auto& rhs = parseSubExpression(options, logicalOrPrecedence - 1);
+            auto& rhs = parseSubExpression(options, conditionalPrecedence);
             left = &factory.conditionalExpression(predicate, question, attributes, lhs, colon, rhs);
+
+            // The conditional can itself be the left operand of a lower precedence operator.
+            if (precedence < conditionalPrecedence)
+                return parseBinaryExpression(left, options, precedence);
         }
     }
 

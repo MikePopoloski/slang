@@ -554,42 +554,42 @@ int OpInfo::getPrecedence(BinaryOperator op) {
         case BinaryOperator::LogicalEquivalence:
             return 2;
         case BinaryOperator::LogicalOr:
-            return 3;
-        case BinaryOperator::LogicalAnd:
             return 4;
-        case BinaryOperator::BinaryOr:
+        case BinaryOperator::LogicalAnd:
             return 5;
+        case BinaryOperator::BinaryOr:
+            return 6;
         case BinaryOperator::BinaryXor:
         case BinaryOperator::BinaryXnor:
-            return 6;
-        case BinaryOperator::BinaryAnd:
             return 7;
+        case BinaryOperator::BinaryAnd:
+            return 8;
         case BinaryOperator::Equality:
         case BinaryOperator::Inequality:
         case BinaryOperator::CaseEquality:
         case BinaryOperator::CaseInequality:
         case BinaryOperator::WildcardEquality:
         case BinaryOperator::WildcardInequality:
-            return 8;
+            return 9;
         case BinaryOperator::GreaterThanEqual:
         case BinaryOperator::GreaterThan:
         case BinaryOperator::LessThanEqual:
         case BinaryOperator::LessThan:
-            return 9;
+            return 10;
         case BinaryOperator::LogicalShiftLeft:
         case BinaryOperator::LogicalShiftRight:
         case BinaryOperator::ArithmeticShiftLeft:
         case BinaryOperator::ArithmeticShiftRight:
-            return 10;
+            return 11;
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
-            return 11;
+            return 12;
         case BinaryOperator::Multiply:
         case BinaryOperator::Divide:
         case BinaryOperator::Mod:
-            return 12;
-        case BinaryOperator::Power:
             return 13;
+        case BinaryOperator::Power:
+            return 14;
     }
     SLANG_UNREACHABLE;
 }
