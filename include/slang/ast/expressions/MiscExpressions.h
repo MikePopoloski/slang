@@ -60,6 +60,14 @@ public:
     LValue evalLValueImpl(EvalContext& context) const;
     bool isEquivalentImpl(const NamedValueExpression& rhs) const;
 
+    /// Evaluates the expression without copying the referenced value.
+    /// Returns a reference to the parameter's value or to the local variable's
+    /// storage in the current call frame; a reference to a local is only valid
+    /// until that variable is next modified. Values that must be computed are
+    /// placed in @a storage and a reference to it is returned. If evaluation
+    /// fails the result is an invalid value.
+    const ConstantValue& evalRef(EvalContext& context, ConstantValue& storage) const;
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
 
 private:

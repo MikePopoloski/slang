@@ -8,6 +8,7 @@
 #include "slang/ast/expressions/SelectExpressions.h"
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Lookup.h"
@@ -15,6 +16,7 @@
 #include "slang/ast/expressions/CallExpression.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/CoverSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
@@ -211,48 +213,122 @@ bool ElementSelectExpression::isConstantSelect(EvalContext& context) const {
     return value().type->hasFixedRange() && !selector().eval(context).bad();
 }
 
-ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
-    ConstantValue cv = value().eval(context);
+// Returns true if evaluating the given expression could modify a variable.
+static bool hasSideEffects(const Expression& expr) {
+    bool result = false;
+    auto visitor = makeVisitor([&](auto&, const AssignmentExpression&) { result = true; },
+                               [&](auto& v, const CallExpression& call) {
+                                   // Constant functions can only take input arguments
+                                   // and can't access variables outside of themselves,
+                                   // so only system subroutines (e.g. queue methods)
+                                   // can modify anything.
+                                   if (call.isSystemCall())
+                                       result = true;
+                                   else
+                                       v.visitDefault(call);
+                               },
+                               [&](auto& v, const UnaryExpression& unary) {
+                                   switch (unary.op) {
+                                       case UnaryOperator::Preincrement:
+                                       case UnaryOperator::Predecrement:
+                                       case UnaryOperator::Postincrement:
+                                       case UnaryOperator::Postdecrement:
+                                           result = true;
+                                           break;
+                                       default:
+                                           v.visitDefault(unary);
+                                           break;
+                                   }
+                               });
+    expr.visit(visitor);
+    return result;
+}
+
+// The functions below evaluate select expressions without copying the entire
+// value being selected from when only a small part of it is needed. The value
+// operand is evaluated by reference where possible: to a cached constant, a
+// parameter value, a local variable, or a part of one of those.
+//
+// A local variable can only be read in place if none of the selectors in
+// the expression can modify a variable; otherwise a selector could change
+// the value being selected from after it has been read. Checking for that
+// requires walking the whole expression, so it's done lazily, only once we
+// find a local that is expensive to copy.
+namespace {
+
+class LocalRefCheck {
+public:
+    explicit LocalRefCheck(const Expression& select) : select(select) {}
+
+    bool allowed() {
+        if (!result)
+            result = !hasSideEffects(select);
+        return *result;
+    }
+
+private:
+    const Expression& select;
+    std::optional<bool> result;
+};
+
+} // namespace
+
+static const ConstantValue& evalValueRef(const Expression& expr, EvalContext& context,
+                                         ConstantValue& storage, LocalRefCheck& localRefs);
+
+// The select functions below perform a selection on @a cv, the already evaluated
+// value operand of a select expression. If the selected value is a part of @a cv,
+// @a part is set to point at it and the returned value is unused. Otherwise the
+// computed result is returned, which is a bad value if the selection failed.
+
+static ConstantValue selectElement(const ElementSelectExpression& expr, EvalContext& context,
+                                   const ConstantValue& cv, const ConstantValue*& part) {
     if (!cv)
         return nullptr;
 
     bool softFail = false;
     ConstantValue associativeIndex;
-    auto range = evalIndex(context, cv, associativeIndex, softFail);
+    auto range = expr.evalIndex(context, cv, associativeIndex, softFail);
     if (!range && associativeIndex.bad()) {
         if (softFail)
-            return type->getDefaultValue();
+            return expr.type->getDefaultValue();
         else
             return nullptr;
     }
 
     // Handling for packed and unpacked arrays, all integer types.
-    const Type& valType = *value().type;
+    const Type& valType = *expr.value().type;
     if (valType.hasFixedRange()) {
         // For fixed types, we know we will always be in range, so just do the selection.
-        if (valType.isUnpackedArray())
-            return cv.elements()[size_t(range->left)];
-        else {
-            cv = cv.integer().slice(range->left, range->right);
-            // Make sure sign and four-statedness are correct.
-            return cv.convertToInt(type->getBitWidth(), type->isSigned(), type->isFourState());
+        if (valType.isUnpackedArray()) {
+            part = &cv.elements()[size_t(range->left)];
+            return nullptr;
         }
+
+        // Make sure sign and four-statedness are correct.
+        auto& type = *expr.type;
+        ConstantValue slice = cv.integer().slice(range->left, range->right);
+        return slice.convertToInt(type.getBitWidth(), type.isSigned(), type.isFourState());
     }
 
     // Handling for associative arrays.
     if (valType.isAssociativeArray()) {
         auto& map = *cv.map();
-        if (auto it = map.find(associativeIndex); it != map.end())
-            return it->second;
+        if (auto it = map.find(associativeIndex); it != map.end()) {
+            part = &it->second;
+            return nullptr;
+        }
 
         // If there is a user specified default, return that without warning.
-        if (map.defaultValue)
-            return map.defaultValue;
+        if (map.defaultValue) {
+            part = &map.defaultValue;
+            return nullptr;
+        }
 
         // Otherwise issue a warning and use the default default.
-        context.addDiag(diag::ConstEvalAssociativeElementNotFound, selector().sourceRange)
-            << value().sourceRange << associativeIndex;
-        return type->getDefaultValue();
+        context.addDiag(diag::ConstEvalAssociativeElementNotFound, expr.selector().sourceRange)
+            << expr.value().sourceRange << associativeIndex;
+        return expr.type->getDefaultValue();
     }
 
     // Handling for strings, dynamic arrays, and queues.
@@ -260,7 +336,126 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     if (valType.isString())
         return cv.getSlice(range->left, range->right, nullptr);
 
-    return std::move(cv).at(size_t(range->left));
+    part = &cv.at(size_t(range->left));
+    return nullptr;
+}
+
+static ConstantValue selectMember(const MemberAccessExpression& expr, EvalContext& context,
+                                  const ConstantValue& cv, const ConstantValue*& part);
+
+// Evaluates a select expression to a value.
+template<auto Select, typename T>
+static ConstantValue evalSelect(const T& expr, EvalContext& context) {
+    LocalRefCheck localRefs(expr);
+    ConstantValue storage;
+    auto& cv = evalValueRef(expr.value(), context, storage, localRefs);
+
+    // Note: every path returns `result` so that it can be constructed in place.
+    const ConstantValue* part = nullptr;
+    ConstantValue result = Select(expr, context, cv, part);
+    if (part) {
+        if (&cv == &storage)
+            result = std::move(*const_cast<ConstantValue*>(part));
+        else
+            result = *part;
+    }
+    return result;
+}
+
+// Evaluates a select expression by reference, for use as the value operand
+// of another select.
+template<auto Select, typename T>
+static const ConstantValue& evalSelectRef(const T& expr, EvalContext& context,
+                                          ConstantValue& storage, LocalRefCheck& localRefs) {
+    auto& cv = evalValueRef(expr.value(), context, storage, localRefs);
+
+    const ConstantValue* part = nullptr;
+    ConstantValue result = Select(expr, context, cv, part);
+    if (!part) {
+        storage = std::move(result);
+        return storage;
+    }
+
+    if (&cv != &storage)
+        return *part;
+
+    // The part lives within the temporary storage, so move it out
+    // to become the new value of that storage.
+    result = std::move(*const_cast<ConstantValue*>(part));
+    storage = std::move(result);
+    return storage;
+}
+
+static const ConstantValue& evalNamedValueRef(const NamedValueExpression& expr,
+                                              EvalContext& context, ConstantValue& storage,
+                                              LocalRefCheck& localRefs) {
+    auto& result = expr.evalRef(context, storage);
+    if (&result == &storage || !result)
+        return result;
+
+    switch (expr.symbol.kind) {
+        case SymbolKind::Parameter:
+        case SymbolKind::EnumValue:
+        case SymbolKind::Specparam:
+            // These values are immutable, so it's always safe to refer to them.
+            return result;
+        default:
+            break;
+    }
+
+    // This is a local variable. Copy it unless doing so would be expensive
+    // and it's safe to refer to it in place.
+    bool cheapToCopy = result.isInteger() ? result.integer().isSingleWord()
+                                          : result.isReal() || result.isShortReal();
+    if (cheapToCopy || !localRefs.allowed()) {
+        storage = result;
+        return storage;
+    }
+
+    return result;
+}
+
+static const ConstantValue& evalValueRef(const Expression& expr, EvalContext& context,
+                                         ConstantValue& storage, LocalRefCheck& localRefs) {
+    switch (expr.kind) {
+        case ExpressionKind::NamedValue:
+        case ExpressionKind::ElementSelect:
+        case ExpressionKind::MemberAccess:
+            break;
+        default:
+            storage = expr.eval(context);
+            return storage;
+    }
+
+    // Mirror what Expression::eval does before calling evalImpl. If results
+    // are being cached we go through eval so that they get stored.
+    if (auto constant = expr.getConstant())
+        return *constant;
+
+    if (expr.bad() || context.cacheResults()) {
+        storage = expr.eval(context);
+        return storage;
+    }
+
+    if (!context.checkBitCount(expr.type->getBitstreamWidth(), expr.sourceRange))
+        return ConstantValue::Invalid;
+
+    switch (expr.kind) {
+        case ExpressionKind::NamedValue:
+            return evalNamedValueRef(expr.as<NamedValueExpression>(), context, storage, localRefs);
+        case ExpressionKind::ElementSelect:
+            return evalSelectRef<selectElement>(expr.as<ElementSelectExpression>(), context,
+                                                storage, localRefs);
+        case ExpressionKind::MemberAccess:
+            return evalSelectRef<selectMember>(expr.as<MemberAccessExpression>(), context, storage,
+                                               localRefs);
+        default:
+            SLANG_UNREACHABLE;
+    }
+}
+
+ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
+    return evalSelect<selectElement>(*this, context);
 }
 
 LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
@@ -699,7 +894,9 @@ bool RangeSelectExpression::isConstantSelect(EvalContext& context) const {
 }
 
 ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
-    ConstantValue cv = value().eval(context);
+    ConstantValue storage;
+    LocalRefCheck localRefs(*this);
+    auto& cv = evalValueRef(value(), context, storage, localRefs);
     if (!cv)
         return nullptr;
 
@@ -1302,62 +1499,70 @@ static bool checkPackedUnionTag(const Type& valueType, const SVInt& val, uint32_
     return true;
 }
 
-ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
-    ConstantValue cv = value().eval(context);
+static ConstantValue selectMember(const MemberAccessExpression& expr, EvalContext& context,
+                                  const ConstantValue& cv, const ConstantValue*& part) {
     if (!cv)
         return nullptr;
 
+    auto& member = expr.member;
+    auto& type = *expr.type;
     auto& field = member.as<FieldSymbol>();
-    auto& valueType = value().type->getCanonicalType();
+    auto& valueType = expr.value().type->getCanonicalType();
     if (valueType.isUnpackedStruct()) {
-        return cv.elements()[field.fieldIndex];
+        part = &cv.elements()[field.fieldIndex];
+        return nullptr;
     }
-    else if (valueType.isUnpackedUnion()) {
+
+    if (valueType.isUnpackedUnion()) {
         auto& unionVal = cv.unionVal();
-        if (unionVal->activeMember == field.fieldIndex)
-            return unionVal->value;
+        if (unionVal->activeMember == field.fieldIndex) {
+            part = &unionVal->value;
+            return nullptr;
+        }
 
         if (valueType.isTaggedUnion()) {
             // Tagged unions can only be accessed via their active member.
-            context.addDiag(diag::ConstEvalTaggedUnion, sourceRange) << member.name;
+            context.addDiag(diag::ConstEvalTaggedUnion, expr.sourceRange) << member.name;
             return nullptr;
         }
-        else {
-            // This member isn't active, so in general it's not safe (or even
-            // possible) to access it. An exception is made for the common initial
-            // sequence of equivalent types, so check for that here and if found
-            // translate the values across.
-            ConstantValue result = type->getDefaultValue();
-            if (unionVal->activeMember) {
-                // Get the type of the member that is currently active.
-                auto& currType = valueType.as<UnpackedUnionType>()
-                                     .fields[*unionVal->activeMember]
-                                     ->getType()
-                                     .getCanonicalType();
 
-                RecursiveStructMemberIterator rsmi(unionVal->value, currType);
-                translateUnionMembers(result, type->getCanonicalType(), rsmi);
-            }
-            return result;
+        // This member isn't active, so in general it's not safe (or even
+        // possible) to access it. An exception is made for the common initial
+        // sequence of equivalent types, so check for that here and if found
+        // translate the values across.
+        ConstantValue result = type.getDefaultValue();
+        if (unionVal->activeMember) {
+            // Get the type of the member that is currently active.
+            auto& currType = valueType.as<UnpackedUnionType>()
+                                 .fields[*unionVal->activeMember]
+                                 ->getType()
+                                 .getCanonicalType();
+
+            RecursiveStructMemberIterator rsmi(unionVal->value, currType);
+            translateUnionMembers(result, type.getCanonicalType(), rsmi);
         }
+        return result;
     }
-    else if (valueType.isPackedUnion()) {
-        auto& cvi = cv.integer();
-        if (!checkPackedUnionTag(valueType, cvi, field.fieldIndex, context, sourceRange,
+
+    auto& cvi = cv.integer();
+    if (valueType.isPackedUnion()) {
+        if (!checkPackedUnionTag(valueType, cvi, field.fieldIndex, context, expr.sourceRange,
                                  member.name)) {
             return nullptr;
         }
 
-        return cvi.slice(int32_t(type->getBitWidth() - 1), 0);
+        return cvi.slice(int32_t(type.getBitWidth() - 1), 0);
     }
-    else {
-        int32_t io = (int32_t)field.bitOffset;
-        int32_t width = (int32_t)type->getBitWidth();
-        cv = cv.integer().slice(width + io - 1, io);
 
-        // Make sure sign and four-statedness are correct.
-        return cv.convertToInt(type->getBitWidth(), type->isSigned(), type->isFourState());
-    }
+    // Make sure sign and four-statedness are correct.
+    int32_t io = (int32_t)field.bitOffset;
+    int32_t width = (int32_t)type.getBitWidth();
+    ConstantValue slice = cvi.slice(width + io - 1, io);
+    return slice.convertToInt(type.getBitWidth(), type.isSigned(), type.isFourState());
+}
+
+ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
+    return evalSelect<selectMember>(*this, context);
 }
 
 LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {

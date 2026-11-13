@@ -3563,3 +3563,122 @@ TEST_CASE("Packed arrays of a named signed type are unsigned") {
     CHECK(session.eval("structs + 16'sd0").integer() == 0x00ff);
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Eval selects of local variables") {
+    ScriptSession session;
+    session.eval(R"(
+function automatic int sum_unpacked;
+    int a[8];
+    int b[2];
+    int s = 0;
+    for (int i = 0; i < 8; i++) a[i] = i * 3;
+    for (int i = 0; i < 8; i++) s += a[i] + a[7 - i];
+    b = a[2:3];
+    return s + b[1];
+endfunction
+)");
+    CHECK(session.eval("sum_unpacked()").integer() == 177);
+
+    session.eval(R"(
+function automatic logic [5:0] packed_bits;
+    logic [3:0][7:0] p = {8'h12, 8'h34, 8'h56, 8'h78};
+    return {p[3][4], p[2][1], p[1][7:4]};
+endfunction
+)");
+    CHECK(session.eval("packed_bits()").integer() == 37);
+
+    session.eval(R"(
+typedef struct { int x; int y[2]; } s_t;
+function automatic int struct_member;
+    s_t s;
+    s.x = 5;
+    s.y[1] = 7;
+    return s.x * s.y[1];
+endfunction
+)");
+    CHECK(session.eval("struct_member()").integer() == 35);
+
+    session.eval(R"(
+function automatic int nested_unpacked;
+    int m[4][8];
+    s_t ss[2];
+    int s = 0;
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 8; j++)
+            m[i][j] = i * 8 + j;
+    ss[1].y[0] = 100;
+    for (int i = 0; i < 4; i++)
+        s += m[i][{1'b0, i[1:0]}] + m[i > 1 ? 3 : 0][7];
+    return s + ss[1].y[0];
+endfunction
+)");
+    CHECK(session.eval("nested_unpacked()").integer() == 54 + 7 * 2 + 31 * 2 + 100);
+
+    session.eval(R"(
+function automatic int dynamic_containers;
+    int aa[string];
+    int q[$];
+    int d[];
+    aa["x"] = 5;
+    q.push_back(6);
+    q.push_back(7);
+    d = new [3];
+    d[2] = 8;
+    return aa["x"] + q[1] + q[$] + d[2];
+endfunction
+)");
+    CHECK(session.eval("dynamic_containers()").integer() == 27);
+
+    session.eval(R"(
+localparam int P[4] = '{1, 2, 3, 4};
+localparam s_t PS = '{3, '{4, 5}};
+function automatic int param_select(int i);
+    return P[i] + PS.y[1];
+endfunction
+)");
+    CHECK(session.eval("param_select(2)").integer() == 8);
+
+    // The value is read before the selector's side effect.
+    session.eval(R"(
+function automatic int side_effect_select;
+    int a[4] = '{0, 20, 30, 40};
+    return a[a[0]++];
+endfunction
+)");
+    CHECK(session.eval("side_effect_select()").integer() == 0);
+
+    session.eval(R"(
+function automatic int nested_side_effect_select;
+    int m[2][4] = '{'{0, 1, 2, 3}, '{1, 5, 6, 7}};
+    return m[1][m[1][0]++] * 10 + m[1][0];
+endfunction
+)");
+    CHECK(session.eval("nested_side_effect_select()").integer() == 52);
+
+    session.eval(R"(
+function automatic int ident(int i);
+    return i;
+endfunction
+
+function automatic int call_select;
+    int a[4] = '{2, 20, 30, 40};
+    int q[$] = '{1, 2, 3};
+    return a[ident(a[0])] + a[q.pop_front()] + q[0];
+endfunction
+)");
+    CHECK(session.eval("call_select()").integer() == 52);
+
+    session.eval(R"(
+function automatic int oob_select;
+    int a[4] = '{1, 2, 3, 4};
+    int i = 9;
+    return a[i];
+endfunction
+)");
+    CHECK(session.eval("oob_select()").integer() == 0);
+
+    auto diags = session.getDiagnostics();
+    INFO(report(diags));
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::IndexOOB);
+}

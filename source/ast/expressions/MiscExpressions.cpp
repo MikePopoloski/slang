@@ -405,16 +405,26 @@ void ValueExpressionBase::serializeTo(ASTSerializer& serializer) const {
 }
 
 ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
+    ConstantValue storage;
+    auto& result = evalRef(context, storage);
+    if (&result == &storage)
+        return storage;
+    return result;
+}
+
+const ConstantValue& NamedValueExpression::evalRef(EvalContext& context,
+                                                   ConstantValue& storage) const {
     if (!checkConstant(context))
-        return nullptr;
+        return ConstantValue::Invalid;
 
     switch (symbol.kind) {
         case SymbolKind::Parameter: {
-            auto v = symbol.as<ParameterSymbol>().getValue(sourceRange);
+            auto& v = symbol.as<ParameterSymbol>().getValue(sourceRange);
             if (v.isUnbounded()) {
                 if (auto target = context.getQueueTarget()) {
                     int32_t size = (int32_t)target->queue()->size();
-                    return SVInt(32, uint64_t(size - 1), true);
+                    storage = SVInt(32, uint64_t(size - 1), true);
+                    return storage;
                 }
             }
             return v;
@@ -424,8 +434,7 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
         case SymbolKind::Specparam:
             return symbol.as<SpecparamSymbol>().getValue(sourceRange);
         default:
-            ConstantValue* v = context.findLocal(&symbol);
-            if (v)
+            if (auto v = context.findLocal(&symbol))
                 return *v;
             break;
     }
@@ -434,7 +443,7 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
     // it's not actually constant.
     auto& diag = context.addDiag(diag::ConstEvalNonConstVariable, sourceRange) << symbol.name;
     diag.addNote(diag::NoteDeclarationHere, symbol.location);
-    return nullptr;
+    return ConstantValue::Invalid;
 }
 
 LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
