@@ -344,6 +344,16 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .value("v1800_2023", LanguageVersion::v1800_2023)
         .value("Default", LanguageVersion::Default);
 
+    nb::class_<DepFileOptions>(driver, "DepFileOptions")
+        .def(nb::init<>())
+        .def_rw("depfileTarget", &DepFileOptions::depfileTarget)
+        .def_rw("depfileTrim", &DepFileOptions::depfileTrim)
+        .def_rw("depfileSort", &DepFileOptions::depfileSort)
+        .def_rw("allDepfile", &DepFileOptions::allDepfile)
+        .def_rw("includeDepfile", &DepFileOptions::includeDepfile)
+        .def_rw("moduleDepfile", &DepFileOptions::moduleDepfile)
+        .def("anyRequested", &DepFileOptions::anyRequested);
+
     nb::class_<Driver> driverClass(driver, "Driver");
 
     nb::class_<Driver::CommandFileMetadata>(driverClass, "CommandFileMetadata")
@@ -371,7 +381,7 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .def("processOptions", &Driver::processOptions, "checkFiles"_a = true)
         .def("runPreprocessor", &Driver::runPreprocessor, "flags"_a)
         .def("reportMacros", &Driver::reportMacros, "groupByFile"_a = false)
-        .def("optionallyWriteDepFiles", &Driver::optionallyWriteDepFiles)
+        .def("writeDepFiles", &Driver::writeDepFiles, "depOptions"_a)
         .def(
             "parseAllSources",
             [](Driver& self, nb::object bufferChangeCB) {

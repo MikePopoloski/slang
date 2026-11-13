@@ -457,26 +457,6 @@ void Driver::addStandardArgs() {
     cmdLine.add("--print-unused-waivers", options.printUnusedWaivers,
                 "Print detailed information about unused diagnostic waivers");
 
-    cmdLine.setGroup("Dependency Files");
-    cmdLine.add("--depfile-target", options.depfileTarget,
-                "Output depfile lists in makefile format, creating the file with "
-                "`<target>:` as the make target");
-    cmdLine.add("--Mall,--all-deps", options.allDepfile,
-                "Generate dependency file list of all files used during parsing", "<file>",
-                CommandLineFlags::FilePath);
-    cmdLine.add("--Minclude,--include-deps", options.includeDepfile,
-                "Generate dependency file list of just include files that were "
-                "used during parsing",
-                "<file>", CommandLineFlags::FilePath);
-    cmdLine.add("--Mmodule,--module-deps", options.moduleDepfile,
-                "Generate dependency file list of source files parsed, excluding include files",
-                "<file>", CommandLineFlags::FilePath);
-    cmdLine.add("--depfile-trim", options.depfileTrim,
-                "Trim unreferenced files before generating dependency lists "
-                "(also implies --depfile-sort)");
-    cmdLine.add("--depfile-sort", options.depfileSort,
-                "Topologically sort the emitted files in dependency lists");
-
     auto addAnalysisFlag = [&](AnalysisFlags flag, std::string_view name, std::string_view desc) {
         auto [it, inserted] = options.analysisFlags.emplace(flag, std::nullopt);
         SLANG_ASSERT(inserted);
@@ -999,18 +979,18 @@ static std::vector<const SyntaxTree*> getSortedDependencies(
     return results;
 }
 
-void Driver::optionallyWriteDepFiles() {
-    if (!options.includeDepfile && !options.moduleDepfile && !options.allDepfile)
+void Driver::writeDepFiles(const DepFileOptions& depOptions) {
+    if (!depOptions.anyRequested())
         return;
 
-    if (options.depfileTrim == true && options.singleUnit.value_or(false)) {
+    if (depOptions.depfileTrim == true && options.singleUnit.value_or(false)) {
         printError("--depfile-trim cannot be combined with --single-unit");
         return;
     }
 
     std::vector<const SyntaxTree*> depTrees;
-    if (options.depfileTrim == true || options.depfileSort == true) {
-        depTrees = getSortedDependencies(*this, syntaxTrees, options.depfileTrim == true);
+    if (depOptions.depfileTrim == true || depOptions.depfileSort == true) {
+        depTrees = getSortedDependencies(*this, syntaxTrees, depOptions.depfileTrim == true);
     }
     else {
         depTrees.reserve(syntaxTrees.size());
@@ -1020,20 +1000,20 @@ void Driver::optionallyWriteDepFiles() {
 
     auto writeDepFile = [&](const std::vector<std::string>& paths, std::string_view fileName) {
         FormatBuffer buffer;
-        if (options.depfileTarget)
-            buffer.format("{}: ", *options.depfileTarget);
+        if (depOptions.depfileTarget)
+            buffer.format("{}: ", *depOptions.depfileTarget);
 
         for (auto& path : paths) {
             buffer.append(path);
 
             // If depfileTarget is provided the delimiter is a space, otherwise a newline.
-            if (options.depfileTarget)
+            if (depOptions.depfileTarget)
                 buffer.append(" ");
             else
                 buffer.append("\n");
         }
 
-        if (options.depfileTarget) {
+        if (depOptions.depfileTarget) {
             buffer.pop_back();
             buffer.append("\n");
         }
@@ -1043,7 +1023,7 @@ void Driver::optionallyWriteDepFiles() {
 
     std::vector<std::string> includePaths;
     flat_hash_set<fs::path> seenPaths;
-    if (options.includeDepfile || options.allDepfile) {
+    if (depOptions.includeDepfile || depOptions.allDepfile) {
         for (auto& tree : depTrees) {
             // The first id is the top-level source file; the rest were pushed
             // via `include directives.
@@ -1055,12 +1035,12 @@ void Driver::optionallyWriteDepFiles() {
             }
         }
 
-        if (options.includeDepfile)
-            writeDepFile(includePaths, *options.includeDepfile);
+        if (depOptions.includeDepfile)
+            writeDepFile(includePaths, *depOptions.includeDepfile);
     }
 
     std::vector<std::string> modulePaths;
-    if (options.moduleDepfile || options.allDepfile) {
+    if (depOptions.moduleDepfile || depOptions.allDepfile) {
         for (auto& tree : depTrees) {
             auto bufferIds = tree->getSourceBufferIds();
             if (!bufferIds.empty()) {
@@ -1070,13 +1050,13 @@ void Driver::optionallyWriteDepFiles() {
             }
         }
 
-        if (options.moduleDepfile)
-            writeDepFile(modulePaths, *options.moduleDepfile);
+        if (depOptions.moduleDepfile)
+            writeDepFile(modulePaths, *depOptions.moduleDepfile);
     }
 
-    if (options.allDepfile) {
+    if (depOptions.allDepfile) {
         includePaths.insert(includePaths.end(), modulePaths.begin(), modulePaths.end());
-        writeDepFile(includePaths, *options.allDepfile);
+        writeDepFile(includePaths, *depOptions.allDepfile);
     }
 }
 

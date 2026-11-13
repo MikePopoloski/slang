@@ -553,9 +553,10 @@ TEST_CASE("Driver dependencies distinguish top-level and nested declarations") {
     auto guard = OS::captureOutput();
 
     Driver driver;
-    driver.options.moduleDepfile = "-";
-    driver.options.depfileSort = true;
-    driver.options.depfileTrim = trim;
+    DepFileOptions depOptions;
+    depOptions.moduleDepfile = "-";
+    depOptions.depfileSort = true;
+    depOptions.depfileTrim = trim;
     driver.options.topModules = {topName};
 
     auto addTree = [&](std::string_view path, std::string_view text) {
@@ -597,7 +598,7 @@ endmodule
         std::ranges::reverse(driver.syntaxTrees);
 
     REQUIRE(driver.reportParseDiags());
-    driver.optionallyWriteDepFiles();
+    driver.writeDepFiles(depOptions);
     INFO(OS::capturedStderr);
     CHECK(driver.diagEngine.getNumWarnings() == 0);
 
@@ -649,9 +650,10 @@ TEST_CASE("Driver dependencies retain virtual interface definitions") {
     auto guard = OS::captureOutput();
 
     Driver driver;
-    driver.options.moduleDepfile = "-";
-    driver.options.depfileSort = true;
-    driver.options.depfileTrim = true;
+    DepFileOptions depOptions;
+    depOptions.moduleDepfile = "-";
+    depOptions.depfileSort = true;
+    depOptions.depfileTrim = true;
     driver.options.topModules = {"top"};
 
     auto addTree = [&](std::string_view path, std::string_view text) {
@@ -680,7 +682,7 @@ endinterface
         std::ranges::reverse(driver.syntaxTrees);
 
     REQUIRE(driver.reportParseDiags());
-    driver.optionallyWriteDepFiles();
+    driver.writeDepFiles(depOptions);
     INFO(OS::capturedStderr);
     CHECK(driver.diagEngine.getNumWarnings() == 0);
 
@@ -807,9 +809,10 @@ TEST_CASE("Driver dependencies distinguish explicit interface ports from data ty
     auto guard = OS::captureOutput();
 
     Driver driver;
-    driver.options.moduleDepfile = "-";
-    driver.options.depfileSort = true;
-    driver.options.depfileTrim = true;
+    DepFileOptions depOptions;
+    depOptions.moduleDepfile = "-";
+    depOptions.depfileSort = true;
+    depOptions.depfileTrim = true;
     driver.options.topModules = {"top"};
 
     auto addTree = [&](std::string_view path, std::string_view text) {
@@ -825,7 +828,7 @@ TEST_CASE("Driver dependencies distinguish explicit interface ports from data ty
     addTree("unused.sv", "interface unused_if; endinterface\n");
 
     REQUIRE(driver.reportParseDiags());
-    driver.optionallyWriteDepFiles();
+    driver.writeDepFiles(depOptions);
     INFO(OS::capturedStderr);
     CHECK(driver.diagEngine.getNumWarnings() == 0);
     CHECK(OS::capturedStdout == "leaf.sv\nbus.sv\ntop.sv\n");

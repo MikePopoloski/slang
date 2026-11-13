@@ -236,6 +236,28 @@ int driverMain(int argc, TArgs argv) {
         driver.cmdLine.add("--ast-json-detailed-types", serializeDetailedTypes,
                            "When dumping AST to JSON, expand out all type information");
 
+        DepFileOptions depOptions;
+        driver.cmdLine.setGroup("Dependency Files");
+        driver.cmdLine.add("--depfile-target", depOptions.depfileTarget,
+                           "Output depfile lists in makefile format, creating the file with "
+                           "`<target>:` as the make target");
+        driver.cmdLine.add("--Mall,--all-deps", depOptions.allDepfile,
+                           "Generate dependency file list of all files used during parsing",
+                           "<file>", CommandLineFlags::FilePath);
+        driver.cmdLine.add("--Minclude,--include-deps", depOptions.includeDepfile,
+                           "Generate dependency file list of just include files that were "
+                           "used during parsing",
+                           "<file>", CommandLineFlags::FilePath);
+        driver.cmdLine.add(
+            "--Mmodule,--module-deps", depOptions.moduleDepfile,
+            "Generate dependency file list of source files parsed, excluding include files",
+            "<file>", CommandLineFlags::FilePath);
+        driver.cmdLine.add("--depfile-trim", depOptions.depfileTrim,
+                           "Trim unreferenced files before generating dependency lists "
+                           "(also implies --depfile-sort)");
+        driver.cmdLine.add("--depfile-sort", depOptions.depfileSort,
+                           "Topologically sort the emitted files in dependency lists");
+
         std::optional<std::string> timeTrace;
         driver.cmdLine.setGroup("Profiling");
         driver.cmdLine.add("--time-trace", timeTrace,
@@ -281,9 +303,7 @@ int driverMain(int argc, TArgs argv) {
             return 1;
         }
 
-        if ((onlyPreprocess || onlyMacros) &&
-            (driver.options.includeDepfile || driver.options.moduleDepfile ||
-             driver.options.allDepfile)) {
+        if ((onlyPreprocess || onlyMacros) && depOptions.anyRequested()) {
             driver.printError(
                 "cannot use dependency file options with --preprocess or --macros-only");
             return 1;
@@ -318,7 +338,7 @@ int driverMain(int argc, TArgs argv) {
                 ok = driver.parseAllSources();
             }
 
-            driver.optionallyWriteDepFiles();
+            driver.writeDepFiles(depOptions);
 
             if (cstJsonFile) {
                 TimeTraceScope timeScope("cstSerialization"sv, ""sv);

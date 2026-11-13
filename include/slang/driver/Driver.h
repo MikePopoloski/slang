@@ -84,6 +84,30 @@ enum class SLANG_EXPORT PreprocessOutputFlags {
 };
 SLANG_BITMASK(PreprocessOutputFlags, IncludeSourceInfo)
 
+/// Options that control writing dependency files via @a Driver::writeDepFiles.
+struct SLANG_EXPORT DepFileOptions {
+    /// Optional target name to include when writing dependency files.
+    std::optional<std::string> depfileTarget;
+
+    /// If true, trim unreferenced files before generating dependency lists.
+    std::optional<bool> depfileTrim;
+
+    /// If true, topologically sort files before generating dependency lists.
+    std::optional<bool> depfileSort;
+
+    /// Output path for a dependency file containing all dependencies.
+    std::optional<std::string> allDepfile;
+
+    /// Output path for a dependency file containing include file dependencies.
+    std::optional<std::string> includeDepfile;
+
+    /// Output path for a dependency file containing module source file dependencies.
+    std::optional<std::string> moduleDepfile;
+
+    /// Returns true if any dependency file outputs have been requested.
+    bool anyRequested() const { return allDepfile || includeDepfile || moduleDepfile; }
+};
+
 /// @brief A top-level class that handles argument parsing, option preparation,
 /// and invoking various parts of the slang compilation process.
 ///
@@ -334,28 +358,6 @@ public:
         flat_hash_set<std::string> excludeExts;
 
         /// @}
-        /// @name Dependency files
-        /// @{
-
-        /// Optional target name to include when writing dependency files.
-        std::optional<std::string> depfileTarget;
-
-        /// If true, trim unreferenced files before generating dependency lists.
-        std::optional<bool> depfileTrim;
-
-        /// If true, topologically sort files before generating dependency lists.
-        std::optional<bool> depfileSort;
-
-        /// Output path for a dependency file containing all dependencies.
-        std::optional<std::string> allDepfile;
-
-        /// Output path for a dependency file containing include file dependencies.
-        std::optional<std::string> includeDepfile;
-
-        /// Output path for a dependency file containing module source file dependencies.
-        std::optional<std::string> moduleDepfile;
-
-        /// @}
         /// @name Analysis
         /// @{
 
@@ -433,9 +435,10 @@ public:
     /// If @a groupByFile is true, macros are grouped and labelled by source file.
     void reportMacros(bool groupByFile = false);
 
-    /// Writes any dependency files that have been requested via command line options.
-    /// (if such options have not been specified this method does nothing).
-    void optionallyWriteDepFiles();
+    /// @brief Writes any dependency files that have been requested in @a depOptions.
+    ///
+    /// If no dependency file outputs are requested this method does nothing.
+    void writeDepFiles(const DepFileOptions& depOptions);
 
     /// @brief Parses all loaded buffers into syntax trees and appends the resulting trees
     /// to the @a syntaxTrees list.
