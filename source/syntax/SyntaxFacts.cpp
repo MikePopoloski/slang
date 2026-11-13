@@ -197,24 +197,26 @@ int SyntaxFacts::getPrecedence(SyntaxKind kind) {
         case SyntaxKind::SUntilWithPropertyExpr:
         case SyntaxKind::ImpliesPropertyExpr:
             return 2;
+        // Level 3 is the conditional operator, which the expression
+        // parser handles itself (it is not a binary operator).
         case SyntaxKind::LogicalOrExpression:
         case SyntaxKind::IffPropertyExpr:
-            return 3;
+            return 4;
         case SyntaxKind::LogicalAndExpression:
         case SyntaxKind::OrPropertyExpr:
         case SyntaxKind::OrSequenceExpr:
-            return 4;
+            return 5;
         case SyntaxKind::BinaryOrExpression:
         case SyntaxKind::AndPropertyExpr:
         case SyntaxKind::AndSequenceExpr:
-            return 5;
+            return 6;
         case SyntaxKind::BinaryXorExpression:
         case SyntaxKind::BinaryXnorExpression:
         case SyntaxKind::IntersectSequenceExpr:
-            return 6;
+            return 7;
         case SyntaxKind::BinaryAndExpression:
         case SyntaxKind::WithinSequenceExpr:
-            return 7;
+            return 8;
         case SyntaxKind::EqualityExpression:
         case SyntaxKind::InequalityExpression:
         case SyntaxKind::CaseEqualityExpression:
@@ -222,28 +224,28 @@ int SyntaxFacts::getPrecedence(SyntaxKind kind) {
         case SyntaxKind::WildcardEqualityExpression:
         case SyntaxKind::WildcardInequalityExpression:
         case SyntaxKind::ThroughoutSequenceExpr:
-            return 8;
+            return 9;
         case SyntaxKind::LessThanExpression:
         case SyntaxKind::LessThanEqualExpression:
         case SyntaxKind::GreaterThanExpression:
         case SyntaxKind::GreaterThanEqualExpression:
         case SyntaxKind::InsideExpression:
         case SyntaxKind::ExpressionOrDist:
-            return 9;
+            return 10;
         case SyntaxKind::LogicalShiftLeftExpression:
         case SyntaxKind::LogicalShiftRightExpression:
         case SyntaxKind::ArithmeticShiftLeftExpression:
         case SyntaxKind::ArithmeticShiftRightExpression:
-            return 10;
+            return 11;
         case SyntaxKind::AddExpression:
         case SyntaxKind::SubtractExpression:
-            return 11;
+            return 12;
         case SyntaxKind::MultiplyExpression:
         case SyntaxKind::DivideExpression:
         case SyntaxKind::ModExpression:
-            return 12;
-        case SyntaxKind::PowerExpression:
             return 13;
+        case SyntaxKind::PowerExpression:
+            return 14;
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
         case SyntaxKind::UnaryLogicalNotExpression:
@@ -256,7 +258,7 @@ int SyntaxFacts::getPrecedence(SyntaxKind kind) {
         case SyntaxKind::UnaryBitwiseXnorExpression:
         case SyntaxKind::UnaryPreincrementExpression:
         case SyntaxKind::UnaryPredecrementExpression:
-            return 14;
+            return 15;
         default:
             return 0;
     }
