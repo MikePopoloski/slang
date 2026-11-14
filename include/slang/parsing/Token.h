@@ -317,6 +317,8 @@ public:
             return false;
         if (hasInlineTrivia && triviaCountSmall != other.triviaCountSmall)
             return false;
+        if (hasInfoPtr != other.hasInfoPtr)
+            return false;
         return hasInfoPtr ? info == other.info : nonInfoLoc == other.nonInfoLoc;
     }
 
