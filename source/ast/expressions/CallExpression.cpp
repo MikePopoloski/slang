@@ -93,8 +93,14 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
 
             auto [parent, inStatic] = Lookup::getContainingClass(*context.scope);
             if (parent && !Lookup::isAccessibleFrom(*sub, *parent)) {
-                auto& diag = context.addDiag(diag::NestedNonStaticClassMethod, range);
-                diag << parent->name;
+                if (Lookup::isNestedWithin(*parent, subroutineParent)) {
+                    auto& diag = context.addDiag(diag::NestedNonStaticClassMethod, range);
+                    diag << parent->name;
+                }
+                else {
+                    auto& diag = context.addDiag(diag::NonStaticClassMethodNotDerived, range);
+                    diag << sub->name << parent->name << subroutineParent.name;
+                }
                 return badExpr(compilation, nullptr);
             }
             else if (!parent || inStatic || context.flags.has(ASTFlags::StaticInitializer)) {

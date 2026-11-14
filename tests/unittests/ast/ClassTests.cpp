@@ -5364,3 +5364,53 @@ endclass
     for (auto& diag : diags)
         CHECK(diag.code == diag::MisplacedNew);
 }
+
+TEST_CASE("Non-static members accessed via class scope from unrelated classes") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class I;
+    pure virtual function int f();
+endclass
+
+interface class J extends I;
+endclass
+
+class Other;
+    int x;
+    function int g(); return 1; endfunction
+endclass
+
+class Base;
+    int y;
+    virtual function int f(); return 1; endfunction
+endclass
+
+class C extends Base implements J;
+    virtual function int f(); return I::f(); endfunction
+    function int h(); return Other::g(); endfunction
+    function int k(); return Other::x; endfunction
+    function int l(); return Base::f() + Base::y; endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::NonStaticClassMethodNotDerived);
+    CHECK(diags[1].code == diag::NonStaticClassMethodNotDerived);
+    CHECK(diags[2].code == diag::NonStaticClassPropertyNotDerived);
+
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:20:38: error: call to non-static member function 'f' without object handle from class 'C', which does not derive from 'I'
+    virtual function int f(); return I::f(); endfunction
+                                     ^~~~~~
+source:21:30: error: call to non-static member function 'g' without object handle from class 'C', which does not derive from 'Other'
+    function int h(); return Other::g(); endfunction
+                             ^~~~~~~~~~
+source:22:30: error: invalid use of non-static class property 'x' from class 'C', which does not derive from 'Other'
+    function int k(); return Other::x; endfunction
+                             ^~~~~~~~
+)");
+}

@@ -310,6 +310,10 @@ public:
     /// access of instance members and doesn't look at visibility of the symbol.
     static bool isAccessibleFrom(const Symbol& target, const Symbol& sourceScope);
 
+    /// Returns whether the given @a scope is lexically nested within the
+    /// provided @a outer symbol, at any depth.
+    static bool isNestedWithin(const Scope& scope, const Symbol& outer);
+
     /// If the given symbol is not a class member, returns true without doing any other work.
     /// Otherwise, if the member is visible from the provided context, returns true.
     /// If it's not visible, and @a sourceRange is provided, an appropriate diganostic will
