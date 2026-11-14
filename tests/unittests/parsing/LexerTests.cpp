@@ -1393,3 +1393,25 @@ f
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::UnclosedTranslateOff);
 }
+
+TEST_CASE("Token equality with mixed inline and info locations") {
+    BumpAllocator testAlloc;
+    BufferID buffer(1, "w.sv");
+
+    // No trivia: the location is stored inline.
+    Token first(testAlloc, TokenKind::StringKeyword, {}, "string", SourceLocation(buffer, 27));
+
+    // Too much trivia for the inline form, so an info block is used.
+    Trivia trivia[] = {Trivia(TriviaKind::EndOfLine, "\n"),
+                       Trivia(TriviaKind::Whitespace, "                  ")};
+
+    // Construct the second token on top of a copy of the first one, so that any
+    // bytes of the location union not overwritten by the info pointer match.
+    alignas(Token) unsigned char slot[sizeof(Token)];
+    std::memcpy(slot, &first, sizeof(Token));
+    Token* second = new (slot)
+        Token(testAlloc, TokenKind::StringKeyword, trivia, "string", SourceLocation(buffer, 55));
+
+    CHECK(!(first == *second));
+    CHECK(!(*second == first));
+}
