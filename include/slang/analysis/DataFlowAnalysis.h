@@ -651,17 +651,39 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValuePath& initialP
 
         currState.assigned[index].unionWith(bounds, {}, bitMapAllocator);
 
+        // A write to an element of a dynamically sized array at a constant index keeps
+        // the element select as its expression: all of the array's elements share the
+        // array's bounds, and the driver checks need the index to tell them apart.
+        auto& evalCtx = this->getEvalContext();
+        const bool isDynamic = path.lsp->type->isDynamicallySizedArray();
+        ConstantValue elemIndex;
+        const Expression* lspExpr = path.lsp;
+        if (isDynamic) {
+            if (auto elem = path.getConstantDynamicElement(evalCtx, &elemIndex))
+                lspExpr = elem;
+        }
+
         auto& lspMap = lvalues[index].assigned;
         for (auto lspIt = lspMap.find(bounds); lspIt != lspMap.end();) {
+            auto itBounds = lspIt.bounds();
+            ConstantValue itIndex;
+            if (isDynamic)
+                std::ignore =
+                    ValuePath(**lspIt, evalCtx).getConstantDynamicElement(evalCtx, &itIndex);
+
             // If we find an existing entry that completely contains
             // the new bounds we can just keep that one and ignore the
-            // new one. Otherwise we will insert a new entry.
-            auto itBounds = lspIt.bounds();
-            if (itBounds.first <= bounds.first && itBounds.second >= bounds.second)
+            // new one. Otherwise we will insert a new entry. An element
+            // only contains the same element.
+            if (itBounds.first <= bounds.first && itBounds.second >= bounds.second &&
+                (!itIndex || (elemIndex && itIndex == elemIndex))) {
                 return;
+            }
 
             // If the new bounds completely contain the existing entry, we can remove it.
-            if (bounds.first < itBounds.first && bounds.second > itBounds.second) {
+            // The whole array contains its elements.
+            if ((bounds.first < itBounds.first && bounds.second > itBounds.second) ||
+                (itBounds == bounds && itIndex && !elemIndex)) {
                 lspMap.erase(lspIt, lspMapAllocator);
                 lspIt = lspMap.find(bounds);
             }
@@ -669,7 +691,7 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValuePath& initialP
                 ++lspIt;
             }
         }
-        lspMap.insert(bounds, path.lsp, lspMapAllocator);
+        lspMap.insert(bounds, lspExpr, lspMapAllocator);
     }
     else if (!inAssertionActionBlock && !inTimingControlExpr) {
         rvalues[&symbol].unionWith(bounds, {}, bitMapAllocator);

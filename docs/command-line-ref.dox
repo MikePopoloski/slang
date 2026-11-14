@@ -641,9 +641,9 @@ most tools allow it anyway so this flag exists for compatibility with those tool
 `--allow-multi-driven-dynamically-sized-arrays`
 
 Allow dynamic arrays, associative arrays, and queues to be driven from multiple always_comb/always_ff
-blocks. slang tracks drivers by the fixed bit range they assign, which the elements of such arrays
-do not have, so a write to any element counts as a write to the whole array and two processes
-writing different elements are reported as conflicting. This flag skips the check for such arrays.
+blocks. Writes to different elements at constant indices are already allowed, as for fixed-size
+arrays; a write with a non-constant index, a write of the whole array, or two writes of the same
+element count as conflicting. This flag skips the check for such arrays.
 
 `--allow-merging-ansi-ports`
 

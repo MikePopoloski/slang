@@ -535,8 +535,10 @@ endmodule
         Compilation compilation;
         AnalysisManager analysisManager;
 
+        // byName, dyn and bag.byName write different constant elements, which don't
+        // conflict; sameKey, q, whole, bag.tag and fixed do.
         auto diags = analyze(code, compilation, analysisManager);
-        REQUIRE(diags.size() == 8);
+        REQUIRE(diags.size() == 5);
         for (auto& diag : diags)
             CHECK(diag.code == diag::MultipleAlwaysAssigns);
     }
@@ -853,6 +855,98 @@ endmodule
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[2].code == diag::MultipleAlwaysAssigns);
+}
+
+TEST_CASE("Multiple always assigns to constant elements of dynamically sized arrays") {
+    auto& code = R"(
+module m;
+    localparam int K = 3;
+    int q[$];
+    int byName[string];
+    int dyn[];
+    int byInt[int];
+    struct { int tag; int byName[string]; } bag;
+    wire clk;
+
+    always_comb q[1] = 1;
+    initial q[2] = 2;
+
+    always_comb byName["out"] = 1;
+    initial byName["in"] = 2;
+
+    always_comb dyn[0] = 1;
+    always_ff @(posedge clk) dyn[K] = 2;
+
+    always_comb begin
+        q[3] = 1;
+        q[4] = 2;
+    end
+    initial q[5] = 3;
+
+    always_comb byInt[1] = 1;
+    initial byInt[-1] = 2;
+
+    always_comb bag.byName["x"] = 1;
+    initial bag.byName["y"] = 2;
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Multiple always assigns to elements of dynamically sized arrays that overlap") {
+    auto& code = R"(
+module m;
+    localparam int K = 1;
+    int same[$];
+    int varLater[$];
+    int varFirst[$];
+    int whole[$];
+    int byName[string];
+    int idx;
+
+    always_comb same[1] = 1;
+    initial same[K] = 2;
+
+    always_comb varLater[1] = 1;
+    initial varLater[idx] = 2;
+
+    always_comb varFirst[idx] = 1;
+    initial varFirst[1] = 2;
+
+    always_comb whole[1] = 1;
+    initial whole = {};
+
+    always_comb byName["k"] = 1;
+    initial byName["k"] = 2;
+
+    int pair[$];
+    always_comb begin
+        pair[1] = 1;
+        pair[2] = 2;
+    end
+    initial pair[2] = 3;
+
+    int later[$];
+    always_comb begin
+        later[1] = 1;
+        later = {};
+    end
+    initial later[2] = 3;
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 7);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::MultipleAlwaysAssigns);
 }
 
 TEST_CASE("UDNT resolution func driven arg") {

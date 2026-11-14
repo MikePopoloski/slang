@@ -354,6 +354,15 @@ static bool handleOverlap(AnalysisContext& context, const ValueSymbol& symbol,
     return false;
 }
 
+// The constant index of the element of a dynamically sized array that the driver writes, if any
+// (see ValuePath::getConstantDynamicElement).
+static ConstantValue getDynamicElementIndex(const ValueDriver& driver, EvalContext& evalCtx) {
+    ConstantValue index;
+    if (!driver.path.getConstantDynamicElement(evalCtx, &index))
+        return nullptr;
+    return index;
+}
+
 void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc,
                               SymbolDriverMap& driverMap, const ValueDriver& driver,
                               SmallVector<HierPortDriver>& hierPortDrivers) {
@@ -471,6 +480,14 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
                 vd.path.lsp->type->isDynamicallySizedArray());
     };
 
+    // Writes to different constant elements of a dynamically sized array don't overlap.
+    std::optional<EvalContext> elemEvalCtx;
+    ConstantValue elemIndex;
+    if (checkOverlap && driver.path.lsp->type->isDynamicallySizedArray()) {
+        elemEvalCtx.emplace(symbol);
+        elemIndex = getDynamicElementIndex(driver, *elemEvalCtx);
+    }
+
     auto end = driverMap.end();
     for (auto it = driverMap.find(bounds); it != end; ++it) {
         // Check whether this pair of drivers overlapping constitutes a problem.
@@ -494,6 +511,11 @@ void DriverTracker::addDriver(AnalysisContext& context, DriverAlloc& driverAlloc
                      !shouldIgnore(driver) &&
                      (curr->isInSingleDriverProcedure() || driver.isInSingleDriverProcedure())) {
                 isProblem = true;
+                if (elemIndex) {
+                    auto currIndex = getDynamicElementIndex(*curr, *elemEvalCtx);
+                    if (currIndex && !(currIndex == elemIndex))
+                        isProblem = false;
+                }
             }
         }
 

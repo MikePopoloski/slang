@@ -70,10 +70,10 @@ enum class SLANG_EXPORT AnalysisFlags {
     ContAssignUsesLSPs = 1 << 8,
 
     /// Signals driven by an always_comb or always_ff are normally not allowed to
-    /// be driven by any other process. The elements of dynamic arrays, associative
-    /// arrays, and queues have no fixed bit range to tell them apart, so a write to
-    /// any one of them counts as a write to the whole array. This flag lifts the
-    /// restriction for such arrays.
+    /// be driven by any other process. Different elements of dynamic arrays,
+    /// associative arrays, and queues written at constant indices don't conflict,
+    /// but a write at a non-constant index counts as a write to the whole array.
+    /// This flag lifts the restriction for such arrays.
     AllowMultiDrivenDynamicallySizedArrays = 1 << 9,
 };
 SLANG_BITMASK(AnalysisFlags, AllowMultiDrivenDynamicallySizedArrays)

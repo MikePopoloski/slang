@@ -13,7 +13,8 @@
 
 namespace slang {
 class BumpAllocator;
-}
+class ConstantValue;
+} // namespace slang
 
 namespace slang::ast {
 
@@ -76,6 +77,17 @@ public:
 
     /// Returns true if this path overlaps @a other.
     [[nodiscard]] bool overlaps(const ValuePath& other) const;
+
+    /// If the path continues past its longest static prefix with an element select of
+    /// a dynamically sized array (a dynamic array, associative array, or queue) whose
+    /// index is a constant without unknown bits, returns that select and stores the
+    /// index in @a index if it is provided. Otherwise returns nullptr.
+    ///
+    /// The LRM makes such a select part of the longest static prefix, but the elements
+    /// of these arrays have no fixed bit range, so @a lsp and @a lspBounds stop at the
+    /// array itself; this recovers the element.
+    [[nodiscard]] const Expression* getConstantDynamicElement(EvalContext& evalContext,
+                                                              ConstantValue* index = nullptr) const;
 
     /// Returns a humany-friendly string representation of the path.
     [[nodiscard]] std::string toString(EvalContext& evalContext) const;

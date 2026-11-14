@@ -397,6 +397,30 @@ bool ValuePath::overlaps(const ValuePath& other) const {
     return fullExpr->isEquivalentTo(*other.fullExpr);
 }
 
+const Expression* ValuePath::getConstantDynamicElement(EvalContext& evalContext,
+                                                       ConstantValue* index) const {
+    if (!lsp || !lsp->type->isDynamicallySizedArray())
+        return nullptr;
+
+    for (auto& elem : *this) {
+        if (elem.kind != ExpressionKind::ElementSelect)
+            continue;
+
+        auto& select = elem.as<ElementSelectExpression>();
+        if (&select.value() != lsp)
+            continue;
+
+        auto cv = select.selector().eval(evalContext);
+        if (!cv || (cv.isInteger() && cv.integer().hasUnknown()))
+            return nullptr;
+
+        if (index)
+            *index = std::move(cv);
+        return &select;
+    }
+    return nullptr;
+}
+
 static void doStringify(const Expression& expr, EvalContext& evalContext, FormatBuffer& buffer) {
     switch (expr.kind) {
         case ExpressionKind::ElementSelect: {
