@@ -493,7 +493,7 @@ class D #(parameter int i = bar);
 endclass
 
 module top;
-   m #(.T(int), .i(1), .j(new[3]), .k(tagged A)) m1();
+   m #(.T(int), .i(1), .j('{1, 2, 3}), .k(tagged A)) m1();
 endmodule
 
 module m;

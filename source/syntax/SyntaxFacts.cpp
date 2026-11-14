@@ -345,6 +345,7 @@ bool SyntaxFacts::isPossibleExpression(TokenKind kind) {
         case TokenKind::RepeatKeyword:
         case TokenKind::TypeKeyword:
         case TokenKind::ApostropheOpenBrace:
+        case TokenKind::NewKeyword:
             // expressions can't actually start with these, but we'll allow it
             // to provide good error handling
         case TokenKind::DoubleColon:

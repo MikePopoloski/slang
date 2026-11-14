@@ -153,7 +153,8 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
 
     // everything else should be some kind of expression
     if (isPossibleExpression(peek().kind)) {
-        bitmask<ExpressionOptions> options = ExpressionOptions::ProceduralAssignmentContext;
+        bitmask<ExpressionOptions> options = ExpressionOptions::ProceduralAssignmentContext |
+                                             ExpressionOptions::AssignmentStatementContext;
         if (allowSuperNew)
             options |= ExpressionOptions::AllowSuperNewCall;
 
@@ -365,8 +366,8 @@ SyntaxNode& Parser::parseForInitializer() {
     if (isVariableDeclaration()) {
         auto varKeyword = consumeIf(TokenKind::VarKeyword);
         auto& type = parseDataType();
-        auto& decl = parseDeclarator(/* allowMinTypMax */ false,
-                                     /* requireInitializers */ true);
+        auto& decl = parseDeclarator(DeclaratorOptions::RequireInitializers |
+                                     DeclaratorOptions::AllowNew);
         auto& result = factory.forVariableDeclaration(varKeyword, &type, decl);
         return result;
     }

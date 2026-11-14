@@ -35,6 +35,21 @@ ExpressionSyntax& Parser::parseExpressionOrDist(bitmask<ExpressionOptions> optio
     return parseSubExpression(options | ExpressionOptions::AllowDist, 0);
 }
 
+// Calls to super.new are a separate construct from class new expressions,
+// and their placement is checked separately.
+static bool isSuperNewCall(const ExpressionSyntax& expr) {
+    const NameSyntax* name;
+    if (expr.kind == SyntaxKind::NewClassExpression)
+        name = expr.as<NewClassExpressionSyntax>().scopedNew;
+    else if (expr.kind == SyntaxKind::SuperNewDefaultedArgsExpression)
+        return true;
+    else
+        return false;
+
+    return name->kind == SyntaxKind::ScopedName &&
+           name->as<ScopedNameSyntax>().left->getLastToken().kind == TokenKind::SuperKeyword;
+}
+
 static bool isNewExpr(const ExpressionSyntax* expr) {
     while (true) {
         if (expr->kind == SyntaxKind::ConstructorName)
@@ -49,6 +64,11 @@ static bool isNewExpr(const ExpressionSyntax* expr) {
 
 ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options, int precedence) {
     auto dg = setDepthGuard();
+
+    // Permission to use 'new' only applies to this immediate expression,
+    // not to any nested subexpressions.
+    const bool allowNew = options.has(ExpressionOptions::AllowNew);
+    options &= ~ExpressionOptions::AllowNew;
 
     auto current = peek();
     if (isPossibleDelayOrEventControl(current.kind)) {
@@ -73,6 +93,10 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
         return factory.taggedUnionExpression(tagged, member, expr);
     }
 
+    // The statement context only applies to the binary operator at the top level.
+    const auto binaryOptions = options;
+    options &= ~ExpressionOptions::AssignmentStatementContext;
+
     ExpressionSyntax* leftOperand;
     SyntaxKind opKind = getUnaryPrefixExpression(current.kind);
     if (opKind != SyntaxKind::Unknown) {
@@ -90,8 +114,14 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
 
         // If the primary is a new or scoped new operator we should handle
         // that separately (it doesn't participate in postfix expression parsing).
-        if (isNewExpr(leftOperand))
-            return parseNewExpression(leftOperand->as<NameSyntax>(), options);
+        if (isNewExpr(leftOperand)) {
+            auto& result = parseNewExpression(leftOperand->as<NameSyntax>(), options);
+            if (!allowNew && !isSuperNewCall(result)) {
+                addDiag(diag::MisplacedNew, result.getFirstToken().location())
+                    << result.sourceRange();
+            }
+            return result;
+        }
 
         // Don't try to parse postfix if we didn't find a valid primary to begin with.
         if (leftOperand->kind != SyntaxKind::IdentifierName ||
@@ -100,8 +130,8 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
         }
     }
 
-    options &= ~ExpressionOptions::AllowSuperNewCall;
-    return parseBinaryExpression(leftOperand, options, precedence);
+    return parseBinaryExpression(leftOperand, binaryOptions & ~ExpressionOptions::AllowSuperNewCall,
+                                 precedence);
 }
 
 ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
@@ -140,7 +170,18 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
             opKind = SyntaxKind::NonblockingAssignmentExpression;
         }
 
-        options &= ~ExpressionOptions::ProceduralAssignmentContext;
+        // The right-hand side of a blocking assignment statement is allowed
+        // to be a 'new' expression. Only the outermost assignment in a statement
+        // counts; nested assignments are just expressions.
+        const bool rhsAllowsNew = opKind == SyntaxKind::AssignmentExpression &&
+                                  options.has(ExpressionOptions::AssignmentStatementContext);
+
+        options &= ~(ExpressionOptions::ProceduralAssignmentContext |
+                     ExpressionOptions::AssignmentStatementContext);
+
+        auto rhsOptions = options;
+        if (rhsAllowsNew)
+            rhsOptions |= ExpressionOptions::AllowNew;
 
         // see if we should take this operator or if it's part of our parent due to precedence
         int newPrecedence = getPrecedence(opKind);
@@ -166,13 +207,15 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
         else {
             auto opToken = consume();
             auto attributes = parseAttributes();
-            auto& rightOperand = parseSubExpression(options, newPrecedence);
+            auto& rightOperand = parseSubExpression(rhsOptions, newPrecedence);
             left = &factory.binaryExpression(opKind, *left, opToken, attributes, rightOperand);
 
             if (isAssignmentOperator(opKind) || options.has(ExpressionOptions::DisallowAttrs))
                 errorIfAttributes(attributes);
         }
     }
+
+    options &= ~ExpressionOptions::AssignmentStatementContext;
 
     // Handle conditional expressions (and their optional pattern matched predicate).
     // Only do this if we're not already within a conditional pattern context, and if

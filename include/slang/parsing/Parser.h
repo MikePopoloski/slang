@@ -60,9 +60,18 @@ enum class ExpressionOptions {
     DisallowAttrs = 1 << 8,
 
     /// Assignment patterns are disallowed in this context.
-    DisallowPatterns = 1 << 9
+    DisallowPatterns = 1 << 9,
+
+    /// A class new, dynamic array new, or shallow copy expression is allowed
+    /// here. This only applies to the immediate expression and not any of its
+    /// subexpressions.
+    AllowNew = 1 << 10,
+
+    /// This expression is the top level of a statement, so the right-hand side
+    /// of a (non-nested) blocking assignment is allowed to be a 'new' expression.
+    AssignmentStatementContext = 1 << 11
 };
-SLANG_BITMASK(ExpressionOptions, DisallowPatterns)
+SLANG_BITMASK(ExpressionOptions, AssignmentStatementContext)
 
 /// Various options for parsing names.
 enum class NameOptions {
@@ -125,6 +134,22 @@ enum class FunctionOptions {
 };
 SLANG_BITMASK(FunctionOptions, AllowOverrideSpecifiers)
 
+/// Various options for parsing declarators.
+enum class DeclaratorOptions {
+    /// No special options specified.
+    None = 0,
+
+    /// Allow the initializer to be a min:typ:max expression.
+    AllowMinTypMax = 1 << 0,
+
+    /// Require that each declarator have an initializer.
+    RequireInitializers = 1 << 1,
+
+    /// Allow the initializer to be a 'new' expression.
+    AllowNew = 1 << 2
+};
+SLANG_BITMASK(DeclaratorOptions, AllowNew)
+
 } // namespace detail
 
 /// Contains various options that can control parsing behavior.
@@ -175,6 +200,7 @@ private:
     using ExpressionOptions = detail::ExpressionOptions;
     using NameOptions = detail::NameOptions;
     using TypeOptions = detail::TypeOptions;
+    using DeclaratorOptions = detail::DeclaratorOptions;
     using FunctionOptions = detail::FunctionOptions;
     using AttrList = syntax::SyntaxList<syntax::AttributeInstanceSyntax>;
 
@@ -318,7 +344,7 @@ private:
     syntax::ClassDeclarationSyntax& parseClassDeclaration(AttrList attributes, Token virtualOrInterface);
     syntax::MemberSyntax* parseClassMember(bool isIfaceClass, bool hasBaseClass);
     syntax::ContinuousAssignSyntax& parseContinuousAssign(AttrList attributes);
-    syntax::DeclaratorSyntax& parseDeclarator(bool allowMinTypMax = false, bool requireInitializers = false);
+    syntax::DeclaratorSyntax& parseDeclarator(bitmask<DeclaratorOptions> options = {});
     syntax::MemberSyntax* parseCoverageMember();
     syntax::BlockEventExpressionSyntax& parseBlockEventExpression();
     syntax::WithClauseSyntax* parseWithClause();
@@ -390,10 +416,9 @@ private:
 
     template<bool (*IsEnd)(TokenKind)>
     syntax::SeparatedSyntaxList<syntax::DeclaratorSyntax> parseDeclarators(
-        TokenKind endKind, Token& end, bool allowMinTypMax = false,
-        bool requireInitializers = false);
+        TokenKind endKind, Token& end, bitmask<DeclaratorOptions> options = {});
     syntax::SeparatedSyntaxList<syntax::DeclaratorSyntax> parseDeclarators(
-        Token& semi, bool allowMinTypMax = false, bool requireInitializers = false);
+        Token& semi, bitmask<DeclaratorOptions> options = {});
 
     template<typename TMember, typename TParseFunc>
     syntax::SyntaxList<TMember> parseMemberList(TokenKind endKind, Token& endToken,

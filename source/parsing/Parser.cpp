@@ -32,7 +32,9 @@ SyntaxNode& Parser::parseGuess() {
 
     // Try to parse as an expression if possible.
     if (isPossibleExpression(peek().kind)) {
-        auto& expr = parseExpression();
+        // Treat the expression like a statement for the purposes of
+        // allowing 'new' on the right-hand side of an assignment.
+        auto& expr = parseSubExpression(ExpressionOptions::AssignmentStatementContext, 0);
         if (peek(TokenKind::Semicolon))
             consume();
 
@@ -738,8 +740,8 @@ MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
     auto delay = parseDelay3();
 
     Token semi;
-    auto declSpan = parseDeclarators(semi, /* allowMinTypMax */ false,
-                                     /* requireInitializers */ hasDriveStrength);
+    auto declSpan = parseDeclarators(semi, hasDriveStrength ? DeclaratorOptions::RequireInitializers
+                                                            : DeclaratorOptions::None);
 
     SeparatedSyntaxList<DeclaratorSyntax> declarators(declSpan);
     if (netType.kind == TokenKind::InterconnectKeyword) {
@@ -877,8 +879,9 @@ DataDeclarationSyntax& Parser::parseDataDeclaration(AttrList attributes) {
     if (dataType.kind == SyntaxKind::TypeReference && !hasVar)
         addDiag(diag::TypeRefDeclVar, dataType.getFirstToken().location());
 
+    // Variable declarations are one of the few places where 'new' is allowed.
     Token semi;
-    auto declarators = parseDeclarators(semi);
+    auto declarators = parseDeclarators(semi, DeclaratorOptions::AllowNew);
 
     return factory.dataDeclaration(attributes, {alloc, modifiers}, dataType, declarators, semi);
 }
@@ -895,17 +898,25 @@ LocalVariableDeclarationSyntax& Parser::parseLocalVariableDeclaration() {
     return factory.localVariableDeclaration(nullptr, var, dataType, declarators, semi);
 }
 
-DeclaratorSyntax& Parser::parseDeclarator(bool allowMinTypMax, bool requireInitializers) {
+DeclaratorSyntax& Parser::parseDeclarator(bitmask<DeclaratorOptions> options) {
     auto name = expect(TokenKind::Identifier);
     auto dimensions = parseDimensionList();
 
     EqualsValueClauseSyntax* initializer = nullptr;
     if (peek(TokenKind::Equals)) {
         auto equals = consume();
-        initializer = &factory.equalsValueClause(equals, allowMinTypMax ? parseMinTypMaxExpression()
-                                                                        : parseExpression());
+
+        ExpressionSyntax* expr;
+        if (options.has(DeclaratorOptions::AllowMinTypMax))
+            expr = &parseMinTypMaxExpression();
+        else if (options.has(DeclaratorOptions::AllowNew))
+            expr = &parseSubExpression(ExpressionOptions::AllowNew, 0);
+        else
+            expr = &parseExpression();
+
+        initializer = &factory.equalsValueClause(equals, *expr);
     }
-    else if (requireInitializers) {
+    else if (options.has(DeclaratorOptions::RequireInitializers)) {
         addDiag(diag::InitializerRequired, name.location());
     }
 
@@ -914,23 +925,18 @@ DeclaratorSyntax& Parser::parseDeclarator(bool allowMinTypMax, bool requireIniti
 
 template<bool (*IsEnd)(TokenKind)>
 SeparatedSyntaxList<DeclaratorSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end,
-                                                               bool allowMinTypMax,
-                                                               bool requireInitializers) {
+                                                               bitmask<DeclaratorOptions> options) {
     SmallVector<TokenOrSyntax, 4> buffer;
     parseList<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end,
                                           RequireItems::True, diag::ExpectedDeclarator,
-                                          [this, allowMinTypMax, requireInitializers] {
-                                              return &parseDeclarator(allowMinTypMax,
-                                                                      requireInitializers);
-                                          });
+                                          [this, options] { return &parseDeclarator(options); });
 
     return SeparatedSyntaxList<DeclaratorSyntax>(alloc, buffer);
 }
 
-SeparatedSyntaxList<DeclaratorSyntax> Parser::parseDeclarators(Token& semi, bool allowMinTypMax,
-                                                               bool requireInitializers) {
-    return parseDeclarators<isNotIdOrComma>(TokenKind::Semicolon, semi, allowMinTypMax,
-                                            requireInitializers);
+SeparatedSyntaxList<DeclaratorSyntax> Parser::parseDeclarators(Token& semi,
+                                                               bitmask<DeclaratorOptions> options) {
+    return parseDeclarators<isNotIdOrComma>(TokenKind::Semicolon, semi, options);
 }
 
 Parser::AttrList Parser::parseAttributes() {
@@ -1055,12 +1061,12 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
         // other non-decl things, so do the parsing manually.
         SeparatedSyntaxList<DeclaratorSyntax> decls;
         if (semi) {
-            decls = parseDeclarators(*semi, /* allowMinTypMax */ true);
+            decls = parseDeclarators(*semi, DeclaratorOptions::AllowMinTypMax);
         }
         else {
             SmallVector<TokenOrSyntax, 2> buffer;
             while (true) {
-                buffer.push_back(&parseDeclarator(/* allowMinTypMax */ true));
+                buffer.push_back(&parseDeclarator(DeclaratorOptions::AllowMinTypMax));
                 if (!peek(TokenKind::Comma) || peek(1).kind != TokenKind::Identifier)
                     break;
 

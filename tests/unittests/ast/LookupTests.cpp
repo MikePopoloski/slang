@@ -2526,13 +2526,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::UnexpectedNameToken);
     CHECK(diags[1].code == diag::UnexpectedNameToken);
-    CHECK(diags[2].code == diag::ExpectedIdentifier);
-    CHECK(diags[3].code == diag::ExpectedToken);
-    CHECK(diags[4].code == diag::UnexpectedNameToken);
-    CHECK(diags[5].code == diag::NewKeywordQualified);
+    CHECK(diags[2].code == diag::MisplacedNew);
+    CHECK(diags[3].code == diag::ExpectedIdentifier);
+    CHECK(diags[4].code == diag::ExpectedToken);
+    CHECK(diags[5].code == diag::UnexpectedNameToken);
+    CHECK(diags[6].code == diag::NewKeywordQualified);
 }
 
 TEST_CASE("Port / attribute lookup location regress GH #676") {

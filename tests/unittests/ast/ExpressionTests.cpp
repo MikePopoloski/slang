@@ -1327,8 +1327,8 @@ module m;
     end
 
     localparam int i = '{};
-    localparam int baz[] = new [i];
-    localparam int boz[] = new [3] (baz);
+    int baz[] = new [i];
+    int boz[] = new [3] (baz);
 endmodule
 )");
 
@@ -4311,7 +4311,9 @@ TEST_CASE("Dynamic array new with assignment pattern default") {
 typedef int DT[];
 
 function DT f1(int i);
-    return new[i] ('{default:3});
+    DT d;
+    d = new[i] ('{default:3});
+    return d;
 endfunction
 
 function DT f2();

@@ -1091,7 +1091,7 @@ module m;
         if ((++i || i == 1) + i) begin end
 
         c.foo(c);
-        c.bar((c = new));
+        c.bar((c = null));
     end
 endmodule
 )";

@@ -571,9 +571,19 @@ TEST_CASE("Arithmetic expressions") {
     CHECK(expr.as<BinaryExpressionSyntax>().right->kind == SyntaxKind::MultiplyExpression);
 }
 
+// 'new' expressions are only allowed in specific contexts, so parse
+// them as the right-hand side of a blocking assignment statement.
+static const ExpressionSyntax& parseNewExpr(const std::string& text) {
+    auto& stmt = parseStatement("x =" + text + ";");
+    REQUIRE(stmt.kind == SyntaxKind::ExpressionStatement);
+    auto& assign = *stmt.as<ExpressionStatementSyntax>().expr;
+    REQUIRE(assign.kind == SyntaxKind::AssignmentExpression);
+    return *assign.as<BinaryExpressionSyntax>().right;
+}
+
 TEST_CASE("Simple class new expression") {
     auto& text = "new";
-    auto& expr = parseExpression(text);
+    auto& expr = parseNewExpr(text);
 
     REQUIRE(expr.kind == SyntaxKind::NewClassExpression);
     CHECK(expr.toString() == text);
@@ -582,7 +592,7 @@ TEST_CASE("Simple class new expression") {
 
 TEST_CASE("Scoped class new expression") {
     auto& text = "A::B#(3, \"foo\", bar[baz])::new";
-    auto& expr = parseExpression(text);
+    auto& expr = parseNewExpr(text);
 
     REQUIRE(expr.kind == SyntaxKind::NewClassExpression);
     CHECK(expr.toString() == text);
@@ -591,7 +601,7 @@ TEST_CASE("Scoped class new expression") {
 
 TEST_CASE("New class with args") {
     auto& text = "A::B#(3, \"foo\", bar[baz])::new (a, , c)";
-    auto& expr = parseExpression(text);
+    auto& expr = parseNewExpr(text);
 
     REQUIRE(expr.kind == SyntaxKind::NewClassExpression);
     CHECK(expr.toString() == text);
@@ -600,7 +610,7 @@ TEST_CASE("New class with args") {
 
 TEST_CASE("Copy class expression") {
     auto& text = "new foo";
-    auto& expr = parseExpression(text);
+    auto& expr = parseNewExpr(text);
 
     REQUIRE(expr.kind == SyntaxKind::CopyClassExpression);
     CHECK(expr.toString() == text);
@@ -609,7 +619,7 @@ TEST_CASE("Copy class expression") {
 
 TEST_CASE("Scoped copy class expression -- error") {
     auto& text = "A::B::new foo";
-    auto& expr = parseExpression(text);
+    auto& expr = parseNewExpr(text);
 
     REQUIRE(expr.kind == SyntaxKind::CopyClassExpression);
     CHECK(expr.toString() == text);
@@ -619,7 +629,7 @@ TEST_CASE("Scoped copy class expression -- error") {
 
 TEST_CASE("New array expression parsing") {
     auto& text = "new [3]";
-    auto& expr = parseExpression(text);
+    auto& expr = parseNewExpr(text);
 
     REQUIRE(expr.kind == SyntaxKind::NewArrayExpression);
     CHECK(expr.toString() == text);
@@ -628,7 +638,7 @@ TEST_CASE("New array expression parsing") {
 
 TEST_CASE("New array expression with initializer") {
     auto& text = "new [3] (foo[bar])";
-    auto& expr = parseExpression(text);
+    auto& expr = parseNewExpr(text);
 
     REQUIRE(expr.kind == SyntaxKind::NewArrayExpression);
     CHECK(expr.toString() == text);
@@ -1158,4 +1168,34 @@ TEST_CASE("Sized vector literal too large") {
 
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics[0].code == diag::LiteralSizeTooLarge);
+}
+
+TEST_CASE("Misplaced new expression parsing -- GH #2099") {
+    auto& text = R"(
+begin
+    c <= new;
+    d <= new[4];
+    c = b ? new : null;
+    c = (new);
+    q = '{new};
+    e = (c = new);
+    take(new);
+    q = '{new, new};
+    e <= new c;
+    for (c = new; c != null; c = new) begin end
+    c = #1 new;
+    c = new;
+    c = C::new(1);
+    d = new[4](d);
+    e = new c;
+    super.new(1);
+    for (C x = new; x != null; x = null) begin end
+end
+)";
+
+    parseStatement(text);
+    REQUIRE(diagnostics.size() == 14);
+    for (size_t i = 0; i < 13; i++)
+        CHECK(diagnostics[i].code == diag::MisplacedNew);
+    CHECK(diagnostics[13].code == diag::InvalidSuperNew);
 }

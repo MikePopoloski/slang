@@ -59,7 +59,7 @@ module m;
     logic foo;
     cg c1 = new(3, foo);
 
-    localparam cg c2 = new(3, foo);
+    localparam cg c2 = null;
     localparam int p = baz();
 
     function automatic int baz;
@@ -73,10 +73,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::CovergroupOutArg);
     CHECK(diags[1].code == diag::ConstEvalCovergroupType);
-    CHECK(diags[2].code == diag::ConstEvalCovergroupType);
 }
 
 TEST_CASE("Covergroup coverage events") {

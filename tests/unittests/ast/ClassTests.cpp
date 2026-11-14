@@ -248,7 +248,7 @@ class C;
 endclass
 
 module m;
-    localparam C c1 = new;
+    localparam C c1 = null;
     localparam int i = c1.foo;
     localparam int j = c1.frob(3);
     localparam int k = c1.p;
@@ -260,8 +260,8 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
-    REQUIRE(diags.size() == 4);
-    for (int i = 0; i < 4; i++) {
+    REQUIRE(diags.size() == 3);
+    for (int i = 0; i < 3; i++) {
         CHECK(diags[i].code == diag::ConstEvalClassType);
     }
 }
@@ -5304,4 +5304,63 @@ TEST_CASE("Never-specialized generic classes that contain nested generic classes
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Misplaced new expressions -- GH #2099") {
+    auto tree = SyntaxTree::fromText(R"(
+class C; endclass
+typedef int da_t[];
+
+function automatic C make(); return new; endfunction
+function automatic da_t make_array(); return new[3]; endfunction
+function automatic void with_default(C c = new); endfunction
+
+module top;
+    C c, e;
+    C q[$];
+    int d[];
+    bit b;
+    function automatic void take(C c); endfunction
+    initial begin
+        c <= new;
+        d <= new[4];
+        c = b ? new : null;
+        c = (new);
+        q = '{new};
+        e = (c = new);
+        take(new);
+        q = '{new, new};
+        e <= new c;
+    end
+endmodule
+
+class D;
+    C c1 = new;
+    covergroup cg; endgroup
+    function new;
+        static C c2 = new;
+        int arr[] = new[3];
+        cg = new;
+        c1 = new;
+        c1 = C::new;
+        c1 = new c1;
+        arr = new[4](arr);
+        for (C c3 = new; c3 != null; c3 = null) begin end
+    endfunction
+endclass
+
+class E extends D;
+    function new;
+        super.new();
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 13);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::MisplacedNew);
 }
