@@ -104,6 +104,7 @@ void registerExpressions(nb::module_& m) {
     nb::class_<CallExpression, Expression> callExpr(m, "CallExpression");
     callExpr.def_ro("subroutine", &CallExpression::subroutine, byrefint)
         .def_prop_ro("thisClass", &CallExpression::thisClass, byrefint)
+        .def_ro("classQualifier", &CallExpression::classQualifier, byrefint)
         .def_prop_ro("arguments", nb::overload_cast<>(&CallExpression::arguments), byrefint)
         .def_prop_ro("isSystemCall", &CallExpression::isSystemCall)
         .def_prop_ro("subroutineName", &CallExpression::getSubroutineName)

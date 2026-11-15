@@ -811,7 +811,7 @@ bool CallExpression::isEquivalentImpl(const CallExpression& rhs) const {
             return false;
     }
 
-    return bool(thisClass_) == bool(rhs.thisClass_) &&
+    return classQualifier == rhs.classQualifier && bool(thisClass_) == bool(rhs.thisClass_) &&
            (!thisClass_ || thisClass_->isEquivalentTo(*rhs.thisClass_)) &&
            std::ranges::equal(arguments(), rhs.arguments(),
                               [](const Expression* a, const Expression* b) {
@@ -947,6 +947,9 @@ void CallExpression::serializeTo(ASTSerializer& serializer) const {
 
     if (thisClass())
         serializer.write("thisClass", *thisClass());
+
+    if (classQualifier)
+        serializer.writeLink("classQualifier", *classQualifier);
 
     if (!arguments().empty()) {
         serializer.startArray("arguments");

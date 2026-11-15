@@ -13,6 +13,7 @@
 
 namespace slang::ast {
 
+class ClassType;
 class FormalArgumentSymbol;
 class VariableSymbol;
 
@@ -186,6 +187,19 @@ private:
     const Expression* thisClass_;
     std::span<const Expression*> arguments_;
     LookupLocation lookupLocation;
+
+public:
+    /// If the called method was named via the class scope resolution operator
+    /// (e.g. `Base::f()`) or the 'super' handle (e.g. `super.f()`), this is the
+    /// class whose scope was named; otherwise nullptr. Note that this can differ
+    /// from the class that declares the method if the method is inherited.
+    ///
+    /// For virtual methods this determines how the call is dispatched: a call
+    /// qualified by a base class of the calling class invokes that class's
+    /// implementation directly, while an unqualified call dispatches based on
+    /// the dynamic type of the object. Tools disagree on whether qualifying a
+    /// call with the calling class itself dispatches or not.
+    const ClassType* classQualifier = nullptr;
 };
 
 } // namespace slang::ast

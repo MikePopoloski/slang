@@ -187,6 +187,15 @@ struct SLANG_EXPORT LookupResult {
     /// Flags that specify additional information about the result of the lookup.
     bitmask<LookupResultFlags> flags;
 
+    /// If the name was resolved via the class scope resolution operator
+    /// (e.g. `C::member`) or the 'super' handle, this is the class named by
+    /// the last such component. Note that this can differ from the class that
+    /// declares the member if it is inherited, and if the name continues with
+    /// dotted components after the class scope (e.g. `C::member.field`) it
+    /// refers to the class qualifying the first of those components rather
+    /// than the final found symbol.
+    const ClassType* classQualifier = nullptr;
+
     /// The portion of the name lookup syntax that resulted in this symbol being found.
     SourceRange nameRange;
 

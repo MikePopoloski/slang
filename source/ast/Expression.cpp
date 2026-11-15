@@ -1247,6 +1247,9 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
             invocation = nullptr;
             withClause = nullptr;
 
+            if (expr->kind == ExpressionKind::Call)
+                expr->as<CallExpression>().classQualifier = result.classQualifier;
+
             if (result.flags.has(LookupResultFlags::IsHierarchical)) {
                 // A call to a subroutine via a hierarchical name needs to be counted
                 // as a potential "hierachical assignment" since we will need to

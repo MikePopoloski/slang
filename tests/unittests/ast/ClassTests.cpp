@@ -5414,3 +5414,67 @@ source:22:30: error: invalid use of non-static class property 'x' from class 'C'
                              ^~~~~~~~
 )");
 }
+
+TEST_CASE("Call expressions record class scope qualifiers") {
+    auto tree = SyntaxTree::fromText(R"(
+class Base;
+    static Base inst;
+    virtual function void f(); endfunction
+    static function void sf(); endfunction
+endclass
+
+class G #(int P = 1);
+    virtual function void f(); endfunction
+endclass
+
+class Mid extends Base;
+    function void a(); f(); endfunction
+    function void b(); Mid::f(); endfunction
+    function void c(); super.f(); endfunction
+    function void d(); Base::f(); endfunction
+    function void e(); this.f(); endfunction
+    function void g(); this.super.f(); endfunction
+    function void h(); Base::sf(); endfunction
+    function void i(); Base::inst.f(); endfunction
+    function void j(); void'(super.randomize()); endfunction
+endclass
+
+class M2 extends G #(2);
+    function void a(); G#(2)::f(); endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& unit = *compilation.getRoot().compilationUnits[0];
+    auto& base = unit.lookupName<ClassType>("Base");
+    auto& mid = unit.lookupName<ClassType>("Mid");
+    auto& m2 = unit.lookupName<ClassType>("M2");
+
+    auto getCall = [](const ClassType& ct, std::string_view name) -> const CallExpression& {
+        auto& sub = ct.find(name)->as<SubroutineSymbol>();
+        auto expr = &sub.getBody().as<ExpressionStatement>().expr;
+        if (expr->kind == ExpressionKind::Conversion)
+            expr = &expr->as<ConversionExpression>().operand();
+        return expr->as<CallExpression>();
+    };
+
+    CHECK(getCall(mid, "a").classQualifier == nullptr);
+    CHECK(getCall(mid, "b").classQualifier == &mid);
+    CHECK(getCall(mid, "c").classQualifier == &base);
+    CHECK(getCall(mid, "d").classQualifier == &base);
+    CHECK(getCall(mid, "e").classQualifier == nullptr);
+    CHECK(getCall(mid, "g").classQualifier == &base);
+    CHECK(getCall(mid, "h").classQualifier == &base);
+    CHECK(getCall(mid, "j").classQualifier == &base);
+
+    auto& viaHandle = getCall(mid, "i");
+    CHECK(viaHandle.classQualifier == nullptr);
+    CHECK(viaHandle.thisClass() != nullptr);
+
+    auto& genericCall = getCall(m2, "a");
+    REQUIRE(genericCall.classQualifier);
+    CHECK(genericCall.classQualifier == m2.getBaseClass());
+}
