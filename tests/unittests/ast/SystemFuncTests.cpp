@@ -569,7 +569,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& p24 = compilation.getRoot().lookupName<ParameterSymbol>("m.p24");
-    CHECK(p24.getValue().str() == "logic[67:0]");
+    CHECK(p24.getValue().str() == "integer");
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 16);
@@ -589,6 +589,115 @@ endmodule
     CHECK(diags[13].code == diag::QueryOnDynamicType);
     CHECK(diags[14].code == diag::QueryOnAssociativeWildcard);
     CHECK(diags[15].code == diag::QueryOnAssociativeWildcard);
+}
+
+TEST_CASE("Array query functions on an associative array") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int narrow[bit [3:0]];
+    int keyed[int];
+    int byte_keyed[logic [7:0]];
+    int rows[bit [7:0]][0:4];
+    int wild[*][0:4];
+    int wide[longint];
+    int unsigned_keyed[bit [31:0]];
+    integer d;
+
+    localparam string t1 = $typename($size(narrow));
+    localparam string t2 = $typename($left(narrow));
+    localparam string t3 = $typename($increment(byte_keyed));
+    localparam string t4 = $typename($right(narrow));
+    localparam string t5 = $typename($low(keyed));
+    localparam string t6 = $typename($high(byte_keyed));
+    localparam string t7 = $typename($increment(rows, 2));
+    localparam string t8 = $typename($size(rows, 2));
+    localparam string t9 = $typename($size(wild, 2));
+    localparam string t10 = $typename($low(wide));
+    localparam string t11 = $typename($right(unsigned_keyed));
+    localparam string t12 = $typename($size(wide));
+    localparam string t13 = $typename($low(wide, d));
+    localparam string t14 = $typename($size(wide, d));
+    localparam string t15 = $typename($low(keyed, d));
+
+    function automatic integer size_of_sixteen();
+        int a[bit [3:0]];
+        for (int i = 0; i < 16; i++) a[i[3:0]] = i;
+        return $size(a);
+    endfunction
+
+    function automatic integer increment_below();
+        int a[bit [7:0]][0:4];
+        return $increment(a, 2);
+    endfunction
+
+    function automatic integer low_of_empty();
+        int a[int];
+        return $low(a);
+    endfunction
+
+    function automatic integer low_of_negative();
+        int a[byte];
+        a[-3] = 1;
+        a[7] = 2;
+        return $low(a);
+    endfunction
+
+    function automatic integer right_of_signed();
+        int a[int];
+        return $right(a);
+    endfunction
+
+    localparam integer v1 = size_of_sixteen();
+    localparam integer v2 = increment_below();
+    localparam integer v3 = low_of_empty();
+    localparam integer v4 = low_of_negative();
+    localparam integer v5 = right_of_signed();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto typeOf = [&](std::string_view name) {
+        auto param = root.lookupName("m." + std::string(name));
+        REQUIRE(param);
+        return param->as<ParameterSymbol>().getValue().str();
+    };
+    auto valueOf = [&](std::string_view name) {
+        auto param = root.lookupName("m." + std::string(name));
+        REQUIRE(param);
+        return param->as<ParameterSymbol>().getValue().integer();
+    };
+
+    // [20.7] The return type is integer.
+    CHECK(typeOf("t1") == "integer");
+    CHECK(typeOf("t2") == "integer");
+    CHECK(typeOf("t3") == "integer");
+    CHECK(typeOf("t4") == "integer");
+    CHECK(typeOf("t5") == "integer");
+    CHECK(typeOf("t6") == "integer");
+
+    // A dimension below the associative one is an ordinary fixed one.
+    CHECK(typeOf("t7") == "integer");
+    CHECK(typeOf("t8") == "integer");
+    CHECK(typeOf("t9") == "integer");
+
+    // An index that integer cannot hold keeps the index type, for the
+    // functions that answer an index.
+    CHECK(typeOf("t10") == "longint");
+    CHECK(typeOf("t11") == "bit[31:0]");
+    CHECK(typeOf("t12") == "integer");
+    CHECK(typeOf("t13") == "longint");
+    CHECK(typeOf("t14") == "integer");
+    CHECK(typeOf("t15") == "integer");
+
+    CHECK(valueOf("v1") == 16);
+    CHECK(valueOf("v2") == -1);
+    CHECK(exactlyEqual(valueOf("v3"), SVInt::createFillX(32, true)));
+    CHECK(valueOf("v4") == -3);
+    CHECK(valueOf("v5") == INT32_MAX);
 }
 
 TEST_CASE("$printtimescale, $timeunit, $timeprecision") {
