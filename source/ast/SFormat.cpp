@@ -108,6 +108,7 @@ bool parse(std::string_view str, function_ref<void(std::string_view)> onText,
             case 'd':
             case 'o':
             case 'b':
+            case 't':
                 widthAllowed = true;
                 if (options.zeroPad) {
                     options.zeroPad = false;
@@ -122,7 +123,6 @@ bool parse(std::string_view str, function_ref<void(std::string_view)> onText,
                 floatAllowed = true;
                 break;
             case 's':
-            case 't':
                 widthAllowed = true;
                 break;
             case 'c':
