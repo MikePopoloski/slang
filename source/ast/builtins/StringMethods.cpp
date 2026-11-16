@@ -299,7 +299,13 @@ public:
         if (!strCv || !valCv)
             return nullptr;
 
-        strCv.store(valCv.integer().toString(base, false));
+        // Only decimal conversions print negative values with a sign;
+        // the other bases print the two's complement bits.
+        SVInt val = valCv.integer();
+        if (base != LiteralBase::Decimal)
+            val.setSigned(false);
+
+        strCv.store(val.toString(base, false));
         return NullConstant;
     }
 

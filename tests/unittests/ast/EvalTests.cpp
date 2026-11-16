@@ -1896,6 +1896,18 @@ TEST_CASE("Eval string methods") {
     session.eval("asdf.bintoa(1234);");
     CHECK(session.eval("asdf").str() == "10011010010");
 
+    session.eval("asdf.itoa(-1);");
+    CHECK(session.eval("asdf").str() == "-1");
+
+    session.eval("asdf.hextoa(-1);");
+    CHECK(session.eval("asdf").str() == "ffffffff");
+
+    session.eval("asdf.octtoa(-8);");
+    CHECK(session.eval("asdf").str() == "37777777770");
+
+    session.eval("asdf.bintoa(-2);");
+    CHECK(session.eval("asdf").str() == "11111111111111111111111111111110");
+
     session.eval("asdf.realtoa(3.14159);");
     CHECK(session.eval("asdf").str() == "3.14159");
 
