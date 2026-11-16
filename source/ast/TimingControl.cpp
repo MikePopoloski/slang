@@ -267,6 +267,8 @@ TimingControl& Delay3Control::fromParams(Compilation& compilation,
         }
 
         delays[i] = &Expression::bind(*items[i]->as<OrderedParamAssignmentSyntax>().expr, context);
+        if (delays[i]->bad())
+            return badCtrl(compilation, nullptr);
 
         if (!delays[i]->type->isNumeric()) {
             context.addDiag(diag::DelayNotNumeric, delays[i]->sourceRange) << *delays[i]->type;
