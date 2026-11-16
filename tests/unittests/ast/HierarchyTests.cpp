@@ -3352,6 +3352,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InfinitelyRecursiveHierarchy);
+    CHECK(compilation.hasFatalErrors());
 }
 
 TEST_CASE("Uinstantiated module assignment pattern param regress -- GH #1572") {

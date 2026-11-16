@@ -374,9 +374,18 @@ int driverMain(int argc, TArgs argv) {
             }
 
             if (astJsonFile) {
-                TimeTraceScope timeScope("astSerialization"sv, ""sv);
-                printASTJson(*compilation, *astJsonFile, astJsonScopes, includeSourceInfo == true,
-                             serializeDetailedTypes == true);
+                if (compilation->hasFatalErrors()) {
+                    // Elaboration stopped early so the AST is incomplete, and the
+                    // hierarchy can be exponentially large (e.g. a module that
+                    // instantiates itself twice) so don't try to serialize it.
+                    driver.printError("not writing AST JSON because of fatal errors");
+                    ok = false;
+                }
+                else {
+                    TimeTraceScope timeScope("astSerialization"sv, ""sv);
+                    printASTJson(*compilation, *astJsonFile, astJsonScopes,
+                                 includeSourceInfo == true, serializeDetailedTypes == true);
+                }
             }
             return ok;
         };
