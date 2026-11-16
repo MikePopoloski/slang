@@ -187,6 +187,12 @@ TEST_CASE("In-memory glob matching") {
     CHECK(svGlobMatches("foo/bar/baz.txt", "...baz.txt"));
     CHECK(svGlobMatches("../../foo/bar/baz.txt", "...bar/..."));
     CHECK(svGlobMatches("../../foo/bar/baz.txt", ".../bar/..."));
+
+    // Consecutive stars can match an empty tail.
+    CHECK(svGlobMatches("foo/bar/baz", "foo/bar/baz**"));
+    CHECK(svGlobMatches("foo/bar/baz.txt", "foo/bar/*.txt**"));
+    CHECK(svGlobMatches("foo/bar/baz", "foo/bar/b*z*"));
+    CHECK(!svGlobMatches("foo/bar/baz", "foo/bar/baz*?"));
 }
 
 TEST_CASE("Display column with UTF-8") {
