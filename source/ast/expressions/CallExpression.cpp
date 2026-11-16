@@ -215,17 +215,36 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
             return false;
     }
 
+    // Formal arguments can be unnamed in some cases (e.g. DPI import prototypes)
+    // so diagnostics refer to those by their position instead.
+    auto reportMissing = [&](DiagCode namedCode, DiagCode unnamedCode, SourceRange diagRange,
+                             const FormalArgumentSymbol& formal, size_t index) {
+        if (formal.name.empty())
+            context.addDiag(unnamedCode, diagRange) << index + 1;
+        else
+            context.addDiag(namedCode, diagRange) << formal.name;
+    };
+
+    auto findNamed = [&](const FormalArgumentSymbol& formal) {
+        if (formal.name.empty())
+            return namedArgs.end();
+        return namedArgs.find(formal.name);
+    };
+
     bool bad = false;
     uint32_t orderedIndex = 0;
-    for (auto formal : formalArgs) {
+    for (size_t formalIndex = 0; formalIndex < formalArgs.size(); formalIndex++) {
+        auto formal = formalArgs[formalIndex];
         const Expression* expr = nullptr;
         if (orderedIndex < orderedArgs.size()) {
             auto arg = orderedArgs[orderedIndex++];
             if (arg->kind == SyntaxKind::EmptyArgument) {
                 // Empty arguments are allowed as long as a default is provided.
                 expr = formal->getDefaultValue();
-                if (!expr)
-                    context.addDiag(diag::ArgCannotBeEmpty, arg->sourceRange()) << formal->name;
+                if (!expr) {
+                    reportMissing(diag::ArgCannotBeEmpty, diag::UnnamedArgCannotBeEmpty,
+                                  arg->sourceRange(), *formal, formalIndex);
+                }
             }
             else if (auto exSyn = context.requireSimpleExpr(arg->as<PropertyExprSyntax>())) {
                 expr = &Expression::bindArgument(formal->getType(), formal->direction,
@@ -233,7 +252,7 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
             }
 
             // Make sure there isn't also a named value for this argument.
-            if (auto it = namedArgs.find(formal->name); it != namedArgs.end()) {
+            if (auto it = findNamed(*formal); it != namedArgs.end()) {
                 auto& diag = context.addDiag(diag::DuplicateArgAssignment,
                                              it->second.first->name.location());
                 diag << formal->name;
@@ -242,7 +261,7 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
                 bad = true;
             }
         }
-        else if (auto it = namedArgs.find(formal->name); it != namedArgs.end()) {
+        else if (auto it = findNamed(*formal); it != namedArgs.end()) {
             // Mark this argument as used so that we can later detect if
             // any were unused.
             it->second.second = true;
@@ -272,7 +291,8 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
                     break;
                 }
                 else {
-                    context.addDiag(diag::UnconnectedArg, range) << formal->name;
+                    reportMissing(diag::UnconnectedArg, diag::UnnamedUnconnectedArg, range, *formal,
+                                  formalIndex);
                 }
             }
         }

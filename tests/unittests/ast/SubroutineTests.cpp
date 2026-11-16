@@ -248,6 +248,29 @@ endmodule
     CHECK(diags[1].code == diag::InvalidDPIReturnType);
 }
 
+TEST_CASE("DPI import with unnamed formal arguments missing values") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    import "DPI-C" function void f1(input int, output logic [3:0]);
+    logic [3:0] r;
+    initial begin
+        f1(, r);
+        f1(.x(1));
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::UnnamedArgCannotBeEmpty);
+    CHECK(diags[1].code == diag::UnnamedUnconnectedArg);
+    CHECK(diags[2].code == diag::UnnamedUnconnectedArg);
+    CHECK(diags[3].code == diag::ArgDoesNotExist);
+}
+
 TEST_CASE("DPI Exports") {
     auto tree = SyntaxTree::fromText(R"(
 function bar; endfunction
