@@ -862,3 +862,27 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpectedNetDelay);
 }
+
+TEST_CASE("User-defined primitive with undeclared identifier in delay") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p(o, a);
+    output o;
+    input a;
+    table 0 : 1; 1 : 0; endtable
+endprimitive
+
+module m;
+    wire x, y;
+    p #(foo) i1(x, y);
+    p #(1, bar) i2(x, y);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+}
