@@ -156,8 +156,10 @@ void AnalysisManager::analyzeCheckerInstance(const CheckerInstanceSymbol& inst,
 
     auto& state = getState();
     for (auto& conn : inst.getPortConnections()) {
-        if (conn.formal.kind == SymbolKind::FormalArgument && conn.actual.index() == 0)
-            driverTracker.add(state.context, state.driverAlloc, *std::get<0>(conn.actual), inst);
+        if (conn.formal.kind == SymbolKind::FormalArgument && conn.actual.index() == 0) {
+            if (auto expr = std::get<0>(conn.actual))
+                driverTracker.add(state.context, state.driverAlloc, *expr, inst);
+        }
     }
 }
 
