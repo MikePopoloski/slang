@@ -249,6 +249,20 @@ public:
     }
 };
 
+// Converts an element offset into an array value to the corresponding index of the array.
+// Fixed-size unpacked arrays store their elements starting from the left bound of their range.
+static ConstantValue indexFromOffset(const Type& arrayType, uint64_t offset) {
+    int64_t index = int64_t(offset);
+    if (arrayType.hasFixedRange()) {
+        auto range = arrayType.getFixedRange();
+        if (range.left <= range.right)
+            index = range.left + index;
+        else
+            index = range.left - index;
+    }
+    return SVInt(32, uint64_t(index), true);
+}
+
 class ArrayLocatorMethod : public SystemSubroutine {
 public:
     enum Mode { All, First, Last } mode;
@@ -334,7 +348,7 @@ public:
                             if (mode == Last)
                                 dist = std::ranges::distance(begin, end) - dist - 1;
 
-                            results.emplace_back(SVInt(32, (uint64_t)dist, true));
+                            results.emplace_back(indexFromOffset(*args[0]->type, uint64_t(dist)));
                         }
                         else {
                             results.emplace_back(*it);
@@ -505,7 +519,7 @@ public:
                 auto cv = iterExpr->eval(context);
                 if (seen.emplace(cv).second) {
                     if (isIndexed && !arr.isMap())
-                        result.emplace_back(SVInt(32, index, true));
+                        result.emplace_back(indexFromOffset(*args[0]->type, index));
                     else if (isIndexed)
                         result.emplace_back(it.key());
                     else
@@ -519,7 +533,7 @@ public:
             for (auto it = begin(arr); it != end(arr); ++it, ++index) {
                 if (seen.emplace(*it).second) {
                     if (isIndexed && !arr.isMap())
-                        result.emplace_back(SVInt(32, index, true));
+                        result.emplace_back(indexFromOffset(*args[0]->type, index));
                     else if (isIndexed)
                         result.emplace_back(it.key());
                     else

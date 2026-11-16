@@ -3022,6 +3022,25 @@ TEST_CASE("Array locator methods") {
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Array locator index methods on fixed-size arrays") {
+    ScriptSession session;
+    session.eval("int a[3:0] = '{10, 20, 30, 10};");
+    session.eval("int b[5:8] = '{10, 20, 30, 10};");
+    session.eval("int c[-2:-1] = '{7, 7};");
+
+    CHECK(session.eval("a.find_index with (item == 10)").toString() == "[3,0]");
+    CHECK(session.eval("a.find_first_index with (item == 20)").toString() == "[2]");
+    CHECK(session.eval("a.find_last_index with (item == 10)").toString() == "[0]");
+    CHECK(session.eval("a.unique_index").toString() == "[3,2,1]");
+    CHECK(session.eval("b.find_index with (item == 10)").toString() == "[5,8]");
+    CHECK(session.eval("b.find_first_index with (item == 30)").toString() == "[7]");
+    CHECK(session.eval("b.find_last_index with (item == 10)").toString() == "[8]");
+    CHECK(session.eval("b.unique_index with (item / 20)").toString() == "[5,6]");
+    CHECK(session.eval("c.find_index with (item == 7)").toString() == "[-2,-1]");
+
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Queue unbounded expressions") {
     ScriptSession session;
     session.eval("int q[$] = {1, 2, 4};");
