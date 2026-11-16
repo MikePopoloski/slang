@@ -794,6 +794,30 @@ endmodule
     CHECK(diags[8].code == diag::InvalidSyntaxInEventExpr);
 }
 
+TEST_CASE("Parenthesized sequence and property operators in event expr args") {
+    auto tree = SyntaxTree::fromText(R"(
+logic x,y,clk;
+sequence s1 (event ev);
+    @(ev) x ##1 y;
+endsequence
+
+module m;
+    assert property (@(posedge clk) s1((x and y)));
+    assert property (@(posedge clk) s1((x ##1 y)));
+    assert property (@(posedge clk) s1((not x)));
+    assert property (@(posedge clk) s1(((x |-> y) or y)));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::InvalidSyntaxInEventExpr);
+}
+
 TEST_CASE("Restrict / expect / cover statements") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
