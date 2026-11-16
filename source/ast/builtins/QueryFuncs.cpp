@@ -229,9 +229,9 @@ public:
                 return comp.getErrorType();
             }
 
-            // [20.7] says the return type is integer. Only $low, $high and $right return an
-            // index, so those keep the index type where integer can't hold every index value.
-            if (returnsIndex() && !integerHoldsEveryIndex(*indexType))
+            // $left, $right, $low and $high return an index, so they keep the index type
+            // and their result can index the array as it is. The others return integer.
+            if (returnsIndex())
                 return *indexType;
         }
         else if (!dimension && type.isAssociativeArray() && returnsIndex()) {
@@ -248,29 +248,8 @@ public:
 
 protected:
     bool returnsIndex() const {
-        return knownNameId == KnownSystemName::Low || knownNameId == KnownSystemName::High ||
-               knownNameId == KnownSystemName::Right;
-    }
-
-    static bool integerHoldsEveryIndex(const Type& indexType) {
-        return indexType.getBitWidth() <= (indexType.isSigned() ? 32u : 31u);
-    }
-
-    // An index of an associative dimension, as the value of the function's return type.
-    static SVInt indexResult(const SVInt& index, const Type& indexType) {
-        if (!integerHoldsEveryIndex(indexType))
-            return index;
-
-        auto result = index.getBitWidth() < 32 ? index.extend(32, indexType.isSigned()) : index;
-        result.setSigned(true);
-        return result;
-    }
-
-    // What $low and $high return for an associative dimension with no elements.
-    static SVInt noIndexResult(const Type& indexType) {
-        if (integerHoldsEveryIndex(indexType))
-            return SVInt::createFillX(32, true);
-        return SVInt::createFillX(indexType.getBitWidth(), indexType.isSigned());
+        return knownNameId == KnownSystemName::Left || knownNameId == KnownSystemName::Right ||
+               knownNameId == KnownSystemName::Low || knownNameId == KnownSystemName::High;
     }
 
     struct DimResult {
@@ -443,8 +422,8 @@ ConstantValue LowFunction::eval(EvalContext& context, const Args& args, SourceRa
     // For associative arrays, $low returns the first key, or 'x if no elements.
     if (dim.indexType) {
         if (dim.map.empty())
-            return noIndexResult(*dim.indexType);
-        return indexResult(dim.map.begin()->first.integer(), *dim.indexType);
+            return SVInt::createFillX(dim.indexType->getBitWidth(), dim.indexType->isSigned());
+        return dim.map.begin()->first;
     }
 
     return SVInt(32, uint64_t(dim.range.lower()), true);
@@ -465,8 +444,8 @@ ConstantValue HighFunction::eval(EvalContext& context, const Args& args, SourceR
     // For associative arrays, $high returns the last key, or 'x if no elements.
     if (dim.indexType) {
         if (dim.map.empty())
-            return noIndexResult(*dim.indexType);
-        return indexResult(dim.map.rbegin()->first.integer(), *dim.indexType);
+            return SVInt::createFillX(dim.indexType->getBitWidth(), dim.indexType->isSigned());
+        return dim.map.rbegin()->first;
     }
 
     return SVInt(32, uint64_t(dim.range.upper()), true);
@@ -482,7 +461,7 @@ ConstantValue LeftFunction::eval(EvalContext& context, const Args& args, SourceR
         return SVInt::createFillX(32, true);
 
     if (dim.indexType)
-        return SVInt(32, 0, true);
+        return SVInt(dim.indexType->getBitWidth(), 0, dim.indexType->isSigned());
 
     return SVInt(32, uint64_t(dim.range.left), true);
 }
@@ -502,7 +481,7 @@ ConstantValue RightFunction::eval(EvalContext& context, const Args& args, Source
         result.setAllOnes();
         if (dim.indexType->isSigned())
             result = result.lshr(1);
-        return indexResult(result, *dim.indexType);
+        return result;
     }
 
     return SVInt(32, uint64_t(dim.range.right), true);

@@ -635,7 +635,7 @@ module m;
         return $low(a);
     endfunction
 
-    function automatic integer low_of_negative();
+    function automatic byte low_of_negative();
         int a[byte];
         a[-3] = 1;
         a[7] = 2;
@@ -650,7 +650,7 @@ module m;
     localparam integer v1 = size_of_sixteen();
     localparam integer v2 = increment_below();
     localparam integer v3 = low_of_empty();
-    localparam integer v4 = low_of_negative();
+    localparam byte v4 = low_of_negative();
     localparam integer v5 = right_of_signed();
 endmodule
 )");
@@ -671,26 +671,27 @@ endmodule
         return param->as<ParameterSymbol>().getValue().integer();
     };
 
-    // [20.7] The return type is integer.
+    // $size and $increment return integer.
     CHECK(typeOf("t1") == "integer");
-    CHECK(typeOf("t2") == "integer");
     CHECK(typeOf("t3") == "integer");
-    CHECK(typeOf("t4") == "integer");
-    CHECK(typeOf("t5") == "integer");
-    CHECK(typeOf("t6") == "integer");
+    CHECK(typeOf("t12") == "integer");
+    CHECK(typeOf("t14") == "integer");
+
+    // $left, $right, $low and $high return an index, so they keep the index type.
+    CHECK(typeOf("t2") == "bit[3:0]");
+    CHECK(typeOf("t4") == "bit[3:0]");
+    CHECK(typeOf("t5") == "int");
+    CHECK(typeOf("t6") == "logic[7:0]");
+    CHECK(typeOf("t10") == "longint");
+    CHECK(typeOf("t11") == "bit[31:0]");
 
     // A dimension below the associative one is an ordinary fixed one.
     CHECK(typeOf("t7") == "integer");
     CHECK(typeOf("t8") == "integer");
     CHECK(typeOf("t9") == "integer");
 
-    // An index that integer cannot hold keeps the index type, for the
-    // functions that answer an index.
-    CHECK(typeOf("t10") == "longint");
-    CHECK(typeOf("t11") == "bit[31:0]");
-    CHECK(typeOf("t12") == "integer");
+    // When the dimension isn't known, only an index wider than integer keeps its type.
     CHECK(typeOf("t13") == "longint");
-    CHECK(typeOf("t14") == "integer");
     CHECK(typeOf("t15") == "integer");
 
     CHECK(valueOf("v1") == 16);
