@@ -2024,3 +2024,16 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Property local variable formal with missing name regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module m; property p(local input int ), b); b; endproperty endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(!diags.empty());
+    CHECK(diags[0].code == diag::ExpectedIdentifier);
+}

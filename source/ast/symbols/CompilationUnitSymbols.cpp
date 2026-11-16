@@ -256,6 +256,9 @@ void PackageSymbol::resolveExports() const {
                 continue;
 
             auto lookupName = item->item.valueText();
+            if (lookupName.empty())
+                continue;
+
             auto package = findPackageForExport(item->package.valueText(), *this,
                                                 item->package.location());
             if (!package)

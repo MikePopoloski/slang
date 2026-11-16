@@ -490,8 +490,11 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
 
     auto checkForOverride = [&](auto& member) {
         // Constructors and static methods can never be virtual.
-        if (member.flags.has(MethodFlags::Constructor | MethodFlags::Static))
+        // Methods without a name are the result of a parse error.
+        if (member.flags.has(MethodFlags::Constructor | MethodFlags::Static) ||
+            member.name.empty()) {
             return;
+        }
 
         // Look in the parent class for a method with the same name.
         auto currentBase = baseType;
@@ -542,7 +545,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
                 }
             }
         }
-        else if (member.kind == SymbolKind::ConstraintBlock) {
+        else if (member.kind == SymbolKind::ConstraintBlock && !member.name.empty()) {
             // Constraint blocks can also be overridden -- check that 'static'ness
             // matches between base and derived if the base is pure.
             bool isOverridden = false;

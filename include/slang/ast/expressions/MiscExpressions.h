@@ -72,6 +72,7 @@ public:
 
 private:
     bool checkConstant(EvalContext& context) const;
+    void reportNonConstVariable(EvalContext& context) const;
 };
 
 /// Represents an expression that references a named value via hierarchical path.

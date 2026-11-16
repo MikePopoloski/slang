@@ -5478,3 +5478,58 @@ endclass
     REQUIRE(genericCall.classQualifier);
     CHECK(genericCall.classQualifier == m2.getBaseClass());
 }
+
+TEST_CASE("Method with extends specifier and missing name regress") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+class base; virtual function void f2(); endfunction endclass
+class A extends base; virtual function :extends void); endfunction endclass
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ExpectedIdentifier);
+    CHECK(diags[1].code == diag::EmptyStatement);
+}
+
+TEST_CASE("Non-static member access from classes with missing names regress") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int asdf;
+    function void bar; endfunction
+endclass
+
+class extends C;
+    static function void baz; bar(); endfunction
+    static int z = asdf;
+endclass
+
+class D;
+    int x;
+    function void foo; endfunction
+
+    class
+        static int y = x + 1;
+        function void func; foo(); endfunction
+    endclass
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::ExpectedIdentifier);
+    CHECK(diags[1].code == diag::NonStaticClassMethod);
+    CHECK(diags[2].code == diag::NonStaticClassProperty);
+    CHECK(diags[3].code == diag::ExpectedIdentifier);
+    CHECK(diags[4].code == diag::NonStaticClassProperty);
+    CHECK(diags[5].code == diag::NonStaticClassMethod);
+}

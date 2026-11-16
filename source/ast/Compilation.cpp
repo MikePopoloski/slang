@@ -1676,6 +1676,11 @@ void Compilation::elaborate() {
         for (auto inst : getRoot().topInstances) {
             for (auto port : inst->body.getPortList()) {
                 if (port->kind == SymbolKind::InterfacePort) {
+                    // Interface ports without a name only occur after
+                    // a parse error, which has already been reported.
+                    if (port->name.empty())
+                        continue;
+
                     inst->body.addDiag(diag::TopModuleIfacePort, port->location)
                         << inst->name << port->name;
                     break;

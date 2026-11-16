@@ -93,7 +93,12 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
 
             auto [parent, inStatic] = Lookup::getContainingClass(*context.scope);
             if (parent && !Lookup::isAccessibleFrom(*sub, *parent)) {
-                if (Lookup::isNestedWithin(*parent, subroutineParent)) {
+                if (parent->name.empty() || subroutineParent.name.empty()) {
+                    // Classes without names are the result of a parse error,
+                    // so use the diagnostic that doesn't need to name them.
+                    context.addDiag(diag::NonStaticClassMethod, range);
+                }
+                else if (Lookup::isNestedWithin(*parent, subroutineParent)) {
                     auto& diag = context.addDiag(diag::NestedNonStaticClassMethod, range);
                     diag << parent->name;
                 }

@@ -455,8 +455,7 @@ const ConstantValue& NamedValueExpression::evalRef(EvalContext& context,
 
     // If we reach this point, the variable was not found, which should mean that
     // it's not actually constant.
-    auto& diag = context.addDiag(diag::ConstEvalNonConstVariable, sourceRange) << symbol.name;
-    diag.addNote(diag::NoteDeclarationHere, symbol.location);
+    reportNonConstVariable(context);
     return ConstantValue::Invalid;
 }
 
@@ -466,12 +465,21 @@ LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
 
     auto cv = context.findLocal(&symbol);
     if (!cv) {
-        auto& diag = context.addDiag(diag::ConstEvalNonConstVariable, sourceRange) << symbol.name;
-        diag.addNote(diag::NoteDeclarationHere, symbol.location);
+        reportNonConstVariable(context);
         return nullptr;
     }
 
     return LValue(*cv);
+}
+
+void NamedValueExpression::reportNonConstVariable(EvalContext& context) const {
+    // Symbols without a name are the result of a parse error,
+    // which has already been reported.
+    if (symbol.name.empty())
+        return;
+
+    auto& diag = context.addDiag(diag::ConstEvalNonConstVariable, sourceRange) << symbol.name;
+    diag.addNote(diag::NoteDeclarationHere, symbol.location);
 }
 
 bool NamedValueExpression::isEquivalentImpl(const NamedValueExpression& rhs) const {

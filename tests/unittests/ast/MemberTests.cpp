@@ -2508,3 +2508,33 @@ alias;
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Package export with missing member name regress") {
+    auto tree = SyntaxTree::fromText(R"(
+package p2; int x; endpackage
+package p1;
+  export p2:
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpectedToken);
+}
+
+TEST_CASE("Top-level interface port with missing name regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface J; endinterface
+module n(J ]j); endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpectedIdentifier);
+}

@@ -1680,7 +1680,12 @@ bool Lookup::ensureAccessible(const Symbol& symbol, const ASTContext& context,
     if (parent && !isAccessibleFrom(symbol, *parent) && !withinCovergroup(symbol, *context.scope)) {
         if (sourceRange) {
             auto& targetClass = symbol.getParentScope()->asSymbol();
-            if (isNestedWithin(*parent, targetClass)) {
+            if (parent->name.empty() || targetClass.name.empty()) {
+                // Classes without names are the result of a parse error,
+                // so use the diagnostic that doesn't need to name them.
+                context.addDiag(diag::NonStaticClassProperty, *sourceRange) << symbol.name;
+            }
+            else if (isNestedWithin(*parent, targetClass)) {
                 auto& diag = context.addDiag(diag::NestedNonStaticClassProperty, *sourceRange);
                 diag << symbol.name << parent->name;
             }
