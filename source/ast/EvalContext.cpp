@@ -22,6 +22,7 @@ void EvalContext::reset() {
     steps = 0;
     disableTarget = nullptr;
     queueTarget = nullptr;
+    activeIterators = nullptr;
     stack.clear();
     lvalStack.clear();
     diags.clear();
@@ -68,6 +69,14 @@ void EvalContext::deleteLocal(const ValueSymbol* symbol) {
         auto& frame = stack.back();
         frame.temporaries.erase(symbol);
     }
+}
+
+auto EvalContext::findIterator(const ValueSymbol& symbol) const -> const ActiveIterator* {
+    for (auto it = activeIterators; it; it = it->prev) {
+        if (&it->symbol == &symbol)
+            return it;
+    }
+    return nullptr;
 }
 
 bool EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,

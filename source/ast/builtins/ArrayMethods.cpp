@@ -25,6 +25,62 @@ static bool isComparable(const Type& type) {
     return type.isNumeric() || type.isString();
 }
 
+// Converts an element offset into an array value to the corresponding index of the array.
+// Fixed-size unpacked arrays store their elements starting from the left bound of their range.
+static ConstantValue indexFromOffset(const Type& arrayType, uint64_t offset) {
+    int64_t index = int64_t(offset);
+    if (arrayType.hasFixedRange()) {
+        auto range = arrayType.getFixedRange();
+        if (range.left <= range.right)
+            index = range.left + index;
+        else
+            index = range.left - index;
+    }
+    return SVInt(32, uint64_t(index), true);
+}
+
+// Holds the state of an array method's iterator variable during constant evaluation:
+// the current element value and its position, which is used by the index method.
+class IteratorState {
+public:
+    IteratorState(EvalContext& context, const ValueSymbol& iterVar) :
+        context(context), value(context.createLocal(&iterVar)), active(iterVar) {
+        context.pushIterator(active);
+    }
+
+    ~IteratorState() { context.popIterator(); }
+
+    IteratorState(const IteratorState&) = delete;
+    IteratorState& operator=(const IteratorState&) = delete;
+
+    // Sets the iterator to the element at the given offset of an array or queue.
+    void set(const ConstantValue& elem, uint64_t offset) {
+        *value = elem;
+        active.offset = offset;
+    }
+
+    // Sets the iterator to the given entry of an associative array.
+    // The key must remain alive while the iterator is active.
+    void set(const ConstantValue& elem, const ConstantValue& key) {
+        *value = elem;
+        active.key = &key;
+    }
+
+    // Sets the iterator to the element at the given position of an array value.
+    template<bool IsConst>
+    void set(const ConstantValue& arr, const CVIterator<IsConst>& it, uint64_t offset) {
+        if (arr.isMap())
+            set(*it, it.key());
+        else
+            set(*it, offset);
+    }
+
+private:
+    EvalContext& context;
+    ConstantValue* value;
+    EvalContext::ActiveIterator active;
+};
+
 class ArrayReductionMethod : public SystemSubroutine {
 public:
     using Operator = function_ref<void(SVInt&, const SVInt&)>;
@@ -76,15 +132,17 @@ public:
             }
 
             auto it = begin(arr);
+            uint64_t offset = 0;
             auto guard = context.disableCaching();
-            auto iterVal = context.createLocal(iterVar, *it);
+            IteratorState iterState(context, *iterVar);
+            iterState.set(arr, it, offset);
             ConstantValue cv = iterExpr->eval(context);
             if (!cv)
                 return nullptr;
 
             SVInt result = cv.integer();
-            for (++it; it != end(arr); ++it) {
-                *iterVal = *it;
+            for (++it, ++offset; it != end(arr); ++it, ++offset) {
+                iterState.set(arr, it, offset);
                 cv = iterExpr->eval(context);
                 if (!cv)
                     return nullptr;
@@ -162,32 +220,50 @@ public:
         if (iterExpr) {
             SLANG_ASSERT(iterVar);
             auto guard = context.disableCaching();
-            auto iterVal = context.createLocal(iterVar);
+            IteratorState iterState(context, *iterVar);
 
+            // Compute the sort key for each element up front, with the iterator
+            // referring to the element's original position, and then sort the
+            // elements according to those keys.
             auto sortTarget = [&, ie = iterExpr](auto& target) {
-                auto pred = [&, ie = ie](ConstantValue& a, ConstantValue& b) {
-                    *iterVal = a;
-                    ConstantValue cva = ie->eval(context);
+                std::vector<std::pair<ConstantValue, size_t>> keys;
+                keys.reserve(target.size());
+                for (size_t i = 0; i < target.size(); i++) {
+                    iterState.set(target[i], i);
+                    ConstantValue cv = ie->eval(context);
+                    if (!cv)
+                        return false;
 
-                    *iterVal = b;
-                    ConstantValue cvb = ie->eval(context);
+                    keys.emplace_back(std::move(cv), i);
+                }
 
-                    return cva < cvb;
-                };
-
+                auto pred = [](auto& a, auto& b) { return a.first < b.first; };
                 if (reversed)
-                    std::ranges::sort(target.rbegin(), target.rend(), pred);
+                    std::ranges::stable_sort(keys.rbegin(), keys.rend(), pred);
                 else
-                    std::ranges::sort(target, pred);
+                    std::ranges::stable_sort(keys, pred);
+
+                std::vector<ConstantValue> sorted;
+                sorted.reserve(keys.size());
+                for (auto& [key, i] : keys)
+                    sorted.emplace_back(std::move(target[i]));
+
+                for (size_t i = 0; i < sorted.size(); i++)
+                    target[i] = std::move(sorted[i]);
+                return true;
             };
 
+            bool ok;
             if (target->isQueue()) {
-                sortTarget(*target->queue());
+                ok = sortTarget(*target->queue());
             }
             else {
                 auto& vec = std::get<ConstantValue::Elements>(target->getVariant());
-                sortTarget(vec);
+                ok = sortTarget(vec);
             }
+
+            if (!ok)
+                return nullptr;
         }
         else {
             auto sortTarget = [&](auto& target) {
@@ -249,20 +325,6 @@ public:
     }
 };
 
-// Converts an element offset into an array value to the corresponding index of the array.
-// Fixed-size unpacked arrays store their elements starting from the left bound of their range.
-static ConstantValue indexFromOffset(const Type& arrayType, uint64_t offset) {
-    int64_t index = int64_t(offset);
-    if (arrayType.hasFixedRange()) {
-        auto range = arrayType.getFixedRange();
-        if (range.left <= range.right)
-            index = range.left + index;
-        else
-            index = range.left - index;
-    }
-    return SVInt(32, uint64_t(index), true);
-}
-
 class ArrayLocatorMethod : public SystemSubroutine {
 public:
     enum Mode { All, First, Last } mode;
@@ -311,13 +373,13 @@ public:
 
         auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
         auto guard = context.disableCaching();
-        auto iterVal = context.createLocal(iterVar);
+        IteratorState iterState(context, *iterVar);
 
         SVQueue results;
         if (arr.isMap()) {
             auto doFind = [&, ie = iterExpr](auto it, auto end) {
                 for (; it != end; it++) {
-                    *iterVal = it->second;
+                    iterState.set(it->second, it->first);
                     ConstantValue cv = ie->eval(context);
                     if (cv.isTrue()) {
                         if (isIndexed)
@@ -340,15 +402,15 @@ public:
         else {
             auto doFind = [&, ie = iterExpr](auto begin, auto end) {
                 for (auto it = begin; it != end; it++) {
-                    *iterVal = *it;
+                    auto offset = std::ranges::distance(begin, it);
+                    if (mode == Last)
+                        offset = std::ranges::distance(begin, end) - offset - 1;
+
+                    iterState.set(*it, uint64_t(offset));
                     ConstantValue cv = ie->eval(context);
                     if (cv.isTrue()) {
                         if (isIndexed) {
-                            auto dist = std::ranges::distance(begin, it);
-                            if (mode == Last)
-                                dist = std::ranges::distance(begin, end) - dist - 1;
-
-                            results.emplace_back(indexFromOffset(*args[0]->type, uint64_t(dist)));
+                            results.emplace_back(indexFromOffset(*args[0]->type, uint64_t(offset)));
                         }
                         else {
                             results.emplace_back(*it);
@@ -422,13 +484,15 @@ public:
             SLANG_ASSERT(iterVar);
 
             auto it = begin(arr);
+            uint64_t offset = 0;
             auto guard = context.disableCaching();
-            auto iterVal = context.createLocal(iterVar, *it);
+            IteratorState iterState(context, *iterVar);
+            iterState.set(arr, it, offset);
             ConstantValue elem = *it;
             ConstantValue val = iterExpr->eval(context);
 
-            for (++it; it != end(arr); ++it) {
-                *iterVal = *it;
+            for (++it, ++offset; it != end(arr); ++it, ++offset) {
+                iterState.set(arr, it, offset);
                 auto cv = iterExpr->eval(context);
 
                 if (isMin) {
@@ -510,12 +574,12 @@ public:
         if (iterExpr) {
             SLANG_ASSERT(iterVar);
             auto guard = context.disableCaching();
-            auto iterVal = context.createLocal(iterVar);
+            IteratorState iterState(context, *iterVar);
 
             uint32_t index = 0;
             flat_hash_set<ConstantValue> seen;
             for (auto it = begin(arr); it != end(arr); ++it, ++index) {
-                *iterVal = *it;
+                iterState.set(arr, it, index);
                 auto cv = iterExpr->eval(context);
                 if (seen.emplace(cv).second) {
                     if (isIndexed && !arr.isMap())
@@ -994,10 +1058,32 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
-        notConst(context, range);
-        return nullptr;
+        // The array methods only iterate over the first dimension of the array,
+        // so that is the only dimension whose index we can return.
+        if (args.size() > 1) {
+            auto dim = args[1]->eval(context);
+            if (!dim)
+                return nullptr;
+
+            if (dim.integer() != 1) {
+                notConst(context, range);
+                return nullptr;
+            }
+        }
+
+        auto& iterator = args[0]->as<NamedValueExpression>().symbol.as<IteratorSymbol>();
+        auto active = context.findIterator(iterator);
+        if (!active) {
+            notConst(context, range);
+            return nullptr;
+        }
+
+        if (active->key)
+            return *active->key;
+
+        return indexFromOffset(iterator.arrayType, active->offset);
     }
 };
 
@@ -1053,12 +1139,12 @@ public:
 
         auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
         auto guard = context.disableCaching();
-        auto iterVal = context.createLocal(iterVar);
+        IteratorState iterState(context, *iterVar);
 
         if (arr.isMap()) {
             AssociativeArray results;
             for (auto& [key, val] : *arr.map()) {
-                *iterVal = val;
+                iterState.set(val, key);
                 ConstantValue cv = iterExpr->eval(context);
                 if (!cv)
                     return nullptr;
@@ -1069,8 +1155,9 @@ public:
         }
         else {
             auto doMap = [&, ie = iterExpr](auto& container, auto& results) {
+                uint64_t offset = 0;
                 for (auto& elem : container) {
-                    *iterVal = elem;
+                    iterState.set(elem, offset++);
                     ConstantValue cv = ie->eval(context);
                     if (!cv)
                         return false;

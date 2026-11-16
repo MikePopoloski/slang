@@ -2489,20 +2489,26 @@ endmodule
     CHECK(diags[2].code == diag::AssociativeWildcardNotAllowed);
 }
 
-TEST_CASE("Iterator index non-const eval") {
+TEST_CASE("Iterator index const eval") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     localparam int arr[] = '{10, 20, 30};
     localparam int q[$] = arr.find_index() with (item.index() > 0);
+    localparam int a[2][3] = '{'{1, 2, 3}, '{4, 5, 6}};
+    localparam int b = a.sum with (item.index(2) == 0 ? 1 : 0);
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
+    // Only the first dimension is iterated, so the index of other dimensions isn't constant.
     auto& diags = compilation.getAllDiagnostics();
-    CHECK(std::count_if(diags.begin(), diags.end(),
-                        [](auto& d) { return d.code == diag::SysFuncNotConst; }) >= 1);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SysFuncNotConst);
+
+    auto& q = compilation.getRoot().lookupName<ParameterSymbol>("m.q");
+    CHECK(q.getValue().toString() == "[1,2]");
 }
 
 TEST_CASE("Array map method errors and null eval") {

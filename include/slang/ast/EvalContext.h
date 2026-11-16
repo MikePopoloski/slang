@@ -74,6 +74,43 @@ public:
     /// storage will be invalidated.
     void deleteLocal(const ValueSymbol* symbol);
 
+    /// The current position of an array method iterator that is active during
+    /// evaluation, which is needed if the iterator's index method is called.
+    /// These are owned by the array method being evaluated and are linked
+    /// together to avoid any allocations, since the index method is rarely used.
+    struct ActiveIterator {
+        /// The iterator variable.
+        const ValueSymbol& symbol;
+
+        /// The offset of the current element within the array or queue.
+        uint64_t offset = 0;
+
+        /// The key of the current element, if iterating an associative array.
+        const ConstantValue* key = nullptr;
+
+        /// The previously active iterator, if any.
+        const ActiveIterator* prev = nullptr;
+
+        explicit ActiveIterator(const ValueSymbol& symbol) : symbol(symbol) {}
+    };
+
+    /// Marks the given iterator as active. It must remain alive until
+    /// a corresponding call to @a popIterator.
+    void pushIterator(ActiveIterator& iterator) {
+        iterator.prev = activeIterators;
+        activeIterators = &iterator;
+    }
+
+    /// Removes the most recently pushed active iterator.
+    void popIterator() {
+        SLANG_ASSERT(activeIterators);
+        activeIterators = activeIterators->prev;
+    }
+
+    /// Finds the active iterator for the given iterator variable,
+    /// or returns nullptr if it is not active.
+    const ActiveIterator* findIterator(const ValueSymbol& symbol) const;
+
     /// Push a new frame onto the call stack.
     [[nodiscard]] bool pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
                                  LookupLocation lookupLocation);
@@ -221,6 +258,7 @@ private:
     uint32_t steps = 0;
     const Symbol* disableTarget = nullptr;
     const ConstantValue* queueTarget = nullptr;
+    const ActiveIterator* activeIterators = nullptr;
     SmallVector<Frame> stack;
     SmallVector<LValue*> lvalStack;
     Diagnostics diags;

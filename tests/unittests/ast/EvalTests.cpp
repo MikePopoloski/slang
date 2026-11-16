@@ -3056,6 +3056,42 @@ TEST_CASE("Array locator index methods on fixed-size arrays") {
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Array method iterator index") {
+    ScriptSession session(optionsFor(LanguageVersion::v1800_2023));
+    session.eval("int q[$] = {5, 3, 9, 1};");
+    session.eval("int b[5:8] = '{10, 20, 30, 40};");
+    session.eval("int c[3:0] = '{10, 20, 30, 40};");
+    session.eval("int aa[string] = '{\"a\":1, \"b\":2, \"c\":3};");
+
+    CHECK(session.eval("q.find with (item.index > 1)").toString() == "[9,1]");
+    CHECK(session.eval("b.find with (item.index == 6)").toString() == "[20]");
+    CHECK(session.eval("c.find with (item.index == 0)").toString() == "[40]");
+    CHECK(session.eval("b.find_last with (item.index < 7)").toString() == "[20]");
+    CHECK(session.eval("c.find_last_index with (item.index > 1)").toString() == "[2]");
+    CHECK(session.eval("aa.find_index with (item.index != \"b\")").toString() == "[\"a\",\"c\"]");
+    CHECK(session.eval("q.find(x) with (x.index(1) == 2)").toString() == "[9]");
+    CHECK(session.eval("q.find(x, i) with (x.i == 3)").toString() == "[1]");
+
+    CHECK(session.eval("b.sum with (item.index)").integer() == 26);
+    CHECK(session.eval("aa.sum with (item.index == \"c\" ? item : 0)").integer() == 3);
+    CHECK(session.eval("q.max with (item.index)").toString() == "[1]");
+    CHECK(session.eval("b.min with (item.index == 7 ? 0 : item)").toString() == "[30]");
+    CHECK(session.eval("q.unique with (item.index / 2)").toString() == "[5,9]");
+    CHECK(session.eval("c.unique_index with (item.index / 2)").toString() == "[3,1]");
+    CHECK(session.eval("b.map with (item.index * 2)").toString() == "[10,12,14,16]");
+
+    session.eval("q.sort with (-item.index);");
+    CHECK(session.eval("q").toString() == "[1,9,3,5]");
+    session.eval("q.rsort with (item.index);");
+    CHECK(session.eval("q").toString() == "[5,3,9,1]");
+
+    // Nested iterators each track their own index.
+    CHECK(session.eval("q.find(x) with (b.sum(y) with (y.index) == x.index + 26)").toString() ==
+          "[5]");
+
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Queue unbounded expressions") {
     ScriptSession session;
     session.eval("int q[$] = {1, 2, 4};");
