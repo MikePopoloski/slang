@@ -2779,8 +2779,16 @@ bool ValueRangeExpression::isEquivalentImpl(const ValueRangeExpression& rhs) con
 
 ConstantValue ValueRangeExpression::checkInside(EvalContext& context,
                                                 const ConstantValue& val) const {
-    ConstantValue cvl = left().eval(context);
-    ConstantValue cvr = right().eval(context);
+    // An unbounded literal as a bound leaves that side of the range open. It has no
+    // value of its own to evaluate to here since there is no queue target.
+    auto evalBound = [&](const Expression& expr) -> ConstantValue {
+        if (expr.unwrapImplicitConversions().kind == ExpressionKind::UnboundedLiteral)
+            return ConstantValue::UnboundedPlaceholder{};
+        return expr.eval(context);
+    };
+
+    ConstantValue cvl = evalBound(left());
+    ConstantValue cvr = evalBound(right());
     if (!cvl || !cvr)
         return nullptr;
 

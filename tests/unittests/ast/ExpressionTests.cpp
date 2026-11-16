@@ -5039,3 +5039,30 @@ endmodule
     }
     CHECK(outer.finish().empty());
 }
+
+TEST_CASE("Inside ranges with unbounded bounds in constant functions") {
+    auto tree = SyntaxTree::fromText(R"(
+function automatic int f(int n);
+    return (n inside {[5:$]} ? 4 : 2) + (n inside {[$:3]} ? 8 : 0);
+endfunction
+
+module m;
+    localparam int P = f(10);
+    logic [f(10):0] x;
+    logic [f(1):0] y;
+    case (f(10))
+        4: begin : g end
+    endcase
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m").body;
+    CHECK(m.find<ParameterSymbol>("P").getValue().integer() == 4);
+    CHECK(m.find<VariableSymbol>("x").getType().getBitWidth() == 5);
+    CHECK(m.find<VariableSymbol>("y").getType().getBitWidth() == 11);
+    CHECK(m.find("g"));
+}
