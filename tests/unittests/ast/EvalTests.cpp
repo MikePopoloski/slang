@@ -1431,6 +1431,9 @@ endfunction
     CHECK(sformatf("%v", "3'b1z0") == "St1 HiZ St0");
 
     CHECK(sformatf("%t", "12345") == "               12345");
+    CHECK(sformatf("%0t", "12345") == "12345");
+    CHECK(sformatf("%8t", "12345") == "   12345");
+    CHECK(sformatf("%-0t|", "12345") == "12345|");
 
     session.eval(R"(
 typedef enum {ON, OFF} switch_e;
