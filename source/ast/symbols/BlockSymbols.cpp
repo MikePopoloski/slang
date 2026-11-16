@@ -577,7 +577,9 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
     if (!condVal) {
         if (condExpr->kind == ExpressionKind::TypeReference)
             condType = &condExpr->as<TypeReferenceExpression>().targetType;
-        else
+
+        // An error has already been reported if we can't figure out the condition.
+        if (!condType || condType->isError())
             return;
     }
 

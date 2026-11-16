@@ -660,6 +660,23 @@ endmodule
     CHECK(it == diags.end());
 }
 
+TEST_CASE("Case generate type reference to undeclared type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    case (type(undeclared_t))
+        type(int): begin : a end
+    endcase
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
 TEST_CASE("Conditional generate same name") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
