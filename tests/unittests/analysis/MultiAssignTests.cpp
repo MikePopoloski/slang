@@ -1813,3 +1813,25 @@ endmodule
     CHECK(diags[0].code == diag::MultipleContAssigns);
     CHECK(diags[1].code == diag::MultipleContAssigns);
 }
+
+TEST_CASE("Methods that modify their object are tracked as drivers") {
+    auto& code = R"(
+module m(input logic clk);
+    int q[$];
+    string s;
+    always_ff @(posedge clk) q.push_back(1);
+    initial void'(q.pop_front());
+
+    assign s = "abc";
+    initial s.putc(0, "x");
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[1].code == diag::MixedVarAssigns);
+}

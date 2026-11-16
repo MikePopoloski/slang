@@ -2400,6 +2400,51 @@ endmodule
                         [](auto& d) { return d.code == diag::ConstEvalDynamicArrayIndex; }) == 2);
 }
 
+TEST_CASE("Methods that modify their object require a modifiable lvalue") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int p[3] = '{3, 1, 2};
+    const int q[$] = {1, 2, 3};
+    const int aa[int] = '{1:2};
+    const int d[] = '{1, 2};
+    const string s = "abc";
+
+    function automatic void f(const ref int r[$], input int i[$]);
+        r.push_back(1);
+        i.push_back(1);
+    endfunction
+
+    function automatic int g(); return 0; endfunction
+
+    initial begin
+        p.sort();
+        p.reverse();
+        q.rsort();
+        q.shuffle();
+        q.delete(0);
+        q.push_front(1);
+        q.insert(0, 1);
+        void'(q.pop_back());
+        aa.delete(1);
+        d.delete();
+        s.putc(0, "x");
+        s.itoa(1);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 13);
+    CHECK(diags[0].code == diag::AssignmentToConstVar);
+    CHECK(diags[1].code == diag::CantModifyConst);
+    CHECK(diags[2].code == diag::CantModifyConst);
+    for (size_t i = 3; i < diags.size(); i++)
+        CHECK(diags[i].code == diag::AssignmentToConstVar);
+}
+
 TEST_CASE("Queue delete with non-constant index in constant function") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

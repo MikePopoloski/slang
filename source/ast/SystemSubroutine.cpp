@@ -67,6 +67,15 @@ void SystemSubroutine::registerLValue(const Expression& expr, const ASTContext& 
         context.getCompilation().noteReference(*sym, /* isLValue */ true);
 }
 
+bool SystemSubroutine::requireModifiableFirstArg(const ASTContext& context,
+                                                 const Args& args) const {
+    if (args.empty())
+        return true;
+
+    registerLValue(*args[0], context);
+    return args[0]->requireLValue(context);
+}
+
 const Type& SystemSubroutine::badArg(const ASTContext& context, const Expression& arg) const {
     context.addDiag(diag::BadSystemSubroutineArg, arg.sourceRange) << *arg.type << kindStr();
     return context.getCompilation().getErrorType();
@@ -107,8 +116,8 @@ const Type& SimpleSystemSubroutine::checkArguments(const ASTContext& context, co
     if (!checkArgCount(context, isMethod, args, range, requiredArgs, argTypes.size()))
         return comp.getErrorType();
 
-    if (isFirstArgLValue && !args.empty())
-        registerLValue(*args[0], context);
+    if (modifiesFirstArg && !requireModifiableFirstArg(context, args))
+        return comp.getErrorType();
 
     return *returnType;
 }

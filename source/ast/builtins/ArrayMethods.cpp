@@ -118,13 +118,16 @@ public:
     ArraySortMethod(KnownSystemName knownNameId, bool reversed) :
         SystemSubroutine(knownNameId, SubroutineKind::Function), reversed(reversed) {
         withClauseMode = WithClauseMode::Iterator;
+        modifiesFirstArg = true;
     }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression* iterExpr) const final {
         auto& comp = context.getCompilation();
-        if (!checkArgCount(context, true, args, range, 0, 0))
+        if (!checkArgCount(context, true, args, range, 0, 0) ||
+            !requireModifiableFirstArg(context, args)) {
             return comp.getErrorType();
+        }
 
         if (iterExpr) {
             if (!isComparable(*iterExpr->type)) {
@@ -212,13 +215,17 @@ private:
 
 class ArrayReverseMethod : public SystemSubroutine {
 public:
-    ArrayReverseMethod() : SystemSubroutine(KnownSystemName::Reverse, SubroutineKind::Function) {}
+    ArrayReverseMethod() : SystemSubroutine(KnownSystemName::Reverse, SubroutineKind::Function) {
+        modifiesFirstArg = true;
+    }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
-        if (!checkArgCount(context, true, args, range, 0, 0))
+        if (!checkArgCount(context, true, args, range, 0, 0) ||
+            !requireModifiableFirstArg(context, args)) {
             return comp.getErrorType();
+        }
 
         return comp.getVoidType();
     }
@@ -548,7 +555,7 @@ class DynArrayDeleteMethod : public SimpleSystemSubroutine {
 public:
     explicit DynArrayDeleteMethod(const Builtins& builtins) :
         SimpleSystemSubroutine(KnownSystemName::Delete, SubroutineKind::Function, 0, {},
-                               builtins.voidType, true) {}
+                               builtins.voidType, true, /* isFirstArgLValue */ true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -563,8 +570,9 @@ public:
 
 class AssocArrayDeleteMethod : public SystemSubroutine {
 public:
-    AssocArrayDeleteMethod() :
-        SystemSubroutine(KnownSystemName::Delete, SubroutineKind::Function) {}
+    AssocArrayDeleteMethod() : SystemSubroutine(KnownSystemName::Delete, SubroutineKind::Function) {
+        modifiesFirstArg = true;
+    }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
@@ -583,8 +591,10 @@ public:
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
-        if (!checkArgCount(context, true, args, range, 0, 1))
+        if (!checkArgCount(context, true, args, range, 0, 1) ||
+            !requireModifiableFirstArg(context, args)) {
             return comp.getErrorType();
+        }
 
         if (args.size() > 1) {
             auto& type = *args[0]->type;
@@ -724,13 +734,17 @@ public:
 class QueuePopMethod : public SystemSubroutine {
 public:
     QueuePopMethod(KnownSystemName knownNameId, bool front) :
-        SystemSubroutine(knownNameId, SubroutineKind::Function), front(front) {}
+        SystemSubroutine(knownNameId, SubroutineKind::Function), front(front) {
+        modifiesFirstArg = true;
+    }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
-        if (!checkArgCount(context, true, args, range, 0, 0))
+        if (!checkArgCount(context, true, args, range, 0, 0) ||
+            !requireModifiableFirstArg(context, args)) {
             return comp.getErrorType();
+        }
 
         return *args[0]->type->getArrayElementType();
     }
@@ -766,7 +780,9 @@ private:
 class QueuePushMethod : public SystemSubroutine {
 public:
     QueuePushMethod(KnownSystemName knownNameId, bool front) :
-        SystemSubroutine(knownNameId, SubroutineKind::Function), front(front) {}
+        SystemSubroutine(knownNameId, SubroutineKind::Function), front(front) {
+        modifiesFirstArg = true;
+    }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
@@ -785,10 +801,10 @@ public:
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
-        if (!checkArgCount(context, true, args, range, 1, 1))
+        if (!checkArgCount(context, true, args, range, 1, 1) ||
+            !requireModifiableFirstArg(context, args)) {
             return comp.getErrorType();
-
-        registerLValue(*args[0], context);
+        }
 
         return comp.getVoidType();
     }
@@ -823,7 +839,9 @@ private:
 
 class QueueInsertMethod : public SystemSubroutine {
 public:
-    QueueInsertMethod() : SystemSubroutine(KnownSystemName::Insert, SubroutineKind::Function) {}
+    QueueInsertMethod() : SystemSubroutine(KnownSystemName::Insert, SubroutineKind::Function) {
+        modifiesFirstArg = true;
+    }
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
@@ -842,10 +860,10 @@ public:
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
-        if (!checkArgCount(context, true, args, range, 2, 2))
+        if (!checkArgCount(context, true, args, range, 2, 2) ||
+            !requireModifiableFirstArg(context, args)) {
             return comp.getErrorType();
-
-        registerLValue(*args[0], context);
+        }
 
         if (!args[1]->type->isIntegral())
             return badArg(context, *args[1]);
@@ -884,13 +902,17 @@ public:
 
 class QueueDeleteMethod : public SystemSubroutine {
 public:
-    QueueDeleteMethod() : SystemSubroutine(KnownSystemName::Delete, SubroutineKind::Function) {}
+    QueueDeleteMethod() : SystemSubroutine(KnownSystemName::Delete, SubroutineKind::Function) {
+        modifiesFirstArg = true;
+    }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
-        if (!checkArgCount(context, true, args, range, 0, 1))
+        if (!checkArgCount(context, true, args, range, 0, 1) ||
+            !requireModifiableFirstArg(context, args)) {
             return comp.getErrorType();
+        }
 
         if (args.size() > 1) {
             if (!args[1]->type->isIntegral())
@@ -1102,9 +1124,10 @@ void Builtins::registerArrayMethods() {
         REGISTER(kind, ArraySort, KnownSystemName::Rsort, true);
         REGISTER(kind, ArrayReverse, );
 
-        addSystemMethod(kind,
-                        std::make_shared<NonConstantFunction>(KnownSystemName::Shuffle, voidType, 0,
-                                                              std::vector<const Type*>{}, true));
+        auto shuffle = std::make_shared<NonConstantFunction>(KnownSystemName::Shuffle, voidType, 0,
+                                                             std::vector<const Type*>{}, true);
+        shuffle->modifiesFirstArg = true;
+        addSystemMethod(kind, std::move(shuffle));
     }
 
     // Associative arrays also alias "size" to "num" for some reason.

@@ -45,6 +45,11 @@ public:
     /// to the caller.
     bool neverReturns = false;
 
+    /// True if this subroutine modifies its first argument, which is typically the
+    /// object a method is invoked on (e.g. a queue's push_back method). That argument
+    /// is then required to be a modifiable lvalue and is treated as passed by reference.
+    bool modifiesFirstArg = false;
+
     /// Possible ways in which the subroutine may use a `with` clause.
     enum class WithClauseMode {
         /// The subroutine does not use a `with` clause.
@@ -74,11 +79,11 @@ public:
 
     /// @returns true if the given argument is passed by reference,
     /// and false otherwise.
-    virtual bool isArgByRef(size_t) const { return false; }
+    virtual bool isArgByRef(size_t argIndex) const { return argIndex == 0 && modifiesFirstArg; }
 
     /// @returns true if a call with the given arguments passes output (or ref / inout)
     /// args, and false otherwise.
-    virtual bool hasOutputArgs(const Args&) const { return false; }
+    virtual bool hasOutputArgs(const Args& args) const { return modifiesFirstArg && !args.empty(); }
 
     /// Allows the subroutine to perform custom argument binding for the given
     /// argument index.
@@ -143,6 +148,10 @@ protected:
 
     /// Helper method to register the given expression as an lvalue.
     static void registerLValue(const Expression& expr, const ASTContext& context);
+
+    /// Checks that the first argument, which this subroutine modifies,
+    /// is a modifiable lvalue and reports an error if not.
+    bool requireModifiableFirstArg(const ASTContext& context, const Args& args) const;
 };
 
 /// An implementation of the SystemSubroutine interface that has
@@ -160,16 +169,18 @@ protected:
                            const std::vector<const Type*>& argTypes, const Type& returnType,
                            bool isMethod, bool isFirstArgLValue = false) :
         SystemSubroutine(name, kind), argTypes(argTypes), returnType(&returnType),
-        requiredArgs(requiredArgs), isMethod(isMethod), isFirstArgLValue(isFirstArgLValue) {
+        requiredArgs(requiredArgs), isMethod(isMethod) {
         SLANG_ASSERT(requiredArgs <= argTypes.size());
+        modifiesFirstArg = isFirstArgLValue;
     }
 
     SimpleSystemSubroutine(KnownSystemName knownNameId, SubroutineKind kind, size_t requiredArgs,
                            const std::vector<const Type*>& argTypes, const Type& returnType,
                            bool isMethod, bool isFirstArgLValue = false) :
         SystemSubroutine(knownNameId, kind), argTypes(argTypes), returnType(&returnType),
-        requiredArgs(requiredArgs), isMethod(isMethod), isFirstArgLValue(isFirstArgLValue) {
+        requiredArgs(requiredArgs), isMethod(isMethod) {
         SLANG_ASSERT(requiredArgs <= argTypes.size());
+        modifiesFirstArg = isFirstArgLValue;
     }
 
 private:
@@ -177,7 +188,6 @@ private:
     const Type* returnType;
     size_t requiredArgs;
     bool isMethod;
-    bool isFirstArgLValue;
 };
 
 /// An implementation of the SystemSubroutine interface that is also
