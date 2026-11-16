@@ -1663,10 +1663,18 @@ void Expression::findPotentiallyImplicitNets(
 
             // A missing identifier token can be inserted by the parser during error
             // recovery; it has already been diagnosed.
-            if (nameSyntax.as<IdentifierNameSyntax>().identifier.isMissing())
+            auto& idName = nameSyntax.as<IdentifierNameSyntax>();
+            if (idName.identifier.isMissing())
+                return;
+
+            // Pattern variables bound locally within the expression
+            // aren't references to anything in the scope.
+            if (std::ranges::find(boundNames, idName.identifier.valueText()) != boundNames.end())
                 return;
 
             bitmask<LookupFlags> flags = LookupFlags::NoUndeclaredError;
+            if (context.getCompilation().hasFlag(CompilationFlags::AllowUseBeforeDeclare))
+                flags |= LookupFlags::AllowDeclaredAfter;
             if (context.flags.has(ASTFlags::BindInstantiation))
                 flags |= LookupFlags::DisallowWildcardImport | LookupFlags::DisallowUnitReferences;
 
@@ -1677,11 +1685,59 @@ void Expression::findPotentiallyImplicitNets(
             SLANG_ASSERT(!result.flags.has(LookupResultFlags::IsHierarchical));
 
             if (!result.found && !result.hasError())
-                results.push_back(&nameSyntax.as<IdentifierNameSyntax>());
+                results.push_back(&idName);
+        }
+
+        void handle(const InvocationExpressionSyntax& invocation) {
+            // A name that is being invoked as a subroutine can never be an implicit net,
+            // and subroutines can be referenced before they are declared, so don't try
+            // to look it up here (doing so with normal rules might fail to find a
+            // subroutine that is declared later in a parent scope).
+            if (invocation.arguments)
+                invocation.arguments->visit(*this);
+            else
+                visitDefault(invocation);
+        }
+
+        void handle(const AssignmentPatternItemSyntax& item) {
+            // The key is a struct member name, a type, or a constant index expression,
+            // none of which can be an implicit net, so only look at the value.
+            item.expr->visit(*this);
+        }
+
+        void handle(const ArrayOrRandomizeMethodExpressionSyntax& methodSyntax) {
+            // The method's argument list holds iterator names (for array methods)
+            // or the variables to randomize, and the with clause / constraint block
+            // refers to iterators or to members of the randomized object. None of
+            // that should create implicit nets, so look only at the receiver.
+            auto method = methodSyntax.method;
+            if (method->kind == SyntaxKind::InvocationExpression)
+                method = method->as<InvocationExpressionSyntax>().left;
+            method->visit(*this);
+        }
+
+        void handle(const ConditionalExpressionSyntax& condSyntax) {
+            // Pattern variables declared in a 'matches' clause are visible in the
+            // subsequent conditions of the predicate and in the true branch.
+            auto savedSize = boundNames.size();
+            for (auto cond : condSyntax.predicate->conditions) {
+                cond->expr->visit(*this);
+                if (cond->matchesClause)
+                    cond->matchesClause->pattern->visit(*this);
+            }
+
+            condSyntax.left->visit(*this);
+            boundNames.resize(savedSize);
+            condSyntax.right->visit(*this);
+        }
+
+        void handle(const VariablePatternSyntax& patternSyntax) {
+            boundNames.push_back(patternSyntax.variableName.valueText());
         }
 
         const ASTContext& context;
         SmallVectorBase<const IdentifierNameSyntax*>& results;
+        SmallVector<std::string_view> boundNames;
     };
 
     Visitor visitor(context, results);

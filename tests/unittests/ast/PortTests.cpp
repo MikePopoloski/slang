@@ -1508,6 +1508,74 @@ endmodule
     CHECK(diags[0].code == diag::ExpectedExpression);
 }
 
+TEST_CASE("Port connection calling function declared later in parent scope -- GH #2122") {
+    auto tree = SyntaxTree::fromText(R"(
+module ADDER #(parameter int OPTION = 1)(input [7:0] a, b);
+    if (OPTION == 1) begin
+        SUB sub1(.sum(add(a, b)));
+        SUB sub2(add(a, b));
+    end
+    function automatic [7:0] add(input [7:0] x, y);
+        add = x + y;
+    endfunction
+endmodule
+
+module SUB(input [7:0] sum);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Implicit nets not created for locally bound names in port connections") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef struct packed { logic [3:0] a; logic [3:0] b; } S;
+typedef union tagged { void Invalid; int Valid; } U;
+
+module top;
+    int arr[3];
+    U u;
+
+    sub1 s1(.p('{a: n1, b: 2}));
+    sub2 s2(.p(arr.sum(x) with (x * 2)), .q(n2));
+    sub2 s3(.p(arr.sum() with (item)), .q(item));
+    sub2 s4(.p(u matches tagged Valid .v &&& v > 0 ? v : n3), .q());
+endmodule
+
+module sub1(input S p); endmodule
+module sub2(input integer p, input logic q); endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // The only implicit nets should be for the real references.
+    std::vector<std::string> implicitNets;
+    for (auto& diag : compilation.getAllDiagnostics()) {
+        CHECK(!diag.isError());
+        if (diag.code == diag::ImplicitNet)
+            implicitNets.push_back(std::get<std::string>(diag.args[0]));
+    }
+    std::ranges::sort(implicitNets);
+    CHECK(implicitNets == std::vector<std::string>{"item", "n1", "n2", "n3"});
+
+    // Struct pattern keys, iterator names, and pattern variables
+    // should not create implicit nets.
+    auto& root = compilation.getRoot();
+    CHECK(!root.lookupName("top.a"));
+    CHECK(!root.lookupName("top.b"));
+    CHECK(!root.lookupName("top.x"));
+    CHECK(!root.lookupName("top.v"));
+
+    // Real references still do, including an iterator name used outside of its with clause.
+    CHECK(root.lookupName("top.n1"));
+    CHECK(root.lookupName("top.n2"));
+    CHECK(root.lookupName("top.n3"));
+    CHECK(root.lookupName("top.item"));
+}
+
 TEST_CASE("Module as interface port def") {
     auto tree = SyntaxTree::fromText(R"(
 module N;
