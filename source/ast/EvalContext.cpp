@@ -28,6 +28,7 @@ void EvalContext::reset() {
     warnings.clear();
     disableRange = {};
     backtraceReported = false;
+    memoizationPrevented = false;
     speculativeCallDiags = false;
 }
 
@@ -114,6 +115,14 @@ bool EvalContext::step(SourceLocation loc) {
 
     addDiag(diag::ConstEvalExceededMaxSteps, loc);
     return false;
+}
+
+bool EvalContext::tryAddSteps(uint32_t count) {
+    if (uint64_t(steps) + count >= getCompilation().getOptions().maxConstexprSteps)
+        return false;
+
+    steps += count;
+    return true;
 }
 
 bool EvalContext::checkBitCount(uint64_t bits, SourceRange range) {

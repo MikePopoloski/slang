@@ -11,6 +11,7 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/ast/types/TypePrinter.h"
@@ -270,6 +271,18 @@ const DefinitionSymbol* Symbol::getDeclaringDefinition() const {
     }
 
     return &curr->as<InstanceBodySymbol>().getDefinition();
+}
+
+const PackageSymbol* Symbol::getDeclaringPackage() const {
+    auto curr = this;
+    while (curr->kind != SymbolKind::Package) {
+        auto scope = curr->getParentScope();
+        if (!scope)
+            return nullptr;
+
+        curr = &scope->asSymbol();
+    }
+    return &curr->as<PackageSymbol>();
 }
 
 const SourceLibrary* Symbol::getSourceLibrary() const {

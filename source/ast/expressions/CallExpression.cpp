@@ -724,6 +724,82 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
         args.emplace_back(std::move(v));
     }
 
+    if (!canMemoize(context))
+        return invokeSubroutine(context, symbol, args);
+
+    // Top-level calls of constant functions are commonly repeated with identical
+    // arguments, e.g. from a parameter initializer in a module that is instantiated
+    // many times, so if the result is fully determined by the function and its
+    // arguments we remember it to avoid repeating potentially expensive evaluations.
+    auto& comp = context.getCompilation();
+    const Compilation::ConstantCallKey key{&symbol, args};
+
+    if (auto memo = comp.findConstantCall(key)) {
+        // Account for the steps the original evaluation took so that the step limit
+        // applies exactly as it would without memoization. If the limit would be
+        // reached, evaluate the call normally so that it fails in the usual way.
+        if (context.tryAddSteps(memo->steps))
+            return std::move(memo->value);
+        return invokeSubroutine(context, symbol, args);
+    }
+
+    const uint32_t stepsBefore = context.getSteps();
+    const size_t diagsBefore = context.getDiagCount();
+    context.takeMemoizationPrevented();
+
+    auto result = invokeSubroutine(context, symbol, args);
+
+    // Diagnostics need to be issued at every call site, so any evaluation that
+    // issues one can't be memoized. Trivial calls aren't worth memoizing.
+    static constexpr uint32_t MinMemoizedSteps = 64;
+    const uint32_t steps = context.getSteps() - stepsBefore;
+    if (!context.takeMemoizationPrevented() && context.getDiagCount() == diagsBefore && result &&
+        steps >= MinMemoizedSteps) {
+        comp.addConstantCall(key, {result, steps});
+    }
+
+    return result;
+}
+
+bool CallExpression::canMemoize(const EvalContext& context) const {
+    // Memoized results are keyed only on the function and its argument values, so
+    // anything else that can affect the evaluation of the function must either rule
+    // out memoization here or prevent it during evaluation (via preventMemoization).
+
+    // Only top-level calls are memoized; the outcome of a nested call could depend
+    // on the state of the call stack (e.g. its depth) and on the queue target or
+    // lvalues of the expression being evaluated. Scripts are excluded because they
+    // skip the constant function checks that the reasoning below relies on.
+    if (context.inFunction() || context.getQueueTarget() || context.getTopLValue() ||
+        context.flags.has(EvalFlags::IsScript)) {
+        return false;
+    }
+
+    // These are the only AST flags that affect evaluation; ConfigParam allows
+    // hierarchical references and UnevaluatedBranch suppresses conversion warnings.
+    // Calls made with them are rare, so we simply don't memoize them.
+    if (context.astCtx.flags.has(ASTFlags::ConfigParam | ASTFlags::UnevaluatedBranch))
+        return false;
+
+    // The remaining evaluation flags affect function evaluation only as follows,
+    // so the evaluation prevents memoization where they make a difference:
+    // - RequireConstant: static variables cause speculative evaluations to fail.
+    // - SpecparamsAllowed: specparam references are otherwise an error.
+    // - AllowUnboundedPlaceholder: the value of '$' without a queue target.
+    // CacheResults has no effect within function calls.
+
+    // Parameters referenced by a constant function must be declared before the
+    // call site, which NamedValueExpression::checkConstant verifies, and which
+    // makes the evaluation depend on the call site. It prevents memoization for
+    // any parameter not declared within a package. For parameters that are within
+    // a package the check always passes as long as the call site is not also
+    // within a package (the call site's scope chain can't reach the parameter's).
+    auto scope = lookupLocation.getScope();
+    return scope && !scope->asSymbol().getDeclaringPackage();
+}
+
+ConstantValue CallExpression::invokeSubroutine(EvalContext& context, const SubroutineSymbol& symbol,
+                                               std::span<const ConstantValue> args) const {
     // Push a new stack frame, push argument values as locals.
     if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
         return nullptr;

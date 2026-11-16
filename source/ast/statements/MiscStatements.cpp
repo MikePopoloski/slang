@@ -71,9 +71,12 @@ ER VariableDeclStatement::evalImpl(EvalContext& context) const {
     // we're only speculatively evaluating an expression that isn't required
     // to be constant, the result would not match the runtime value, so
     // give up instead.
-    if (symbol.lifetime == VariableLifetime::Static &&
-        !context.flags.has(EvalFlags::RequireConstant)) {
-        return ER::Fail;
+    if (symbol.lifetime == VariableLifetime::Static) {
+        if (!context.flags.has(EvalFlags::RequireConstant))
+            return ER::Fail;
+
+        // Without the flag this would have failed; see CallExpression::canMemoize.
+        context.preventMemoization();
     }
 
     // Figure out the initial value for the variable.

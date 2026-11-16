@@ -10,7 +10,9 @@ using Catch::Approx;
 #include "slang/ast/ScriptSession.h"
 #include "slang/ast/expressions/CallExpression.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/ast/symbols/SpecifySymbols.h"
 
 TEST_CASE("Simple eval") {
     ScriptSession session;
@@ -3681,4 +3683,303 @@ endfunction
     INFO(report(diags));
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::IndexOOB);
+}
+
+TEST_CASE("Memoized constant function calls") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    localparam int Scale = 3;
+    function automatic int sum(int n);
+        int s = 0;
+        for (int i = 0; i < n; i++) s += i * Scale;
+        return s;
+    endfunction
+    function automatic real inv(real x);
+        real r = 0.0;
+        for (int i = 0; i < 100; i++) r = 1.0 / x;
+        return r;
+    endfunction
+endpackage
+
+module leaf #(parameter int N = 1, parameter real X = 1.0);
+    localparam int S = p::sum(N);
+    localparam int T = p::sum(N) + p::sum(N);
+    localparam real I = p::inv(X);
+endmodule
+
+module top;
+    leaf #(.N(100), .X(0.0)) a();
+    leaf #(.N(100), .X(-0.0)) b();
+    leaf #(.N(200)) c();
+    for (genvar g = 0; g < 4; g++) begin : gen
+        leaf #(.N(100)) d();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto param = [&](std::string_view path) -> const ConstantValue& {
+        return compilation.getRoot().lookupName(path)->as<ParameterSymbol>().getValue();
+    };
+    CHECK(param("top.a.S").integer() == 14850);
+    CHECK(param("top.b.S").integer() == 14850);
+    CHECK(param("top.c.S").integer() == 59700);
+    CHECK(param("top.gen[3].d.S").integer() == 14850);
+    CHECK(param("top.a.T").integer() == 29700);
+    CHECK(param("top.c.T").integer() == 119400);
+
+    // 0.0 and -0.0 compare equal but are not the same argument.
+    CHECK(double(param("top.a.I").real()) == INFINITY);
+    CHECK(double(param("top.b.I").real()) == -INFINITY);
+
+    // The calls should have been memoized.
+    auto& sum = compilation.getPackage("p")->find("sum")->as<SubroutineSymbol>();
+    ConstantValue arg = SVInt(32, 100, true);
+    auto result = compilation.findConstantCall({&sum, std::span(&arg, 1)});
+    REQUIRE(result);
+    CHECK(result->value.integer() == 14850);
+    CHECK(result->steps > 100);
+}
+
+TEST_CASE("Memoized constant function calls respect the step limit") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    function automatic int spin(int n);
+        int s = 0;
+        for (int i = 0; i < n; i++) s++;
+        return s;
+    endfunction
+endpackage
+
+module leaf;
+    localparam int A = p::spin(2000);
+    localparam int B = p::spin(2000) + p::spin(2000) + p::spin(2000) + p::spin(2000) +
+                       p::spin(2000);
+endmodule
+
+module top;
+    leaf l1();
+    leaf #() l2();
+endmodule
+)");
+
+    CompilationOptions co;
+    co.maxConstexprSteps = 8192;
+
+    Bag options;
+    options.set(co);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    // One call fits in the step budget but five in the same
+    // expression don't, regardless of whether they are memoized.
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalExceededMaxSteps);
+
+    auto& a = compilation.getRoot().lookupName("top.l1.A")->as<ParameterSymbol>();
+    CHECK(a.getValue().integer() == 2000);
+}
+
+TEST_CASE("Memoized constant function calls with call site dependence") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int A = f(10);
+    localparam int B = 5;
+    localparam int C = f(10);
+
+    function automatic int f(int n);
+        int s = 0;
+        for (int i = 0; i < n * 10; i++) s += B;
+        return s;
+    endfunction
+endmodule
+
+package p1;
+    function automatic int g(int n);
+        int s = 0;
+        for (int i = 0; i < n * 10; i++) s += p2::K;
+        return s;
+    endfunction
+endpackage
+
+module n;
+    localparam int D = p1::g(10);
+endmodule
+
+package p2;
+    localparam int E = p1::g(10);
+    localparam int K = 2;
+    localparam int F = p1::g(10);
+endpackage
+
+module top;
+    m m1();
+    n n1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Evaluate the valid calls first so that memoizing them would
+    // cause the invalid calls to be skipped.
+    auto param = [&](std::string_view path) -> const ConstantValue& {
+        return compilation.getRoot().lookupName(path)->as<ParameterSymbol>().getValue();
+    };
+    CHECK(param("top.m1.C").integer() == 500);
+    CHECK(param("top.n1.D").integer() == 200);
+    CHECK(param("p2::F").integer() == 200);
+
+    // Only the calls made before the referenced parameter is declared fail.
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConstEvalIdUsedInCEBeforeDecl);
+    CHECK(diags[1].code == diag::ConstEvalIdUsedInCEBeforeDecl);
+    CHECK(param("top.m1.A").bad());
+    CHECK(param("p2::E").bad());
+}
+
+TEST_CASE("Memoized constant function calls with aggregate arguments") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    function automatic int weigh(int a[3], string s, int q[$], int m[string], shortreal r);
+        int w = 0;
+        for (int i = 0; i < 40; i++) w += a[i % 3] + s.len() + q.size() + m.num() + int'(r);
+        return w;
+    endfunction
+endpackage
+
+module leaf #(parameter int K = 0);
+    localparam int A[3] = '{K, 2, 3};
+    localparam int Q[$] = '{1, 2};
+    localparam int M[string] = '{"a": 1, "b": K};
+    localparam int W = p::weigh(A, "xy", Q, M, 1.5);
+endmodule
+
+module top;
+    leaf #(1) l1a();
+    leaf #(1) l1b();
+    leaf #(2) l2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto w = [&](std::string_view path) {
+        return compilation.getRoot().lookupName(path)->as<ParameterSymbol>().getValue().integer();
+    };
+    CHECK(w("top.l1a.W") == 399);
+    CHECK(w("top.l1b.W") == 399);
+    CHECK(w("top.l2.W") == 413);
+}
+
+TEST_CASE("Memoized constant function calls with unevaluated branch flag") {
+    // Enum value initializers are evaluated with ASTFlags::UnevaluatedBranch,
+    // which suppresses conversion warnings that other call sites must still get.
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    function automatic int f(int n);
+        byte b;
+        int s = 0;
+        for (int i = 0; i < 100; i++) s += i;
+        b = s + n;
+        return b;
+    endfunction
+endpackage
+
+module m;
+    typedef enum int { A = p::f(10) } e;
+    logic [p::f(10) + 200:0] x;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& m = compilation.getRoot().lookupName("m")->as<InstanceSymbol>().body;
+    auto& a = m.find("e")->as<TypeAliasType>().targetType.getType().as<EnumType>();
+    CHECK(a.values().begin()->getValue().integer() == 96);
+
+    // The dimension's call must still issue the warning (the enum's must not).
+    auto& diags = compilation.getAllDiagnostics();
+    INFO(report(diags));
+    CHECK(std::ranges::count(diags, diag::ConstantConversion, &Diagnostic::code) == 1);
+}
+
+TEST_CASE("Memoized constant function calls with static variables") {
+    // Speculative evaluation of a function with a static variable must fail
+    // (so the condition below isn't treated as constant and the assignment
+    // warning is issued) even after the same call succeeded for a parameter.
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    function automatic int f(int n);
+        static int k;
+        int s = 0;
+        for (int i = 0; i < 100; i++) s += i;
+        return s + n + k;
+    endfunction
+endpackage
+
+module m;
+    localparam int P = p::f(1);
+    logic [7:0] b;
+    initial if (p::f(1) == 0) b = 300;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& m = compilation.getRoot().lookupName("m")->as<InstanceSymbol>().body;
+    CHECK(m.find<ParameterSymbol>("P").getValue().integer() == 4951);
+
+    auto& diags = compilation.getAllDiagnostics();
+    INFO(report(diags));
+    CHECK(std::ranges::count(diags, diag::ConstantConversion, &Diagnostic::code) == 1);
+}
+
+TEST_CASE("Memoized constant function calls with specparams") {
+    // A function can only reach a specparam via a hierarchical reference,
+    // which is only allowed in constant functions with AllowHierarchicalConst.
+    auto tree = SyntaxTree::fromText(R"(
+module m(input a, output b);
+    specparam S = 5;
+    function automatic int f(int n);
+        int s = 0;
+        for (int i = 0; i < 100; i++) s += i;
+        return s + n + m.S;
+    endfunction
+
+    specify
+        (a => b) = f(1);
+    endspecify
+
+    localparam int P = f(1);
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowHierarchicalConst;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    // Evaluate the specify path delay first; the parameter's call must still fail.
+    auto& m = compilation.getRoot().lookupName("m")->as<InstanceSymbol>().body;
+    auto& block = m.membersOfType<SpecifyBlockSymbol>().front();
+    auto& path = block.membersOfType<TimingPathSymbol>().front();
+    REQUIRE(path.getDelays().size() == 1);
+    EvalContext evalCtx(ASTContext(m, LookupLocation::max), EvalFlags::SpecparamsAllowed);
+    CHECK(path.getDelays()[0]->eval(evalCtx).integer() == 4956);
+
+    auto& diags = compilation.getAllDiagnostics();
+    INFO(report(diags));
+    CHECK(std::ranges::count(diags, diag::SpecparamInConstant, &Diagnostic::code) == 1);
 }

@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include "slang/ast/ASTContext.h"
 #include "slang/ast/ASTDiagMap.h"
 #include "slang/ast/InstanceCacheKey.h"
 #include "slang/ast/OpaqueInstancePath.h"
@@ -823,6 +824,39 @@ public:
     const NetType& getWireNetType() const { return *wireNetType; }
 
     /// @}
+    /// @name Constant function call memoization
+    /// @{
+
+    /// Identifies a call of a constant function with specific argument values,
+    /// for purposes of memoizing its result.
+    struct ConstantCallKey {
+        /// The function being called.
+        not_null<const SubroutineSymbol*> subroutine;
+
+        /// The values of the arguments passed to the function.
+        std::span<const ConstantValue> args;
+    };
+
+    /// The memoized result of a constant function call.
+    struct ConstantCallResult {
+        /// The value returned by the call.
+        ConstantValue value;
+
+        /// The number of evaluation steps the call took.
+        uint32_t steps = 0;
+    };
+
+    /// Looks up the memoized result of an earlier constant function call
+    /// matching @a key, if there is one.
+    std::optional<ConstantCallResult> findConstantCall(const ConstantCallKey& key) const;
+
+    /// Memoizes the result of a constant function call. The caller is responsible
+    /// for ensuring that the result is fully determined by @a key; in particular
+    /// that the evaluation issued no diagnostics and didn't depend on the location
+    /// from which the call was made.
+    void addConstantCall(const ConstantCallKey& key, const ConstantCallResult& result);
+
+    /// @}
     /// @name Allocation functions
     /// @{
 
@@ -931,6 +965,10 @@ private:
     TypedBumpAllocator<SymbolMap> symbolMapAllocator;
     TypedBumpAllocator<PointerMap> pointerMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
+
+    // Memoized constant function call results; see addConstantCall.
+    struct ConstantCallCache;
+    std::unique_ptr<ConstantCallCache> constantCallCache;
 
     // Instances of all the built-in types.
     const Type* bitType;

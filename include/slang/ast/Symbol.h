@@ -15,6 +15,7 @@ namespace slang::ast {
 
 class DeclaredType;
 class DefinitionSymbol;
+class PackageSymbol;
 class Scope;
 enum class RandMode;
 
@@ -200,6 +201,11 @@ public:
 
     /// Gets the source library that contains this symbol.
     const SourceLibrary* getSourceLibrary() const;
+
+    /// Gets the package in which this symbol is declared, following the chain of
+    /// parent scopes all the way up. If this symbol is itself a package, returns
+    /// the symbol. If the symbol isn't declared in a package, returns nullptr.
+    const PackageSymbol* getDeclaringPackage() const;
 
     /// If this symbol is a random variable, returns its mode.
     /// Otherwise returns RandMode::None.

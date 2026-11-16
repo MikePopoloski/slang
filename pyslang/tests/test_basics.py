@@ -8,6 +8,7 @@ from pyslang.analysis import AnalysisManager
 from pyslang.ast import (
     ASTContext,
     Compilation,
+    EvalContext,
     Lookup,
     LookupLocation,
     Scope,
@@ -228,3 +229,43 @@ def test_string_to_ast_to_string_loop() -> None:
     output_str = str(tree.root)
 
     assert input_str.rstrip() == output_str.rstrip()
+
+
+def test_declaring_package_and_eval_context():
+    tree = SyntaxTree.fromText("""
+package p;
+    function automatic int sum(int n);
+        int s = 0;
+        for (int i = 0; i < n; i++) s += i;
+        return s;
+    endfunction
+endpackage
+
+module m;
+    localparam int P = p::sum(100);
+endmodule
+""")
+    compilation = Compilation()
+    compilation.addSyntaxTree(tree)
+    assert not compilation.getAllDiagnostics()
+
+    pkg = compilation.getPackage("p")
+    sub = pkg.find("sum")
+    assert sub.declaringPackage.name == "p"
+    assert pkg.declaringPackage.name == "p"
+    m = compilation.getRoot().lookupName("m")
+    assert m.declaringPackage is None
+    assert m.body.find("P").value == 4950
+
+    ec = EvalContext(m.body)
+    assert ec.steps == 0
+    assert ec.callDepth == 0
+    assert ec.diagCount == 0
+    assert ec.tryAddSteps(5)
+    assert ec.steps == 5
+    assert not ec.tryAddSteps(compilation.options.maxConstexprSteps)
+    assert ec.steps == 5
+
+    ec.preventMemoization()
+    assert ec.takeMemoizationPrevented()
+    assert not ec.takeMemoizationPrevented()

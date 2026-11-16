@@ -41,9 +41,66 @@ const PackageSymbol& createStdPackage(Compilation&);
 
 namespace slang::ast {
 
+struct Compilation::ConstantCallCache {
+    // Owning version of ConstantCallKey that is stored in the map.
+    struct StoredKey {
+        const SubroutineSymbol* subroutine;
+        std::vector<ConstantValue> args;
+
+        explicit StoredKey(const ConstantCallKey& key) :
+            subroutine(key.subroutine), args(key.args.begin(), key.args.end()) {}
+
+        ConstantCallKey view() const { return {subroutine, args}; }
+    };
+
+    // Both functors are transparent so that lookups don't need to copy arguments.
+    struct Hash {
+        using is_transparent = void;
+
+        size_t operator()(const ConstantCallKey& key) const {
+            size_t h = 0;
+            hash_combine(h, key.subroutine.get());
+            for (auto& arg : key.args)
+                hash_combine(h, arg.hash());
+            return h;
+        }
+
+        size_t operator()(const StoredKey& key) const { return (*this)(key.view()); }
+    };
+
+    struct Equal {
+        using is_transparent = void;
+
+        bool operator()(const ConstantCallKey& a, const ConstantCallKey& b) const {
+            // Arguments must be identical, not merely equal: e.g. 0.0 and -0.0
+            // compare equal but a function can tell them apart.
+            return a.subroutine == b.subroutine &&
+                   std::ranges::equal(a.args, b.args,
+                                      [](auto& l, auto& r) { return l.isIdentical(r); });
+        }
+
+        bool operator()(const StoredKey& a, const ConstantCallKey& b) const {
+            return (*this)(a.view(), b);
+        }
+        bool operator()(const ConstantCallKey& a, const StoredKey& b) const {
+            return (*this)(a, b.view());
+        }
+        bool operator()(const StoredKey& a, const StoredKey& b) const {
+            return (*this)(a.view(), b.view());
+        }
+    };
+
+    // Bounds the memory used by the cache. Going over the limit only
+    // costs performance; calls that don't fit are evaluated normally.
+    static constexpr size_t MaxEntries = 1 << 16;
+
+    flat_hash_map<StoredKey, ConstantCallResult, Hash, Equal> map;
+};
+
 Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
-    options(options.getOrDefault<CompilationOptions>()), tempDiag({}, {}), netAliasAllocator(*this),
-    defaultLibPtr(defaultLib) {
+    options(options.getOrDefault<CompilationOptions>()),
+    constantCallCache(std::make_unique<ConstantCallCache>()), tempDiag({}, {}),
+    netAliasAllocator(*this), defaultLibPtr(defaultLib) {
 
     // Construct all built-in types.
     auto& bi = builtins::Builtins::Instance;
@@ -1736,6 +1793,20 @@ static const flat_hash_set<DiagCode> BadLookupDiags = {
     diag::CouldNotResolveHierarchicalPath,
     diag::DotIntoInstArray,
 };
+
+std::optional<Compilation::ConstantCallResult> Compilation::findConstantCall(
+    const ConstantCallKey& key) const {
+    auto& cache = *constantCallCache;
+    if (auto it = cache.map.find(key); it != cache.map.end())
+        return it->second;
+    return std::nullopt;
+}
+
+void Compilation::addConstantCall(const ConstantCallKey& key, const ConstantCallResult& result) {
+    auto& cache = *constantCallCache;
+    if (cache.map.size() < ConstantCallCache::MaxEntries)
+        cache.map.try_emplace(ConstantCallCache::StoredKey(key), result);
+}
 
 static bool shouldReportUninstantiatedDiag(const DiagCode& code) {
     switch (code.getSubsystem()) {

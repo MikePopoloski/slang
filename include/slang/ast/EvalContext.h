@@ -101,6 +101,14 @@ public:
     /// a single constant function for too long.
     [[nodiscard]] bool step(SourceLocation loc);
 
+    /// Gets the number of steps (statements) executed so far.
+    uint32_t getSteps() const { return steps; }
+
+    /// Records @a count steps that were executed on behalf of this context
+    /// elsewhere, such as by a memoized function call. If doing so would reach
+    /// the step limit, nothing is recorded and false is returned.
+    [[nodiscard]] bool tryAddSteps(uint32_t count);
+
     /// Checks whether a computed bit count exceeds the configured constant value size limit.
     /// If the limit is exceeded, a diagnostic is issued and false is returned.
     /// Use this before allocating a large value to prevent out-of-memory crashes.
@@ -170,6 +178,21 @@ public:
     /// Returns nullptr if there is no queue target active.
     const ConstantValue* getQueueTarget() const { return queueTarget; }
 
+    /// Gets the number of frames on the call stack.
+    size_t getCallDepth() const { return stack.size(); }
+
+    /// Records that the evaluation depends on something other than the functions
+    /// being called and the values of their arguments, such as the evaluation flags
+    /// or the location of a call site, so the result of the outermost function call
+    /// can't be memoized.
+    void preventMemoization() { memoizationPrevented = true; }
+
+    /// Returns whether @a preventMemoization has been called and clears the flag.
+    bool takeMemoizationPrevented() { return std::exchange(memoizationPrevented, false); }
+
+    /// Gets the number of diagnostics currently recorded by this context.
+    size_t getDiagCount() const { return diags.size() + warnings.size(); }
+
     /// Dumps the contents of the call stack to a string for debugging.
     std::string dumpStack() const;
 
@@ -204,6 +227,7 @@ private:
     Diagnostics warnings;
     SourceRange disableRange;
     bool backtraceReported = false;
+    bool memoizationPrevented = false;
 
     // Set when a speculative evaluation (one without EvalFlags::RequireConstant)
     // issues a diagnostic from within a function call. See noteDiagIssued.

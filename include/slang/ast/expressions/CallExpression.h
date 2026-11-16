@@ -184,6 +184,10 @@ private:
     static bool checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
                               SourceRange range);
 
+    bool canMemoize(const EvalContext& context) const;
+    ConstantValue invokeSubroutine(EvalContext& context, const SubroutineSymbol& symbol,
+                                   std::span<const ConstantValue> args) const;
+
     const Expression* thisClass_;
     std::span<const Expression*> arguments_;
     LookupLocation lookupLocation;

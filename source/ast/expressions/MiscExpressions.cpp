@@ -392,9 +392,14 @@ bool ValueExpressionBase::checkConstantBase(EvalContext& context) const {
             break;
     }
 
-    if (symbol.kind == SymbolKind::Specparam && !context.flags.has(EvalFlags::SpecparamsAllowed)) {
-        context.addDiag(diag::SpecparamInConstant, sourceRange);
-        return false;
+    if (symbol.kind == SymbolKind::Specparam) {
+        if (!context.flags.has(EvalFlags::SpecparamsAllowed)) {
+            context.addDiag(diag::SpecparamInConstant, sourceRange);
+            return false;
+        }
+
+        // Without the flag this would have failed; see CallExpression::canMemoize.
+        context.preventMemoization();
     }
 
     return true;
@@ -501,6 +506,12 @@ bool NamedValueExpression::checkConstant(EvalContext& context) const {
         // of the constant function. If the two locations are not in the same compilation
         // unit, assume that it's ok. Also if the reference is via a package import
         // that's fine too.
+        //
+        // For the outermost call this makes the evaluation depend on where the function
+        // was called from, which affects memoization (see CallExpression::canMemoize).
+        if (context.getCallDepth() == 1 && !symbol.getDeclaringPackage())
+            context.preventMemoization();
+
         auto compare = symbol.isDeclaredBefore(frame.lookupLocation);
         if (!compare.value_or(true)) {
             auto scope = symbol.getParentScope();

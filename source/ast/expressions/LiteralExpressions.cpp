@@ -288,6 +288,8 @@ ConstantValue UnboundedLiteral::evalImpl(EvalContext& context) const {
     // and use a placeholder value to indicate that.
     auto target = context.getQueueTarget();
     if (!target) {
+        // The result depends on the evaluation flags; see CallExpression::canMemoize.
+        context.preventMemoization();
         if (context.flags.has(EvalFlags::AllowUnboundedPlaceholder))
             return ConstantValue::UnboundedPlaceholder{};
         return nullptr;

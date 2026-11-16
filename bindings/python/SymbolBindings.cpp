@@ -157,6 +157,7 @@ void registerSymbols(nb::module_& m) {
         .def_prop_ro("isValue", &Symbol::isValue)
         .def_prop_ro("declaredType", &Symbol::getDeclaredType, byrefint)
         .def_prop_ro("declaringDefinition", &Symbol::getDeclaringDefinition, byrefint)
+        .def_prop_ro("declaringPackage", &Symbol::getDeclaringPackage, byrefint)
         .def_prop_ro("randMode", &Symbol::getRandMode)
         .def_prop_ro("nextSibling", &Symbol::getNextSibling, byrefint)
         .def_prop_ro("sourceLibrary", &Symbol::getSourceLibrary)
