@@ -1528,3 +1528,31 @@ endmodule
     auto diags = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Analysis of nested class that extends a specialization of its enclosing class") {
+    // All class specializations need to be created during elaboration;
+    // analysis runs with a frozen compilation and can't create more.
+    auto& code = R"(
+package p;
+    class Base #(type T = int);
+        T t;
+        class Config extends Base #(real);
+            class Inner extends Base #(byte); endclass
+        endclass
+    endclass
+endpackage
+
+class Base2 #(type T = int);
+    class Config extends Base2 #(real); endclass
+endclass
+
+module m;
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}

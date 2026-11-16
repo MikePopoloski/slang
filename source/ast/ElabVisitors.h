@@ -475,12 +475,20 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
         // Visiting a specialization can trigger more specializations to be made for the
         // same or other generic classes, so keep going until nothing new shows up.
         // specializations() returns a snapshot so it's safe to visit while iterating.
+        //
+        // We also go back over and find generic classes that were never instantiated
+        // and force an empty one to make sure we collect all diagnostics that
+        // don't depend on parameter values. Visiting one of those can itself create
+        // new specializations (e.g. a nested class that extends a specialization of
+        // its enclosing class) so those need to be part of the same loop.
+        //
+        // Note: genericClasses can grow while we iterate (from nested generic classes)
+        // so iterate by index.
         SmallSet<const Type*, 8> visitedSpecs;
+        SmallSet<const GenericClassDefSymbol*, 8> visitedInvalid;
         bool didSomething;
         do {
             didSomething = false;
-            // Note: genericClasses can grow while we iterate (from nested generic classes)
-            // so iterate by index.
             for (size_t i = 0; i < genericClasses.size(); i++) {
                 for (auto spec : genericClasses[i]->specializations()) {
                     if (visitedSpecs.emplace(spec).second) {
@@ -489,18 +497,18 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
                     }
                 }
             }
-        } while (didSomething);
 
-        // Go back over and find generic classes that were never instantiated
-        // and force an empty one to make sure we collect all diagnostics that
-        // don't depend on parameter values.
-        // Note: genericClasses can grow while we iterate (from nested generic classes)
-        // so iterate by index.
-        for (size_t i = 0; i < genericClasses.size(); i++) {
-            auto symbol = genericClasses[i];
-            if (symbol->numSpecializations() == 0)
-                symbol->getInvalidSpecialization().visit(*this);
-        }
+            if (!didSomething) {
+                for (size_t i = 0; i < genericClasses.size(); i++) {
+                    auto symbol = genericClasses[i];
+                    if (symbol->numSpecializations() == 0 &&
+                        visitedInvalid.emplace(symbol).second) {
+                        symbol->getInvalidSpecialization().visit(*this);
+                        didSomething = true;
+                    }
+                }
+            }
+        } while (didSomething);
 
         // Visit all attributes and force their values to resolve.
         // Map is copied in case binding the expression causes map mutation
