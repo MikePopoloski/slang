@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
         std::optional<bool> squashNewlines;
 
         std::optional<bool> includeMissing;
-        std::optional<bool> includeSkipped;
+        std::optional<bool> excludeSkipped;
 
         driver::Driver driver;
         driver.addStandardArgs();
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
         // Missing/skipped node options
         driver.cmdLine.add("--include-missing", includeMissing,
                            "Include missing (auto-inserted) nodes in output");
-        driver.cmdLine.add("--exclude-skipped", includeSkipped,
+        driver.cmdLine.add("--exclude-skipped", excludeSkipped,
                            "Exclude skipped (error) nodes in output");
 
         if (!driver.parseCommandLine(argc, argv))
@@ -136,6 +136,7 @@ int main(int argc, char** argv) {
         SyntaxPrinter printer(driver.sourceManager);
 
         printer.setIncludeDirectives(true);
+        printer.setIncludeSkipped(true);
         printer.setSquashNewlines(false);
 
         // Apply command line overrides to defaults
@@ -151,8 +152,8 @@ int main(int argc, char** argv) {
 
         if (includeMissing == true)
             printer.setIncludeMissing(true);
-        if (includeSkipped == true)
-            printer.setIncludeSkipped(true);
+        if (excludeSkipped == true)
+            printer.setIncludeSkipped(false);
 
         // Make sure we reproduce newlines correctly on Windows:
 #if defined(_WIN32)
