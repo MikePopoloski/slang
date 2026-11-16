@@ -29,7 +29,7 @@ static bool matches(std::string_view str, std::string_view pattern) {
             if (pattern.empty())
                 return true;
 
-            for (size_t i = 0, end = str.size(); i < end; i++) {
+            for (size_t i = 0, end = str.size(); i <= end; i++) {
                 if (matches(str.substr(i), pattern))
                     return true;
             }
