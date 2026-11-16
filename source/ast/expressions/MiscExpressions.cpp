@@ -103,6 +103,15 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         // If this is actually a class property, check that no static methods,
         // initializers, or nested classes are accessing it.
         auto& var = symbol.as<VariableSymbol>();
+
+        // Pattern variables and iterators that only live for the duration of a single
+        // expression (e.g. array method 'with' clauses) can't outlive the evaluation
+        // of the enclosing expression, so they are fine to reference in contexts
+        // that otherwise disallow automatic variables.
+        const bool isExprScopedTemp = var.kind == SymbolKind::PatternVar ||
+                                      (var.kind == SymbolKind::Iterator &&
+                                       !var.as<IteratorSymbol>().isLoopVariable);
+
         if (symbol.kind == SymbolKind::ClassProperty) {
             if (!Lookup::ensureAccessible(symbol, context, sourceRange))
                 return badExpr(comp, nullptr);
@@ -113,7 +122,7 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
             return badExpr(comp, nullptr);
         }
         else if (!var.flags.has(VariableFlags::RefStatic) && flags.has(DisallowedAutoVarContexts) &&
-                 var.kind != SymbolKind::PatternVar) {
+                 !isExprScopedTemp) {
             if (flags.has(ASTFlags::NonProcedural)) {
                 context.addDiag(diag::AutoFromNonProcedural, sourceRange) << symbol.name;
                 return badExpr(comp, nullptr);

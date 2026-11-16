@@ -248,6 +248,11 @@ public:
     /// and set this value to the empty string.
     std::string_view indexMethodName;
 
+    /// True if this is the loop variable of a foreach statement or constraint,
+    /// as opposed to an iterator that exists only for the duration of a single
+    /// expression (such as in an array method 'with' clause).
+    bool isLoopVariable = false;
+
     IteratorSymbol(const Scope& scope, std::string_view name, SourceLocation loc,
                    const Type& arrayType, std::string_view indexMethodName);
     IteratorSymbol(std::string_view name, SourceLocation loc, const Type& arrayType,

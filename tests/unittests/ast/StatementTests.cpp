@@ -1506,6 +1506,32 @@ endmodule
     CHECK(diags[0].code == diag::AutoFromNonBlockingTiming);
 }
 
+TEST_CASE("Expression-scoped iterators in contexts that disallow automatic variables") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int arr[3] = '{1, 2, 3};
+    int j, k;
+    wire integer w1 = arr.sum() with (item * 2);
+    wire integer w2;
+    assign w2 = arr.sum(x) with (x * 2);
+    int s = arr.sum() with (item);
+
+    initial begin
+        j <= #(arr.sum() with (item)) 1;
+        foreach (arr[i]) k <= #i 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Only the foreach loop variable reference should be an error.
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AutoFromNonBlockingTiming);
+}
+
 TEST_CASE("Clocking block as event control") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

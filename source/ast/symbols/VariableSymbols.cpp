@@ -605,7 +605,7 @@ IteratorSymbol::IteratorSymbol(const Scope& scope, std::string_view name, Source
 IteratorSymbol::IteratorSymbol(std::string_view name, SourceLocation loc, const Type& arrayType,
                                const Type& indexType) :
     TempVarSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic),
-    arrayType(arrayType) {
+    arrayType(arrayType), isLoopVariable(true) {
 
     flags |= VariableFlags::Const;
     setType(indexType);
