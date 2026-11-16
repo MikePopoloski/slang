@@ -1754,6 +1754,27 @@ endchecker
     analysisManager.analyze(compilation);
 }
 
+TEST_CASE("Procedural checker with unconnected output port crash regress") {
+    auto& code = R"(
+module m;
+    checker c(output int o); endchecker
+    initial c c2();
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto tree = SyntaxTree::fromText(code);
+    compilation.addSyntaxTree(tree);
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnconnectedArg);
+    compilation.freeze();
+
+    analysisManager.analyze(compilation);
+}
+
 TEST_CASE("Multi-assign for output port variable with initializer") {
     auto& code = R"(
 module m(output var reg r = 1);
