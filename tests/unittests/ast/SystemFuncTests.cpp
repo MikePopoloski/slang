@@ -2288,6 +2288,27 @@ endmodule
                         [](auto& d) { return d.code == diag::ConstEvalDynamicArrayIndex; }) == 2);
 }
 
+TEST_CASE("Queue delete with non-constant index in constant function") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function automatic int f();
+        int q[$] = {1, 2, 3};
+        q.delete($urandom);
+        return q.size();
+    endfunction
+
+    localparam int p = f();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SysFuncNotConst);
+}
+
 TEST_CASE("Iterator index method errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
