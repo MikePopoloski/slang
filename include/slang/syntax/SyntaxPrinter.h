@@ -24,7 +24,10 @@ class SyntaxTree;
 /// back to source code.
 class SLANG_EXPORT SyntaxPrinter {
 public:
+    /// Construct a printer that prints tokens from any source location.
     SyntaxPrinter() = default;
+
+    /// Construct a printer with configurable macro and include expansion.
     explicit SyntaxPrinter(const SourceManager& sourceManager);
 
     /// Append raw text to the buffer.
@@ -63,15 +66,6 @@ public:
     /// Print the provided @a tree to the internal buffer.
     /// @return a reference to this object, to allow chaining additional method calls.
     SyntaxPrinter& print(const SyntaxTree& tree);
-
-    /// If no source manager is provided or if this flag is set, print tokens from any location.
-    /// Otherwise, filter out tokens based on other flags that control inclusion or exclusion of
-    /// preprocesser macros, includes, etc.
-    /// @return a reference to this object, to allow chaining additional method calls.
-    SyntaxPrinter& setIncludeAllLocations(bool include) {
-        includeAllLocations = include;
-        return *this;
-    }
 
     /// Sets whether to include trivia when printing syntax.
     /// @return a reference to this object, to allow chaining additional method calls.
@@ -153,7 +147,6 @@ private:
     std::string buffer;
     std::string_view currentFileName;
     const SourceManager* sourceManager = nullptr;
-    bool includeAllLocations = false;
     bool includeTrivia = true;
     bool includeMissing = false;
     bool includeSkipped = false;
