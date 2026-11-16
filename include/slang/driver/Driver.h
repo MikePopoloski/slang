@@ -79,10 +79,14 @@ enum class SLANG_EXPORT PreprocessOutputFlags {
     /// time the program is run. Used for testing.
     UseFixedObfuscationSeed = 1 << 3,
 
-    /// Include source line information in the output.
-    IncludeSourceInfo = 1 << 4
+    /// Include source file and line comments in the output.
+    IncludeSourceInfo = 1 << 4,
+
+    /// Emit line directives that preserve source file names and line numbers.
+    /// Can be combined with IncludeSourceInfo to also emit source comments.
+    EmitLineDirectives = 1 << 5
 };
-SLANG_BITMASK(PreprocessOutputFlags, IncludeSourceInfo)
+SLANG_BITMASK(PreprocessOutputFlags, EmitLineDirectives)
 
 /// Options that control writing dependency files via @a Driver::writeDepFiles.
 struct SLANG_EXPORT DepFileOptions {

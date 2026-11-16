@@ -87,6 +87,41 @@ TEST_CASE("Driver file preprocess -- obfuscation") {
                            "\n"));
 }
 
+TEST_CASE("Driver preprocessed line directives preserve EOF locations") {
+    const auto newline = GENERATE(""sv, "\n"sv);
+    const auto flags = GENERATE(
+        bitmask<PreprocessOutputFlags>(PreprocessOutputFlags::EmitLineDirectives),
+        PreprocessOutputFlags::EmitLineDirectives | PreprocessOutputFlags::IncludeSourceInfo);
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+    REQUIRE(driver.parseCommandLine("slang"));
+    REQUIRE(driver.processOptions(false));
+    auto buffer = driver.sourceManager.assignText("source.sv", "module m;" + std::string(newline));
+    driver.sourceLoader.addBuffer(buffer);
+    REQUIRE(driver.runPreprocessor(flags));
+    CHECK(contains(OS::capturedStdout, "// source.sv:1\n") ==
+          flags.has(PreprocessOutputFlags::IncludeSourceInfo));
+
+    SourceManager sourceManager;
+    auto tree = SyntaxTree::fromFileInMemory(OS::capturedStdout, sourceManager, "preprocessed.sv");
+    auto eof = tree->root().getLastToken();
+    REQUIRE(eof.kind == TokenKind::EndOfFile);
+    CHECK(sourceManager.getFileName(eof.location()) == "source.sv");
+    CHECK(sourceManager.getLineNumber(eof.location()) == (newline.empty() ? 1 : 2));
+    size_t errors = 0;
+    for (const auto& diagnostic : tree->diagnostics()) {
+        if (diagnostic.isError()) {
+            errors++;
+            CHECK(diagnostic.code == diag::ExpectedToken);
+            CHECK(sourceManager.getFileName(diagnostic.location) == "source.sv");
+            CHECK(sourceManager.getLineNumber(diagnostic.location) == 1);
+        }
+    }
+    CHECK(errors == 1);
+}
+
 TEST_CASE("Driver command files are processed strictly in order") {
     auto guard = OS::captureOutput();
 

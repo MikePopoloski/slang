@@ -195,6 +195,7 @@ int driverMain(int argc, TArgs argv) {
         std::optional<bool> includeDirectives;
         std::optional<bool> obfuscateIds;
         std::optional<bool> includeSource;
+        std::optional<bool> emitLineDirectives;
         driver.cmdLine.setGroup("Preprocessor");
         driver.cmdLine.add("--comments", includeComments,
                            "Include comments in preprocessed output (with -E)");
@@ -204,6 +205,8 @@ int driverMain(int argc, TArgs argv) {
                            "Randomize all identifiers in preprocessed output (with -E)");
         driver.cmdLine.add("--preprocess-source", includeSource,
                            "Show source line information with preprocessor output");
+        driver.cmdLine.add("--preprocess-lines", emitLineDirectives,
+                           "Emit source location `line directives in preprocessed output");
 
         std::optional<std::string> astJsonFile;
         driver.cmdLine.setGroup("JSON Output");
@@ -324,6 +327,8 @@ int driverMain(int argc, TArgs argv) {
                     flags |= PreprocessOutputFlags::ObfuscateIds;
                 if (includeSource == true)
                     flags |= PreprocessOutputFlags::IncludeSourceInfo;
+                if (emitLineDirectives == true)
+                    flags |= PreprocessOutputFlags::EmitLineDirectives;
 
                 return driver.runPreprocessor(flags);
             }

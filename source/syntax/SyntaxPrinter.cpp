@@ -11,6 +11,7 @@
 
 #include "slang/parsing/ParserMetadata.h"
 #include "slang/parsing/Token.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceLocation.h"
@@ -28,13 +29,23 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
     switch (trivia.kind) {
         case TriviaKind::Directive: {
             auto& syntax = *trivia.syntax();
-            if (shouldPrint(syntax)) {
-                print(syntax);
-            }
-            else {
+            if (!shouldPrint(syntax)) {
                 for (const auto& t : syntax.getFirstToken().trivia())
                     print(t);
+                break;
             }
+
+            // A line directive ahead of a branch directive could land in an inactive
+            // region, where it would be ignored when the output is parsed again.
+            bool syncLine = !ConditionalBranchDirectiveSyntax::isKind(syntax.kind) &&
+                            !UnconditionalBranchDirectiveSyntax::isKind(syntax.kind);
+            bool wasInDirective = std::exchange(inDirective, false);
+            for (auto it = syntax.tokens_begin(); it != syntax.tokens_end(); ++it) {
+                print(*it, syncLine);
+                syncLine = false;
+                inDirective = true;
+            }
+            inDirective = wasInDirective;
             break;
         }
         case TriviaKind::SkippedSyntax:
@@ -52,6 +63,12 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
                 append(trivia.getRawText());
             break;
         case TriviaKind::LineComment:
+            if (!includeComments && inDirective && trivia.getRawText().ends_with('\\')) {
+                // The continuation belongs to the directive even when its comment is removed.
+                append("\\");
+                break;
+            }
+            [[fallthrough]];
         case TriviaKind::BlockComment:
             if (!includeComments)
                 break;
@@ -64,10 +81,15 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
 }
 
 SyntaxPrinter& SyntaxPrinter::print(Token token) {
+    print(token, !inDirective);
+    return *this;
+}
+
+void SyntaxPrinter::print(Token token, bool syncLine) {
     auto location = token.location();
     bool excluded = !shouldPrint(location);
 
-    if (!excluded && sourceManager && includeSource) {
+    if (!excluded && sourceManager && includeSource && !emitLineDirectives) {
         std::string_view fileName = sourceManager->getFileName(location);
         if (fileName != currentFileName) {
             auto lineNumber = sourceManager->getLineNumber(location);
@@ -115,10 +137,77 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
         }
     }
 
-    if (!excluded && (includeMissing || !token.isMissing()))
+    if (!excluded && (includeMissing || !token.isMissing())) {
+        if (syncLine && emitLineDirectives && sourceManager && !token.isMissing())
+            printLineDirective(location);
         append(token.rawText());
+    }
+}
 
-    return *this;
+void SyntaxPrinter::printLineDirective(SourceLocation location) {
+    if (!location || location == SourceLocation::NoLocation)
+        return;
+
+    location = sourceManager->getFullyExpandedLoc(location);
+    auto lineNumber = sourceManager->getLineNumber(location);
+    if (!lineNumber)
+        return;
+
+    auto fileName = sourceManager->getFileName(location);
+    if (fileName == currentFileName && lineNumber == outputLine &&
+        location.buffer() == lineBuffer) {
+        return;
+    }
+
+    // The level marks entering an include file (1), returning from one (2), or neither (0).
+    int level = 0;
+    if (location.buffer() != lineBuffer) {
+        if (sourceManager->getIncludedFrom(location.buffer()))
+            level = 1;
+
+        auto ancestor = sourceManager->getIncludedFrom(lineBuffer);
+        while (ancestor) {
+            ancestor = sourceManager->getFullyExpandedLoc(ancestor);
+            if (ancestor.buffer() == location.buffer()) {
+                level = 2;
+                break;
+            }
+            ancestor = sourceManager->getIncludedFrom(ancestor.buffer());
+        }
+    }
+
+    std::string escapedName;
+    for (char c : fileName) {
+        if (uint8_t(c) < 32 || c == 127) {
+            escapedName += fmt::format("\\{:03o}", uint8_t(c));
+        }
+        else {
+            if (c == '\\' || c == '"')
+                escapedName += '\\';
+            escapedName += c;
+        }
+    }
+
+    // Keep indentation with the token rather than on the line before its directive.
+    size_t lineStart = buffer.find_last_of("\r\n");
+    lineStart = lineStart == std::string::npos ? 0 : lineStart + 1;
+    std::string indentation;
+    if (buffer.find_first_not_of(" \t", lineStart) == std::string::npos) {
+        indentation = buffer.substr(lineStart);
+        buffer.resize(lineStart);
+    }
+
+    if (!buffer.empty() && buffer.back() != '\n' && buffer.back() != '\r')
+        buffer.append("\n");
+    if (includeSource && fileName != currentFileName)
+        buffer.append(fmt::format("// {}:{}\n", escapedName, lineNumber));
+    buffer.append(fmt::format("`line {} \"{}\" {}\n", lineNumber, escapedName, level));
+    buffer.append(indentation);
+
+    currentFileName = fileName;
+    lineBuffer = location.buffer();
+    outputLine = lineNumber;
+    pendingNewline = 0;
 }
 
 SyntaxPrinter& SyntaxPrinter::print(const SyntaxNode& node) {
@@ -226,33 +315,46 @@ std::string SyntaxPrinter::printFile(const SyntaxTree& tree) {
 }
 
 SyntaxPrinter& SyntaxPrinter::append(std::string_view text) {
-    if (!squashNewlines) {
-        buffer.append(text);
-        return *this;
+    size_t start = buffer.size();
+    if (squashNewlines) {
+        bool carriage = false;
+        bool newline = false;
+        size_t i = 0;
+        for (; i < text.length(); i++) {
+            if (text[i] == '\r')
+                carriage = true;
+            else if (text[i] == '\n')
+                newline = true;
+            else
+                break;
+        }
+
+        text = text.substr(i);
+
+        if (buffer.empty() || buffer.back() != '\n') {
+            if (carriage)
+                buffer.push_back('\r');
+            if (newline)
+                buffer.push_back('\n');
+        }
     }
-
-    bool carriage = false;
-    bool newline = false;
-    size_t i = 0;
-    for (; i < text.length(); i++) {
-        if (text[i] == '\r')
-            carriage = true;
-        else if (text[i] == '\n')
-            newline = true;
-        else
-            break;
-    }
-
-    text = text.substr(i);
-
-    if (buffer.empty() || buffer.back() != '\n') {
-        if (carriage)
-            buffer.push_back('\r');
-        if (newline)
-            buffer.push_back('\n');
-    }
-
     buffer.append(text);
+
+    if (emitLineDirectives) {
+        for (char c : std::string_view(buffer).substr(start)) {
+            if (c != '\n' && c != '\r') {
+                pendingNewline = 0;
+            }
+            else if (pendingNewline && c != pendingNewline) {
+                // Second half of a two character line ending.
+                pendingNewline = 0;
+            }
+            else {
+                outputLine++;
+                pendingNewline = c;
+            }
+        }
+    }
     return *this;
 }
 
@@ -297,6 +399,9 @@ bool SyntaxPrinter::shouldPrint(const SyntaxNode& syntax) const {
 
     if (syntax.kind == SyntaxKind::IncludeDirective)
         return !expandIncludes;
+
+    if (syntax.kind == SyntaxKind::LineDirective && emitLineDirectives)
+        return false;
 
     return includeDirectives;
 }
