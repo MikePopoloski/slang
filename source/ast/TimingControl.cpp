@@ -503,7 +503,11 @@ static void collectEvents(const ASTContext& context, const SyntaxNode& expr,
             break;
         }
         default:
-            SLANG_UNREACHABLE;
+            // Other sequence and property operators can show up inside
+            // parentheses (e.g. "(a and b)") but aren't valid event expressions.
+            context.addDiag(diag::InvalidSyntaxInEventExpr, expr.sourceRange());
+            addResult(*context.getCompilation().emplace<InvalidTimingControl>(nullptr));
+            break;
     }
 }
 
