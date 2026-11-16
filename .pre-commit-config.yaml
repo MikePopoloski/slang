@@ -29,10 +29,14 @@ repos:
     args: [--allow-multiple-documents]
   - id: debug-statements
   - id: end-of-file-fixer
+    # Preserve trailing blank lines in the preprocessor's exact-output fixture.
+    exclude: ^tests/regression/driver/file-preprocess-directives\.out\.sv$
   - id: fix-byte-order-marker
   - id: mixed-line-ending
     args: [--fix,lf]
   - id: trailing-whitespace
+    # This fixture is compared verbatim with the preprocessor output.
+    exclude: ^tests/regression/driver/file-preprocess-directives\.out\.sv$
 
 # Python linting and formatting with Ruff.
 - repo: https://github.com/astral-sh/ruff-pre-commit

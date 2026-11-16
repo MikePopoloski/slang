@@ -757,7 +757,8 @@ bool Driver::runPreprocessor(bitmask<PreprocessOutputFlags> flags) {
     output.setIncludeComments(flags.has(PreprocessOutputFlags::IncludeComments));
     output.setIncludeDirectives(flags.has(PreprocessOutputFlags::IncludeDirectives));
     output.setIncludeSource(flags.has(PreprocessOutputFlags::IncludeSourceInfo));
-    output.setIncludeAllLocations(true);
+    output.setExpandMacros(true);
+    output.setExpandIncludes(true);
 
     std::optional<std::mt19937> rng;
     flat_hash_map<std::string, std::string> obfuscationMap;
