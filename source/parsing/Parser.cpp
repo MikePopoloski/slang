@@ -222,10 +222,19 @@ PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
         }
 
         if (kind == TokenKind::InterfaceKeyword) {
-            if (direction)
+            auto keyword = consume();
+            if (direction) {
                 addDiag(diag::DirectionOnInterfacePort, direction.location());
 
-            auto keyword = consume();
+                // Interface port headers have no direction, so keep the token
+                // in the tree as skipped trivia attached to the keyword.
+                SmallVector<Trivia, 4> trivia;
+                trivia.push_back(Trivia{TriviaKind::SkippedTokens,
+                                        alloc.copyFrom(std::span<const Token>(&direction, 1))});
+                trivia.append_range(keyword.trivia());
+                keyword = keyword.withTrivia(alloc, trivia);
+            }
+
             return factory.interfacePortHeader(keyword, parseDotMemberClause());
         }
     }

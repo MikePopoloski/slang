@@ -5,6 +5,7 @@
 
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
+#include "slang/syntax/SyntaxPrinter.h"
 
 TEST_CASE("Simple module") {
     auto& text = "module foo(); endmodule";
@@ -1884,4 +1885,20 @@ endmodule
 
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Direction on interface port is preserved in the syntax tree") {
+    auto& text = R"(
+module m(input interface a, output interface.mp b);
+    input interface c;
+endmodule
+)";
+    auto tree = SyntaxTree::fromText(text);
+    CHECK(SyntaxPrinter::printFile(*tree) == text);
+
+    auto& diags = tree->diagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::DirectionOnInterfacePort);
+    CHECK(diags[1].code == diag::DirectionOnInterfacePort);
+    CHECK(diags[2].code == diag::DirectionOnInterfacePort);
 }
