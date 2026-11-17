@@ -4,6 +4,7 @@
 #include "Test.h"
 #include <fmt/format.h>
 
+#include "slang/ast/ASTVisitor.h"
 #include "slang/diagnostics/StatementsDiags.h"
 
 TEST_CASE("Named sequences") {
@@ -2143,4 +2144,30 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MissingGlobalClocking);
+}
+
+TEST_CASE("Untyped sequence actuals are cast to their self-determined type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic clk;
+    logic [1:0] a2, b2;
+    sequence st(q); (q == 4'hF); endsequence
+    c1: cover property (@(posedge clk) st(a2 + b2));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    // Find the addition and make sure it was done at its self-determined width.
+    const Expression* add = nullptr;
+    compilation.getRoot().visit(makeVisitor([&](auto& v, const BinaryExpression& expr) {
+        if (expr.op == BinaryOperator::Add)
+            add = &expr;
+        v.visitDefault(expr);
+    }));
+
+    REQUIRE(add);
+    CHECK(add->type->getBitWidth() == 2);
 }

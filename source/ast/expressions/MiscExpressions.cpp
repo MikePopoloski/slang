@@ -1279,6 +1279,29 @@ struct CheckerArgVisitor : public ASTVisitor<CheckerArgVisitor, VisitFlags::AllG
 static const PropertyExprSyntax* EvaluatingPlaceholder =
     reinterpret_cast<const PropertyExprSyntax*>(UINTPTR_MAX);
 
+static bool isVariableLValue(const Expression& expr) {
+    switch (expr.kind) {
+        case ExpressionKind::NamedValue:
+        case ExpressionKind::HierarchicalValue:
+        case ExpressionKind::UnboundedLiteral:
+            return true;
+        case ExpressionKind::ElementSelect:
+            return isVariableLValue(expr.as<ElementSelectExpression>().value());
+        case ExpressionKind::RangeSelect:
+            return isVariableLValue(expr.as<RangeSelectExpression>().value());
+        case ExpressionKind::MemberAccess:
+            return isVariableLValue(expr.as<MemberAccessExpression>().value());
+        case ExpressionKind::Concatenation:
+            for (auto op : expr.as<ConcatenationExpression>().operands()) {
+                if (!isVariableLValue(*op))
+                    return false;
+            }
+            return true;
+        default:
+            return false;
+    }
+}
+
 Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRange range,
                                                   const ASTContext& instanceCtx) {
     Compilation& comp = instanceCtx.getCompilation();
@@ -1399,6 +1422,19 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
                 auto& result = selfDetermined(comp, *regExpr, argCtx, argCtx.flags);
                 CheckerArgVisitor(instanceCtx, formal, result, range);
                 result.sourceRange = range;
+
+                // For sequences and properties, the actual argument is cast to its
+                // self-determined type before being substituted, unless it is $ or
+                // a variable_lvalue [16.8]. This prevents the surrounding context
+                // from changing the width of operations within the argument.
+                auto parentKind = symbol.getParentScope()->asSymbol().kind;
+                if ((parentKind == SymbolKind::Sequence || parentKind == SymbolKind::Property) &&
+                    !instanceCtx.flags.has(ASTFlags::LValue) && result.type->isNumeric() &&
+                    !isVariableLValue(result)) {
+                    return *comp.emplace<ConversionExpression>(*result.type,
+                                                               ConversionKind::Explicit, result,
+                                                               range);
+                }
                 return result;
             }
             else if (instanceCtx.flags.has(ASTFlags::EventExpression) &&
