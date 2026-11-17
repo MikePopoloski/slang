@@ -1306,35 +1306,45 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
         result->addMembers(*definition.portList);
 
     // Finally add members from the body.
-    for (auto member : declSyntax.members) {
-        // If this is a parameter declaration we will create the symbol manually
-        // as we need to apply any overrides.
-        if (member->kind != SyntaxKind::ParameterDeclarationStatement) {
-            result->addMembers(*member);
-        }
-        else {
-            auto createParam = [&](auto& declarator) {
-                SLANG_ASSERT(paramIt != definition.parameters.end());
+    auto createParam = [&](auto& declarator) {
+        SLANG_ASSERT(paramIt != definition.parameters.end());
 
-                auto& decl = *paramIt;
-                SLANG_ASSERT(declarator.name.valueText() == decl.name);
+        auto& decl = *paramIt;
+        SLANG_ASSERT(declarator.name.valueText() == decl.name);
 
-                auto& param = paramBuilder.createParam(decl, *result, instanceLoc);
-                params.push_back(&param);
-                paramIt++;
-            };
+        auto& param = paramBuilder.createParam(decl, *result, instanceLoc);
+        params.push_back(&param);
+        paramIt++;
+    };
 
-            auto paramBase = member->as<ParameterDeclarationStatementSyntax>().parameter;
-            if (paramBase->kind == SyntaxKind::ParameterDeclaration) {
-                for (auto declarator : paramBase->as<ParameterDeclarationSyntax>().declarators)
-                    createParam(*declarator);
+    auto addBodyMembers = [&](auto& self, const SyntaxList<MemberSyntax>& members) -> void {
+        for (auto member : members) {
+            if (member->kind == SyntaxKind::GenerateRegion) {
+                // Generate regions have no semantic meaning, so just add their
+                // members directly; this ensures parameters in them get overrides.
+                self(self, member->as<GenerateRegionSyntax>().members);
+            }
+            else if (member->kind != SyntaxKind::ParameterDeclarationStatement) {
+                result->addMembers(*member);
             }
             else {
-                for (auto declarator : paramBase->as<TypeParameterDeclarationSyntax>().declarators)
-                    createParam(*declarator);
+                // If this is a parameter declaration we will create the symbol manually
+                // as we need to apply any overrides.
+                auto paramBase = member->as<ParameterDeclarationStatementSyntax>().parameter;
+                if (paramBase->kind == SyntaxKind::ParameterDeclaration) {
+                    for (auto declarator : paramBase->as<ParameterDeclarationSyntax>().declarators)
+                        createParam(*declarator);
+                }
+                else {
+                    for (auto declarator :
+                         paramBase->as<TypeParameterDeclarationSyntax>().declarators) {
+                        createParam(*declarator);
+                    }
+                }
             }
         }
-    }
+    };
+    addBodyMembers(addBodyMembers, declSyntax.members);
 
     // Make note of any bind directives targeting this instance.
     if (overrideNode) {
