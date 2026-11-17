@@ -933,6 +933,34 @@ endmodule
     CHECK(g1.getExternalName() == "g1");
 }
 
+TEST_CASE("Generate block external names collide with imports and forward typedefs") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    int genblk1;
+endpackage
+
+module top;
+    import p::genblk1;
+    typedef genblk2;
+
+    if (1) logic a;
+    if (1) logic b;
+
+    typedef int genblk2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
+    auto range = top.membersOfType<GenerateBlockSymbol>();
+    auto it = range.begin();
+    CHECK((it++)->getExternalName() == "genblk01");
+    CHECK((it++)->getExternalName() == "genblk02");
+}
+
 TEST_CASE("Error checking in uninstantiated modules") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
