@@ -3013,3 +3013,20 @@ endmodule
     CHECK(get("top.s2") == "'{i:7}");
     CHECK(get("top.s3") == "'{i:9}|'{9}");
 }
+
+TEST_CASE("Elaboration tasks format byte arrays with no format specifier as strings") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    localparam byte ba[0:1] = '{"o", "k"};
+    $info(ba);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfoTask);
+    CHECK(report(diags).find("$info encountered: ok") != std::string::npos);
+}
