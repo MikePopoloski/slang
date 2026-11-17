@@ -1820,6 +1820,32 @@ endmodule
     CHECK(diags[8].code == diag::TooFewArguments);
 }
 
+TEST_CASE("randsequence weight code blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int x;
+    initial begin
+        randsequence (A)
+            A : B C := 1 { x++; };
+            B : { x += 10; };
+            C : { x += 100; };
+        endsequence
+
+        randsequence (A)
+            A : rand join := 1 {};
+        endsequence
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RandJoinNotEnough);
+}
+
 TEST_CASE("foreach loop non-standard syntax") {
     auto tree = SyntaxTree::fromText(R"(
 module top;
