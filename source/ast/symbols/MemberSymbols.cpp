@@ -8,6 +8,7 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 
 #include "../FmtHelpers.h"
+#include <set>
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
@@ -853,16 +854,28 @@ public:
     // Determines whether the trie contains at least one row that
     // matches the given inputs (and possibly state char).
     bool contains(std::span<const char> inputs, char stateChar) const {
+        SmallVector<const BitTrie*> nodes;
+        nodes.push_back(this);
+        advance(nodes, inputs, stateChar);
+        return anyEntry(nodes);
+    }
+
+    // Advances the given set of nodes along all paths that match the given
+    // inputs (and possibly state char), replacing it with the resulting set.
+    static void advance(SmallVector<const BitTrie*>& nodes, std::span<const char> inputs,
+                        char stateChar) {
+        if (nodes.empty())
+            return;
+
         auto handle = [](const BitTrie& node, SmallVector<const BitTrie*>& nextNodes, int index,
                          bool) {
             if (node.children[index])
                 nextNodes.push_back(node.children[index]);
         };
+        nodes[0]->traverse(nodes, inputs, stateChar, handle);
+    }
 
-        SmallVector<const BitTrie*> nodes;
-        nodes.push_back(this);
-        traverse(nodes, inputs, stateChar, handle);
-
+    static bool anyEntry(std::span<const BitTrie* const> nodes) {
         return std::ranges::any_of(nodes, [](auto node) { return node->entry != nullptr; });
     }
 
@@ -1219,6 +1232,129 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
 const static std::vector<std::string_view> AllPrimEdges = {"(01)", "(0x)", "(10)",
                                                            "(1x)", "(x0)", "(x1)"};
 
+namespace {
+
+// Finds input combinations of an edge-sensitive UDP that aren't covered by any
+// table row. Every combination has exactly one input with an edge and all other
+// inputs set to 0, 1, or x. Rather than testing every combination against the
+// trie (which is exponential in the number of inputs) we walk the inputs left to
+// right, tracking the set of trie nodes that match the prefix so far, and remember
+// which (position, edge placed, node set) states have all of their completions
+// covered so that those subtrees never need to be visited again.
+class UdpEdgeCoverageChecker {
+public:
+    UdpEdgeCoverageChecker(const PrimitiveSymbol& prim, const Scope& scope, const BitTrie& trie) :
+        prim(prim), scope(scope), numInputs(prim.ports.size() - 1),
+        maxNotes(scope.getCompilation().getOptions().maxUDPCoverageNotes) {
+        SmallVector<const BitTrie*> nodes;
+        nodes.push_back(&trie);
+        visit(nodes, 0, false);
+
+        if (diag && !noteStr.empty()) {
+            noteStr.pop_back();
+            diag->addNote(diag::NoteUdpCoverage, SourceLocation::NoLocation) << noteStr;
+        }
+    }
+
+private:
+    const PrimitiveSymbol& prim;
+    const Scope& scope;
+    size_t numInputs;
+    uint32_t maxNotes;
+
+    std::string current;
+    std::string noteStr;
+    uint32_t noteCount = 0;
+    Diagnostic* diag = nullptr;
+    bool done = false;
+    std::set<std::vector<uintptr_t>> fullyCovered;
+
+    // Returns true if all completions of the current prefix are covered.
+    bool visit(SmallVector<const BitTrie*>& nodes, size_t pos, bool edgeUsed) {
+        if (done)
+            return false;
+
+        if (pos == numInputs) {
+            SLANG_ASSERT(edgeUsed);
+            BitTrie::advance(nodes, {}, '?');
+            if (BitTrie::anyEntry(nodes))
+                return true;
+
+            addMissing();
+            return false;
+        }
+
+        std::vector<uintptr_t> key;
+        key.reserve(nodes.size() + 2);
+        key.push_back(pos);
+        key.push_back(edgeUsed);
+        for (auto node : nodes)
+            key.push_back(reinterpret_cast<uintptr_t>(node));
+
+        if (fullyCovered.contains(key))
+            return true;
+
+        bool allCovered = true;
+        auto tryValue = [&](std::string_view value) {
+            SmallVector<const BitTrie*> next;
+            next.append_range(nodes);
+            BitTrie::advance(next, value, 0);
+            std::ranges::sort(next);
+            next.erase(std::unique(next.begin(), next.end()), next.end());
+
+            auto len = current.size();
+            current.append(value);
+            if (!visit(next, pos + 1, edgeUsed || value.size() > 1))
+                allCovered = false;
+            current.resize(len);
+        };
+
+        // The edge has to go somewhere, so if this is the last input and
+        // we haven't placed it yet it has to go here.
+        if (edgeUsed || pos + 1 < numInputs) {
+            tryValue("0"sv);
+            tryValue("1"sv);
+            tryValue("x"sv);
+        }
+
+        if (!edgeUsed) {
+            for (auto edge : AllPrimEdges)
+                tryValue(edge);
+        }
+
+        if (allCovered)
+            fullyCovered.emplace(std::move(key));
+        return allCovered;
+    }
+
+    void addMissing() {
+        if (!diag)
+            diag = &scope.addDiag(diag::UdpCoverage, prim.location);
+
+        if (noteCount >= maxNotes) {
+            noteStr += "...and more\n";
+            done = true;
+            return;
+        }
+
+        bool nextSplit = true;
+        for (auto c : current) {
+            if (c == '(')
+                nextSplit = false;
+            else if (c == ')')
+                nextSplit = true;
+
+            noteStr += c;
+            if (nextSplit)
+                noteStr += ' ';
+        }
+        noteCount++;
+        noteStr += '\n';
+    }
+};
+
+} // namespace
+
 static void checkPrimitiveEdgeCombinations(const PrimitiveSymbol& prim, const Scope& scope,
                                            const BitTrie& trie) {
     // Check that if the behavior of the UDP is sensitive to edges of any input, the desired
@@ -1227,96 +1363,7 @@ static void checkPrimitiveEdgeCombinations(const PrimitiveSymbol& prim, const Sc
         return;
 
     SLANG_ASSERT(prim.ports.size() >= 2);
-    auto numInputs = prim.ports.size() - 1;
-
-    // Initial state is (01)000...
-    std::string state(AllPrimEdges[0]);
-    state.append(numInputs - 1, '0');
-
-    // End state is xxx...(x1)
-    std::string endState(numInputs - 1, 'x');
-    endState.append("(x1)"sv);
-
-    // Try to find the missing combinations by completely enumerating all
-    // possible table rows.
-    std::string noteStr;
-    uint32_t noteCount = 0;
-    Diagnostic* diag = nullptr;
-    auto& comp = scope.getCompilation();
-
-    while (true) {
-        // Try to find the desired row in the trie we built earlier.
-        if (!trie.contains(state, '?')) {
-            // Not found, so we'll issue a warning if we don't have one already.
-            if (!diag)
-                diag = &scope.addDiag(diag::UdpCoverage, prim.location);
-
-            if (noteCount >= comp.getOptions().maxUDPCoverageNotes) {
-                noteStr += "...and more\n";
-                break;
-            }
-
-            bool nextSplit = true;
-            for (auto c : state) {
-                if (c == '(')
-                    nextSplit = false;
-                else if (c == ')')
-                    nextSplit = true;
-
-                noteStr += c;
-                if (nextSplit)
-                    noteStr += ' ';
-            }
-            noteCount++;
-            noteStr += '\n';
-        }
-
-        if (state.back() == ')' && state == endState)
-            break;
-
-        // Iterate state by increasing leftoutermost inputs.
-        // For simple inputs value '0' goes to '1' and value '1' goes to `x`.
-        // For edge inputs circular iteration occurs over 'AllPrimEdges' list.
-        for (size_t i = 0; i < state.size(); ++i) {
-            if (state[i] == '(') {
-                std::string_view currEdge(&state[i], 4);
-                if (currEdge == AllPrimEdges.back()) {
-                    // We finished cycling this edge.
-                    if (state.back() != 'x') {
-                        state.replace(i, 4, AllPrimEdges[0]);
-                        i += 3;
-                        continue;
-                    }
-
-                    // Move edge input to the next position and set all others as '0'
-                    std::ranges::fill(state, '0');
-                    state.replace(i + 1, 4, AllPrimEdges[0]);
-                    break;
-                }
-
-                auto it = std::find(AllPrimEdges.begin(), AllPrimEdges.end(), currEdge) + 1;
-                state.replace(i, 4, *it);
-                break;
-            }
-
-            if (state[i] == '0') {
-                state[i] = '1';
-                break;
-            }
-
-            if (state[i] == '1') {
-                state[i] = 'x';
-                break;
-            }
-
-            state[i] = '0';
-        }
-    }
-
-    if (diag && !noteStr.empty()) {
-        noteStr.pop_back();
-        diag->addNote(diag::NoteUdpCoverage, SourceLocation::NoLocation) << noteStr;
-    }
+    UdpEdgeCoverageChecker checker(prim, scope, trie);
 }
 
 PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
