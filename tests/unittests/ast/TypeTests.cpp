@@ -3915,3 +3915,37 @@ endmodule
     auto& p = compilation.getRoot().lookupName<ParameterSymbol>("m.p");
     CHECK(p.getValue().integer() == 2);
 }
+
+TEST_CASE("Operators on enum operands use the enum base type") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    typedef enum {Red, Green, Blue} Colors;
+    typedef enum logic [3:0] {A, B} E4;
+    Colors C;
+    E4 e;
+    logic sel;
+
+    initial begin
+        C = Red | Green;
+        C = C + C;
+        C = -Green;
+        e = ~e;
+        C = Colors'(C + 1);
+        C = sel ? Red : Green;
+    end
+
+    localparam Colors pcol = Blue;
+    if (!(type(pcol + Green) == type(int))) $error("%s", $typename(pcol + Green));
+    if (!(type(e & e) == type(logic [3:0]))) $error("%s", $typename(e & e));
+    if (!(type(e << 1) == type(logic [3:0]))) $error("%s", $typename(e << 1));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.size() == 4);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::NoImplicitConversion);
+}

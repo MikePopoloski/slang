@@ -233,6 +233,25 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
     return true;
 }
 
+// An enum used as an operand in an expression is automatically
+// cast to the base type of the enum declaration [6.19.4].
+static const Type* stripEnum(const Type* type) {
+    auto& ct = type->getCanonicalType();
+    if (ct.kind == SymbolKind::EnumType)
+        return &ct.as<EnumType>().baseType;
+    return type;
+}
+
+// Converts enum operand types to their base types (updating lt and rt so
+// that later operand type checks see them too) and returns the binary
+// operator result type.
+static const Type* binaryTypeOfEnumBase(Compilation& compilation, const Type*& lt, const Type*& rt,
+                                        bool forceFourState) {
+    lt = stripEnum(lt);
+    rt = stripEnum(rt);
+    return OpInfo::binaryType(compilation, lt, rt, forceFourState);
+}
+
 Expression& UnaryExpression::fromSyntax(Compilation& compilation,
                                         const PrefixUnaryExpressionSyntax& syntax,
                                         const ASTContext& context) {
@@ -257,7 +276,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
         case SyntaxKind::UnaryMinusExpression:
             // Supported for both integral and real types. Result is same as input type.
             good = type->isNumeric();
-            result->type = type;
+            result->type = stripEnum(type);
             break;
         case SyntaxKind::UnaryLogicalNotExpression:
             // Supported for all boolean convertible types. Result is a single bit.
@@ -269,7 +288,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
         case SyntaxKind::UnaryBitwiseNotExpression:
             // Supported for integral only. Result is same as input type.
             good = type->isIntegral();
-            result->type = type;
+            result->type = stripEnum(type);
             break;
         case SyntaxKind::UnaryBitwiseAndExpression:
         case SyntaxKind::UnaryBitwiseOrExpression:
@@ -793,25 +812,25 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
         case BinaryOperator::Subtract:
         case BinaryOperator::Multiply:
             good = bothNumeric;
-            result->type = OpInfo::binaryType(compilation, lt, rt, false);
+            result->type = binaryTypeOfEnumBase(compilation, lt, rt, false);
             break;
         case BinaryOperator::Divide:
             // Result is forced to 4-state because result can be X.
             good = bothNumeric;
-            result->type = OpInfo::binaryType(compilation, lt, rt, true);
+            result->type = binaryTypeOfEnumBase(compilation, lt, rt, true);
             break;
         case BinaryOperator::Mod:
             // Result is forced to 4-state because result can be X.
             // Different from divide because only integers are allowed.
             good = bothIntegral;
-            result->type = OpInfo::binaryType(compilation, lt, rt, true);
+            result->type = binaryTypeOfEnumBase(compilation, lt, rt, true);
             break;
         case BinaryOperator::BinaryAnd:
         case BinaryOperator::BinaryOr:
         case BinaryOperator::BinaryXor:
         case BinaryOperator::BinaryXnor:
             good = bothIntegral;
-            result->type = OpInfo::binaryType(compilation, lt, rt, false);
+            result->type = binaryTypeOfEnumBase(compilation, lt, rt, false);
             break;
         case BinaryOperator::LogicalShiftLeft:
         case BinaryOperator::LogicalShiftRight:
@@ -820,6 +839,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             // The result is always the same type as the lhs, except that if the rhs is
             // four state then the lhs also becomes four state.
             good = bothIntegral;
+            lt = stripEnum(lt);
             if (rt->isFourState())
                 result->type = forceFourState(compilation, lt);
             else
@@ -829,12 +849,12 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
         case BinaryOperator::Power:
             good = bothNumeric;
             if (lt->isFloating() || rt->isFloating()) {
-                result->type = OpInfo::binaryType(compilation, lt, rt, false);
+                result->type = binaryTypeOfEnumBase(compilation, lt, rt, false);
                 contextDetermined(context, result->right_, result, *result->type, opRange);
             }
             else {
                 // Result is forced to 4-state because result can be X.
-                result->type = forceFourState(compilation, lt);
+                result->type = forceFourState(compilation, stripEnum(lt));
                 selfDetermined(context, result->right_);
             }
             break;
