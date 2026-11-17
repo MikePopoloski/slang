@@ -1049,6 +1049,22 @@ TEST_CASE("Unpacked struct eval") {
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Packed union member reads convert to the member type") {
+    ScriptSession session;
+    session.eval("typedef union packed { int a; logic [31:0] b; } u_t;");
+    session.eval("u_t u = 32'hxxxx_ffff;");
+    session.eval("u_t v = 32'hffff_ffff;");
+
+    auto cv = session.eval("u.a");
+    CHECK(!cv.integer().hasUnknown());
+    CHECK(cv.integer() == SVInt(32, 0xffff, true));
+
+    CHECK(session.eval("v.a < 0").integer() == 1);
+    CHECK(session.eval("longint'(v.a)").integer() == -1);
+    CHECK(session.eval("u.b").integer().hasUnknown());
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Unpacked union eval") {
     ScriptSession session;
     session.eval("union { integer a[2:0]; bit b; } foo, bar;");
