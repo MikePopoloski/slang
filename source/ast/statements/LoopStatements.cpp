@@ -262,9 +262,11 @@ ER RepeatLoopStatement::evalImpl(EvalContext& context) const {
     if (cv.bad())
         return ER::Fail;
 
-    std::optional<int64_t> oc = cv.integer().as<int64_t>();
+    // Negative, unknown, and high impedance values are all treated as zero.
+    auto& ci = cv.integer();
+    std::optional<int64_t> oc = ci.as<int64_t>();
     if (!oc || oc < 0) {
-        if (cv.integer().hasUnknown())
+        if (ci.hasUnknown() || (ci.isSigned() && ci.isNegative()))
             oc = 0;
         else {
             auto& diag = context.addDiag(diag::ValueOutOfRange, count.sourceRange);
