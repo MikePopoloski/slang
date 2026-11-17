@@ -868,6 +868,35 @@ endfunction
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Associative array default value is converted to the element type") {
+    ScriptSession session;
+    session.eval("byte a[int] = '{default: 8'd200};");
+    CHECK(session.eval("a[0]").integer() == -56);
+
+    session.eval("string w[int] = '{default: \"hello\"};");
+    CHECK(session.eval("w[3] == \"hello\"").integer() == 1);
+
+    session.eval("typedef struct { int a; int b; } s_t;");
+    session.eval("s_t s[string] = '{default: 5};");
+    CHECK(session.eval("s[\"x\"].a + s[\"y\"].b").integer() == 10);
+    NO_SESSION_ERRORS;
+
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct { int a; byte b; } s_t;
+    s_t s[string];
+    int bad[int] = '{default: s["x"]};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadAssignment);
+}
+
 TEST_CASE("Queue eval") {
     ScriptSession session;
     session.eval("int arr[$] = '{1, 2, 3, 4};");

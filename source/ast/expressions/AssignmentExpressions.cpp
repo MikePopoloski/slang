@@ -1659,6 +1659,17 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
         }
     }
 
+    // If there is a default setter expression, translate it to the target type
+    // of the array, and store that in case we need it to do constant evaluation.
+    if (defaultSetter) {
+        auto matched = matchElementValue(context, elementType, nullptr, type, syntax, {},
+                                         defaultSetter);
+        if (!matched)
+            bad = true;
+        else
+            defaultSetter = matched;
+    }
+
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
         type, std::span<const MemberSetter>{}, std::span<const TypeSetter>{},
         indexSetters.copy(comp), defaultSetter, std::span<const Expression*>{}, sourceRange);
