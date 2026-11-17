@@ -359,9 +359,19 @@ const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
             return it->second;
 
         if (exportData && exportData->wildcardExportPackages) {
+            // The name is exported if it was imported through one of the wildcard
+            // exported packages, which isn't necessarily the package that declares
+            // it, since that package may itself have imported and exported it [26.6].
             auto& owningPackage = findOwningPackage(*it->second);
             if (exportData->wildcardExportPackages->contains(owningPackage.name))
                 return it->second;
+
+            for (auto [_, pkg] : *exportData->wildcardExportPackages) {
+                if (pkg && pkg->kind == SymbolKind::Package &&
+                    pkg->as<PackageSymbol>().findForImport(lookupName) == it->second) {
+                    return it->second;
+                }
+            }
         }
     }
 
