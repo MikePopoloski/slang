@@ -219,6 +219,7 @@ static std::pair<bitmask<MethodFlags>, Visibility> getMethodFlags(
             case TokenKind::ConstKeyword:
             case TokenKind::ExternKeyword:
             case TokenKind::RandKeyword:
+            case TokenKind::RandCKeyword:
                 // Parser already issued errors for these, so just ignore them here.
                 break;
             default:

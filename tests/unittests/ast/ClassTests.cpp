@@ -177,6 +177,23 @@ endfunction
     CHECK(diags[21].code == diag::QualifiersOnOutOfBlock);
 }
 
+TEST_CASE("Invalid rand qualifiers on methods don't crash") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    randc task t(); endtask
+    rand function void f(); endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidMethodQualifier);
+    CHECK(diags[1].code == diag::InvalidMethodQualifier);
+}
+
 TEST_CASE("Class typedefs") {
     auto tree = SyntaxTree::fromText(R"(
 typedef class C;
