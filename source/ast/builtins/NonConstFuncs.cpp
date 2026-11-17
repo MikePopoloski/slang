@@ -418,6 +418,11 @@ public:
         AssertionExpr::checkSampledValueExpr(*args[0], context, isFuture,
                                              diag::SampledValueLocalVar, diag::SampledValueMatched);
 
+        // $past_gclk and $future_gclk return the sampled value of their
+        // argument; the rest are boolean value change functions [16.9.4].
+        if (knownNameId == KnownSystemName::PastGclk || knownNameId == KnownSystemName::FutureGclk)
+            return *args[0]->type;
+
         return comp.getBitType();
     }
 

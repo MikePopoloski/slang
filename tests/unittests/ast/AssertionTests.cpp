@@ -2049,3 +2049,26 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("$past_gclk and $future_gclk return the argument type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk);
+    logic [7:0] d;
+    global clocking @(posedge clk); endclocking
+
+    localparam string t1 = $typename($past_gclk(d));
+    localparam string t2 = $typename($past(d,,,@$global_clock));
+    localparam int b1 = $bits($past_gclk(d));
+    localparam int b2 = $bits($changed_gclk(d));
+    if (t1 != t2 || b1 != 8 || b2 != 1) $error("wrong types");
+
+    logic [7:0] q;
+    always @(posedge clk) q <= $past_gclk(d);
+    assert property (@(posedge clk) $future_gclk(d) == 8'h80);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
