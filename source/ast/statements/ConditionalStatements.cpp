@@ -161,22 +161,29 @@ Statement& ConditionalStatement::fromSyntax(Compilation& comp,
     return *result;
 }
 
-struct EvalConditionalVisitor {
-    EvalContext& context;
-    SmallVector<const Statement*> items;
-    bool bad = false;
+ER ConditionalStatement::evalImpl(EvalContext& context) const {
+    // The unique and unique0 keywords require that all conditions in the
+    // series be evaluated so that overlaps can be detected. Otherwise we stop
+    // at the first condition that matches. Note that only if statements in the
+    // else arm are part of the series; an if statement in the true arm is
+    // a separate statement that gets evaluated on its own.
+    const bool unique = check == UniquePriorityCheck::Unique ||
+                        check == UniquePriorityCheck::Unique0;
 
-    EvalConditionalVisitor(EvalContext& context) : context(context), items() {}
-
-    void visit(const ConditionalStatement& stmt) {
+    const Statement* firstMatch = nullptr;
+    const Statement* elseStmt = nullptr;
+    auto curr = this;
+    while (true) {
         bool matched = true;
-        for (auto& cond : stmt.conditions) {
+        for (auto& cond : curr->conditions) {
             auto result = cond.expr->eval(context);
-            bad |= result.bad();
+            if (result.bad())
+                return ER::Fail;
 
             if (cond.pattern) {
                 result = cond.pattern->eval(context, result, CaseStatementCondition::Normal);
-                bad |= result.bad();
+                if (result.bad())
+                    return ER::Fail;
             }
 
             if (!result.isTrue()) {
@@ -185,41 +192,47 @@ struct EvalConditionalVisitor {
             }
         }
 
-        if (matched)
-            stmt.ifTrue.visit(*this);
-
-        if (stmt.ifFalse) {
-            if (ConditionalStatement::isKind(stmt.ifFalse->kind) || !matched)
-                stmt.ifFalse->visit(*this);
+        if (matched) {
+            if (!firstMatch) {
+                firstMatch = &curr->ifTrue;
+                if (!unique)
+                    break;
+            }
+            else {
+                // Only unique and unique0 get here. We don't need
+                // to keep looking after finding a violation.
+                auto& diag = context.addDiag(diag::ConstEvalIfItemsNotUnique,
+                                             curr->ifTrue.sourceRange);
+                diag << (check == UniquePriorityCheck::Unique ? "unique"sv : "unique0"sv);
+                diag.addNote(diag::NotePreviousMatch, firstMatch->sourceRange);
+                break;
+            }
         }
-    }
 
-    void visit(const Statement& stmt) { items.push_back(&stmt); }
-};
+        if (!curr->ifFalse)
+            break;
 
-ER ConditionalStatement::evalImpl(EvalContext& context) const {
-    EvalConditionalVisitor visitor(context);
-    this->visit(visitor);
-    if (visitor.bad)
-        return ER::Fail;
-
-    if (visitor.items.empty()) {
-        if (check == UniquePriorityCheck::Priority || check == UniquePriorityCheck::Unique) {
-            auto& diag = context.addDiag(diag::ConstEvalNoIfItemsMatched,
-                                         conditions.back().expr->sourceRange);
-            diag << (check == UniquePriorityCheck::Priority ? "priority"sv : "unique"sv);
+        if (curr->ifFalse->kind == StatementKind::Conditional) {
+            curr = &curr->ifFalse->as<ConditionalStatement>();
+            continue;
         }
-        return ER::Success;
+
+        elseStmt = curr->ifFalse;
+        break;
     }
 
-    bool unique = check == UniquePriorityCheck::Unique || check == UniquePriorityCheck::Unique0;
-    if (unique && visitor.items.size() > 1) {
-        auto& diag = context.addDiag(diag::ConstEvalIfItemsNotUnique,
-                                     visitor.items[1]->sourceRange);
-        diag.addNote(diag::NotePreviousMatch, visitor.items[0]->sourceRange);
-    }
+    if (firstMatch)
+        return firstMatch->eval(context);
 
-    return visitor.items[0]->eval(context);
+    if (elseStmt)
+        return elseStmt->eval(context);
+
+    if (check == UniquePriorityCheck::Priority || check == UniquePriorityCheck::Unique) {
+        auto& diag = context.addDiag(diag::ConstEvalNoIfItemsMatched,
+                                     conditions.back().expr->sourceRange);
+        diag << (check == UniquePriorityCheck::Priority ? "priority"sv : "unique"sv);
+    }
+    return ER::Success;
 }
 
 void ConditionalStatement::serializeTo(ASTSerializer& serializer) const {

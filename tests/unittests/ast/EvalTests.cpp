@@ -179,6 +179,84 @@ endfunction
     }
 }
 
+TEST_CASE("Eval if-else-if chains stop at the first match unless unique") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function automatic int f(int n);
+        if (n <= 0) return 0;
+        else if (f(n - 1) >= 0) return n + f(n - 1);
+        else return -1;
+    endfunction
+
+    function automatic int k(bit pri);
+        int x = 0;
+        if (pri) begin
+            priority if ((x = x + 1) == 1) return x;
+            else if ((x = x * 10) == 5) return 5;
+        end
+        else begin
+            if ((x = x + 1) == 1) return x;
+            else if ((x = x * 10) == 5) return 5;
+        end
+        return -1;
+    endfunction
+
+    // The else binds to the inner if, which is a separate statement
+    // in the true arm and not part of the unique-if series.
+    function automatic int h(bit a, bit b, bit c);
+        int r = 7;
+        unique if (a) if (b) r = 1; else if (c) r = 2;
+        return r;
+    endfunction
+
+    function automatic int u(int a);
+        unique if (a == 1) return 1;
+        else if (a < 4) return 2;
+        return 0;
+    endfunction
+
+    function automatic int u0(int a);
+        unique0 if (a > 0) return 1;
+        else if (a > 1) return 2;
+        return 0;
+    endfunction
+
+    localparam int F = f(3);
+    localparam int K1 = k(0);
+    localparam int K2 = k(1);
+    localparam int H1 = h(1, 1, 1);
+    localparam int H2 = h(1, 0, 1);
+    localparam int H3 = h(1, 0, 0);
+    localparam int U1 = u(2);
+    localparam int U2 = u(1);
+    localparam int U3 = u0(5);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::DanglingElse);
+    CHECK(diags[1].code == diag::ConstEvalIfItemsNotUnique);
+    CHECK(diags[2].code == diag::ConstEvalIfItemsNotUnique);
+    CHECK(report(diags).find("unique0 if") != std::string::npos);
+
+    auto getParam = [&](std::string_view name) {
+        return compilation.getRoot().lookupName<ParameterSymbol>(name).getValue().integer();
+    };
+    CHECK(getParam("m.F") == 6);
+    CHECK(getParam("m.K1") == 1);
+    CHECK(getParam("m.K2") == 1);
+    CHECK(getParam("m.H1") == 1);
+    CHECK(getParam("m.H2") == 2);
+    CHECK(getParam("m.H3") == 7);
+    CHECK(getParam("m.U1") == 2);
+    CHECK(getParam("m.U2") == 1);
+    CHECK(getParam("m.U3") == 1);
+}
+
 TEST_CASE("Eval for loop") {
     ScriptSession session;
     session.eval(R"(
