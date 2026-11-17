@@ -149,6 +149,28 @@ endmodule
     CHECK(diags[20].code == diag::ExpectedExpression);
 }
 
+TEST_CASE("Sequence ranges with lower bounds that fail to evaluate") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk, a, b);
+    property p(x); @(posedge clk) a ##[x:2] b; endproperty
+    sequence s(x); a [*x:2] ##1 b; endsequence
+
+    assert property (p(1));
+    assert property (@(posedge clk) s(2));
+    assert property (p(3));
+    assert property (@(posedge clk) a ##[$:2] b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::SeqRangeMinMax);
+    CHECK(diags[1].code == diag::UnboundedNotAllowed);
+}
+
 TEST_CASE("Sequence & property instances") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
