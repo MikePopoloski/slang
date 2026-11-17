@@ -1551,7 +1551,9 @@ static ConstantValue selectMember(const MemberAccessExpression& expr, EvalContex
             return nullptr;
         }
 
-        return cvi.slice(int32_t(type.getBitWidth() - 1), 0);
+        // Make sure sign and four-statedness are correct.
+        ConstantValue slice = cvi.slice(int32_t(type.getBitWidth() - 1), 0);
+        return slice.convertToInt(type.getBitWidth(), type.isSigned(), type.isFourState());
     }
 
     // Make sure sign and four-statedness are correct.
