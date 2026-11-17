@@ -407,7 +407,8 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
                 // if it has one.
                 if (isWildcard && port->defaultValueSyntax &&
                     port->direction == ArgumentDirection::In) {
-                    return port->defaultValueSyntax;
+                    setDefault({});
+                    return expr;
                 }
 
                 context.addDiag(diag::ImplicitNamedPortNotFound, range.get()) << port->name;
