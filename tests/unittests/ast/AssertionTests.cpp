@@ -2029,3 +2029,23 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Checker formal defaults used via wildcard connections bind in the checker") {
+    auto tree = SyntaxTree::fromText(R"(
+checker chk1(logic a, event e = $inferred_clock);
+endchecker
+
+checker chk2(logic x, logic c = x);
+endchecker
+
+module m(input clk, a, sig);
+    default clocking @(posedge clk); endclocking
+    chk1 c1(.*);
+    chk2 c2(.x(sig), .*);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
