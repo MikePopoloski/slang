@@ -1416,3 +1416,37 @@ endconfig
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InfoTask);
 }
+
+TEST_CASE("Config library-specific cell rules without a use cell") {
+    auto tree = SyntaxTree::fromText(R"(
+module leaf #(parameter int P = 0);
+endmodule
+
+module sub;
+endmodule
+
+module top;
+    leaf l();
+    sub s();
+endmodule
+
+config cfg1;
+    design top;
+    cell work.leaf use #(.P(5));
+    cell work.sub liblist work;
+endconfig
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConfigSpecificCellLiblist);
+
+    auto& p = compilation.getRoot().lookupName<ParameterSymbol>("top.l.P");
+    CHECK(p.getValue().integer() == 5);
+}
