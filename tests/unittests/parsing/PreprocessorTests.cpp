@@ -1192,6 +1192,33 @@ TEST_CASE("FILE Directive (include+nesting)") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("FILE value stays valid after later `line directives") {
+    auto& text = "`line 100 \"orig.v\" 0\n"
+                 "`__FILE__\n"
+                 "`line 3 \"a.v\" 0\n"
+                 "`line 4 \"b.v\" 0\n"
+                 "`line 5 \"c.v\" 0\n"
+                 "`line 6 \"d.v\" 0\n"
+                 "`line 7 \"e.v\" 0\n"
+                 "`__FILE__";
+
+    diagnostics.clear();
+
+    SourceManager sourceManager;
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    Token first = preprocessor.next();
+    REQUIRE(first.kind == TokenKind::StringLiteral);
+
+    Token second = preprocessor.next();
+    REQUIRE(second.kind == TokenKind::StringLiteral);
+
+    CHECK(first.valueText() == "orig.v");
+    CHECK(second.valueText() == "e.v");
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("`line + FILE + LINE Directive") {
     auto& text = "`line 6 \"other.sv\" 0\n"
                  "`__LINE__\n"

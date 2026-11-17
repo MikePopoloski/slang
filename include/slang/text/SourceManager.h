@@ -8,6 +8,7 @@
 #pragma once
 
 #include <atomic>
+#include <deque>
 #include <expected.hpp>
 #include <filesystem>
 #include <memory>
@@ -335,7 +336,9 @@ private:
         SourceLocation includedFrom;
         uint64_t sortKey = 0;
         BufferKind bufferKind = BufferKind::DesignFile;
-        std::vector<LineDirectiveInfo> lineDirectives;
+        // A deque so that existing entries (and views of their names handed
+        // out by getFileName) stay valid when more directives are added.
+        std::deque<LineDirectiveInfo> lineDirectives;
 
         FileInfo() = default;
 
