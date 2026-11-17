@@ -423,6 +423,13 @@ Constraint& UniquenessConstraint::fromSyntax(const UniquenessConstraintSyntax& s
     const Type* commonType = nullptr;
     SmallVector<const Expression*> items;
     for (auto item : syntax.ranges->valueRanges) {
+        // Ranges are allowed by the grammar but not as uniqueness items.
+        if (item->kind == SyntaxKind::ValueRangeExpression) {
+            context.addDiag(diag::InvalidUniquenessExpr, item->sourceRange());
+            bad = true;
+            continue;
+        }
+
         auto& expr = Expression::bind(*item, context);
         items.push_back(&expr);
 

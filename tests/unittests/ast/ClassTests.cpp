@@ -2093,6 +2093,23 @@ endclass
     CHECK(diags[17].code == diag::RandCInSoft);
 }
 
+TEST_CASE("Range items in uniqueness constraints") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    rand int a, b;
+    constraint c { unique {a, [b:b], [a:b]}; }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidUniquenessExpr);
+    CHECK(diags[1].code == diag::InvalidUniquenessExpr);
+}
+
 TEST_CASE("Constraint qualifiers") {
     auto tree = SyntaxTree::fromText(R"(
 class A;
