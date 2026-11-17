@@ -824,7 +824,7 @@ void DriverTracker::checkNetCollapsing(AnalysisContext& context, const PortConne
     if (internal.size() == 1 && external.size() == 1) {
         auto& inNt = *internal[0].netType;
         auto& exNt = *external[0].netType;
-        if (&inNt == &exNt)
+        if (&inNt.getCanonicalNetType() == &exNt.getCanonicalNetType())
             return;
 
         if (!inNt.isBuiltIn() || !exNt.isBuiltIn()) {
@@ -870,7 +870,7 @@ void DriverTracker::checkNetCollapsing(AnalysisContext& context, const PortConne
         auto& exNt = *ex->netType;
 
         if (!inNt.isBuiltIn() || !exNt.isBuiltIn()) {
-            if (&inNt != &exNt) {
+            if (&inNt.getCanonicalNetType() != &exNt.getCanonicalNetType()) {
                 context.addDiag(port, diag::UserDefPortMixedConcat, expr->sourceRange)
                     << inNt.name << exNt.name;
                 return;

@@ -12,6 +12,7 @@
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
+#include "slang/ast/types/NetType.h"
 #include "slang/ast/types/TypePrinter.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxRewriter.h"
@@ -3948,4 +3949,48 @@ endmodule
     REQUIRE(diags.size() == 4);
     for (auto& diag : diags)
         CHECK(diag.code == diag::NoImplicitConversion);
+}
+
+TEST_CASE("Nettype alias chains and cycles") {
+    auto tree = SyntaxTree::fromText(R"(
+package p; nettype q::b a; endpackage
+package q; nettype p::a b; endpackage
+
+package r;
+    nettype logic [3:0] n0;
+    nettype n0 n1;
+    nettype n1 n2;
+endpackage
+
+module c(input q::b x);
+endmodule
+
+module m;
+    p::a w;
+    c c1(w);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(!diags.empty());
+    CHECK(diags[0].code == diag::RecursiveDefinition);
+
+    auto getNt = [&](std::string_view pkg, std::string_view name) -> const NetType& {
+        return compilation.getPackage(pkg)->find(name)->as<NetType>();
+    };
+
+    // Aliases that form a cycle aren't treated as aliases.
+    auto& a = getNt("p", "a");
+    auto& b = getNt("q", "b");
+    CHECK(a.getAliasTarget() == nullptr);
+    CHECK(b.getAliasTarget() == nullptr);
+    CHECK(&a.getCanonicalNetType() == &a);
+    CHECK(&b.getCanonicalNetType() == &b);
+
+    auto& n0 = getNt("r", "n0");
+    CHECK(&getNt("r", "n2").getCanonicalNetType() == &n0);
+    CHECK(getNt("r", "n2").getAliasTarget() == &getNt("r", "n1"));
 }

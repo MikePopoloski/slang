@@ -84,6 +84,14 @@ public:
     /// Gets the custom resolution function for this net type, if it has one.
     const SubroutineSymbol* getResolutionFunction() const;
 
+    /// If this nettype is declared as another name for an existing nettype
+    /// (e.g. `nettype nt nt2;`), returns that nettype. Otherwise returns nullptr.
+    const NetType* getAliasTarget() const;
+
+    /// Gets the canonical nettype, which is the nettype at the end of any
+    /// chain of nettype aliases (or this nettype if it is not an alias).
+    const NetType& getCanonicalNetType() const;
+
     /// @returns true if this is an error nettype.
     bool isError() const { return netKind == Unknown; }
 
@@ -101,6 +109,7 @@ public:
 
 private:
     mutable std::optional<const SubroutineSymbol*> resolver;
+    mutable std::optional<const NetType*> aliasTarget;
 };
 
 } // namespace slang::ast

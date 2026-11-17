@@ -1835,3 +1835,35 @@ endmodule
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[1].code == diag::MixedVarAssigns);
 }
+
+TEST_CASE("Nettype aliases are the same nettype") {
+    auto& code = R"(
+module m;
+    function automatic logic res(input logic d[]); return d.or(); endfunction
+    nettype logic nt with res;
+    nettype nt nt2;
+    nt2 n;
+    assign n = 1;
+    assign n = 0;
+endmodule
+
+package p;
+    nettype logic [3:0] nt;
+    nettype nt nt2;
+endpackage
+
+module c import p::*; (input nt x);
+endmodule
+
+module m2 import p::*; ();
+    nt2 a;
+    c c1(a);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(code, compilation, analysisManager);
+    CHECK(diags.empty());
+}

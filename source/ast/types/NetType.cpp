@@ -10,6 +10,7 @@
 #include "slang/ast/ASTContext.h"
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/Lookup.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
@@ -89,6 +90,46 @@ static void validateResolver(const NetType& netType, const SubroutineSymbol& res
     }
 }
 
+const NetType* NetType::getAliasTarget() const {
+    if (aliasTarget)
+        return *aliasTarget;
+
+    aliasTarget = nullptr;
+    auto syntax = getSyntax();
+    auto scope = getParentScope();
+    if (!syntax || !scope || syntax->kind != SyntaxKind::NetTypeDeclaration)
+        return nullptr;
+
+    // An alias has a plain name for its type and no resolution function.
+    auto& declSyntax = syntax->as<NetTypeDeclarationSyntax>();
+    if (declSyntax.withFunction || declSyntax.type->kind != SyntaxKind::NamedType)
+        return nullptr;
+
+    // If the data type failed to resolve (including because of a circular chain
+    // of aliases, which is diagnosed there) don't treat this as an alias. This
+    // guarantees that chains of aliases are acyclic.
+    if (declaredType.getType().isError())
+        return nullptr;
+
+    ASTContext context(*scope, LookupLocation::before(*this));
+    LookupResult result;
+    Lookup::name(*declSyntax.type->as<NamedTypeSyntax>().name, context, LookupFlags::Type, result);
+
+    if (result.found && result.found->kind == SymbolKind::NetType && result.selectors.empty() &&
+        result.found != this) {
+        aliasTarget = &result.found->as<NetType>();
+    }
+
+    return *aliasTarget;
+}
+
+const NetType& NetType::getCanonicalNetType() const {
+    auto curr = this;
+    while (auto target = curr->getAliasTarget())
+        curr = target;
+    return *curr;
+}
+
 const SubroutineSymbol* NetType::getResolutionFunction() const {
     if (resolver)
         return *resolver;
@@ -96,6 +137,12 @@ const SubroutineSymbol* NetType::getResolutionFunction() const {
     auto syntax = getSyntax();
     auto scope = getParentScope();
     SLANG_ASSERT(syntax && scope);
+
+    // A nettype alias has the same resolution function as the nettype it names.
+    if (auto& canonical = getCanonicalNetType(); &canonical != this) {
+        resolver = canonical.getResolutionFunction();
+        return *resolver;
+    }
 
     auto& declSyntax = syntax->as<NetTypeDeclarationSyntax>();
     if (declSyntax.withFunction) {
