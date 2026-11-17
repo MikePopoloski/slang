@@ -975,6 +975,57 @@ endmodule
     CHECK(diags[0].code == diag::BadAssignment);
 }
 
+TEST_CASE("Constant evaluation of x/z indices into dynamic arrays") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function automatic int f1(integer k);
+        int a[integer];
+        a[1] = 1;
+        a[2] = 2;
+        a.delete(k);
+        return a.num() * 10 + a.exists(k);
+    endfunction
+
+    function automatic int f2();
+        int a[integer];
+        a[1] = 5;
+        a['x] = 3;
+        return a[32'bx] + a.num();
+    endfunction
+
+    function automatic int f3(integer i);
+        int q[$] = '{1, 2, 3};
+        int r[$] = q[i:1];
+        q[i] = 99;
+        return q[i] + r.size() + q.size();
+    endfunction
+
+    localparam int P1 = f1('x);
+    localparam int P2 = f1(5);
+    localparam int P3 = f2();
+    localparam int P4 = f3('x);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ConstEvalAssociativeIndexInvalid);
+    CHECK(diags[1].code == diag::ConstEvalAssociativeIndexInvalid);
+    CHECK(diags[2].code == diag::ConstEvalDynamicArrayIndex);
+    CHECK(diags[3].code == diag::ConstEvalDynamicArrayIndex);
+
+    auto getParam = [&](std::string_view name) {
+        return compilation.getRoot().lookupName<ParameterSymbol>(name).getValue().integer();
+    };
+    CHECK(getParam("m.P1") == 20);
+    CHECK(getParam("m.P2") == 20);
+    CHECK(getParam("m.P3") == 1);
+    CHECK(getParam("m.P4") == 3);
+}
+
 TEST_CASE("Queue eval") {
     ScriptSession session;
     session.eval("int arr[$] = '{1, 2, 3, 4};");

@@ -531,6 +531,16 @@ std::optional<ConstantRange> ElementSelectExpression::evalIndex(EvalContext& con
     }
 
     std::optional<int32_t> index = cs.integer().as<int32_t>();
+    if (!index && valType.isUnpackedArray() && !valType.hasFixedRange() &&
+        cs.integer().hasUnknown()) {
+        // An index with x or z bits into a dynamic array or queue is
+        // invalid; reads return the default value and writes are ignored.
+        context.addDiag(diag::ConstEvalDynamicArrayIndex, sourceRange)
+            << cs << valType << (val ? val.size() : 0);
+        softFail = true;
+        return std::nullopt;
+    }
+
     if (!index) {
         if (!warnedAboutIndex)
             context.addDiag(diag::IndexOOB, sourceRange) << cs << valType;
@@ -968,6 +978,14 @@ std::optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& conte
         return std::nullopt;
 
     const Type& valueType = *value().type;
+
+    // A queue slice with x or z bits in either bound yields the empty queue.
+    if (valueType.isQueue() && selectionKind == RangeSelectionKind::Simple &&
+        (cl.integer().hasUnknown() || cr.integer().hasUnknown())) {
+        softFail = true;
+        return std::nullopt;
+    }
+
     std::optional<int32_t> li = cl.integer().as<int32_t>();
     std::optional<int32_t> ri = cr.integer().as<int32_t>();
     if (!li) {

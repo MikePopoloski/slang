@@ -706,6 +706,19 @@ function int func;
 endfunction
 ```
 
+-Winvalid-assoc-index
+A constant function used an index with x or z bits to access an associative array.
+Such an index is invalid; reads return the default value for the element type and
+writes are ignored.
+```
+localparam int foo = func();
+function int func;
+    int i[integer];
+    i['x] = 1;
+    return i[32'bx];
+endfunction
+```
+
 -Wstatic-skipped
 A constant function contains a static variable with an initializer. That initializer
 will be skipped during constant evaluation, which could lead to unintuitive results.

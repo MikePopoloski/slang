@@ -695,8 +695,9 @@ public:
             if (!index)
                 return nullptr;
 
+            // An index with x or z bits is invalid and never matches an entry.
             auto target = lval.resolve();
-            if (target && target->isMap()) {
+            if (target && target->isMap() && !index.hasUnknown()) {
                 // Try to erase the element -- no warning if it doesn't exist.
                 target->map()->erase(index);
             }
@@ -752,7 +753,8 @@ public:
         if (!array || !index)
             return nullptr;
 
-        bool exists = array.map()->count(index);
+        // An index with x or z bits is invalid and never matches an entry.
+        bool exists = !index.hasUnknown() && array.map()->count(index);
         return SVInt(32, exists ? 1 : 0, true);
     }
 };

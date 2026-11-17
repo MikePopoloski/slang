@@ -1132,7 +1132,7 @@ error ConstEvalSubroutineNotConstant "'{}' is not callable in a constant express
 error ConstEvalFunctionArgDirection "cannot call a function with output, inout, or ref arguments in a constant expression"
 error ConstEvalFunctionInsideGenerate "cannot call a function declared inside a generate block in a constant expression"
 error ConstEvalDynamicToFixedSize "cannot assign {} of length {} to {}"
-error ConstEvalAssociativeIndexInvalid "index {} has x or z bits which is invalid"
+warning invalid-assoc-index ConstEvalAssociativeIndexInvalid "index {} has x or z bits which is invalid"
 error ConstEvalDisableTarget "disable statement in a constant function cannot target a block that is not currently executing"
 error ConstEvalClassType "class types are not allowed in constant expressions"
 error ConstEvalCovergroupType "covergroup types are not allowed in constant expressions"
@@ -1317,7 +1317,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   unconnected-output-port unconnected-inout-port null-port
                   unconnected-unnamed-port redef-macro unknown-pragma unknown-warning-option
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
-                  static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
+                  static-skipped elem-not-found invalid-assoc-index dynarray-index dynarray-range queue-range empty-queue
                   unknown-escape-code missing-top warning-task unsized-concat finish-num
                   nonblocking-final constraint-missing missing-format dpi-spec udp-port-empty
                   lifetime-prototype net-inconsistent port-coercion empty-body reversed-range
