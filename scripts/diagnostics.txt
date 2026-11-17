@@ -1124,7 +1124,7 @@ error ConstEvalTaggedUnion "cannot access '{}' because it is not the currently a
 error ConstEvalRandValue "random value statements are not allowed in constant functions"
 error ConstEvalParamCycle "cyclic dependency found when determining value of '{}'"
 error ConstEvalNoIfItemsMatched "no condition matched in {} if statement in constant function"
-error ConstEvalIfItemsNotUnique "more than one condition matched in unique if statement in constant function"
+error ConstEvalIfItemsNotUnique "more than one condition matched in {} if statement in constant function"
 error ConstEvalCheckers "checkers are not allowed in constant functions"
 warning elem-not-found ConstEvalAssociativeElementNotFound "element {} does not exist in associative array"
 warning static-skipped ConstEvalStaticSkipped "static variable initialization is skipped in constant function calls"
