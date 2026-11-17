@@ -1196,7 +1196,8 @@ note NoteAliasedTo "which is aliased to"
 note NoteAliasDeclaration "previous alias declaration here"
 note NoteHierarchicalRef "hierarchical reference here"
 warning missing-top NoTopModules "no top-level modules found in design"
-warning duplicate-defparam DuplicateDefparam "parameter already has a defparam override applied; ignoring this one"
+warning duplicate-defparam DuplicateDefparam "parameter has multiple defparam overrides; ignoring this one"
+note NoteDefparamUsed "using this defparam instead"
 
 subsystem Analysis
 error AssertionNoClock "{} has no explicit clocking event and one cannot be inferred from context"

@@ -1227,6 +1227,38 @@ endmodule
     auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::DuplicateDefparam);
+
+    // The last defparam in source text wins.
+    auto& p = compilation.getRoot().lookupName<ParameterSymbol>("top.m1.p");
+    CHECK(p.getValue().integer() == 2);
+}
+
+TEST_CASE("Multiple defparams for one target in the same module") {
+    auto& text = R"(
+module sub;
+    parameter P = 0;
+endmodule
+
+module top;
+    sub s();
+    defparam s.P = 1;
+    defparam s.P = 2;
+endmodule
+)";
+    auto tree = SyntaxTree::fromText(text);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DuplicateDefparam);
+    // The warning is on the first (ignored) defparam.
+    auto firstOffset = std::string_view(text).find("s.P = 1");
+    CHECK(diags[0].location.offset() == firstOffset);
+
+    auto& p = compilation.getRoot().lookupName<ParameterSymbol>("top.s.P");
+    CHECK(p.getValue().integer() == 2);
 }
 
 TEST_CASE("Parameter override regression GH #459") {

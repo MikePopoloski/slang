@@ -996,8 +996,9 @@ endclass
 ```
 
 -Wduplicate-defparam
-More than one defparam targets the same parameter. The LRM specifies that this is undefined
-behavior. slang takes the value from the first defparam it sees and ignores the rest.
+More than one defparam targets the same parameter. The LRM specifies that the last defparam
+in source text wins, which is what slang does; the others are ignored. If the defparams are in
+different compilation units the result is undefined, and slang uses the first one it sees.
 ```
 module m;
     parameter p = 1;

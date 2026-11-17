@@ -594,16 +594,31 @@ void Compilation::resolveDefParamsAndBinds() {
             SLANG_ASSERT(entry.defparamSyntax);
 
             auto node = getNodeFor(entry.path, c);
-            auto [it, inserted] = node->paramOverrides.emplace(
-                entry.targetSyntax,
-                HierarchyOverrideNode::ParamOverride{entry.value, nullptr, entry.defparamSyntax,
-                                                     entry.isImplicitString});
+            HierarchyOverrideNode::ParamOverride newOverride{entry.value, nullptr,
+                                                             entry.defparamSyntax,
+                                                             entry.isImplicitString};
+            auto [it, inserted] = node->paramOverrides.emplace(entry.targetSyntax, newOverride);
+            if (inserted)
+                continue;
 
-            if (!inserted && isFinal) {
-                SLANG_ASSERT(it->second.defparam);
-                auto& diag = c.root->addDiag(diag::DuplicateDefparam,
-                                             entry.defparamSyntax->sourceRange());
-                diag.addNote(diag::NotePreviousDefinition, it->second.defparam->sourceRange());
+            // If there are multiple defparams for the same parameter, the last one
+            // in source text wins. If they are in different compilation units the
+            // result is undefined, so we just keep the first one we found.
+            SLANG_ASSERT(it->second.defparam);
+            auto prevSyntax = it->second.defparam;
+            auto ignored = entry.defparamSyntax;
+            if (auto sm = c.getSourceManager()) {
+                auto isBefore = sm->isBeforeInCompilationUnit(
+                    prevSyntax->sourceRange().start(), entry.defparamSyntax->sourceRange().start());
+                if (isBefore.value_or(false)) {
+                    it->second = newOverride;
+                    ignored = prevSyntax;
+                }
+            }
+
+            if (isFinal) {
+                auto& diag = c.root->addDiag(diag::DuplicateDefparam, ignored->sourceRange());
+                diag.addNote(diag::NoteDefparamUsed, it->second.defparam->sourceRange());
             }
         }
 
