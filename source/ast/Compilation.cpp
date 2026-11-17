@@ -2624,7 +2624,18 @@ std::pair<Compilation::DefinitionLookupResult, bool> Compilation::resolveConfigR
         if (cellOverride) {
             if (auto it = cellOverride->specificLibRules.find(&targetLib);
                 it != cellOverride->specificLibRules.end()) {
-                return resolveConfigRule(scope, *it->second);
+                auto& specificRule = *it->second;
+                if (!specificRule.useCell.name.empty())
+                    return resolveConfigRule(scope, specificRule);
+
+                // The rule doesn't redirect to another cell (e.g. it only
+                // has parameter overrides) so apply it to the def in this lib.
+                specificRule.isUsed = true;
+                if (auto def = findDefByLib(defList, targetLib)) {
+                    return std::pair<Compilation::DefinitionLookupResult, bool>{
+                        {def, nullptr, &specificRule}, false};
+                }
+                return std::nullopt;
             }
         }
 
