@@ -1543,7 +1543,7 @@ endmodule
 
     auto& top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
     auto instances = top.membersOfType<InstanceSymbol>();
-    REQUIRE(std::ranges::equal(instances, std::array{"i1", "i3", "ff2", "ff1"}, {}, &Symbol::name));
+    REQUIRE(std::ranges::equal(instances, std::array{"i1", "i3", "ff2"}, {}, &Symbol::name));
 }
 
 TEST_CASE("Instance array size limits") {
@@ -3551,4 +3551,30 @@ endmodule
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Nested modules instantiated in generate blocks or other nested modules") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    module inner; int x; endmodule
+    if (1) begin : g inner i(); end
+endmodule
+
+module top2;
+    module inner2; int x; endmodule
+    module other; inner2 i(); endmodule
+    module solo; int y; endmodule
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName("top.g.i.x"));
+    CHECK(!root.lookupName("top.inner"));
+    CHECK(root.lookupName("top2.other.i.x"));
+    CHECK(root.lookupName("top2.solo.y"));
+    CHECK(!root.lookupName("top2.inner2"));
 }

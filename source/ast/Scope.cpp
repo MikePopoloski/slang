@@ -27,6 +27,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxVisitor.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/TimeTrace.h"
 
@@ -1475,6 +1476,27 @@ void Scope::handleDataDeclaration(
     insertMembers(symbols);
 }
 
+namespace {
+
+// Looks for explicit instantiations of a given (nested) module name.
+struct NestedInstantiationFinder : public SyntaxVisitor<NestedInstantiationFinder> {
+    std::string_view name;
+    bool found = false;
+
+    explicit NestedInstantiationFinder(std::string_view name) : name(name) {}
+
+    void handle(const HierarchyInstantiationSyntax& syntax) {
+        if (syntax.type.valueText() == name)
+            found = true;
+    }
+
+    // Don't descend into things that can't contain instantiations.
+    void handle(const ExpressionSyntax&) {}
+    void handle(const StatementSyntax&) {}
+};
+
+} // namespace
+
 void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const {
     // We implicitly instantiate this definition if it has no parameters
     // and no ports and hasn't been instantiated elsewhere.
@@ -1499,6 +1521,25 @@ void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const 
     auto def = compilation.getDefinition(*this, syntax);
     if (!def || def->getInstanceCount() > 0)
         return;
+
+    // The definition may also be explicitly instantiated somewhere that hasn't been
+    // elaborated yet, such as in a generate block or in a sibling nested module,
+    // so look through the syntax of the enclosing module to find out [23.4].
+    for (auto parent = syntax.parent; parent; parent = parent->parent) {
+        if (parent->kind == SyntaxKind::ModuleDeclaration ||
+            parent->kind == SyntaxKind::InterfaceDeclaration ||
+            parent->kind == SyntaxKind::ProgramDeclaration) {
+            NestedInstantiationFinder finder(def->name);
+            for (auto member : parent->as<ModuleDeclarationSyntax>().members) {
+                if (member != &syntax)
+                    member->visit(finder);
+            }
+
+            if (finder.found)
+                return;
+            break;
+        }
+    }
 
     auto& inst = InstanceSymbol::createDefaultNested(*this, syntax);
     insertMember(&inst, lastMember, /* incrementIndex */ true);
