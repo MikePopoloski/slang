@@ -302,7 +302,8 @@ static char getDefaultSpecifier(const Expression& expr, LiteralBase defaultBase)
     if (type.isFloating())
         return 'f';
 
-    if (type.isString())
+    // Unpacked arrays of bytes are formatted as strings [21.2.1.1].
+    if (type.isString() || type.isByteArray())
         return 's';
 
     return 'p';
