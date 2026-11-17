@@ -2823,8 +2823,16 @@ ConstantValue ValueRangeExpression::checkInside(EvalContext& context,
             }
         }
         else {
-            // Convert the rhs to the lhs type.
-            cvr = convert(*right().type, *left().type, right().sourceRange, std::move(cvr));
+            // Convert the rhs to the lhs type. As for relative tolerances,
+            // real to integral conversions truncate instead of rounding.
+            auto& lt = *left().type;
+            if (lt.isIntegral() && right().type->isFloating()) {
+                cvr = SVInt::fromDouble(lt.getBitWidth(), cvr.convertToReal().real(), lt.isSigned(),
+                                        /* round */ false);
+            }
+            else {
+                cvr = convert(*right().type, lt, right().sourceRange, std::move(cvr));
+            }
         }
 
         // Form the range, [A - B : A + B], swapping A and B if needed
