@@ -3,6 +3,10 @@
 
 #include "Test.h"
 
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/CoverSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
+
 TEST_CASE("Covergroup data type") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -1028,4 +1032,38 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::CoverCrossItems);
     CHECK(diags[1].code == diag::InvalidBinsTarget);
+}
+
+TEST_CASE("Coverpoint inferred types are the self-determined expression type") {
+    auto tree = SyntaxTree::fromText(R"(
+module t;
+    typedef enum {RED, GREEN, BLUE} color_t;
+    color_t c;
+    logic [0:7] y;
+    bit [3:0] q;
+    byte b;
+
+    covergroup cg;
+        cp: coverpoint c {
+            bins named[] = cp with (item.name() != "BLUE");
+        }
+        X: cross y, q, c;
+        B: coverpoint b;
+    endgroup
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& t = compilation.getRoot().lookupName<InstanceSymbol>("t").body;
+    auto& cg = t.find("cg")->as<CovergroupType>();
+    auto getType = [&](std::string_view name) {
+        return cg.getBody().find(name)->as<CoverpointSymbol>().declaredType.getType().toString();
+    };
+    CHECK(getType("cp") == "t.color_t");
+    CHECK(getType("y") == "logic[0:7]");
+    CHECK(getType("q") == "bit[3:0]");
+    CHECK(getType("B") == "byte");
 }

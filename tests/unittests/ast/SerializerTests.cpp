@@ -731,7 +731,7 @@ endclass
                             {
                               "name": "CrossValType",
                               "kind": "TypeAlias",
-                              "target": "struct{logic[0:0] e;logic[0:0] y;}C3.s$9"
+                              "target": "struct{logic e;logic y;}C3.s$9"
                             },
                             {
                               "name": "CrossQueueType",

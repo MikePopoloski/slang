@@ -68,6 +68,10 @@ void DeclaredType::mergeImplicitPort(
                    unpackedDimensions);
 }
 
+static bool isEmptyImplicitType(const ImplicitTypeSyntax& syntax) {
+    return !syntax.signing && syntax.dimensions.empty();
+}
+
 void DeclaredType::resolveType(const ASTContext& typeContext,
                                const ASTContext& initializerContext) const {
     auto& comp = typeContext.getCompilation();
@@ -106,6 +110,13 @@ void DeclaredType::resolveType(const ASTContext& typeContext,
         }
         else if (!initializerSyntax) {
             type = &comp.getErrorType();
+        }
+        else if (flags.has(DeclaredTypeFlags::CoverageType) &&
+                 isEmptyImplicitType(syntax->as<ImplicitTypeSyntax>())) {
+            // The inferred type of a coverpoint is the self-determined
+            // type of the coverpoint expression [19.5].
+            initializer = &Expression::bind(*initializerSyntax, initializerContext);
+            type = initializer->type;
         }
         else {
             bitmask<ASTFlags> extraFlags;
