@@ -106,6 +106,16 @@ ModuleHeaderSyntax& Parser::parseModuleHeader() {
             auto star = consume();
             ports = &factory.wildcardPortList(openParen, dot, star,
                                               expect(TokenKind::CloseParenthesis));
+
+            // The parameters and package imports come from the extern
+            // declaration along with the ports, so they aren't allowed here.
+            if (!imports.empty()) {
+                addDiag(diag::WildcardPortsWithImports,
+                        SourceRange(imports[0]->sourceRange().start(),
+                                    imports.back()->sourceRange().end()));
+            }
+            if (parameterList)
+                addDiag(diag::WildcardPortsWithParams, parameterList->sourceRange());
         }
         else if (isNonAnsiPort()) {
             Token closeParen;

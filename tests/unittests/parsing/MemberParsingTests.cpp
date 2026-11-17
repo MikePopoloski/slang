@@ -1126,6 +1126,24 @@ endmodule
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Wildcard port list with a parameter port list or header imports") {
+    auto& text = R"(
+package p; endpackage
+extern module m (input a);
+module m #(parameter Q = 2) (.*);
+endmodule
+
+extern module n (input a);
+module n import p::*; (.*);
+endmodule
+)";
+
+    parseCompilationUnit(text);
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::WildcardPortsWithParams);
+    CHECK(diagnostics[1].code == diag::WildcardPortsWithImports);
+}
+
 TEST_CASE("Extern interface method parsing") {
     auto& text = R"(
 interface I;
