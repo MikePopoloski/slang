@@ -568,6 +568,9 @@ const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) con
                                                      ctx);
                 value2 = comp.allocConstant(ctx.eval(expr2));
             }
+            else if (isPathPulse) {
+                value2 = value1;
+            }
             else {
                 value2 = &ConstantValue::Invalid;
             }
@@ -603,8 +606,12 @@ void SpecparamSymbol::fromSyntax(const Scope& scope, const SpecparamDeclarationS
         param->setAttributes(scope, syntax.attributes);
         results.push_back(param);
 
-        if (decl->value2)
+        // Pulse control specparams are recognized by name; if only the reject
+        // limit is given it applies to the error limit as well [30.7.1].
+        if (decl->value2 || (decl->name.valueText().starts_with("PATHPULSE$"sv) &&
+                             scope.asSymbol().kind == SymbolKind::SpecifyBlock)) {
             param->isPathPulse = true;
+        }
     }
 }
 

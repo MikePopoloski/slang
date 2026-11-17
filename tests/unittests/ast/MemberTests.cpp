@@ -2559,3 +2559,36 @@ module n(J ]j); endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpectedIdentifier);
 }
+
+TEST_CASE("Single-value PATHPULSE$ specparams") {
+    auto tree = SyntaxTree::fromText(R"(
+module f1(input a, output y);
+    specify
+        specparam PATHPULSE$ = (3);
+        specparam PATHPULSE$q$a = (3);
+        specparam PATHPULSE$a$y = 4;
+        (a => y) = PATHPULSE$;
+    endspecify
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::InvalidSpecifyDest);
+    CHECK(diags[2].code == diag::PathPulseInExpr);
+
+    auto& spec = compilation.getRoot()
+                     .lookupName<InstanceSymbol>("f1")
+                     .body.membersOfType<SpecifyBlockSymbol>()
+                     .front();
+    auto& pp = spec.find("PATHPULSE$a$y")->as<SpecparamSymbol>();
+    CHECK(pp.isPathPulse);
+    CHECK(pp.getPulseRejectLimit().integer() == 4);
+    CHECK(pp.getPulseErrorLimit().integer() == 4);
+    CHECK(pp.getPathSource());
+    CHECK(pp.getPathDest());
+}
