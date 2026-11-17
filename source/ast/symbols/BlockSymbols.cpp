@@ -262,11 +262,11 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
             result->addMember(
                 StatementBlockSymbol::fromSyntax(scope, prod->as<RsCodeBlockSyntax>()));
         }
+    }
 
-        if (syntax.weightClause && syntax.weightClause->codeBlock) {
-            result->addMember(StatementBlockSymbol::fromSyntax(
-                scope, syntax.weightClause->codeBlock->as<RsCodeBlockSyntax>()));
-        }
+    if (syntax.weightClause && syntax.weightClause->codeBlock) {
+        result->addMember(StatementBlockSymbol::fromSyntax(
+            scope, syntax.weightClause->codeBlock->as<RsCodeBlockSyntax>()));
     }
 
     return *result;
