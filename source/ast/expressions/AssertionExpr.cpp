@@ -490,7 +490,7 @@ SequenceRange SequenceRange::fromSyntax(const RangeSelectSyntax& syntax, const A
     auto r = context.evalInteger(re);
     if (context.requirePositive(r, syntax.right->sourceRange())) {
         range.max = uint32_t(*r);
-        if (*l > *r) {
+        if (l && *l > *r) {
             auto& diag = context.addDiag(diag::SeqRangeMinMax, syntax.left->sourceRange());
             diag << syntax.right->sourceRange();
             diag << *l << *r;
