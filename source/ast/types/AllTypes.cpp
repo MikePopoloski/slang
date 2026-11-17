@@ -415,9 +415,9 @@ const Type& EnumType::create(const EnumDeclaration& decl, const ASTContext& type
         if (!cb->isError()) {
             // Error if the named type is invalid for an enum base type. Other invalid types
             // will have been diagnosed already by the parser.
-            if (!cb->isSimpleBitVector() &&
-                (bts.kind == SyntaxKind::NamedType || IntegerTypeSyntax::isKind(bts.kind))) {
-                context.addDiag(diag::InvalidEnumBase, bts.sourceRange()) << *base;
+            if (!cb->isSimpleBitVector()) {
+                if (bts.kind == SyntaxKind::NamedType || IntegerTypeSyntax::isKind(bts.kind))
+                    context.addDiag(diag::InvalidEnumBase, bts.sourceRange()) << *base;
                 cb = &comp.getErrorType();
             }
             else {
