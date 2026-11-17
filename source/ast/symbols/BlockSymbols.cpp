@@ -716,8 +716,17 @@ static std::string createGenBlkName(uint32_t constructIndex, const Scope& parent
     std::string base = "genblk";
     std::string index = std::to_string(constructIndex);
     std::string current = base + index;
-    while (auto symbol = parent.find(current)) {
+
+    // Look in the name map directly instead of using find() so that we also
+    // see names that are taken by explicit imports and forwarding typedefs.
+    auto& nameMap = parent.getNameMap();
+    while (true) {
+        auto it = nameMap.find(current);
+        if (it == nameMap.end())
+            break;
+
         // Sibling generate from if or case statement and not actually a name collision
+        auto symbol = it->second;
         if (symbol->kind == SymbolKind::GenerateBlock &&
             symbol->as<GenerateBlockSymbol>().isUnnamed) {
             return current;
