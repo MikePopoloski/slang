@@ -3586,3 +3586,45 @@ endmodule
     CHECK(diags[0].code == diag::DuplicateImport);
     CHECK(diags[1].code == diag::StaticInitValue);
 }
+
+TEST_CASE("Wildcard export of names wildcard-imported through a re-exporting package") {
+    auto tree = SyntaxTree::fromText(R"(
+package p1;
+    int x;
+endpackage
+
+package p2;
+    import p1::x;
+    export p1::*;
+endpackage
+
+package p3;
+    import p2::*;
+    export p2::*;
+    function int q; return x; endfunction
+endpackage
+
+package p4;
+    import p1::*;
+    import p2::*;
+    export p2::*;
+    function int q; return x; endfunction
+endpackage
+
+module t;
+    import p3::*;
+    initial x = 1;
+endmodule
+
+module u;
+    initial begin
+        p3::x = 1;
+        p4::x = 2;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
