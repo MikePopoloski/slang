@@ -263,8 +263,15 @@ private:
         if (lastInterface || lastGenericIface)
             return add(decl, lastInterface, lastModport, lastGenericIface, attrs);
 
-        if (!lastType && !lastNetType)
+        if (!lastType && !lastNetType) {
+            // This port follows an explicit port, so it only inherits the direction.
+            // The port kind and type are determined using the same rules as for the
+            // first port in the list, which means an implicitly typed net unless
+            // this is a ref port [23.2.2.3].
             lastType = &comp.createEmptyTypeSyntax(decl.getFirstToken().location());
+            if (lastDirection != ArgumentDirection::Ref)
+                lastNetType = &getDefaultNetType(scope, decl.name.location(), true);
+        }
 
         return add(decl, lastDirection, lastType, lastNetType, attrs, lastImplicitInputNet);
     }

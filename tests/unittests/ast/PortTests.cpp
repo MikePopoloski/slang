@@ -2436,3 +2436,48 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UsedBeforeDeclared);
 }
+
+TEST_CASE("Ports following explicit ANSI ports use first-port kind rules") {
+    auto tree = SyntaxTree::fromText(R"(
+module mh22 (input wire integer p_a, .p_b(s_b), p_c);
+    logic [5:0] s_b;
+endmodule
+
+module e2 (output .p_b(s_b), p_c);
+    logic [5:0] s_b;
+endmodule
+
+module e5 (inout wire p_a, .p_b(s_b), p_c);
+    wire [5:0] s_b;
+endmodule
+
+module e6 (ref .p_b(s_b), p_c);
+    logic [5:0] s_b;
+endmodule
+
+module top;
+    wire integer i;
+    wire a, b, c;
+    logic l;
+    logic [5:0] d;
+    wire [5:0] w1, w2;
+    mh22 u1(.p_a(i), .p_b(d), .p_c(b));
+    e2 u2(.p_b(w1), .p_c(c));
+    e5 u3(.p_a(a), .p_b(w2), .p_c(c));
+    e6 u4(.p_b(d), .p_c(l));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto getKind = [&](std::string_view path) {
+        return compilation.getRoot().lookupName(path)->kind;
+    };
+
+    CHECK(getKind("top.u1.p_c") == SymbolKind::Net);
+    CHECK(getKind("top.u2.p_c") == SymbolKind::Net);
+    CHECK(getKind("top.u3.p_c") == SymbolKind::Net);
+    CHECK(getKind("top.u4.p_c") == SymbolKind::Variable);
+}
