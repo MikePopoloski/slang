@@ -2665,6 +2665,25 @@ endmodule
     CHECK(diags[0].code == diag::InvalidEnumBase);
 }
 
+TEST_CASE("Non-integral keyword enum base types don't crash") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum string { A } a;
+    enum chandle { B } b;
+    enum event { C } c;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ExpectedEnumBase);
+    CHECK(diags[1].code == diag::ExpectedEnumBase);
+    CHECK(diags[2].code == diag::ExpectedEnumBase);
+}
+
 TEST_CASE("Enum can't be its own base type") {
     auto tree = SyntaxTree::fromText(R"(
 module test;
