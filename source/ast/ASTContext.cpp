@@ -144,20 +144,33 @@ void ASTContext::setAttributes(const Expression& expr,
                                    AttributeSymbol::fromSyntax(syntax, *scope, getLocation()));
 }
 
+static const ASTContext& getAssertionInstantiationContext(const ASTContext& context,
+                                                          bool& sawDefault) {
+    auto curCtx = &context;
+    sawDefault = false;
+    while (curCtx->assertionInstance && curCtx->assertionInstance->prevContext &&
+           curCtx->assertionInstance->symbol &&
+           curCtx->assertionInstance->symbol->kind != SymbolKind::Checker) {
+        sawDefault |= curCtx->assertionInstance->isDefault;
+        curCtx = curCtx->assertionInstance->prevContext;
+    }
+    return *curCtx;
+}
+
+const Scope* ASTContext::getAssertionInstantiationScope() const {
+    bool sawDefault;
+    auto& ctx = getAssertionInstantiationContext(*this, sawDefault);
+    return sawDefault ? nullptr : ctx.scope.get();
+}
+
 template<typename TLoc>
 Diagnostic& ASTContext::addDiagImpl(DiagCode code, TLoc loc) const {
     if (assertionInstance) {
         // If we're in an assertion instance we need to walk up the
         // instantiation chain to find the real scope, otherwise we
         // might miss cases where we are in an uninstantiated scope.
-        auto curCtx = this;
-        while (curCtx->assertionInstance && curCtx->assertionInstance->prevContext &&
-               curCtx->assertionInstance->symbol &&
-               curCtx->assertionInstance->symbol->kind != SymbolKind::Checker) {
-            curCtx = curCtx->assertionInstance->prevContext;
-        }
-
-        auto& diag = curCtx->scope->addDiag(code, loc);
+        bool sawDefault;
+        auto& diag = getAssertionInstantiationContext(*this, sawDefault).scope->addDiag(code, loc);
         addAssertionBacktrace(diag);
         return diag;
     }

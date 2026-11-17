@@ -270,6 +270,10 @@ struct SLANG_EXPORT AssertionInstanceDetails {
     /// previously in the stack of assertion instances being expanded.
     /// Only applicable to properties, since this is illegal for sequences.
     bool isRecursive = false;
+
+    /// Set to true if this is a default instance created to check a sequence,
+    /// property, or let declaration on its own, rather than a real instantiation.
+    bool isDefault = false;
 };
 
 /// @brief Contains required context for binding syntax nodes with symbols to form
@@ -550,6 +554,13 @@ public:
     /// If this context is within an assertion instance, report a backtrace of how that
     /// instance was expanded to the given diagnostic; otherwise, do nothing.
     void addAssertionBacktrace(Diagnostic& diag) const;
+
+    /// Gets the scope in which the current assertion expression is considered
+    /// to appear, after walking up through any named sequence and property
+    /// instantiations. If not in an assertion instance this is just the current scope.
+    /// Returns nullptr if the chain ends at a default instance of a declaration,
+    /// meaning that the real point of appearance isn't known.
+    const Scope* getAssertionInstantiationScope() const;
 
     /// Resets the flags for this context; the @a addedFlags will be added to the flag set,
     /// and any non-sticky flags will be removed.

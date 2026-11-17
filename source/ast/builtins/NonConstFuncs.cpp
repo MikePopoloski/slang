@@ -415,8 +415,12 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
 
-        if (!comp.getGlobalClockingAndNoteUse(*context.scope)) {
-            if (!context.scope->isUninstantiated())
+        // Global clocking referenced in a named sequence or property is looked
+        // up from the point where the assertion appears [14.14]. If we're just
+        // checking the declaration on its own there's nothing to look up yet.
+        auto lookupScope = context.getAssertionInstantiationScope();
+        if (lookupScope && !comp.getGlobalClockingAndNoteUse(*lookupScope)) {
+            if (!lookupScope->isUninstantiated())
                 context.addDiag(diag::MissingGlobalClocking, range);
         }
 

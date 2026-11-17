@@ -2102,3 +2102,45 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Global clocking in named properties is resolved where the assertion appears") {
+    auto tree = SyntaxTree::fromText(R"(
+module top1;
+    u uu();
+endmodule
+
+module u;
+    logic clk, a, b;
+    global clocking gc @(clk); endclocking
+    assert property (lib1.p(a, b));
+endmodule
+
+module lib1;
+    property p(x, y); @($global_clock) x |=> y; endproperty
+endmodule
+
+module top2;
+    logic a, b;
+    lib2 l();
+    assert property (l.p(a, b));
+endmodule
+
+module lib2;
+    logic clk;
+    global clocking gc @(clk); endclocking
+    property p(x, y); @($global_clock) x |=> y; endproperty
+endmodule
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("top1");
+    options.topModules.emplace("top2");
+    options.topModules.emplace("lib1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MissingGlobalClocking);
+}

@@ -1192,6 +1192,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     instance.symbol = &symbol;
     instance.prevContext = &context;
     instance.instanceLoc = symbol.location;
+    instance.isDefault = true;
 
     // Bind default args, make placeholder entries for args that don't have defaults.
     SourceLocation outputLocalVarArgLoc;
