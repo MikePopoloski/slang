@@ -1723,6 +1723,8 @@ endfunction
     CHECK(session.eval("foo(4)").integer() == 4);
     CHECK(session.eval("foo(9)").integer() == 4);
     CHECK(session.eval("foo(8)").integer() == 8);
+    CHECK(session.eval("foo(-1)").integer() == 0);
+    CHECK(session.eval("foo(-5)").integer() == 0);
     NO_SESSION_ERRORS;
 }
 
@@ -1749,6 +1751,7 @@ endfunction
     CHECK(session.eval("foo(1.4)").integer() == 1);
     CHECK(session.eval("foo(1.5)").integer() == 2);
     CHECK(session.eval("bar(1.5)").integer() == 2);
+    CHECK(session.eval("foo(-2.0)").integer() == 0);
     NO_SESSION_ERRORS;
 }
 

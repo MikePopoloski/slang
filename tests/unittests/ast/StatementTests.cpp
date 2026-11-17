@@ -589,11 +589,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::ValueOutOfRange);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
     CHECK(diags[1].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
     CHECK(diags[2].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
-    CHECK(diags[3].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
 }
 
 TEST_CASE("Local statement parameter") {
