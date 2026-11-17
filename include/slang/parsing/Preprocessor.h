@@ -341,7 +341,8 @@ private:
     std::pair<syntax::MacroActualArgumentListSyntax*, Trivia> handleTopLevelMacro(
         Token directive, const MacroDef& macro);
     bool expandMacro(MacroDef macro, MacroExpansion& expansion,
-                     syntax::MacroActualArgumentListSyntax* actualArgs);
+                     syntax::MacroActualArgumentListSyntax* actualArgs,
+                     const SmallSet<const syntax::DefineDirectiveSyntax*, 8>& alreadyExpanded);
     bool expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& expansion);
     bool expandReplacementList(std::span<Token const>& tokens,
                                SmallSet<const syntax::DefineDirectiveSyntax*, 8>& alreadyExpanded);

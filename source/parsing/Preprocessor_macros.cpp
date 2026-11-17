@@ -416,8 +416,9 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
     // Expand out the macro
     expandedTokens.clear();
     SmallVector<Token, 32> buffer;
+    SmallSet<const DefineDirectiveSyntax*, 8> alreadyExpanded;
     MacroExpansion expansion{sourceManager, alloc, buffer, directive, true};
-    if (!expandMacro(macro, expansion, actualArgs))
+    if (!expandMacro(macro, expansion, actualArgs, alreadyExpanded))
         return finish(false);
 
     // The macro is now expanded out into tokens, but some of those tokens might
@@ -425,7 +426,6 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
     // perform stringification or concatenation of tokens. It's possible that
     // after concatentation is performed we will have formed new valid macro
     // names that need to be expanded, which is why we loop here.
-    SmallSet<const DefineDirectiveSyntax*, 8> alreadyExpanded;
     if (!macro.isIntrinsic())
         alreadyExpanded.insert(macro.syntax);
 
@@ -452,7 +452,8 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
 }
 
 bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
-                               MacroActualArgumentListSyntax* actualArgs) {
+                               MacroActualArgumentListSyntax* actualArgs,
+                               const SmallSet<const DefineDirectiveSyntax*, 8>& callerExpanded) {
     if (macro.isIntrinsic()) {
         // for now, no intrisics can have arguments
         SLANG_ASSERT(!actualArgs);
@@ -572,8 +573,12 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         // Fully expand out arguments before substitution to make sure we can detect whether
         // a usage of a macro in a replacement list is valid or an illegal recursion.
         if (!it->second.isExpanded) {
+            // Arguments are expanded in the context of the caller, so any macros that were
+            // already being expanded there can't appear here either. This catches cases
+            // where a macro's body passes a usage of itself as an argument to another macro.
             std::span<const Token> argTokens = it->second;
             SmallSet<const DefineDirectiveSyntax*, 8> alreadyExpanded;
+            alreadyExpanded.insert(callerExpanded.begin(), callerExpanded.end());
 
             while (true) {
                 const Token* ptr = argTokens.data();
@@ -812,7 +817,7 @@ bool Preprocessor::expandReplacementList(
 
         expansionBuffer.clear();
         MacroExpansion expansion{sourceManager, alloc, expansionBuffer, token, false};
-        if (!expandMacro(macro, expansion, actualArgs))
+        if (!expandMacro(macro, expansion, actualArgs, alreadyExpanded))
             return false;
 
         // Recursively expand out nested macros; this ensures that we detect
