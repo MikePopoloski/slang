@@ -2598,3 +2598,36 @@ endmodule
     CHECK(diags[0].code == diag::InvalidStringArg);
     CHECK(diags[1].code == diag::InvalidStringArg);
 }
+
+TEST_CASE("%p formatting of empty associative arrays and untagged unions") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    function automatic string f1();
+        int aa[int];
+        return $sformatf("%p|%0p", aa, aa);
+    endfunction
+
+    typedef union {int i; byte b;} u_t;
+    function automatic u_t mkb(); u_t u; u.b = 8'd7; return u; endfunction
+    function automatic u_t mki(); u_t u; u.i = 9; return u; endfunction
+
+    localparam string s1 = f1();
+    localparam u_t ub = mkb();
+    localparam u_t ui = mki();
+    localparam string s2 = $sformatf("%p", ub);
+    localparam string s3 = $sformatf("%p|%0p", ui, ui);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto get = [&](std::string_view name) {
+        return root.lookupName<ParameterSymbol>(name).getValue().str();
+    };
+    CHECK(get("top.s1") == "'{}|'{}");
+    CHECK(get("top.s2") == "'{i:7}");
+    CHECK(get("top.s3") == "'{i:9}|'{9}");
+}
