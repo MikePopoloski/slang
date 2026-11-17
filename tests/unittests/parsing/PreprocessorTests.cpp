@@ -758,6 +758,31 @@ TEST_CASE("Recursive macros") {
     CHECK(diagnostics[1].code == diag::RecursiveMacro);
 }
 
+TEST_CASE("Recursive macros passed as arguments from their own body") {
+    auto& text = R"(
+`define Q(x) x
+`define Q2 `Q(`Q2)
+`Q2
+
+`define Q3(y) `Q(`Q3(y))
+`Q3(1)
+
+`define D(x=`Q4) x
+`define Q4 `D()
+`Q4
+
+`define max(a,b) ((a) > (b) ? (a) : (b))
+`define M `max(`max(1,2),3)
+`max(`max(4,2),3) `M
+)";
+
+    preprocess(text);
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::RecursiveMacro);
+    CHECK(diagnostics[1].code == diag::RecursiveMacro);
+    CHECK(diagnostics[2].code == diag::RecursiveMacro);
+}
+
 TEST_CASE("Not recursive macros") {
     auto& text = R"(
 `define A `B
