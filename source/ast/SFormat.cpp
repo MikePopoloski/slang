@@ -461,6 +461,10 @@ struct TypeVisitor {
             if (!u.activeMember) {
                 buffer.append("(unset)");
             }
+            else if (!type.isTagged && !type.fields.empty() &&
+                     printUntaggedUnion(*type.fields[0], *type.fields[*u.activeMember], u.value)) {
+                // Printed as the first declared member.
+            }
             else {
                 auto& field = *type.fields[*u.activeMember];
                 buffer.format("{}", field.name);
@@ -470,6 +474,32 @@ struct TypeVisitor {
                 }
             }
         }
+    }
+
+    // For untagged unions only the first declared member is printed [21.2.1.6].
+    bool printUntaggedUnion(const FieldSymbol& first, const FieldSymbol& active,
+                            const ConstantValue& value) {
+        auto& firstType = first.getType();
+        const ConstantValue* toPrint = &value;
+        ConstantValue converted;
+        if (&first != &active) {
+            // Reinterpret the active member's bits as the first member if we can.
+            if (!firstType.isIntegral() || !value.isInteger())
+                return false;
+
+            converted = value.convertToInt(firstType.getBitWidth(), firstType.isSigned(),
+                                           firstType.isFourState());
+            toPrint = &converted;
+        }
+
+        buffer.append("'{");
+        if (!abbreviated) {
+            buffer.append(first.name);
+            buffer.append(":");
+        }
+        firstType.visit(*this, *toPrint);
+        buffer.append("}");
+        return true;
     }
 
     void visit(const FixedSizeUnpackedArrayType& type, const ConstantValue& arg) {
@@ -504,9 +534,11 @@ struct TypeVisitor {
                     buffer.append(" ");
             }
 
-            buffer.pop_back();
-            if (!abbreviated)
+            if (!arg.map()->empty()) {
                 buffer.pop_back();
+                if (!abbreviated)
+                    buffer.pop_back();
+            }
             buffer.append("}");
         }
     }
