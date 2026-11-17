@@ -221,7 +221,7 @@ endmodule
             "source_file": "source",
             "source_line": 14,
             "source_column": 7,
-            "type": "C",
+            "type": "test_enum.C",
             "initializer": {
               "source_file_start": "source",
               "source_file_end": "source",
@@ -230,7 +230,7 @@ endmodule
               "source_column_start": 11,
               "source_column_end": 14,
               "kind": "NewClass",
-              "type": "C",
+              "type": "test_enum.C",
               "isSuperClass": false
             },
             "lifetime": "Static"

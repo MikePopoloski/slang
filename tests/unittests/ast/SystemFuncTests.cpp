@@ -3030,3 +3030,35 @@ endmodule
     CHECK(diags[0].code == diag::InfoTask);
     CHECK(report(diags).find("$info encountered: ok") != std::string::npos);
 }
+
+TEST_CASE("$typename of class types includes the scope prefix") {
+    auto tree = SyntaxTree::fromText(R"(
+package P;
+    class C; endclass
+    class D #(int N = 1); endclass
+endpackage
+
+module top;
+    class MC; endclass
+    P::C c;
+    MC mc;
+    P::D#(3) d;
+
+    localparam string s1 = $typename(c);
+    localparam string s2 = $typename(mc);
+    localparam string s3 = $typename(d);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto get = [&](std::string_view name) {
+        return root.lookupName<ParameterSymbol>(name).getValue().str();
+    };
+    CHECK(get("top.s1") == "P::C");
+    CHECK(get("top.s2") == "top.MC");
+    CHECK(get("top.s3") == "P::D#(3)");
+}
