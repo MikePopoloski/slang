@@ -1033,6 +1033,10 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
         auto& diag = scope.addDiag(diag::DuplicateDefinition, package.location);
         diag << package.name;
         diag.addNote(diag::NotePreviousDefinition, it->second->location);
+
+        // The last definition encountered wins [33.3.1.1].
+        if (it->second != stdPkg)
+            it->second = &package;
     }
 
     checkElemTimeScale(package.timeScale, syntax.header->name.range());
@@ -1068,6 +1072,9 @@ const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
                 auto& diag = scope.addDiag(diag::Redefinition, config.location);
                 diag << config.name;
                 diag.addNote(diag::NotePreviousDefinition, (*findIt)->location);
+
+                // The last definition encountered wins [33.3.1.1].
+                *findIt = &config;
             }
             else {
                 it->second.emplace_back(&config);

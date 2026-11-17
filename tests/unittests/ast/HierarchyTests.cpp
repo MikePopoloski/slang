@@ -3578,3 +3578,32 @@ endmodule
     CHECK(root.lookupName("top2.solo.y"));
     CHECK(!root.lookupName("top2.inner2"));
 }
+
+TEST_CASE("Duplicate packages and configs use the last definition") {
+    auto tree = SyntaxTree::fromText(R"(
+package p; localparam V = 1; endpackage
+package p; localparam V = 2; endpackage
+
+module m1; endmodule
+module m2; localparam int W = p::V; endmodule
+
+config c; design m1; endconfig
+config c; design m2; endconfig
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("c");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::DuplicateDefinition);
+    CHECK(diags[1].code == diag::Redefinition);
+
+    auto& root = compilation.getRoot();
+    REQUIRE(root.topInstances.size() == 1);
+    CHECK(root.topInstances[0]->getDefinition().name == "m2");
+    CHECK(root.lookupName<ParameterSymbol>("m2.W").getValue().integer() == 2);
+}
