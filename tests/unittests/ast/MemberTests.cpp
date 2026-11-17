@@ -1043,6 +1043,27 @@ endmodule : m
     CHECK(diags[5].code == diag::LetHierarchical);
 }
 
+TEST_CASE("Let with invalid typed argument in constant expression") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct { int a; } us_t;
+    typedef int ua_t[2];
+    let fus(us_t x) = x.a;
+    let fa(ua_t x) = x[0];
+    localparam int a1 = fus(1.5);
+    localparam int a2 = fa(5);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::AssertionArgTypeMismatch);
+    CHECK(diags[1].code == diag::AssertionArgTypeMismatch);
+}
+
 TEST_CASE("Hierarchical path strings") {
     auto tree = SyntaxTree::fromText(R"(
 module top;

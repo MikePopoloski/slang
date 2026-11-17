@@ -1118,8 +1118,13 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         bodyContext.flags |= ASTFlags::PropertyNegation;
 
     // Let declarations expand directly to an expression.
-    if (symbol.kind == SymbolKind::LetDecl)
+    if (symbol.kind == SymbolKind::LetDecl) {
+        // Don't expand the body if any arguments were invalid, since
+        // their uses would be rebound with an invalid conversion.
+        if (bad)
+            return badExpr(comp, nullptr);
         return create(comp, *symbol.as<LetDeclSymbol>().exprSyntax, bodyContext);
+    }
 
     // Now instantiate by creating the assertion expression of the sequence / property body.
     auto bodySyntax = symbol.getSyntax();
