@@ -3514,6 +3514,10 @@ module m;
     localparam b = 5.3 inside { "ASDF", 5.0, [7.0+%-25] };
     localparam c = 5 inside { [7+%-25] };
     localparam d = -6 inside { [-7+%-25] };
+    localparam e = 3 inside { [7 +/- 3.6] };
+    localparam f = 4 inside { [7 +/- 3.6] };
+    localparam g = 11 inside { [7 +/- 3.6] };
+    localparam h = 10 inside { [7 +/- 3.6] };
 endmodule
 )",
                                      options);
@@ -3530,6 +3534,10 @@ endmodule
     CHECK(getValue("m.b").integer() == 1);
     CHECK(getValue("m.c").integer() == 0);
     CHECK(getValue("m.d").integer() == 1);
+    CHECK(getValue("m.e").integer() == 0);
+    CHECK(getValue("m.f").integer() == 1);
+    CHECK(getValue("m.g").integer() == 0);
+    CHECK(getValue("m.h").integer() == 1);
 }
 
 TEST_CASE("v1800-2023: ref static arguments") {
