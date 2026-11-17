@@ -3062,3 +3062,40 @@ endmodule
     CHECK(get("top.s2") == "top.MC");
     CHECK(get("top.s3") == "P::D#(3)");
 }
+
+TEST_CASE("Type matching distinguishes signed packed arrays from arrays of signed elements") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    typedef bit signed [3:0] sb4;
+    typedef bit signed sb;
+    localparam sb4 [1:0] P2 = '1;
+    localparam bit signed [1:0][3:0] P3 = '1;
+    sb [3:0] v1;
+    bit signed [3:0] v2;
+
+    localparam string s1 = $typename(P2);
+    localparam string s2 = $typename(P3);
+    localparam string s3 = $typename(v1);
+    localparam string s4 = $typename(v2);
+    localparam bit m1 = type(P2) == type(P3);
+    localparam bit m2 = type(v1) == type(v2);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto get = [&](std::string_view name) {
+        return root.lookupName<ParameterSymbol>(name).getValue();
+    };
+
+    // $typename doesn't distinguish these; this matches other tools.
+    CHECK(get("top.s1").str() == "bit signed[1:0][3:0]");
+    CHECK(get("top.s2").str() == "bit signed[1:0][3:0]");
+    CHECK(get("top.s3").str() == "bit signed[3:0]");
+    CHECK(get("top.s4").str() == "bit signed[3:0]");
+    CHECK(get("top.m1").integer() == 0);
+    CHECK(get("top.m2").integer() == 0);
+}

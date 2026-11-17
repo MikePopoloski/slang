@@ -472,8 +472,12 @@ bool Type::isMatching(const Type& rhs) const {
             return false;
 
         if (l->kind == SymbolKind::PackedArrayType) {
-            // If packed size, ranges must match.
-            if (l->as<PackedArrayType>().range != r->as<PackedArrayType>().range)
+            // If packed size, ranges must match. The signedness of the array
+            // must also match, since a packed array of signed elements
+            // is itself unsigned [7.4.1].
+            auto& lp = l->as<PackedArrayType>();
+            auto& rp = r->as<PackedArrayType>();
+            if (lp.range != rp.range || lp.isSigned != rp.isSigned)
                 return false;
         }
         else if (l->kind == SymbolKind::FixedSizeUnpackedArrayType) {
