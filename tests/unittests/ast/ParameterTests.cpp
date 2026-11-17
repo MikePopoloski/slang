@@ -1882,3 +1882,46 @@ endmodule
     CHECK(root.lookupName<InstanceSymbol>("m.o2").getCanonicalBody() != nullptr);
     CHECK(root.lookupName<InstanceSymbol>("m.o3").getCanonicalBody() == nullptr);
 }
+
+TEST_CASE("Parameters in generate regions can be overridden") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    generate
+        parameter P = 1;
+        localparam L = 3;
+    endgenerate
+    parameter Q = 5;
+endmodule
+
+module n;
+    generate parameter P = 1; endgenerate
+endmodule
+
+module o #(parameter X = 1);
+    generate parameter P = 1; endgenerate
+endmodule
+
+module top;
+    m #(2, 6) u();
+    n v();
+    defparam v.P = 7;
+    o #(.X(2), .P(3)) w();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssignedToLocalBodyParam);
+
+    auto getParam = [&](std::string_view name) {
+        return compilation.getRoot().lookupName<ParameterSymbol>(name).getValue().integer();
+    };
+    CHECK(getParam("top.u.P") == 2);
+    CHECK(getParam("top.u.Q") == 6);
+    CHECK(getParam("top.u.L") == 3);
+    CHECK(getParam("top.v.P") == 7);
+    CHECK(getParam("top.w.P") == 1);
+}

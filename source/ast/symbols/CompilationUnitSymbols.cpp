@@ -482,6 +482,25 @@ DefinitionSymbol::DefinitionSymbol(const Scope& scope, LookupLocation lookupLoca
     std::optional<SourceRange> unitsRange;
     std::optional<SourceRange> precisionRange;
 
+    // Generate regions have no semantic meaning, so parameters
+    // declared within them are just like body parameters.
+    auto addBodyParam = [&](const MemberSyntax& member) {
+        auto declaration = member.as<ParameterDeclarationStatementSyntax>().parameter;
+        bool isLocal = hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
+
+        ParameterBuilder::createDecls(scope, *declaration, isLocal, /* isPort */ false,
+                                      member.attributes, parameters);
+    };
+
+    auto addRegionParams = [&](auto& self, const GenerateRegionSyntax& region) -> void {
+        for (auto member : region.members) {
+            if (member->kind == SyntaxKind::ParameterDeclarationStatement)
+                addBodyParam(*member);
+            else if (member->kind == SyntaxKind::GenerateRegion)
+                self(self, member->as<GenerateRegionSyntax>());
+        }
+    };
+
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::TimeUnitsDeclaration) {
             if (!timeScale)
@@ -499,12 +518,10 @@ DefinitionSymbol::DefinitionSymbol(const Scope& scope, LookupLocation lookupLoca
                 modports.emplace(item->name.valueText());
         }
         else if (member->kind == SyntaxKind::ParameterDeclarationStatement) {
-            auto declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
-            bool isLocal = hasPortParams ||
-                           declaration->keyword.kind == TokenKind::LocalParamKeyword;
-
-            ParameterBuilder::createDecls(scope, *declaration, isLocal, /* isPort */ false,
-                                          member->attributes, parameters);
+            addBodyParam(*member);
+        }
+        else if (member->kind == SyntaxKind::GenerateRegion) {
+            addRegionParams(addRegionParams, member->as<GenerateRegionSyntax>());
         }
     }
 
