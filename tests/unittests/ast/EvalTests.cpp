@@ -157,6 +157,8 @@ endfunction
         auto diags = session.getDiagnostics();
         REQUIRE(diags.size() == 1);
         CHECK(diags[0].code == diag::ConstEvalNoIfItemsMatched);
+        CHECK(report(diags).find("no condition matched in unique if statement") !=
+              std::string::npos);
     }
 
     SECTION("Not unique if match") {
@@ -173,6 +175,7 @@ endfunction
         auto diags = session.getDiagnostics();
         REQUIRE(diags.size() == 1);
         CHECK(diags[0].code == diag::ConstEvalIfItemsNotUnique);
+        CHECK(report(diags).find("more than one condition matched") != std::string::npos);
     }
 }
 
