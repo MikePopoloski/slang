@@ -193,6 +193,11 @@ public:
     /// A list of ports declared by this definition.
     const syntax::PortListSyntax* portList;
 
+    /// If this definition uses a wildcard port list, this is the header of the
+    /// extern declaration from which its ports, parameters, and package imports
+    /// are taken. Otherwise nullptr.
+    const syntax::ModuleHeaderSyntax* externHeader = nullptr;
+
     /// A set of modport names declared by this definition.
     flat_hash_set<std::string_view> modports;
 

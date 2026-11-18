@@ -3607,3 +3607,30 @@ config c; design m2; endconfig
     CHECK(root.topInstances[0]->getDefinition().name == "m2");
     CHECK(root.lookupName<ParameterSymbol>("m2.W").getValue().integer() == 2);
 }
+
+TEST_CASE("Wildcard port list takes package imports from the extern declaration") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    typedef logic [3:0] t;
+    localparam int K = 7;
+endpackage
+
+extern module m import p::*; #(parameter int W = K) (input t a);
+module m (.*);
+    localparam int L = K + W;
+endmodule
+
+module top;
+    logic [3:0] x;
+    m u(.a(x));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<ParameterSymbol>("top.u.L").getValue().integer() == 14);
+    CHECK(root.lookupName<ValueSymbol>("top.u.a").getType().getBitWidth() == 4);
+}

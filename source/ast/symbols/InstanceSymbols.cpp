@@ -1285,7 +1285,13 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
     auto& declSyntax = definition.getSyntax()->as<ModuleDeclarationSyntax>();
     result->setSyntax(declSyntax);
 
-    // Package imports from the header always come first.
+    // Package imports from the header always come first. With a wildcard port list
+    // the header (including its imports) comes from the extern declaration, since
+    // the ports and parameters taken from it can depend on those imports [23.5, 26.4].
+    if (definition.externHeader) {
+        for (auto import : definition.externHeader->imports)
+            result->addMembers(*import);
+    }
     for (auto import : declSyntax.header->imports)
         result->addMembers(*import);
 

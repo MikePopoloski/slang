@@ -496,8 +496,10 @@ DefinitionSymbol::DefinitionSymbol(const Scope& scope, LookupLocation lookupLoca
     if (header->ports && header->ports->kind == SyntaxKind::WildcardPortList) {
         auto& comp = scope.getCompilation();
         auto externMod = comp.getExternDefinition(name, scope);
-        if (externMod && externMod->kind == SyntaxKind::ExternModuleDecl)
+        if (externMod && externMod->kind == SyntaxKind::ExternModuleDecl) {
             header = externMod->as<ExternModuleDeclSyntax>().header;
+            externHeader = header;
+        }
         else if (!name.empty())
             scope.addDiag(diag::MissingExternWildcardPorts, header->ports->sourceRange()) << name;
     }
