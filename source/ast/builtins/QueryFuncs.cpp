@@ -229,10 +229,10 @@ public:
                 return comp.getErrorType();
             }
 
-            // $left, $right, $low and $high return an index, so they keep the index type
+            // $left, $right, $low and $high return an index, so they take the index type
             // and their result can index the array as it is. The others return integer.
             if (returnsIndex())
-                return *indexType;
+                return forceFourState(comp, *indexType);
         }
         else if (!dimension && type.isAssociativeArray() && returnsIndex()) {
             // If the index is unknown, we don't know if they will select the associative
@@ -240,7 +240,7 @@ public:
             // normal integer.
             auto indexType = type.getAssociativeIndexType();
             if (indexType && indexType->getBitWidth() > 32)
-                return *indexType;
+                return forceFourState(comp, *indexType);
         }
 
         return comp.getIntegerType();
@@ -250,6 +250,16 @@ protected:
     bool returnsIndex() const {
         return knownNameId == KnownSystemName::Left || knownNameId == KnownSystemName::Right ||
                knownNameId == KnownSystemName::Low || knownNameId == KnownSystemName::High;
+    }
+
+    // An index result is forced to 4-state because $low and $high of an empty array are X.
+    // Keep the width and the signed flag of the index type.
+    static const Type& forceFourState(Compilation& comp, const Type& indexType) {
+        if (indexType.isFourState())
+            return indexType;
+
+        auto flags = indexType.getIntegralFlags() | IntegralFlags::FourState;
+        return comp.getType(indexType.getBitWidth(), flags);
     }
 
     struct DimResult {

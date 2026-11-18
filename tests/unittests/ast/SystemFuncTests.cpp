@@ -601,6 +601,10 @@ module m;
     int wild[*][0:4];
     int wide[longint];
     int unsigned_keyed[bit [31:0]];
+    typedef enum {A, B} two_state_e;
+    typedef enum logic [1:0] {X0, X1} four_state_e;
+    int by_enum[two_state_e];
+    int by_four_state_enum[four_state_e];
     integer d;
 
     localparam string t1 = $typename($size(narrow));
@@ -618,6 +622,9 @@ module m;
     localparam string t13 = $typename($low(wide, d));
     localparam string t14 = $typename($size(wide, d));
     localparam string t15 = $typename($low(keyed, d));
+    localparam string t16 = $typename($low(by_enum));
+    localparam string t17 = $typename($high(by_four_state_enum));
+    localparam string t18 = $typename(four_state_e);
 
     function automatic integer size_of_sixteen();
         int a[bit [3:0]];
@@ -677,21 +684,25 @@ endmodule
     CHECK(typeOf("t12") == "integer");
     CHECK(typeOf("t14") == "integer");
 
-    // $left, $right, $low and $high return an index, so they keep the index type.
-    CHECK(typeOf("t2") == "bit[3:0]");
-    CHECK(typeOf("t4") == "bit[3:0]");
-    CHECK(typeOf("t5") == "int");
+    // $left, $right, $low and $high return an index, so they take the index type, forced
+    // to 4-state so that $low and $high of an empty array can be X. A 2-state enum has no
+    // 4-state form, so it becomes the logic vector of its base type.
+    CHECK(typeOf("t2") == "logic[3:0]");
+    CHECK(typeOf("t4") == "logic[3:0]");
+    CHECK(typeOf("t5") == "logic signed[31:0]");
     CHECK(typeOf("t6") == "logic[7:0]");
-    CHECK(typeOf("t10") == "longint");
-    CHECK(typeOf("t11") == "bit[31:0]");
+    CHECK(typeOf("t10") == "logic signed[63:0]");
+    CHECK(typeOf("t11") == "logic[31:0]");
+    CHECK(typeOf("t16") == "logic signed[31:0]");
+    CHECK(typeOf("t17") == typeOf("t18"));
 
     // A dimension below the associative one is an ordinary fixed one.
     CHECK(typeOf("t7") == "integer");
     CHECK(typeOf("t8") == "integer");
     CHECK(typeOf("t9") == "integer");
 
-    // When the dimension isn't known, only an index wider than integer keeps its type.
-    CHECK(typeOf("t13") == "longint");
+    // When the dimension isn't known, only an index wider than integer takes its type.
+    CHECK(typeOf("t13") == "logic signed[63:0]");
     CHECK(typeOf("t15") == "integer");
 
     CHECK(valueOf("v1") == 16);
