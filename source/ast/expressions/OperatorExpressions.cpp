@@ -2424,8 +2424,9 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     selfDetermined(context, right);
     result->concat_ = right;
 
+    // Compute in 64 bits; a 32-bit product can wrap around and slip past the width check.
     auto width = context.requireValidBitWidth(
-        SVInt(32, uint64_t(*count), true) * right->type->getBitWidth(), syntax.sourceRange());
+        SVInt(64, uint64_t(*count) * right->type->getBitWidth(), false), syntax.sourceRange());
     if (!width)
         return badExpr(compilation, result);
 
