@@ -8,7 +8,6 @@
 #pragma once
 
 #include <atomic>
-#include <deque>
 #include <expected.hpp>
 #include <filesystem>
 #include <memory>
@@ -305,13 +304,13 @@ private:
     // Stores information specified in a `line directive, which alters the
     // line number and file name that we report in diagnostics.
     struct LineDirectiveInfo {
-        std::string name;       // File name set by directive
+        std::string_view name;  // File name set by directive (owned by lineDirectiveNames)
         size_t lineInFile;      // Actual file line where directive occurred
         size_t lineOfDirective; // Line number set by directive
         uint8_t level;          // Level of directive. Either 0, 1, or 2.
 
-        LineDirectiveInfo(std::string&& fname, size_t lif, size_t lod, uint8_t level) noexcept :
-            name(std::move(fname)), lineInFile(lif), lineOfDirective(lod), level(level) {}
+        LineDirectiveInfo(std::string_view fname, size_t lif, size_t lod, uint8_t level) noexcept :
+            name(fname), lineInFile(lif), lineOfDirective(lod), level(level) {}
     };
 
     // Stores actual file contents and metadata; only one per loaded file
@@ -336,9 +335,7 @@ private:
         SourceLocation includedFrom;
         uint64_t sortKey = 0;
         BufferKind bufferKind = BufferKind::DesignFile;
-        // A deque so that existing entries (and views of their names handed
-        // out by getFileName) stay valid when more directives are added.
-        std::deque<LineDirectiveInfo> lineDirectives;
+        std::vector<LineDirectiveInfo> lineDirectives;
 
         FileInfo() = default;
 
@@ -394,6 +391,11 @@ private:
 
     // uniquified backing memory for directories
     std::set<std::filesystem::path> directories;
+
+    // uniquified backing memory for file names set by `line directives; a node-based
+    // container so that views handed out by getFileName stay valid as more are added
+    // and as the FileInfo entries that refer to them are moved around.
+    std::set<std::string, std::less<>> lineDirectiveNames;
 
     // map from buffer to diagnostic directive lists
     flat_hash_map<BufferID, std::vector<DiagnosticDirectiveInfo>> diagDirectives;
