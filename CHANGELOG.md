@@ -15,6 +15,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Parameters and other non-signal items declared in a program can now be referenced hierarchically from outside the program (including via `defparam`); only references to nets and variables declared in a program are errors, as specified by the LRM
 * Reversed range selects (diagnosed by [-Wrange-select-reversed](https://sv-lang.com/warning-ref.html#range-select-reversed)) are now treated as selecting entirely out of bounds: reads return the default value for the type and writes are ignored, instead of producing an invalid expression
 * The error when using global clock tasks like `$global_clock` and `$past_gclk` without a global clocking block in scope is now suppressible [-Wno-missing-global-clocking](https://sv-lang.com/warning-ref.html#missing-global-clocking) (thanks to @Timmmm)
+* `new` expressions are now only allowed where the LRM permits them: as a variable initializer or the right-hand side of a blocking assignment
+* The result of arithmetic, bitwise, shift, and unary operators applied to enum operands now has the enum's base type rather than the enum type, per the LRM, so assigning the result back to an enum requires a cast
+* When multiple `defparam`s target the same parameter, the last one in source text is now used, and the duplicate-defparam warning is reported on the ignored one
+* Parameters declared in generate regions are now overridable, since generate regions have no semantic meaning
+* Duplicate package and config definitions now use the last definition encountered, matching existing behavior for modules, interfaces, and primitives
+* `export p::*` now exports names that `p` itself wildcard-imported and exported from another package
+* Modules with a wildcard port list (`(.*)`) now take their package imports from the extern declaration, and report errors for their own parameter port lists or header imports, which were previously silently dropped
+* Non-first ANSI ports that only specify a direction now follow the same net / variable kind rules as the first port, instead of becoming variables
+* Nettype aliases are now treated as the same nettype as their target, for resolution functions and port connections
+* Single-value `PATHPULSE$` specparams are now treated as pulse control specparams
+* Coverpoints with no data type now take the self-determined type of their expression, instead of using implicit parameter typing rules
+* Untyped sequence and property actual arguments are now cast to their self-determined type before substitution
+* `$typename` now prefixes class type names with their defining scope
+* Signed packed arrays are now distinguished from unsigned arrays of signed elements when checking type matching
+* Array and string methods that modify their object (like `push_back`, `sort`, `delete`, `putc`) now require a modifiable lvalue, so they can no longer modify parameters, `const` variables, or `const ref` arguments
+* Unpacked byte arrays with no format specifier are now formatted as strings in elaboration system tasks
 
 ### Notable Breaking Changes
 * Enum element ranges (like `enum { A[N] }`) must now be integer literals, as required by the LRM. Non-literal ranges were previously accepted with a warning; they are now a hard error and the `-Wenum-range` warning has been removed
@@ -39,6 +55,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * [-Wuseless-cast](https://sv-lang.com/warning-ref.html#useless-cast) no longer warns about size casts whose width is computed (e.g. from a parameter), since such casts are only redundant for some parameterizations
 * [-Wunsized-concat](https://sv-lang.com/warning-ref.html#unsized-concat) no longer warns about a single-element concatenation used as the count of a replication, like `{{4}{foo}}`
 * Statements in the items of a case statement with a constant case expression that are not selected are now treated as unevaluated, so they no longer report warnings like out of bounds selects, matching the behavior of untaken `if` branches and conditional operators (thanks to @likeamahoney)
+* Constant evaluation of selects of large local variables is now much faster, and the results of expensive constant function calls are memoized
+* Added `Compilation::DiagnosticCapture` to the API, for capturing diagnostics issued while operating on an already-elaborated compilation (thanks to @povik)
+* Qualified calls to non-static methods of classes the caller doesn't derive from now get a more specific error message, and the AST records the class qualifier used for qualified calls to non-static methods
+* The UDP edge coverage check no longer takes exponential time for UDPs with many inputs, and its notes listing missing rows are now complete
+* AST JSON is no longer written for designs with fatal errors, which could previously hang on large recursive hierarchies
 
 ### Fixes
 * Fixed [-Wcase-gen-dup](https://sv-lang.com/warning-ref.html#case-gen-dup) and [-Wcase-gen-none](https://sv-lang.com/warning-ref.html#case-gen-none) printing `<unset>` instead of the type when the case generate condition is a type reference
@@ -104,6 +125,39 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Undeclared base classes are now reported even while the class's own extends clause is being resolved, and follow-on errors in classes that derive (directly or indirectly) from a class with an invalid base are suppressed
 * The "in N instances" note on diagnostics now correctly counts instances declared in the same instantiation statement, instance arrays, and instances whose bodies were cached
 * The prebuilt Windows release binary is now built in the Release configuration; it was previously an unoptimized Debug build (thanks to @dirk-seynhaeve)
+* The dependency file command line options (`--Mall`, `--Minclude`, `--Mmodule`, `--depfile-target`, `--depfile-trim`, `--depfile-sort`) are now only available in the main `slang` tool instead of every tool built on Driver (where they did nothing)
+* `$global_clock` inside named sequences and properties is now resolved from where the assertion appears, not from the declaration
+* `$past_gclk` and `$future_gclk` now return the type of their argument
+* Nested modules are no longer implicitly instantiated when they are instantiated in generate blocks or other nested modules
+* Fixed parsing precedence of the conditional operator relative to the `->` and `<->` implication operators
+* Fixed qualified lookup of interface class methods
+* Fixed constant evaluation of `inside` ranges with `$` bounds outside of parameter initializers
+* Fixed array method iterator variables being disallowed in non-procedural contexts like continuous assignments and net initializers
+* Fixed implicit nets being incorrectly created in port connections for names like function calls declared later in the scope, struct pattern keys, iterator names, and pattern variables
+* Fixed the `index` method of array iterators not being supported in constant expressions
+* Fixed index locator methods (`find_index`, etc) returning element offsets instead of actual indices for fixed-size arrays whose range doesn't start at zero or is descending
+* Fixed `%0t` not being treated as a minimum width format specifier
+* Fixed the string `hextoa`, `octtoa`, and `bintoa` methods to print two's complement bits for negative values instead of a sign
+* Fixed `%p` formatting of empty associative arrays and untagged unpacked unions
+* Fixed the result types of array query functions on associative arrays (thanks to @hankhsu1996)
+* Fixed associative array pattern default values not being converted to the element type
+* Fixed constant evaluation of if-else-if chains to stop at the first matching condition for plain and priority `if` statements
+* Fixed negative `repeat` counts in constant evaluation; they are now treated as zero
+* Fixed packed union member reads in constant evaluation not converting to the member's signedness and state
+* Fixed constant evaluation of x/z indices into associative arrays, dynamic arrays, and queues to follow the LRM, returning the default value with a warning instead of failing evaluation
+* Fixed real absolute tolerances for integral values being rounded instead of truncated
+* Fixed checker formal default values being bound in the wrong scope when filled by a wildcard connection
+* Fixed library-specific config cell rules that don't name a use cell (like `cell lib.foo use #(...)`)
+* Fixed spurious "minimum is greater than maximum" errors for sequence ranges whose minimum fails to evaluate
+* Fixed recursive macros passed as arguments from their own body overflowing the stack
+* Fixed `__FILE__` values pointing at freed memory after later `` `line `` directives
+* Fixed an overflow when computing the width of a replication with very large operands
+* Fixed glob patterns with a trailing double star (like `foo**`) failing to match an empty tail
+* Fixed port direction tokens on interface ports being dropped from the syntax tree
+* Fixed a use-after-free and missing elaboration of class specializations created while visiting never-specialized generic classes (thanks to @vorsicht80)
+* Fixed ICE when evaluating a queue `delete` call with a non-constant index
+* Fixed ICE in analysis of procedural checker instances with unconnected output ports
+* Fixed ICEs on a variety of invalid code, including: case generate conditions with an invalid type reference, invalid primitive instance delays, parenthesized sequence and property operators in event expressions, symbols missing names due to parse errors, unnamed DPI arguments, enums with non-integral base types, `randc` methods, `unique` / `priority` if statements matching nothing in constant functions, `let` instances with mismatched typed arguments, range items in uniqueness constraints, randsequence rules with a weight block and no productions, explicit imports matching implicit generate block names, and invalid upward virtual interface name usage
 
 ### Tools & Bindings
 #### slang-tidy
@@ -114,6 +168,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added a new `UserClassDerivesFromUVMBase` check that finds classes that don't derive from UVM base classes (thanks to @svenka3)
 * Fixed skip paths in config files erroneously matching files in the parent directory and in sibling directories that share a name prefix
 * Fixed the return code being zero on failure when run with `--quiet`
+
+#### rewriter
+* Fixed the `--exclude-skipped` flag doing the opposite of its description
 
 
 ## [v12.1] - 2026-10-25
