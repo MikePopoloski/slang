@@ -205,44 +205,63 @@ public:
             return comp.getErrorType();
         }
 
-        int32_t knownIndex = 0;
+        // The dimension being queried, if it is known before the call runs.
+        const Type* dimension = nullptr;
         if (args.size() > 1) {
             if (!args[1]->type->isIntegral())
                 return badArg(context, *args[1]);
 
             // Try to verify the dimension index if it's a constant.
-            if (!context.inUnevaluatedBranch() && !checkDim(context, args, knownIndex))
+            if (!context.inUnevaluatedBranch() && !checkDim(context, args, dimension))
                 return comp.getErrorType();
         }
         else {
-            // Index defaults to 1 if not provided.
-            knownIndex = 1;
+            // Index defaults to 1 if not provided, which is the first argument itself.
+            dimension = &type;
         }
 
-        if (type.isAssociativeArray()) {
-            // If the first argument is an associative array and we know we're selecting it,
-            // ensure that the index type is integral.
-            auto indexType = type.getAssociativeIndexType();
-            if (knownIndex && (!indexType || !indexType->isIntegral())) {
+        if (dimension && dimension->isAssociativeArray()) {
+            // If we know we're selecting an associative dimension, ensure that the
+            // index type is integral.
+            auto indexType = dimension->getAssociativeIndexType();
+            if (!indexType || !indexType->isIntegral()) {
                 context.addDiag(diag::QueryOnAssociativeWildcard, args[0]->sourceRange) << name;
                 return comp.getErrorType();
             }
 
-            // If the index is known, the result type is the index type.
-            if (knownIndex)
-                return *indexType;
-
-            // If the index is unknown, we don't know if they will select the associative array
-            // or some other dimension. Use the index type if it's larger than a normal integer,
-            // and otherwise just use an integer result type.
-            if (indexType->getBitWidth() > 32)
-                return *indexType;
+            // $left, $right, $low and $high return an index, so they take the index type
+            // and their result can index the array as it is. The others return integer.
+            if (returnsIndex())
+                return forceFourState(comp, *indexType);
+        }
+        else if (!dimension && type.isAssociativeArray() && returnsIndex()) {
+            // If the index is unknown, we don't know if they will select the associative
+            // array or some other dimension. Use the index type if it's larger than a
+            // normal integer.
+            auto indexType = type.getAssociativeIndexType();
+            if (indexType && indexType->getBitWidth() > 32)
+                return forceFourState(comp, *indexType);
         }
 
         return comp.getIntegerType();
     }
 
 protected:
+    bool returnsIndex() const {
+        return knownNameId == KnownSystemName::Left || knownNameId == KnownSystemName::Right ||
+               knownNameId == KnownSystemName::Low || knownNameId == KnownSystemName::High;
+    }
+
+    // An index result is forced to 4-state because $low and $high of an empty array are X.
+    // Keep the width and the signed flag of the index type.
+    static const Type& forceFourState(Compilation& comp, const Type& indexType) {
+        if (indexType.isFourState())
+            return indexType;
+
+        auto flags = indexType.getIntegralFlags() | IntegralFlags::FourState;
+        return comp.getType(indexType.getBitWidth(), flags);
+    }
+
     struct DimResult {
         AssociativeArray map;
         const Type* indexType = nullptr;
@@ -338,7 +357,7 @@ protected:
         return cv.size();
     }
 
-    static bool checkDim(const ASTContext& context, const Args& args, int32_t& resultIndex) {
+    static bool checkDim(const ASTContext& context, const Args& args, const Type*& resultDim) {
         // Similar logic to what's above, except we're just verifying a constant index here.
         // It's ok for it not to be constant, it will be evaluated at runtime.
         ConstantValue iv = context.tryEval(*args[1]);
@@ -355,7 +374,6 @@ protected:
         if (!index || *index <= 0)
             return error();
 
-        resultIndex = *index;
         const Type* type = args[0]->type;
         for (int32_t i = 0; i < *index - 1; i++) {
             if (!type->isArray())
@@ -363,8 +381,10 @@ protected:
             type = type->getArrayElementType();
         }
 
-        if (type->hasFixedRange() && !type->isScalar())
+        if (type->hasFixedRange() && !type->isScalar()) {
+            resultDim = type;
             return true;
+        }
 
         if (!type->isString() && !type->isUnpackedArray())
             return error();
@@ -375,6 +395,7 @@ protected:
             return false;
         }
 
+        resultDim = type;
         return true;
     }
 };
@@ -468,6 +489,8 @@ ConstantValue RightFunction::eval(EvalContext& context, const Args& args, Source
     if (dim.indexType) {
         SVInt result(dim.indexType->getBitWidth(), 0, dim.indexType->isSigned());
         result.setAllOnes();
+        if (dim.indexType->isSigned())
+            result = result.lshr(1);
         return result;
     }
 
@@ -487,7 +510,7 @@ ConstantValue SizeFunction::eval(EvalContext& context, const Args& args, SourceR
         return SVInt(32, uint64_t(dim.range.right + 1), true);
 
     if (dim.indexType)
-        return SVInt(dim.indexType->getBitWidth(), dim.map.size(), dim.indexType->isSigned());
+        return SVInt(32, dim.map.size(), true);
 
     return SVInt(32, dim.range.width(), true);
 }

@@ -569,7 +569,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& p24 = compilation.getRoot().lookupName<ParameterSymbol>("m.p24");
-    CHECK(p24.getValue().str() == "logic[67:0]");
+    CHECK(p24.getValue().str() == "integer");
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 16);
@@ -589,6 +589,127 @@ endmodule
     CHECK(diags[13].code == diag::QueryOnDynamicType);
     CHECK(diags[14].code == diag::QueryOnAssociativeWildcard);
     CHECK(diags[15].code == diag::QueryOnAssociativeWildcard);
+}
+
+TEST_CASE("Array query functions on an associative array") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int narrow[bit [3:0]];
+    int keyed[int];
+    int byte_keyed[logic [7:0]];
+    int rows[bit [7:0]][0:4];
+    int wild[*][0:4];
+    int wide[longint];
+    int unsigned_keyed[bit [31:0]];
+    typedef enum {A, B} two_state_e;
+    typedef enum logic [1:0] {X0, X1} four_state_e;
+    int by_enum[two_state_e];
+    int by_four_state_enum[four_state_e];
+    integer d;
+
+    localparam string t1 = $typename($size(narrow));
+    localparam string t2 = $typename($left(narrow));
+    localparam string t3 = $typename($increment(byte_keyed));
+    localparam string t4 = $typename($right(narrow));
+    localparam string t5 = $typename($low(keyed));
+    localparam string t6 = $typename($high(byte_keyed));
+    localparam string t7 = $typename($increment(rows, 2));
+    localparam string t8 = $typename($size(rows, 2));
+    localparam string t9 = $typename($size(wild, 2));
+    localparam string t10 = $typename($low(wide));
+    localparam string t11 = $typename($right(unsigned_keyed));
+    localparam string t12 = $typename($size(wide));
+    localparam string t13 = $typename($low(wide, d));
+    localparam string t14 = $typename($size(wide, d));
+    localparam string t15 = $typename($low(keyed, d));
+    localparam string t16 = $typename($low(by_enum));
+    localparam string t17 = $typename($high(by_four_state_enum));
+    localparam string t18 = $typename(four_state_e);
+
+    function automatic integer size_of_sixteen();
+        int a[bit [3:0]];
+        for (int i = 0; i < 16; i++) a[i[3:0]] = i;
+        return $size(a);
+    endfunction
+
+    function automatic integer increment_below();
+        int a[bit [7:0]][0:4];
+        return $increment(a, 2);
+    endfunction
+
+    function automatic integer low_of_empty();
+        int a[int];
+        return $low(a);
+    endfunction
+
+    function automatic byte low_of_negative();
+        int a[byte];
+        a[-3] = 1;
+        a[7] = 2;
+        return $low(a);
+    endfunction
+
+    function automatic integer right_of_signed();
+        int a[int];
+        return $right(a);
+    endfunction
+
+    localparam integer v1 = size_of_sixteen();
+    localparam integer v2 = increment_below();
+    localparam integer v3 = low_of_empty();
+    localparam byte v4 = low_of_negative();
+    localparam integer v5 = right_of_signed();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto typeOf = [&](std::string_view name) {
+        auto param = root.lookupName("m." + std::string(name));
+        REQUIRE(param);
+        return param->as<ParameterSymbol>().getValue().str();
+    };
+    auto valueOf = [&](std::string_view name) {
+        auto param = root.lookupName("m." + std::string(name));
+        REQUIRE(param);
+        return param->as<ParameterSymbol>().getValue().integer();
+    };
+
+    // $size and $increment return integer.
+    CHECK(typeOf("t1") == "integer");
+    CHECK(typeOf("t3") == "integer");
+    CHECK(typeOf("t12") == "integer");
+    CHECK(typeOf("t14") == "integer");
+
+    // $left, $right, $low and $high return an index, so they take the index type, forced
+    // to 4-state so that $low and $high of an empty array can be X. A 2-state enum has no
+    // 4-state form, so it becomes the logic vector of its base type.
+    CHECK(typeOf("t2") == "logic[3:0]");
+    CHECK(typeOf("t4") == "logic[3:0]");
+    CHECK(typeOf("t5") == "logic signed[31:0]");
+    CHECK(typeOf("t6") == "logic[7:0]");
+    CHECK(typeOf("t10") == "logic signed[63:0]");
+    CHECK(typeOf("t11") == "logic[31:0]");
+    CHECK(typeOf("t16") == "logic signed[31:0]");
+    CHECK(typeOf("t17") == typeOf("t18"));
+
+    // A dimension below the associative one is an ordinary fixed one.
+    CHECK(typeOf("t7") == "integer");
+    CHECK(typeOf("t8") == "integer");
+    CHECK(typeOf("t9") == "integer");
+
+    // When the dimension isn't known, only an index wider than integer takes its type.
+    CHECK(typeOf("t13") == "logic signed[63:0]");
+    CHECK(typeOf("t15") == "integer");
+
+    CHECK(valueOf("v1") == 16);
+    CHECK(valueOf("v2") == -1);
+    CHECK(exactlyEqual(valueOf("v3"), SVInt::createFillX(32, true)));
+    CHECK(valueOf("v4") == -3);
+    CHECK(valueOf("v5") == INT32_MAX);
 }
 
 TEST_CASE("$printtimescale, $timeunit, $timeprecision") {
