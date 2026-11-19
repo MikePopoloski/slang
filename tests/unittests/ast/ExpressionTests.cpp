@@ -407,6 +407,23 @@ endmodule
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
 }
 
+TEST_CASE("Replication width overflowing 32 bits -- GH #2130") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire [15:0] a = { 8 << $clog2(8 << 22) {a} };
+    wire [15:0] b = { 32'h7fffffff {16'd0} };
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ValueExceedsMaxBitWidth);
+    CHECK(diags[1].code == diag::ValueExceedsMaxBitWidth);
+}
+
 TEST_CASE("Invalid sized cast operand type") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
