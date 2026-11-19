@@ -2486,7 +2486,16 @@ void Compilation::checkVirtualIfaceInstance(const InstanceSymbol& instance) {
         auto& upwardNames = it->second->upwardNames;
         if (!upwardNames.empty()) {
             auto& diag = body->addDiag(diag::VirtualIfaceHierRef, instance.location);
-            diag.addNote(diag::NoteHierarchicalRef, upwardNames[0]->expr->sourceRange);
+
+            // Some upward references have no expression (e.g. implicit references
+            // to a global clocking block) or have an invalid expression with no
+            // source range, so find the first one that can be pointed at.
+            for (auto ref : upwardNames) {
+                if (ref->expr && ref->expr->sourceRange.start()) {
+                    diag.addNote(diag::NoteHierarchicalRef, ref->expr->sourceRange);
+                    break;
+                }
+            }
         }
     }
 
