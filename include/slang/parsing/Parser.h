@@ -501,6 +501,10 @@ private:
     // is indented at the same level as the body, making it look like it's part of the construct.
     void checkMisleadingIndentation(const syntax::SyntaxNode& prevStmt, Token nextToken);
 
+    // Report warnings for begin .. end where they aren't needed, which
+    // may indicate a missing `else`.
+    void checkUnnecessaryBlock(const syntax::SyntaxNode& stmt);
+
     // ---- Member variables ----
 
     // The factory used to create new syntax nodes.
