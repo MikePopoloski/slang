@@ -12,15 +12,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * `$bits` is no longer allowed on `real`, `shortreal`, and `realtime` values or on unpacked unions, since they are not bitstream types
 * The error for changing the visibility of an inherited virtual method is now downgradeable via [-Wvirtual-visibility-mismatch](https://sv-lang.com/warning-ref.html#virtual-visibility-mismatch)
 * Arguments to class `randomize` calls must now be simple names of properties of the object being randomized, as required by the LRM; forms like `(x)`, `local::x`, and `this.x` are errors
-* Parameters and other non-signal items declared in a program can now be referenced hierarchically from outside the program (including via `defparam`); only references to nets and variables declared in a program are errors, as specified by the LRM
 * Reversed range selects (diagnosed by [-Wrange-select-reversed](https://sv-lang.com/warning-ref.html#range-select-reversed)) are now treated as selecting entirely out of bounds: reads return the default value for the type and writes are ignored, instead of producing an invalid expression
 * The error when using global clock tasks like `$global_clock` and `$past_gclk` without a global clocking block in scope is now suppressible [-Wno-missing-global-clocking](https://sv-lang.com/warning-ref.html#missing-global-clocking) (thanks to @Timmmm)
 * `new` expressions are now only allowed where the LRM permits them: as a variable initializer or the right-hand side of a blocking assignment
 * The result of arithmetic, bitwise, shift, and unary operators applied to enum operands now has the enum's base type rather than the enum type, per the LRM, so assigning the result back to an enum requires a cast
 * When multiple `defparam`s target the same parameter, the last one in source text is now used, and the duplicate-defparam warning is reported on the ignored one
-* Parameters declared in generate regions are now overridable, since generate regions have no semantic meaning
 * Duplicate package and config definitions now use the last definition encountered, matching existing behavior for modules, interfaces, and primitives
-* `export p::*` now exports names that `p` itself wildcard-imported and exported from another package
 * Modules with a wildcard port list (`(.*)`) now take their package imports from the extern declaration, and report errors for their own parameter port lists or header imports, which were previously silently dropped
 * Non-first ANSI ports that only specify a direction now follow the same net / variable kind rules as the first port, instead of becoming variables
 * Nettype aliases are now treated as the same nettype as their target, for resolution functions and port connections
@@ -30,7 +27,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * `$typename` now prefixes class type names with their defining scope
 * Signed packed arrays are now distinguished from unsigned arrays of signed elements when checking type matching
 * Array and string methods that modify their object (like `push_back`, `sort`, `delete`, `putc`) now require a modifiable lvalue, so they can no longer modify parameters, `const` variables, or `const ref` arguments
-* Unpacked byte arrays with no format specifier are now formatted as strings in elaboration system tasks
 
 ### Notable Breaking Changes
 * Enum element ranges (like `enum { A[N] }`) must now be integer literals, as required by the LRM. Non-literal ranges were previously accepted with a warning; they are now a hard error and the `-Wenum-range` warning has been removed
@@ -53,33 +49,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * [-Wcase-outside-range](https://sv-lang.com/warning-ref.html#case-outside-range) now warns when both the case expression and the item are constant but the item can't fit in the type of the case expression (which makes it work for case generate constructs)
 * AST JSON source ranges now more correctly set source locations for nodes from expanded macros, and include additional location information about the original macro definition (thanks to @hankhsu1996)
 * [-Wuseless-cast](https://sv-lang.com/warning-ref.html#useless-cast) no longer warns about size casts whose width is computed (e.g. from a parameter), since such casts are only redundant for some parameterizations
-* [-Wunsized-concat](https://sv-lang.com/warning-ref.html#unsized-concat) no longer warns about a single-element concatenation used as the count of a replication, like `{{4}{foo}}`
-* Statements in the items of a case statement with a constant case expression that are not selected are now treated as unevaluated, so they no longer report warnings like out of bounds selects, matching the behavior of untaken `if` branches and conditional operators (thanks to @likeamahoney)
 * Constant evaluation of selects of large local variables is now much faster, and the results of expensive constant function calls are memoized
-* Added `Compilation::DiagnosticCapture` to the API, for capturing diagnostics issued while operating on an already-elaborated compilation (thanks to @povik)
 * Qualified calls to non-static methods of classes the caller doesn't derive from now get a more specific error message, and the AST records the class qualifier used for qualified calls to non-static methods
-* The UDP edge coverage check no longer takes exponential time for UDPs with many inputs, and its notes listing missing rows are now complete
-* AST JSON is no longer written for designs with fatal errors, which could previously hang on large recursive hierarchies
 
 ### Fixes
 * Fixed [-Wcase-gen-dup](https://sv-lang.com/warning-ref.html#case-gen-dup) and [-Wcase-gen-none](https://sv-lang.com/warning-ref.html#case-gen-none) printing `<unset>` instead of the type when the case generate condition is a type reference
 * Fixed `checker` declarations being ignored when calculating file dependencies for `--depfile-trim` and library file loading (thanks to @Timmmm)
 * Diagnostics that are errors by default and downgraded with `-Wno-error=` are now correctly turned off by `-Wnone`, while enabling them by name or group keeps them as errors (thanks to @hankhsu1996)
 * Fixed data races when constructing `Driver` objects concurrently on multiple threads, and when printing via the `OS` utility functions while output capture is installed or removed on another thread
-* Fixed a crash when constructing an AST with an invalid class method specifier
-* Fixed randsequence `case` productions selecting the wrong production for items after one that lists more than one expression
-* Fixed slicing of packed port connections across multidimensional instance arrays whose dimensions have different sizes, which assigned the wrong bits to each instance
-* Fixed nested type operators like `type(type(x))` resolving to the type reference itself instead of the type of `x` when used in a type comparison or case statement
-* Fixed a crash when evaluating a `foreach` loop in a constant function whose trailing loop dimensions are skipped (e.g. `foreach (arr[i,])`)
 * Fixed string replications in constant expressions not being checked against the `--max-constant-size` limit, which allowed unbounded memory use
-* Fixed unsized literals whose high order bit is `x` or `z` (like `'hx3`) being zero-extended instead of extended with `x` or `z` to the size of the expression containing them
-* Fixed out of bounds bits of a part-select of a two-state vector reading as `x` instead of `0` in constant expressions
 * An indexed part-select whose base has `x` or `z` bits is now reported via the downgradeable [-Windex-oob](https://sv-lang.com/warning-ref.html#index-oob) like other out of bounds selects, instead of a hard error, and constant evaluation follows the LRM by reading the default value and ignoring writes
 * Fixed decimal literals consisting of an `x` or `z` digit followed by underscores (like `7'dz__`) being parsed as all `x`, and decimal literals with a known digit followed by an unknown one (like `7'd1z`) not being diagnosed
 * Fixed implicit named (`.name`) and wildcard (`.*`) port connections resolving names via wildcard imports that are declared after the instance, instead of the names visible at the point of the instance
 * Fixed modules, interfaces, and programs being able to reference the first compilation unit item declared after them, which the LRM disallows (all other later items were already correctly diagnosed)
 * Fixed package exports of the form `export p::x` not being diagnosed when `x` was imported from a different package than `p` (and is not a candidate for import from `p`), as required by the LRM
-* Fixed replicated assignment patterns for structs (like `'{3{-1}}`) converting every replica to the types of the first members instead of each member's own type, which produced malformed values and could crash constant evaluation. These patterns are now expanded into simple assignment patterns in the AST
 * Fixed `$countdrivers` rejecting a bit-select of a vector net and accepting a whole vector net; the LRM requires its argument to be a scalar net or a bit-select of a vector net
 * Fixed implicit named port connections (`.name`) connecting to an implicit net that is only created by a later connection of the same instantiation; the LRM requires the name to be declared prior to the connection
 * Fixed class `randomize` calls rejecting arguments that specify properties inherited from a base class
@@ -94,70 +77,33 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed `rand_mode()` and `constraint_mode()` being rejected when called without arguments as a statement or in a `void` cast
 * Fixed `rand_mode()` being allowed to query the state of unpacked arrays and structs, and being available on selects of packed values
 * Fixed `rand_mode()` on `rand` object handles to apply to the handle variable itself instead of to the random variables within the object, and allowed querying its state
-* Fixed an internal assertion when a subroutine with more than one statement contains an invalid statement that has nested blocks, such as a `fork`-`join` in a function; statements inside a disallowed `fork` block are now also checked for errors
 * Fixed the `$random` function to bind its argument as an output instead of an input (thanks to @hankhsu1996)
 * Fixed the built-in `std` classes to have all of the built-in randomize methods that all classes should have (thanks to @hankhsu1996)
 * Interface classes should not have `rand_mode` and `constraint_mode` built-in methods on them (thanks to @hankhsu1996)
-* Fixed a bug where interfaces that contain a modport with export methods followed by another modport without export methods would lose track of their exports (thanks to @hankhsu1996)
 * Fixed parameters and enum values whose initializers depend on themselves through a function's return or argument types not being reported as recursive definitions (thanks to @hankhsu1996)
 * Fixed implementations of `extern` interface methods (e.g. `function int i.f()`) not being checked for errors or analyzed, which also caused false unused warnings (thanks to @hankhsu1996)
-* Fixed calls to functions with static variables being folded to a constant when evaluated speculatively (e.g. as a select index), which gave incorrect results for functions that modify that state
 * Fixed diagnostics from inside speculatively evaluated function calls (e.g. an out of bounds select in the function body) being reported at the call site
-* Fixed the implicit return value variable of static functions to have static lifetime
-* Fixed several internal assertions related to invalid syntax and to assignment patterns on the left-hand side of assignments
-* Fixed type parameters of class specializations and instances that default to a type declared inline (like an enum or struct) being treated as different types when the default is used in more than one place
-* Fixed an internal assertion on a function call cycle through the function's return type
-* Fixed false "default value must exactly match" errors for out-of-block method definitions whose default argument values need conversion to the argument type
 * Fixed names in the dimensions of non-ANSI interface port declarations being looked up at the wrong location, which made body declarations invisible to them
-* Fixed left-justified `%-` format fields of hex, octal, and binary values printing a different number, and of strings padding on the wrong side (thanks to @hankhsu1996)
 * Fixed infinite recursion on an interface that contains a virtual interface of itself; potentially infinite chains of virtual interface instances are now reported as an error (thanks to @hankhsu1996)
-* Fixed pattern variables declared in conditional expressions being rejected in constant functions as not declared locally
 * Fixed multiple driver checks through `ref` port expressions missing overlaps when selects use non-literal constant indices
-* Fixed `this` being disallowed in enum value initializers inside class methods
-* Fixed values of enums declared in an interface not being usable in that interface's modport expressions
-* Fixed an internal assertion when a scoped name (like `p::a` or `C::b`) or a member access refers to a symbol from within its own type; this is now reported as a recursive definition
 * Fixed a crash when lazily created class specializations are added while visiting the AST
-* Fixed an internal assertion when a UDP table row has no input fields
 * Fixed file dependency discovery for depfiles and library loading reporting nested or imported declarations as missing, and losing dependencies on interfaces used via virtual interfaces and explicit interface ports. Interface port types are now only looked up in libraries when `--allow-toplevel-iface-ports` is set (thanks to @AndrewNolte)
 * Fixed `defparam`s that target an untyped parameter to take on the type of the assigned value, as with parameter overrides, instead of the type of the parameter's default value
 * Fixed `defparam`s that assign a NaN real value or `$`
 * Reworked how enum values are elaborated to fix a variety of crashes and missing identifier bugs related to inline enum declarations
 * Undeclared base classes are now reported even while the class's own extends clause is being resolved, and follow-on errors in classes that derive (directly or indirectly) from a class with an invalid base are suppressed
 * The "in N instances" note on diagnostics now correctly counts instances declared in the same instantiation statement, instance arrays, and instances whose bodies were cached
-* The prebuilt Windows release binary is now built in the Release configuration; it was previously an unoptimized Debug build (thanks to @dirk-seynhaeve)
 * The dependency file command line options (`--Mall`, `--Minclude`, `--Mmodule`, `--depfile-target`, `--depfile-trim`, `--depfile-sort`) are now only available in the main `slang` tool instead of every tool built on Driver (where they did nothing)
 * `$global_clock` inside named sequences and properties is now resolved from where the assertion appears, not from the declaration
-* `$past_gclk` and `$future_gclk` now return the type of their argument
-* Nested modules are no longer implicitly instantiated when they are instantiated in generate blocks or other nested modules
-* Fixed parsing precedence of the conditional operator relative to the `->` and `<->` implication operators
 * Fixed qualified lookup of interface class methods
-* Fixed constant evaluation of `inside` ranges with `$` bounds outside of parameter initializers
 * Fixed array method iterator variables being disallowed in non-procedural contexts like continuous assignments and net initializers
 * Fixed implicit nets being incorrectly created in port connections for names like function calls declared later in the scope, struct pattern keys, iterator names, and pattern variables
 * Fixed the `index` method of array iterators not being supported in constant expressions
-* Fixed index locator methods (`find_index`, etc) returning element offsets instead of actual indices for fixed-size arrays whose range doesn't start at zero or is descending
-* Fixed `%0t` not being treated as a minimum width format specifier
-* Fixed the string `hextoa`, `octtoa`, and `bintoa` methods to print two's complement bits for negative values instead of a sign
-* Fixed `%p` formatting of empty associative arrays and untagged unpacked unions
 * Fixed the result types of array query functions on associative arrays (thanks to @hankhsu1996)
-* Fixed associative array pattern default values not being converted to the element type
-* Fixed constant evaluation of if-else-if chains to stop at the first matching condition for plain and priority `if` statements
-* Fixed negative `repeat` counts in constant evaluation; they are now treated as zero
-* Fixed packed union member reads in constant evaluation not converting to the member's signedness and state
 * Fixed constant evaluation of x/z indices into associative arrays, dynamic arrays, and queues to follow the LRM, returning the default value with a warning instead of failing evaluation
-* Fixed real absolute tolerances for integral values being rounded instead of truncated
-* Fixed checker formal default values being bound in the wrong scope when filled by a wildcard connection
-* Fixed library-specific config cell rules that don't name a use cell (like `cell lib.foo use #(...)`)
-* Fixed spurious "minimum is greater than maximum" errors for sequence ranges whose minimum fails to evaluate
-* Fixed recursive macros passed as arguments from their own body overflowing the stack
 * Fixed `__FILE__` values pointing at freed memory after later `` `line `` directives
-* Fixed an overflow when computing the width of a replication with very large operands
-* Fixed glob patterns with a trailing double star (like `foo**`) failing to match an empty tail
-* Fixed port direction tokens on interface ports being dropped from the syntax tree
-* Fixed a use-after-free and missing elaboration of class specializations created while visiting never-specialized generic classes (thanks to @vorsicht80)
-* Fixed ICE when evaluating a queue `delete` call with a non-constant index
-* Fixed ICE in analysis of procedural checker instances with unconnected output ports
-* Fixed ICEs on a variety of invalid code, including: case generate conditions with an invalid type reference, invalid primitive instance delays, parenthesized sequence and property operators in event expressions, symbols missing names due to parse errors, unnamed DPI arguments, enums with non-integral base types, `randc` methods, `unique` / `priority` if statements matching nothing in constant functions, `let` instances with mismatched typed arguments, range items in uniqueness constraints, randsequence rules with a weight block and no productions, explicit imports matching implicit generate block names, and invalid upward virtual interface name usage
+* Fixed missing elaboration of class specializations created while visiting never-specialized generic classes
+* Fixed an ICE on symbols missing names due to parse errors
 
 ### Tools & Bindings
 #### slang-tidy
@@ -166,6 +112,73 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added a new `ConcurrentAssertHasFailAction` check that finds assertions without a fail action block (thanks to @vajeetha)
 * Added a new `ConditionalOperatorPrecedence` check that finds potentially misleading conditional operator usage (thanks to @vajeetha)
 * Added a new `UserClassDerivesFromUVMBase` check that finds classes that don't derive from UVM base classes (thanks to @svenka3)
+
+
+## [v12.2] - 2026-11-20
+### Language Compatibility
+* Parameters and other non-signal items declared in a program can now be referenced hierarchically from outside the program (including via `defparam`); only references to nets and variables declared in a program are errors, as specified by the LRM
+* Parameters declared in generate regions are now overridable, since generate regions have no semantic meaning
+* `export p::*` now exports names that `p` itself wildcard-imported and exported from another package
+* Unpacked byte arrays with no format specifier are now formatted as strings in elaboration system tasks
+
+### Improvements
+* [-Wunsized-concat](https://sv-lang.com/warning-ref.html#unsized-concat) no longer warns about a single-element concatenation used as the count of a replication, like `{{4}{foo}}`
+* Statements in the items of a case statement with a constant case expression that are not selected are now treated as unevaluated, so they no longer report warnings like out of bounds selects, matching the behavior of untaken `if` branches and conditional operators (thanks to @likeamahoney)
+* Added `Compilation::DiagnosticCapture` to the API, for capturing diagnostics issued while operating on an already-elaborated compilation (thanks to @povik)
+* The UDP edge coverage check no longer takes exponential time for UDPs with many inputs, and its notes listing missing rows are now complete
+* AST JSON is no longer written for designs with fatal errors, which could previously hang on large recursive hierarchies
+
+### Fixes
+* Fixed a crash when constructing an AST with an invalid class method specifier
+* Fixed randsequence `case` productions selecting the wrong production for items after one that lists more than one expression
+* Fixed slicing of packed port connections across multidimensional instance arrays whose dimensions have different sizes, which assigned the wrong bits to each instance
+* Fixed nested type operators like `type(type(x))` resolving to the type reference itself instead of the type of `x` when used in a type comparison or case statement
+* Fixed a crash when evaluating a `foreach` loop in a constant function whose trailing loop dimensions are skipped (e.g. `foreach (arr[i,])`)
+* Fixed unsized literals whose high order bit is `x` or `z` (like `'hx3`) being zero-extended instead of extended with `x` or `z` to the size of the expression containing them
+* Fixed out of bounds bits of a part-select of a two-state vector reading as `x` instead of `0` in constant expressions
+* Fixed replicated assignment patterns for structs (like `'{3{-1}}`) converting every replica to the types of the first members instead of each member's own type, which produced malformed values and could crash constant evaluation. These patterns are now expanded into simple assignment patterns in the AST
+* Fixed an internal assertion when a subroutine with more than one statement contains an invalid statement that has nested blocks, such as a `fork`-`join` in a function; statements inside a disallowed `fork` block are now also checked for errors
+* Fixed a bug where interfaces that contain a modport with export methods followed by another modport without export methods would lose track of their exports (thanks to @hankhsu1996)
+* Fixed calls to functions with static variables being folded to a constant when evaluated speculatively (e.g. as a select index), which gave incorrect results for functions that modify that state
+* Fixed the implicit return value variable of static functions to have static lifetime
+* Fixed several internal assertions related to invalid syntax and to assignment patterns on the left-hand side of assignments
+* Fixed type parameters of class specializations and instances that default to a type declared inline (like an enum or struct) being treated as different types when the default is used in more than one place
+* Fixed an internal assertion on a function call cycle through the function's return type
+* Fixed false "default value must exactly match" errors for out-of-block method definitions whose default argument values need conversion to the argument type
+* Fixed left-justified `%-` format fields of hex, octal, and binary values printing a different number, and of strings padding on the wrong side (thanks to @hankhsu1996)
+* Fixed pattern variables declared in conditional expressions being rejected in constant functions as not declared locally
+* Fixed `this` being disallowed in enum value initializers inside class methods
+* Fixed values of enums declared in an interface not being usable in that interface's modport expressions
+* Fixed an internal assertion when a scoped name (like `p::a` or `C::b`) or a member access refers to a symbol from within its own type; this is now reported as a recursive definition
+* Fixed an internal assertion when a UDP table row has no input fields
+* The prebuilt Windows release binary is now built in the Release configuration; it was previously an unoptimized Debug build (thanks to @dirk-seynhaeve)
+* `$past_gclk` and `$future_gclk` now return the type of their argument
+* Nested modules are no longer implicitly instantiated when they are instantiated in generate blocks or other nested modules
+* Fixed parsing precedence of the conditional operator relative to the `->` and `<->` implication operators
+* Fixed constant evaluation of `inside` ranges with `$` bounds outside of parameter initializers
+* Fixed index locator methods (`find_index`, etc) returning element offsets instead of actual indices for fixed-size arrays whose range doesn't start at zero or is descending
+* Fixed `%0t` not being treated as a minimum width format specifier
+* Fixed the string `hextoa`, `octtoa`, and `bintoa` methods to print two's complement bits for negative values instead of a sign
+* Fixed `%p` formatting of empty associative arrays and untagged unpacked unions
+* Fixed associative array pattern default values not being converted to the element type
+* Fixed constant evaluation of if-else-if chains to stop at the first matching condition for plain and priority `if` statements
+* Fixed negative `repeat` counts in constant evaluation; they are now treated as zero
+* Fixed packed union member reads in constant evaluation not converting to the member's signedness and state
+* Fixed real absolute tolerances for integral values being rounded instead of truncated
+* Fixed checker formal default values being bound in the wrong scope when filled by a wildcard connection
+* Fixed library-specific config cell rules that don't name a use cell (like `cell lib.foo use #(...)`)
+* Fixed spurious "minimum is greater than maximum" errors for sequence ranges whose minimum fails to evaluate
+* Fixed recursive macros passed as arguments from their own body overflowing the stack
+* Fixed an overflow when computing the width of a replication with very large operands
+* Fixed glob patterns with a trailing double star (like `foo**`) failing to match an empty tail
+* Fixed port direction tokens on interface ports being dropped from the syntax tree
+* Fixed a use-after-free when visiting nested generic classes during elaboration (thanks to @vorsicht80)
+* Fixed ICE when evaluating a queue `delete` call with a non-constant index
+* Fixed ICE in analysis of procedural checker instances with unconnected output ports
+* Fixed ICEs on a variety of invalid code, including: case generate conditions with an invalid type reference, invalid primitive instance delays, parenthesized sequence and property operators in event expressions, unnamed DPI arguments, enums with non-integral base types, `randc` methods, `unique` / `priority` if statements matching nothing in constant functions, `let` instances with mismatched typed arguments, range items in uniqueness constraints, randsequence rules with a weight block and no productions, explicit imports matching implicit generate block names, and invalid upward virtual interface name usage
+
+### Tools & Bindings
+#### slang-tidy
 * Fixed skip paths in config files erroneously matching files in the parent directory and in sibling directories that share a name prefix
 * Fixed the return code being zero on failure when run with `--quiet`
 
