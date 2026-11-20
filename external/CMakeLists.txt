@@ -47,7 +47,7 @@ else()
   FetchContent_Declare(
     fmt
     GIT_REPOSITORY ${SLANG_DEP_URL_PREFIX}fmtlib/fmt.git
-    GIT_TAG 12.2.0
+    GIT_TAG 12.2.1
     GIT_SHALLOW ON
     SYSTEM EXCLUDE_FROM_ALL)
   FetchContent_MakeAvailable(fmt)
@@ -138,9 +138,9 @@ if(SLANG_USE_MIMALLOC)
   FetchContent_Declare(
     mimalloc
     GIT_REPOSITORY ${SLANG_DEP_URL_PREFIX}microsoft/mimalloc.git
-    GIT_TAG v3.6.1
+    GIT_TAG v3.7.0
     GIT_SHALLOW ON
-    FIND_PACKAGE_ARGS 3.6)
+    FIND_PACKAGE_ARGS 3.7)
   FetchContent_MakeAvailable(mimalloc)
 
   if(mimalloc_FOUND)
