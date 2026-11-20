@@ -12,6 +12,78 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixes
 
 
+## [v12.2] - 2026-11-20
+### Language Compatibility
+* Parameters and other non-signal items declared in a program can now be referenced hierarchically from outside the program (including via `defparam`); only references to nets and variables declared in a program are errors, as specified by the LRM
+* Parameters declared in generate regions are now overridable, since generate regions have no semantic meaning
+* `export p::*` now exports names that `p` itself wildcard-imported and exported from another package
+* Unpacked byte arrays with no format specifier are now formatted as strings in elaboration system tasks
+
+### Improvements
+* [-Wunsized-concat](https://sv-lang.com/warning-ref.html#unsized-concat) no longer warns about a single-element concatenation used as the count of a replication, like `{{4}{foo}}`
+* Statements in the items of a case statement with a constant case expression that are not selected are now treated as unevaluated, so they no longer report warnings like out of bounds selects, matching the behavior of untaken `if` branches and conditional operators (thanks to @likeamahoney)
+* Added `Compilation::DiagnosticCapture` to the API, for capturing diagnostics issued while operating on an already-elaborated compilation (thanks to @povik)
+* The UDP edge coverage check no longer takes exponential time for UDPs with many inputs, and its notes listing missing rows are now complete
+* AST JSON is no longer written for designs with fatal errors, which could previously hang on large recursive hierarchies
+
+### Fixes
+* Fixed a crash when constructing an AST with an invalid class method specifier
+* Fixed randsequence `case` productions selecting the wrong production for items after one that lists more than one expression
+* Fixed slicing of packed port connections across multidimensional instance arrays whose dimensions have different sizes, which assigned the wrong bits to each instance
+* Fixed nested type operators like `type(type(x))` resolving to the type reference itself instead of the type of `x` when used in a type comparison or case statement
+* Fixed a crash when evaluating a `foreach` loop in a constant function whose trailing loop dimensions are skipped (e.g. `foreach (arr[i,])`)
+* Fixed unsized literals whose high order bit is `x` or `z` (like `'hx3`) being zero-extended instead of extended with `x` or `z` to the size of the expression containing them
+* Fixed out of bounds bits of a part-select of a two-state vector reading as `x` instead of `0` in constant expressions
+* Fixed replicated assignment patterns for structs (like `'{3{-1}}`) converting every replica to the types of the first members instead of each member's own type, which produced malformed values and could crash constant evaluation. These patterns are now expanded into simple assignment patterns in the AST
+* Fixed an internal assertion when a subroutine with more than one statement contains an invalid statement that has nested blocks, such as a `fork`-`join` in a function; statements inside a disallowed `fork` block are now also checked for errors
+* Fixed a bug where interfaces that contain a modport with export methods followed by another modport without export methods would lose track of their exports (thanks to @hankhsu1996)
+* Fixed calls to functions with static variables being folded to a constant when evaluated speculatively (e.g. as a select index), which gave incorrect results for functions that modify that state
+* Fixed the implicit return value variable of static functions to have static lifetime
+* Fixed several internal assertions related to invalid syntax and to assignment patterns on the left-hand side of assignments
+* Fixed type parameters of class specializations and instances that default to a type declared inline (like an enum or struct) being treated as different types when the default is used in more than one place
+* Fixed an internal assertion on a function call cycle through the function's return type
+* Fixed false "default value must exactly match" errors for out-of-block method definitions whose default argument values need conversion to the argument type
+* Fixed left-justified `%-` format fields of hex, octal, and binary values printing a different number, and of strings padding on the wrong side (thanks to @hankhsu1996)
+* Fixed pattern variables declared in conditional expressions being rejected in constant functions as not declared locally
+* Fixed `this` being disallowed in enum value initializers inside class methods
+* Fixed values of enums declared in an interface not being usable in that interface's modport expressions
+* Fixed an internal assertion when a scoped name (like `p::a` or `C::b`) or a member access refers to a symbol from within its own type; this is now reported as a recursive definition
+* Fixed an internal assertion when a UDP table row has no input fields
+* The prebuilt Windows release binary is now built in the Release configuration; it was previously an unoptimized Debug build (thanks to @dirk-seynhaeve)
+* `$past_gclk` and `$future_gclk` now return the type of their argument
+* Nested modules are no longer implicitly instantiated when they are instantiated in generate blocks or other nested modules
+* Fixed parsing precedence of the conditional operator relative to the `->` and `<->` implication operators
+* Fixed constant evaluation of `inside` ranges with `$` bounds outside of parameter initializers
+* Fixed index locator methods (`find_index`, etc) returning element offsets instead of actual indices for fixed-size arrays whose range doesn't start at zero or is descending
+* Fixed `%0t` not being treated as a minimum width format specifier
+* Fixed the string `hextoa`, `octtoa`, and `bintoa` methods to print two's complement bits for negative values instead of a sign
+* Fixed `%p` formatting of empty associative arrays and untagged unpacked unions
+* Fixed associative array pattern default values not being converted to the element type
+* Fixed constant evaluation of if-else-if chains to stop at the first matching condition for plain and priority `if` statements
+* Fixed negative `repeat` counts in constant evaluation; they are now treated as zero
+* Fixed packed union member reads in constant evaluation not converting to the member's signedness and state
+* Fixed real absolute tolerances for integral values being rounded instead of truncated
+* Fixed checker formal default values being bound in the wrong scope when filled by a wildcard connection
+* Fixed library-specific config cell rules that don't name a use cell (like `cell lib.foo use #(...)`)
+* Fixed spurious "minimum is greater than maximum" errors for sequence ranges whose minimum fails to evaluate
+* Fixed recursive macros passed as arguments from their own body overflowing the stack
+* Fixed an overflow when computing the width of a replication with very large operands
+* Fixed glob patterns with a trailing double star (like `foo**`) failing to match an empty tail
+* Fixed port direction tokens on interface ports being dropped from the syntax tree
+* Fixed a use-after-free when visiting nested generic classes during elaboration (thanks to @vorsicht80)
+* Fixed ICE when evaluating a queue `delete` call with a non-constant index
+* Fixed ICE in analysis of procedural checker instances with unconnected output ports
+* Fixed ICEs on a variety of invalid code, including: case generate conditions with an invalid type reference, invalid primitive instance delays, parenthesized sequence and property operators in event expressions, unnamed DPI arguments, enums with non-integral base types, `randc` methods, `unique` / `priority` if statements matching nothing in constant functions, `let` instances with mismatched typed arguments, range items in uniqueness constraints, randsequence rules with a weight block and no productions, explicit imports matching implicit generate block names, and invalid upward virtual interface name usage
+
+### Tools & Bindings
+#### slang-tidy
+* Fixed skip paths in config files erroneously matching files in the parent directory and in sibling directories that share a name prefix
+* Fixed the return code being zero on failure when run with `--quiet`
+
+#### rewriter
+* Fixed the `--exclude-skipped` flag doing the opposite of its description
+
+
 ## [v12.1] - 2026-10-25
 ### Fixes
 * Fixed missing type checking of case property expression items against the case expression; incompatible types are now correctly reported as errors
