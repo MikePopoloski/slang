@@ -187,6 +187,7 @@ When running in preprocessor-only mode (using `-E`) include comments in the prep
 `--directives`
 
 When running in preprocessor-only mode (using `-E`) include directives in the preprocessed output text.
+Macro invocations and include directives are expanded, so their original text is not retained.
 
 `--max-include-depth <depth>`
 
