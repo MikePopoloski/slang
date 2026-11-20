@@ -847,13 +847,14 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
             SourceLocation macroLoc = sourceManager.createExpansionLoc(loc, expansion.getRange(),
                                                                        macroName);
 
-            std::string_view fileName = sourceManager.getFileName(loc);
+            std::string fileName = sourceManager.getPathForFileMacro(loc);
             text.push_back('"');
             text.append_range(fileName);
             text.push_back('"');
 
             std::string_view rawText = toStringView(text.copy(alloc));
-            Token token(alloc, TokenKind::StringLiteral, {}, rawText, macroLoc, fileName);
+            Token token(alloc, TokenKind::StringLiteral, {}, rawText, macroLoc,
+                        rawText.substr(1, rawText.size() - 2));
             expansion.append(token, macroLoc, loc, expansion.getRange());
             break;
         }

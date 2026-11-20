@@ -76,6 +76,11 @@ public:
     /// returns an empty string.
     const std::filesystem::path& getFullPath(BufferID buffer) const;
 
+    /// Gets the file name that the `__FILE__` macro expands to at a given source location.
+    /// This is the name @a getFileName gives, unless a macro prefix mapping matches the
+    /// full path of the file or the name set by a line directive.
+    std::string getPathForFileMacro(SourceLocation location) const;
+
     /// Gets the column line number for a given source location.
     /// @a location must be a file location.
     size_t getColumnNumber(SourceLocation location) const;
@@ -248,6 +253,11 @@ public:
     /// VCS and similar simulators that always prefer +incdir directories over local lookup.
     void setIncDirFirst(bool set) { incDirFirst = set; }
 
+    /// Adds a mapping that replaces the path prefix @a oldPrefix with @a newPrefix in the
+    /// file names that the `__FILE__` macro expands to. If several mappings match, the one
+    /// with the most path components is used. Diagnostics are not affected.
+    void addMacroPrefixMapping(const std::filesystem::path& oldPrefix, std::string_view newPrefix);
+
     /// Adds a line directive at the given location.
     void addLineDirective(SourceLocation location, size_t lineNum, std::string_view name,
                           uint8_t level);
@@ -301,16 +311,26 @@ public:
     size_t getMemoryUsage() const;
 
 private:
+    // The file name set by a `line directive, both as we report it in diagnostics
+    // and as it was written.
+    struct LineDirectiveName {
+        std::string name;
+        std::string writtenName;
+
+        auto operator<=>(const LineDirectiveName&) const = default;
+    };
+
     // Stores information specified in a `line directive, which alters the
     // line number and file name that we report in diagnostics.
     struct LineDirectiveInfo {
-        std::string_view name;  // File name set by directive (owned by lineDirectiveNames)
-        size_t lineInFile;      // Actual file line where directive occurred
-        size_t lineOfDirective; // Line number set by directive
-        uint8_t level;          // Level of directive. Either 0, 1, or 2.
+        const LineDirectiveName* fileName; // Owned by lineDirectiveNames
+        size_t lineInFile;                 // Actual file line where directive occurred
+        size_t lineOfDirective;            // Line number set by directive
+        uint8_t level;                     // Level of directive. Either 0, 1, or 2.
 
-        LineDirectiveInfo(std::string_view fname, size_t lif, size_t lod, uint8_t level) noexcept :
-            name(fname), lineInFile(lif), lineOfDirective(lod), level(level) {}
+        LineDirectiveInfo(const LineDirectiveName* fname, size_t lif, size_t lod,
+                          uint8_t level) noexcept :
+            fileName(fname), lineInFile(lif), lineOfDirective(lod), level(level) {}
     };
 
     // Stores actual file contents and metadata; only one per loaded file
@@ -395,10 +415,13 @@ private:
     // uniquified backing memory for file names set by `line directives; a node-based
     // container so that views handed out by getFileName stay valid as more are added
     // and as the FileInfo entries that refer to them are moved around.
-    std::set<std::string, std::less<>> lineDirectiveNames;
+    std::set<LineDirectiveName> lineDirectiveNames;
 
     // map from buffer to diagnostic directive lists
     flat_hash_map<BufferID, std::vector<DiagnosticDirectiveInfo>> diagDirectives;
+
+    // path prefixes to replace in the file names that `__FILE__` expands to
+    std::vector<std::pair<std::filesystem::path, std::string>> macroPrefixMappings;
 
     std::atomic<uint32_t> unnamedBufferCount = 0;
     bool disableProximatePaths = false;
@@ -429,6 +452,14 @@ private:
 
     template<IsLock TLock>
     size_t getRawLineNumber(SourceLocation location, TLock& lock) const;
+
+    template<IsLock TLock>
+    const LineDirectiveInfo* getLineDirectiveImpl(SourceLocation location, const FileInfo& info,
+                                                  TLock& lock) const;
+
+    template<IsLock TLock>
+    std::string applyMacroPrefixMappings(const std::filesystem::path& path, std::string_view name,
+                                         TLock& lock) const;
 
     template<IsLock TLock>
     bool isMacroLocImpl(SourceLocation location, TLock& lock) const;
