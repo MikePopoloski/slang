@@ -2238,6 +2238,22 @@ class Derived extends Base;
 endclass
 ```
 
+-Wqualified-pure-virtual-call
+A call through 'super' or a superclass scope runs that class's own implementation
+of a method instead of dispatching, and the LRM declares a pure virtual method
+without one. Some tools allow the call anyway, so the error can be downgraded for
+compatibility.
+```
+virtual class Base;
+  pure virtual function int f();
+endclass
+class Derived extends Base;
+  virtual function int f();
+    return super.f() + 1;  // Base::f has no implementation
+  endfunction
+endclass
+```
+
 -Wmissing-global-clocking
 A global clocking block must be visible from the scope of any system function that uses it,
 for example `$global_clock` or `$past_gclk`. However some tools automatically

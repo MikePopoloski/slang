@@ -1051,6 +1051,7 @@ warning dup-import DuplicateImport "duplicate import declaration is redundant"
 warning duplicate-definition DuplicateDefinition "duplicate definition of '{}'"
 warning randomize-var-shadow RandomizeConstraintShadow "'{}' in randomize constraint block refers to class member of '{}', but a variable with the same name exists in an enclosing scope; disambiguate with 'local::{}' to reference the enclosing scope variable or 'this.{}' for the class member"
 warning upward-name UpwardHierarchicalName "'{}' is an upward hierarchical name reference"
+warning qualified-pure-virtual-call QualifiedPureVirtualCall "pure virtual method '{}' has no implementation to call through 'super' or a superclass scope"
 
 subsystem SysFuncs
 error BadSystemSubroutineArg "invalid argument type {} to system {}"
@@ -1346,7 +1347,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   tautological-self-compare
                   tautological-range-compare tautological-bitwise-compare tautological-overlap-compare
                   tautological-negation-compare nonstandard-instance-array-query
-                  missing-global-clocking }
+                  missing-global-clocking qualified-pure-virtual-call }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
@@ -1403,7 +1404,7 @@ compat Default error = { duplicate-definition bad-procedural-force unknown-sys-n
                          ref-arg-in-fork-join cannot-index-scalar string-in-constraint
                          virtual-arg-name-mismatch virtual-visibility-mismatch undefined-param-override
                          redefinition redefinition-different-type nonstandard-instance-array-query
-                         missing-global-clocking }
+                         missing-global-clocking qualified-pure-virtual-call }
 
 compat Vcs error = { duplicate-definition bad-procedural-force unknown-sys-name nonstandard-hierarchical-cross
                      nonstandard-string-concat nonstandard-inside mixed-var-assigns multiple-cont-assigns
