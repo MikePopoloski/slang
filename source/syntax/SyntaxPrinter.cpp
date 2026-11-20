@@ -77,7 +77,7 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
     }
 
     if (includeTrivia) {
-        if (includeAllLocations || !sourceManager) {
+        if (!sourceManager) {
             for (const auto& t : token.trivia())
                 print(t);
         }
@@ -257,7 +257,7 @@ SyntaxPrinter& SyntaxPrinter::append(std::string_view text) {
 }
 
 bool SyntaxPrinter::shouldPrint(SourceLocation loc) const {
-    if (includeAllLocations || !sourceManager)
+    if (!sourceManager)
         return true;
 
     if (sourceManager->isMacroLoc(loc)) {
@@ -280,7 +280,7 @@ bool SyntaxPrinter::shouldPrint(SourceLocation loc) const {
 }
 
 bool SyntaxPrinter::shouldPrint(const SyntaxNode& syntax) const {
-    if (includeAllLocations || !sourceManager)
+    if (!sourceManager)
         return includeDirectives;
 
     if (syntax.kind == SyntaxKind::MacroUsage) {
