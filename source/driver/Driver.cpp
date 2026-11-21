@@ -760,6 +760,12 @@ bool Driver::runPreprocessor(bitmask<PreprocessOutputFlags> flags) {
     output.setExpandMacros(true);
     output.setExpandIncludes(true);
 
+    // Squashing newlines would desynchronize the output from its source lines,
+    // costing an extra line directive each time.
+    const bool emitLines = flags.has(PreprocessOutputFlags::EmitLineDirectives);
+    output.setEmitLineDirectives(emitLines);
+    output.setSquashNewlines(!emitLines);
+
     std::optional<std::mt19937> rng;
     flat_hash_map<std::string, std::string> obfuscationMap;
 
@@ -806,7 +812,8 @@ bool Driver::runPreprocessor(bitmask<PreprocessOutputFlags> flags) {
         }
     }
 
-    OS::print(fmt::format("{}\n", output.str()));
+    // A trailing newline would move the end of file off of its source line.
+    OS::print(emitLines ? output.str() : fmt::format("{}\n", output.str()));
     return true;
 }
 

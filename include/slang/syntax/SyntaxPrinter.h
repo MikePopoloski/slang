@@ -125,6 +125,17 @@ public:
         return *this;
     }
 
+    /// Sets whether to emit `line directives that preserve the source file names and
+    /// line numbers of printed tokens when the output is parsed again. Requires a source
+    /// manager. Existing line directives are dropped since their effect is already
+    /// reflected in the generated ones. When combined with @a setIncludeSource the
+    /// source comments are placed alongside the generated directives.
+    /// @return a reference to this object, to allow chaining additional method calls.
+    SyntaxPrinter& setEmitLineDirectives(bool emit) {
+        emitLineDirectives = emit;
+        return *this;
+    }
+
     /// Sets whether to squash adjacent newlines down into one when printing syntax.
     /// @return a reference to this object, to allow chaining additional method calls.
     SyntaxPrinter& setSquashNewlines(bool include) {
@@ -141,11 +152,31 @@ public:
     static std::string printFile(const SyntaxTree& tree);
 
 private:
+    /// Print a token, optionally synchronizing the output's line mapping to it first.
+    void print(parsing::Token token, bool syncLine);
+
+    /// Emit a line directive if the output's logical position doesn't match @a location.
+    void printLineDirective(SourceLocation location);
+
     bool shouldPrint(const SyntaxNode& syntax) const;
     bool shouldPrint(SourceLocation loc) const;
 
     std::string buffer;
     std::string_view currentFileName;
+
+    /// Source buffer of the last token mapped by a line directive.
+    BufferID lineBuffer;
+
+    /// Logical line number at the end of the output, as a reader of it would compute.
+    size_t outputLine = 0;
+
+    /// The last newline character printed if it could still pair with the next
+    /// one to form a single line ending, otherwise zero.
+    char pendingNewline = 0;
+
+    /// Set while printing the tokens of a directive after its first one.
+    bool inDirective = false;
+
     const SourceManager* sourceManager = nullptr;
     bool includeTrivia = true;
     bool includeMissing = false;
@@ -156,6 +187,7 @@ private:
     bool includeComments = true;
     bool includeSource = false;
     bool squashNewlines = true;
+    bool emitLineDirectives = false;
 };
 
 } // namespace slang::syntax

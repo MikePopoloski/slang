@@ -3,9 +3,11 @@
 
 #include "Test.h"
 #include "catch2/catch_test_macros.hpp"
+#include <catch2/generators/catch_generators.hpp>
 
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxPrinter.h"
+#include "slang/text/SourceManager.h"
 
 TEST_CASE("SyntaxPrinter - line comments") {
     auto& cu = parseCompilationUnit(R"(
@@ -245,4 +247,143 @@ endmodule)");
           R"(// Leading comment
 module m; // Inline comment
 endmodule)");
+}
+
+TEST_CASE("SyntaxPrinter line directives preserve source locations") {
+    const bool comments = GENERATE(false, true);
+    const bool directives = GENERATE(false, true);
+    const bool sourceInfo = GENERATE(false, true);
+    const auto newline = GENERATE("\n"sv, "\r\n"sv, "\r"sv);
+
+    // Keeps in-memory include lookups from being resolved against the working directory
+    SourceManager sourceManager;
+    sourceManager.setDisableProximatePaths(true);
+    auto withNewlines = [&](std::string_view text) {
+        std::string result;
+        for (char c : text) {
+            if (c == '\n')
+                result += newline;
+            else
+                result += c;
+        }
+        return result;
+    };
+
+    sourceManager.assignText("outer.svh", withNewlines(R"(`line 20 "outer.svh" 0
+    initial missing_outer = 1;
+`include "inner.svh"
+    initial missing_outer_after = 1;
+)"));
+    sourceManager.assignText("inner.svh", withNewlines(R"(`line 30 "inner.svh" 0
+    // Included source
+    initial missing_inner = 1;
+)"));
+
+    auto tree = SyntaxTree::fromFileInMemory(withNewlines(R"(`line 10 "input.sv" 0
+`define REPORT(name) initial \
+    // Macro body comment \
+    name = 1;
+`define EMPTY
+`define TRAILING 17 /* end */ \
+
+module top;
+    `EMPTY
+    /* first
+
+       last */
+    `REPORT(missing_macro)
+`ifdef OMIT
+    initial skipped = 0;
+`endif
+`include "outer.svh"
+    string text = "first\
+second";
+    initial missing_after = 1;
+`line 70 "mapped\\path\"name.sv" 0
+    initial missing_mapped = 1;
+endmodule
+)"),
+                                             sourceManager, "input.sv");
+    REQUIRE(tree->diagnostics().empty());
+
+    auto output = SyntaxPrinter(sourceManager)
+                      .setIncludeComments(comments)
+                      .setIncludeDirectives(directives)
+                      .setIncludeSource(sourceInfo)
+                      .setExpandMacros(true)
+                      .setExpandIncludes(true)
+                      .setSquashNewlines(false)
+                      .setEmitLineDirectives(true)
+                      .print(*tree)
+                      .str();
+    INFO(output);
+
+    SourceManager outputSourceManager;
+    auto reparsed = SyntaxTree::fromFileInMemory(output, outputSourceManager, "preprocessed.sv");
+    REQUIRE(reparsed->diagnostics().empty());
+
+    auto expected = tree->root().tokens_begin();
+    auto actual = reparsed->root().tokens_begin();
+    for (; expected != tree->root().tokens_end(); ++expected, ++actual) {
+        REQUIRE(actual != reparsed->root().tokens_end());
+        CAPTURE(expected->rawText());
+        CHECK(actual->kind == expected->kind);
+        CHECK(actual->rawText() == expected->rawText());
+        CHECK(outputSourceManager.getFileName(actual->location()) ==
+              sourceManager.getFileName(expected->location()));
+        CHECK(outputSourceManager.getLineNumber(actual->location()) ==
+              sourceManager.getLineNumber(expected->location()));
+    }
+    CHECK(actual == reparsed->root().tokens_end());
+
+    Compilation originalCompilation;
+    originalCompilation.addSyntaxTree(tree);
+    auto originalDiags = originalCompilation.getAllDiagnostics();
+    REQUIRE(originalDiags.size() == 6);
+
+    Compilation outputCompilation;
+    outputCompilation.addSyntaxTree(reparsed);
+    auto outputDiags = outputCompilation.getAllDiagnostics();
+    REQUIRE(outputDiags.size() == originalDiags.size());
+    auto locations = [](const auto& diags, const SourceManager& sm) {
+        std::vector<std::pair<std::string_view, size_t>> result;
+        for (const auto& diagnostic : diags) {
+            CHECK(diagnostic.code == diag::UndeclaredIdentifier);
+            result.emplace_back(sm.getFileName(diagnostic.location),
+                                sm.getLineNumber(diagnostic.location));
+        }
+        std::ranges::sort(result);
+        return result;
+    };
+    CHECK(locations(outputDiags, outputSourceManager) == locations(originalDiags, sourceManager));
+
+    CHECK(contains(output, "`line 20 \"outer.svh\" 1"));
+    CHECK(contains(output, "`line 31 \"inner.svh\" 1"));
+    CHECK(contains(output, "`line 22 \"outer.svh\" 2"));
+    CHECK(contains(output, "// outer.svh:20\n") == sourceInfo);
+    CHECK(contains(output, "// inner.svh:31\n") == sourceInfo);
+    CHECK(contains(output, "// outer.svh:22\n") == sourceInfo);
+}
+
+TEST_CASE("SyntaxPrinter keeps directive continuations when dropping comments") {
+    auto tree = SyntaxTree::fromText(R"(`define DECLARE(name) \
+    // Dropped comment \
+    logic name;
+module m;
+endmodule
+)");
+    REQUIRE(tree->diagnostics().empty());
+
+    auto output = SyntaxPrinter()
+                      .setIncludeDirectives(true)
+                      .setIncludeComments(false)
+                      .setSquashNewlines(false)
+                      .print(*tree)
+                      .str();
+    CHECK(output == R"(`define DECLARE(name) \
+    \
+    logic name;
+module m;
+endmodule
+)");
 }

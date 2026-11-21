@@ -165,7 +165,8 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
         .value("IncludeDirectives", PreprocessOutputFlags::IncludeDirectives)
         .value("ObfuscateIds", PreprocessOutputFlags::ObfuscateIds)
         .value("UseFixedObfuscationSeed", PreprocessOutputFlags::UseFixedObfuscationSeed)
-        .value("IncludeSourceInfo", PreprocessOutputFlags::IncludeSourceInfo);
+        .value("IncludeSourceInfo", PreprocessOutputFlags::IncludeSourceInfo)
+        .value("EmitLineDirectives", PreprocessOutputFlags::EmitLineDirectives);
 
     nb::enum_<MinTypMax>(ast, "MinTypMax")
         .value("Min", MinTypMax::Min)

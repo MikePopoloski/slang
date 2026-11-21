@@ -575,6 +575,7 @@ void registerSyntax(nb::module_& syntax, nb::module_& parsing) {
         .def("setExpandIncludes", &SyntaxPrinter::setExpandIncludes, byrefint, "expand"_a)
         .def("setIncludeComments", &SyntaxPrinter::setIncludeComments, byrefint, "include"_a)
         .def("setSquashNewlines", &SyntaxPrinter::setSquashNewlines, byrefint, "include"_a)
+        .def("setEmitLineDirectives", &SyntaxPrinter::setEmitLineDirectives, byrefint, "emit"_a)
         .def("str", &SyntaxPrinter::str)
         .def_static("printFile", &SyntaxPrinter::printFile, "tree"_a);
 

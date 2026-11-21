@@ -268,6 +268,15 @@ alphanumeric strings.
 Prints the source file name and line number in the preprocessor output stream with --preprocess.
 Only prints the source file name and line number when there is a change in source file name.
 
+`--preprocess-lines`
+
+Emits SystemVerilog `` `line `` directives in the preprocessor output stream with --preprocess.
+These preserve source file names and line numbers when the output is compiled again, including
+across include files and macro expansions. Newlines are preserved, and additional directives
+correct locations after preprocessing removes or expands source text. Columns and macro expansion
+backtraces are not preserved. Combine with --preprocess-source to also emit comments marking
+source file changes.
+
 @section clr-parsing Parsing
 
 `--max-parse-depth <depth>`
