@@ -291,15 +291,30 @@ struct ConstraintExprVisitor {
     }
 
 private:
+    bool hasRandVars(const Expression& expr) const {
+        bool result = false;
+        expr.visitSymbolReferences([&](const Expression&, const Symbol& sym) {
+            if (context.getRandMode(sym) != RandMode::None)
+                result = true;
+        });
+        return result;
+    }
+
     bool fail() {
         failed = true;
         return false;
     }
 
     bool checkType(const Expression& expr) {
-        if (!expr.type->isValidForRand(RandMode::Rand,
-                                       context.getCompilation().languageVersion()) &&
+        auto languageVersion = context.getCompilation().languageVersion();
+        if (!expr.type->isValidForRand(RandMode::Rand, languageVersion) &&
             !expr.type->isUnbounded()) {
+            // Subexpressions may have operands that are neither integral nor real
+            // as long as they contain no random variables [18.3].
+            if (!isTop && languageVersion >= LanguageVersion::v1800_2023 && !hasRandVars(expr)) {
+                return true;
+            }
+
             // Some tools allow 'string' expressions (typically equality comparisons)
             // within constraint if-conditions. The LRM requires the predicate to be
             // boolean-convertible but does not explicitly require all sub-expressions to be

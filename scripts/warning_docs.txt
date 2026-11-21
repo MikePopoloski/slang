@@ -2289,8 +2289,11 @@ endmodule
 ```
 
 -Wstring-in-constraint
-The LRM does not permit string sub-expressions in constraint expressions.
+Prior to 1800-2023, the LRM does not permit string sub-expressions in constraint expressions.
 Some tools accept string equality comparisons inside constraint if-conditions as an extension.
+Starting with 1800-2023, subexpressions that contain no random variables may have string
+operands, so this warning is only issued for older language versions or when the
+subexpression involves random variables.
 ```
 class RegField;
   rand logic [7:0] value;

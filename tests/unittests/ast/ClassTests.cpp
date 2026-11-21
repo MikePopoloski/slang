@@ -4729,6 +4729,33 @@ endclass
     CHECK(diags[0].code == diag::StringConstraintExpr);
 }
 
+TEST_CASE("v1800-2023: non-integral subexpressions without random variables in constraints") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class D; endclass
+class C;
+    rand int x;
+    rand string rs;
+    string s = "a";
+    D d;
+    constraint c1 { if (s == "a") x == 1; else x == 2; }
+    constraint c2 { (d == null) -> x == 3; }
+    constraint c3 { if (rs == "a") x == 1; }
+    constraint c4 { s; }
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::InvalidRandType);
+    CHECK(diags[1].code == diag::InvalidConstraintExpr);
+    CHECK(diags[2].code == diag::InvalidConstraintExpr);
+}
+
 TEST_CASE("randomize with clause missing constraint block") {
     auto tree = SyntaxTree::fromText(R"(
 class C;
