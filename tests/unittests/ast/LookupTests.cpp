@@ -95,6 +95,36 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Wildcard imported name stays visible after a later conflicting wildcard import") {
+    auto tree = SyntaxTree::fromText(R"(
+package p; localparam int x = 1; endpackage
+package q; localparam int x = 2; endpackage
+
+module m1;
+    import p::*;
+    localparam int a = x;
+    import q::*;
+    localparam int b = x;
+endmodule
+
+module m2;
+    import p::*;
+    import q::*;
+    localparam int c = x;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AmbiguousWildcardImport);
+
+    auto& b = compilation.getRoot().lookupName<ParameterSymbol>("m1.b");
+    CHECK(b.getValue().integer() == 1);
+}
+
 TEST_CASE("Wildcard import lookup 2") {
     auto tree = SyntaxTree::fromText(R"(
 package p;

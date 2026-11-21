@@ -2303,6 +2303,23 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                     imports.emplace_back(Import{imported, import});
             }
 
+            // If an earlier reference already imported one of these, that symbol
+            // became locally visible in this scope [26.3] and takes precedence over
+            // the potentially locally visible symbols from later wildcard imports.
+            if (imports.size() > 1) {
+                if (auto it = wildcardImportData->importedSymbols.find(name);
+                    it != wildcardImportData->importedSymbols.end()) {
+                    for (auto& entry : imports) {
+                        if (entry.imported == it->second) {
+                            auto chosen = entry;
+                            imports.clear();
+                            imports.push_back(chosen);
+                            break;
+                        }
+                    }
+                }
+            }
+
             if (!imports.empty()) {
                 if (imports.size() > 1) {
                     if (sourceRange) {
