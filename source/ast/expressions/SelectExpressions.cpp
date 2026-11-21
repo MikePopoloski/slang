@@ -82,6 +82,38 @@ static void checkForVectoredSelect(const Expression& value, SourceRange range,
     }
 }
 
+// Returns true if the given select operand refers to one of the unpacked
+// dimensions of an array of nets, as opposed to the data type of the nettype.
+static bool isSelectOfNetArray(const Expression& val, const NetSymbol& net) {
+    // Count how many of the net's unpacked dimensions are already consumed by
+    // element selects. Range selects don't consume a dimension.
+    uint32_t depth = 0;
+    for (auto curr = &val;;) {
+        if (curr->kind == ExpressionKind::ElementSelect) {
+            depth++;
+            curr = &curr->as<ElementSelectExpression>().value();
+        }
+        else if (curr->kind == ExpressionKind::RangeSelect) {
+            curr = &curr->as<RangeSelectExpression>().value();
+        }
+        else {
+            break;
+        }
+    }
+
+    // Count the unpacked dimensions of the net array itself, which wrap the
+    // data type of the nettype.
+    auto& dataType = net.netType.getDataType();
+    auto type = &net.getType();
+    uint32_t arrayDims = 0;
+    while (!type->isMatching(dataType) && type->isUnpackedArray()) {
+        arrayDims++;
+        type = type->getArrayElementType();
+    }
+
+    return depth < arrayDims;
+}
+
 template<typename T>
 bool requireLValueHelper(const T& expr, const ASTContext& context, SourceLocation location,
                          bitmask<AssignFlags> flags) {
@@ -97,8 +129,10 @@ bool requireLValueHelper(const T& expr, const ASTContext& context, SourceLocatio
     }
 
     if (auto sym = val.getSymbolReference(); sym && sym->isValue()) {
+        // Selecting a whole net from an array of nets of a user-defined nettype
+        // is fine, but selects into the nettype's data type are not [10.3.2].
         if (auto net = sym->template as_if<NetSymbol>();
-            net && net->netType.netKind == NetType::UserDefined) {
+            net && net->netType.netKind == NetType::UserDefined && !isSelectOfNetArray(val, *net)) {
             context.addDiag(diag::UserDefPartialDriver, expr.sourceRange) << sym->name;
             return false;
         }

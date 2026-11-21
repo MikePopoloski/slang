@@ -293,6 +293,48 @@ endmodule
     CHECK(diags[7].code == diag::UserDefPartialDriver);
 }
 
+TEST_CASE("Driving whole elements of arrays of user-defined nettype nets") {
+    auto tree = SyntaxTree::fromText(R"(
+nettype real rnet;
+typedef int ia_t[2];
+nettype ia_t anet;
+typedef struct { int a; } s_t;
+nettype s_t snet;
+nettype logic [3:0] vnet;
+
+module drv(output real o);
+    assign o = 1.0;
+endmodule
+
+module m;
+    rnet r [2][3];
+    anet a [2];
+    anet b;
+    snet s [2];
+    vnet v [2];
+
+    assign r[0][1] = 1.0;
+    drv d(r[1][2]);
+    assign a[0] = '{1, 2};
+    assign s[1] = '{a: 1};
+    assign v[1] = 4'd1;
+
+    assign a[1][0] = 1;
+    assign b[0] = 1;
+    assign s[0].a = 1;
+    assign v[0][1] = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::UserDefPartialDriver);
+}
+
 TEST_CASE("Attributes") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
