@@ -986,7 +986,7 @@ RsRuleSyntax& Parser::parseRsRule() {
     RsWeightClauseSyntax* weightClause = nullptr;
     if (peek(TokenKind::ColonEquals)) {
         auto colonEqual = consume();
-        auto& weight = parsePrimaryExpression(ExpressionOptions::DisallowVectors);
+        auto& weight = parsePrimaryExpression(ExpressionOptions::None);
 
         RsCodeBlockSyntax* codeBlock = nullptr;
         if (peek(TokenKind::OpenBrace))

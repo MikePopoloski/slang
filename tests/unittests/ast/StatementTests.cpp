@@ -1850,6 +1850,27 @@ endmodule
     CHECK(diags[0].code == diag::RandJoinNotEnough);
 }
 
+TEST_CASE("randsequence sized and based integer weights") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int x;
+    initial begin
+        randsequence ()
+            A : B := 3'd2 | C := 'h3 { x = 1; } | D := 4'b0101 | E := 5;
+            B : { };
+            C : { };
+            D : { };
+            E : { };
+        endsequence
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("foreach loop non-standard syntax") {
     auto tree = SyntaxTree::fromText(R"(
 module top;
