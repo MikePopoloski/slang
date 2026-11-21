@@ -275,11 +275,18 @@ void DeclaredType::checkType(const ASTContext& context) const {
                 !flags.has(DeclaredTypeFlags::ImplicitInputNet)) {
                 context.addDiag(diag::InvalidNetType, parent.location) << *type;
             }
-            else if (net.expansionHint != NetSymbol::None && type->getBitWidth() == 1 &&
-                     type->getCanonicalType().kind != SymbolKind::PackedArrayType) {
+            else if (net.expansionHint != NetSymbol::None) {
                 // A vectored or scalared net needs at least one packed dimension [6.7],
-                // which can be a single bit wide like [0:0].
-                context.addDiag(diag::VectoredWithoutPackedDim, parent.location);
+                // which can be a single bit wide like [0:0]. Unpacked dimensions
+                // and unpacked aggregates don't count.
+                auto elem = &type->getCanonicalType();
+                while (elem->isUnpackedArray())
+                    elem = &elem->getArrayElementType()->getCanonicalType();
+
+                if (!elem->isIntegral() ||
+                    (elem->getBitWidth() == 1 && elem->kind != SymbolKind::PackedArrayType)) {
+                    context.addDiag(diag::VectoredWithoutPackedDim, parent.location);
+                }
             }
             break;
         }

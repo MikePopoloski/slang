@@ -57,6 +57,33 @@ endmodule
     CHECK(diags[1].code == diag::VectoredWithoutPackedDim);
 }
 
+TEST_CASE("Vectored and scalared nets without a packed dimension") {
+    // Unpacked dimensions and unpacked aggregates don't count as the
+    // packed dimension that vectored and scalared nets require [6.7].
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct {logic a; logic b;} S;
+    typedef struct packed {logic [1:0] a; logic b;} P;
+
+    wire vectored a [3:0];
+    wire scalared logic b [1:0];
+    wire vectored S c;
+
+    wire vectored [3:0] d [2];
+    wire scalared P e;
+    wire vectored integer f;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::VectoredWithoutPackedDim);
+}
+
 TEST_CASE("Invalid nets") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
