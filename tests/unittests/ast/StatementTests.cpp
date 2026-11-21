@@ -2895,6 +2895,44 @@ endmodule
     CHECK(diags[0].code == diag::ForeachWildcardIndex);
 }
 
+TEST_CASE("Nonblocking event triggers with timing don't block") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic a, b, clk;
+    event e;
+
+    always_ff @(posedge clk) begin
+        a <= b;
+        ->> #1 e;
+        ->> @(b) e;
+    end
+
+    always_comb begin
+        a = b;
+        ->> #1 e;
+    end
+
+    final ->> #1 e;
+
+    function void f();
+        ->> #1 e;
+    endfunction
+
+    task automatic t;
+        automatic int d = 1;
+        ->> #d e;
+    endtask
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AutoFromNonBlockingTiming);
+}
+
 TEST_CASE("Event trigger target is not an event") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

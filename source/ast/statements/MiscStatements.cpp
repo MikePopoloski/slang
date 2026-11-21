@@ -549,13 +549,20 @@ Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
     if (auto sym = target.getSymbolReference())
         compilation.noteReference(*sym, /* isLValue */ true);
 
+    // The timing control on a nonblocking event trigger doesn't block the
+    // statement [15.5.1], so like a nonblocking assignment's it isn't counted
+    // as a blocking timing control.
+    bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingEventTriggerStatement;
     const TimingControl* timing = nullptr;
     if (syntax.timing) {
-        timing = &TimingControl::bind(*syntax.timing, context);
-        stmtCtx.observeTiming(*timing);
-    }
+        ASTContext timingCtx = context;
+        if (isNonBlocking)
+            timingCtx.flags |= ASTFlags::NonBlockingTimingControl;
 
-    bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingEventTriggerStatement;
+        timing = &TimingControl::bind(*syntax.timing, timingCtx);
+        if (!isNonBlocking)
+            stmtCtx.observeTiming(*timing);
+    }
 
     return *compilation.emplace<EventTriggerStatement>(target, timing, isNonBlocking,
                                                        syntax.sourceRange());
