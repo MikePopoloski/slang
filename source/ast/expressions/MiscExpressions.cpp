@@ -9,6 +9,7 @@
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/Bitstream.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/symbols/BlockSymbols.h"
@@ -791,8 +792,8 @@ bool AssertionInstanceExpression::checkAssertionArg(const PropertyExprSyntax& pr
             break;
     }
 
-    // For all other types, we need a normal expression that
-    // is cast compatible with the target type.
+    // For all other types, we need a normal expression that is cast compatible
+    // with the target type, which includes types that can be bit-stream cast [6.22.4].
     if (!regExpr) {
         ctx.addDiag(diag::AssertionArgNeedsRegExpr, propExpr.sourceRange()) << type;
         return false;
@@ -803,8 +804,16 @@ bool AssertionInstanceExpression::checkAssertionArg(const PropertyExprSyntax& pr
         return false;
 
     if (!type.isCastCompatible(*bound.type)) {
-        ctx.addDiag(diag::AssertionArgTypeMismatch, propExpr.sourceRange()) << *bound.type << type;
-        return false;
+        if (!type.isBitstreamCastable(*bound.type)) {
+            ctx.addDiag(diag::AssertionArgTypeMismatch, propExpr.sourceRange())
+                << *bound.type << type;
+            return false;
+        }
+
+        if (!Bitstream::checkClassAccess(type, ctx, propExpr.sourceRange()) ||
+            !Bitstream::checkClassAccess(bound, ctx)) {
+            return false;
+        }
     }
 
     auto formalParent = formal.getParentScope();
@@ -1485,8 +1494,9 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
             expr.sourceRange = range;
 
             if (!instanceCtx.flags.has(ASTFlags::LValue) && !expr.type->isMatching(type)) {
-                return *comp.emplace<ConversionExpression>(type, ConversionKind::Explicit, expr,
-                                                           range);
+                auto kind = type.isCastCompatible(*expr.type) ? ConversionKind::Explicit
+                                                              : ConversionKind::BitstreamCast;
+                return *comp.emplace<ConversionExpression>(type, kind, expr, range);
             }
 
             return expr;

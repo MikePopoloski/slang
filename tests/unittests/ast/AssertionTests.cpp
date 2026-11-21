@@ -229,7 +229,7 @@ TEST_CASE("Assertion instance arg type checking") {
 module m;
     int foo[];
     assert property (a(1, 1 iff 1, foo, 1 and 1));
-    assert property (a(1 iff 1, 1, 1));
+    assert property (a(1 iff 1, 1, 1.0));
     assert property (a(1, 1, foo[*]));
 
     int e;

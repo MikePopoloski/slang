@@ -1066,6 +1066,37 @@ endmodule : m
     CHECK(diags[5].code == diag::LetHierarchical);
 }
 
+TEST_CASE("Let typed formals accept bit-stream castable actuals") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct { int a; } us_t;
+    typedef struct { int a; int b; } big_t;
+    let fi(int x) = x;
+    let fus(us_t x) = x.a;
+    let fb(big_t x) = x.a;
+
+    localparam us_t u = '{a: 7};
+    localparam int a1 = fi(u);
+    localparam int a2 = fus(5);
+    int q[$];
+    int a3;
+    int a4 = fb(5);
+    initial a3 = fi(q);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter(DefaultIgnoreWarnings);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssertionArgTypeMismatch);
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<ParameterSymbol>("m.a1").getValue().integer() == 7);
+    CHECK(root.lookupName<ParameterSymbol>("m.a2").getValue().integer() == 5);
+}
+
 TEST_CASE("Let with invalid typed argument in constant expression") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
