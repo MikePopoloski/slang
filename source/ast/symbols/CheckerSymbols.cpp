@@ -785,6 +785,16 @@ public:
                     if (!checkTimed())
                         return;
                     break;
+                case StatementKind::VariableDeclaration: {
+                    // Loop statements are allowed [17.5], including for loops
+                    // that declare their own loop variables.
+                    auto syntax = stmt.template as<VariableDeclStatement>().symbol.getSyntax();
+                    if (!syntax || !syntax->parent ||
+                        syntax->parent->kind != SyntaxKind::ForVariableDeclaration) {
+                        return notAllowed();
+                    }
+                    break;
+                }
                 case StatementKind::ExpressionStatement: {
                     auto& expr = stmt.template as<ExpressionStatement>().expr;
                     switch (expr.kind) {

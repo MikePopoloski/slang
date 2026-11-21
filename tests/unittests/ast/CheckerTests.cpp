@@ -1133,6 +1133,26 @@ endmodule
     CHECK(diags[0].code == diag::InvalidStmtInChecker);
 }
 
+TEST_CASE("Checker procedures with for loop variable declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+checker c(logic a, event e);
+    logic x;
+    logic arr[2];
+    always_comb for (int i = 0; i < 2; i++) x = a;
+    always_ff @e for (int i = 0, j = 1; i < 2; i++) arr[i] <= a;
+endchecker
+
+module m;
+    logic a, clk;
+    c i(a, posedge clk);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Checker instance array exceeds maximum size") {
     auto tree = SyntaxTree::fromText(R"(
 module top;
