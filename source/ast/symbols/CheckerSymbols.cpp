@@ -572,9 +572,12 @@ std::span<const CheckerInstanceSymbol::Connection> CheckerInstanceSymbol::getPor
             continue;
 
         if (conn.formal.kind == SymbolKind::AssertionPort) {
+            ASTContext connCtx = argCtx;
+            connCtx.flags |= ASTFlags::CheckerConnection;
+
             AssertionInstanceExpression::ActualArg actualArgValue;
             if (AssertionInstanceExpression::checkAssertionArg(
-                    *expr, conn.formal.as<AssertionPortSymbol>(), argCtx, actualArgValue,
+                    *expr, conn.formal.as<AssertionPortSymbol>(), connCtx, actualArgValue,
                     /* isRecursiveProp */ false)) {
                 conn.actual = actualArgValue;
             }

@@ -144,23 +144,31 @@ void ASTContext::setAttributes(const Expression& expr,
                                    AttributeSymbol::fromSyntax(syntax, *scope, getLocation()));
 }
 
-static const ASTContext& getAssertionInstantiationContext(const ASTContext& context,
-                                                          bool& sawDefault) {
-    auto curCtx = &context;
-    sawDefault = false;
-    while (curCtx->assertionInstance && curCtx->assertionInstance->prevContext &&
-           curCtx->assertionInstance->symbol &&
-           curCtx->assertionInstance->symbol->kind != SymbolKind::Checker) {
-        sawDefault |= curCtx->assertionInstance->isDefault;
-        curCtx = curCtx->assertionInstance->prevContext;
-    }
-    return *curCtx;
-}
-
 const Scope* ASTContext::getAssertionInstantiationScope() const {
-    bool sawDefault;
-    auto& ctx = getAssertionInstantiationContext(*this, sawDefault);
-    return sawDefault ? nullptr : ctx.scope.get();
+    // A checker's actual argument bound at the instantiation site (to record
+    // the port connection) hasn't been substituted into the checker body yet,
+    // so there's no scope to look things up from until it is.
+    if (flags.has(ASTFlags::CheckerConnection))
+        return nullptr;
+
+    // Lookups are performed after actual arguments have been substituted
+    // into the sequence, property, or checker body [14.14], so when expanding
+    // an argument we continue from the point where the formal was referenced
+    // rather than the scope in which the actual was written.
+    auto curCtx = this;
+    bool sawDefault = false;
+    while (auto inst = curCtx->assertionInstance) {
+        if (!inst->prevContext)
+            break;
+
+        if (!inst->argExpansionLoc) {
+            if (!inst->symbol || inst->symbol->kind == SymbolKind::Checker)
+                break;
+            sawDefault |= inst->isDefault;
+        }
+        curCtx = inst->prevContext;
+    }
+    return sawDefault ? nullptr : curCtx->scope.get();
 }
 
 template<typename TLoc>
@@ -169,8 +177,14 @@ Diagnostic& ASTContext::addDiagImpl(DiagCode code, TLoc loc) const {
         // If we're in an assertion instance we need to walk up the
         // instantiation chain to find the real scope, otherwise we
         // might miss cases where we are in an uninstantiated scope.
-        bool sawDefault;
-        auto& diag = getAssertionInstantiationContext(*this, sawDefault).scope->addDiag(code, loc);
+        auto curCtx = this;
+        while (curCtx->assertionInstance && curCtx->assertionInstance->prevContext &&
+               curCtx->assertionInstance->symbol &&
+               curCtx->assertionInstance->symbol->kind != SymbolKind::Checker) {
+            curCtx = curCtx->assertionInstance->prevContext;
+        }
+
+        auto& diag = curCtx->scope->addDiag(code, loc);
         addAssertionBacktrace(diag);
         return diag;
     }

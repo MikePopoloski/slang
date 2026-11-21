@@ -147,7 +147,8 @@ void registerAST(nb::module_& m) {
         .value("WildcardPortConn", ASTFlags::WildcardPortConn)
         .value("UnknownPortConn", ASTFlags::UnknownPortConn)
         .value("AllowInstanceArray", ASTFlags::AllowInstanceArray)
-        .value("EnumValueType", ASTFlags::EnumValueType);
+        .value("EnumValueType", ASTFlags::EnumValueType)
+        .value("CheckerConnection", ASTFlags::CheckerConnection);
 
     nb::class_<EvaluatedDimension>(m, "EvaluatedDimension")
         .def_ro("kind", &EvaluatedDimension::kind)

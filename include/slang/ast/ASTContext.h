@@ -199,8 +199,14 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// The type being resolved is the type of an enum's values, which is the
     /// enum type itself without any packed dimensions given in its syntax.
     EnumValueType = 1ull << 45,
+
+    /// A checker's actual argument is being bound at the instantiation site
+    /// to record the port connection. Lookups that happen after substitution
+    /// into the checker body (such as for $global_clock) are deferred until
+    /// the argument is expanded there.
+    CheckerConnection = 1ull << 46,
 };
-SLANG_BITMASK(ASTFlags, EnumValueType)
+SLANG_BITMASK(ASTFlags, CheckerConnection)
 
 /// Various flags that can be applied to a constant expression evaluation.
 enum class SLANG_EXPORT EvalFlags : uint8_t {
@@ -559,7 +565,9 @@ public:
     /// to appear, after walking up through any named sequence and property
     /// instantiations. If not in an assertion instance this is just the current scope.
     /// Returns nullptr if the chain ends at a default instance of a declaration,
-    /// meaning that the real point of appearance isn't known.
+    /// or if a checker's actual argument is being bound at the instantiation site
+    /// (ASTFlags::CheckerConnection), meaning that the real point of appearance
+    /// isn't known yet.
     const Scope* getAssertionInstantiationScope() const;
 
     /// Resets the flags for this context; the @a addedFlags will be added to the flag set,

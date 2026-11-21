@@ -2104,6 +2104,40 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Global clocking in checker actual arguments is resolved in the checker body") {
+    auto tree = SyntaxTree::fromText(R"(
+checker chk(sequence s);
+    logic cc;
+    global clocking g @(cc); endclocking
+    cover property (s);
+endchecker
+
+checker chk2(sequence s);
+    cover property (s);
+endchecker
+
+module top;
+    logic a;
+    chk c(@$global_clock a);
+    chk2 c2(@$global_clock a);
+endmodule
+
+module top2;
+    logic clk, a;
+    global clocking gc @(clk); endclocking
+    chk2 c3(@$global_clock a);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MissingGlobalClocking);
+    CHECK(compilation.getSourceManager()->getLineNumber(diags[0].location) == 15);
+}
+
 TEST_CASE("Global clocking in named properties is resolved where the assertion appears") {
     auto tree = SyntaxTree::fromText(R"(
 module top1;
