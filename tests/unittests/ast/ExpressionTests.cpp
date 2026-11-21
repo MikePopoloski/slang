@@ -5248,3 +5248,23 @@ endmodule
     CHECK(m.find<VariableSymbol>("y").getType().getBitWidth() == 11);
     CHECK(m.find("g"));
 }
+
+TEST_CASE("Type reference cast as an equality operand") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam logic [0:1] a = 2'b00, b = 2'b01;
+    localparam bit p1 = type(logic [0:3])'({a, b}) == 1;
+    localparam bit p2 = type(logic [0:3])'({a, b}) !== 4'd2;
+    localparam bit p3 = type(a) == type(logic [0:1]);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<ParameterSymbol>("m.p1").getValue().integer() == 1);
+    CHECK(root.lookupName<ParameterSymbol>("m.p2").getValue().integer() == 1);
+    CHECK(root.lookupName<ParameterSymbol>("m.p3").getValue().integer() == 1);
+}

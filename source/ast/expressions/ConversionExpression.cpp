@@ -276,7 +276,11 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
         return comp.emplace<ConversionExpression>(*type, cast, operand, syntax.sourceRange());
     };
 
-    auto& targetExpr = bind(*syntax.left, context, ASTFlags::AllowDataType);
+    // The cast target is always a type, even when the cast itself is an operand
+    // of an equality operator where type references would otherwise be allowed.
+    ASTContext targetCtx(context);
+    targetCtx.flags &= ~ASTFlags::AllowTypeReferences;
+    auto& targetExpr = bind(*syntax.left, targetCtx, ASTFlags::AllowDataType);
     if (targetExpr.bad()) {
         return badExpr(comp, result(bindOperand()));
     }
