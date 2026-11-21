@@ -106,6 +106,17 @@ const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const AS
     if (argIndex >= argTypes.size())
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
 
+    // String arguments of system tasks and functions can also be given as
+    // integral values that are interpreted as strings (e.g. [21.3.1], [21.6]).
+    if (!isMethod && argTypes[argIndex]->isString()) {
+        auto& expr = Expression::bind(syntax, context);
+        if (expr.bad() || expr.type->isIntegral())
+            return expr;
+
+        return Expression::convertAssignment(context, *argTypes[argIndex],
+                                             const_cast<Expression&>(expr), expr.sourceRange);
+    }
+
     return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, {}, syntax,
                                     context);
 }

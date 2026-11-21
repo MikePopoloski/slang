@@ -150,6 +150,34 @@ endmodule
     CHECK(s2.getValue().str() == "A");
 }
 
+TEST_CASE("String arguments of system functions accept integral values") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [8*20:1] fn = "out.txt";
+    logic [8:1] mode = "w";
+    logic [8*3:1] plus = "foo";
+    string s = "x";
+    real r;
+    integer fd, fd2, p;
+    initial begin
+        fd = $fopen(fn);
+        fd2 = $fopen("out2.txt", mode);
+        p = $test$plusargs(plus);
+        fd = $fopen(s, "r");
+        $dumpfile(fn);
+        fd = $fopen(r);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadAssignment);
+}
+
 TEST_CASE("Format string - class handle and null types") {
     auto tree = SyntaxTree::fromText(R"(
 class my_class;
