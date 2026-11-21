@@ -152,10 +152,10 @@ public:
     static std::string printFile(const SyntaxTree& tree);
 
 private:
-    /// Print a token, optionally synchronizing the output's line mapping to it first.
+    // Print a token, optionally synchronizing the output's line mapping to it first.
     void print(parsing::Token token, bool syncLine);
 
-    /// Emit a line directive if the output's logical position doesn't match @a location.
+    // Emit a line directive if the output's logical position doesn't match location.
     void printLineDirective(SourceLocation location);
 
     bool shouldPrint(const SyntaxNode& syntax) const;
@@ -164,17 +164,17 @@ private:
     std::string buffer;
     std::string_view currentFileName;
 
-    /// Source buffer of the last token mapped by a line directive.
+    // Source buffer of the last token mapped by a line directive.
     BufferID lineBuffer;
 
-    /// Logical line number at the end of the output, as a reader of it would compute.
+    // Logical line number at the end of the output, as a reader of it would compute.
     size_t outputLine = 0;
 
-    /// The last newline character printed if it could still pair with the next
-    /// one to form a single line ending, otherwise zero.
+    // The last newline character printed if it could still pair with the next
+    // one to form a single line ending, otherwise zero.
     char pendingNewline = 0;
 
-    /// Set while printing the tokens of a directive after its first one.
+    // Set while printing the tokens of a directive after its first one.
     bool inDirective = false;
 
     const SourceManager* sourceManager = nullptr;

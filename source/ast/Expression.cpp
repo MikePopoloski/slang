@@ -1250,9 +1250,11 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
             if (expr->kind == ExpressionKind::Call)
                 expr->as<CallExpression>().classQualifier = result.classQualifier;
 
-            // A call qualified by a superclass runs that class's own implementation,
-            // and a pure virtual method has none (LRM 8.21). Qualifying with the calling
-            // class itself is left alone, since tools disagree on whether that dispatches.
+            // Calling a method through 'super' or a base class scope (e.g. Base::f())
+            // bypasses virtual dispatch, so a pure virtual method called this way has
+            // no implementation to run (LRM 8.21). We don't diagnose a qualifier that
+            // names the containing class itself, since tools differ on whether that
+            // form dispatches virtually.
             if (expr->kind == ExpressionKind::Call && result.classQualifier &&
                 symbol->as<SubroutineSymbol>().flags.has(MethodFlags::Pure) &&
                 result.classQualifier != Lookup::getContainingClass(*context.scope).first) {

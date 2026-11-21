@@ -178,8 +178,10 @@ void SyntaxPrinter::printLineDirective(SourceLocation location) {
 
     std::string escapedName;
     for (char c : fileName) {
-        if (uint8_t(c) < 32 || c == 127) {
-            escapedName += fmt::format("\\{:03o}", uint8_t(c));
+        // Control characters are octal escaped; non-ASCII bytes pass through unchanged.
+        auto uc = static_cast<unsigned char>(c);
+        if (uc < 0x20 || uc == 0x7f) {
+            escapedName += fmt::format("\\{:03o}", unsigned(uc));
         }
         else {
             if (c == '\\' || c == '"')

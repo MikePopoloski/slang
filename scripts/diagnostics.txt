@@ -1051,7 +1051,7 @@ warning dup-import DuplicateImport "duplicate import declaration is redundant"
 warning duplicate-definition DuplicateDefinition "duplicate definition of '{}'"
 warning randomize-var-shadow RandomizeConstraintShadow "'{}' in randomize constraint block refers to class member of '{}', but a variable with the same name exists in an enclosing scope; disambiguate with 'local::{}' to reference the enclosing scope variable or 'this.{}' for the class member"
 warning upward-name UpwardHierarchicalName "'{}' is an upward hierarchical name reference"
-warning qualified-pure-virtual-call QualifiedPureVirtualCall "pure virtual method '{}' has no implementation to call through 'super' or a superclass scope"
+warning qualified-pure-virtual-call QualifiedPureVirtualCall "cannot call pure virtual method '{}' through 'super' or a class scope"
 
 subsystem SysFuncs
 error BadSystemSubroutineArg "invalid argument type {} to system {}"

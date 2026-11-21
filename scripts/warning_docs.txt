@@ -2239,10 +2239,10 @@ endclass
 ```
 
 -Wqualified-pure-virtual-call
-A call through 'super' or a superclass scope runs that class's own implementation
-of a method instead of dispatching, and the LRM declares a pure virtual method
-without one. Some tools allow the call anyway, so the error can be downgraded for
-compatibility.
+Calling a method through 'super' or a base class scope (e.g. `Base::f()`) invokes
+that class's implementation directly instead of dispatching virtually. A pure virtual
+method has no implementation, so such a call is invalid. Some tools allow it anyway,
+so this error can be downgraded to a warning for compatibility.
 ```
 virtual class Base;
   pure virtual function int f();

@@ -1248,25 +1248,25 @@ endclass
     auto& diags = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diags);
     CHECK(result == R"(
-source:9:35: warning: pure virtual method 'f' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+source:9:35: warning: cannot call pure virtual method 'f' through 'super' or a class scope [-Wqualified-pure-virtual-call]
     function int viaSuper; return super.f(); endfunction
                                   ^~~~~~~~~
-source:10:35: warning: pure virtual method 'f' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+source:10:35: warning: cannot call pure virtual method 'f' through 'super' or a class scope [-Wqualified-pure-virtual-call]
     function int viaScope; return Base::f(); endfunction
                                   ^~~~~~~~~
-source:11:39: warning: pure virtual method 'f' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+source:11:39: warning: cannot call pure virtual method 'f' through 'super' or a class scope [-Wqualified-pure-virtual-call]
     function int viaThisSuper; return this.super.f(); endfunction
                                       ^~~~~~~~~~~~~~
-source:12:24: warning: pure virtual method 't' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+source:12:24: warning: cannot call pure virtual method 't' through 'super' or a class scope [-Wqualified-pure-virtual-call]
     task viaSuperTask; super.t(); endtask
                        ^~~~~~~~~
-source:19:36: warning: pure virtual method 'f' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+source:19:36: warning: cannot call pure virtual method 'f' through 'super' or a class scope [-Wqualified-pure-virtual-call]
     virtual function int f; return Base::f(); endfunction
                                    ^~~~~~~~~
-source:32:36: warning: pure virtual method 'g' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+source:32:36: warning: cannot call pure virtual method 'g' through 'super' or a class scope [-Wqualified-pure-virtual-call]
     virtual function int g; return Restated::g() + Body::g(); endfunction
                                    ^~~~~~~~~~~~~
-source:41:36: warning: pure virtual method 'f' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+source:41:36: warning: cannot call pure virtual method 'f' through 'super' or a class scope [-Wqualified-pure-virtual-call]
     virtual function int f; return G#(2)::f(); endfunction
                                    ^~~~~~~~~~
 )");

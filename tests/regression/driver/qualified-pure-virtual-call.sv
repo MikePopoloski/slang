@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 
-// A pure virtual method has no implementation for a call through 'super'
-// to run; strict mode is an error.
+// Calling a pure virtual method through 'super' is an error by default.
 // RUN: %slang %s 2>&1 || true
 // CHECK: error:
 // CHECK: Build failed
