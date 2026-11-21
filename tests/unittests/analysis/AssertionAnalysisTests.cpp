@@ -2007,6 +2007,28 @@ endmodule
     CHECK(diags[0].code == diag::SeqMethodEndClock);
 }
 
+TEST_CASE("Sequence method operands are clocked by the calling context") {
+    auto& text = R"(
+module m;
+    logic c1, c2, a, b;
+    sequence ec2; @(posedge c2) a ##1 b; endsequence
+    sequence ec1; @(posedge c1) a ##1 b; endsequence
+    A: assert property (@(posedge c1) a ##2 ec2.matched);
+    B: assert property (@(posedge c1) ec2.matched ##2 b);
+    C: assert property (@(posedge c1) a ##2 ec2.triggered);
+    D: assert property (@(posedge c1) a ##2 ec1.triggered);
+    E: assert property (ec2.matched);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidMulticlockedSeqOp);
+}
+
 TEST_CASE("Global future sampled value func with seq match items") {
     auto& text = R"(
 module m(input logic clk, a, b, c);

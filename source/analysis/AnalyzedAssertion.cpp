@@ -504,6 +504,12 @@ struct AssertionVisitor {
                 if (!args.empty() && args[0]->kind == ExpressionKind::AssertionInstance) {
                     result = visit(args[0]->as<AssertionInstanceExpression>(), outerClock, flags,
                                    /* isForSequenceMethod */ true, /* isMaximalExpr */ true);
+
+                    // The matched method synchronizes the source sequence's end point to
+                    // the clock of the calling context [16.13.5], so if there is one
+                    // the result is a boolean sampled on that clock.
+                    if (ksn == KnownSystemName::Matched && outerClock)
+                        result = inheritedClock(expr, outerClock, flags | VF::RequireSequence);
                 }
             }
         }
