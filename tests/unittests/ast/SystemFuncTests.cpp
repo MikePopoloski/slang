@@ -1901,6 +1901,51 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Scope arguments of $dumpvars, $sdf_annotate, and assertion control tasks search upward "
+          "for instances") {
+    // Instances in a parent instance can be named by their instance name or
+    // definition name [23.8], but other kinds of symbols, such as variables,
+    // aren't searched for upward.
+    auto tree = SyntaxTree::fromText(R"(
+module child;
+    initial begin
+        $assertoff(0, child, parent, p1, c2);
+        $dumpvars(0, child, parent, p1, c2);
+        $sdf_annotate("a.sdf", child);
+        $sdf_annotate("a.sdf", parent);
+        $sdf_annotate("a.sdf", p1);
+        $sdf_annotate("a.sdf", c2);
+        $dumpvars(0, v);
+    end
+endmodule
+
+module parent;
+    int v;
+    child c1();
+    child c2();
+endmodule
+
+module top;
+    parent p1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // The only error is for the variable; the rest are off-by-default
+    // warnings about the upward names.
+    auto& diags = compilation.getAllDiagnostics();
+    std::vector<int> errorLines;
+    for (auto& diag : diags) {
+        if (diag.code == diag::UpwardHierarchicalName)
+            continue;
+        CHECK(diag.code == diag::UndeclaredIdentifier);
+        errorLines.push_back(int(compilation.getSourceManager()->getLineNumber(diag.location)));
+    }
+    CHECK(errorLines == std::vector<int>{10});
+}
+
 TEST_CASE("Weak References") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(

@@ -72,8 +72,13 @@ enum class SLANG_EXPORT LookupFlags {
     /// Lookup is happening within a type reference expression.
     TypeReference = 1 << 11,
 
-    /// Always allow upward name lookup to occur, even with simple identifiers.
-    AlwaysAllowUpward = 1 << 12,
+    /// Upward lookup for a simple name can also find instances in a parent
+    /// instance, either by instance name or by definition name [23.8], as is
+    /// done for the scope arguments of $dumpvars, $sdf_annotate, and the assertion
+    /// control tasks.
+    /// Without this, simple names only search upward for tasks, functions, and
+    /// blocks (and sequences and properties, with HasArguments).
+    AllowUpwardInstances = 1 << 12,
 
     /// Disallow resolving a name to a member declared or imported into
     /// the $unit compilation unit scope.
@@ -86,10 +91,15 @@ enum class SLANG_EXPORT LookupFlags {
     /// from within a cross, as is done for the targets of binsof expressions.
     AllowCoverpoints = 1 << 15,
 
+    /// The name is the target of an invocation with an argument list, such as
+    /// `foo(a)`. Upward lookup for a simple name can then also find named
+    /// sequences and properties in a parent instance.
+    HasArguments = 1 << 16,
+
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated
 };
-SLANG_BITMASK(LookupFlags, AllowCoverpoints)
+SLANG_BITMASK(LookupFlags, HasArguments)
 
 /// Flags that indicate additional details about the result of a lookup operation.
 enum class SLANG_EXPORT LookupResultFlags : uint8_t {

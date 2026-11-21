@@ -1073,7 +1073,7 @@ Expression& Expression::bindName(Compilation& comp, const NameSyntax& syntax,
                                  const ASTContext& context) {
     bitmask<LookupFlags> flags = LookupFlags::None;
     if (invocation && invocation->arguments)
-        flags |= LookupFlags::AllowDeclaredAfter | LookupFlags::AlwaysAllowUpward;
+        flags |= LookupFlags::AllowDeclaredAfter | LookupFlags::HasArguments;
     if (comp.hasFlag(CompilationFlags::AllowUseBeforeDeclare))
         flags |= LookupFlags::AllowDeclaredAfter;
 

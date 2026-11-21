@@ -1256,13 +1256,48 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
         // Don't search upward if we already found the name but couldn't use it
         // (e.g. a function whose return type is still being resolved), since
         // we'd just find the same symbol again.
-        if (flags.has(LookupFlags::AlwaysAllowUpward) && !result.hasError()) {
+        if (!result.hasError() && !flags.has(LookupFlags::Type)) {
+            // Names of tasks, functions, named blocks, and generate blocks are also
+            // searched for upward through the hierarchy [23.8], even when they're
+            // simple identifiers, such as a function call, a task called without
+            // parentheses, or the target of a disable statement. Other tools also
+            // find named sequences and properties instantiated with arguments, and
+            // instances named as the scope arguments of some system tasks.
             LookupResult originalResult = result;
             if (!lookupUpward({}, name, context, flags, result))
                 return;
 
-            if (!result.found)
+            // Only take those kinds of symbols, and only from a parent instance;
+            // anything in our own instance was already considered by the normal
+            // lookup rules.
+            auto getBody = [](const Scope* scope) -> const Symbol* {
+                while (scope && scope->asSymbol().kind != SymbolKind::InstanceBody)
+                    scope = scope->asSymbol().getParentScope();
+                return scope ? &scope->asSymbol() : nullptr;
+            };
+
+            auto isUpwardKind = [&](SymbolKind kind) {
+                switch (kind) {
+                    case SymbolKind::Subroutine:
+                    case SymbolKind::StatementBlock:
+                    case SymbolKind::GenerateBlock:
+                    case SymbolKind::GenerateBlockArray:
+                        return true;
+                    case SymbolKind::Sequence:
+                    case SymbolKind::Property:
+                        return flags.has(LookupFlags::HasArguments);
+                    case SymbolKind::Instance:
+                    case SymbolKind::InstanceArray:
+                        return flags.has(LookupFlags::AllowUpwardInstances);
+                    default:
+                        return false;
+                }
+            };
+
+            if (!result.found || getBody(result.found->getParentScope()) == getBody(&scope) ||
+                !isUpwardKind(result.found->kind)) {
                 result = std::move(originalResult);
+            }
         }
 
         if (!result.found && !result.hasError())

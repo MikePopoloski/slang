@@ -56,10 +56,11 @@ void registerSymbols(nb::module_& m) {
         .value("StaticInitializer", LookupFlags::StaticInitializer)
         .value("ForceHierarchical", LookupFlags::ForceHierarchical)
         .value("TypeReference", LookupFlags::TypeReference)
-        .value("AlwaysAllowUpward", LookupFlags::AlwaysAllowUpward)
+        .value("AllowUpwardInstances", LookupFlags::AllowUpwardInstances)
         .value("DisallowUnitReferences", LookupFlags::DisallowUnitReferences)
         .value("AllowUnnamedGenerate", LookupFlags::AllowUnnamedGenerate)
-        .value("AllowCoverpoints", LookupFlags::AllowCoverpoints);
+        .value("AllowCoverpoints", LookupFlags::AllowCoverpoints)
+        .value("HasArguments", LookupFlags::HasArguments);
 
     nb::enum_<LookupResultFlags>(m, "LookupResultFlags", nb::is_arithmetic(), nb::is_flag())
         .value("None_", LookupResultFlags::None)

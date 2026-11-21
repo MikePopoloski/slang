@@ -1029,6 +1029,96 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Upward lookup of simple subroutine and block names") {
+    auto tree = SyntaxTree::fromText(R"(
+module c;
+    int z;
+    initial begin
+        pt;
+        vf;
+        disable blk;
+        disable pt;
+        z = v;
+    end
+endmodule
+
+module b;
+    int v;
+    initial begin : blk
+        #10;
+    end
+    task pt; endtask
+    function void vf; endfunction
+    c c1();
+endmodule
+
+module top;
+    b b1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // The only error is for the variable; the rest are off-by-default
+    // warnings about the upward names.
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    size_t undeclared = 0, upward = 0;
+    for (auto& diag : diags) {
+        if (diag.code == diag::UndeclaredIdentifier)
+            undeclared++;
+        else if (diag.code == diag::UpwardHierarchicalName)
+            upward++;
+    }
+    CHECK(undeclared == 1);
+    CHECK(upward == 4);
+}
+
+TEST_CASE("Upward lookup of sequences, properties, and lets") {
+    // Tasks, functions, and blocks are searched for upward [23.8]. Sequences
+    // and properties are too when instantiated with arguments, as other tools
+    // allow, but not let declarations or argument-less sequence references.
+    auto tree = SyntaxTree::fromText(R"(
+module c;
+    logic clk, x;
+    int r;
+    initial r = plet(1);
+    assert property (@(posedge clk) pseq(x));
+    assert property (@(posedge clk) pprop(x));
+    initial r = pf(1);
+    assert property (@(posedge clk) pseq2);
+endmodule
+
+module b;
+    let plet(a) = a + 1;
+    sequence pseq(a); a ##1 a; endsequence
+    property pprop(a); a |=> a; endproperty
+    function int pf(int a); return a; endfunction
+    logic y;
+    sequence pseq2; y ##1 y; endsequence
+    c c1();
+endmodule
+
+module top;
+    b b1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    std::vector<int> lines;
+    for (auto& diag : diags) {
+        if (diag.code == diag::UndeclaredIdentifier)
+            lines.push_back(int(compilation.getSourceManager()->getLineNumber(diag.location)));
+        else
+            CHECK(diag.code == diag::UpwardHierarchicalName);
+    }
+    CHECK(lines == std::vector<int>{5, 9});
+}
+
 TEST_CASE("Upward name unit scope") {
     auto file1 = SyntaxTree::fromText(R"(
 module M;

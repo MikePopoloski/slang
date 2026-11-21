@@ -469,7 +469,8 @@ public:
             }
 
             auto& ref = ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(),
-                                                              context);
+                                                              context,
+                                                              LookupFlags::AllowUpwardInstances);
 
             if (ref.kind == ExpressionKind::ArbitrarySymbol) {
                 auto& sym = *ref.as<ArbitrarySymbolExpression>().symbol;
@@ -651,7 +652,7 @@ public:
 
         return ArbitrarySymbolExpression::fromSyntax(context.getCompilation(),
                                                      syntax.as<NameSyntax>(), context,
-                                                     LookupFlags::AlwaysAllowUpward);
+                                                     LookupFlags::AllowUpwardInstances);
     }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
@@ -748,7 +749,8 @@ public:
             }
 
             auto& ref = ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(),
-                                                              context);
+                                                              context,
+                                                              LookupFlags::AllowUpwardInstances);
 
             if (ref.kind == ExpressionKind::ArbitrarySymbol) {
                 auto& sym = *ref.as<ArbitrarySymbolExpression>().symbol;
