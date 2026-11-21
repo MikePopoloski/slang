@@ -1379,6 +1379,30 @@ endmodule
     CHECK(diags[1].code == diag::InterconnectReference);
 }
 
+TEST_CASE("Interconnect nets connected to primitive terminals") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive u_inv(output o, input i);
+    table
+        0 : 1;
+        1 : 0;
+    endtable
+endprimitive
+
+module top;
+    interconnect w1, w2, w3, w4;
+    wire x, y, z;
+    buf g1(x, w1);
+    buf g2(w2, y);
+    tran s1(w3, z);
+    u_inv p1(w4, x);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Net alias on interconnect nets") {
     // IEEE 1800-2023 6.6.8: a net_alias statement is legal with interconnect
     // net_lvalues as long as all nets in the alias are also interconnect nets.
