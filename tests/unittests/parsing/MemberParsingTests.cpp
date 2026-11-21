@@ -1148,6 +1148,24 @@ endprimitive
     CHECK(ports[2]->attributes.empty());
 }
 
+TEST_CASE("Attributes on interface extern method prototypes") {
+    auto& text = R"(
+interface I;
+    (* x *) extern function void f(int x);
+    (* y = 1 *) extern forkjoin task t();
+endinterface
+)";
+
+    auto& unit = parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    auto& iface = unit.members[0]->as<ModuleDeclarationSyntax>();
+    REQUIRE(iface.members.size() == 2);
+    CHECK(iface.members[0]->kind == SyntaxKind::ExternInterfaceMethod);
+    CHECK(iface.members[0]->attributes.size() == 1);
+    CHECK(iface.members[1]->attributes.size() == 1);
+}
+
 TEST_CASE("Extern module/primitive parsing") {
     auto& text = R"(
 extern macromodule m #(parameter int i) (input real r);

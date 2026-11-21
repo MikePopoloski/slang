@@ -412,7 +412,6 @@ MemberSyntax* Parser::parseMemberImpl(AttrList attributes, SyntaxKind parentKind
             return &factory.checkerDataDeclaration(attributes, rand, parseDataDeclaration({}));
         }
         case TokenKind::ExternKeyword:
-            errorIfAttributes(attributes);
             if (auto member = parseExternMember(parentKind, attributes))
                 return member;
             break;
@@ -3712,6 +3711,7 @@ MemberSyntax* Parser::parseExternMember(SyntaxKind parentKind, AttrList attribut
         case TokenKind::MacromoduleKeyword:
         case TokenKind::InterfaceKeyword:
         case TokenKind::ProgramKeyword: {
+            errorIfAttributes(attributes);
             auto keyword = consume();
             auto actualAttrs = parseAttributes();
             auto& header = parseModuleHeader();
@@ -3720,6 +3720,7 @@ MemberSyntax* Parser::parseExternMember(SyntaxKind parentKind, AttrList attribut
             return &factory.externModuleDecl(attributes, keyword, actualAttrs, header);
         }
         case TokenKind::PrimitiveKeyword: {
+            errorIfAttributes(attributes);
             auto keyword = consume();
             auto actualAttrs = parseAttributes();
             auto primitive = consume();
