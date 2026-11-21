@@ -2633,7 +2633,7 @@ SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes)
         declarations.push_back(&parseLocalVariableDeclaration());
 
     auto& expr = parseSequenceExpr(0, /* isInProperty */ false);
-    auto semi2 = expect(TokenKind::Semicolon);
+    auto semi2 = consumeIf(TokenKind::Semicolon);
     auto end = expect(TokenKind::EndSequenceKeyword);
 
     auto blockName = parseNamedBlockClause();

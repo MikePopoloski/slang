@@ -198,6 +198,20 @@ endmodule
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Optional semicolon before endsequence and endproperty") {
+    auto& text = R"(
+module m;
+    sequence s1; a ##1 b endsequence : s1
+    sequence s2; a ##1 b; endsequence
+    property p1; s1 endproperty
+    property p2; s2; endproperty
+endmodule
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Property declarations") {
     auto& text = R"(
 property p3;
