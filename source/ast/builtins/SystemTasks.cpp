@@ -636,6 +636,12 @@ public:
     explicit AssertControlTask(KnownSystemName knownNameId) :
         SystemTaskBase(knownNameId), isFullMethod(name == "$assertcontrol") {}
 
+    // The assertion_type, directive_type, and levels arguments of $assertcontrol
+    // can be left empty to use their default values [20.11].
+    bool allowEmptyArgument(size_t argIndex) const final {
+        return isFullMethod && argIndex >= 1 && argIndex <= 3;
+    }
+
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         if ((isFullMethod && argIndex < 4) || (!isFullMethod && argIndex == 0) ||
@@ -659,7 +665,7 @@ public:
             // Otherwise, only the first arg is an integer expression. The rest, in both
             // cases, are hierarchical references.
             if ((isFullMethod && i < 4) || (!isFullMethod && i == 0)) {
-                if (!args[i]->type->isIntegral())
+                if (args[i]->kind != ExpressionKind::EmptyArgument && !args[i]->type->isIntegral())
                     return badArg(context, *args[i]);
             }
             else {

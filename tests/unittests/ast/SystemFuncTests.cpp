@@ -810,6 +810,28 @@ endmodule
     CHECK(diags[5].code == diag::BadSystemSubroutineArg);
 }
 
+TEST_CASE("assertcontrol allows empty optional arguments") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        $assertcontrol(4, , , 0);
+        $assertcontrol(3, , 7);
+        $assertcontrol(3, 15, , 1, m);
+        $assertcontrol(3, 15, 7, 1, );
+        $assertoff(, m);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::EmptyArgNotAllowed);
+    CHECK(diags[1].code == diag::EmptyArgNotAllowed);
+}
+
 TEST_CASE("assertcontrol") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
