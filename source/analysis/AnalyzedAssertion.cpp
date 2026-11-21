@@ -298,9 +298,11 @@ struct AssertionVisitor {
                     }
 
                     if (lastEndClock && outerClock) {
-                        // The end clock of a sequence used with .triggered or .matched
-                        // must match the outer clock.
-                        if (!outerClock->isEquivalentTo(*lastEndClock)) {
+                        // The end clock of a sequence used with .triggered must match
+                        // the outer clock. The .matched method is specifically for
+                        // detecting the end point of a sequence with a different clock [16.13.5].
+                        if (expr.getKnownSystemName() == KnownSystemName::Triggered &&
+                            !outerClock->isEquivalentTo(*lastEndClock)) {
                             parent.parent.bad = true;
                             auto& diag = parent.addDiag(diag::SeqMethodEndClock, expr.sourceRange);
                             diag << expr.getSubroutineName();

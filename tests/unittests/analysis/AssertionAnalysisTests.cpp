@@ -1989,6 +1989,24 @@ endmodule
     CHECK(diags[9].code == diag::AssertionNoClock);
 }
 
+TEST_CASE("Matched allows a different end clock") {
+    auto& text = R"(
+module m(input logic clk, input logic clk2);
+    logic a, b;
+    sequence s2; @(posedge clk2) a ##1 b; endsequence
+    a1: assert property (@(posedge clk) a ##1 (b && s2.matched));
+    a2: assert property (@(posedge clk) a ##1 (b && s2.triggered));
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SeqMethodEndClock);
+}
+
 TEST_CASE("Global future sampled value func with seq match items") {
     auto& text = R"(
 module m(input logic clk, a, b, c);
