@@ -4042,7 +4042,11 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
             return;
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::GenerateRegion:
-            if (!isAllowedInGenerate(member.kind)) {
+            // Checker variables (including rand ones) can be declared in
+            // generate blocks within checkers [17.2].
+            if (!isAllowedInGenerate(member.kind) &&
+                (member.kind != SyntaxKind::CheckerDataDeclaration ||
+                 currentDefinitionKind != SyntaxKind::CheckerDeclaration)) {
                 error(diag::NotAllowedInGenerate);
                 return;
             }

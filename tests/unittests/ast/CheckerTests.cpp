@@ -1153,6 +1153,42 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Checker variables in generate blocks within checkers") {
+    auto tree = SyntaxTree::fromText(R"(
+checker c(event e);
+    if (1) begin : g
+        rand bit gv;
+        assert property (@e gv == g.gv);
+    end
+    for (genvar i = 0; i < 2; i++) begin : f
+        rand bit fv;
+    end
+    generate
+        rand bit grv;
+    endgenerate
+endchecker
+
+module n;
+    if (1) begin : g
+        rand bit x;
+    end
+endmodule
+
+module m;
+    logic clk;
+    c i(posedge clk);
+    n n1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NotAllowedInGenerate);
+}
+
 TEST_CASE("Checker instance array exceeds maximum size") {
     auto tree = SyntaxTree::fromText(R"(
 module top;
