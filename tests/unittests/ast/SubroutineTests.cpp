@@ -9,6 +9,7 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
@@ -463,13 +464,40 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::ConstEvalDPINotConstant);
-    CHECK(diags[1].code == diag::ConstEvalVoidNotConstant);
-    CHECK(diags[2].code == diag::TaskFromFunction);
-    CHECK(diags[3].code == diag::ConstEvalFunctionArgDirection);
-    CHECK(diags[4].code == diag::ConstEvalFunctionInsideGenerate);
-    CHECK(diags[5].code == diag::ConstEvalTaskNotConstant);
+    CHECK(diags[1].code == diag::TaskFromFunction);
+    CHECK(diags[2].code == diag::ConstEvalFunctionArgDirection);
+    CHECK(diags[3].code == diag::ConstEvalFunctionInsideGenerate);
+    CHECK(diags[4].code == diag::ConstEvalTaskNotConstant);
+}
+
+TEST_CASE("Void function calls inside constant functions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function automatic void inc(int a); endfunction
+    function automatic void early(int a);
+        if (a != 0) return;
+        $error("not reached");
+    endfunction
+    function automatic int g(int a); return a; endfunction
+    function automatic int f(int a);
+        inc(a);
+        early(1);
+        void'(g(a));
+        return a + 1;
+    endfunction
+
+    localparam int P = f(1);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& p = compilation.getRoot().lookupName<ParameterSymbol>("m.P");
+    CHECK(p.getValue().integer() == 2);
 }
 
 TEST_CASE("Subroutine ref arguments") {

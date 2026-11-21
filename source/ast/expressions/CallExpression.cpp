@@ -833,8 +833,9 @@ ConstantValue CallExpression::invokeSubroutine(EvalContext& context, const Subro
     for (size_t i = 0; i < formals.size(); i++)
         context.createLocal(formals[i], args[i]);
 
-    SLANG_ASSERT(symbol.returnValVar);
-    context.createLocal(symbol.returnValVar);
+    // Void functions don't have a return value variable.
+    if (symbol.returnValVar)
+        context.createLocal(symbol.returnValVar);
 
     using ER = Statement::EvalResult;
     ER er = symbol.getBody().eval(context);
@@ -845,7 +846,10 @@ ConstantValue CallExpression::invokeSubroutine(EvalContext& context, const Subro
     if (er == ER::Disable)
         context.addDiag(diag::ConstEvalDisableTarget, context.getDisableRange());
 
-    ConstantValue result = std::move(*context.findLocal(symbol.returnValVar));
+    // A void function has no value, but a successful call must still produce a
+    // non-bad result so that the calling statement doesn't fail.
+    ConstantValue result = symbol.returnValVar ? std::move(*context.findLocal(symbol.returnValVar))
+                                               : ConstantValue(ConstantValue::NullPlaceholder{});
     context.popFrame();
 
     if (er == ER::Fail || er == ER::Disable)
@@ -943,11 +947,6 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
     if (subroutine.flags.has(MethodFlags::BuiltIn | MethodFlags::InterfaceExtern |
                              MethodFlags::ModportExport | MethodFlags::ModportImport)) {
         context.addDiag(diag::ConstEvalSubroutineNotConstant, range) << subroutine.name;
-        return false;
-    }
-
-    if (subroutine.getReturnType().isVoid()) {
-        context.addDiag(diag::ConstEvalVoidNotConstant, range);
         return false;
     }
 
