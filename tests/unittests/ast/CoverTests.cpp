@@ -198,6 +198,32 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Coverpoint names are not visible in cross bin expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i, j;
+    covergroup cg1;
+        coverpoint i { bins lo = {[0:3]}; }
+        coverpoint j;
+        crs: cross i, j {
+            bins b = binsof(i) iff (i > 0);
+            bins x = binsof(i.lo) intersect {[j:5]};
+            bins y = binsof(i) with (i + j < 3);
+        }
+    endgroup
+    covergroup cg2 with function sample(int v, bit b);
+        cr: cross v, b { bins w = binsof(v) iff (b); }
+    endgroup
+    cg1 c1 = new;
+    cg2 c2 = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Cover points") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

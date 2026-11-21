@@ -1080,6 +1080,9 @@ Expression& Expression::bindName(Compilation& comp, const NameSyntax& syntax,
     if (context.flags.has(ASTFlags::StaticInitializer))
         flags |= LookupFlags::StaticInitializer;
 
+    if (context.flags.has(ASTFlags::AllowCoverpoint))
+        flags |= LookupFlags::AllowCoverpoints;
+
     if (context.flags.has(ASTFlags::BindInstantiation))
         flags |= LookupFlags::DisallowWildcardImport | LookupFlags::DisallowUnitReferences;
 

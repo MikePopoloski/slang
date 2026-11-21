@@ -82,10 +82,14 @@ enum class SLANG_EXPORT LookupFlags {
     /// Allow unnamed generate blocks to be looked up by their external name.
     AllowUnnamedGenerate = 1 << 14,
 
+    /// The lookup can find coverpoints declared in the enclosing covergroup
+    /// from within a cross, as is done for the targets of binsof expressions.
+    AllowCoverpoints = 1 << 15,
+
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated
 };
-SLANG_BITMASK(LookupFlags, AllowUnnamedGenerate)
+SLANG_BITMASK(LookupFlags, AllowCoverpoints)
 
 /// Flags that indicate additional details about the result of a lookup operation.
 enum class SLANG_EXPORT LookupResultFlags : uint8_t {
