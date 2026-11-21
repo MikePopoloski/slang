@@ -1126,6 +1126,28 @@ endmodule
     CHECK(diagnostics[3].code == diag::InterconnectInitializer);
 }
 
+TEST_CASE("UDP ANSI ports with attributes") {
+    auto& text = R"(
+primitive p1((* a *) output o, (* b, c = 1 *) input i, input j);
+    table
+        0 0 : 1;
+        1 ? : 0;
+    endtable
+endprimitive
+)";
+
+    auto& unit = parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    auto& udp = unit.members[0]->as<UdpDeclarationSyntax>();
+    REQUIRE(udp.portList->kind == SyntaxKind::AnsiUdpPortList);
+    auto& ports = udp.portList->as<AnsiUdpPortListSyntax>().ports;
+    REQUIRE(ports.size() == 3);
+    CHECK(ports[0]->attributes.size() == 1);
+    CHECK(ports[1]->attributes.size() == 1);
+    CHECK(ports[2]->attributes.empty());
+}
+
 TEST_CASE("Extern module/primitive parsing") {
     auto& text = R"(
 extern macromodule m #(parameter int i) (input real r);

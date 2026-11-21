@@ -3046,7 +3046,9 @@ UdpPortListSyntax& Parser::parseUdpPortList(bool& isSequential) {
         return factory.wildcardUdpPortList(openParen, dot, star, closeParen,
                                            expect(TokenKind::Semicolon));
     }
-    else if (peek(TokenKind::OutputKeyword) || peek(TokenKind::InputKeyword)) {
+    else if (peek(TokenKind::OutputKeyword) || peek(TokenKind::InputKeyword) || isStartOfAttrs(0)) {
+        // Attributes can only precede ANSI style port declarations;
+        // the non-ANSI list is just identifiers.
         Token closeParen;
         SmallVector<TokenOrSyntax, 4> ports;
         parseList<isPossibleUdpPort, isEndOfParenList>(
