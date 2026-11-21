@@ -180,6 +180,35 @@ endclass
     CHECK(diags[4].code == diag::IntBoolConv);
 }
 
+TEST_CASE("Implicit boolean conversion warnings for assertion instance args") {
+    auto tree = SyntaxTree::fromText(R"(
+property p(seq, clk, rst=1'b0);
+    @(posedge clk) disable iff (rst) seq;
+endproperty
+
+module top;
+    logic clk, rst;
+    logic [1:0] a, b;
+
+    // These don't warn
+    A: cover property(p(a & b, clk, rst));
+    B: cover property(@(posedge clk) disable iff (rst) a & b);
+
+    // These do
+    C: cover property(p(a + b, clk, rst));
+    D: cover property(@(posedge clk) disable iff (rst) a + b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::IntBoolConv);
+    CHECK(diags[1].code == diag::IntBoolConv);
+}
+
 TEST_CASE("Useless cast warnings") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

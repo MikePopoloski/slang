@@ -9,6 +9,7 @@
 
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/symbols/AttributeSymbol.h"
@@ -286,8 +287,19 @@ bool ASTContext::requireBooleanConvertible(const Expression& expr) const {
         //   if (a & b) begin end
         //   if (a >> 2) begin end
         auto isMaskOrRShift = [&] {
-            if (expr.kind == ExpressionKind::BinaryOp) {
-                auto op = expr.as<BinaryExpression>().op;
+            // Look through conversions that don't change the type, such as the
+            // self-determined cast applied to actual arguments substituted
+            // into sequence and property instances.
+            auto curr = &expr;
+            while (curr->kind == ExpressionKind::Conversion) {
+                auto& operand = curr->as<ConversionExpression>().operand();
+                if (!operand.type->isMatching(*curr->type))
+                    break;
+                curr = &operand;
+            }
+
+            if (curr->kind == ExpressionKind::BinaryOp) {
+                auto op = curr->as<BinaryExpression>().op;
                 return op == BinaryOperator::BinaryAnd || op == BinaryOperator::LogicalShiftRight ||
                        op == BinaryOperator::ArithmeticShiftRight ||
                        op == BinaryOperator::BinaryXor || op == BinaryOperator::BinaryXnor;
