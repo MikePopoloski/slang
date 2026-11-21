@@ -174,6 +174,30 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Coverpoint bin values are statically cast to enum types") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef enum {RED, GREEN, BLUE} color_t;
+    typedef enum {X1, X2} other_t;
+    color_t c;
+    covergroup cg;
+        color_t c1: coverpoint c {
+            bins b1 = {1};
+            bins b2 = {RED, 2};
+            bins b3 = {X2};
+            bins b4 = {[GREEN:$]};
+            bins t1 = (RED => 1 => [0:2]);
+        }
+    endgroup
+    cg cg_inst = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Cover points") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

@@ -10,6 +10,8 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
+#include "slang/ast/expressions/ConversionExpression.h"
+#include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
@@ -557,6 +559,41 @@ CoverageBinSymbol& CoverageBinSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
+// Bin values are statically cast to the coverpoint type [19.5.7]. For the types a
+// coverpoint can have, that only differs from assignment conversion when the target
+// is an enum, which doesn't allow implicit conversions from other types, so bind
+// against the enum's base type and then explicitly convert the result.
+static const Expression& bindBinValue(const Type& type, const ExpressionSyntax& syntax,
+                                      const ASTContext& context) {
+    auto& ct = type.getCanonicalType();
+    if (!ct.isEnum())
+        return Expression::bindRValue(type, syntax, {}, context);
+
+    auto& expr = Expression::bindRValue(ct.as<EnumType>().baseType, syntax, {}, context);
+    if (expr.bad())
+        return expr;
+
+    auto& comp = context.getCompilation();
+    auto cast = [&](const Expression& e) -> Expression& {
+        auto& operand = const_cast<Expression&>(e);
+        if (e.kind == ExpressionKind::UnboundedLiteral)
+            return operand;
+        return *comp.emplace<ConversionExpression>(type, ConversionKind::Explicit, operand,
+                                                   e.sourceRange);
+    };
+
+    if (expr.kind == ExpressionKind::ValueRange) {
+        auto& vre = expr.as<ValueRangeExpression>();
+        auto result = comp.emplace<ValueRangeExpression>(*expr.type, vre.rangeKind,
+                                                         cast(vre.left()), cast(vre.right()),
+                                                         expr.sourceRange);
+        result->syntax = expr.syntax;
+        return *result;
+    }
+
+    return cast(expr);
+}
+
 static const Expression* bindIffExpr(const CoverageIffClauseSyntax* syntax,
                                      const ASTContext& context) {
     if (!syntax)
@@ -623,7 +660,7 @@ void CoverageBinSymbol::resolve() const {
             SmallVector<const Expression*> buffer;
             auto& rcbis = init->as<RangeCoverageBinInitializerSyntax>();
             for (auto elem : rcbis.ranges->valueRanges)
-                buffer.push_back(&Expression::bindRValue(type, *elem, {}, context));
+                buffer.push_back(&bindBinValue(type, *elem, context));
             values = buffer.copy(comp);
 
             if (rcbis.withClause)
@@ -682,8 +719,7 @@ CoverageBinSymbol::TransRangeList::TransRangeList(const TransRangeSyntax& syntax
                                                   const ASTContext& context) {
     SmallVector<const Expression*> buffer;
     for (auto elem : syntax.items) {
-        auto& expr = Expression::bindRValue(type, *elem, {}, context);
-        buffer.push_back(&expr);
+        buffer.push_back(&bindBinValue(type, *elem, context));
     }
 
     auto& comp = context.getCompilation();
