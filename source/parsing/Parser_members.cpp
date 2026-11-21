@@ -4043,10 +4043,13 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::GenerateRegion:
             // Checker variables (including rand ones) can be declared in
-            // generate blocks within checkers [17.2].
+            // generate blocks within checkers [17.2], and extern task and
+            // function prototypes in generate blocks within interfaces [27.3].
             if (!isAllowedInGenerate(member.kind) &&
                 (member.kind != SyntaxKind::CheckerDataDeclaration ||
-                 currentDefinitionKind != SyntaxKind::CheckerDeclaration)) {
+                 currentDefinitionKind != SyntaxKind::CheckerDeclaration) &&
+                (member.kind != SyntaxKind::ExternInterfaceMethod ||
+                 currentDefinitionKind != SyntaxKind::InterfaceDeclaration)) {
                 error(diag::NotAllowedInGenerate);
                 return;
             }

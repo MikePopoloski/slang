@@ -908,6 +908,35 @@ endmodule
     CHECK(diags[0].code == diag::DupInterfaceExternMethod);
 }
 
+TEST_CASE("Extern prototypes in interface generate blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    if (1) begin : g
+        extern task t();
+        extern function int f(int a);
+    end
+endinterface
+
+module m;
+    if (1) begin : g
+        extern task t();
+    end
+endmodule
+
+module top;
+    I i();
+    m m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NotAllowedInGenerate);
+}
+
 TEST_CASE("Instance caching with iface port side effects and downward names") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;

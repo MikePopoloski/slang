@@ -2235,7 +2235,13 @@ void Compilation::checkExternIfaceMethods(std::span<const MethodPrototypeSymbol*
             auto scope = proto->getParentScope();
             SLANG_ASSERT(scope);
 
+            // Prototypes declared in generate blocks are allowed [27.3] but can't
+            // be exported through a modport, so they can never have an
+            // implementation; don't complain about that.
             auto& parent = scope->asSymbol();
+            if (parent.kind == SymbolKind::GenerateBlock)
+                continue;
+
             if (!parent.name.empty() && !proto->name.empty()) {
                 auto& diag = scope->addDiag(diag::MissingExternImpl, proto->location);
                 diag << SemanticFacts::getSubroutineKindStr(proto->subroutineKind);
