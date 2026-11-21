@@ -362,6 +362,24 @@ private:
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
     Diagnostic& addDiag(DiagCode code, SourceRange range);
 
+    // Tracks line continuations in the text of a macro definition to find where
+    // the definition ends. Used both when parsing a `define and when skipping one
+    // in an inactive conditional block.
+    struct MacroBodyEndTracker {
+        // Returns true if the given token is past the end of the definition,
+        // i.e. it starts a new line that wasn't continued, or is the end of file.
+        bool isPastEnd(Token token, bool allowTrailingSpace);
+
+        // Notes that the given token, which was not past the end, is part of the
+        // macro text.
+        void addToken(Token token);
+
+    private:
+        bool hasContinuation = false;
+        bool escapedContinuation = false;
+        int numContinuations = 0;
+    };
+
     // This is a small collection of state used to keep track of where we are in a tree of
     // nested conditional directives.
     struct BranchEntry {

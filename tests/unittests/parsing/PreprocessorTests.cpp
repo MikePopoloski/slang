@@ -66,6 +66,41 @@ TEST_CASE("System include file") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Directives in macro definitions don't end skipped blocks") {
+    auto& text = R"(
+`ifdef UNDEF
+`define Q `endif
+bogus1
+`endif
+`ifdef UNDEF
+`define Q(a) a \
+  `endif \
+  `else
+bogus2
+`define R // c
+`else
+ok1
+`endif
+`ifndef UNDEF
+ok2
+`else
+`define T `else
+bogus3
+`endif
+`ifdef UNDEF
+`define E \foo\
+  `endif
+bogus4
+`endif
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result.find("bogus") == std::string::npos);
+    CHECK(result.find("ok1") != std::string::npos);
+    CHECK(result.find("ok2") != std::string::npos);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Double include, no pragma once") {
     auto& text = R"(
 `include "local.svh"

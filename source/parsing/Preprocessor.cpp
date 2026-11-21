@@ -720,6 +720,58 @@ Trivia Preprocessor::handleResetAllDirective(Token directive) {
     return createSimpleDirective(directive);
 }
 
+bool Preprocessor::MacroBodyEndTracker::isPastEnd(Token token, bool allowTrailingSpace) {
+    // The definition ends at the first new line that doesn't follow a line continuation.
+    if (token.kind == TokenKind::EndOfFile)
+        return true;
+
+    if (token.kind == TokenKind::LineContinuation) {
+        hasContinuation = true;
+        numContinuations++;
+        return false;
+    }
+
+    // An escaped identifier that ends in a backslash acts as a continuation
+    // if it's directly followed by the new line.
+    auto triviaList = token.trivia();
+    if (std::exchange(escapedContinuation, false) && !triviaList.empty() &&
+        triviaList[0].kind == TriviaKind::EndOfLine) {
+        hasContinuation = true;
+    }
+
+    for (const Trivia& trivia : triviaList) {
+        switch (trivia.kind) {
+            case TriviaKind::EndOfLine:
+                if (!hasContinuation)
+                    return true;
+                hasContinuation = false;
+                break;
+            case TriviaKind::LineComment:
+                // A line comment can have a trailing line continuation.
+                hasContinuation = (trivia.getRawText().back() == '\\');
+                break;
+            case TriviaKind::Whitespace:
+                // Only allow trailing spaces after the continuation if the option is enabled.
+                // Also, the trailing space is not allowed for the first line of the macro
+                // definition.
+                if (!allowTrailingSpace || numContinuations == 1)
+                    hasContinuation = false;
+                break;
+            default:
+                hasContinuation = false;
+                break;
+        }
+    }
+    return false;
+}
+
+void Preprocessor::MacroBodyEndTracker::addToken(Token token) {
+    if (token.kind == TokenKind::Identifier) {
+        auto raw = token.rawText();
+        escapedContinuation = !raw.empty() && raw.back() == '\\';
+    }
+}
+
 Trivia Preprocessor::handleDefineDirective(Token directive) {
     MacroFormalArgumentListSyntax* formalArguments = nullptr;
     bool bad = false;
@@ -769,62 +821,22 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
 
     // consume all remaining tokens as macro text
     scratchTokenBuffer.clear();
-    bool hasContinuation = false;
-    int numContinuations = 0;
+    MacroBodyEndTracker endTracker;
     while (true) {
-        // Figure out when to stop consuming macro text. This involves looking for new lines in the
-        // trivia of each token as we grab it. If there's a new line without a preceeding line
-        // continuation token we know the macro is finished.
         Token t = peek();
-        if (t.kind == TokenKind::EndOfFile)
-            break;
-        if (t.kind == TokenKind::LineContinuation) {
-            hasContinuation = true;
-            numContinuations++;
-            scratchTokenBuffer.push_back(consume());
-            continue;
-        }
-
-        bool done = false;
-        auto triviaList = t.trivia();
-        for (const Trivia& trivia : triviaList) {
-            switch (trivia.kind) {
-                case TriviaKind::EndOfLine:
-                    if (hasContinuation)
-                        hasContinuation = false;
-                    else
-                        done = true;
-                    break;
-                case TriviaKind::LineComment:
-                    // A line comment can have a trailing line continuation.
-                    hasContinuation = (trivia.getRawText().back() == '\\');
-                    break;
-                case TriviaKind::Whitespace:
-                    // Only allow trailing spaces after the continuation if the option is enabled.
-                    // Also, the trailing space is not allowed for the first line of the macro
-                    // definition.
-                    if (!lexerOptions.allowMacroTrailingSpace || numContinuations == 1)
-                        hasContinuation = false;
-                    break;
-                default:
-                    hasContinuation = false;
-                    break;
-            }
-            if (done)
-                break;
-        }
-        if (done)
+        if (endTracker.isPastEnd(t, lexerOptions.allowMacroTrailingSpace))
             break;
 
         consume();
+        endTracker.addToken(t);
 
         if (t.kind == TokenKind::Identifier) {
-            // Escaped identifiers that end in a backslash act as a continuation.
+            // Escaped identifiers that end in a backslash act as a continuation;
+            // split the backslash off into its own token.
             auto raw = t.rawText();
             if (!raw.empty() && raw.back() == '\\') {
                 auto nextTrivia = peek().trivia();
                 if (!nextTrivia.empty() && nextTrivia[0].kind == TriviaKind::EndOfLine) {
-                    hasContinuation = true;
                     scratchTokenBuffer.push_back(
                         t.withRawText(alloc, raw.substr(0, raw.size() - 1)));
                     scratchTokenBuffer.push_back(Token(alloc, TokenKind::LineContinuation, {}, "\\",
@@ -959,14 +971,25 @@ Trivia Preprocessor::parseBranchDirective(Token directive,
         // (elsif, else, endif) at the same nesting level. Inner ifdef/endif
         // pairs are included in the disabled tokens
         int nestedDepth = 0;
+
+        // Directives within the text of a macro definition are hidden and don't
+        // terminate the block [22.6], so track whether we're inside of a `define.
+        std::optional<MacroBodyEndTracker> defineTracker;
+
         while (true) {
             auto token = nextRaw();
 
             bool done = false;
-            if (token.kind == TokenKind::EndOfFile) {
+            if (defineTracker &&
+                !defineTracker->isPastEnd(token, lexerOptions.allowMacroTrailingSpace)) {
+                // Part of the macro body; skip it.
+                defineTracker->addToken(token);
+            }
+            else if (token.kind == TokenKind::EndOfFile) {
                 done = true;
             }
             else if (token.kind == TokenKind::Directive) {
+                defineTracker.reset();
                 switch (token.directiveKind()) {
                     case SyntaxKind::IfDefDirective:
                     case SyntaxKind::IfNDefDirective:
@@ -983,9 +1006,15 @@ Trivia Preprocessor::parseBranchDirective(Token directive,
                         if (nestedDepth == 0)
                             done = true;
                         break;
+                    case SyntaxKind::DefineDirective:
+                        defineTracker.emplace();
+                        break;
                     default:
                         break;
                 }
+            }
+            else {
+                defineTracker.reset();
             }
 
             if (done) {
