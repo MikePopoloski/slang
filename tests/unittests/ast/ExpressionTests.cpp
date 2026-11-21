@@ -5268,3 +5268,24 @@ endmodule
     CHECK(root.lookupName<ParameterSymbol>("m.p2").getValue().integer() == 1);
     CHECK(root.lookupName<ParameterSymbol>("m.p3").getValue().integer() == 1);
 }
+
+TEST_CASE("Element select of signed packed array keeps declared range") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef bit signed [1:-1][0:3] T;
+    localparam T P = T'(12'hc3a);
+    localparam string t = $typename(P[1]);
+    localparam bit b = P[1][0];
+    localparam bit [1:0] p = P[1][0 +: 2];
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<ParameterSymbol>("m.t").getValue().str() == "bit[0:3]");
+    CHECK(root.lookupName<ParameterSymbol>("m.b").getValue().integer() == 1);
+    CHECK(root.lookupName<ParameterSymbol>("m.p").getValue().integer() == 3);
+}

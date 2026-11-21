@@ -1125,8 +1125,11 @@ static const Type* changeSign(const TypeProvider& typeProvider, const Type& type
     else
         flags &= ~IntegralFlags::Signed;
 
-    if (dims.size() == 1)
-        return &typeProvider.getType(type.getBitWidth(), flags);
+    // A single dimension with the canonical [N-1:0] range can use a cached vector type.
+    // Anything else needs to be rebuilt to preserve the declared range.
+    auto width = type.getBitWidth();
+    if (dims.size() == 1 && dims[0] == ConstantRange{int32_t(width - 1), 0})
+        return &typeProvider.getType(width, flags);
 
     // Rebuild the array with the new element type.
     curr = &typeProvider.getScalarType(flags);
