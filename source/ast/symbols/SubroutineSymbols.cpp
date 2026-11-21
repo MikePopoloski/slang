@@ -484,13 +484,12 @@ void SubroutineSymbol::setOverride(const SubroutineSymbol& parentMethod) const {
     auto scope = getParentScope();
     SLANG_ASSERT(scope);
 
-    checkVirtualMethodMatch(*scope, parentMethod, *this, /* allowDerivedReturn */ true);
+    checkVirtualMethodMatch(*scope, parentMethod, *this);
 }
 
 void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
                                                const SubroutineSymbol& parentMethod,
-                                               const SubroutineSymbol& derivedMethod,
-                                               bool allowDerivedReturn) {
+                                               const SubroutineSymbol& derivedMethod) {
     if (parentMethod.subroutineKind != derivedMethod.subroutineKind) {
         auto& diag = scope.addDiag(diag::VirtualKindMismatch, derivedMethod.location);
         diag.addNote(diag::NoteDeclarationHere, parentMethod.location);
@@ -504,9 +503,10 @@ void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
 
     // Check that return type and arguments match what was declared in the superclass method.
     // If the return type is a class type, it can be one that derives from the return type
-    // declared in the superclass method.
-    if (!retType.isMatching(parentRetType) && (!allowDerivedReturn || !retType.isClass() ||
-                                               !parentRetType.isAssignmentCompatible(retType))) {
+    // declared in the superclass method. This also applies to methods that implement
+    // or override interface class methods [8.26.6.1].
+    if (!retType.isMatching(parentRetType) &&
+        (!retType.isClass() || !parentRetType.isAssignmentCompatible(retType))) {
         Diagnostic* diag;
         auto typeSyntax = derivedMethod.declaredReturnType.getTypeSyntax();
         if (typeSyntax)

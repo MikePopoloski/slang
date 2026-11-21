@@ -171,8 +171,7 @@ public:
                                                SmallVectorBase<FormalArgumentSymbol*>& arguments);
 
     static void checkVirtualMethodMatch(const Scope& scope, const SubroutineSymbol& parentMethod,
-                                        const SubroutineSymbol& derivedMethod,
-                                        bool allowDerivedReturn);
+                                        const SubroutineSymbol& derivedMethod);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }
 

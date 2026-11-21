@@ -5668,3 +5668,36 @@ endclass
     CHECK(diags[4].code == diag::NonStaticClassProperty);
     CHECK(diags[5].code == diag::NonStaticClassMethod);
 }
+
+TEST_CASE("Interface class methods implemented with derived class return types") {
+    auto tree = SyntaxTree::fromText(R"(
+class R; endclass
+class R2 extends R; endclass
+class Other; endclass
+
+interface class A;
+    pure virtual function R f();
+    pure virtual function R g();
+endclass
+
+interface class B extends A;
+    pure virtual function R2 f();
+endclass
+
+class X implements B;
+    virtual function R2 f();
+        return null;
+    endfunction
+    virtual function Other g();
+        return null;
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::VirtualReturnMismatch);
+}

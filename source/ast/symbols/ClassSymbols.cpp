@@ -540,8 +540,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
                 if (auto protoSub = proto.getSubroutine()) {
                     SubroutineSymbol::checkVirtualMethodMatch(*context.scope,
                                                               baseSub->as<SubroutineSymbol>(),
-                                                              *protoSub,
-                                                              /* allowDerivedReturn */ true);
+                                                              *protoSub);
                 }
             }
         }
@@ -834,8 +833,8 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                         auto parentSub = parent.getSubroutine();
                         auto derivedSub = derived.getSubroutine();
                         if (parentSub && derivedSub) {
-                            SubroutineSymbol::checkVirtualMethodMatch(
-                                *this, *parentSub, *derivedSub, /* allowDerivedReturn */ false);
+                            SubroutineSymbol::checkVirtualMethodMatch(*this, *parentSub,
+                                                                      *derivedSub);
                         }
 
                         if (auto overrides = parent.getOverride())
@@ -904,8 +903,7 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                 }
 
                 // Finally, verify the method signatures match.
-                SubroutineSymbol::checkVirtualMethodMatch(*this, *methodSub, implSub,
-                                                          /* allowDerivedReturn */ false);
+                SubroutineSymbol::checkVirtualMethodMatch(*this, *methodSub, implSub);
             }
 
             declaredIfacesBuf.push_back(iface);
