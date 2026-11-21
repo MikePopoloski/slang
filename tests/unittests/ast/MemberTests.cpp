@@ -880,6 +880,49 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Default clocking inherited by nested declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(input logic clk, input logic clk2);
+    default clocking cb @(posedge clk); endclocking
+
+    interface ifc;
+        initial ##1 $display("ifc");
+    endinterface
+
+    module inner;
+        default clocking cb2 @(posedge clk2); endclocking
+        initial ##1 $display("inner");
+
+        module innermost;
+            initial ##1 $display("innermost");
+        endmodule
+        innermost m();
+    endmodule
+
+    if (1) begin : g
+        inner i();
+    end
+    ifc f();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto getClocking = [&](std::string_view path) {
+        auto& inst = root.lookupName<InstanceSymbol>(path);
+        auto sym = compilation.getDefaultClocking(inst.body);
+        REQUIRE(sym);
+        return sym->name;
+    };
+
+    CHECK(getClocking("top.f") == "cb");
+    CHECK(getClocking("top.g.i") == "cb2");
+    CHECK(getClocking("top.g.i.m") == "cb2");
+}
+
 TEST_CASE("Clocking block errors") {
     auto tree = SyntaxTree::fromText(R"(
 module test;

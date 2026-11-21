@@ -1341,6 +1341,16 @@ const Symbol* Compilation::getDefaultClocking(const Scope& scope) const {
             return getDefaultClocking(*parent);
     }
 
+    // Nested module and interface declarations inherit from the
+    // scope in which they are declared [14.12].
+    if (lookupSym && lookupSym->kind == SymbolKind::InstanceBody) {
+        auto parent = lookupSym->as<InstanceBodySymbol>().getDefinition().getParentScope();
+        if (parent && parent->asSymbol().kind != SymbolKind::CompilationUnit &&
+            parent->asSymbol().kind != SymbolKind::Root) {
+            return getDefaultClocking(*parent);
+        }
+    }
+
     return nullptr;
 }
 
