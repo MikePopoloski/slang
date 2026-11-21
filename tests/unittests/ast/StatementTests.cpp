@@ -1313,7 +1313,9 @@ module m;
         deassign {i, l[0]};
         force {w[1], i[1]} = 1;
         release i[1];
-        force {w[1], x} = 1;
+        force {w[1], x[0]} = 1;
+        force x = 1;
+        release x;
         assign q = 1;
         force st.a = 1;
     end
@@ -1329,7 +1331,7 @@ endmodule
     CHECK(diags[1].code == diag::BadProceduralAssign);
     CHECK(diags[2].code == diag::BadProceduralForce);
     CHECK(diags[3].code == diag::BadProceduralForce);
-    CHECK(diags[4].code == diag::BadForceNetType);
+    CHECK(diags[4].code == diag::UserDefPartialDriver);
     CHECK(diags[5].code == diag::AutoFromNonProcedural);
 }
 

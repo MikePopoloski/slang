@@ -592,9 +592,11 @@ static bool isValidAssignLVal(const Expression& expr) {
     }
 }
 
-// [10.6.2] disallows both a select of a variable and a net with a user-defined nettype
-// as a force / release target. Neither leaves the statement unusable, so both are
-// reported here and the statement is kept.
+// [10.6.2] disallows a select of a variable or of a net with a user-defined nettype
+// as a force / release target; a whole net of a user-defined nettype is fine [6.6.7].
+// Selects of such nets are already reported as partial drivers when the target is
+// checked as an lvalue, so only variable selects are diagnosed here. That doesn't
+// leave the statement unusable, so the statement is kept.
 static bool isValidForceLVal(const Expression& expr, const ASTContext& context,
                              const Expression* select) {
     switch (expr.kind) {
@@ -603,8 +605,6 @@ static bool isValidForceLVal(const Expression& expr, const ASTContext& context,
             if (auto sym = expr.getSymbolReference()) {
                 if (select && VariableSymbol::isKind(sym->kind))
                     context.addDiag(diag::BadProceduralForce, select->sourceRange);
-                else if (sym->kind == SymbolKind::Net && !sym->as<NetSymbol>().netType.isBuiltIn())
-                    context.addDiag(diag::BadForceNetType, expr.sourceRange);
             }
             return true;
         case ExpressionKind::MemberAccess:
