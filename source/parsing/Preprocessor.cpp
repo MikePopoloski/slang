@@ -1455,15 +1455,18 @@ ConditionalDirectiveExpressionSyntax* Preprocessor::parseConditionalExpr(int min
         }
     };
 
-    ConditionalDirectiveExpressionSyntax* left;
-    if (peek(TokenKind::Exclamation)) {
-        auto op = consume();
-        auto operand = parsePrimary();
-        left = alloc.emplace<UnaryConditionalDirectiveExpressionSyntax>(op, *operand);
-    }
-    else {
-        left = parsePrimary();
-    }
+    // The operand of '!' is itself an ifdef_macro_expression [22.6], so it can be
+    // another '!' expression, as in `ifdef (!!A).
+    auto parseUnary = [&](auto& self) -> ConditionalDirectiveExpressionSyntax* {
+        if (peek(TokenKind::Exclamation)) {
+            auto op = consume();
+            auto operand = self(self);
+            return alloc.emplace<UnaryConditionalDirectiveExpressionSyntax>(op, *operand);
+        }
+        return parsePrimary();
+    };
+
+    ConditionalDirectiveExpressionSyntax* left = parseUnary(parseUnary);
 
     while (true) {
         auto nextKind = peek().kind;

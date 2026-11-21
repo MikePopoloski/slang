@@ -2866,6 +2866,41 @@ PREC3
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Conditional ifdef expression nested negation") {
+    auto& text = R"(
+`define A
+
+`ifdef (!!A)
+NEG1
+`endif
+`ifdef (! !A)
+NEG2
+`endif
+`ifdef (A && !!A)
+NEG3
+`endif
+`ifdef (!!!A)
+BAD1
+`else
+NEG4
+`endif
+`ifdef (!!C)
+BAD2
+`endif
+)";
+
+    auto& expected = R"(
+NEG1
+NEG2
+NEG3
+NEG4
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Conditional ifdef expression right-associativity") {
     auto& text = R"(
 `define A
