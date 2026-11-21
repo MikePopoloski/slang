@@ -740,6 +740,38 @@ endmodule
     CHECK(elems[2].integer() == 3);
 }
 
+TEST_CASE("Scoped type names as struct assignment pattern keys") {
+    auto tree = SyntaxTree::fromText(R"(
+package pk;
+    typedef logic [3:0] nib;
+    localparam int P = 1;
+endpackage
+
+class C;
+    typedef byte bt;
+endclass
+
+module top;
+    typedef struct { pk::nib d; C::bt e; } S;
+    localparam S A = '{pk::nib: 3, C::bt: 4};
+    localparam S B = '{pk::P: 1, default: 0};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssignmentPatternKeyExpr);
+
+    auto& a = compilation.getRoot().lookupName<ParameterSymbol>("top.A");
+    auto elems = a.getValue().elements();
+    REQUIRE(elems.size() == 2);
+    CHECK(elems[0].integer() == 3);
+    CHECK(elems[1].integer() == 4);
+}
+
 TEST_CASE("Replicated assignment patterns") {
     auto tree = SyntaxTree::fromText(R"(
 module n(input int frob[3]);

@@ -1361,11 +1361,28 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
                 }
             }
         }
-        else if (DataTypeSyntax::isKind(item->key->kind)) {
-            const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(), context);
-            if (typeKey.isSimpleType()) {
-                auto& expr = bindRValue(typeKey, *item->expr, {}, context);
-                typeSetters.emplace_back(TypeSetter{&typeKey, &expr});
+        else if (DataTypeSyntax::isKind(item->key->kind) ||
+                 item->key->kind == SyntaxKind::ScopedName) {
+            // A scoped name key can only be a package or class scoped type name
+            // (a simple_type [A.6.7.1]); bind it allowing data types to find out.
+            const Type* typeKey = nullptr;
+            if (DataTypeSyntax::isKind(item->key->kind)) {
+                typeKey = &comp.getType(item->key->as<DataTypeSyntax>(), context);
+            }
+            else {
+                auto& keyExpr = Expression::bind(*item->key, context, ASTFlags::AllowDataType);
+                if (keyExpr.bad()) {
+                    bad = true;
+                    continue;
+                }
+
+                if (keyExpr.kind == ExpressionKind::DataType)
+                    typeKey = keyExpr.type;
+            }
+
+            if (typeKey && typeKey->isSimpleType()) {
+                auto& expr = bindRValue(*typeKey, *item->expr, {}, context);
+                typeSetters.emplace_back(TypeSetter{typeKey, &expr});
                 bad |= expr.bad();
             }
             else {
