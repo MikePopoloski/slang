@@ -1491,6 +1491,30 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Net alias of struct member selects") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct packed { logic a; logic [1:0] b; } ps_t;
+    wire ps_t s;
+    wire c;
+    wire [1:0] e;
+    logic v;
+    alias c = s.a;
+    alias e = s.b;
+    alias s.a = v;
+    alias s.b = s.b;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::NetAliasNotANet);
+    CHECK(diags[1].code == diag::NetAliasSelf);
+}
+
 TEST_CASE("Net alias on interconnect nets") {
     // IEEE 1800-2023 6.6.8: a net_alias statement is legal with interconnect
     // net_lvalues as long as all nets in the alias are also interconnect nets.

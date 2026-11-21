@@ -2425,6 +2425,27 @@ struct NetAlias {
     Compilation::AliasBitRange bounds;
 };
 
+// Gets the symbol at the root of a chain of selects and member accesses, which
+// for a valid net alias is the net itself (not a member of the net's type).
+static const Symbol* getRootSymbol(const Expression& expr) {
+    auto curr = &expr;
+    while (true) {
+        switch (curr->kind) {
+            case ExpressionKind::MemberAccess:
+                curr = &curr->as<MemberAccessExpression>().value();
+                break;
+            case ExpressionKind::ElementSelect:
+                curr = &curr->as<ElementSelectExpression>().value();
+                break;
+            case ExpressionKind::RangeSelect:
+                curr = &curr->as<RangeSelectExpression>().value();
+                break;
+            default:
+                return curr->getSymbolReference();
+        }
+    }
+}
+
 struct NetAliasVisitor {
     const ASTContext& context;
     const NetType* commonNetType = nullptr;
@@ -2447,7 +2468,7 @@ struct NetAliasVisitor {
                     if (expr.hasHierarchicalReference()) {
                         context.addDiag(diag::NetAliasHierarchical, expr.sourceRange);
                     }
-                    else if (auto sym = expr.getSymbolReference()) {
+                    else if (auto sym = getRootSymbol(expr)) {
                         if (sym->kind != SymbolKind::Net) {
                             context.addDiag(diag::NetAliasNotANet, expr.sourceRange) << sym->name;
                         }
