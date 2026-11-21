@@ -29,6 +29,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/PoolAllocator.h"
@@ -1367,6 +1368,54 @@ static void checkPrimitiveEdgeCombinations(const PrimitiveSymbol& prim, const Sc
     UdpEdgeCoverageChecker checker(prim, scope, trie);
 }
 
+// Checks the parts of a primitive table row that depend on whether the primitive
+// is sequential. The parser can't do this since the ports, and so the kind of
+// primitive, can come from an extern declaration [29.3].
+static void checkTableRowKind(const Scope& scope, const UdpEntrySyntax& entry, bool isSequential) {
+    if (isSequential) {
+        if (!entry.current && !entry.semi.isMissing())
+            scope.addDiag(diag::UdpSequentialState, entry.semi.location());
+        return;
+    }
+
+    if (entry.current)
+        scope.addDiag(diag::UdpCombState, entry.current->sourceRange());
+
+    // Edges can only be used in sequential primitives. Only the first edge
+    // in a row is reported; the parser reports any others as duplicates.
+    auto findEdge = [&]() -> std::optional<SourceLocation> {
+        for (auto field : entry.inputs) {
+            if (field->kind == SyntaxKind::UdpEdgeField)
+                return field->getFirstToken().location();
+
+            auto tok = field->as<UdpSimpleFieldSyntax>().field;
+            auto text = tok.rawText();
+            for (size_t i = 0; i < text.length(); i++) {
+                switch (charToLower(text[i])) {
+                    case '*':
+                    case 'r':
+                    case 'f':
+                    case 'p':
+                    case 'n':
+                        return tok.location() + i;
+                    default:
+                        break;
+                }
+            }
+        }
+        return std::nullopt;
+    };
+
+    if (auto loc = findEdge())
+        scope.addDiag(diag::UdpEdgeInComb, *loc);
+
+    if (entry.next && entry.next->kind == SyntaxKind::UdpSimpleField) {
+        auto tok = entry.next->as<UdpSimpleFieldSyntax>().field;
+        if (tok.rawText() == "-")
+            scope.addDiag(diag::UdpInvalidMinus, tok.location());
+    }
+}
+
 PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                                              const UdpDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
@@ -1612,6 +1661,8 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
             createTableRow(scope, *entry, table, ports.size(), trie, trieAlloc);
             if (!table.empty() && !prim->isEdgeSensitive)
                 prim->isEdgeSensitive = table.back().isEdgeSensitive;
+
+            checkTableRowKind(scope, *entry, prim->isSequential);
         }
 
         prim->table = table.copy(comp);

@@ -38,6 +38,68 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("UDP with wildcard ports from an extern declaration") {
+    auto tree = SyntaxTree::fromText(R"(
+extern primitive s1(output reg o, input a);
+primitive s1(.*);
+    table
+        0 : ? : 1;
+        r : ? : 0;
+        1 : ? : -;
+    endtable
+endprimitive
+
+extern primitive c1(output o, input a);
+primitive c1(.*);
+    table
+        0 : 1;
+        1 : 0;
+    endtable
+endprimitive
+
+extern primitive s2(output reg o, input a);
+primitive s2(.*);
+    table
+        0 : 1;
+    endtable
+endprimitive
+
+extern primitive c2(output o, input a);
+primitive c2(.*);
+    table
+        0 : 1 : 1;
+        (01) : 0;
+        1 : -;
+    endtable
+endprimitive
+
+module top;
+    wire o1, o2, o3, o4;
+    reg a;
+    s1 u1(o1, a);
+    c1 u2(o2, a);
+    s2 u3(o3, a);
+    c2 u4(o4, a);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Ignore the off-by-default warnings about incomplete tables.
+    Diagnostics diags;
+    for (auto& diag : compilation.getAllDiagnostics()) {
+        if (diag.code != diag::UdpCoverage)
+            diags.push_back(diag);
+    }
+
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::UdpSequentialState);
+    CHECK(diags[1].code == diag::UdpCombState);
+    CHECK(diags[2].code == diag::UdpEdgeInComb);
+    CHECK(diags[3].code == diag::UdpInvalidMinus);
+}
+
 TEST_CASE("Gates") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -196,7 +258,7 @@ endprimitive
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 26);
+    REQUIRE(diags.size() == 27);
     CHECK(diags[0].code == diag::PrimitiveOutputFirst);
     CHECK(diags[1].code == diag::PrimitiveAnsiMix);
     CHECK(diags[2].code == diag::DuplicateDefinition);
@@ -208,21 +270,22 @@ endprimitive
     CHECK(diags[8].code == diag::PrimitivePortDup);
     CHECK(diags[9].code == diag::PrimitivePortMissing);
     CHECK(diags[10].code == diag::PrimitiveRegInput);
-    CHECK(diags[11].code == diag::PrimitivePortMissing);
-    CHECK(diags[12].code == diag::PrimitiveDupOutput);
-    CHECK(diags[13].code == diag::PrimitiveInitialInComb);
-    CHECK(diags[14].code == diag::PrimitiveDupInitial);
-    CHECK(diags[15].code == diag::PrimitiveWrongInitial);
-    CHECK(diags[16].code == diag::PrimitiveInitVal);
-    CHECK(diags[17].code == diag::Redefinition);
+    CHECK(diags[11].code == diag::UdpCombState);
+    CHECK(diags[12].code == diag::PrimitivePortMissing);
+    CHECK(diags[13].code == diag::PrimitiveDupOutput);
+    CHECK(diags[14].code == diag::PrimitiveInitialInComb);
+    CHECK(diags[15].code == diag::PrimitiveDupInitial);
+    CHECK(diags[16].code == diag::PrimitiveWrongInitial);
+    CHECK(diags[17].code == diag::PrimitiveInitVal);
     CHECK(diags[18].code == diag::Redefinition);
-    CHECK(diags[19].code == diag::ExpectedUdpSymbol);
-    CHECK(diags[20].code == diag::UdpWrongInputCount);
+    CHECK(diags[19].code == diag::Redefinition);
+    CHECK(diags[20].code == diag::ExpectedUdpSymbol);
     CHECK(diags[21].code == diag::UdpWrongInputCount);
-    CHECK(diags[22].code == diag::UdpCoverage);
-    CHECK(diags[23].code == diag::UdpDupDiffOutput);
-    CHECK(diags[24].code == diag::UdpAllX);
-    CHECK(diags[25].code == diag::UdpDupDiffOutput);
+    CHECK(diags[22].code == diag::UdpWrongInputCount);
+    CHECK(diags[23].code == diag::UdpCoverage);
+    CHECK(diags[24].code == diag::UdpDupDiffOutput);
+    CHECK(diags[25].code == diag::UdpAllX);
+    CHECK(diags[26].code == diag::UdpDupDiffOutput);
 }
 
 TEST_CASE("UDP instances error checking") {

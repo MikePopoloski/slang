@@ -3000,16 +3000,13 @@ BindDirectiveSyntax& Parser::parseBindDirective(AttrList attr) {
     }
 }
 
-UdpPortDeclSyntax& Parser::parseUdpPortDecl(bool& isReg) {
+UdpPortDeclSyntax& Parser::parseUdpPortDecl() {
     auto attrs = parseAttributes();
 
     if (peek(TokenKind::OutputKeyword) || peek(TokenKind::RegKeyword)) {
         auto output = consumeIf(TokenKind::OutputKeyword);
         auto reg = consumeIf(TokenKind::RegKeyword);
         auto name = expect(TokenKind::Identifier);
-
-        if (reg)
-            isReg = true;
 
         EqualsValueClauseSyntax* init = nullptr;
         if (output && reg && peek(TokenKind::Equals)) {
@@ -3036,7 +3033,7 @@ UdpPortDeclSyntax& Parser::parseUdpPortDecl(bool& isReg) {
     return factory.udpInputPortDecl(attrs, input, {alloc, ports});
 }
 
-UdpPortListSyntax& Parser::parseUdpPortList(bool& isSequential) {
+UdpPortListSyntax& Parser::parseUdpPortList() {
     auto openParen = expect(TokenKind::OpenParenthesis);
 
     if (peek(TokenKind::Dot) && peek(1).kind == TokenKind::Star) {
@@ -3051,10 +3048,10 @@ UdpPortListSyntax& Parser::parseUdpPortList(bool& isSequential) {
         // the non-ANSI list is just identifiers.
         Token closeParen;
         SmallVector<TokenOrSyntax, 4> ports;
-        parseList<isPossibleUdpPort, isEndOfParenList>(
-            ports, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
-            diag::ExpectedUdpPort,
-            [this, &isSequential] { return &parseUdpPortDecl(isSequential); });
+        parseList<isPossibleUdpPort, isEndOfParenList>(ports, TokenKind::CloseParenthesis,
+                                                       TokenKind::Comma, closeParen,
+                                                       RequireItems::True, diag::ExpectedUdpPort,
+                                                       [this] { return &parseUdpPortDecl(); });
 
         return factory.ansiUdpPortList(openParen, {alloc, ports}, closeParen,
                                        expect(TokenKind::Semicolon));
@@ -3072,20 +3069,14 @@ UdpPortListSyntax& Parser::parseUdpPortList(bool& isSequential) {
     }
 }
 
-UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput, bool isSequential,
-                                          bool& sawTransition) {
+UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput, bool& sawTransition) {
+    // Whether the primitive is sequential, and so allows edges, is checked
+    // during elaboration since it can depend on an extern declaration.
     auto checkTransition = [&](std::optional<SourceLocation> loc = {}) {
-        if (isInput) {
-            if (sawTransition) {
-                if (!loc)
-                    loc = peek().location();
-                addDiag(diag::UdpDupTransition, *loc);
-            }
-            else if (!isSequential) {
-                if (!loc)
-                    loc = peek().location();
-                addDiag(diag::UdpEdgeInComb, *loc);
-            }
+        if (isInput && sawTransition) {
+            if (!loc)
+                loc = peek().location();
+            addDiag(diag::UdpDupTransition, *loc);
         }
         sawTransition = true;
     };
@@ -3220,11 +3211,11 @@ UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput, bool isSe
     return &factory.udpSimpleField(next);
 }
 
-UdpEntrySyntax& Parser::parseUdpEntry(bool isSequential) {
+UdpEntrySyntax& Parser::parseUdpEntry() {
     bool sawTransition = false;
     SmallVector<UdpFieldBaseSyntax*, 4> inputs;
     while (true) {
-        auto field = parseUdpField(inputs.empty(), /* isInput */ true, isSequential, sawTransition);
+        auto field = parseUdpField(inputs.empty(), /* isInput */ true, sawTransition);
         if (!field)
             break;
 
@@ -3232,15 +3223,14 @@ UdpEntrySyntax& Parser::parseUdpEntry(bool isSequential) {
     }
 
     auto colon1 = expect(TokenKind::Colon);
-    auto nextState = parseUdpField(!inputs.empty(), /* isInput */ false, isSequential,
-                                   sawTransition);
+    auto nextState = parseUdpField(!inputs.empty(), /* isInput */ false, sawTransition);
 
     Token colon2;
     UdpFieldBaseSyntax* currentState = nullptr;
     if (peek(TokenKind::Colon)) {
         colon2 = consume();
-        currentState = std::exchange(nextState, parseUdpField(true, /* isInput */ false,
-                                                              isSequential, sawTransition));
+        currentState = std::exchange(nextState,
+                                     parseUdpField(true, /* isInput */ false, sawTransition));
     }
 
     auto checkNonInput = [&](const UdpFieldBaseSyntax* syntax, bool isOutput) {
@@ -3257,7 +3247,9 @@ UdpEntrySyntax& Parser::parseUdpEntry(bool isSequential) {
                         addDiag(diag::UdpInvalidOutput, tok.location()) << raw[0];
                     break;
                 case '-':
-                    if (!isOutput || !isSequential)
+                    // The output field is checked during elaboration, since it
+                    // depends on whether the primitive is sequential.
+                    if (!isOutput)
                         addDiag(diag::UdpInvalidMinus, tok.location());
                     break;
                 default:
@@ -3270,20 +3262,14 @@ UdpEntrySyntax& Parser::parseUdpEntry(bool isSequential) {
     checkNonInput(nextState, true);
 
     auto semi = expect(TokenKind::Semicolon);
-
-    if (currentState && !isSequential)
-        addDiag(diag::UdpCombState, currentState->sourceRange());
-    else if (!currentState && isSequential && !semi.isMissing())
-        addDiag(diag::UdpSequentialState, semi.location());
-
     return factory.udpEntry({alloc, inputs}, colon1, currentState, colon2, nextState, semi);
 }
 
-UdpBodySyntax& Parser::parseUdpBody(bool isSequential) {
+UdpBodySyntax& Parser::parseUdpBody() {
     SmallVector<TokenOrSyntax, 4> portDecls;
     while (isPossibleUdpPort(peek().kind)) {
         auto current = peek();
-        portDecls.push_back(&parseUdpPortDecl(isSequential));
+        portDecls.push_back(&parseUdpPortDecl());
         portDecls.push_back(expect(TokenKind::Semicolon));
 
         if (current == peek()) {
@@ -3308,7 +3294,7 @@ UdpBodySyntax& Parser::parseUdpBody(bool isSequential) {
     SmallVector<UdpEntrySyntax*> entries;
     while (isPossibleUdpEntry(peek().kind)) {
         auto current = peek();
-        entries.push_back(&parseUdpEntry(isSequential));
+        entries.push_back(&parseUdpEntry());
 
         if (current == peek()) {
             // We didn't consume any tokens, so we're looking at
@@ -3325,9 +3311,8 @@ UdpDeclarationSyntax& Parser::parseUdpDeclaration(AttrList attr) {
     auto primitive = consume();
     auto name = expect(TokenKind::Identifier);
 
-    bool isSequential = false;
-    auto& portList = parseUdpPortList(isSequential);
-    auto& body = parseUdpBody(isSequential);
+    auto& portList = parseUdpPortList();
+    auto& body = parseUdpBody();
     auto endprim = expect(TokenKind::EndPrimitiveKeyword);
 
     NamedBlockClauseSyntax* endBlockName = parseNamedBlockClause();
@@ -3735,12 +3720,11 @@ MemberSyntax* Parser::parseExternMember(SyntaxKind parentKind, AttrList attribut
             return &factory.externModuleDecl(attributes, keyword, actualAttrs, header);
         }
         case TokenKind::PrimitiveKeyword: {
-            bool unused;
             auto keyword = consume();
             auto actualAttrs = parseAttributes();
             auto primitive = consume();
             auto name = expect(TokenKind::Identifier);
-            auto& portList = parseUdpPortList(unused);
+            auto& portList = parseUdpPortList();
             if (portList.kind == SyntaxKind::WildcardUdpPortList)
                 addDiag(diag::ExternWildcardPortList, portList.sourceRange());
             return &factory.externUdpDecl(attributes, keyword, actualAttrs, primitive, name,
