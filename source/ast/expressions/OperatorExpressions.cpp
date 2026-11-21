@@ -2576,7 +2576,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                     argType = &uu.fields[0]->getType();
             }
 
-            if (!argType->isBitstreamType(isDestination)) {
+            if (isDestination ? !argType->isBitstreamUnpackTarget() : !argType->isBitstreamType()) {
                 context.addDiag(diag::BadStreamExprType, arg.sourceRange) << *arg.type;
                 return badResult();
             }

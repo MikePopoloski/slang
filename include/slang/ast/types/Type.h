@@ -124,6 +124,12 @@ public:
     /// destination side of a bitstream cast, which disallows associative arrays.
     bool isBitstreamType(bool destination = false) const;
 
+    /// Indicates whether this type can be the target of a streaming concatenation
+    /// unpack operation. This is the same as the destination side of a bitstream
+    /// cast, except that class handles are allowed since the stream is unpacked
+    /// into an existing object [11.4.14.3].
+    bool isBitstreamUnpackTarget() const;
+
     /// Check whether this type has a fixed bitstream size, as opposed to a dynamically
     /// sized type like a dynamic array or string.
     bool isFixedSize() const;

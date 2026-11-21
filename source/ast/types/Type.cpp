@@ -235,28 +235,34 @@ bool Type::isStruct() const {
     }
 }
 
-bool Type::isBitstreamType(bool destination) const {
-    auto& ct = getCanonicalType();
+namespace {
+
+enum class BitstreamMode { Source, CastDestination, UnpackTarget };
+
+bool isBitstreamTypeImpl(const Type& type, BitstreamMode mode) {
+    auto& ct = type.getCanonicalType();
     if (ct.isIntegral() || ct.isString())
         return true;
 
     if (ct.isUnpackedArray()) {
-        if (destination && ct.kind == SymbolKind::AssociativeArrayType)
+        if (mode != BitstreamMode::Source && ct.kind == SymbolKind::AssociativeArrayType)
             return false;
-        return ct.getArrayElementType()->isBitstreamType(destination);
+        return isBitstreamTypeImpl(*ct.getArrayElementType(), mode);
     }
 
     if (ct.isUnpackedStruct()) {
         auto& us = ct.as<UnpackedStructType>();
         for (auto field : us.fields) {
-            if (!field->getType().isBitstreamType(destination))
+            if (!isBitstreamTypeImpl(field->getType(), mode))
                 return false;
         }
         return true;
     }
 
     if (ct.isClass()) {
-        if (destination)
+        // A class is illegal as the destination type of a bitstream cast [6.24.3],
+        // but a stream can be unpacked into an existing object [11.4.14.3].
+        if (mode == BitstreamMode::CastDestination)
             return false;
 
         auto& classType = ct.as<ClassType>();
@@ -264,13 +270,24 @@ bool Type::isBitstreamType(bool destination) const {
             return false;
 
         for (auto& prop : classType.properties()) {
-            if (!prop.getType().isBitstreamType(destination))
+            if (!isBitstreamTypeImpl(prop.getType(), mode))
                 return false;
         }
         return true;
     }
 
     return false;
+}
+
+} // namespace
+
+bool Type::isBitstreamType(bool destination) const {
+    return isBitstreamTypeImpl(*this, destination ? BitstreamMode::CastDestination
+                                                  : BitstreamMode::Source);
+}
+
+bool Type::isBitstreamUnpackTarget() const {
+    return isBitstreamTypeImpl(*this, BitstreamMode::UnpackTarget);
 }
 
 bool Type::isFixedSize() const {

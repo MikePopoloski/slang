@@ -3111,6 +3111,40 @@ endmodule
     CHECK(diags[6].code == diag::ClassPrivateMembersBitstream);
 }
 
+TEST_CASE("Streaming unpack into class handles") {
+    auto tree = SyntaxTree::fromText(R"(
+class Q; int a; endclass
+class R;
+    int h;
+    Q q;
+endclass
+class P;
+    int h;
+    int aa[int];
+endclass
+
+module m;
+    R r = new;
+    P p = new;
+    longint x;
+    initial begin
+        {>>{r}} = 64'h1;
+        x = {>>{r}};
+        {>>{p}} = 64'h1;
+        r = R'(64'h1);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BadStreamExprType);
+    CHECK(diags[1].code == diag::BadConversion);
+}
+
 TEST_CASE("Class bitstream of this with inaccessible base class members") {
     auto tree = SyntaxTree::fromText(R"(
 class B;
