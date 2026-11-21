@@ -54,6 +54,10 @@ public:
     static bool checkClassAccess(const Type& type, const ASTContext& context,
                                  SourceRange sourceRange);
 
+    /// Performs the same check as the type-based overload for a source expression,
+    /// except that the current instance `this` is always allowed [6.24.3].
+    static bool checkClassAccess(const Expression& expr, const ASTContext& context);
+
     /// Re-ordering of the generic stream. For source/packed concatenation, unpackWidth = 0. For
     /// target/unpacked concatenation, unpackWidth is the total width of target.
     static ConstantValue reOrder(ConstantValue&& value, uint64_t sliceSize,

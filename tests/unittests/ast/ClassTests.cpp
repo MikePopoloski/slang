@@ -3111,6 +3111,32 @@ endmodule
     CHECK(diags[6].code == diag::ClassPrivateMembersBitstream);
 }
 
+TEST_CASE("Class bitstream of this with inaccessible base class members") {
+    auto tree = SyntaxTree::fromText(R"(
+class B;
+    local int a;
+endclass
+
+class D extends B;
+    int b;
+
+    function void foo(D other);
+        longint i = longint'(this);
+        longint j = {>>{this}};
+        int k = $countones(this);
+        longint l = longint'(other);
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ClassPrivateMembersBitstream);
+}
+
 TEST_CASE("Using this keyword in class property intializer") {
     auto tree = SyntaxTree::fromText(R"(
 typedef class B;

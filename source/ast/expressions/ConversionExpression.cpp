@@ -358,7 +358,7 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
             diag << targetExpr.sourceRange << operand->sourceRange;
             return badExpr(comp, result(*operand));
         }
-        else if (!Bitstream::checkClassAccess(*operand->type, context, operand->sourceRange)) {
+        else if (!Bitstream::checkClassAccess(*operand, context)) {
             return badExpr(comp, result(*operand));
         }
 

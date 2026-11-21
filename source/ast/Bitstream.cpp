@@ -526,7 +526,7 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
             return false;
         }
 
-        if (!checkClassAccess(*rhs.type, context, rhs.sourceRange))
+        if (!checkClassAccess(rhs, context))
             return false;
     }
 
@@ -628,6 +628,12 @@ bool Bitstream::checkClassAccess(const Type& type, const ASTContext& context,
         }
     }
     return true;
+}
+
+bool Bitstream::checkClassAccess(const Expression& expr, const ASTContext& context) {
+    if (expr.isThisHandle())
+        return true;
+    return checkClassAccess(*expr.type, context, expr.sourceRange);
 }
 
 ConstantValue Bitstream::reOrder(ConstantValue&& value, uint64_t sliceSize, uint64_t unpackWidth) {

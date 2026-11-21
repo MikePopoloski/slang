@@ -56,7 +56,7 @@ public:
         if (!args[0]->type->isBitstreamType())
             return badArg(context, *args[0]);
 
-        if (!Bitstream::checkClassAccess(*args[0]->type, context, args[0]->sourceRange))
+        if (!Bitstream::checkClassAccess(*args[0], context))
             return comp.getErrorType();
 
         for (auto arg : args.subspan(1)) {
@@ -131,7 +131,7 @@ public:
         if (!args[0]->type->isBitstreamType())
             return badArg(context, *args[0]);
 
-        if (!Bitstream::checkClassAccess(*args[0]->type, context, args[0]->sourceRange))
+        if (!Bitstream::checkClassAccess(*args[0], context))
             return comp.getErrorType();
 
         return comp.getIntType();
@@ -165,7 +165,7 @@ public:
         if (!args[0]->type->isBitstreamType())
             return badArg(context, *args[0]);
 
-        if (!Bitstream::checkClassAccess(*args[0]->type, context, args[0]->sourceRange))
+        if (!Bitstream::checkClassAccess(*args[0], context))
             return comp.getErrorType();
 
         return comp.getBitType();

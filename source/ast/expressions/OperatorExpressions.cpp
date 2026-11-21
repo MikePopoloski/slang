@@ -2581,8 +2581,11 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                 return badResult();
             }
 
-            if (!Bitstream::checkClassAccess(*argType, context, arg.sourceRange))
+            // The current instance `this` is always allowed as a source [6.24.3].
+            if (!arg.isThisHandle() &&
+                !Bitstream::checkClassAccess(*argType, context, arg.sourceRange)) {
                 return badResult();
+            }
         }
 
         uint64_t argWidth = 0;
