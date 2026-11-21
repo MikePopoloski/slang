@@ -10,10 +10,13 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/expressions/AssertionExpr.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
@@ -483,6 +486,108 @@ private:
     }
 };
 
+// Implements $timeunit, $timeprecision, and $scale, which all take an optional
+// (or for $scale, required) module or scope name argument.
+class TimeScaleFunction : public SystemSubroutine {
+public:
+    TimeScaleFunction(KnownSystemName knownNameId, bool isOptional) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), isOptional(isOptional) {}
+
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        if (argIndex == 0) {
+            auto& comp = context.getCompilation();
+            if (!NameSyntax::isKind(syntax.kind)) {
+                context.addDiag(diag::ExpectedModuleName, syntax.sourceRange());
+                return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
+            }
+
+            bitmask<LookupFlags> extraFlags;
+            if (isOptional)
+                extraFlags = LookupFlags::AllowRoot | LookupFlags::AllowUnit;
+
+            return ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context,
+                                                         extraFlags);
+        }
+
+        return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
+    }
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, isOptional ? 0 : 1, 1))
+            return comp.getErrorType();
+
+        if (isOptional) {
+            auto languageVersion = comp.languageVersion();
+            if (languageVersion < LanguageVersion::v1800_2023)
+                context.addDiag(diag::WrongLanguageVersion, range) << toString(languageVersion);
+        }
+
+        if (args.size() > 0) {
+            auto& sym = *args[0]->as<ArbitrarySymbolExpression>().symbol;
+            if (sym.kind != SymbolKind::Instance && sym.kind != SymbolKind::CompilationUnit &&
+                sym.kind != SymbolKind::Root) {
+                if (!context.scope->isUninstantiated())
+                    context.addDiag(diag::ExpectedModuleName, args[0]->sourceRange);
+                return comp.getErrorType();
+            }
+        }
+
+        return comp.getIntType();
+    }
+
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
+                       const CallExpression::SystemCallInfo& callInfo) const final {
+        // $timeunit and $timeprecision are constant system functions [11.2.1],
+        // but $scale is not.
+        if (knownNameId == KnownSystemName::Scale) {
+            notConst(context, range);
+            return nullptr;
+        }
+
+        const bool isUnit = knownNameId == KnownSystemName::TimeUnit;
+        auto& comp = context.getCompilation();
+        TimeScale ts;
+        if (args.empty()) {
+            ts = callInfo.scope->getTimeScale().value_or(TimeScale());
+        }
+        else {
+            auto& sym = *args[0]->as<ArbitrarySymbolExpression>().symbol;
+            switch (sym.kind) {
+                case SymbolKind::Instance:
+                    ts = sym.as<InstanceSymbol>().body.getTimeScale().value_or(TimeScale());
+                    break;
+                case SymbolKind::CompilationUnit:
+                    ts = sym.as<CompilationUnitSymbol>().timeScale.value_or(TimeScale());
+                    break;
+                case SymbolKind::Root:
+                    // Both functions return the simulation time unit, which is the
+                    // smallest time precision in the design [20.4.1, 3.14.3].
+                    return SVInt(32, uint64_t(toExponent(comp.getSimulationTimeUnit())), true);
+                default:
+                    return nullptr;
+            }
+        }
+
+        return SVInt(32, uint64_t(toExponent(isUnit ? ts.base : ts.precision)), true);
+    }
+
+private:
+    // Converts a time value to the power of ten used by these functions [Table 20-2].
+    static int32_t toExponent(const TimeScaleValue& value) {
+        int32_t exp = -3 * int32_t(value.unit);
+        if (value.magnitude == TimeScaleMagnitude::Ten)
+            exp += 1;
+        else if (value.magnitude == TimeScaleMagnitude::Hundred)
+            exp += 2;
+        return exp;
+    }
+
+    bool isOptional;
+};
+
 void Builtins::registerMiscSystemFuncs() {
     using parsing::KnownSystemName;
 
@@ -499,6 +604,10 @@ void Builtins::registerMiscSystemFuncs() {
         std::make_shared<InferredValueFunction>(KnownSystemName::InferredClock, true));
     addSystemSubroutine(
         std::make_shared<InferredValueFunction>(KnownSystemName::InferredDisable, false));
+
+    addSystemSubroutine(std::make_shared<TimeScaleFunction>(KnownSystemName::TimeUnit, true));
+    addSystemSubroutine(std::make_shared<TimeScaleFunction>(KnownSystemName::TimePrecision, true));
+    addSystemSubroutine(std::make_shared<TimeScaleFunction>(KnownSystemName::Scale, false));
 
     addSystemMethod(SymbolKind::ClassType, std::make_shared<ClassRandomizeFunction>());
     addSystemMethod(SymbolKind::SequenceType,

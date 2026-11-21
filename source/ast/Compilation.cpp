@@ -334,6 +334,28 @@ std::vector<const PackageSymbol*> Compilation::getPackages() const {
     return result;
 }
 
+TimeScaleValue Compilation::getSimulationTimeUnit() const {
+    TimeScaleValue result = getDefaultTimeScale().value_or(TimeScale()).precision;
+    auto check = [&](const std::optional<TimeScale>& ts) {
+        result = std::min(result, ts.value_or(TimeScale()).precision);
+    };
+
+    for (auto unit : getCompilationUnits())
+        check(unit->timeScale);
+
+    for (auto& [name, pkg] : packageMap)
+        check(pkg->timeScale);
+
+    for (auto& [key, val] : definitionMap) {
+        for (auto sym : val.first) {
+            if (sym->kind == SymbolKind::Definition)
+                check(sym->as<DefinitionSymbol>().timeScale);
+        }
+    }
+
+    return result;
+}
+
 const SourceLibrary* Compilation::getSourceLibrary(std::string_view name) const {
     if (auto it = libraryNameMap.find(name); it != libraryNameMap.end())
         return it->second;

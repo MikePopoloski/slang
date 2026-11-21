@@ -27,6 +27,9 @@ from pyslang import (
     SourceLocation,
     SourceManager,
     SVInt,
+    TimeScaleMagnitude,
+    TimeScaleValue,
+    TimeUnit,
     clog2,
     logic_t,
 )
@@ -110,6 +113,27 @@ source:3:23: warning: arithmetic between operands of different types ('logic' an
                    ~~ ^ ~~~~~~~~
 """
     )
+
+
+def test_simulation_time_unit():
+    # With nothing specified the simulation time unit is the default precision.
+    assert Compilation().simulationTimeUnit == TimeScaleValue.fromString("1ns")
+
+    tree = SyntaxTree.fromText(
+        """
+timeunit 100ps / 10fs;
+module a; timeunit 1ms / 1us; endmodule
+`timescale 1ns / 1ps
+module b; endmodule
+"""
+    )
+    comp = Compilation()
+    comp.addSyntaxTree(tree)
+
+    # The smallest precision anywhere in the design.
+    unit = comp.simulationTimeUnit
+    assert unit == TimeScaleValue(TimeUnit.Femtoseconds, TimeScaleMagnitude.Ten)
+    assert str(unit) == "10fs"
 
 
 def test_resolved_dpi_exports():

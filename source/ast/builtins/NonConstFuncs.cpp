@@ -450,66 +450,6 @@ private:
     bool isFuture;
 };
 
-class TimeScaleFunc : public SystemSubroutine {
-public:
-    TimeScaleFunc(KnownSystemName knownNameId, bool isOptional) :
-        SystemSubroutine(knownNameId, SubroutineKind::Function), isOptional(isOptional) {}
-
-    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
-                                   const ExpressionSyntax& syntax, const Args& args) const final {
-        if (argIndex == 0) {
-            auto& comp = context.getCompilation();
-            if (!NameSyntax::isKind(syntax.kind)) {
-                context.addDiag(diag::ExpectedModuleName, syntax.sourceRange());
-                return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
-            }
-
-            bitmask<LookupFlags> extraFlags;
-            if (isOptional)
-                extraFlags = LookupFlags::AllowRoot | LookupFlags::AllowUnit;
-
-            return ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context,
-                                                         extraFlags);
-        }
-
-        return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
-    }
-
-    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
-                               const Expression*) const final {
-        auto& comp = context.getCompilation();
-        if (!checkArgCount(context, false, args, range, isOptional ? 0 : 1, 1))
-            return comp.getErrorType();
-
-        if (isOptional) {
-            auto languageVersion = comp.languageVersion();
-            if (languageVersion < LanguageVersion::v1800_2023)
-                context.addDiag(diag::WrongLanguageVersion, range) << toString(languageVersion);
-        }
-
-        if (args.size() > 0) {
-            auto& sym = *args[0]->as<ArbitrarySymbolExpression>().symbol;
-            if (sym.kind != SymbolKind::Instance && sym.kind != SymbolKind::CompilationUnit &&
-                sym.kind != SymbolKind::Root) {
-                if (!context.scope->isUninstantiated())
-                    context.addDiag(diag::ExpectedModuleName, args[0]->sourceRange);
-                return comp.getErrorType();
-            }
-        }
-
-        return comp.getIntType();
-    }
-
-    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
-                       const CallExpression::SystemCallInfo&) const final {
-        notConst(context, range);
-        return nullptr;
-    }
-
-private:
-    bool isOptional;
-};
-
 class StacktraceFunc : public SystemSubroutine {
 public:
     StacktraceFunc() : SystemSubroutine(KnownSystemName::Stacktrace, SubroutineKind::Function) {}
@@ -697,9 +637,6 @@ void Builtins::registerNonConstFuncs() {
     addSystemSubroutine(std::make_shared<FReadFunc>());
     addSystemSubroutine(std::make_shared<SampledFunc>());
     addSystemSubroutine(std::make_shared<PastFunc>());
-    addSystemSubroutine(std::make_shared<TimeScaleFunc>(KnownSystemName::TimeUnit, true));
-    addSystemSubroutine(std::make_shared<TimeScaleFunc>(KnownSystemName::TimePrecision, true));
-    addSystemSubroutine(std::make_shared<TimeScaleFunc>(KnownSystemName::Scale, false));
     addSystemSubroutine(std::make_shared<StacktraceFunc>());
     addSystemSubroutine(std::make_shared<CountDriversFunc>());
     addSystemSubroutine(std::make_shared<GetPatternFunc>());

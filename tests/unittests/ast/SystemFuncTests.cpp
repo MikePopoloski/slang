@@ -2824,9 +2824,8 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::WrongLanguageVersion);
-    CHECK(diags[1].code == diag::IntFloatConv);
 }
 
 TEST_CASE("Iterator index on wildcard associative array") {
@@ -3098,4 +3097,58 @@ endmodule
     CHECK(get("top.s4").str() == "bit signed[3:0]");
     CHECK(get("top.m1").integer() == 0);
     CHECK(get("top.m2").integer() == 0);
+}
+
+TEST_CASE("v1800-2023: $timeunit and $timeprecision are constant") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+timeunit 100ps / 10fs;
+module a_dat;
+    timeunit 1ms / 1us;
+    localparam int RU = $timeunit($root);
+    localparam int RP = $timeprecision($root);
+    localparam int UU = $timeunit($unit);
+    localparam int UP = $timeprecision($unit);
+    localparam int AU = $timeunit;
+    localparam int AP = $timeprecision;
+    localparam int CU = $timeunit(b_dat.c1);
+    localparam int CP = $timeprecision(b_dat.c1);
+endmodule
+
+`timescale 10 fs / 1 fs
+module b_dat;
+    c_dat c1 ();
+endmodule
+
+`timescale 1 ns / 1 ns
+module c_dat;
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto get = [&](std::string_view name) {
+        return root.lookupName<ParameterSymbol>("a_dat."s + std::string(name))
+            .getValue()
+            .integer()
+            .as<int32_t>()
+            .value();
+    };
+
+    // These match the example output in [20.4.1].
+    CHECK(get("RU") == -15);
+    CHECK(get("RP") == -15);
+    CHECK(get("UU") == -10);
+    CHECK(get("UP") == -14);
+    CHECK(get("AU") == -3);
+    CHECK(get("AP") == -6);
+    CHECK(get("CU") == -9);
+    CHECK(get("CP") == -9);
+
+    CHECK(compilation.getSimulationTimeUnit() ==
+          TimeScaleValue(TimeUnit::Femtoseconds, TimeScaleMagnitude::One));
 }
