@@ -1756,6 +1756,26 @@ endmodule : m
     CHECK_DIAGS_EMPTY;
 }
 
+TEST_CASE("Inferred clock default on event-typed sequence formal") {
+    auto& text = R"(
+module m;
+    logic c1, c2, a, b;
+    sequence se(event ck = $inferred_clock); @ck a ##1 b; endsequence
+    sequence su(ck = $inferred_clock); @ck a ##1 b; endsequence
+    A1: assert property (@(posedge c1) a ##2 su);
+    A2: assert property (@(posedge c1) a ##2 se);
+    A3: assert property (@(posedge c1) a ##2 se(posedge c2));
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidMulticlockedSeqOp);
+}
+
 TEST_CASE("Checker default inferred clocks") {
     auto& text = R"(
 module top(input clk);

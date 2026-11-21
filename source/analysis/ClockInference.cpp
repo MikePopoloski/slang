@@ -23,8 +23,17 @@ ClockInference::ExpansionInstance::ExpansionInstance(const AssertionInstanceExpr
 
     // Determine if this instance has an inferred clocking default argument.
     for (auto& arg : expr.arguments) {
-        if (auto argExpr = std::get_if<const Expression*>(&std::get<1>(arg))) {
+        auto& actual = std::get<1>(arg);
+        if (auto argExpr = std::get_if<const Expression*>(&actual)) {
             if (ClockInference::isInferredClockCall(**argExpr)) {
+                hasInferredClockArg = true;
+                break;
+            }
+        }
+        else if (auto argTiming = std::get_if<const TimingControl*>(&actual)) {
+            // Arguments for formals of type event are bound as timing controls.
+            if (*argTiming && (*argTiming)->kind == TimingControlKind::SignalEvent &&
+                ClockInference::isInferredClockCall((*argTiming)->as<SignalEventControl>().expr)) {
                 hasInferredClockArg = true;
                 break;
             }
