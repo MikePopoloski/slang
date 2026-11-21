@@ -3026,6 +3026,32 @@ endmodule
     CHECK(diags[2].code == diag::ConstEvalTimedStmtNotConst);
 }
 
+TEST_CASE("Nonblocking assignment in a constant function call") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function int f(int a);
+        int l;
+        l = 0;
+        l <= a;
+        return l;
+    endfunction
+
+    localparam int P = f(7);
+
+    // Not a constant call, so this is fine.
+    int x;
+    initial x = f(3);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalTimedStmtNotConst);
+}
+
 TEST_CASE("wait_order target must be an event") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

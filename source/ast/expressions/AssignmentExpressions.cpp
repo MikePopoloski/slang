@@ -452,7 +452,9 @@ bool AssignmentExpression::isLValueArg() const {
 }
 
 ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
-    if (!context.flags.has(EvalFlags::IsScript) && timingControl) {
+    // A nonblocking assignment schedules an update for after the current
+    // evaluation, which a constant function can't do [13.4.3].
+    if (!context.flags.has(EvalFlags::IsScript) && (timingControl || isNonBlocking())) {
         context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
         return nullptr;
     }
