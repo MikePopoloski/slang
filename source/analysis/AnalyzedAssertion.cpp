@@ -298,17 +298,7 @@ struct AssertionVisitor {
                     }
 
                     if (lastEndClock && outerClock) {
-                        // The end clock of a sequence used with .triggered must match
-                        // the outer clock. The .matched method is specifically for
-                        // detecting the end point of a sequence with a different clock [16.13.5].
-                        if (expr.getKnownSystemName() == KnownSystemName::Triggered &&
-                            !outerClock->isEquivalentTo(*lastEndClock)) {
-                            parent.parent.bad = true;
-                            auto& diag = parent.addDiag(diag::SeqMethodEndClock, expr.sourceRange);
-                            diag << expr.getSubroutineName();
-                            diag.addNote(diag::NoteClockHere, outerClock->sourceRange);
-                            diag.addNote(diag::NoteClockHere, lastEndClock->sourceRange);
-                        }
+                        parent.checkSeqMethodEndClock(expr, outerClock, lastEndClock);
                         lastEndClock = nullptr;
                     }
                 }
@@ -481,6 +471,20 @@ struct AssertionVisitor {
         return result;
     }
 
+    void checkSeqMethodEndClock(const CallExpression& call, Clock outerClock, Clock endClock) {
+        // The end clock of a sequence used with .triggered must match the clock of
+        // the calling context. The .matched method is specifically for detecting
+        // the end point of a sequence with a different clock [16.13.5].
+        if (call.getKnownSystemName() == KnownSystemName::Triggered &&
+            !outerClock->isEquivalentTo(*endClock)) {
+            parent.bad = true;
+            auto& diag = addDiag(diag::SeqMethodEndClock, call.sourceRange);
+            diag << call.getSubroutineName();
+            diag.addNote(diag::NoteClockHere, outerClock->sourceRange);
+            diag.addNote(diag::NoteClockHere, endClock->sourceRange);
+        }
+    }
+
     VisitResult visit(const SimpleAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
         LocalSet savedVars;
         if (isZeroOrMoreRep(expr.repetition)) {
@@ -505,11 +509,17 @@ struct AssertionVisitor {
                     result = visit(args[0]->as<AssertionInstanceExpression>(), outerClock, flags,
                                    /* isForSequenceMethod */ true, /* isMaximalExpr */ true);
 
-                    // The matched method synchronizes the source sequence's end point to
-                    // the clock of the calling context [16.13.5], so if there is one
-                    // the result is a boolean sampled on that clock.
-                    if (ksn == KnownSystemName::Matched && outerClock)
+                    // Both methods yield a boolean sampled on the clock of the calling
+                    // context [16.13.5]: matched synchronizes the source sequence's end
+                    // point to that clock, and triggered requires the source to end on it.
+                    if (outerClock) {
+                        if (!result->clocks.empty()) {
+                            auto endClock = result->endClock ? result->endClock
+                                                             : result->clocks.back();
+                            checkSeqMethodEndClock(call, outerClock, endClock);
+                        }
                         result = inheritedClock(expr, outerClock, flags | VF::RequireSequence);
+                    }
                 }
             }
         }

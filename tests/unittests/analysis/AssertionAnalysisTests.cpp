@@ -2056,20 +2056,39 @@ module m;
     logic c1, c2, a, b;
     sequence ec2; @(posedge c2) a ##1 b; endsequence
     sequence ec1; @(posedge c1) a ##1 b; endsequence
+    sequence mc; @(posedge c2) a ##1 @(posedge c1) b; endsequence
+    sequence s(sequence x); @(posedge c1) a ##1 x.triggered; endsequence
     A: assert property (@(posedge c1) a ##2 ec2.matched);
     B: assert property (@(posedge c1) ec2.matched ##2 b);
     C: assert property (@(posedge c1) a ##2 ec2.triggered);
     D: assert property (@(posedge c1) a ##2 ec1.triggered);
     E: assert property (ec2.matched);
+    F: assert property (@(posedge c1) a ##2 mc.triggered);
+    G: assert property (@(posedge c1) a ##1 ec2.triggered);
+    H: assert property (@(posedge c1) a |=> ec2.triggered);
+    I: assert property (@(posedge c1) ec2.triggered);
+    J: assert property (s(ec1));
+    K: assert property (s(ec2));
+endmodule
+
+module n;
+    logic c1, c2, a, b;
+    default clocking @(posedge c1); endclocking
+    sequence ec2; @(posedge c2) a ##1 b; endsequence
+    L: assert property (ec2.triggered);
+    M: assert property (ec2.matched);
 endmodule
 )";
 
     Compilation compilation;
     AnalysisManager analysisManager;
 
+    // A bare .triggered operand is a boolean on the context clock, so the
+    // source sequence has to end on that clock [16.13.5].
     auto diags = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::InvalidMulticlockedSeqOp);
+    REQUIRE(diags.size() == 6);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::SeqMethodEndClock);
 }
 
 TEST_CASE("Global future sampled value func with seq match items") {
@@ -2155,7 +2174,7 @@ module mod_sva_checks;
    a6_legal: assert property (
      @(posedge clk_a) disable iff ($rose(a, @clk_a)) a |=> b);
 
-    assert property(e4.triggered);
+    assert property(@(posedge clk_a) e4.triggered);
       assert property($rose(a));
 endmodule : mod_sva_checks
 )";
