@@ -328,6 +328,16 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
         type = &comp.getType(width, operand->type->getIntegralFlags());
     }
 
+    // A string literal cast to an unpacked byte array follows the same rules as
+    // assigning it to one, so it's left justified if the sizes differ [5.9].
+    if (type->isByteArray() && operand->isImplicitString()) {
+        auto& conv = ConversionExpression::makeImplicit(context, *type, ConversionKind::Explicit,
+                                                        *operand, nullptr,
+                                                        syntax.apostrophe.range());
+        conv.sourceRange = syntax.sourceRange();
+        return conv;
+    }
+
     if (!type->isCastCompatible(*operand->type)) {
         if (!Bitstream::checkClassAccess(*type, context, targetExpr.sourceRange)) {
             return badExpr(comp, result(*operand));

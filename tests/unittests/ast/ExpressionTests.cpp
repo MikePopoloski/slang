@@ -1603,6 +1603,36 @@ endmodule
     CHECK(diags[0].code == diag::BadAssignment);
 }
 
+TEST_CASE("String literal cast to unpacked array of bytes") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef byte ba5_t[0:4];
+    typedef byte ba2_t[2];
+    typedef byte bd_t[];
+    typedef byte bq_t[$];
+    localparam ba5_t a = ba5_t'("AB");
+    localparam ba2_t b = ba2_t'("ABC");
+    localparam ba2_t c = ba2_t'("AB");
+    localparam bd_t d = bd_t'("ABC");
+    localparam bq_t e = bq_t'("ABC");
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto get = [&](std::string_view name) {
+        return root.lookupName<ParameterSymbol>(name).getValue().toString();
+    };
+    CHECK(get("m.a") == "[8'sd65,8'sd66,8'sd0,8'sd0,8'sd0]");
+    CHECK(get("m.b") == "[8'sd65,8'sd66]");
+    CHECK(get("m.c") == "[8'sd65,8'sd66]");
+    CHECK(get("m.d") == "[8'sd65,8'sd66,8'sd67]");
+    CHECK(get("m.e") == "[8'sd65,8'sd66,8'sd67]");
+}
+
 auto testBitstream(const std::string& text, DiagCode code = DiagCode()) {
     const auto& fullText = "module Top; " + text + " endmodule";
     auto tree = SyntaxTree::fromText(fullText);
