@@ -2530,6 +2530,21 @@ endmodule
     CHECK(diags[0].code == diag::ConcurrentAssertNotInProc);
 }
 
+TEST_CASE("Immediate assertions in concurrent assertion action blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic clk, a;
+    assert property (@(posedge clk) a) assert (a); else assert (!a);
+    always @(posedge clk) assert property (a) assert (a);
+    cover property (@(posedge clk) a) begin assert (a); end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Immediate assertions not allowed at module level -- GH #1789") {
     auto tree = SyntaxTree::fromText(R"(
 module foo;

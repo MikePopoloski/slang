@@ -256,9 +256,11 @@ Statement& ImmediateAssertionStatement::fromSyntax(Compilation& compilation,
         // Immediate (non-deferred) assertions require a procedural context.
         // The isFromAssertion flag identifies synthetic procedural blocks created for
         // module-level assertion members, which are not valid for immediate assertions.
+        // The action blocks of concurrent assertions can also contain them [16.14.1].
         auto proc = context.getProceduralBlock();
         bool inRealProcBlock = proc && !proc->isFromAssertion;
-        if (!context.scope->isProceduralContext() && !inRealProcBlock) {
+        if (!context.scope->isProceduralContext() && !inRealProcBlock &&
+            !context.flags.has(ASTFlags::ConcurrentAssertActionBlock)) {
             context.addDiag(diag::ImmediateAssertNotInProc, syntax.sourceRange());
             return badStmt(compilation, nullptr);
         }
