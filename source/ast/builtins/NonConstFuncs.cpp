@@ -151,6 +151,30 @@ private:
     bool isFscanf;
 };
 
+// Checks whether the given type is valid as the destination of $fread [21.3.4.4].
+static bool isValidFReadTarget(const Type& type) {
+    if (type.isIntegral() || type.isUnpackedArray())
+        return true;
+
+    // Unpacked structs are read as though each member were read in order,
+    // and unpacked unions as though their first member were read.
+    auto& ct = type.getCanonicalType();
+    if (ct.kind == SymbolKind::UnpackedStructType) {
+        for (auto field : ct.as<UnpackedStructType>().fields) {
+            if (!isValidFReadTarget(field->getType()))
+                return false;
+        }
+        return true;
+    }
+
+    if (ct.kind == SymbolKind::UnpackedUnionType) {
+        auto& fields = ct.as<UnpackedUnionType>().fields;
+        return !fields.empty() && isValidFReadTarget(fields[0]->getType());
+    }
+
+    return false;
+}
+
 class FReadFunc : public SystemSubroutine {
 public:
     FReadFunc() : SystemSubroutine(KnownSystemName::FRead, SubroutineKind::Function) {}
@@ -172,8 +196,8 @@ public:
         if (!checkArgCount(context, false, args, range, 2, 4))
             return comp.getErrorType();
 
-        // First argument is integral or an unpacked array.
-        if (!args[0]->type->isIntegral() && !args[0]->type->isUnpackedArray())
+        // First argument is integral, an unpacked array, or an unpacked struct or union.
+        if (!isValidFReadTarget(*args[0]->type))
             return badArg(context, *args[0]);
 
         // Second argument is an fd (integral).

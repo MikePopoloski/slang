@@ -178,6 +178,35 @@ endmodule
     CHECK(diags[0].code == diag::BadAssignment);
 }
 
+TEST_CASE("fread into unpacked structs and unions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct { int x; byte y; } us_t;
+    typedef union { int x; real r; } uu_t;
+    typedef struct { int x; uu_t u; byte b[2]; } nest_t;
+    typedef struct { int x; real r; } bs_t;
+    typedef union { real r; int x; } bu_t;
+    us_t us; uu_t uu; nest_t n; bs_t bs; bu_t bu;
+    integer fd, c;
+    initial begin
+        c = $fread(us, fd);
+        c = $fread(uu, fd);
+        c = $fread(n, fd);
+        c = $fread(bs, fd);
+        c = $fread(bu, fd);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[1].code == diag::BadSystemSubroutineArg);
+}
+
 TEST_CASE("Format string - class handle and null types") {
     auto tree = SyntaxTree::fromText(R"(
 class my_class;
