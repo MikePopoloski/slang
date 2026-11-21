@@ -1097,6 +1097,21 @@ endmodule
     CHECK(root.lookupName<ParameterSymbol>("m.a2").getValue().integer() == 5);
 }
 
+TEST_CASE("Let event actuals inside always_comb") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic clk, input logic a);
+    logic w, v;
+    let ro(x, event e) = $rose(x, @(e));
+    always_comb w = ro(a, posedge clk);
+    always_comb v = $rose(a, @(posedge clk));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Let with invalid typed argument in constant expression") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

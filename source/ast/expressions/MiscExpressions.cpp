@@ -674,6 +674,18 @@ ConstantValue LValueReferenceExpression::evalImpl(EvalContext& context) const {
     return lvalue->load();
 }
 
+// Binds an event expression that is used only to tell a system function or an
+// assertion which clock to use. It doesn't actually pass any time, so usage inside
+// of an always_comb shouldn't report an error about that; clear out the context's
+// procedure to avoid it.
+static TimingControl& bindClockingEvent(const PropertyExprSyntax& syntax,
+                                        const ASTContext& argContext) {
+    ASTContext context(argContext);
+    context.clearSymbolCtx();
+    context.flags |= ASTFlags::NonProcedural;
+    return TimingControl::bind(syntax, context);
+}
+
 Expression& ClockingEventExpression::fromSyntax(const ClockingPropertyExprSyntax& syntax,
                                                 const ASTContext& argContext) {
     // Clocking event expressions are only used in special system function calls,
@@ -782,7 +794,7 @@ bool AssertionInstanceExpression::checkAssertionArg(const PropertyExprSyntax& pr
             return !bound.bad();
         }
         case SymbolKind::EventType: {
-            auto& bound = TimingControl::bind(propExpr, ctx);
+            auto& bound = bindClockingEvent(propExpr, ctx);
             result = &bound;
             return !bound.bad();
         }
@@ -1450,7 +1462,7 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
                      instanceCtx.flags.has(ASTFlags::AllowClockingBlock)) {
                 // In an event expression, a referenced argument gets interpreted
                 // as an event expression itself and not as an assertion expression.
-                auto& timing = TimingControl::bind(*propExpr, argCtx);
+                auto& timing = bindClockingEvent(*propExpr, argCtx);
                 return *comp.emplace<ClockingEventExpression>(comp.getVoidType(), timing, range);
             }
             else {
@@ -1478,7 +1490,7 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
             // are allowed, regardless of what the actual argument expression looks like.
             if (instanceCtx.flags.has(ASTFlags::EventExpression) &&
                 instanceCtx.flags.has(ASTFlags::AllowClockingBlock)) {
-                auto& timing = TimingControl::bind(*propExpr, argCtx);
+                auto& timing = bindClockingEvent(*propExpr, argCtx);
                 return *comp.emplace<ClockingEventExpression>(comp.getVoidType(), timing, range);
             }
 
