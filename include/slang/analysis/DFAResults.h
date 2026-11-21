@@ -119,6 +119,9 @@ public:
 
     /// Gets all of the nets and variables that were read in the procedure,
     /// along with their accessed bit ranges.
+    /// For procedures that can have an inferred clock (always, always_ff,
+    /// and initial) this doesn't include reads that occur only within
+    /// immediate assertion conditions [16.14.6].
     const ReadSet& getRValues() const { return rvalues; }
 
     /// Gets the per-region read sets for all @* timing controls in the procedure.

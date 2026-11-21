@@ -123,6 +123,9 @@ public:
     };
 
     /// Gets all symbols (and bit ranges) read anywhere in the procedure.
+    /// For procedures that can have an inferred clock (always, always_ff,
+    /// and initial) this doesn't include reads that occur only within
+    /// immediate assertion conditions [16.14.6].
     std::span<const ReadRange> getReadSet() const { return readSet; }
 
     /// Gets the per-region read sets for each @* timing control in the procedure.

@@ -412,6 +412,37 @@ endmodule
     checkSensitivityNames(sensit, {"b", "c", "e"});
 }
 
+TEST_CASE("Sensitivity list - immediate assertion conditions in functions and @* contribute") {
+    SensitivityHarness h1(R"(
+module m;
+    logic a, b, y;
+    function automatic void check();
+        assert (b);
+    endfunction
+    always_comb begin
+        y = a;
+        check();
+    end
+endmodule
+)");
+    auto sensit = h1.sensitivity();
+    CHECK(sensit.kind == SLK::Implicit);
+    checkSensitivityNames(sensit, {"a", "b"});
+
+    SensitivityHarness h2(R"(
+module m;
+    logic c, d, z;
+    always @* begin
+        z = c;
+        assert (d);
+    end
+endmodule
+)");
+    sensit = h2.sensitivity();
+    CHECK(sensit.kind == SLK::Implicit);
+    checkSensitivityNames(sensit, {"c", "d"});
+}
+
 // ---------------------------------------------------------------------------
 // Wait-statement timing-control expressions (LRM 9.4.2.5)
 // ---------------------------------------------------------------------------

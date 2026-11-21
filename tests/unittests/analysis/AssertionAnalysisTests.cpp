@@ -1632,6 +1632,29 @@ endmodule
     CHECK(diags[0].code == diag::InvalidMulticlockedSeqOp);
 }
 
+TEST_CASE("Clock inference ignores references in immediate assertion conditions") {
+    auto& text = R"(
+module m;
+    logic clk, a, b;
+    always @(posedge clk) begin
+        assert (clk);
+        assert property (a);
+    end
+    always @(posedge clk) begin
+        b <= clk;
+        assert property (a);
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto diags = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssertionNoClock);
+}
+
 TEST_CASE("Inferred clock resolution") {
     auto& text = R"(
 module m(input clk1, clk2, clk3, a);

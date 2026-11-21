@@ -186,6 +186,12 @@ protected:
     /// Called after leaving an assertion action block.
     void leaveAssertionActionBlock() {}
 
+    /// Called before visiting the condition of an immediate assertion.
+    void enterAssertionCondition() {}
+
+    /// Called after visiting the condition of an immediate assertion.
+    void leaveAssertionCondition() {}
+
     // ------------------------------------------------------------------------
     // Statement visitors
     // ------------------------------------------------------------------------
@@ -759,7 +765,9 @@ protected:
     }
 
     void visitStmt(const ImmediateAssertionStatement& stmt) {
+        (DERIVED).enterAssertionCondition();
         visitCondition(stmt.cond);
+        (DERIVED).leaveAssertionCondition();
 
         if (stmt.isDeferred) {
             // Deferred assertion action blocks don't execute until

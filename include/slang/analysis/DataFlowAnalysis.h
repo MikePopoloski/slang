@@ -170,7 +170,8 @@ protected:
         AFABase(symbol, context.manager->getOptions(),
                 reportDiags ? &context.diagnostics : nullptr),
         DFAResults(context, this->getState().assigned), context(context),
-        sequenceChecker(*this, reportDiags ? &context : nullptr) {}
+        sequenceChecker(*this, reportDiags ? &context : nullptr),
+        ignoreAssertionConditionReads(canInferClock(symbol)) {}
 
     template<typename T>
         requires(detail::IsSelectExpr<T>)
@@ -483,6 +484,11 @@ protected:
     void enterAssertionActionBlock() { inAssertionActionBlock = true; }
     void leaveAssertionActionBlock() { inAssertionActionBlock = false; }
 
+    // Reads within immediate assertion conditions don't prevent clock
+    // inference [16.14.6]; see ignoreAssertionConditionReads.
+    void enterAssertionCondition() { inAssertionCondition = true; }
+    void leaveAssertionCondition() { inAssertionCondition = false; }
+
     // Override the CRTP hooks from AbstractFlowAnalysis to suppress rvalue
     // read tracking while inside a timing-control expression (wait condition,
     // wait_order event list). Per LRM 9.4.2.2, identifiers that only appear
@@ -547,11 +553,34 @@ private:
     // Expressions that have already been checked for tautological comparisons.
     SmallSet<const Expression*, 2> checkedExprs;
 
+    // Determines whether the given analyzed symbol is a procedure that can
+    // have an inferred clock [16.14.6]. always_comb, always_latch, and final
+    // procedures can't, since they never have a leading event control.
+    static bool canInferClock(const Symbol& symbol) {
+        if (symbol.kind != SymbolKind::ProceduralBlock)
+            return false;
+
+        auto kind = symbol.as<ProceduralBlockSymbol>().procedureKind;
+        return kind != ProceduralBlockKind::AlwaysComb &&
+               kind != ProceduralBlockKind::AlwaysLatch && kind != ProceduralBlockKind::Final;
+    }
+
     // Set to true while visiting an lvalue expression.
     bool isLValue = false;
 
     // Set to true while visiting immediate assertion action blocks.
     bool inAssertionActionBlock = false;
+
+    // Set to true while visiting immediate assertion conditions.
+    bool inAssertionCondition = false;
+
+    // If true, reads within immediate assertion conditions are not recorded
+    // in the procedure's rvalues, so that they don't prevent clock inference
+    // [16.14.6]. This is only set for procedures that can infer a clock, which
+    // are never the ones whose read set forms an implicit sensitivity list;
+    // those do include such reads [9.2.2.2.1]. Reads in @* regions are
+    // tracked separately and always include them.
+    bool ignoreAssertionConditionReads;
 
     // Set to true while visiting timing-control expressions (wait condition,
     // wait_order event list, etc.).
@@ -672,7 +701,8 @@ void DataFlowAnalysis<TDerived, TState>::noteReference(const ValuePath& initialP
         lspMap.insert(bounds, path.lsp, lspMapAllocator);
     }
     else if (!inAssertionActionBlock && !inTimingControlExpr) {
-        rvalues[&symbol].unionWith(bounds, {}, bitMapAllocator);
+        if (!inAssertionCondition || !ignoreAssertionConditionReads)
+            rvalues[&symbol].unionWith(bounds, {}, bitMapAllocator);
         for (auto region : activeImplicitRegions)
             implicitEventRVals[region][&symbol].unionWith(bounds, {}, bitMapAllocator);
     }
