@@ -695,6 +695,54 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Recursive property after a multi-cycle antecedent") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic clk, a, b;
+    property r1; a ##1 b |-> r1; endproperty
+    property r2; a ##[1:3] b #-# r2; endproperty
+    property r3; a |-> r3; endproperty
+    property r4; a ##[0:1] b |-> r4; endproperty
+    property r5; a[*0:1] ##1 b |-> r5; endproperty
+    property r6; a[*2] |-> r6; endproperty
+
+    assert property (@(posedge clk) r1);
+    assert property (@(posedge clk) r2);
+    assert property (@(posedge clk) r3);
+    assert property (@(posedge clk) r4);
+    assert property (@(posedge clk) r5);
+    assert property (@(posedge clk) r6);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::RecursivePropTimeAdvance);
+    CHECK(diags[1].code == diag::RecursivePropTimeAdvance);
+    CHECK(diags[2].code == diag::RecursivePropTimeAdvance);
+}
+
+TEST_CASE("Sequence concatenation length includes element lengths") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic clk, a, b, c, d;
+    assert property (@(posedge clk) (a[*3] ##1 b) intersect (c ##1 d));
+    assert property (@(posedge clk) (a[*3] ##1 b) intersect (c ##3 d));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SeqNoMatch);
+    CHECK(compilation.getSourceManager()->getLineNumber(diags[0].location) == 4);
+}
+
 TEST_CASE("Recursive property instance passed as argument still checked") {
     auto tree = SyntaxTree::fromText(R"(
 module top(input logic clk, a, b);

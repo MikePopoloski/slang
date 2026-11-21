@@ -833,29 +833,40 @@ AssertionExpr::NondegeneracyCheckResult SequenceConcatExpr::checkNondegeneracyIm
 }
 
 std::optional<SequenceRange> SequenceConcatExpr::computeSequenceLengthImpl() const {
-    uint32_t delayMin = 0;
-    uint32_t delayMax = 0;
-    for (auto it = elements.begin(); it != elements.end(); it++) {
-        const bool acceptsOnlyEmpty = it->sequence->checkNondegeneracy().status.has(
-            NondegeneracyStatus::AcceptsOnlyEmpty);
+    // Lengths are counted in clock ticks, inclusive of both ends, so a single
+    // boolean has length 1 and an empty match has length 0. For (s1 ##n s2)
+    // the length is l1 + n + l2 - 1, which also holds when either side is an
+    // empty match since (empty ##n s) is equivalent to (##(n-1) s) and
+    // (s ##n empty) is equivalent to (s ##(n-1) `true) [16.9.2.1].
+    // A leading delay (##n s) behaves like (`true ##n s), which is n + l2.
+    auto combine = [](uint64_t acc, uint64_t delay, uint64_t len, bool first) -> uint64_t {
+        if (first)
+            return delay + len;
+        auto total = acc + delay + len;
+        return total == 0 ? 0 : total - 1;
+    };
 
-        // Default delay length for concat sequence is 1 if it admits a non-empty match.
-        if (it == elements.begin() && !acceptsOnlyEmpty)
-            delayMin = delayMax = 1;
+    uint64_t minLen = 0, maxLen = 0;
+    bool unbounded = false;
+    bool first = true;
+    for (auto& elem : elements) {
+        auto len = elem.sequence->computeSequenceLength();
+        if (!len)
+            return {};
 
-        // (empty ##n seq), where n is greater than 0, is equivalent to (##(n-1) seq).
-        // Also ((##n empty) ; (seq ##n empty)), where n is greater than 0, is equivalent to
-        // ((##(n-1) `true) ; (seq ##(n-1) `true))
-        delayMin += (it->delay.min && acceptsOnlyEmpty) ? it->delay.min - 1 : it->delay.min;
-        if (it->delay.max.has_value()) {
-            const auto maxVal = it->delay.max.value();
-            delayMax += (maxVal && acceptsOnlyEmpty) ? maxVal - 1 : maxVal;
-        }
+        minLen = combine(minLen, elem.delay.min, len->min, first);
+        if (!elem.delay.max || !len->max)
+            unbounded = true;
+        else if (!unbounded)
+            maxLen = combine(maxLen, *elem.delay.max, *len->max, first);
+
+        first = false;
     }
 
     SequenceRange res;
-    res.min = delayMin;
-    res.max = delayMax;
+    res.min = uint32_t(std::min<uint64_t>(minLen, UINT32_MAX));
+    if (!unbounded)
+        res.max = uint32_t(std::min<uint64_t>(maxLen, UINT32_MAX));
     return res;
 }
 
@@ -1177,6 +1188,15 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& s
 
     auto& comp = context.getCompilation();
     auto& left = bind(*syntax.left, context.resetFlags(lflags), false, nondegenRequirement);
+
+    // For overlapped implication and followed-by, the consequent starts at the end
+    // of the antecedent's match, so time has advanced if every match of the
+    // antecedent spans at least two clock ticks [16.12.17].
+    if (isOverlapOp) {
+        if (auto length = left.computeSequenceLength(); length && length->min >= 2)
+            rflags = ASTFlags::PropertyTimeAdvance;
+    }
+
     auto& right = bind(*syntax.right, context.resetFlags(rflags));
 
     // clang-format off
