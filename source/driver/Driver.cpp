@@ -211,6 +211,10 @@ void Driver::addStandardArgs() {
     cmdLine.add("-U,--undefine-macro", options.undefines,
                 "Undefine macro name at the start of all source files", "<macro>",
                 CommandLineFlags::CommaList);
+    cmdLine.add("--macro-prefix-map", options.macroPrefixMaps,
+                "Replace the path prefix <old> with <new> in the file names that `__FILE__` "
+                "expands to",
+                "<old>=<new>");
 
     cmdLine.setGroup("Preprocessor");
     cmdLine.add("--max-include-depth", options.maxIncludeDepth,
@@ -672,6 +676,25 @@ bool Driver::processOptions(bool checkFiles) {
 
     if (options.incDirFirst.value_or(options.compat == CompatMode::Vcs))
         sourceManager.setIncDirFirst(true);
+
+    if (!options.macroPrefixMaps.empty()) {
+        bool anyBad = false;
+        for (auto& mapping : options.macroPrefixMaps) {
+            const size_t equalsIndex = mapping.find_first_of('=');
+            if (equalsIndex == std::string::npos) {
+                printError(fmt::format("invalid format for macro-prefix-map: '{}'", mapping));
+                anyBad = true;
+            }
+            else {
+                sourceManager.addMacroPrefixMapping(mapping.substr(0, equalsIndex),
+                                                    std::string_view(mapping).substr(equalsIndex +
+                                                                                     1));
+            }
+        }
+
+        if (anyBad)
+            return false;
+    }
 
     if (!reportLoadErrors())
         return false;

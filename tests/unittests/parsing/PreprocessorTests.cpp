@@ -1249,6 +1249,63 @@ TEST_CASE("`line + FILE + LINE Directive") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("FILE Directive under a macro prefix mapping") {
+    fs::path testDir = fs::weakly_canonical(findTestDir());
+    std::string text = "`include \"file_uses_defn.svh\"\n"
+                       "`line 1 \"" +
+                       (testDir / "nested" / "deeper.sv").generic_string() +
+                       "\" 0\n"
+                       "`__FILE__\n"
+                       "`line 1 \"/elsewhere/other.sv\" 0\n"
+                       "`__FILE__\n"
+                       "`line 1 \"relative.sv\" 0\n"
+                       "`__FILE__\n";
+
+    diagnostics.clear();
+
+    SourceManager sourceManager;
+    setupSourceManager(sourceManager);
+    sourceManager.addMacroPrefixMapping(fs::proximate(testDir), "lib");
+    sourceManager.addMacroPrefixMapping(testDir / "nested", "inner");
+    sourceManager.addMacroPrefixMapping(testDir / "nest", "partial");
+    sourceManager.addMacroPrefixMapping(testDir / "test.sv", "only.sv");
+
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    // An included file is named by its full path under the mapping that matches it,
+    // even when the mapping was given as a relative path. Diagnostics still use the
+    // file's own name.
+    Token token = preprocessor.next();
+    REQUIRE(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == (fs::path("lib") / "file_uses_defn.svh").string());
+    CHECK(sourceManager.getFileName(token.location()) ==
+          fs::proximate(testDir / "file_uses_defn.svh").string());
+
+    // The mapping with the most path components wins, and a prefix only matches
+    // whole components.
+    token = preprocessor.next();
+    REQUIRE(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == (fs::path("inner") / "deeper.sv").string());
+
+    // A name that no mapping matches keeps the name diagnostics use.
+    token = preprocessor.next();
+    REQUIRE(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() ==
+          fs::path("/elsewhere/other.sv").lexically_proximate(fs::current_path()).string());
+
+    token = preprocessor.next();
+    REQUIRE(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == "relative.sv");
+
+    // A mapping can name a whole file.
+    auto buffer = sourceManager.readSource(fs::proximate(testDir / "test.sv"), nullptr);
+    REQUIRE(buffer);
+    CHECK(sourceManager.getPathForFileMacro(SourceLocation(buffer->id, 0)) == "only.sv");
+
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Invalid `line directive") {
     auto& text = "`line 6 \"other.sv\" 4";
     preprocess(text);

@@ -140,16 +140,9 @@ std::string_view SourceManager::getFileName(SourceLocation location) const {
     if (!info || !info->data)
         return "";
 
-    // Avoid computing line offsets if we just need a name of `line-less file
-    if (info->lineDirectives.empty())
-        return info->data->name;
-
-    size_t rawLine = getRawLineNumber(fileLocation, lock);
-    auto lineDirective = info->getPreviousLineDirective(rawLine);
-    if (!lineDirective)
-        return info->data->name;
-    else
-        return lineDirective->name;
+    if (auto lineDirective = getLineDirectiveImpl(fileLocation, *info, lock))
+        return lineDirective->fileName->name;
+    return info->data->name;
 }
 
 std::string_view SourceManager::getRawFileName(BufferID buffer) const {
@@ -168,6 +161,21 @@ const fs::path& SourceManager::getFullPath(BufferID buffer) const {
         return emptyPath;
 
     return info->data->fullPath;
+}
+
+std::string SourceManager::getPathForFileMacro(SourceLocation location) const {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    SourceLocation fileLocation = getFullyExpandedLocImpl(location, lock);
+    auto info = getFileInfo(fileLocation.buffer(), lock);
+    if (!info || !info->data)
+        return "";
+
+    if (auto lineDirective = getLineDirectiveImpl(fileLocation, *info, lock)) {
+        auto fileName = lineDirective->fileName;
+        return applyMacroPrefixMappings(fs::path(fileName->writtenName).lexically_normal(),
+                                        fileName->name, lock);
+    }
+    return applyMacroPrefixMappings(info->data->fullPath, info->data->name, lock);
 }
 
 template<IsLock TLock>
@@ -558,6 +566,26 @@ SourceManager::BufferOrError SourceManager::readHeader(
     return nonstd::make_unexpected(make_error_code(std::errc::no_such_file_or_directory));
 }
 
+void SourceManager::addMacroPrefixMapping(const fs::path& oldPrefix, std::string_view newPrefix) {
+    // Make the prefix canonical the same way openCached does for files,
+    // so that the two can be compared.
+    fs::path prefix = oldPrefix;
+    if (!disableProximatePaths) {
+        std::error_code ec;
+        prefix = fs::weakly_canonical(oldPrefix, ec);
+        if (ec)
+            prefix = oldPrefix;
+    }
+
+    // Strip a trailing separator so the prefix compares by whole components.
+    prefix = prefix.lexically_normal();
+    if (!prefix.has_filename() && prefix != prefix.root_path())
+        prefix = prefix.parent_path();
+
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    macroPrefixMappings.emplace_back(std::move(prefix), std::string(newPrefix));
+}
+
 void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, std::string_view name,
                                      uint8_t level) {
     std::unique_lock<std::shared_mutex> lock(mutex);
@@ -575,8 +603,9 @@ void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, st
         full = fs::path(info->data->name).replace_filename(linePath);
 
     size_t sourceLineNum = getRawLineNumber(fileLocation, lock);
-    auto& storedName = *lineDirectiveNames.emplace(getU8Str(full)).first;
-    info->lineDirectives.emplace_back(storedName, sourceLineNum, lineNum, level);
+    auto& storedName =
+        *lineDirectiveNames.emplace(LineDirectiveName{getU8Str(full), std::string(name)}).first;
+    info->lineDirectives.emplace_back(&storedName, sourceLineNum, lineNum, level);
 }
 
 void SourceManager::addDiagnosticDirective(SourceLocation location, std::string_view name,
@@ -797,6 +826,43 @@ size_t SourceManager::getRawLineNumber(SourceLocation location, TLock& readLock)
     if (it != fd->lineOffsets.end() && *it == location.offset())
         line++;
     return line;
+}
+
+template<IsLock TLock>
+const SourceManager::LineDirectiveInfo* SourceManager::getLineDirectiveImpl(SourceLocation location,
+                                                                            const FileInfo& info,
+                                                                            TLock& lock) const {
+    // Avoid computing line offsets if we just need a name of `line-less file
+    if (info.lineDirectives.empty())
+        return nullptr;
+
+    return info.getPreviousLineDirective(getRawLineNumber(location, lock));
+}
+
+template<IsLock TLock>
+std::string SourceManager::applyMacroPrefixMappings(const fs::path& path, std::string_view name,
+                                                    TLock&) const {
+    const std::string* replacement = nullptr;
+    fs::path rest;
+    size_t bestDepth = 0;
+    for (auto& [prefix, newPrefix] : macroPrefixMappings) {
+        fs::path relative = path.lexically_relative(prefix);
+        if (relative.empty() || *relative.begin() == "..")
+            continue;
+
+        size_t depth = size_t(std::distance(prefix.begin(), prefix.end()));
+        if (!replacement || depth > bestDepth) {
+            replacement = &newPrefix;
+            rest = std::move(relative);
+            bestDepth = depth;
+        }
+    }
+
+    if (!replacement)
+        return std::string(name);
+    if (rest == ".")
+        return *replacement;
+    return getU8Str(fs::path(*replacement) / rest);
 }
 
 template<IsLock TLock>

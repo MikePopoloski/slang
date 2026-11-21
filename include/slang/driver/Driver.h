@@ -185,6 +185,10 @@ public:
         /// A list of macros that should be undefined in each compilation unit.
         std::vector<std::string> undefines;
 
+        /// A list of mappings, each of the form <old>=<new>, that replace a path
+        /// prefix in the file names that the `__FILE__` macro expands to.
+        std::vector<std::string> macroPrefixMaps;
+
         /// If true, library files will inherit macro definitions from primary source files.
         std::optional<bool> librariesInheritMacros;
 

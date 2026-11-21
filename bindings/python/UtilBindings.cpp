@@ -136,6 +136,9 @@ void registerText(nb::module_& m) {
         .def("getFileName", &SourceManager::getFileName, "location"_a)
         .def("getRawFileName", &SourceManager::getRawFileName, "buffer"_a)
         .def("getFullPath", &SourceManager::getFullPath, "buffer"_a)
+        .def("getPathForFileMacro", &SourceManager::getPathForFileMacro, "location"_a)
+        .def("addMacroPrefixMapping", &SourceManager::addMacroPrefixMapping, "oldPrefix"_a,
+             "newPrefix"_a)
         .def("getColumnNumber", &SourceManager::getColumnNumber, "location"_a)
         .def("getDisplayColumnNumber", &SourceManager::getDisplayColumnNumber, "location"_a)
         .def("getIncludedFrom", &SourceManager::getIncludedFrom, "buffer"_a)

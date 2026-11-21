@@ -165,6 +165,18 @@ slang -DFOO=2 -DBAR=asdf -D BAZ=3
 
 Undefine the given macro at the start of all source files.
 
+`--macro-prefix-map <old>=<new>`
+
+Replace the path prefix \<old\> with \<new\> in the file names that \`__FILE__ expands to. A prefix
+matches whole path components of the file's full path, or of the name set by a \`line directive.
+If several prefixes match, the one with the most components is used. If none match, \`__FILE__
+expands to the name used in diagnostics. Diagnostics are not affected. This option can be given
+more than once. Example:
+
+@code{.ansi}
+slang --macro-prefix-map /home/me/proj= --macro-prefix-map /home/me/proj/vendor=vendor
+@endcode
+
 `--disable-local-includes`
 
 Disables "local" include path lookup, where include directives search relative to the file
