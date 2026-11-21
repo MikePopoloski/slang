@@ -446,6 +446,21 @@ TEST_CASE("Conditional expression (pattern matching)") {
           SyntaxKind::ExpressionPattern);
 }
 
+TEST_CASE("Conditional expression with a bare tagged pattern") {
+    auto& text = "u matches tagged Inv ? 1 : 0";
+    auto& expr = parseExpression(text);
+
+    CHECK(expr.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
+    REQUIRE(expr.kind == SyntaxKind::ConditionalExpression);
+
+    auto& cond = expr.as<ConditionalExpressionSyntax>();
+    REQUIRE(cond.predicate->conditions.size() == 1);
+    auto& pattern = *cond.predicate->conditions[0]->matchesClause->pattern;
+    REQUIRE(pattern.kind == SyntaxKind::TaggedPattern);
+    CHECK(pattern.as<TaggedPatternSyntax>().pattern == nullptr);
+}
+
 #if __cpp_exceptions
 TEST_CASE("Big expression") {
     auto& text = R"(

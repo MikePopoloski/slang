@@ -1112,8 +1112,10 @@ PatternSyntax& Parser::parsePattern() {
             auto tagged = consume();
             auto name = expect(TokenKind::Identifier);
 
+            // A '?' here is the start of a conditional operator that uses
+            // this pattern as its predicate, not a nested pattern.
             PatternSyntax* pattern = nullptr;
-            if (isPossiblePattern(peek().kind))
+            if (isPossiblePattern(peek().kind) && !peek(TokenKind::Question))
                 pattern = &parsePattern();
 
             return factory.taggedPattern(tagged, name, pattern);
