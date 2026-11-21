@@ -3684,6 +3684,32 @@ endmodule
     CHECK(diags[0].code == diag::AutoVarTraced);
 }
 
+TEST_CASE("v1800-2023: ref static arguments from struct members") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct { int a; int d[]; } st;
+    st sst;
+    task automatic t(ref static int r); r = 5; endtask
+    initial begin
+        automatic st ast;
+        t(sst.a);
+        t(ast.a);
+        t(sst.d[0]);
+    end
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::AutoVarToRefStatic);
+    CHECK(diags[1].code == diag::AutoVarToRefStatic);
+}
+
 TEST_CASE("v1800-2023: ref static errors") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(

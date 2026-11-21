@@ -354,7 +354,9 @@ static bool canConnectToRefArg(const ASTContext& context, const Expression& expr
 
     const bool isRefStatic = argFlags.has(VariableFlags::RefStatic);
     if (isRefStatic) {
-        if (var.lifetime == VariableLifetime::Automatic &&
+        // Struct fields don't have their own lifetime; the containing
+        // variable is checked when recursing through the member access.
+        if (var.lifetime == VariableLifetime::Automatic && var.kind != SymbolKind::Field &&
             !var.flags.has(VariableFlags::RefStatic)) {
             return false;
         }
