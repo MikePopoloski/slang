@@ -346,7 +346,8 @@ private:
     bool expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& expansion);
     bool expandReplacementList(std::span<Token const>& tokens,
                                SmallSet<const syntax::DefineDirectiveSyntax*, 8>& alreadyExpanded);
-    void createBuiltInMacro(std::string_view name, int value, std::string_view valueStr = {});
+    void createBuiltInMacro(std::string_view name, int value, std::string_view valueStr = {},
+                            bool builtIn = true);
     Token getLastConsumed() const { return lastConsumed; }
 
     static bool isSameMacro(const syntax::DefineDirectiveSyntax& left,

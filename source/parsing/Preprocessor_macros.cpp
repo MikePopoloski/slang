@@ -30,7 +30,8 @@ Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {
     return it->second;
 }
 
-void Preprocessor::createBuiltInMacro(std::string_view name, int value, std::string_view valueStr) {
+void Preprocessor::createBuiltInMacro(std::string_view name, int value, std::string_view valueStr,
+                                      bool builtIn) {
 #define NL SourceLocation::NoLocation
 
     if (valueStr.empty()) {
@@ -50,7 +51,7 @@ void Preprocessor::createBuiltInMacro(std::string_view name, int value, std::str
     MacroDef def;
     def.syntax = alloc.emplace<DefineDirectiveSyntax>(directive, nameTok, nullptr,
                                                       syntax::TokenList(alloc, body));
-    def.builtIn = true;
+    def.builtIn = builtIn;
     macros[name] = def;
 
 #undef NL
@@ -1023,9 +1024,12 @@ void Preprocessor::splitTokens(Token sourceToken, size_t offset, SmallVectorBase
                        getCurrentKeywordVersion(), results);
 }
 
-static bool isSameToken(Token left, Token right) {
+static bool isSameToken(Token left, Token right, bool ignoreTrivia = false) {
     if (left.kind != right.kind || left.rawText() != right.rawText())
         return false;
+
+    if (ignoreTrivia)
+        return true;
 
     auto lt = left.trivia();
     auto rt = right.trivia();
@@ -1039,13 +1043,16 @@ static bool isSameToken(Token left, Token right) {
     return true;
 }
 
-static bool isSameTokenList(const TokenList& left, const TokenList& right) {
+static bool isSameTokenList(const TokenList& left, const TokenList& right,
+                            bool ignoreLeadingTrivia = false) {
     if (left.size() != right.size())
         return false;
 
+    bool first = true;
     for (auto lit = left.begin(), rit = right.begin(); lit != left.end(); lit++, rit++) {
-        if (!isSameToken(*lit, *rit))
+        if (!isSameToken(*lit, *rit, ignoreLeadingTrivia && first))
             return false;
+        first = false;
     }
     return true;
 }
@@ -1078,7 +1085,8 @@ bool Preprocessor::isSameMacro(const DefineDirectiveSyntax& left,
         }
     }
 
-    return isSameTokenList(left.body, right.body);
+    // Whitespace between the macro name and its body isn't part of the body.
+    return isSameTokenList(left.body, right.body, /* ignoreLeadingTrivia */ true);
 }
 
 } // namespace slang::parsing

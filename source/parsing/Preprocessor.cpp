@@ -252,6 +252,10 @@ void Preprocessor::undefineAll() {
     createBuiltInMacro("__slang_major__"sv, VersionInfo::getMajor());
     createBuiltInMacro("__slang_minor__"sv, VersionInfo::getMinor());
 
+    // The coverage control macros are ordinary predefined text macros [40.3.1],
+    // not compiler directives, so they can be redefined or undefined.
+#undef DEFINE
+#define DEFINE(name, value) createBuiltInMacro(name, value, #value, /* builtIn */ false)
     DEFINE("SV_COV_START"sv, 0);
     DEFINE("SV_COV_STOP"sv, 1);
     DEFINE("SV_COV_RESET"sv, 2);

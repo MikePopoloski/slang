@@ -1659,14 +1659,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
-    CHECK(diags[0].code == diag::UndefineBuiltinDirective);
-    CHECK(diags[1].code == diag::TooManyArguments);
-    CHECK(diags[2].code == diag::NoImplicitConversion);
-    CHECK(diags[3].code == diag::CouldNotResolveHierarchicalPath);
-    CHECK(diags[4].code == diag::UndeclaredIdentifier);
-    CHECK(diags[5].code == diag::ExpectedModuleInstance);
-    CHECK(diags[6].code == diag::NoImplicitConversion);
+    // The coverage macros are ordinary text macros, so undefining one is fine.
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::TooManyArguments);
+    CHECK(diags[1].code == diag::NoImplicitConversion);
+    CHECK(diags[2].code == diag::CouldNotResolveHierarchicalPath);
+    CHECK(diags[3].code == diag::UndeclaredIdentifier);
+    CHECK(diags[4].code == diag::ExpectedModuleInstance);
+    CHECK(diags[5].code == diag::NoImplicitConversion);
 }
 
 TEST_CASE("Coverage function non-string value argument error") {

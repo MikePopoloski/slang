@@ -1691,6 +1691,22 @@ TEST_CASE("Command-line defines priority over `define") {
     }
 }
 
+TEST_CASE("Coverage control macros can be redefined and undefined") {
+    auto& text = R"(
+`define SV_COV_START 0
+`undef SV_COV_OK
+`ifdef SV_COV_OK
+bad
+`endif
+`SV_COV_START
+)";
+
+    std::string result = preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+    CHECK(result.find("bad") == std::string::npos);
+    CHECK(result.find("0") != std::string::npos);
+}
+
 TEST_CASE("Undef builtin") {
     auto& text = R"(
 `undef __slang__
