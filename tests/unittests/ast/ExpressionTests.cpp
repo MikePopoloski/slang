@@ -3662,6 +3662,28 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("v1800-2023: ref static arguments can be traced by $monitor") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    task automatic t(ref static logic r);
+        $monitor("r=%b", r);
+    endtask
+    task automatic u(ref logic r);
+        $monitor("r=%b", r);
+    endtask
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AutoVarTraced);
+}
+
 TEST_CASE("v1800-2023: ref static errors") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(

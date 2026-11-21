@@ -71,7 +71,8 @@ public:
 static void checkMonitorArg(const ASTContext& context, const Expression& expr) {
     expr.visitSymbolReferences([&](const Expression&, const Symbol& sym) {
         if (auto var = sym.as_if<VariableSymbol>();
-            var && var->lifetime == VariableLifetime::Automatic && var->kind != SymbolKind::Field) {
+            var && var->lifetime == VariableLifetime::Automatic && var->kind != SymbolKind::Field &&
+            !var->flags.has(VariableFlags::RefStatic)) {
             context.addDiag(diag::AutoVarTraced, expr.sourceRange) << sym.name;
         }
     });
