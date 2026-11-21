@@ -11,7 +11,10 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/Lookup.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/symbols/SubroutineSymbols.h"
+#include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
@@ -619,12 +622,49 @@ void CycleDelayControl::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
 }
 
+// Looks up a block event target of the form `handle.method`, where the handle
+// is a class variable and the method is a member of that class [19.3].
+static const SubroutineSymbol* findClassMethodTarget(const NameSyntax& name,
+                                                     const ASTContext& context) {
+    if (name.kind != SyntaxKind::ScopedName)
+        return nullptr;
+
+    LookupResult result;
+    Lookup::name(name, context, LookupFlags::ForceHierarchical, result);
+    if (!result.found || result.hasError() || result.selectors.size() != 1 ||
+        !result.found->isValue()) {
+        return nullptr;
+    }
+
+    auto selector = std::get_if<LookupResult::MemberSelector>(&result.selectors[0]);
+    if (!selector)
+        return nullptr;
+
+    auto& type = result.found->as<ValueSymbol>().getType().getCanonicalType();
+    if (!type.isClass())
+        return nullptr;
+
+    auto member = type.as<ClassType>().find(selector->name);
+    if (!member || member->kind != SymbolKind::Subroutine)
+        return nullptr;
+
+    return &member->as<SubroutineSymbol>();
+}
+
 TimingControl& BlockEventListControl::fromSyntax(const BlockEventExpressionSyntax& syntax,
                                                  const ASTContext& context) {
     auto& comp = context.getCompilation();
     SmallVector<Event, 4> events;
 
     auto addEvent = [&](const PrimaryBlockEventExpressionSyntax& evSyntax) {
+        if (auto method = findClassMethodTarget(*evSyntax.name, context)) {
+            auto expr = comp.emplace<ArbitrarySymbolExpression>(*context.scope, *method,
+                                                                comp.getVoidType(), nullptr,
+                                                                evSyntax.name->sourceRange());
+            events.push_back({expr, evSyntax.keyword.kind == TokenKind::BeginKeyword});
+            return true;
+        }
+
         auto& expr = ArbitrarySymbolExpression::fromSyntax(comp, *evSyntax.name, context);
         if (auto symbol = expr.getSymbolReference()) {
             if (symbol->kind != SymbolKind::StatementBlock &&

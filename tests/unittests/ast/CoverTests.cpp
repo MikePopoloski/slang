@@ -111,6 +111,43 @@ endmodule
     CHECK(diags[1].code == diag::InvalidBlockEventTarget);
 }
 
+TEST_CASE("Covergroup block events on methods through class handles") {
+    auto tree = SyntaxTree::fromText(R"(
+class B;
+    task bt; endtask
+endclass
+
+class K extends B;
+    task t; endtask
+    function void f; endfunction
+    int v;
+endclass
+
+class K3;
+    K k;
+    covergroup cg @@(end k.t);
+    endgroup
+    function new; cg = new; endfunction
+endclass
+
+module m;
+    K k;
+    covergroup cg1 @@(begin k.f or end k.bt);
+    endgroup
+    covergroup cg2 @@(begin k.v);
+    endgroup
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidBlockEventTarget);
+    CHECK(diags[1].code == diag::UnexpectedSelection);
+}
+
 TEST_CASE("Cover points") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
