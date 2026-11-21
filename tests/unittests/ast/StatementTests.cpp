@@ -1491,13 +1491,14 @@ endmodule
     CHECK(diags[5].code == diag::TimingInFuncNotAllowed);
 }
 
-TEST_CASE("Non-blocking timing control reference to auto") {
+TEST_CASE("Non-blocking event control reference to auto") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     initial begin
         automatic int i;
         int j;
         j <= #i 1;
+        j <= @(i) 1;
     end
 endmodule
 )");
@@ -1522,7 +1523,7 @@ module m;
 
     initial begin
         j <= #(arr.sum() with (item)) 1;
-        foreach (arr[i]) k <= #i 1;
+        foreach (arr[i]) k <= @(i) 1;
     end
 endmodule
 )");
@@ -2942,6 +2943,7 @@ module m;
     task automatic t;
         automatic int d = 1;
         ->> #d e;
+        ->> @(d) e;
     endtask
 endmodule
 )");

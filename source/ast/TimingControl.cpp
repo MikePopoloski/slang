@@ -49,6 +49,12 @@ TimingControl& TimingControl::bind(const TimingControlSyntax& syntax, const ASTC
     ASTContext ctx(context);
     ctx.flags |= ASTFlags::AssignmentDisallowed;
 
+    // Automatic variables are only disallowed in the event controls of
+    // nonblocking assignments [13.3.2]. A delay value is evaluated when the
+    // statement executes, so it can refer to them.
+    if (syntax.kind == SyntaxKind::DelayControl || syntax.kind == SyntaxKind::CycleDelay)
+        ctx.flags &= ~ASTFlags::NonBlockingTimingControl;
+
     TimingControl* result;
     switch (syntax.kind) {
         case SyntaxKind::DelayControl:
