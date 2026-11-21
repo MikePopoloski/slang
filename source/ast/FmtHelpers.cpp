@@ -27,12 +27,10 @@ static bool isValidForRaw(const Type& type) {
         return true;
 
     if (type.isUnpackedUnion()) {
+        // Unpacked unions are formatted as though the operation were
+        // performed on the first member [21.2.1.1].
         auto& uut = type.getCanonicalType().as<UnpackedUnionType>();
-        for (auto field : uut.fields) {
-            if (!isValidForRaw(field->getType()))
-                return false;
-        }
-        return true;
+        return !uut.fields.empty() && isValidForRaw(uut.fields[0]->getType());
     }
     else if (type.isUnpackedStruct()) {
         auto& ust = type.getCanonicalType().as<UnpackedStructType>();

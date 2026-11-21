@@ -282,6 +282,11 @@ static void formatRaw2(std::string& result, const ConstantValue& value) {
         return;
     }
 
+    // A union whose active member isn't the first can hold a value with no raw
+    // representation (like a real); there's nothing meaningful to emit for it.
+    if (!value.isInteger())
+        return;
+
     SVInt sv = value.integer();
     sv.flattenUnknowns();
 
@@ -311,6 +316,11 @@ static void formatRaw4(std::string& result, const ConstantValue& value) {
         formatRaw4(result, value.unionVal()->value);
         return;
     }
+
+    // A union whose active member isn't the first can hold a value with no raw
+    // representation (like a real); there's nothing meaningful to emit for it.
+    if (!value.isInteger())
+        return;
 
     const SVInt& sv = value.integer();
     uint32_t words = sv.getNumWords();

@@ -109,6 +109,47 @@ endmodule
     CHECK(diags[20].code == diag::FormatRealInt);
 }
 
+TEST_CASE("Raw format specifiers on unpacked unions use the first member") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef union { int a; real r; } uu_t;
+    typedef union { real r; int a; } ur_t;
+
+    function automatic string f1;
+        uu_t u;
+        u.r = 1.5;
+        return $sformatf("%u%z", u, u);
+    endfunction
+
+    function automatic string f2;
+        uu_t u;
+        u.a = 65;
+        return $sformatf("%u", u);
+    endfunction
+
+    localparam string s1 = f1();
+    localparam string s2 = f2();
+
+    uu_t uu;
+    ur_t ur;
+    initial begin
+        $display("%u %z", uu, uu);
+        $display("%u", ur);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::FormatMismatchedType);
+
+    auto& s2 = compilation.getRoot().lookupName<ParameterSymbol>("m.s2");
+    CHECK(s2.getValue().str() == "A");
+}
+
 TEST_CASE("Format string - class handle and null types") {
     auto tree = SyntaxTree::fromText(R"(
 class my_class;
