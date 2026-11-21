@@ -270,8 +270,11 @@ void DeclaredType::checkType(const ASTContext& context) const {
                 !flags.has(DeclaredTypeFlags::ImplicitInputNet)) {
                 context.addDiag(diag::InvalidNetType, parent.location) << *type;
             }
-            else if (type->getBitWidth() == 1 && net.expansionHint != NetSymbol::None) {
-                context.addDiag(diag::SingleBitVectored, parent.location);
+            else if (net.expansionHint != NetSymbol::None && type->getBitWidth() == 1 &&
+                     type->getCanonicalType().kind != SymbolKind::PackedArrayType) {
+                // A vectored or scalared net needs at least one packed dimension [6.7],
+                // which can be a single bit wide like [0:0].
+                context.addDiag(diag::VectoredWithoutPackedDim, parent.location);
             }
             break;
         }

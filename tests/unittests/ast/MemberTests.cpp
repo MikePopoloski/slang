@@ -34,6 +34,29 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Single-bit vectored and scalared nets with a packed dimension") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef logic [0:0] vec_t;
+
+    wire vectored [0:0] a;
+    wire scalared [0:0] b;
+    wire vectored vec_t c;
+
+    wire scalared d;
+    wire vectored logic e;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::VectoredWithoutPackedDim);
+    CHECK(diags[1].code == diag::VectoredWithoutPackedDim);
+}
+
 TEST_CASE("Invalid nets") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -56,7 +79,7 @@ endmodule
     CHECK(diags[0].code == diag::InvalidNetType);
     CHECK(diags[1].code == diag::InvalidNetType);
     CHECK(diags[2].code == diag::InvalidNetType);
-    CHECK(diags[3].code == diag::SingleBitVectored);
+    CHECK(diags[3].code == diag::VectoredWithoutPackedDim);
     CHECK(diags[4].code == diag::UndeclaredIdentifier);
     CHECK(diags[5].code == diag::DelayNotNumeric);
 }
