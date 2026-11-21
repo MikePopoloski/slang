@@ -1250,6 +1250,15 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
             if (expr->kind == ExpressionKind::Call)
                 expr->as<CallExpression>().classQualifier = result.classQualifier;
 
+            // A call qualified by a superclass runs that class's own implementation,
+            // and a pure virtual method has none (LRM 8.21). Qualifying with the calling
+            // class itself is left alone, since tools disagree on whether that dispatches.
+            if (expr->kind == ExpressionKind::Call && result.classQualifier &&
+                symbol->as<SubroutineSymbol>().flags.has(MethodFlags::Pure) &&
+                result.classQualifier != Lookup::getContainingClass(*context.scope).first) {
+                context.addDiag(diag::QualifiedPureVirtualCall, callRange) << symbol->name;
+            }
+
             if (result.flags.has(LookupResultFlags::IsHierarchical)) {
                 // A call to a subroutine via a hierarchical name needs to be counted
                 // as a potential "hierachical assignment" since we will need to

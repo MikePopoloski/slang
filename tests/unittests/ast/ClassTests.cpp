@@ -1197,6 +1197,81 @@ endmodule
     CHECK(diags[2].code == diag::InheritFromAbstract);
 }
 
+TEST_CASE("Pure virtual method calls through super or a superclass scope") {
+    auto tree = SyntaxTree::fromText(R"(
+virtual class Base;
+    pure virtual function int f();
+    pure virtual task t();
+    function int own; return Base::f(); endfunction
+endclass
+
+virtual class Mid extends Base;
+    function int viaSuper; return super.f(); endfunction
+    function int viaScope; return Base::f(); endfunction
+    function int viaThisSuper; return this.super.f(); endfunction
+    task viaSuperTask; super.t(); endtask
+    function int ownInherited; return Mid::f(); endfunction
+    function int unqualified; return f(); endfunction
+    function int viaThis; return this.f(); endfunction
+endclass
+
+class Leaf extends Mid;
+    virtual function int f; return Base::f(); endfunction
+    virtual task t; endtask
+endclass
+
+class Body;
+    virtual function int g; return 1; endfunction
+endclass
+
+virtual class Restated extends Body;
+    pure virtual function int g;
+endclass
+
+class Restating extends Restated;
+    virtual function int g; return Restated::g() + Body::g(); endfunction
+endclass
+
+virtual class G #(int P = 1);
+    pure virtual function int f();
+    function int own; return G::f(); endfunction
+endclass
+
+class Spec extends G #(2);
+    virtual function int f; return G#(2)::f(); endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:9:35: warning: pure virtual method 'f' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+    function int viaSuper; return super.f(); endfunction
+                                  ^~~~~~~~~
+source:10:35: warning: pure virtual method 'f' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+    function int viaScope; return Base::f(); endfunction
+                                  ^~~~~~~~~
+source:11:39: warning: pure virtual method 'f' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+    function int viaThisSuper; return this.super.f(); endfunction
+                                      ^~~~~~~~~~~~~~
+source:12:24: warning: pure virtual method 't' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+    task viaSuperTask; super.t(); endtask
+                       ^~~~~~~~~
+source:19:36: warning: pure virtual method 'f' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+    virtual function int f; return Base::f(); endfunction
+                                   ^~~~~~~~~
+source:32:36: warning: pure virtual method 'g' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+    virtual function int g; return Restated::g() + Body::g(); endfunction
+                                   ^~~~~~~~~~~~~
+source:41:36: warning: pure virtual method 'f' has no implementation to call through 'super' or a superclass scope [-Wqualified-pure-virtual-call]
+    virtual function int f; return G#(2)::f(); endfunction
+                                   ^~~~~~~~~~
+)");
+}
+
 TEST_CASE("Polymorphism example") {
     auto tree = SyntaxTree::fromText(R"(
 class A;
