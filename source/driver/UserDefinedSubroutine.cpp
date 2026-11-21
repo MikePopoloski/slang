@@ -114,6 +114,17 @@ bool UserDefinedSubroutine::hasOutputArgs(const Args&) const {
     return false;
 }
 
+bool UserDefinedSubroutine::allowEmptyArgument(size_t argIndex) const {
+    // Without a prototype arguments are passed through to VPI unchecked, and
+    // an omitted argument is represented as a vpiNullOp operation [37.42].
+    // With a prototype, an argument can only be omitted if it has a default.
+    if (!proto)
+        return true;
+
+    auto args = proto->getArguments();
+    return argIndex < args.size() && args[argIndex]->getDefaultValue() != nullptr;
+}
+
 const Expression& UserDefinedSubroutine::bindArgument(size_t argIndex, const ASTContext& context,
                                                       const ExpressionSyntax& syntax,
                                                       const Args&) const {
