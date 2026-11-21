@@ -500,7 +500,8 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
 
     auto dims = parseDimensionList();
     if (!packed) {
-        if (!dims.empty()) {
+        // A soft union is packed even without the packed keyword [7.3.1].
+        if (!dims.empty() && taggedOrSoft.kind != TokenKind::SoftKeyword) {
             SourceRange range{dims.front()->getFirstToken().location(),
                               dims.back()->getLastToken().range().end()};
             addDiag(diag::PackedDimsOnUnpacked, range);

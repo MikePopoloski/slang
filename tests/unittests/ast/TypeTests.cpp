@@ -2469,6 +2469,24 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("v1800-2023: Soft unions with packed dimensions") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    union soft { bit [7:0] a; bit [3:0] b; } [1:0] u;
+    localparam int w = $bits(u);
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& w = compilation.getRoot().lookupName<ParameterSymbol>("m.w");
+    CHECK(w.getValue().integer() == 16);
+}
+
 TEST_CASE("Type dimension overflow regress") {
     auto tree = SyntaxTree::fromText(R"(
 logic [-2147483648:-2147483649] a;
