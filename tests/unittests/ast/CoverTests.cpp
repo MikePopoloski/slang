@@ -148,6 +148,32 @@ endmodule
     CHECK(diags[1].code == diag::UnexpectedSelection);
 }
 
+TEST_CASE("Coverpoint names are not visible in bin expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [3:0] addr;
+    logic en;
+    localparam int lim = 3;
+    covergroup cg(bit [3:0] lo);
+        coverpoint en;
+        coverpoint addr {
+            bins b1 = {[0:7]} iff (addr != 0);
+            bins b2 = {[0:3]} iff (en);
+            bins b3 = {[lo:7]};
+        }
+        lim: coverpoint addr;
+        c2: coverpoint addr { bins b = {[0:lim]}; bins w[] = {[0:3]} with (item > 1); }
+        x: cross c2, en { bins bb = binsof(c2.b); }
+    endgroup
+    cg cg_inst = new(4'd1);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Cover points") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

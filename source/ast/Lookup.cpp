@@ -2312,6 +2312,13 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
     if (!location.getScope())
         return;
 
+    // Coverpoint names are only visible in specific contexts, which don't include
+    // expressions inside the coverpoint such as its bins [19.5]. Continue from the
+    // start of the covergroup so that sibling coverpoints (and the coverpoint itself)
+    // don't hide outer declarations.
+    if (scope.asSymbol().kind == SymbolKind::Coverpoint)
+        location = LookupLocation(location.getScope(), 0);
+
     // If this scope was an out-of-block subroutine, tell the next recursive call about it.
     // Otherwise, if our previous call was for such a situation and we didn't find the symbol
     // in this class scope, we need to use the subroutine's out-of-block lookup location
