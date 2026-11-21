@@ -37,7 +37,12 @@ static const Type& getIndexedType(TTypeProvider& typeProvider, const ASTContext&
                                   const Type& valueType, SourceRange exprRange,
                                   SourceRange valueRange, bool isRangeSelect) {
     const Type& ct = valueType.getCanonicalType();
-    if (ct.isArray()) {
+    if (ct.isUntypedType()) {
+        // Selects of an interconnect net (which can have packed dimensions)
+        // are also untyped; their type comes from what they connect to.
+        return valueType;
+    }
+    else if (ct.isArray()) {
         auto& elemType = *ct.getArrayElementType();
         if (ct.kind == SymbolKind::PackedArrayType && ct.isSigned())
             return elemType.makeUnsigned(typeProvider);
@@ -220,7 +225,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
             }
         }
     }
-    else if (context.flags.has(ASTFlags::NonProcedural)) {
+    else if (context.flags.has(ASTFlags::NonProcedural) && !valueType.isUntypedType()) {
         context.addDiag(diag::DynamicNotProcedural, fullRange);
     }
 
@@ -708,6 +713,11 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& comp, Expression& val
                                              value.sourceRange, true);
     if (elementType.isError())
         return badExpr(comp, result);
+
+    if (elementType.isUntypedType()) {
+        result->type = &elementType;
+        return *result;
+    }
 
     // Selects of vectored nets are disallowed.
     checkForVectoredSelect(value, fullRange, context);

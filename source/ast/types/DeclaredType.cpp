@@ -130,15 +130,20 @@ void DeclaredType::resolveType(const ASTContext& typeContext,
         }
     }
     else if (flags.has(DeclaredTypeFlags::InterconnectNet)) {
-        // An interconnect net is always untyped (or some array of untyped elements).
+        // An interconnect net is always untyped (or some unpacked array of untyped
+        // elements). Packed dimensions don't change that; the net takes its data
+        // type from its connections [6.6.8], so they're only checked for validity.
         type = &comp.getType(SyntaxKind::Untyped);
         if (syntax->kind == SyntaxKind::ImplicitType) {
             // This should always be an implicit type unless there's an
             // error (diagnosed by the parser).
             auto& its = syntax->as<ImplicitTypeSyntax>();
-            if (!its.dimensions.empty())
-                type = &comp.getType(*type, its.dimensions,
-                                     typeContext.resetFlags(ASTFlags::AllowInterconnect));
+            if (!its.dimensions.empty()) {
+                auto& checked = comp.getType(*type, its.dimensions,
+                                             typeContext.resetFlags(ASTFlags::AllowInterconnect));
+                if (checked.isError())
+                    type = &checked;
+            }
         }
 
         if (dimensions) {

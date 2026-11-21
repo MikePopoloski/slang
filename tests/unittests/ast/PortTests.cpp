@@ -1886,6 +1886,37 @@ endmodule
     CHECK(diags[3].code == diag::InterconnectReference);
 }
 
+TEST_CASE("Interconnect ports and nets with packed dimensions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1(input interconnect [3:0] a);
+endmodule
+
+module m2(input wire [3:0] a);
+endmodule
+
+module m3(input wire [1:0] a);
+endmodule
+
+module top;
+    wire [3:0] w;
+    m1 u1(w);
+
+    interconnect [3:0] x;
+    m2 u2(x);
+    m3 u3(x[1:0]);
+    m3 u4(x[0+:2]);
+    m3 u5(x[1]);
+
+    interconnect y [3:0];
+    m3 u6(y[1]);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("More interconnect ports") {
     auto tree = SyntaxTree::fromText(R"(
 module top();
