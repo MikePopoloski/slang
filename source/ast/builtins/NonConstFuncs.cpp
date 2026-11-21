@@ -320,6 +320,7 @@ public:
         return Expression::bind(syntax, context, ASTFlags::AssertionExpr);
     }
 
+    bool allowEmptyArgument(size_t argIndex) const final { return argIndex == 1; }
     bool allowClockingArgument(size_t argIndex) const final { return argIndex == 1; }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
@@ -331,8 +332,10 @@ public:
         AssertionExpr::checkSampledValueExpr(*args[0], context, false, diag::SampledValueLocalVar,
                                              diag::SampledValueMatched);
 
-        if (args.size() == 2 && args[1]->kind != ExpressionKind::ClockingEvent)
+        if (args.size() == 2 && args[1]->kind != ExpressionKind::ClockingEvent &&
+            args[1]->kind != ExpressionKind::EmptyArgument) {
             return badArg(context, *args[1]);
+        }
 
         return comp.getBitType();
     }
@@ -360,7 +363,7 @@ public:
         return Expression::bind(syntax, context, extraFlags);
     }
 
-    bool allowEmptyArgument(size_t argIndex) const final { return argIndex == 1 || argIndex == 2; }
+    bool allowEmptyArgument(size_t argIndex) const final { return argIndex >= 1 && argIndex <= 3; }
     bool allowClockingArgument(size_t argIndex) const final { return argIndex == 3; }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
@@ -386,8 +389,10 @@ public:
                 return comp.getErrorType();
         }
 
-        if (args.size() > 3 && args[3]->kind != ExpressionKind::ClockingEvent)
+        if (args.size() > 3 && args[3]->kind != ExpressionKind::ClockingEvent &&
+            args[3]->kind != ExpressionKind::EmptyArgument) {
             return badArg(context, *args[3]);
+        }
 
         return *args[0]->type;
     }

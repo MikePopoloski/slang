@@ -1333,6 +1333,29 @@ endmodule
     CHECK(diags[5].code == diag::GlobalSampledValueNested);
 }
 
+TEST_CASE("Sampled value functions with empty trailing arguments") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic clk);
+    logic a, r;
+    logic [7:0] x, y;
+    always @(posedge clk) begin
+        r <= $rose(a,);
+        r <= $fell(a,);
+        r <= $stable(a,);
+        r <= $changed(a,);
+        x <= $past(y,,,);
+        x <= $past(y,2,,);
+    end
+
+    assert property (@(posedge clk) $rose(a,) |-> $past(y,,,) == 0);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Global clock sys func") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
