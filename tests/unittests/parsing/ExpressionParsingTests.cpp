@@ -366,6 +366,25 @@ TEST_CASE("Tagged union expression") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Tagged union expression followed by a binary operator") {
+    // The member value is a primary, and the tagged union expression is itself
+    // an operand of any trailing binary operator [11.9].
+    auto& text = "p = tagged B 8'hff + 1";
+    auto& expr = parseExpression(text);
+
+    REQUIRE(expr.kind == SyntaxKind::AssignmentExpression);
+    auto& rhs = *expr.as<BinaryExpressionSyntax>().right;
+    REQUIRE(rhs.kind == SyntaxKind::AddExpression);
+    auto& left = *rhs.as<BinaryExpressionSyntax>().left;
+    REQUIRE(left.kind == SyntaxKind::TaggedUnionExpression);
+    auto& tagged = left.as<TaggedUnionExpressionSyntax>();
+    CHECK(tagged.member.valueText() == "B");
+    REQUIRE(tagged.expr);
+    CHECK(tagged.expr->kind == SyntaxKind::IntegerVectorExpression);
+    CHECK(expr.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Bad argument recovery") {
     auto& text = "foo(]], 3 4,)";
     auto& expr = parseExpression(text);

@@ -2730,19 +2730,25 @@ module m;
         foo = tagged baz 1;
         foo = tagged b;
         foo = tagged c 52;
+        foo = tagged a 1 + 1;
     end
+    union tagged packed { void N; bit [7:0] B; } pu = tagged B 1 + 1;
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
+    // A trailing binary operator applies to the whole tagged union expression,
+    // which then isn't the source of an assignment.
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::TaggedUnionTarget);
     CHECK(diags[1].code == diag::UnknownMember);
     CHECK(diags[2].code == diag::TaggedUnionMissingInit);
     CHECK(diags[3].code == diag::BadAssignment);
+    CHECK(diags[4].code == diag::TaggedUnionTarget);
+    CHECK(diags[5].code == diag::TaggedUnionTarget);
 }
 
 TEST_CASE("Assignment pattern expressions") {

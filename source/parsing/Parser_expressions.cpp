@@ -84,13 +84,16 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
 
         ExpressionSyntax* expr = nullptr;
         if (isPossibleExpression(peek().kind)) {
-            // This is not allowed to be a binary expression,
-            // so use a high precedence to avoid taking any
-            // binary operators that may trail our tag expr.
+            // The member value is a primary [11.9], so use a high precedence
+            // to avoid taking any binary operators that trail our tag expr.
             expr = &parseSubExpression(ExpressionOptions::None, INT_MAX);
         }
 
-        return factory.taggedUnionExpression(tagged, member, expr);
+        // The tagged union expression is itself an operand, so any trailing
+        // binary operators apply to it: tagged B x + 1 is (tagged B x) + 1.
+        auto& taggedExpr = factory.taggedUnionExpression(tagged, member, expr);
+        return parseBinaryExpression(&taggedExpr, options & ~ExpressionOptions::AllowSuperNewCall,
+                                     precedence);
     }
 
     // The statement context only applies to the binary operator at the top level.
