@@ -655,7 +655,9 @@ void ASTContext::addAssertionBacktrace(Diagnostic& diag) const {
         if (inst.symbol->kind == SymbolKind::Checker)
             return;
 
-        if (!inst.symbol->name.empty()) {
+        // Default instances are created to check a declaration on its own;
+        // a note pointing back at the declaration itself isn't useful.
+        if (!inst.symbol->name.empty() && !inst.isDefault) {
             auto& note = diag.addNote(diag::NoteWhileExpanding, inst.instanceLoc);
             switch (inst.symbol->kind) {
                 case SymbolKind::Sequence:

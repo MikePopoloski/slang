@@ -209,6 +209,40 @@ endmodule
     CHECK(diags[1].code == diag::IntBoolConv);
 }
 
+TEST_CASE("Assertion instance arg diagnostics at the same location are not deduplicated") {
+    auto tree = SyntaxTree::fromText(R"(
+`define COVER(LABEL, SEQ, CLK, RST) \
+    LABEL: cover property(p_cover(SEQ, CLK, RST));
+
+property p_cover(seq, clk, rst=1'b0);
+    @(posedge clk) disable iff (rst) seq;
+endproperty
+
+module m;
+    logic clk, rst;
+    logic [1:0] a, b;
+    logic [1:0] x, y;
+
+    `COVER(A, a | b, clk, rst)
+    `COVER(B, x | y, clk, rst)
+endmodule
+
+module top;
+    m m1();
+    m m2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::IntBoolConv);
+    CHECK(diags[1].code == diag::IntBoolConv);
+    CHECK(diags[0].notes[0].location != diags[1].notes[0].location);
+}
+
 TEST_CASE("Useless cast warnings") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

@@ -28,6 +28,9 @@ public:
     Diagnostics coalesce(const SourceManager* sourceManager);
 
 private:
+    static void coalesceGroup(Diagnostics& results, DiagCode code,
+                              std::vector<Diagnostic>& diagList);
+
     flat_hash_map<std::tuple<DiagCode, SourceLocation>, std::vector<Diagnostic>> map;
 };
 
