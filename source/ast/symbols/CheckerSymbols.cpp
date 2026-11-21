@@ -602,8 +602,11 @@ std::span<const CheckerInstanceSymbol::Connection> CheckerInstanceSymbol::getPor
 const Expression* CheckerInstanceSymbol::Connection::getOutputInitialExpr() const {
     if (!outputInitialExpr) {
         if (outputInitialSyntax) {
+            // Output port initialization has the same semantics as a
+            // variable initialization [17.2].
             ASTContext context(parent, LookupLocation::after(formal));
-            outputInitialExpr = &Expression::bind(*outputInitialSyntax, context);
+            auto& type = formal.as<FormalArgumentSymbol>().getType();
+            outputInitialExpr = &Expression::bindRValue(type, *outputInitialSyntax, {}, context);
         }
         else {
             outputInitialExpr = nullptr;

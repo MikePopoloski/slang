@@ -1189,6 +1189,37 @@ endmodule
     CHECK(diags[0].code == diag::NotAllowedInGenerate);
 }
 
+TEST_CASE("Checker output port initializers use the port type") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef struct packed { bit x; bit y; } S;
+
+checker c1(output bit [1:0] o = '{1, 0});
+endchecker
+
+checker c2(output S s = '{x:1, y:0});
+endchecker
+
+checker c3(output string s = 5);
+endchecker
+
+module m;
+    bit [1:0] o;
+    S s;
+    string str;
+    c1 i1(o);
+    c2 i2(s);
+    c3 i3(str);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NoImplicitConversion);
+}
+
 TEST_CASE("Checker instance array exceeds maximum size") {
     auto tree = SyntaxTree::fromText(R"(
 module top;
