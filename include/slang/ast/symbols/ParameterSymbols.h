@@ -31,6 +31,11 @@ public:
                                 const syntax::ParameterDeclarationStatementSyntax& syntax,
                                 SmallVectorBase<Symbol*>& results);
 
+    /// Applies defparam overrides to the parameters declared directly within
+    /// the given named block or subroutine [23.10.2]. This is done when the
+    /// scope is elaborated, by which point it's part of the instance hierarchy.
+    static void applyDefParams(const Scope& scope);
+
     static bool allMatching(std::ranges::range auto&& leftParams,
                             std::ranges::range auto&& rightParams);
 

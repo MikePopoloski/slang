@@ -201,37 +201,6 @@ void getInstanceArrayDimensions(const InstanceArraySymbol& array,
     dimensions.push_back(array.range);
 }
 
-const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
-    auto& sym = scope.asSymbol();
-    if (sym.kind == SymbolKind::InstanceBody)
-        return sym.as<InstanceBodySymbol>().hierarchyOverrideNode;
-
-    auto parentScope = sym.getParentScope();
-    SLANG_ASSERT(parentScope);
-
-    auto node = findParentOverrideNode(*parentScope);
-    if (!node)
-        return nullptr;
-
-    if (sym.kind == SymbolKind::GenerateBlock &&
-        parentScope->asSymbol().kind == SymbolKind::GenerateBlockArray) {
-
-        auto it = node->childNodes.find(sym.as<GenerateBlockSymbol>().constructIndex);
-        if (it == node->childNodes.end())
-            return nullptr;
-
-        return &it->second;
-    }
-
-    auto syntax = sym.getSyntax();
-    SLANG_ASSERT(syntax);
-
-    if (auto it = node->childNodes.find(*syntax); it != node->childNodes.end())
-        return &it->second;
-
-    return nullptr;
-}
-
 void checkForInvalidNestedConfigNodes(const ASTContext& context,
                                       const ConfigBlockSymbol::InstanceOverride& node,
                                       const ConfigBlockSymbol& configBlock) {
@@ -345,6 +314,37 @@ void resolveInstanceOverrides(const ResolvedConfig& resolvedConfig, const ASTCon
 } // namespace
 
 namespace slang::ast {
+
+const HierarchyOverrideNode* HierarchyOverrideNode::find(const Scope& scope) {
+    auto& sym = scope.asSymbol();
+    if (sym.kind == SymbolKind::InstanceBody)
+        return sym.as<InstanceBodySymbol>().hierarchyOverrideNode;
+
+    auto parentScope = sym.getParentScope();
+    SLANG_ASSERT(parentScope);
+
+    auto node = find(*parentScope);
+    if (!node)
+        return nullptr;
+
+    if (sym.kind == SymbolKind::GenerateBlock &&
+        parentScope->asSymbol().kind == SymbolKind::GenerateBlockArray) {
+
+        auto it = node->childNodes.find(sym.as<GenerateBlockSymbol>().constructIndex);
+        if (it == node->childNodes.end())
+            return nullptr;
+
+        return &it->second;
+    }
+
+    auto syntax = sym.getSyntax();
+    SLANG_ASSERT(syntax);
+
+    if (auto it = node->childNodes.find(*syntax); it != node->childNodes.end())
+        return &it->second;
+
+    return nullptr;
+}
 
 std::string_view InstanceSymbolBase::getArrayName() const {
     auto scope = getParentScope();
@@ -561,7 +561,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         // generate blocks that might actually be along the parent path for
         // the new instances we're creating.
         if (parentInst->hierarchyOverrideNode)
-            parentOverrideNode = findParentOverrideNode(*context.scope);
+            parentOverrideNode = HierarchyOverrideNode::find(*context.scope);
 
         // Check if our parent has a configuration applied. If so, and if
         // that configuration has instance overrides, we need to check if

@@ -306,6 +306,11 @@ struct SLANG_EXPORT HierarchyOverrideNode {
     /// If the target is null, then the bind is actually targeting the
     /// scope represented by this override node.
     std::vector<std::pair<BindDirectiveInfo, const syntax::SyntaxNode*>> binds;
+
+    /// Finds the override node for the given instance body or generate block,
+    /// or any scope nested within them, by walking down from the containing
+    /// instance's override node. Returns nullptr if there isn't one.
+    static const HierarchyOverrideNode* find(const Scope& scope);
 };
 
 /// A centralized location for creating and caching symbols. This includes

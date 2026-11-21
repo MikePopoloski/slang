@@ -328,8 +328,15 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             ParameterSymbolBase::fromLocalSyntax(*this,
                                                  syntax.as<ParameterDeclarationStatementSyntax>(),
                                                  params);
-            for (auto param : params)
+            for (auto param : params) {
                 addMember(*param);
+
+                // Parameters in named blocks and subroutines can be the target of
+                // defparams [23.10.2]. We're not part of the hierarchy yet, so any
+                // overrides get applied once we're elaborated.
+                if (auto p = param->as_if<ParameterSymbol>(); p && !p->isLocalParam())
+                    setNeedElaboration();
+            }
             break;
         }
         case SyntaxKind::AlwaysBlock:
@@ -1388,6 +1395,9 @@ void Scope::elaborate() const {
         thisSym->as<InstanceBodySymbol>().finishElaboration(
             [this](const Symbol& member) { insertMember(&member, lastMember, true); });
     }
+
+    if (thisSym->kind == SymbolKind::StatementBlock || thisSym->kind == SymbolKind::Subroutine)
+        ParameterSymbolBase::applyDefParams(*this);
 
     SLANG_ASSERT(!needsElaboration);
     if (thisSym->kind == SymbolKind::InstanceBody && TimeTrace::isEnabled())

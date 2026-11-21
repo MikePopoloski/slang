@@ -31,11 +31,18 @@ using namespace parsing;
 void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
                                           const ParameterDeclarationStatementSyntax& syntax,
                                           SmallVectorBase<Symbol*>& results) {
+    // A parameter declared in a named block, task, or function can be
+    // redefined by a defparam [23.10.2], so it's not a localparam.
     auto paramBase = syntax.parameter;
+    auto scopeKind = scope.asSymbol().kind;
+    const bool overridable = paramBase->keyword.kind == TokenKind::ParameterKeyword &&
+                             (scopeKind == SymbolKind::StatementBlock ||
+                              scopeKind == SymbolKind::Subroutine);
+
     if (paramBase->kind == SyntaxKind::ParameterDeclaration) {
         SmallVector<ParameterSymbol*> params;
         ParameterSymbol::fromSyntax(scope, paramBase->as<ParameterDeclarationSyntax>(),
-                                    /* isLocal */ true, /* isPort */ false, params);
+                                    /* isLocal */ !overridable, /* isPort */ false, params);
         for (auto param : params) {
             param->setAttributes(scope, syntax.attributes);
             results.push_back(param);
@@ -51,8 +58,46 @@ void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
         }
     }
 
-    if (syntax.parameter->keyword.kind != TokenKind::LocalParamKeyword)
+    if (syntax.parameter->keyword.kind != TokenKind::LocalParamKeyword && !overridable)
         scope.addDiag(diag::PreferLocalparam, syntax.parameter->keyword.range());
+}
+
+void ParameterSymbolBase::applyDefParams(const Scope& scope) {
+    // Defparam overrides are recorded relative to the nearest enclosing generate
+    // block or instance body. Members of classes and checkers aren't part of the
+    // instance hierarchy and can't be targeted.
+    auto curr = scope.asSymbol().getParentScope();
+    while (curr) {
+        auto kind = curr->asSymbol().kind;
+        if (kind == SymbolKind::InstanceBody || kind == SymbolKind::GenerateBlock)
+            break;
+
+        if (kind == SymbolKind::ClassType || kind == SymbolKind::GenericClassDef ||
+            kind == SymbolKind::CheckerInstanceBody) {
+            return;
+        }
+        curr = curr->asSymbol().getParentScope();
+    }
+
+    if (!curr)
+        return;
+
+    auto node = HierarchyOverrideNode::find(*curr);
+    if (!node || node->paramOverrides.empty())
+        return;
+
+    auto& comp = scope.getCompilation();
+    for (auto& param : scope.membersOfType<ParameterSymbol>()) {
+        auto syntax = param.getSyntax();
+        if (param.isLocalParam() || !syntax)
+            continue;
+
+        if (auto it = node->paramOverrides.find(syntax);
+            it != node->paramOverrides.end() && it->second.defparam) {
+            const_cast<ParameterSymbol&>(param).setDefParamValue(comp, it->second.cv,
+                                                                 it->second.isImplicitString);
+        }
+    }
 }
 
 void ParameterSymbolBase::checkDefaultExpression() const {

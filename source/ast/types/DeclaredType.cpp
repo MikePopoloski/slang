@@ -549,9 +549,12 @@ T DeclaredType::getASTContext() const {
 
     // If this type/initializer has been overridden by a parameter override,
     // we should use the instantiation scope and not the parameter's scope
-    // when resolving.
-    if ((IsInitializer && flags.has(DeclaredTypeFlags::InitializerOverridden)) ||
-        (!IsInitializer && flags.has(DeclaredTypeFlags::TypeOverridden))) {
+    // when resolving. Parameters in named blocks and subroutines can only be
+    // overridden by defparams, whose values are already resolved, so they
+    // keep using their own scope.
+    if (((IsInitializer && flags.has(DeclaredTypeFlags::InitializerOverridden)) ||
+         (!IsInitializer && flags.has(DeclaredTypeFlags::TypeOverridden))) &&
+        scope->asSymbol().kind == SymbolKind::InstanceBody) {
         auto& instBody = scope->asSymbol().as<InstanceBodySymbol>();
         auto inst = instBody.parentInstance;
         SLANG_ASSERT(inst);

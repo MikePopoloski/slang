@@ -16,7 +16,12 @@ namespace slang::ast {
 OpaqueInstancePath::OpaqueInstancePath(const Symbol& symbol) {
     auto curr = &symbol;
     if (symbol.kind != SymbolKind::Instance) {
-        while (curr->kind != SymbolKind::InstanceBody) {
+        // Parameters within generate blocks (in named blocks or subroutines that can
+        // be targeted by defparams) need the path to include the generate block,
+        // since each generate block instance can be overridden separately.
+        const bool isParam = symbol.kind == SymbolKind::Parameter;
+        while (curr->kind != SymbolKind::InstanceBody &&
+               !(isParam && curr->kind == SymbolKind::GenerateBlock)) {
             auto parent = curr->getHierarchicalParent();
             if (!parent)
                 return;

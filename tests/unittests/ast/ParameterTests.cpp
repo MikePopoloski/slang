@@ -1468,6 +1468,65 @@ endmodule
     }
 }
 
+TEST_CASE("Defparams targeting parameters in blocks and subroutines") {
+    auto tree = SyntaxTree::fromText(R"(
+module sub;
+    initial begin : nb
+        parameter BP = 1;
+        logic [BP-1:0] x;
+        localparam XW = $bits(x);
+        begin : inner
+            parameter IP = 1;
+        end
+    end
+    task t;
+        parameter TP = 1;
+    endtask
+    function int f;
+        parameter logic [3:0] FP = 1;
+        return FP;
+    endfunction
+    for (genvar i = 0; i < 2; i++) begin : ga
+        task t2; parameter AP = 1; endtask
+    end
+    initial begin : nb2
+        localparam LP = 1;
+    end
+endmodule
+
+module top;
+    sub s1(), s2();
+    defparam s2.nb.BP = 5;
+    defparam s2.nb.inner.IP = 6;
+    defparam s2.t.TP = 7;
+    defparam s2.f.FP = 8;
+    defparam s2.ga[1].t2.AP = 9;
+    defparam s2.nb2.LP = 10;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DefParamLocal);
+
+    auto& root = compilation.getRoot();
+    auto val = [&](std::string_view path) {
+        return root.lookupName<ParameterSymbol>(path).getValue().integer().as<int>();
+    };
+    CHECK(val("top.s1.nb.BP") == 1);
+    CHECK(val("top.s2.nb.BP") == 5);
+    CHECK(val("top.s1.nb.XW") == 1);
+    CHECK(val("top.s2.nb.XW") == 5);
+    CHECK(val("top.s2.nb.inner.IP") == 6);
+    CHECK(val("top.s2.t.TP") == 7);
+    CHECK(val("top.s2.f.FP") == 8);
+    CHECK(val("top.s2.ga[0].t2.AP") == 1);
+    CHECK(val("top.s2.ga[1].t2.AP") == 9);
+}
+
 TEST_CASE("Defparams with instance caching") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
