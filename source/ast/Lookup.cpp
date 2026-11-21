@@ -1072,6 +1072,33 @@ const Symbol* findThisHandle(const Scope& scope, bitmask<LookupFlags> flags, Sou
                  !flags.has(LookupFlags::StaticInitializer)) {
             return parent->as<ClassType>().thisVar;
         }
+        else {
+            // 'this' is also allowed within covergroups embedded in classes [8.11].
+            auto isCoverScope = [](const Symbol& sym) {
+                switch (sym.kind) {
+                    case SymbolKind::CovergroupBody:
+                    case SymbolKind::CovergroupType:
+                    case SymbolKind::Coverpoint:
+                    case SymbolKind::CoverCross:
+                    case SymbolKind::CoverCrossBody:
+                        return true;
+                    default:
+                        return false;
+                }
+            };
+
+            if (isCoverScope(*parent)) {
+                while (isCoverScope(*parent)) {
+                    auto parentScope = parent->getParentScope();
+                    if (!parentScope)
+                        break;
+                    parent = &parentScope->asSymbol();
+                }
+
+                if (parent->kind == SymbolKind::ClassType)
+                    return parent->as<ClassType>().thisVar;
+            }
+        }
     }
 
     result.addDiag(scope, diag::InvalidThisHandle, range);

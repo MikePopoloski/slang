@@ -1067,3 +1067,37 @@ endmodule
     CHECK(getType("q") == "bit[3:0]");
     CHECK(getType("B") == "byte");
 }
+
+TEST_CASE("this handle in covergroups embedded in classes") {
+    auto tree = SyntaxTree::fromText(R"(
+class T1;
+    int b, c;
+    bit en;
+    covergroup cg;
+        cp: coverpoint this.b iff (this.en) {
+            bins lo = {[0:this.c]};
+        }
+        cq: coverpoint this.c;
+        cx: cross cp, cq iff (this.en);
+    endgroup
+    function new();
+        cg = new;
+    endfunction
+endclass
+
+module top;
+    int x;
+    covergroup g;
+        coverpoint this.x;
+    endgroup
+    T1 t = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidThisHandle);
+}
