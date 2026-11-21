@@ -291,7 +291,8 @@ private:
     syntax::NonAnsiPortSyntax& parseNonAnsiPort();
     syntax::MemberSyntax& parseAnsiPort();
     syntax::AnsiPortListSyntax& parseAnsiPortList(Token openParen);
-    syntax::PortHeaderSyntax& parsePortHeader(Token constKeyword, Token direction);
+    syntax::PortHeaderSyntax& parsePortHeader(Token constKeyword, Token direction,
+                                              Token staticKeyword = {});
     syntax::PortDeclarationSyntax& parsePortDeclaration(AttrList attributes);
     syntax::TimeUnitsDeclarationSyntax& parseTimeUnitsDeclaration(AttrList attributes);
     syntax::SyntaxList<syntax::PackageImportDeclarationSyntax> parsePackageImports();

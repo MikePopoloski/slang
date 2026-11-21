@@ -3747,6 +3747,53 @@ endmodule
     CHECK(diags[2].code == diag::AutoVarToRefStatic);
 }
 
+TEST_CASE("v1800-2023: non-ANSI ref static arguments") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m(a);
+    ref static int a;
+endmodule
+
+module top;
+    int g;
+    function automatic int f;
+        ref static int a;
+        const ref static int b;
+        return a + b;
+    endfunction
+
+    initial begin
+        automatic int x;
+        $display(f(g, g));
+        $display(f(x, g));
+    end
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& f = compilation.getRoot().lookupName<SubroutineSymbol>("top.f");
+    auto args = f.getArguments();
+    REQUIRE(args.size() == 2);
+    CHECK(args[0]->flags.has(VariableFlags::RefStatic));
+    CHECK(args[1]->flags.has(VariableFlags::RefStatic));
+    CHECK(args[1]->flags.has(VariableFlags::Const));
+
+    // The ref port on the uninstantiated module 'm' also gets an
+    // unconnected port error; just check for the ones we care about.
+    auto& diags = compilation.getAllDiagnostics();
+    bool sawStaticPort = false, sawAutoVar = false;
+    for (auto& diag : diags) {
+        sawStaticPort |= diag.code == diag::StaticPortNotAllowed;
+        sawAutoVar |= diag.code == diag::AutoVarToRefStatic;
+        CHECK(diag.code != diag::ExpectedDeclarator);
+    }
+    CHECK(sawStaticPort);
+    CHECK(sawAutoVar);
+}
+
 TEST_CASE("Out of range select regress") {
     auto tree = SyntaxTree::fromText(R"(
 localparam p = -4'd8;

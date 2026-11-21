@@ -560,6 +560,8 @@ private:
 
                 if (varHeader.constKeyword)
                     scope.addDiag(diag::ConstPortNotAllowed, varHeader.constKeyword.range());
+                if (varHeader.staticKeyword)
+                    scope.addDiag(diag::StaticPortNotAllowed, varHeader.staticKeyword.range());
 
                 // If the port has any kind of type declared, this constitutes a full symbol
                 // definition. Otherwise we need to see if there's an existing symbol to match with.

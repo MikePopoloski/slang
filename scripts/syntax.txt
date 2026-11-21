@@ -1105,6 +1105,7 @@ DotMemberClause? modport
 VariablePortHeader base=PortHeader
 token constKeyword
 token direction
+token staticKeyword
 token varKeyword
 DataType dataType
 

@@ -214,10 +214,11 @@ NonAnsiPortSyntax& Parser::parseNonAnsiPort() {
     return factory.implicitNonAnsiPort(parsePortExpression());
 }
 
-PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
+PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction,
+                                          Token staticKeyword) {
     auto kind = peek().kind;
 
-    if (!constKeyword) {
+    if (!constKeyword && !staticKeyword) {
         if (isNetType(kind)) {
             auto netType = consume();
             auto& dataType = parseDataType(TypeOptions::AllowImplicit);
@@ -251,13 +252,13 @@ PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
 
     if (kind == TokenKind::VarKeyword) {
         auto varKeyword = consume();
-        return factory.variablePortHeader(constKeyword, direction, varKeyword,
+        return factory.variablePortHeader(constKeyword, direction, staticKeyword, varKeyword,
                                           parseDataType(TypeOptions::AllowImplicit));
     }
 
     if (kind == TokenKind::Identifier) {
         // could be a bunch of different things here; scan ahead to see
-        if (!constKeyword && peek(1).kind == TokenKind::Dot &&
+        if (!constKeyword && !staticKeyword && peek(1).kind == TokenKind::Dot &&
             peek(2).kind == TokenKind::Identifier && peek(3).kind == TokenKind::Identifier) {
             auto name = consume();
             return factory.interfacePortHeader(name, parseDotMemberClause());
@@ -269,11 +270,11 @@ PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
         else
             type = &factory.implicitType(Token(), nullptr, placeholderToken());
 
-        return factory.variablePortHeader(constKeyword, direction, Token(), *type);
+        return factory.variablePortHeader(constKeyword, direction, staticKeyword, Token(), *type);
     }
 
     // assume we have some kind of data type here
-    return factory.variablePortHeader(constKeyword, direction, Token(),
+    return factory.variablePortHeader(constKeyword, direction, staticKeyword, Token(),
                                       parseDataType(TypeOptions::AllowImplicit));
 }
 
@@ -314,7 +315,16 @@ PortDeclarationSyntax& Parser::parsePortDeclaration(AttrList attributes) {
     // Callers must ensure we don't call with 'const' unless also 'ref'.
     SLANG_ASSERT(!constKeyword || direction.kind == TokenKind::RefKeyword);
 
-    auto& header = parsePortHeader(constKeyword, direction);
+    Token staticKeyword;
+    if (direction.kind == TokenKind::RefKeyword && peek(TokenKind::StaticKeyword)) {
+        staticKeyword = consume();
+        if (parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+            addDiag(diag::WrongLanguageVersion, staticKeyword.range())
+                << toString(parseOptions.languageVersion);
+        }
+    }
+
+    auto& header = parsePortHeader(constKeyword, direction, staticKeyword);
 
     Token semi;
     auto declarators = parseDeclarators(semi);

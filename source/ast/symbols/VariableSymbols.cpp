@@ -332,6 +332,8 @@ void FormalArgumentSymbol::fromSyntax(const Scope& scope, const PortDeclarationS
 
         if (isConst)
             arg->flags |= VariableFlags::Const;
+        if (header.staticKeyword)
+            arg->flags |= VariableFlags::RefStatic;
     }
 }
 
