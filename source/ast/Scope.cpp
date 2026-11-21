@@ -437,10 +437,16 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 addMember(*subroutine);
             break;
         }
-        case SyntaxKind::ClassMethodPrototype:
-            addMember(
-                MethodPrototypeSymbol::fromSyntax(*this, syntax.as<ClassMethodPrototypeSyntax>()));
+        case SyntaxKind::ClassMethodPrototype: {
+            // Constructor prototypes are deferred for the same reason
+            // as constructor declarations above.
+            auto& proto = syntax.as<ClassMethodPrototypeSyntax>();
+            if (proto.prototype->name->getLastToken().kind == TokenKind::NewKeyword)
+                addDeferredMembers(syntax);
+            else
+                addMember(MethodPrototypeSymbol::fromSyntax(*this, proto));
             break;
+        }
         case SyntaxKind::ElabSystemTask:
             addMember(
                 ElabSystemTaskSymbol::fromSyntax(compilation, syntax.as<ElabSystemTaskSyntax>()));
@@ -1330,6 +1336,13 @@ void Scope::elaborate() const {
                 }
                 break;
             }
+            case SyntaxKind::ClassMethodPrototype: {
+                auto& proto = MethodPrototypeSymbol::fromSyntax(
+                    *this, member.node.as<ClassMethodPrototypeSyntax>());
+                auto members = {&proto};
+                insertMembers(members, symbol);
+                break;
+            }
             case SyntaxKind::UserDefinedNetDeclaration:
             case SyntaxKind::DataDeclaration:
                 // Already handled above.
@@ -1739,6 +1752,7 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::ProgramDeclaration:
         case SyntaxKind::ClassMethodDeclaration:
+        case SyntaxKind::ClassMethodPrototype:
         case SyntaxKind::ClockingDeclaration:
             return 1;
         case SyntaxKind::SpecifyBlock:

@@ -704,6 +704,46 @@ endfunction
     CHECK(init->eval(ctx).integer() == 1);
 }
 
+TEST_CASE("Extern constructor prototype with defaulted super args") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class B;
+    int a;
+    function new(int a = 1);
+        this.a = a;
+    endfunction
+endclass
+
+class C extends B;
+    int b;
+    extern function new(int b, default);
+endclass
+
+function C::new(int b, default);
+    this.b = b;
+endfunction
+
+module top;
+    C c;
+    initial c = new(2, 3);
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& c = compilation.getRoot().compilationUnits[0]->find("C")->as<ClassType>();
+    auto ctor = c.getConstructor();
+    REQUIRE(ctor);
+    CHECK(ctor->getArguments().size() == 2);
+
+    auto protos = c.membersOfType<MethodPrototypeSymbol>();
+    REQUIRE(protos.begin() != protos.end());
+    CHECK(protos.begin()->getArguments().size() == 2);
+}
+
 TEST_CASE("This handle in extern method default arg") {
     auto tree = SyntaxTree::fromText(R"(
 class A;
