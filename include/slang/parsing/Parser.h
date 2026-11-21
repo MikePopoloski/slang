@@ -539,12 +539,25 @@ private:
 template<bool (*IsEnd)(TokenKind)>
 bool Parser::scanTypePart(uint32_t& index, TokenKind start, TokenKind end) {
     int nesting = 1;
+    int braceNesting = 0;
     while (true) {
         auto kind = peek(index).kind;
-        if (IsEnd(kind) || kind == TokenKind::EndOfFile)
+        if (kind == TokenKind::EndOfFile)
+            return false;
+
+        // The body of a struct or union type, such as one given as a parameter
+        // value, contains semicolons that don't end the part we're scanning.
+        if (IsEnd(kind) && (kind != TokenKind::Semicolon || braceNesting == 0))
             return false;
 
         index++;
+        if (start != TokenKind::OpenBrace) {
+            if (kind == TokenKind::OpenBrace)
+                braceNesting++;
+            else if (kind == TokenKind::CloseBrace && braceNesting > 0)
+                braceNesting--;
+        }
+
         if (kind == start)
             nesting++;
         else if (kind == end) {

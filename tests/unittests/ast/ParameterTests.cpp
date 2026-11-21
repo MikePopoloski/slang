@@ -4,9 +4,11 @@
 #include "Test.h"
 #include <fmt/format.h>
 
+#include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/Type.h"
 
@@ -1466,6 +1468,44 @@ endmodule
             fmt::format("m2.{}[{}].m.p", name, i));
         CHECK(p.getValue().integer() == i + 1);
     }
+}
+
+TEST_CASE("Struct and union types as type parameter values") {
+    // A data_type, including a struct or union with its body, is a legal
+    // param_expression [6.20.1]. The semicolons in the body shouldn't stop the
+    // lookahead that decides whether this is an instantiation or declaration.
+    auto tree = SyntaxTree::fromText(R"(
+module m #(type TE = int) (); TE x; endmodule
+class C #(type T = int); T v; endclass
+
+module top;
+    m #(struct {int a;}) u1();
+    m #(.TE(union {int a; bit [31:0] b;})) u2();
+    m #(struct packed {logic [3:0] a; logic b;}) u3();
+    C #(struct {int a;}) c1;
+    initial begin
+        C #(struct {int a; real r;}) c2;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto typeOf = [&](std::string_view path) -> const Type& {
+        return root.lookupName<VariableSymbol>(path).getType().getCanonicalType();
+    };
+    CHECK(typeOf("top.u1.x").kind == SymbolKind::UnpackedStructType);
+    CHECK(typeOf("top.u2.x").kind == SymbolKind::UnpackedUnionType);
+    CHECK(typeOf("top.u3.x").kind == SymbolKind::PackedStructType);
+    CHECK(typeOf("top.u3.x").getBitWidth() == 5);
+
+    auto& c1 = root.lookupName<VariableSymbol>("top.c1").getType().getCanonicalType();
+    REQUIRE(c1.isClass());
+    auto& v = c1.as<ClassType>().find("v")->as<ClassPropertySymbol>();
+    CHECK(v.getType().getCanonicalType().kind == SymbolKind::UnpackedStructType);
 }
 
 TEST_CASE("Defparams targeting parameters in blocks and subroutines") {
