@@ -524,6 +524,23 @@ The possible comment directives are:
 -   `lint_on` -- Turn on the specified warning
 -   `lint_save` -- Push the current warning state to a stack, just like `` `pragma diagnostic push ``
 -   `lint_restore` -- Pop the warning state stack, just like `` `pragma diagnostic pop ``
+-   `lint_waive` -- Waive one or more warnings (given as a comma separated list) for a single line
+
+`lint_waive` is a compact alternative to wrapping a single line in `lint_save` / `lint_off` /
+`lint_restore`. When the comment appears after other source text on a line, the waiver applies
+to that line. Otherwise it applies to the next line that contains source text, skipping over blank
+lines and other comments. Any text after the list of warning names is ignored, so it can be used
+to document the reason for the waiver. Example:
+
+@code{.sv}
+module m(
+    input logic a,  // slang lint_waive unused-port
+    // slang lint_waive unused-port -- reason for the waiver goes here
+    input logic b,
+    input logic c   // slang lint_waive unused-port, unused-net
+);
+endmodule
+@endcode
 
 slang can also be configured to skip over text enclosed in legacy style "translate_off" comment regions.
 See the `--translate-off-format` command line argument description for more details.

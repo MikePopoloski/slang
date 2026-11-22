@@ -523,6 +523,7 @@ void registerSyntax(nb::module_& syntax, nb::module_& parsing) {
         .value("LintOff", CommentHandler::LintOff)
         .value("LintSave", CommentHandler::LintSave)
         .value("LintRestore", CommentHandler::LintRestore)
+        .value("LintWaive", CommentHandler::LintWaive)
         .export_values();
 
     nb::class_<LexerOptions>(parsing, "LexerOptions")

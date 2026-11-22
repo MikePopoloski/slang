@@ -46,7 +46,12 @@ struct CommentHandler {
         LintSave,
 
         /// Restore a previously set lint state.
-        LintRestore
+        LintRestore,
+
+        /// Waives one or more warnings for a single line: either the line containing
+        /// the comment, if it has preceding source text, or otherwise the next line
+        /// that contains a token.
+        LintWaive
     };
 
     /// The kind of comment handler this is.
@@ -185,6 +190,12 @@ private:
     bool tryApplyCommentHandler();
     void scanDisabledRegion(std::string_view firstWord, std::string_view secondWord,
                             std::optional<std::string_view> thirdWord, DiagCode unclosedDiag);
+
+    // Returns a pointer to the first character at or after @a ptr that is not
+    // whitespace or part of a comment, or to the end of the buffer if there is none.
+    // If @a stopAtNewline is true, stops at the first newline outside of a block comment.
+    const char* skipWhitespaceAndComments(const char* ptr, bool stopAtNewline) const;
+    void addLineWaivers(const char* linePtr, std::span<const std::string_view> names);
 
     template<typename... Args>
     Token create(TokenKind kind, Args&&... args);

@@ -1231,6 +1231,7 @@ void Driver::addParseOptions(Bag& bag) const {
     loptions.commentHandlers["slang"]["lint_on"] = {CommentHandler::LintOn};
     loptions.commentHandlers["slang"]["lint_save"] = {CommentHandler::LintSave};
     loptions.commentHandlers["slang"]["lint_restore"] = {CommentHandler::LintRestore};
+    loptions.commentHandlers["slang"]["lint_waive"] = {CommentHandler::LintWaive};
 
     ParserOptions poptions;
     poptions.languageVersion = languageVersion;

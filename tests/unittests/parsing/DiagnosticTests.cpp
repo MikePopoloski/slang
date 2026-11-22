@@ -965,6 +965,89 @@ source:9:5: warning: extra ';' has no effect [-Wempty-member]
 )");
 }
 
+TEST_CASE("Diagnostic comment waivers") {
+    SyntaxTree::getDefaultSourceManager().clearDiagnosticDirectives();
+
+    LexerOptions options;
+    options.commentHandlers["slang"]["lint_off"] = {CommentHandler::LintOff};
+    options.commentHandlers["slang"]["lint_on"] = {CommentHandler::LintOn};
+    options.commentHandlers["slang"]["lint_save"] = {CommentHandler::LintSave};
+    options.commentHandlers["slang"]["lint_restore"] = {CommentHandler::LintRestore};
+    options.commentHandlers["slang"]["lint_waive"] = {CommentHandler::LintWaive};
+
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    ; // slang lint_waive empty-member
+    ; // warn
+    // slang lint_waive empty-member
+
+    // other comment
+    ; // hidden
+    ; // warn
+    /* slang lint_waive -Wempty-member */ ;
+    ; // warn
+    int i = 3.4; // slang lint_waive empty-member, constant-conversion because reasons
+    int j = 3.4; // warn
+    // slang lint_off empty-member
+    ; // slang lint_waive empty-member
+    ; // hidden
+    // slang lint_save
+    // slang lint_on empty-member
+    ; // warn
+    // slang lint_waive empty-member
+    /* slang lint_restore */ ;
+    ; // hidden
+    // slang lint_waive foo-bar
+    ;
+    // slang lint_on empty-member
+    // slang lint_waive empty-member
+    /* multi
+       line */ /* another */
+
+    ; // hidden
+    ; // warn
+endmodule
+// slang lint_waive empty-member)",
+                                     options);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    DiagnosticEngine engine(tree->sourceManager());
+    Diagnostics pragmaDiags = engine.setMappingsFromPragmas();
+
+    auto client = std::make_shared<TextDiagnosticClient>();
+    engine.addClient(client);
+    for (auto& diag : pragmaDiags)
+        engine.issue(diag);
+    for (auto& diag : compilation.getAllDiagnostics())
+        engine.issue(diag);
+
+    CHECK("\n"s + client->getString() == R"(
+source:24:1: warning: unknown warning option 'foo-bar' [-Wunknown-warning-option]
+    ;
+^
+source:4:5: warning: extra ';' has no effect [-Wempty-member]
+    ; // warn
+    ^
+source:9:5: warning: extra ';' has no effect [-Wempty-member]
+    ; // warn
+    ^
+source:11:5: warning: extra ';' has no effect [-Wempty-member]
+    ; // warn
+    ^
+source:13:11: warning: implicit conversion from 'real' to 'int' changes value from 3.4 to 3 [-Wconstant-conversion]
+    int j = 3.4; // warn
+          ^ ~~~
+source:19:5: warning: extra ';' has no effect [-Wempty-member]
+    ; // warn
+    ^
+source:31:5: warning: extra ';' has no effect [-Wempty-member]
+    ; // warn
+    ^
+)");
+}
+
 TEST_CASE("Diagnostic warning option corner cases") {
     auto createEngine = [](std::vector<std::string> options) {
         DiagnosticEngine engine(getSourceManager());

@@ -196,6 +196,8 @@ void registerText(nb::module_& m) {
              "name"_a, "level"_a)
         .def("addDiagnosticDirective", &SourceManager::addDiagnosticDirective, "location"_a,
              "name"_a, "severity"_a)
+        .def("addDiagnosticWaiver", &SourceManager::addDiagnosticWaiver, "start"_a, "end"_a,
+             "name"_a)
         .def("getAllBuffers", &SourceManager::getAllBuffers);
 }
 

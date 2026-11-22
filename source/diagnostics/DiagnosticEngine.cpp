@@ -703,9 +703,46 @@ void DiagnosticEngine::setMappingsFromPragmasImpl(BufferID buffer,
     std::vector<flat_hash_map<DiagCode, DiagnosticSeverity>> mappingStack;
     mappingStack.emplace_back();
 
-    auto noteDiag = [&](DiagCode code, auto& directive) {
-        diagMappings[code][buffer].emplace_back(directive.offset, directive.severity);
-        mappingStack.back()[code] = directive.severity;
+    // Tracks the number of currently active waivers for each diagnostic.
+    // While a waiver is active, the diagnostic stays ignored regardless of other
+    // directives; those directives still update the tracked state so that it can
+    // be restored correctly once the waiver ends.
+    flat_hash_map<DiagCode, uint32_t> waiverDepth;
+    auto isWaived = [&](DiagCode code) {
+        auto it = waiverDepth.find(code);
+        return it != waiverDepth.end() && it->second > 0;
+    };
+
+    // Restores the mapping for the given code to the current state on the stack,
+    // or to the default (unset) if there is no current state.
+    auto restoreMapping = [&](DiagCode code, size_t offset,
+                              const flat_hash_map<DiagCode, DiagnosticSeverity>& state) {
+        auto& mappings = diagMappings[code][buffer];
+        if (auto it = state.find(code); it != state.end())
+            mappings.emplace_back(offset, it->second);
+        else
+            mappings.emplace_back(offset, std::nullopt);
+    };
+
+    auto applyDirective = [&](DiagCode code, auto& directive) {
+        switch (directive.kind) {
+            case SourceManager::DiagnosticDirectiveInfo::Mapping:
+                if (!isWaived(code))
+                    diagMappings[code][buffer].emplace_back(directive.offset, directive.severity);
+                mappingStack.back()[code] = directive.severity;
+                break;
+            case SourceManager::DiagnosticDirectiveInfo::WaiverBegin:
+                if (waiverDepth[code]++ == 0)
+                    diagMappings[code][buffer].emplace_back(directive.offset,
+                                                            DiagnosticSeverity::Ignored);
+                break;
+            case SourceManager::DiagnosticDirectiveInfo::WaiverEnd:
+                if (auto it = waiverDepth.find(code); it != waiverDepth.end() && it->second > 0) {
+                    if (--it->second == 0)
+                        restoreMapping(code, directive.offset, mappingStack.back());
+                }
+                break;
+        }
     };
 
     for (const SourceManager::DiagnosticDirectiveInfo& directive : directives) {
@@ -722,11 +759,8 @@ void DiagnosticEngine::setMappingsFromPragmasImpl(BufferID buffer,
             // If there is no previous value, they go back to the default (unset).
             auto& prev = mappingStack[mappingStack.size() - 2];
             for (auto [code, _] : mappingStack.back()) {
-                auto& mappings = diagMappings[code][buffer];
-                if (auto it = prev.find(code); it != prev.end())
-                    mappings.emplace_back(directive.offset, it->second);
-                else
-                    mappings.emplace_back(directive.offset, std::nullopt);
+                if (!isWaived(code))
+                    restoreMapping(code, directive.offset, prev);
             }
             mappingStack.pop_back();
         }
@@ -749,13 +783,13 @@ void DiagnosticEngine::setMappingsFromPragmasImpl(BufferID buffer,
 
             if (auto group = findDiagGroup(name)) {
                 for (auto code : group->getDiags())
-                    noteDiag(code, directive);
+                    applyDirective(code, directive);
             }
             else if (auto codes = findFromOptionName(name); !codes.empty()) {
                 for (auto code : codes)
-                    noteDiag(code, directive);
+                    applyDirective(code, directive);
             }
-            else {
+            else if (directive.kind != SourceManager::DiagnosticDirectiveInfo::WaiverEnd) {
                 auto& diag = diags.add(diag::UnknownWarningOption,
                                        SourceLocation(buffer, directive.offset));
                 diag << name;
@@ -808,7 +842,7 @@ std::optional<DiagnosticSeverity> DiagnosticEngine::findMappedSeverity(
         return std::nullopt;
 
     const std::vector<DiagnosticMapping>& mappings = byBuffer->second;
-    auto byOffset = std::ranges::lower_bound(mappings, fileLoc.offset(), {},
+    auto byOffset = std::ranges::upper_bound(mappings, fileLoc.offset(), {},
                                              &DiagnosticMapping::offset);
     if (byOffset == mappings.begin())
         return std::nullopt;

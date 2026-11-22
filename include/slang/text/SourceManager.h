@@ -266,9 +266,25 @@ public:
     void addDiagnosticDirective(SourceLocation location, std::string_view name,
                                 DiagnosticSeverity severity);
 
+    /// Adds a diagnostic waiver that suppresses the named diagnostic (or group)
+    /// for the source range between @a start and @a end.
+    void addDiagnosticWaiver(SourceLocation start, SourceLocation end, std::string_view name);
+
     /// Stores information specified in a pragma diagnostic directive, which alters the
     /// currently active set of diagnostic mappings.
     struct DiagnosticDirectiveInfo {
+        /// The kind of diagnostic directive.
+        enum Kind : uint8_t {
+            /// Sets the severity of the named diagnostic from this point onward.
+            Mapping,
+
+            /// Begins a waiver region in which the named diagnostic is suppressed.
+            WaiverBegin,
+
+            /// Ends a waiver region previously started by a WaiverBegin directive.
+            WaiverEnd
+        };
+
         /// The name of the diagnostic being controlled.
         std::string_view name;
 
@@ -278,9 +294,12 @@ public:
         /// The new severity the diagnostic should have.
         DiagnosticSeverity severity;
 
-        DiagnosticDirectiveInfo(std::string_view name, size_t offset,
-                                DiagnosticSeverity severity) noexcept :
-            name(name), offset(offset), severity(severity) {}
+        /// The kind of directive.
+        Kind kind = Mapping;
+
+        DiagnosticDirectiveInfo(std::string_view name, size_t offset, DiagnosticSeverity severity,
+                                Kind kind = Mapping) noexcept :
+            name(name), offset(offset), severity(severity), kind(kind) {}
     };
 
     /// Visits each buffer that contains diagnostic directives and invokes the provided
@@ -469,6 +488,10 @@ private:
 
     template<IsLock TLock>
     SourceLocation getFullyExpandedLocImpl(SourceLocation location, TLock& lock) const;
+
+    void addDiagnosticDirectiveImpl(SourceLocation fileLocation, std::string_view name,
+                                    DiagnosticSeverity severity,
+                                    DiagnosticDirectiveInfo::Kind kind);
 
     template<IsLock TLock>
     SourceLocation getOriginalLocImpl(SourceLocation location, TLock& lock) const;

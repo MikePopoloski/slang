@@ -259,47 +259,62 @@ Token Lexer::lex(KeywordVersion keywordVersion) {
 }
 
 bool Lexer::isNextTokenOnSameLine() {
-    auto guard = ScopeGuard([this, currBuff = sourceBuffer] { sourceBuffer = currBuff; });
+    auto ptr = skipWhitespaceAndComments(sourceBuffer, /* stopAtNewline */ true);
+    switch (*ptr) {
+        case '\0':
+        case '\r':
+        case '\n':
+            return false;
+        case '`': {
+            // Only macro usages are considered to be on the same line; directives are not.
+            auto guard = ScopeGuard([this, currBuff = sourceBuffer] { sourceBuffer = currBuff; });
+            sourceBuffer = ptr;
+            mark();
+            advance();
+            return lexDirective().directiveKind() == SyntaxKind::MacroUsage;
+        }
+        default:
+            return true;
+    }
+}
 
-    while (true) {
-        switch (peek()) {
+const char* Lexer::skipWhitespaceAndComments(const char* ptr, bool stopAtNewline) const {
+    auto end = sourceEnd - 1;
+    while (ptr < end) {
+        switch (*ptr) {
+            case '\r':
+            case '\n':
+                if (stopAtNewline)
+                    return ptr;
+                [[fallthrough]];
             case ' ':
             case '\t':
             case '\v':
             case '\f':
-                advance();
+                ptr++;
                 break;
             case '/':
-                switch (peek(1)) {
-                    case '/':
-                        return false;
-                    case '*':
-                        advance(2);
-                        while (true) {
-                            if (consume('*') && consume('/'))
-                                break;
-                            if (peek() == '\0' && reallyAtEnd())
-                                return false;
-                            advance();
-                        }
-                        break;
-                    default:
-                        return true;
+                if (ptr[1] == '/') {
+                    ptr += 2;
+                    while (ptr < end && !isNewline(*ptr))
+                        ptr++;
+                }
+                else if (ptr[1] == '*') {
+                    ptr += 2;
+                    while (ptr < end && !(ptr[0] == '*' && ptr[1] == '/'))
+                        ptr++;
+                    if (ptr < end)
+                        ptr += 2;
+                }
+                else {
+                    return ptr;
                 }
                 break;
-            case '\0':
-            case '\r':
-            case '\n':
-                return false;
-            case '`':
-                // Only macro usages are considered to be on the same line; directives are not.
-                mark();
-                advance();
-                return lexDirective().directiveKind() == SyntaxKind::MacroUsage;
             default:
-                return true;
+                return ptr;
         }
     }
+    return end;
 }
 
 Token Lexer::lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine,
@@ -1437,8 +1452,59 @@ bool Lexer::tryApplyCommentHandler() {
         case CommentHandler::LintRestore:
             sourceManager.addDiagnosticDirective(loc(), "__pop__", DiagnosticSeverity::Ignored);
             return false;
+        case CommentHandler::LintWaive: {
+            // Collect a comma separated list of warning names.
+            SmallVector<std::string_view, 2> names;
+            while (true) {
+                auto name = nextWord();
+                if (!name.empty())
+                    names.push_back(name);
+
+                while (isTabOrSpace(peek()))
+                    advance();
+                if (!consume(','))
+                    break;
+            }
+
+            if (names.empty())
+                return false;
+
+            // If there is any source text preceding the comment on the same line,
+            // the waiver applies to this line. Otherwise it applies to the line
+            // containing the next token.
+            auto ptr = marker;
+            while (ptr != originalBegin && isTabOrSpace(ptr[-1]))
+                ptr--;
+
+            if (ptr != originalBegin && !isNewline(ptr[-1])) {
+                addLineWaivers(marker, names);
+            }
+            else {
+                // The marker is at the start of this comment, so skipping from there
+                // skips the comment itself along with any whitespace and comments after it.
+                auto next = skipWhitespaceAndComments(marker, /* stopAtNewline */ false);
+                if (next < sourceEnd - 1)
+                    addLineWaivers(next, names);
+            }
+            return false;
+        }
     }
     SLANG_UNREACHABLE;
+}
+
+void Lexer::addLineWaivers(const char* linePtr, std::span<const std::string_view> names) {
+    auto start = linePtr;
+    while (start != originalBegin && !isNewline(start[-1]))
+        start--;
+
+    auto end = linePtr;
+    while (end < sourceEnd - 1 && !isNewline(*end))
+        end++;
+
+    SourceLocation startLoc(bufferId, size_t(start - originalBegin));
+    SourceLocation endLoc(bufferId, size_t(end - originalBegin));
+    for (auto name : names)
+        sourceManager.addDiagnosticWaiver(startLoc, endLoc, name);
 }
 
 bool Lexer::scanUTF8Char(bool alreadyErrored) {

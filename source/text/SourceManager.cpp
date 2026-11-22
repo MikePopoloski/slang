@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "slang/diagnostics/Diagnostics.h"
 #include "slang/text/CharInfo.h"
 #include "slang/text/Glob.h"
 #include "slang/util/OS.h"
@@ -611,18 +612,32 @@ void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, st
 void SourceManager::addDiagnosticDirective(SourceLocation location, std::string_view name,
                                            DiagnosticSeverity severity) {
     std::unique_lock<std::shared_mutex> lock(mutex);
-    SourceLocation fileLocation = getFullyExpandedLocImpl(location, lock);
+    addDiagnosticDirectiveImpl(getFullyExpandedLocImpl(location, lock), name, severity,
+                               DiagnosticDirectiveInfo::Mapping);
+}
 
+void SourceManager::addDiagnosticWaiver(SourceLocation start, SourceLocation end,
+                                        std::string_view name) {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    addDiagnosticDirectiveImpl(getFullyExpandedLocImpl(start, lock), name,
+                               DiagnosticSeverity::Ignored, DiagnosticDirectiveInfo::WaiverBegin);
+    addDiagnosticDirectiveImpl(getFullyExpandedLocImpl(end, lock), name,
+                               DiagnosticSeverity::Ignored, DiagnosticDirectiveInfo::WaiverEnd);
+}
+
+void SourceManager::addDiagnosticDirectiveImpl(SourceLocation fileLocation, std::string_view name,
+                                               DiagnosticSeverity severity,
+                                               DiagnosticDirectiveInfo::Kind kind) {
     size_t offset = fileLocation.offset();
     auto& vec = diagDirectives[fileLocation.buffer()];
     if (vec.empty() || offset >= vec.back().offset)
-        vec.emplace_back(name, offset, severity);
+        vec.emplace_back(name, offset, severity, kind);
     else {
         // Keep the list in sorted order. Typically new additions should be at the end,
         // in which case we'll hit the condition above, but just in case we will do the
         // full search and insert here.
         vec.emplace(std::ranges::upper_bound(vec, offset, {}, &DiagnosticDirectiveInfo::offset),
-                    name, offset, severity);
+                    name, offset, severity, kind);
     }
 }
 
