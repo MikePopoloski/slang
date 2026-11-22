@@ -553,6 +553,7 @@ error MultipleDefaultConstructorArg "'default' cannot be used more than once in 
 error DefaultSuperArgLocalReference "cannot use 'default' here because the superclass constructor argument '{}' refers to local member '{}'"
 error OverridingInitial "'{}' is marked 'initial' but overrides a base class member"
 error OverridingFinal "'{}' overrides a base class member that is marked 'final'"
+error StaticOverridesVirtual "static method '{}' cannot override a virtual method in a base class"
 error PackageImportSelf "package cannot import itself"
 error PackageExportSelf "package cannot export itself"
 error PackageExportNotImported "cannot export '{}' because it is not imported in this package"

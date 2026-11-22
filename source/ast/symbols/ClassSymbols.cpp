@@ -494,12 +494,10 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
     };
 
     auto checkForOverride = [&](auto& member) {
-        // Constructors and static methods can never be virtual.
+        // Constructors can never be virtual.
         // Methods without a name are the result of a parse error.
-        if (member.flags.has(MethodFlags::Constructor | MethodFlags::Static) ||
-            member.name.empty()) {
+        if (member.flags.has(MethodFlags::Constructor) || member.name.empty())
             return;
-        }
 
         // Look in the parent class for a method with the same name.
         auto currentBase = baseType;
@@ -508,6 +506,23 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
             if (found) {
                 if (found->kind == SymbolKind::Subroutine) {
                     auto& baseSub = found->as<SubroutineSymbol>();
+                    if (member.flags.has(MethodFlags::Static)) {
+                        // A static method can't be virtual, so it can't override a virtual
+                        // method, which has to remain virtual, nor a final one [8.20].
+                        if (baseSub.flags.has(MethodFlags::Final)) {
+                            auto& diag = context.addDiag(diag::OverridingFinal, member.location);
+                            diag << member.name;
+                            diag.addNote(diag::NoteDeclarationHere, baseSub.location);
+                        }
+                        else if (baseSub.isVirtual()) {
+                            auto& diag = context.addDiag(diag::StaticOverridesVirtual,
+                                                         member.location);
+                            diag << member.name;
+                            diag.addNote(diag::NoteDeclarationHere, baseSub.location);
+                        }
+                        return;
+                    }
+
                     checkOverrideSpecifiers(baseSub, member);
                     if (baseSub.isVirtual())
                         member.setOverride(baseSub);

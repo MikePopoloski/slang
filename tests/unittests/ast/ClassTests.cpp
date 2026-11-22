@@ -6048,3 +6048,41 @@ function void C::h3(const ref int x); endfunction
     CHECK(diags[3].code == diag::MethodArgDirectionMismatch);
     CHECK(diags[4].code == diag::MethodArgDirectionMismatch);
 }
+
+TEST_CASE("Static method with the name of a base virtual or final method") {
+    // A static method can't be virtual, so it can't override a virtual method,
+    // which must remain virtual, or a final one [8.20].
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    function void n(); endfunction
+    static function void s(); endfunction
+    virtual function void v(); endfunction
+    function :final void g(); endfunction
+    virtual task t(); endtask
+endclass
+
+class B extends A;
+    static function void n(); endfunction
+    static function void s(); endfunction
+    static function void v(); endfunction
+    static function void g(); endfunction
+endclass
+
+class C extends A;
+    extern static task t();
+endclass
+
+task C::t(); endtask
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::StaticOverridesVirtual);
+    CHECK(diags[1].code == diag::OverridingFinal);
+    CHECK(diags[2].code == diag::StaticOverridesVirtual);
+}
