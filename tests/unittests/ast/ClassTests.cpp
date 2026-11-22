@@ -5272,6 +5272,58 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Class specializations on types declared per elaboration are distinct") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    class Box #(type T = int);
+        static int count;
+    endclass
+
+    class Outer #(type U = int);
+        typedef struct { int a; } s;
+        static Box #(s) b;
+    endclass
+
+    class D #(type U = int, type T = struct { U x; });
+        static int count;
+    endclass
+endpackage
+
+module M;
+    typedef struct { int a; } own_t;
+    p::Box #(own_t) b;
+    p::D #(own_t) d;
+
+    class C #(type T = struct { own_t x; });
+        static int count;
+    endclass
+    C c;
+endmodule
+
+module top;
+    M m1();
+    M m2();
+    p::Outer #(int) o1;
+    p::Outer #(real) o2;
+    initial begin
+        m1.b = m2.b;
+        m1.d = m2.d;
+        m1.c = m2.c;
+        o1.b = o2.b;
+        $static_assert(type(o1.b) != type(o2.b));
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::BadAssignment);
+}
+
 TEST_CASE("Class parameters with inline enum declarations") {
     auto tree = SyntaxTree::fromText(R"(
 class base;

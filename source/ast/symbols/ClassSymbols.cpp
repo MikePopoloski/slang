@@ -1119,7 +1119,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
 
     SmallVector<const Symbol*> paramSymbols;
     SmallVector<const ConstantValue*> paramValues;
-    SmallVector<const Type*> typeParams;
+    SmallVector<detail::ClassSpecializationKey::TypeParam> typeParams;
     for (auto& decl : paramDecls) {
         auto& param = paramBuilder.createParam(decl, *classType, instanceLoc);
         if (paramBuilder.hasErrors()) {
@@ -1140,7 +1140,8 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
             }
             else {
                 auto& tps = sym.as<TypeParameterSymbol>();
-                typeParams.push_back(&tps.targetType.getType().getCanonicalType());
+                typeParams.push_back(
+                    {&tps.targetType.getType().getCanonicalType(), !tps.isOverridden()});
             }
         }
     }
@@ -1214,15 +1215,18 @@ void GenericClassDefSymbol::serializeTo(ASTSerializer& serializer) const {
 namespace detail {
 
 ClassSpecializationKey::ClassSpecializationKey(std::span<const ConstantValue* const> paramValues,
-                                               std::span<const Type* const> typeParams) :
+                                               std::span<const TypeParam> typeParams) :
     paramValues(paramValues), typeParams(typeParams) {
 
     // Precompute the hash.
     size_t h = 0;
     for (auto val : paramValues)
         hash_combine(h, val ? val->hash() : 0);
-    for (auto type : typeParams)
-        hash_combine(h, type ? type->hash() : 0);
+    // Note that defaulted type params still hash by their type, since they can
+    // match an explicitly specified type. Copies of an inline type declared in
+    // a default hash the same since Type::hash is structural for those types.
+    for (auto& param : typeParams)
+        hash_combine(h, param.type ? param.type->hash() : 0);
     savedHash = h;
 }
 
@@ -1248,12 +1252,20 @@ bool ClassSpecializationKey::operator==(const ClassSpecializationKey& other) con
 
     for (auto lit = typeParams.begin(), rit = other.typeParams.begin(); lit != typeParams.end();
          lit++, rit++) {
-        const Type* l = *lit;
-        const Type* r = *rit;
+        // If both specializations took the default for this parameter, the
+        // resulting types match even if they aren't the same object: a default
+        // can only depend on earlier parameters, which are all compared here,
+        // and on names in the scope declaring the generic class, which is the
+        // same for every specialization in its cache. This matters for types
+        // declared inline in the default (like an enum or struct), which are
+        // created anew in each specialization.
+        if (lit->isDefault && rit->isDefault)
+            continue;
+
+        const Type* l = lit->type;
+        const Type* r = rit->type;
         if (l && r) {
-            // A type declared in the default value of a type parameter (like an
-            // inline enum or struct) is created anew in each specialization.
-            if (!l->isMatchingAcrossElaborations(*r))
+            if (!l->isMatching(*r))
                 return false;
         }
         else {

@@ -219,8 +219,18 @@ namespace detail {
 // when that's the case so it's separated here for now.
 class ClassSpecializationKey {
 public:
+    /// The resolved value of a type parameter in a specialization.
+    struct TypeParam {
+        /// The canonical type of the parameter.
+        const Type* type;
+
+        /// True if the parameter took its default value instead of
+        /// being given one in the specialization.
+        bool isDefault;
+    };
+
     ClassSpecializationKey(std::span<const ConstantValue* const> paramValues,
-                           std::span<const Type* const> typeParams);
+                           std::span<const TypeParam> typeParams);
 
     size_t hash() const { return savedHash; }
 
@@ -228,7 +238,7 @@ public:
 
 private:
     std::span<const ConstantValue* const> paramValues;
-    std::span<const Type* const> typeParams;
+    std::span<const TypeParam> typeParams;
     size_t savedHash;
 };
 
