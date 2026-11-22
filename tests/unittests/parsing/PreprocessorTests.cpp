@@ -1365,6 +1365,30 @@ TEST_CASE("`line directive split across lines") {
     CHECK(diagnostics[1].code == diag::LineDirectiveMultiline);
 }
 
+TEST_CASE("Directive in the middle of another directive") {
+    // A directive can't appear in the middle of another one, though a macro
+    // usage can, and a directive can follow a complete one on the same line [22.2].
+    auto& text = R"(
+`timescale 1ns `resetall / 1ps
+`default_nettype `celldefine wire
+`define UNIT 1ns
+`timescale `UNIT / 1ps
+`timescale 1ns/1ps `resetall
+`default_nettype wire `celldefine
+`endcelldefine `resetall
+`define A
+`ifdef A `resetall `endif
+`ifndef A `resetall `else `celldefine `endif
+`undef A `undefineall
+`begin_keywords "1800-2017" `end_keywords
+)";
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::NestedDirective);
+    CHECK(diagnostics[1].code == diag::NestedDirective);
+}
+
 TEST_CASE("Coverage macros") {
     PreprocessorOptions ppOptions;
     Bag options;

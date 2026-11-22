@@ -357,6 +357,15 @@ Token Preprocessor::nextProcessed() {
         case TokenKind::Unknown:
             return handleDirectives(token);
         case TokenKind::Directive:
+            // A directive can't appear in the middle of another directive [22.2].
+            // A directive on a later line isn't in the middle of anything; it was
+            // just reached while looking past the end of the previous one. The
+            // same goes for the lookahead after an `ifdef expression.
+            if (directiveArgDepth > 0 && !inIfDefCondition &&
+                token.directiveKind() != SyntaxKind::MacroUsage && token.isOnSameLine()) {
+                addDiag(diag::NestedDirective, token.range());
+            }
+
             if (inIfDefCondition) {
                 switch (token.directiveKind()) {
                     case SyntaxKind::IfDefDirective:
@@ -429,6 +438,17 @@ Token Preprocessor::handleDirectives(Token token) {
                 }
 
                 auto savedLast = std::exchange(lastConsumed, token);
+
+                // Track that we're reading this directive's arguments so that nested
+                // directives can be diagnosed; macro usages aren't directives [22.2].
+                const bool isDirective = token.directiveKind() != SyntaxKind::MacroUsage;
+                if (isDirective)
+                    directiveArgDepth++;
+                auto depthGuard = ScopeGuard([&] {
+                    if (isDirective)
+                        directiveArgDepth--;
+                });
+
                 switch (token.directiveKind()) {
                     case SyntaxKind::IncludeDirective:
                         trivia.push_back(handleIncludeDirective(token));

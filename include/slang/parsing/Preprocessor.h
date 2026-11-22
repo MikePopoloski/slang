@@ -576,6 +576,10 @@ private:
     bool hasProtectedCode = false;
 
     int designElementDepth = 0;
+
+    // The number of directives whose arguments are currently being read,
+    // used to diagnose a directive in the middle of another one.
+    int directiveArgDepth = 0;
     uint32_t includeDepth = 0;
     uint32_t protectEncryptDepth = 0;
     uint32_t protectDecryptDepth = 0;
