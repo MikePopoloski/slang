@@ -158,6 +158,8 @@ void registerCompilation(nb::module_& m, nb::module_& ast, nb::module_& driver) 
     EXPOSE_ENUM(ast, ElabSystemTaskKind);
     EXPOSE_ENUM(ast, RandMode);
     EXPOSE_ENUM(ast, PrimitivePortDirection);
+    EXPOSE_ENUM(ast, ChargeStrength);
+    EXPOSE_ENUM(ast, DriveStrength);
 
     nb::enum_<PreprocessOutputFlags>(m, "PreprocessOutputFlags", nb::is_arithmetic(), nb::is_flag())
         .value("None_", PreprocessOutputFlags::None)

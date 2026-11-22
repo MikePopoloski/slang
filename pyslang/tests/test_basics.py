@@ -7,7 +7,11 @@ import pytest
 from pyslang.analysis import AnalysisManager
 from pyslang.ast import (
     ASTContext,
+    ChargeStrength,
     Compilation,
+    Delay3Control,
+    DelayControl,
+    DriveStrength,
     EvalContext,
     Lookup,
     LookupLocation,
@@ -293,3 +297,32 @@ endmodule
     ec.preventMemoization()
     assert ec.takeMemoizationPrevented()
     assert not ec.takeMemoizationPrevented()
+
+
+def test_drive_and_charge_strengths():
+    tree = SyntaxTree.fromText("""
+module m(input logic a, b, output logic y, z);
+    and (strong1, strong0) g1 (y, a, b);
+    and #(1:2:3) g2 (z, a, b);
+    wire (weak0, pull1) #2 w = a;
+    trireg (large) t;
+    assign (supply0, highz1) y = a;
+endmodule
+""")
+    compilation = Compilation()
+    compilation.addSyntaxTree(tree)
+    assert not compilation.getAllDiagnostics()
+
+    body = compilation.getRoot().lookupName("m").body
+    assert body.find("g1").driveStrength == (DriveStrength.Strong, DriveStrength.Strong)
+    assert body.find("g2").driveStrength == (None, None)
+    assert isinstance(body.find("g2").delay, Delay3Control)
+
+    w = body.find("w")
+    assert w.driveStrength == (DriveStrength.Weak, DriveStrength.Pull)
+    assert isinstance(w.delay, DelayControl)
+    assert w.chargeStrength is None
+    assert body.find("t").chargeStrength == ChargeStrength.Large
+
+    assign = next(s for s in body if s.kind == SymbolKind.ContinuousAssign)
+    assert assign.driveStrength == (DriveStrength.Supply, DriveStrength.HighZ)
