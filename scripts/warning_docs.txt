@@ -909,6 +909,17 @@ class C;
 endclass
 ```
 
+-Wautomatic-class-property
+A class property is declared with the `automatic` keyword. A class body is not a
+procedural context, so the LRM doesn't allow it there; class properties are instance
+members by default anyway. This is an error by default, but some tools accept it, so it
+can be downgraded to a warning. It is turned off in VCS compatibility mode.
+```
+class C;
+    automatic int h;
+endclass
+```
+
 -Wconst-reassign
 An instance constant (a `const` class property with no initializer) is assigned more than
 once in its class constructor. The LRM allows only one assignment. Assignments on separate

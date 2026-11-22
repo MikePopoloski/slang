@@ -5982,3 +5982,21 @@ endmodule
     for (auto& d : diags)
         CHECK(d.code == diag::ConstVarReassign);
 }
+
+TEST_CASE("Automatic class property") {
+    // A class body isn't a procedural context, so automatic isn't allowed [A.2.1.3].
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    automatic int h;
+    var int v;
+    static int s;
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AutomaticClassProperty);
+}

@@ -81,7 +81,12 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
     for (Token mod : dataSyntax.modifiers) {
         switch (mod.kind) {
             case TokenKind::VarKeyword:
+                break;
             case TokenKind::AutomaticKeyword:
+                // A class body isn't a procedural context, so 'automatic' isn't
+                // allowed here [A.2.1.3]. Some tools accept it anyway, so this is
+                // an error by default that can be downgraded.
+                scope.addDiag(diag::AutomaticClassProperty, mod.range());
                 break;
             case TokenKind::ConstKeyword:
                 isConst = true;

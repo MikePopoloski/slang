@@ -611,6 +611,7 @@ warning member-impl-not-found MemberImplNotFound "implementation not found in pa
 warning ref-arg-automatic RefArgAutomaticFunc "'ref' arguments can only be used in 'automatic' subroutines"
 warning prefer-localparam PreferLocalparam "prefer 'localparam' because parameter cannot be overridden in this context"
 warning const-reassign ConstVarReassign "instance constant '{}' is assigned more than once in the constructor"
+warning automatic-class-property AutomaticClassProperty "class properties cannot be declared 'automatic'"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -1355,7 +1356,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   tautological-self-compare
                   tautological-range-compare tautological-bitwise-compare tautological-overlap-compare
                   tautological-negation-compare nonstandard-instance-array-query
-                  missing-global-clocking qualified-pure-virtual-call solve-before-type const-reassign }
+                  missing-global-clocking qualified-pure-virtual-call solve-before-type const-reassign
+                  automatic-class-property }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
@@ -1412,7 +1414,8 @@ compat Default error = { duplicate-definition bad-procedural-force unknown-sys-n
                          ref-arg-in-fork-join cannot-index-scalar string-in-constraint
                          virtual-arg-name-mismatch virtual-visibility-mismatch undefined-param-override
                          redefinition redefinition-different-type nonstandard-instance-array-query
-                         missing-global-clocking qualified-pure-virtual-call solve-before-type }
+                         missing-global-clocking qualified-pure-virtual-call solve-before-type
+                         automatic-class-property }
 
 compat Vcs error = { duplicate-definition bad-procedural-force unknown-sys-name nonstandard-hierarchical-cross
                      nonstandard-string-concat nonstandard-inside mixed-var-assigns multiple-cont-assigns
@@ -1420,7 +1423,7 @@ compat Vcs error = { duplicate-definition bad-procedural-force unknown-sys-name 
                      string-int-concat nonstandard-instance-array-query missing-global-clocking }
 
 compat Vcs ignored = { explicit-static implicit-conv finish-num nonstandard-sys-func nonstandard-foreach
-                       foreach-call-expr nonstandard-dist nested-comment }
+                       foreach-call-expr nonstandard-dist nested-comment automatic-class-property }
 
 compat All ignored = { explicit-static implicit-conv finish-num nonstandard-sys-func nonstandard-foreach
-                       foreach-call-expr nonstandard-dist nested-comment }
+                       foreach-call-expr nonstandard-dist nested-comment automatic-class-property }
