@@ -942,6 +942,20 @@ endmodule
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Net alias with a single net") {
+    // At least two net_lvalues are required [10.11].
+    auto& text = R"(
+module m;
+    alias A;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedToken);
+    CHECK(diagnostics[0].location.offset() == std::string_view(text).find("A;") + 1);
+}
+
 TEST_CASE("Package export parsing") {
     auto& text = R"(
 package p;

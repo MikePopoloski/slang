@@ -3698,6 +3698,11 @@ NetAliasSyntax& Parser::parseNetAlias(AttrList attributes) {
         diag::ExpectedExpression,
         [this] { return &parsePrimaryExpression(ExpressionOptions::None); });
 
+    // At least two nets are required [10.11]. If the list is otherwise
+    // well formed, point out the missing '=' and second net.
+    if (buffer.size() == 1 && !semi.isMissing() && !buffer[0].node()->getFirstToken().isMissing())
+        addDiag(diag::ExpectedToken, semi.location()) << "="sv;
+
     return factory.netAlias(attributes, keyword, {alloc, buffer}, semi);
 }
 
