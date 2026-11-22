@@ -2643,6 +2643,11 @@ SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes)
 }
 
 CheckerDeclarationSyntax& Parser::parseCheckerDeclaration(AttrList attributes) {
+    // Checkers are design elements [3.2], so tell the preprocessor
+    // that we're inside one until the end keyword.
+    auto& pp = getPP();
+    pp.pushDesignElementStack();
+
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
     auto portList = parseAssertionItemPortList(SyntaxKind::CheckerDeclaration);
@@ -2659,6 +2664,7 @@ CheckerDeclarationSyntax& Parser::parseCheckerDeclaration(AttrList attributes) {
         });
 
     currentDefinitionKind = savedDefinitionKind;
+    pp.popDesignElementStack();
 
     auto blockName = parseNamedBlockClause();
     checkBlockNames(name, blockName);
@@ -3328,12 +3334,18 @@ UdpBodySyntax& Parser::parseUdpBody() {
 }
 
 UdpDeclarationSyntax& Parser::parseUdpDeclaration(AttrList attr) {
+    // Primitives are design elements [3.2], so tell the preprocessor
+    // that we're inside one until the end keyword.
+    auto& pp = getPP();
+    pp.pushDesignElementStack();
+
     auto primitive = consume();
     auto name = expect(TokenKind::Identifier);
 
     auto& portList = parseUdpPortList();
     auto& body = parseUdpBody();
     auto endprim = expect(TokenKind::EndPrimitiveKeyword);
+    pp.popDesignElementStack();
 
     NamedBlockClauseSyntax* endBlockName = parseNamedBlockClause();
     checkBlockNames(name, endBlockName);
@@ -3825,6 +3837,11 @@ ConfigUseClauseSyntax& Parser::parseConfigUseClause() {
 }
 
 ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
+    // Configurations are design elements [3.2], so tell the preprocessor
+    // that we're inside one until the end keyword.
+    auto& pp = getPP();
+    pp.pushDesignElementStack();
+
     auto config = consume();
     auto name = expect(TokenKind::Identifier);
     auto semi1 = expect(TokenKind::Semicolon);
@@ -3935,6 +3952,7 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
     }
 
     auto endconfig = expect(TokenKind::EndConfigKeyword);
+    pp.popDesignElementStack();
     auto blockName = parseNamedBlockClause();
     checkBlockNames(name, blockName);
 

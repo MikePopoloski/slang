@@ -336,6 +336,37 @@ endmodule
     CHECK(diagnostics[1].code == diag::DirectiveInsideDesignElement);
 }
 
+TEST_CASE("Errors for directives inside primitives, checkers, and configs") {
+    // Primitives, checkers, and configurations are design elements too [3.2].
+    auto& text = R"(
+primitive u(output o, input a);
+`resetall
+    table 0 : 0; 1 : 1; endtable
+endprimitive
+`resetall
+checker c;
+`default_nettype none
+endchecker
+`resetall
+config cfg;
+`resetall
+    design m;
+endconfig
+`resetall
+module m;
+    checker c2;
+    endchecker
+`resetall
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 4);
+    for (auto& diag : diagnostics)
+        CHECK(diag.code == diag::DirectiveInsideDesignElement);
+}
+
 TEST_CASE("v1800-2023: `timescale not allowed in design element") {
     auto& text = R"(
 module m1;
