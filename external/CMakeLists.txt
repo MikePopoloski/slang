@@ -202,9 +202,9 @@ else()
   FetchContent_Declare(
     tomlplusplus
     GIT_REPOSITORY ${SLANG_DEP_URL_PREFIX}marzer/tomlplusplus.git
-    GIT_TAG v3.4.0
+    GIT_TAG v3.5.0
     GIT_SHALLOW ON
-    FIND_PACKAGE_ARGS 3.4)
+    FIND_PACKAGE_ARGS 3.5)
   FetchContent_MakeAvailable(tomlplusplus)
 
   if(tomlplusplus_FOUND)
