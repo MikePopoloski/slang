@@ -28,6 +28,19 @@ namespace slang::ast {
 using namespace parsing;
 using namespace syntax;
 
+// Checks whether two formal arguments have the same direction. const ref and
+// ref static are distinct directions from plain ref [A.2.6].
+static bool directionsMatch(const FormalArgumentSymbol& a, const FormalArgumentSymbol& b) {
+    if (a.direction != b.direction)
+        return false;
+
+    if (a.direction != ArgumentDirection::Ref)
+        return true;
+
+    constexpr auto refFlags = VariableFlags::Const | VariableFlags::RefStatic;
+    return (a.flags & refFlags) == (b.flags & refFlags);
+}
+
 const Statement& SubroutineSymbol::getBody() const {
     if (!stmt) {
         auto syntax = getSyntax();
@@ -593,7 +606,7 @@ void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
         }
 
         // Direction must match.
-        if (da->direction != pa->direction) {
+        if (!directionsMatch(*da, *pa)) {
             auto& diag = scope.addDiag(diag::VirtualArgDirectionMismatch, da->location);
             diag << da->name;
             diag.addNote(diag::NoteDeclarationHere, pa->location);
@@ -1306,7 +1319,7 @@ bool MethodPrototypeSymbol::checkMethodMatch(const Scope& scope,
         }
 
         // Direction must match.
-        if (da->direction != pa->direction) {
+        if (!directionsMatch(*da, *pa)) {
             auto& diag = scope.addDiag(diag::MethodArgDirectionMismatch, da->location);
             diag << da->name;
             diag.addNote(diag::NoteDeclarationHere, pa->location);

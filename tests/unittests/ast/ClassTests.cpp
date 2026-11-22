@@ -6000,3 +6000,51 @@ endclass
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AutomaticClassProperty);
 }
+
+TEST_CASE("const ref and ref static are distinct argument directions") {
+    // Overrides and out-of-block definitions must match the qualifiers of a
+    // ref argument, since const ref and ref static are distinct directions [8.20, 8.24].
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class B;
+    virtual function void f1(ref static int a); endfunction
+    virtual function void f2(const ref int a); endfunction
+    virtual function void f3(const ref int a, b); endfunction
+    virtual function void f4(ref int a); endfunction
+endclass
+
+class D extends B;
+    virtual function void f1(ref int a); endfunction
+    virtual function void f2(ref int a); endfunction
+    virtual function void f3(const ref int a, b); endfunction
+    virtual function void f4(ref int a); endfunction
+endclass
+
+interface class I;
+    pure virtual function void g(const ref int a);
+endclass
+
+class C implements I;
+    virtual function void g(ref int a); endfunction
+    extern function void h1(const ref int x);
+    extern function void h2(ref static int x);
+    extern function void h3(const ref int x);
+endclass
+
+function void C::h1(ref int x); endfunction
+function void C::h2(ref int x); endfunction
+function void C::h3(const ref int x); endfunction
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::VirtualArgDirectionMismatch);
+    CHECK(diags[1].code == diag::VirtualArgDirectionMismatch);
+    CHECK(diags[2].code == diag::VirtualArgDirectionMismatch);
+    CHECK(diags[3].code == diag::MethodArgDirectionMismatch);
+    CHECK(diags[4].code == diag::MethodArgDirectionMismatch);
+}
