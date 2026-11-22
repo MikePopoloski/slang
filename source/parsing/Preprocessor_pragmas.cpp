@@ -221,6 +221,8 @@ void Preprocessor::applyResetPragma(const PragmaDirectiveSyntax& pragma) {
 
                 if (name == "protect")
                     resetProtectState();
+                else if (name == "diagnostic")
+                    resetDiagnosticState(simple.value.location());
 
                 continue;
             }
@@ -234,6 +236,12 @@ void Preprocessor::applyResetPragma(const PragmaDirectiveSyntax& pragma) {
 void Preprocessor::applyResetAllPragma(const PragmaDirectiveSyntax& pragma) {
     ensurePragmaArgs(pragma, 0);
     resetProtectState();
+    resetDiagnosticState(pragma.directive.location());
+}
+
+void Preprocessor::resetDiagnosticState(SourceLocation location) {
+    // Reset and resetall return the diagnostic pragma state to its default [22.11.1].
+    sourceManager.addDiagnosticDirective(location, "__reset__", DiagnosticSeverity::Ignored);
 }
 
 void Preprocessor::applyOncePragma(const PragmaDirectiveSyntax& pragma) {

@@ -658,6 +658,63 @@ source:11:5: warning: extra ';' has no effect [-Wempty-member]
 )");
 }
 
+TEST_CASE("Diagnostic pragma state is cleared by reset and resetall") {
+    SyntaxTree::getDefaultSourceManager().clearDiagnosticDirectives();
+
+    // Both reset forms return the diagnostic pragma state to its default
+    // [22.11.1], including state saved by push, so a later pop does nothing.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+`pragma diagnostic ignore="-Wempty-member"
+    ; // hidden
+`pragma resetall
+    ; // warn
+`pragma diagnostic error="-Wempty-member"
+`pragma reset diagnostic
+    ; // warn
+`pragma diagnostic push
+`pragma diagnostic ignore="-Wempty-member"
+`pragma reset diagnostic
+    ; // warn
+`pragma diagnostic pop
+    ; // warn
+`pragma diagnostic error="-Wempty-member"
+`pragma reset protect
+    ; // error
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    DiagnosticEngine engine(tree->sourceManager());
+    Diagnostics pragmaDiags = engine.setMappingsFromPragmas();
+    CHECK(pragmaDiags.empty());
+
+    auto client = std::make_shared<TextDiagnosticClient>();
+    engine.addClient(client);
+    for (auto& diag : compilation.getAllDiagnostics())
+        engine.issue(diag);
+
+    CHECK("\n"s + client->getString() == R"(
+source:6:5: warning: extra ';' has no effect [-Wempty-member]
+    ; // warn
+    ^
+source:9:5: warning: extra ';' has no effect [-Wempty-member]
+    ; // warn
+    ^
+source:13:5: warning: extra ';' has no effect [-Wempty-member]
+    ; // warn
+    ^
+source:15:5: warning: extra ';' has no effect [-Wempty-member]
+    ; // warn
+    ^
+source:18:5: error: extra ';' has no effect [-Wempty-member]
+    ; // error
+    ^
+)");
+}
+
 TEST_CASE("Diagnostics with Unicode and tabs in source snippet") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

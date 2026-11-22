@@ -259,6 +259,7 @@ private:
     void ensurePragmaArgs(const syntax::PragmaDirectiveSyntax& pragma, size_t count);
     void ensureNoPragmaArgs(Token keyword, const syntax::PragmaExpressionSyntax* args);
     void resetProtectState();
+    void resetDiagnosticState(SourceLocation location);
 
     // Pragma protect handlers
     void handleProtectBegin(Token keyword, const syntax::PragmaExpressionSyntax* args,

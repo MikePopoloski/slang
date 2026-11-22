@@ -730,6 +730,19 @@ void DiagnosticEngine::setMappingsFromPragmasImpl(BufferID buffer,
             }
             mappingStack.pop_back();
         }
+        else if (name == "__reset__") {
+            // Every directive set so far, at any level of the stack,
+            // goes back to the default, and the stack is discarded.
+            flat_hash_set<DiagCode> codes;
+            for (auto& level : mappingStack) {
+                for (auto [code, _] : level) {
+                    if (codes.insert(code).second)
+                        diagMappings[code][buffer].emplace_back(directive.offset, std::nullopt);
+                }
+            }
+            mappingStack.clear();
+            mappingStack.emplace_back();
+        }
         else {
             if (name.starts_with("-W"sv))
                 name = name.substr(2);
