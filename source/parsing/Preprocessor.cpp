@@ -1150,6 +1150,14 @@ Trivia Preprocessor::handleLineDirective(Token directive) {
 
     auto result = alloc.emplace<LineDirectiveSyntax>(directive, lineNumber, fileName, level);
 
+    // The directive can't be split across lines [22.2].
+    for (auto arg : {lineNumber, fileName, level}) {
+        if (!arg.isMissing() && !arg.isOnSameLine()) {
+            addDiag(diag::LineDirectiveMultiline, arg.location());
+            break;
+        }
+    }
+
     if (!lineNumber.isMissing() && !fileName.isMissing() && !level.isMissing()) {
         auto levNum = level.intValue().as<uint8_t>();
         auto lineNum = lineNumber.intValue().as<size_t>();

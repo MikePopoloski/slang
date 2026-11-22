@@ -1349,6 +1349,22 @@ TEST_CASE("Invalid `line directive") {
     CHECK(diagnostics[0].code == diag::InvalidLineDirectiveLevel);
 }
 
+TEST_CASE("`line directive split across lines") {
+    // Directives have to be on one line unless specified otherwise [22.2].
+    auto& text = R"(
+`line
+3 "a.sv" 0
+`line 5
+  "b.sv" 0
+`line 7 "c.sv" 0
+)";
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::LineDirectiveMultiline);
+    CHECK(diagnostics[1].code == diag::LineDirectiveMultiline);
+}
+
 TEST_CASE("Coverage macros") {
     PreprocessorOptions ppOptions;
     Bag options;
