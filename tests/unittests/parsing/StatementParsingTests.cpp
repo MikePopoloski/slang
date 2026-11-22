@@ -371,6 +371,13 @@ TEST_CASE("Empty case statement") {
     CHECK(diagnostics[0].code == diag::CaseStatementEmpty);
 }
 
+TEST_CASE("Empty randcase statement") {
+    parseStatement("randcase endcase");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::CaseStatementEmpty);
+}
+
 TEST_CASE("Procedural assign requires assignment expression") {
     parseStatement("assign a;");
 

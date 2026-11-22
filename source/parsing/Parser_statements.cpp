@@ -807,6 +807,10 @@ RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
             itemBuffer.push_back(&factory.randCaseItem(expr, colon, stmt));
     }
 
+    // At least one item is required [18.16].
+    if (itemBuffer.empty())
+        addDiag(diag::CaseStatementEmpty, randCase.location()) << "randcase"sv;
+
     auto endcase = expect(TokenKind::EndCaseKeyword);
     return factory.randCaseStatement(label, attributes, randCase, {alloc, itemBuffer}, endcase);
 }
