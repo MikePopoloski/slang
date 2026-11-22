@@ -357,12 +357,14 @@ Token Preprocessor::nextProcessed() {
         case TokenKind::Unknown:
             return handleDirectives(token);
         case TokenKind::Directive:
+            if (inIfDefLookahead)
+                return token;
+
             // A directive can't appear in the middle of another directive [22.2].
             // A directive on a later line isn't in the middle of anything; it was
-            // just reached while looking past the end of the previous one. The
-            // same goes for the lookahead after an `ifdef expression.
-            if (directiveArgDepth > 0 && !inIfDefCondition &&
-                token.directiveKind() != SyntaxKind::MacroUsage && token.isOnSameLine()) {
+            // just reached while looking past the end of the previous one.
+            if (directiveArgDepth > 0 && token.directiveKind() != SyntaxKind::MacroUsage &&
+                token.isOnSameLine()) {
                 addDiag(diag::NestedDirective, token.range());
             }
 
@@ -1497,7 +1499,14 @@ ConditionalDirectiveExpressionSyntax* Preprocessor::parseConditionalExpr(int min
     ConditionalDirectiveExpressionSyntax* left = parseUnary(parseUnary);
 
     while (true) {
+        // Looking for another operator can reach past the end of the expression.
+        // Any directive found there, including a macro usage, is left unprocessed:
+        // it ends the expression and is handled afterward as part of the taken
+        // branch, or skipped along with a disabled one.
+        inIfDefLookahead = true;
         auto nextKind = peek().kind;
+        inIfDefLookahead = false;
+
         int prec = getPrec(nextKind);
         if (prec < minPrec || (prec == minPrec && !isRightAssoc(nextKind)))
             break;

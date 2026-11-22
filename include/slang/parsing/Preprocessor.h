@@ -580,6 +580,10 @@ private:
     // The number of directives whose arguments are currently being read,
     // used to diagnose a directive in the middle of another one.
     int directiveArgDepth = 0;
+
+    // Set while an `ifdef expression looks for a following operator.
+    bool inIfDefLookahead = false;
+
     uint32_t includeDepth = 0;
     uint32_t protectEncryptDepth = 0;
     uint32_t protectDecryptDepth = 0;

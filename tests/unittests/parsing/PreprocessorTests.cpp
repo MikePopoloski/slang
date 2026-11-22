@@ -2959,6 +2959,31 @@ RIGHTASSOC1
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Conditional ifdef expression followed by a directive on the same line") {
+    // The directive after the expression is processed only if the branch is taken.
+    auto& text = R"(
+`define A
+`define B
+`define M macro_text
+`ifdef (NOPE) `undef A `endif
+`ifdef A a_still_defined `endif
+`ifdef (A) `undef B `endif
+`ifdef B b_still_defined `else b_was_undefined `endif
+`ifdef (NOPE) `M `else else_text `endif
+`ifdef (A) `M `endif
+`ifdef (A) `ifdef NOPE inner `else inner_else `endif `endif
+`ifdef (C) `resetall `endif
+`ifdef (C) `resetall `endif
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    std::istringstream stream(result);
+    std::vector<std::string> words{std::istream_iterator<std::string>(stream), {}};
+    CHECK(words == std::vector<std::string>{"a_still_defined", "b_was_undefined", "else_text",
+                                            "macro_text", "inner_else"});
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Conditional ifdef expression errors") {
     auto& text = R"(
 `define A 0
