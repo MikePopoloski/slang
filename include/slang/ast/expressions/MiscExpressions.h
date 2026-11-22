@@ -37,7 +37,7 @@ public:
 
     static bool checkLValue(const ASTContext& context, const ValueSymbol& symbol,
                             bitmask<AssignFlags> flags, SourceLocation assignLoc,
-                            SourceRange varRange);
+                            SourceRange varRange, bool viaOtherObject = false);
 
     static bool isKind(ExpressionKind kind) {
         return kind == ExpressionKind::NamedValue || kind == ExpressionKind::HierarchicalValue;

@@ -1700,7 +1700,7 @@ bool MemberAccessExpression::requireLValueImpl(const ASTContext& context, Source
     if (valueType.isObjectHandleType() || valueType.isVoid()) {
         if (member.isValue()) {
             return ValueExpressionBase::checkLValue(context, member.as<ValueSymbol>(), flags,
-                                                    location, sourceRange);
+                                                    location, sourceRange, !value().isThisHandle());
         }
 
         if (!location)

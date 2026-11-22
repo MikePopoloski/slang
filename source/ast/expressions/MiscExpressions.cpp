@@ -274,7 +274,7 @@ bool ValueExpressionBase::requireLValueImpl(const ASTContext& context, SourceLoc
 
 bool ValueExpressionBase::checkLValue(const ASTContext& context, const ValueSymbol& symbol,
                                       bitmask<AssignFlags> flags, SourceLocation assignLoc,
-                                      SourceRange varRange) {
+                                      SourceRange varRange, bool viaOtherObject) {
     auto reportErr = [&](DiagCode code) {
         if (!assignLoc)
             assignLoc = varRange.start();
@@ -316,7 +316,8 @@ bool ValueExpressionBase::checkLValue(const ASTContext& context, const ValueSymb
         auto& var = symbol.as<VariableSymbol>();
         if (var.flags.has(VariableFlags::Const)) {
             // If we are in a class constructor and this variable does not have an initializer,
-            // it's ok to assign to it.
+            // it's ok to assign to it. For an instance constant that has to be the constructor
+            // of the class that declares it, assigning the object being constructed [8.19].
             auto parent = &context.scope->asSymbol();
             while (parent->kind == SymbolKind::StatementBlock) {
                 auto parentScope = parent->getParentScope();
@@ -325,7 +326,9 @@ bool ValueExpressionBase::checkLValue(const ASTContext& context, const ValueSymb
             }
 
             if (var.getInitializer() || parent->kind != SymbolKind::Subroutine ||
-                (parent->as<SubroutineSymbol>().flags & MethodFlags::Constructor) == 0) {
+                (parent->as<SubroutineSymbol>().flags & MethodFlags::Constructor) == 0 ||
+                (var.kind == SymbolKind::ClassProperty &&
+                 (viaOtherObject || var.getParentScope() != parent->getParentScope()))) {
                 return reportErr(diag::AssignmentToConstVar);
             }
         }

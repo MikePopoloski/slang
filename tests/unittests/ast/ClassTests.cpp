@@ -5888,3 +5888,60 @@ endclass
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::VirtualReturnMismatch);
 }
+
+TEST_CASE("Instance constants can only be assigned by their own class constructor") {
+    // An instance constant can only be assigned in the constructor of the class
+    // that declares it, on the object being constructed [8.19].
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    const int ic;
+    const int jc;
+    const int kc;
+    extern function new(bit b = 0);
+endclass
+
+function A::new(bit b = 0);
+    ic = 1;
+    this.jc = 2;
+    if (b) begin kc = 3; end else kc = 4;
+endfunction
+
+class P #(int N = 1);
+    const int ic;
+    function new(); ic = N; endfunction
+endclass
+
+class B extends A;
+    const int bc;
+    function new();
+        super.new();
+        bc = ic;
+        ic = 5;
+        super.jc = 6;
+    endfunction
+endclass
+
+class C;
+    const int ic;
+    function new(C other, A a);
+        ic = 1;
+        other.ic = 2;
+        a.kc = 3;
+    endfunction
+endclass
+
+module top;
+    P #(3) p;
+    B b;
+    C c;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    for (auto& d : diags)
+        CHECK(d.code == diag::AssignmentToConstVar);
+}
