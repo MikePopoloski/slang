@@ -1389,6 +1389,21 @@ TEST_CASE("Directive in the middle of another directive") {
     CHECK(diagnostics[1].code == diag::NestedDirective);
 }
 
+TEST_CASE("Escaped identifier as a macro formal argument name") {
+    // Formal argument names must be simple identifiers [22.5.1], though the
+    // macro name itself can be escaped.
+    auto& text = R"(
+`define F(\a , b) \a b
+`define \G (a) a
+`F(1, 2) `G(3)
+)";
+    std::string result = preprocess(text);
+    CHECK(result.find("1 2") != std::string::npos);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::EscapedMacroFormalArg);
+}
+
 TEST_CASE("Coverage macros") {
     PreprocessorOptions ppOptions;
     Bag options;

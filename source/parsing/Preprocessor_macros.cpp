@@ -935,10 +935,17 @@ MacroActualArgumentSyntax* Preprocessor::MacroParser::parseActualArgument() {
 
 MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
     Token arg = peek();
-    if (arg.kind == TokenKind::Identifier || LF::isKeyword(arg.kind))
+    if (arg.kind == TokenKind::Identifier || LF::isKeyword(arg.kind)) {
         consume();
-    else
+
+        // Formal argument names must be simple identifiers [22.5.1].
+        auto raw = arg.rawText();
+        if (!raw.empty() && raw[0] == '\\')
+            pp.addDiag(diag::EscapedMacroFormalArg, arg.range());
+    }
+    else {
         arg = expect(TokenKind::Identifier);
+    }
 
     MacroArgumentDefaultSyntax* argDef = nullptr;
     if (peek(TokenKind::Equals)) {
