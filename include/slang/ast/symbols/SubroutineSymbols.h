@@ -180,6 +180,7 @@ public:
 
 private:
     void addThisVar(const Type& type);
+    void checkConstReassignment(const ASTContext& context, const Statement& body) const;
 
     std::span<const StatementBlockSymbol* const> blocks;
     mutable const Statement* stmt = nullptr;

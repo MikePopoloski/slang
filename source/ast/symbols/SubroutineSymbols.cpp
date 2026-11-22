@@ -59,9 +59,50 @@ const Statement& SubroutineSymbol::getBody() const {
             // so that we don't get spurious asserts about it.
             if (stmt->bad())
                 stmtCtx.blocks = {};
+            else if (flags.has(MethodFlags::Constructor))
+                checkConstReassignment(context, *stmt);
         }
     }
     return *stmt;
+}
+
+void SubroutineSymbol::checkConstReassignment(const ASTContext& context,
+                                              const Statement& body) const {
+    // An instance constant can only be assigned once in its class constructor [8.19].
+    // Every assignment in the body counts, including ones on separate branches.
+    auto classScope = getParentScope();
+    auto getConstProperty = [&](const Expression& lhs) -> const ClassPropertySymbol* {
+        const Symbol* sym = nullptr;
+        if (lhs.kind == ExpressionKind::NamedValue) {
+            sym = &lhs.as<NamedValueExpression>().symbol;
+        }
+        else if (lhs.kind == ExpressionKind::MemberAccess) {
+            auto& access = lhs.as<MemberAccessExpression>();
+            if (access.value().isThisHandle())
+                sym = &access.member;
+        }
+
+        if (!sym || sym->kind != SymbolKind::ClassProperty || sym->getParentScope() != classScope)
+            return nullptr;
+
+        auto& prop = sym->as<ClassPropertySymbol>();
+        if (!prop.flags.has(VariableFlags::Const) || prop.getInitializer())
+            return nullptr;
+        return &prop;
+    };
+
+    SmallMap<const ClassPropertySymbol*, SourceRange, 4> firstAssigns;
+    body.visit(makeVisitor([&](auto& visitor, const AssignmentExpression& expr) {
+        if (auto prop = getConstProperty(expr.left())) {
+            auto [it, inserted] = firstAssigns.emplace(prop, expr.left().sourceRange);
+            if (!inserted) {
+                auto& diag = context.addDiag(diag::ConstVarReassign, expr.left().sourceRange);
+                diag << prop->name;
+                diag.addNote(diag::NoteAssignedHere, it->second);
+            }
+        }
+        visitor.visitDefault(expr);
+    }));
 }
 
 std::pair<SubroutineSymbol*, bool> SubroutineSymbol::fromSyntax(

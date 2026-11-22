@@ -909,6 +909,20 @@ class C;
 endclass
 ```
 
+-Wconst-reassign
+An instance constant (a `const` class property with no initializer) is assigned more than
+once in its class constructor. The LRM allows only one assignment. Assignments on separate
+branches of a conditional count, too.
+```
+class C;
+    const int size;
+    function new(bit big);
+        size = 16;
+        if (big) size = 64;
+    endfunction
+endclass
+```
+
 -Wignored-slice
 A streaming operator with direction left-to-right provides a slice size, which
 has no effect because only right-to-left streaming can use a slice size.

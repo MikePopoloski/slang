@@ -610,6 +610,7 @@ warning unnamed-generate UnnamedGenerate "generate block is unnamed"
 warning member-impl-not-found MemberImplNotFound "implementation not found in parent scope for '{}'"
 warning ref-arg-automatic RefArgAutomaticFunc "'ref' arguments can only be used in 'automatic' subroutines"
 warning prefer-localparam PreferLocalparam "prefer 'localparam' because parameter cannot be overridden in this context"
+warning const-reassign ConstVarReassign "instance constant '{}' is assigned more than once in the constructor"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -1354,7 +1355,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   tautological-self-compare
                   tautological-range-compare tautological-bitwise-compare tautological-overlap-compare
                   tautological-negation-compare nonstandard-instance-array-query
-                  missing-global-clocking qualified-pure-virtual-call solve-before-type }
+                  missing-global-clocking qualified-pure-virtual-call solve-before-type const-reassign }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

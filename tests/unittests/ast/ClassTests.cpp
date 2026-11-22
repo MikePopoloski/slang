@@ -5903,7 +5903,7 @@ endclass
 function A::new(bit b = 0);
     ic = 1;
     this.jc = 2;
-    if (b) begin kc = 3; end else kc = 4;
+    if (b) begin kc = 3; end
 endfunction
 
 class P #(int N = 1);
@@ -5944,4 +5944,41 @@ endmodule
     REQUIRE(diags.size() == 4);
     for (auto& d : diags)
         CHECK(d.code == diag::AssignmentToConstVar);
+}
+
+TEST_CASE("Instance constant assigned more than once in a constructor") {
+    // An instance constant can only be assigned once in its constructor [8.19].
+    // Assignments on separate branches count too.
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    const int ic;
+    const int jc;
+    const int kc;
+    const int lc;
+    int v;
+    function new(bit b = 0);
+        ic = 1;
+        ic = 2;
+        if (b) jc = 1;
+        else jc = 2;
+        kc = 1;
+        this.kc = 2;
+        lc = 1;
+        v = 1;
+        v = 2;
+    endfunction
+endclass
+
+module top;
+    A a;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    for (auto& d : diags)
+        CHECK(d.code == diag::ConstVarReassign);
 }
