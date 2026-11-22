@@ -6,6 +6,9 @@ on:
     tags:
       - 'v*'
 
+env:
+  RELEASE_TOOLS: slang slang-hier slang-reflect slang-tidy slang-unifdef
+
 jobs:
   linux:
     name: Linux (x86_64, manylinux_2_28)
@@ -27,7 +30,7 @@ jobs:
       - name: Package
         run: |
           mkdir -p dist
-          tar -czvf dist/slang-linux-x86_64.tar.gz -C build/bin slang
+          tar -czvf dist/slang-linux-x86_64.tar.gz -C build/bin $RELEASE_TOOLS
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: artifact-linux
@@ -61,7 +64,7 @@ jobs:
       - name: Package
         run: |
           mkdir -p dist
-          tar -czvf dist/slang-macos-arm64.tar.gz -C build/bin slang
+          tar -czvf dist/slang-macos-arm64.tar.gz -C build/bin $RELEASE_TOOLS
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: artifact-macos
@@ -91,7 +94,7 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Sign binary
+      - name: Sign binaries
         uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
         with:
           endpoint: ${{ secrets.AZURE_TRUSTED_SIGNING_ENDPOINT }}
@@ -105,7 +108,8 @@ jobs:
       - name: Package
         run: |
           New-Item -ItemType Directory -Force -Path dist
-          Compress-Archive -Path build/bin/slang.exe -DestinationPath dist/slang-windows-x86_64.zip
+          $tools = $env:RELEASE_TOOLS -split ' ' | ForEach-Object { "build/bin/$_.exe" }
+          Compress-Archive -Path $tools -DestinationPath dist/slang-windows-x86_64.zip
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: artifact-windows
