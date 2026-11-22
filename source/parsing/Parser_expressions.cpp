@@ -463,7 +463,22 @@ ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace,
     parseList<isPossibleExpressionOrComma, isEndOfBracedList>(
         buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::False,
         diag::ExpectedExpression, [this] { return &parseExpression(); });
+
+    if (first)
+        checkDanglingFirstSeparator(buffer, closeBrace);
     return factory.concatenationExpression(openBrace, {alloc, buffer}, closeBrace);
+}
+
+void Parser::checkDanglingFirstSeparator(std::span<const TokenOrSyntax> items, Token closeBrace) {
+    // When the first item and its separator are parsed by hand, the list parser
+    // never sees a trailing separator that directly precedes the close brace,
+    // so report it here the same way it would.
+    if (items.size() == 2 && items[1].isToken() && !items[1].token().isMissing() &&
+        !closeBrace.isMissing()) {
+        auto sep = items[1].token();
+        addDiag(diag::MisplacedTrailingSeparator, sep.location())
+            << LexerFacts::getTokenKindText(sep.kind);
+    }
 }
 
 StreamingConcatenationExpressionSyntax& Parser::parseStreamConcatenation(Token openBrace) {
@@ -533,6 +548,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                     buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace,
                     RequireItems::False, diag::ExpectedAssignmentKey,
                     [this] { return &parseAssignmentPatternItem(nullptr); });
+                checkDanglingFirstSeparator(buffer, closeBrace);
             }
             else {
                 closeBrace = expect(TokenKind::CloseBrace);
@@ -608,6 +624,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternFromBrace(
         parseList<isPossibleExpressionOrCommaOrDefault, isEndOfBracedList>(
             buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::False,
             diag::ExpectedAssignmentKey, [this] { return &parseAssignmentPatternItem(nullptr); });
+        checkDanglingFirstSeparator(buffer, closeBrace);
     }
     else {
         closeBrace = expect(TokenKind::CloseBrace);

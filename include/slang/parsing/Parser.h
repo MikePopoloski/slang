@@ -506,6 +506,10 @@ private:
     // may indicate a missing `else`.
     void checkUnnecessaryBlock(const syntax::SyntaxNode& stmt);
 
+    // Report a trailing separator after the single element of a brace-enclosed list.
+    void checkDanglingFirstSeparator(std::span<const syntax::TokenOrSyntax> items,
+                                     Token closeBrace);
+
     // ---- Member variables ----
 
     // The factory used to create new syntax nodes.

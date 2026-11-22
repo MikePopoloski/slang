@@ -1017,6 +1017,31 @@ endmodule
     CHECK(diagnostics[0].code == diag::AttributesNotAllowed);
 }
 
+TEST_CASE("Trailing comma after a single concatenation or pattern element") {
+    auto& text = R"(
+module m;
+    logic [7:0] a, b;
+    logic [15:0] w;
+    logic [1:0] p;
+    int u [1];
+    localparam logic [7:0] X = {8'h5,};
+    initial begin
+        w = {a,};
+        p = '{default:1,};
+        u = '{0:1,};
+        w = {a, b,};
+        w = {a};
+        p = '{default:1};
+    end
+endmodule
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 5);
+    for (auto& diag : diagnostics)
+        CHECK(diag.code == diag::MisplacedTrailingSeparator);
+}
+
 TEST_CASE("Attributes disallowed on system subroutine calls") {
     // Unlike tf_call, system_tf_call has no attribute instances [A.8.2].
     auto& text = R"(
