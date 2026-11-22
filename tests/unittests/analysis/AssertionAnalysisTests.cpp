@@ -2019,7 +2019,9 @@ endmodule
     AnalysisManager analysisManager;
 
     auto diags = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 10);
+    // The last assertion has no clock either: s2's own clock doesn't clock
+    // the boolean result of s2.triggered [16.16.1].
+    REQUIRE(diags.size() == 11);
     CHECK(diags[0].code == diag::AssertionNoClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
     CHECK(diags[2].code == diag::AssertionNoClock);
@@ -2030,6 +2032,7 @@ endmodule
     CHECK(diags[7].code == diag::SeqMethodEndClock);
     CHECK(diags[8].code == diag::AssertionNoClock);
     CHECK(diags[9].code == diag::AssertionNoClock);
+    CHECK(diags[10].code == diag::AssertionNoClock);
 }
 
 TEST_CASE("Matched allows a different end clock") {
@@ -2084,11 +2087,18 @@ endmodule
     AnalysisManager analysisManager;
 
     // A bare .triggered operand is a boolean on the context clock, so the
-    // source sequence has to end on that clock [16.13.5].
+    // source sequence has to end on that clock [16.13.5]. Without any context
+    // clock (E), the assertion has no clock at all [16.16.1].
     auto diags = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 6);
-    for (auto& diag : diags)
-        CHECK(diag.code == diag::SeqMethodEndClock);
+    REQUIRE(diags.size() == 7);
+    size_t noClock = 0;
+    for (auto& diag : diags) {
+        if (diag.code == diag::AssertionNoClock)
+            noClock++;
+        else
+            CHECK(diag.code == diag::SeqMethodEndClock);
+    }
+    CHECK(noClock == 1);
 }
 
 TEST_CASE("Global future sampled value func with seq match items") {

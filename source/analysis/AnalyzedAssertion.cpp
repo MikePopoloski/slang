@@ -499,8 +499,8 @@ struct AssertionVisitor {
             result = visit(expr.expr.as<AssertionInstanceExpression>(), outerClock, flags);
         }
         else if (expr.expr.kind == ExpressionKind::Call) {
-            // If this is a call to sequence method we don't require an outer clock,
-            // so check for that case explicitly.
+            // Calls to sequence methods visit their operand instance with the
+            // outer clock, so check for that case explicitly.
             auto& call = expr.expr.as<CallExpression>();
             if (auto ksn = call.getKnownSystemName();
                 ksn == KnownSystemName::Triggered || ksn == KnownSystemName::Matched) {
@@ -512,14 +512,13 @@ struct AssertionVisitor {
                     // Both methods yield a boolean sampled on the clock of the calling
                     // context [16.13.5]: matched synchronizes the source sequence's end
                     // point to that clock, and triggered requires the source to end on it.
-                    if (outerClock) {
-                        if (!result->clocks.empty()) {
-                            auto endClock = result->endClock ? result->endClock
-                                                             : result->clocks.back();
-                            checkSeqMethodEndClock(call, outerClock, endClock);
-                        }
-                        result = inheritedClock(expr, outerClock, flags | VF::RequireSequence);
+                    // The source sequence's clock never clocks the boolean itself, so
+                    // without an outer clock there is no clock at all [16.16.1].
+                    if (outerClock && !result->clocks.empty()) {
+                        auto endClock = result->endClock ? result->endClock : result->clocks.back();
+                        checkSeqMethodEndClock(call, outerClock, endClock);
                     }
+                    result = inheritedClock(expr, outerClock, flags | VF::RequireSequence);
                 }
             }
         }
