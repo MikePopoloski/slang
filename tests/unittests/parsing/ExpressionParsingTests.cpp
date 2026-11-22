@@ -1017,6 +1017,27 @@ endmodule
     CHECK(diagnostics[0].code == diag::AttributesNotAllowed);
 }
 
+TEST_CASE("Attributes disallowed on system subroutine calls") {
+    // Unlike tf_call, system_tf_call has no attribute instances [A.8.2].
+    auto& text = R"(
+module m;
+    function int f(int v); return v; endfunction
+    int a;
+    initial begin
+        $display (* foo *) ("x");
+        $finish (* foo *);
+        a = $bits (* foo *) (a);
+        a = f (* foo *) (a);
+    end
+endmodule
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 3);
+    for (auto& diag : diagnostics)
+        CHECK(diag.code == diag::AttributesNotAllowed);
+}
+
 TEST_CASE("Vector literal overflow parsing") {
     auto& text = R"(
 shortint a = -16'sd32769;

@@ -2694,6 +2694,23 @@ ClockingSkewSyntax* Parser::parseClockingSkew() {
 }
 
 MemberSyntax* Parser::parseClockingItem() {
+    // Only assertion item declarations in a clocking block can have
+    // attributes [A.6.11], so diagnose them on skew and signal items.
+    uint32_t index = 0;
+    if (scanAttributes(index)) {
+        switch (peek(index).kind) {
+            case TokenKind::DefaultKeyword:
+            case TokenKind::InputKeyword:
+            case TokenKind::OutputKeyword:
+            case TokenKind::InOutKeyword:
+                if (index > 0)
+                    errorIfAttributes(parseAttributes());
+                break;
+            default:
+                break;
+        }
+    }
+
     Token def;
     switch (peek().kind) {
         case TokenKind::DefaultKeyword:

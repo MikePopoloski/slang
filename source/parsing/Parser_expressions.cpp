@@ -735,9 +735,12 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
             }
             case TokenKind::OpenParenthesis: {
                 if (isStartOfAttrs(0)) {
+                    // System subroutine calls can't have attributes [A.8.2].
                     auto attributes = parseAttributes();
-                    if (options.has(ExpressionOptions::DisallowAttrs))
+                    if (options.has(ExpressionOptions::DisallowAttrs) ||
+                        expr->kind == SyntaxKind::SystemName) {
                         errorIfAttributes(attributes);
+                    }
 
                     switch (peek().kind) {
                         case TokenKind::DoublePlus:

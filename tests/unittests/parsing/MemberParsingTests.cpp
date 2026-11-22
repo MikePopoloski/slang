@@ -1736,6 +1736,28 @@ task:
     REQUIRE(diagnostics.size() == 1);
 }
 
+TEST_CASE("Attributes disallowed on clocking skew and signal items") {
+    // Only assertion item declarations in a clocking block can have
+    // attributes [A.6.11].
+    auto& text = R"(
+module m(input clk);
+    logic a, b;
+    clocking cb @(posedge clk);
+        (* foo *) default input #1;
+        (* foo *) input a;
+        (* foo *) output #1 b;
+        (* foo *) property p; a; endproperty
+    endclocking
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 3);
+    for (auto& diag : diagnostics)
+        CHECK(diag.code == diag::AttributesNotAllowed);
+}
+
 TEST_CASE("Nested attributes are not allowed") {
     auto& text = R"(
 (* a1  , a2 = - (* a3 = 2  *) null *) module mod;
