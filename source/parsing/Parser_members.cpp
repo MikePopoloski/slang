@@ -3302,6 +3302,10 @@ UdpBodySyntax& Parser::parseUdpBody() {
         }
     }
 
+    // At least one table entry is required [29.3].
+    if (entries.empty() && !table.isMissing() && peek(TokenKind::EndTableKeyword))
+        addDiag(diag::ExpectedUdpSymbol, peek().location());
+
     auto endtable = expect(TokenKind::EndTableKeyword);
     return factory.udpBody({alloc, portDecls}, initial, table, {alloc, entries}, endtable);
 }

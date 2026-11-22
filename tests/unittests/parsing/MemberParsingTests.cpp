@@ -1449,6 +1449,25 @@ endmodule
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("UDP with an empty state table") {
+    // At least one table entry is required [29.3].
+    auto& text = R"(
+primitive p1(output o, input a);
+    table endtable
+endprimitive
+
+primitive p2(output reg o, input a);
+    table
+    endtable
+endprimitive
+)";
+
+    parseCompilationUnit(text);
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::ExpectedUdpSymbol);
+    CHECK(diagnostics[1].code == diag::ExpectedUdpSymbol);
+}
+
 TEST_CASE("Primitive parsing crash regress 1") {
     auto& text = R"(
 primitive ,*l,
