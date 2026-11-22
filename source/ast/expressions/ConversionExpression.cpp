@@ -295,6 +295,17 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
             context.addDiag(diag::BadCastType, targetExpr.sourceRange) << *type;
             badCastType = true;
         }
+        else if (IntegerTypeSyntax::isKind(syntax.left->kind) &&
+                 syntax.left->as<IntegerTypeSyntax>().signing) {
+            // A predefined type is cast to with its keyword alone; signing is
+            // a casting type of its own, so the two can't be combined [6.24.1].
+            // Name the type as written, since 'int signed' prints as 'int'.
+            auto& its = syntax.left->as<IntegerTypeSyntax>();
+            context.addDiag(diag::BadCastType, targetExpr.sourceRange)
+                << "'"s + std::string(its.keyword.rawText()) + " " +
+                       std::string(its.signing.rawText()) + "'";
+            badCastType = true;
+        }
 
         // Don't pass type as assignmentTarget for streaming operands: the existing
         // isBitstreamCast path below handles them with the correct semantics and error codes.

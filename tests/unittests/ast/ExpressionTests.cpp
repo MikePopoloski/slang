@@ -376,6 +376,50 @@ endmodule
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
 }
 
+TEST_CASE("Casts to a predefined type with a signing keyword") {
+    // A cast to a predefined type uses the keyword alone, and signing is a
+    // separate casting type, so they can't be combined [6.24.1]. Class
+    // specializations are accepted, as other tools do.
+    auto tree = SyntaxTree::fromText(R"(
+class PC #(int W = 1); endclass
+
+module m;
+    logic [3:0] x;
+    logic [7:0] y;
+    PC #(2) h;
+    typedef int unsigned uint_t;
+    initial begin
+        y = int unsigned'(x);
+        y = int signed'(x);
+        y = logic signed'(x);
+        y = byte unsigned'(x);
+
+        y = int'(x);
+        y = unsigned'(x);
+        y = signed'(x);
+        y = uint_t'(x);
+        h = PC#(2)'(h);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diags;
+    for (auto& diag : compilation.getAllDiagnostics()) {
+        if (diag.isError())
+            diags.push_back(diag);
+    }
+
+    REQUIRE(diags.size() == 4);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::BadCastType);
+
+    std::string result = "\n" + report(diags);
+    CHECK(result.find("invalid casting type 'int signed'") != std::string::npos);
+}
+
 TEST_CASE("Invalid cast type still binds operand") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
