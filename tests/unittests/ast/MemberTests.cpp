@@ -2131,6 +2131,39 @@ endmodule
     CHECK(diags[12].code == diag::NoChangeEdgeRequired);
 }
 
+TEST_CASE("System timing check delayed signal arguments") {
+    // A delayed reference or delayed data argument names a delayed signal [31.9].
+    // Selects and hierarchical names are accepted, but concatenations are not.
+    auto tree = SyntaxTree::fromText(R"(
+module m(input CLK, input [7:0] D);
+    wire [7:0] dD;
+    wire dCLK, a, b;
+    reg notif;
+    specify
+        $setuphold(posedge CLK, D[1], 1, 2, notif, , , dCLK, dD[1:1]);
+        $setuphold(posedge CLK, D[2], 1, 2, notif, , , dCLK, m.a);
+        $setuphold(posedge CLK, D[3], 1, 2, notif, , , dCLK, dD[3]);
+        $setuphold(posedge CLK, D[4], 1, 2, notif, , , dCLK, {a, b});
+        $setuphold(posedge CLK, D[5], 1, 2, notif, , , {a, b}, dD[5]);
+        $recrem(posedge CLK, D[6], 1, 2, notif, , , {2{a}}, dD[6]);
+    endspecify
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diags;
+    for (auto& diag : compilation.getAllDiagnostics()) {
+        if (diag.isError())
+            diags.push_back(diag);
+    }
+
+    REQUIRE(diags.size() == 3);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::InvalidTimingCheckDelayedArg);
+}
+
 TEST_CASE("System timing check implicit nets") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

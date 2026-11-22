@@ -993,7 +993,17 @@ void SystemTimingCheckSymbol::resolve() const {
                     break;
                 }
 
+                // The delayed signal is a terminal name with an optional select [31.9].
+                // Selects and hierarchical names are accepted, but a concatenation
+                // doesn't name a delayed signal at all.
                 auto& exprSyntax = *actual.as<ExpressionTimingCheckArgSyntax>().expr;
+                if (exprSyntax.kind == SyntaxKind::ConcatenationExpression ||
+                    exprSyntax.kind == SyntaxKind::MultipleConcatenationExpression) {
+                    context.addDiag(diag::InvalidTimingCheckDelayedArg, actual.sourceRange());
+                    argBuf.emplace_back();
+                    break;
+                }
+
                 auto& expr = Expression::bindArgument(*signalExpr->type, ArgumentDirection::Out, {},
                                                       exprSyntax, context);
                 argBuf.emplace_back(expr);

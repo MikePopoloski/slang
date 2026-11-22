@@ -505,6 +505,7 @@ error ParallelPathWidth "parallel specify path source type {} has different widt
 error UnknownSystemTimingCheck "unknown system timing check '{}'"
 error TimingCheckEventNotAllowed "timing check event expression not allowed for this argument"
 error InvalidTimingCheckNotifierArg "invalid timing check argument; expecting a notifier variable name"
+error InvalidTimingCheckDelayedArg "invalid timing check argument; expecting a delayed signal name, not a concatenation"
 error TimingCheckEventEdgeRequired "'{}' event argument requires an edge trigger"
 error NoChangeEdgeRequired "trigger for first argument to '$nochange' must be posedge or negedge only"
 error PathPulseInvalidPathName "PATHPULSE$ path '{}' must be of the form 'source$dest'"
