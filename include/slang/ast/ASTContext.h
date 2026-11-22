@@ -205,8 +205,12 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// into the checker body (such as for $global_clock) are deferred until
     /// the argument is expanded there.
     CheckerConnection = 1ull << 46,
+
+    /// The type being resolved is the value of a type parameter, either its
+    /// default or an assignment in a parameter value list.
+    TypeParameterValue = 1ull << 47,
 };
-SLANG_BITMASK(ASTFlags, CheckerConnection)
+SLANG_BITMASK(ASTFlags, TypeParameterValue)
 
 /// Various flags that can be applied to a constant expression evaluation.
 enum class SLANG_EXPORT EvalFlags : uint8_t {

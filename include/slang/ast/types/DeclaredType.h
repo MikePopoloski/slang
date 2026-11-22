@@ -95,12 +95,16 @@ enum class SLANG_EXPORT DeclaredTypeFlags {
     /// the enum type itself without any packed dimensions given in its syntax.
     EnumValues = 1 << 18,
 
+    /// The declared type is the value of a type parameter, either its
+    /// default or an assignment in a parameter value list.
+    TypeParamValue = 1 << 19,
+
     /// A mask of flags that indicate additional type rules are needed to
     /// be checked after the type itself is resolved.
     NeedsTypeCheck = NetType | UserDefinedNetType | FormalArgMergeVar | Rand | DPIReturnType |
         DPIArg | RequireSequenceType | CoverageType | IfaceOrGenBlkVar
 };
-SLANG_BITMASK(DeclaredTypeFlags, EnumValues)
+SLANG_BITMASK(DeclaredTypeFlags, TypeParamValue)
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type. Optionally includes an

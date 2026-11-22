@@ -499,8 +499,18 @@ void DeclaredType::resolveAt(const ASTContext& context) const {
 }
 
 void DeclaredType::forceResolveAt(const ASTContext& context) const {
-    if (!type)
-        resolveType(context, context);
+    if (!type) {
+        // The given context replaces the one from getASTContext, so carry
+        // over the flag that marks a type parameter's value.
+        if (flags.has(DeclaredTypeFlags::TypeParamValue)) {
+            ASTContext paramContext = context;
+            paramContext.flags |= ASTFlags::TypeParameterValue;
+            resolveType(paramContext, paramContext);
+        }
+        else {
+            resolveType(context, context);
+        }
+    }
 
     if (!initializer)
         resolveAt(context);
@@ -542,6 +552,8 @@ T DeclaredType::getASTContext() const {
         astFlags |= ASTFlags::DPIArg;
     if (flags.has(DeclaredTypeFlags::EnumValues))
         astFlags |= ASTFlags::EnumValueType;
+    if (flags.has(DeclaredTypeFlags::TypeParamValue))
+        astFlags |= ASTFlags::TypeParameterValue;
 
     const Scope* scope = parent.getParentScope();
     SLANG_ASSERT(scope);

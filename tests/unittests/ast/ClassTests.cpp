@@ -6086,3 +6086,57 @@ task C::t(); endtask
     CHECK(diags[1].code == diag::OverridingFinal);
     CHECK(diags[2].code == diag::StaticOverridesVirtual);
 }
+
+TEST_CASE("Selecting a type through a type parameter or interface-based typedef") {
+    // A type can be selected with :: through a type parameter or interface-based
+    // typedef only in a typedef, type operator, or type parameter assignment [8.23].
+    // Use the default language version to check that the type operator is allowed.
+    Bag options;
+    auto tree = SyntaxTree::fromText(R"(
+class K;
+    typedef int it;
+    static int sv;
+    static function int sf(); return 1; endfunction
+endclass
+
+class P #(type X = int); endclass
+
+class Q #(type T = K);
+    T::it bad1;
+    int a = T::sv;
+    int b = T::sf();
+    P #(T::it) p;
+    typedef T::it it2;
+    var type(T::it) v;
+    localparam type LT = T::it;
+endclass
+
+interface I;
+    class CC; typedef int t; endclass
+    typedef CC ct;
+endinterface
+
+module m(I i);
+    typedef i.ct ict;
+    typedef ict ict2;
+    ict::t bad2;
+    ict2::t bad3;
+    typedef ict::t t2;
+endmodule
+
+module top;
+    I i();
+    m mm(i);
+    Q q;
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    for (auto& d : diags)
+        CHECK(d.code == diag::ScopeRestrictedPrefix);
+}

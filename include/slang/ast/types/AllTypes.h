@@ -631,6 +631,11 @@ public:
     /// of this alias. Any inconsistencies will issue diagnostics.
     void checkForwardDecls() const;
 
+    /// Indicates whether this alias is an interface-based typedef [25.10], either
+    /// directly or by naming another alias that is one. Checking through other
+    /// aliases requires resolving their target types.
+    bool isInterfaceBased() const;
+
     ConstantValue getDefaultValueImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -641,6 +646,9 @@ private:
     friend class TypeParameterSymbol;
 
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
+
+    // Set if this alias was declared directly by an interface-based typedef.
+    bool declaredInterfaceBased = false;
 };
 
 /// An empty type symbol that indicates an error occurred while trying to

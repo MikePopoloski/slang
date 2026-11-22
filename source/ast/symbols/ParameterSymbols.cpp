@@ -299,12 +299,12 @@ void ParameterSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isBody", isBodyParam());
 }
 
-static DeclaredTypeFlags getTypeParamFlags(const Scope& scope) {
+static bitmask<DeclaredTypeFlags> getTypeParamFlags(const Scope& scope) {
     // v1800-2023: Type parameter assignments are allowed to reference
     // incomplete forward class types now.
     if (scope.getCompilation().languageVersion() >= LanguageVersion::v1800_2023)
-        return DeclaredTypeFlags::TypedefTarget;
-    return DeclaredTypeFlags::None;
+        return DeclaredTypeFlags::TypeParamValue | DeclaredTypeFlags::TypedefTarget;
+    return DeclaredTypeFlags::TypeParamValue;
 }
 
 TypeParameterSymbol::TypeParameterSymbol(const Scope& scope, std::string_view name,

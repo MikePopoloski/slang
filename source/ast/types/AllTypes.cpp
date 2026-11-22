@@ -1447,6 +1447,16 @@ TypeAliasType& TypeAliasType::fromSyntax(const Scope& scope,
     result->targetType.setDimensionSyntax(syntax.dimensions);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
+
+    // An interface-based typedef names a type through an interface port, which
+    // is the only legal use of a dotted name as a typedef target [25.10].
+    if (syntax.type->kind == SyntaxKind::NamedType) {
+        auto& name = *syntax.type->as<NamedTypeSyntax>().name;
+        result->declaredInterfaceBased = name.kind == SyntaxKind::ScopedName &&
+                                         name.as<ScopedNameSyntax>().separator.kind ==
+                                             TokenKind::Dot;
+    }
+
     return *result;
 }
 
@@ -1470,6 +1480,19 @@ TypeAliasType& TypeAliasType::fromSyntax(const Scope& scope,
 
     result.setAttributes(scope, syntax.attributes);
     return result;
+}
+
+bool TypeAliasType::isInterfaceBased() const {
+    auto alias = this;
+    while (true) {
+        if (alias->declaredInterfaceBased)
+            return true;
+
+        auto& target = alias->targetType.getType();
+        if (!target.isAlias())
+            return false;
+        alias = &target.as<TypeAliasType>();
+    }
 }
 
 void TypeAliasType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {

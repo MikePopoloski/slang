@@ -157,6 +157,15 @@ struct NamePlusLoc {
     SyntaxKind kind;
 };
 
+// Checks whether the given symbol is a type parameter or a type defined by an
+// interface-based typedef. Either may resolve to a class type, but selecting a
+// type through one with :: is restricted [8.23].
+bool isRestrictedScopePrefix(const Symbol& symbol) {
+    if (symbol.kind == SymbolKind::TypeParameter)
+        return true;
+    return symbol.kind == SymbolKind::TypeAlias && symbol.as<TypeAliasType>().isInterfaceBased();
+}
+
 const Symbol* unwrapTypeParam(const Scope& scope, const Symbol* symbol) {
     if (symbol->kind == SymbolKind::TypeParameter) {
         scope.getCompilation().noteReference(*symbol);
@@ -761,6 +770,7 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
 
     // Unwrap the symbol if it's a type parameter, and bail early if it's an error type.
     const Symbol* symbol = std::exchange(result.found, nullptr);
+    const bool restrictedPrefix = symbol && isRestrictedScopePrefix(*symbol);
     if (symbol) {
         symbol = unwrapTypeParam(*context.scope, symbol);
         if (!symbol)
@@ -933,6 +943,15 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
         !flags.has(LookupFlags::AllowIncompleteForwardTypedefs) && symbol->isType()) {
         result.flags &= ~LookupResultFlags::FromForwardTypedef;
         result.addDiag(*context.scope, diag::ScopeIncompleteTypedef, name.range);
+    }
+
+    // Likewise, a type can't be selected through a type parameter or interface-based
+    // typedef prefix outside of those contexts [8.23]. Unlike forward typedefs, the
+    // type operator and type parameter values are allowed here in every language version.
+    if (restrictedPrefix && !flags.has(LookupFlags::AllowIncompleteForwardTypedefs) &&
+        !context.flags.has(ASTFlags::TypeOperator | ASTFlags::TypeParameterValue) &&
+        symbol->isType()) {
+        result.addDiag(*context.scope, diag::ScopeRestrictedPrefix, name.range);
     }
 
     result.found = symbol;

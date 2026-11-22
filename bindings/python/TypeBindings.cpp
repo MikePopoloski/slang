@@ -280,7 +280,8 @@ void registerTypes(nb::module_& m) {
         .def_ro("visibility", &TypeAliasType::visibility)
         .def_prop_ro(
             "firstForwardDecl",
-            [](const TypeAliasType& self) { return self.getFirstForwardDecl(); }, byrefint);
+            [](const TypeAliasType& self) { return self.getFirstForwardDecl(); }, byrefint)
+        .def_prop_ro("isInterfaceBased", &TypeAliasType::isInterfaceBased);
 
     scopeClass<ClassType, Type>(m, "ClassType")
         .def_ro("genericClass", &ClassType::genericClass, byrefint)
