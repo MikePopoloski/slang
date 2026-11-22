@@ -210,6 +210,12 @@ bool Preprocessor::popSource() {
     if (!branchStack.empty())
         addDiag(diag::MissingEndIfDirective, branchStack.back().directive.range());
 
+    // Every `begin_keywords needs a matching `end_keywords [22.14].
+    if (!openBeginKeywords.empty()) {
+        addDiag(diag::MissingEndKeywordsDirective, openBeginKeywords.back().range());
+        openBeginKeywords.clear();
+    }
+
     return true;
 }
 
@@ -1275,8 +1281,10 @@ Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
         auto versionOpt = LF::getKeywordVersion(versionToken.valueText());
         if (!versionOpt)
             addDiag(diag::UnrecognizedKeywordVersion, versionToken.range());
-        else
+        else {
             keywordVersionStack.push_back(*versionOpt);
+            openBeginKeywords.push_back(directive);
+        }
     }
 
     auto result = alloc.emplace<BeginKeywordsDirectiveSyntax>(directive, versionToken);
@@ -1299,6 +1307,8 @@ Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
             }
             else {
                 keywordVersionStack.erase(it.base() - 1);
+                if (!openBeginKeywords.empty())
+                    openBeginKeywords.pop_back();
             }
             break;
         }

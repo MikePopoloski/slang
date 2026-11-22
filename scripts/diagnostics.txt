@@ -85,6 +85,7 @@ error EscapedMacroFormalArg "macro formal argument name must be a simple identif
 error UndefineBuiltinDirective "cannot `undef built-in directives"
 error UnrecognizedKeywordVersion "unsupported keyword version specified for `begin_keywords"
 error MismatchedEndKeywordsDirective "no opening `begin_keywords directive"
+error MissingEndKeywordsDirective "missing `end_keywords directive"
 error InvalidTimeScaleSpecifier "time scale must have a value of 1, 10, or 100"
 error InvalidTimeScalePrecision "time precision must be at least as precise as the time unit (i.e. it cannot be a longer unit of time)"
 error InvalidInferredTimeScale "invalid inferred time scale of {} for scope; time precision must be at least as precise as the time unit (i.e. it cannot be a longer unit of time)"

@@ -568,6 +568,9 @@ private:
 
     /// Various state set by preprocessor directives.
     std::vector<KeywordVersionState> keywordVersionStack;
+
+    // The `begin_keywords directives that haven't been closed yet.
+    std::vector<Token> openBeginKeywords;
     std::optional<TimeScale> activeTimeScale;
     TokenKind defaultNetType = TokenKind::WireKeyword;
     TokenKind unconnectedDrive = TokenKind::Unknown;

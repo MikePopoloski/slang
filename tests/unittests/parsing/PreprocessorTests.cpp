@@ -1404,6 +1404,33 @@ TEST_CASE("Escaped identifier as a macro formal argument name") {
     CHECK(diagnostics[0].code == diag::EscapedMacroFormalArg);
 }
 
+TEST_CASE("Missing `end_keywords directive") {
+    // `begin_keywords and `end_keywords must be used in pairs [22.14].
+    auto& text = R"(
+`begin_keywords "1800-2017"
+`begin_keywords "1364-2005"
+`end_keywords
+`begin_keywords "1800-2009"
+`end_keywords
+)";
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::MissingEndKeywordsDirective);
+    CHECK(diagnostics[0].location.offset() == std::string_view(text).find("`begin_keywords"));
+}
+
+TEST_CASE("Matched `begin_keywords directives") {
+    auto& text = R"(
+`begin_keywords "1800-2017"
+`begin_keywords "1364-2005"
+`end_keywords
+`end_keywords
+)";
+    preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Coverage macros") {
     PreprocessorOptions ppOptions;
     Bag options;
