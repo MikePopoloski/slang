@@ -6240,3 +6240,31 @@ endclass
     CHECK(diags[0].code == diag::BadSolveBefore);
     CHECK(diags[1].code == diag::BadDisableSoft);
 }
+
+TEST_CASE("Duplicate loop variables in a foreach constraint") {
+    // The loop variables share the scope of the foreach constraint [18.5.7.1].
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    rand int A[2][3];
+    rand int B[2][3][4];
+    rand int D[3];
+    rand int x;
+    constraint c1 { foreach (A[i,i]) x > i; }
+    constraint c2 { foreach (B[i,,i]) x > i; }
+    constraint c3 { foreach (A[i,j]) x > i + j; }
+    constraint c4 { foreach (A[i]) { foreach (D[i]) x > i; } }
+endclass
+
+module top;
+    C c;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::Redefinition);
+    CHECK(diags[1].code == diag::Redefinition);
+}

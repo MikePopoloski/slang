@@ -9,6 +9,7 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -624,6 +625,24 @@ Constraint& ForeachConstraint::fromSyntax(const LoopConstraintSyntax& syntax,
     for (auto& dim : dims) {
         if (dim.loopVar)
             const_cast<IteratorSymbol*>(dim.loopVar)->setParent(*context.scope);
+    }
+
+    // The loop variables share the scope of the foreach constraint [18.5.7.1], so
+    // their names must be distinct, as they are for a procedural foreach loop.
+    for (size_t i = 0; i < dims.size(); i++) {
+        auto var = dims[i].loopVar;
+        if (!var)
+            continue;
+
+        for (size_t j = 0; j < i; j++) {
+            auto prev = dims[j].loopVar;
+            if (prev && prev->name == var->name) {
+                auto& diag = context.addDiag(diag::Redefinition, var->location);
+                diag << var->name;
+                diag.addNote(diag::NotePreviousDefinition, prev->location);
+                break;
+            }
+        }
     }
 
     iterCtx.addTemporaryEnums(*syntax.constraints);
