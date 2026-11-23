@@ -947,7 +947,12 @@ RandSequenceStatement::Rule RandSequenceStatement::createRule(
     std::optional<CodeBlockProd> codeBlock;
     if (auto wc = syntax.weightClause) {
         weightExpr = &Expression::bind(*wc->weight, context);
-        context.requireIntegral(*weightExpr);
+        if (context.requireIntegral(*weightExpr)) {
+            // Weights must be non-negative [18.17.1]; check it when the value is constant.
+            auto cv = context.tryEval(*weightExpr);
+            if (cv.isInteger() && cv.integer().isSigned() && cv.integer().isNegative())
+                context.addDiag(diag::RandSeqNegativeWeight, weightExpr->sourceRange) << cv;
+        }
 
         if (wc->codeBlock) {
             SLANG_ASSERT(blockIt != blockRange.end());
@@ -965,6 +970,16 @@ RandSequenceStatement::Rule RandSequenceStatement::createRule(
             if (!randJoinExpr->bad() && !randJoinExpr->type->isNumeric()) {
                 context.addDiag(diag::RandJoinNotNumeric, randJoinExpr->sourceRange)
                     << *randJoinExpr->type;
+            }
+            else if (!randJoinExpr->bad()) {
+                // The bias must be in the range 0.0 to 1.0 [18.17.5]; check it when
+                // the value is constant.
+                auto cv = context.tryEval(*randJoinExpr);
+                if (cv.isInteger() || cv.isReal() || cv.isShortReal()) {
+                    double value = cv.convertToReal().real();
+                    if (value < 0.0 || value > 1.0)
+                        context.addDiag(diag::RandJoinOutOfRange, randJoinExpr->sourceRange) << cv;
+                }
             }
         }
     }

@@ -479,6 +479,8 @@ error LocalVarTypeRequired "local variable argument must specify an explicit typ
 error AssertionPortOutputDefault "assertion port with 'output' or 'inout' direction cannot specify a default value"
 error NotAProduction "'{}' is not a randsequence production"
 error RandJoinNotNumeric "rand join expression type {} is not numeric"
+error RandJoinOutOfRange "rand join expression value {} is not between 0.0 and 1.0"
+error RandSeqNegativeWeight "randsequence weight {} is negative"
 error NotAClockingBlock "'{}' is not a clocking block"
 error CovergroupOutArg "covergroups cannot have 'output' or 'inout' arguments"
 error CoverageOptionDup "duplicate option assignment for '{}'"

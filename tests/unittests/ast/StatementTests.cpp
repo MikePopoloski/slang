@@ -3260,3 +3260,32 @@ endmodule
         CHECK(diags[3].code == diag::TimingInFuncNotAllowed);
     }
 }
+
+TEST_CASE("randsequence constant negative weights and rand join bias out of range") {
+    // Weights must be non-negative [18.17.1] and a rand join bias must be between
+    // 0.0 and 1.0 [18.17.5]. Constant values are checked at compile time.
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    localparam int NEG = -2;
+    localparam real BIAS = 0.25;
+    int w = -5;
+    initial randsequence()
+        A : B := (-1) | B := NEG | B := w | B := 4'hF | B := 0 | C | E;
+        B : {};
+        C : rand join (2.0) D D | rand join (-0.5) D D | rand join (1) D D;
+        E : rand join (0) D D | rand join (BIAS) D D | rand join (w) D D;
+        D : {};
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::RandSeqNegativeWeight);
+    CHECK(diags[1].code == diag::RandSeqNegativeWeight);
+    CHECK(diags[2].code == diag::RandJoinOutOfRange);
+    CHECK(diags[3].code == diag::RandJoinOutOfRange);
+}
