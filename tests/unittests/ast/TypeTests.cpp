@@ -4018,3 +4018,24 @@ endmodule
     CHECK(&getNt("r", "n2").getCanonicalNetType() == &n0);
     CHECK(getNt("r", "n2").getAliasTarget() == &getNt("r", "n1"));
 }
+
+TEST_CASE("Untagged union containing a tagged union with dynamic members") {
+    // Dynamic types and chandles can only be members of tagged unions [7.3.2], and
+    // the members of a nested tagged union are members of the outer union too.
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    union { union tagged { int d[]; int x; } t; int a; } u1;
+    union { union tagged { chandle h; int x; } t; int a; } u2;
+    union tagged { union tagged { int d[]; int x; } t; int a; } u3;
+    union { union { int x; byte b; } t; int a; } u4;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidUnionMember);
+    CHECK(diags[1].code == diag::InvalidUnionMember);
+}

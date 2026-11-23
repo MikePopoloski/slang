@@ -1086,6 +1086,15 @@ bool Type::isValidForUnion(bool isTagged, const Type** foundInvalid) const {
         }
     }
 
+    // A nested union's members are members of the outer union too, so an untagged
+    // union can't hold them even if the nested union is tagged [7.3.2].
+    if (ct.isUnpackedUnion()) {
+        for (auto field : ct.as<UnpackedUnionType>().fields) {
+            if (!field->getType().isValidForUnion(isTagged, foundInvalid))
+                return false;
+        }
+    }
+
     return true;
 }
 
