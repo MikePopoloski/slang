@@ -387,3 +387,41 @@ module m;
 endmodule
 )");
 }
+
+TEST_CASE("SyntaxPrinter expands conditional directives") {
+    auto tree = SyntaxTree::fromText(R"(`timescale 1ns/1ps
+`define A
+`ifdef A
+module a; endmodule
+`ifdef B
+module b; endmodule
+`endif
+`else
+module c; endmodule
+`endif
+module d; endmodule
+)");
+    REQUIRE(tree->diagnostics().empty());
+
+    auto output = SyntaxPrinter()
+                      .setIncludeDirectives(true)
+                      .setExpandConditionals(true)
+                      .print(*tree)
+                      .str();
+    CHECK(output == R"(`timescale 1ns/1ps
+`define A
+module a; endmodule
+module d; endmodule
+)");
+
+    output = SyntaxPrinter()
+                 .setIncludeDirectives(true)
+                 .setExpandConditionals(true)
+                 .setIncludeMacroDefinitions(false)
+                 .print(*tree)
+                 .str();
+    CHECK(output == R"(`timescale 1ns/1ps
+module a; endmodule
+module d; endmodule
+)");
+}

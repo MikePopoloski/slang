@@ -1,7 +1,5 @@
 // DEFAULT
 
- 
- 
 module child;
     localparam int width = 3;
 endmodule
@@ -18,8 +16,6 @@ endmodule
 
 // COMMENTS
 
- // Value definition
- /* Macro end */
 // Included module
 module child;
     localparam int width = 3;
@@ -39,14 +35,7 @@ endmodule
 `line 1 "preprocess_directives.sv" 0
 `timescale 1ns/1ps
 `default_nettype none
-`define VALUE 17 
-`define JOIN(a, b) a``b
-`define ADD_VALUE(x)  ((x)  + `VALUE) 
-`define CONTINUED_VALUE 17  \
-`define CONTINUED_EXPR (17  \
-)
 `line 1 "preprocess_header.svh" 0
-`define WIDTH 3
 module child;
     localparam int width = 3;
 endmodule
@@ -66,14 +55,7 @@ endmodule
 `line 1 "preprocess_directives.sv" 0
 `timescale 1ns/1ps
 `default_nettype none
-`define VALUE 17 // Value definition
-`define JOIN(a, b) a``b
-`define ADD_VALUE(x) /* Macro beginning */ ((x) /* Macro middle */ + `VALUE) /* Macro end */
-`define CONTINUED_VALUE 17 /* Continued macro end */ \
-`define CONTINUED_EXPR (17 /* Comment before continuation */ \
-)
 `line 1 "preprocess_header.svh" 0
-`define WIDTH 3
 // Included module
 module child;
     localparam int width = 3;
@@ -94,9 +76,9 @@ endmodule
 
 
 
- 
 
- 
+
+
 
 
 
@@ -125,9 +107,9 @@ endmodule
 
 
 
- // Value definition
 
- /* Macro end */
+
+
 
 
 
@@ -157,17 +139,16 @@ endmodule
 `line 1 "preprocess_directives.sv" 0
 `timescale 1ns/1ps
 `default_nettype none
-`define VALUE 17 
-`define JOIN(a, b) a``b
-`define ADD_VALUE(x)  ((x)  + `VALUE) 
-`define CONTINUED_VALUE 17  \
 
-`define CONTINUED_EXPR (17  \
-)
 
-`line 1 "preprocess_header.svh" 1
-`define WIDTH 3
 
+
+
+
+
+
+
+`line 3 "preprocess_header.svh" 1
 module child;
     localparam int width = 3;
 endmodule
@@ -190,17 +171,16 @@ endmodule
 `line 1 "preprocess_directives.sv" 0
 `timescale 1ns/1ps
 `default_nettype none
-`define VALUE 17 // Value definition
-`define JOIN(a, b) a``b
-`define ADD_VALUE(x) /* Macro beginning */ ((x) /* Macro middle */ + `VALUE) /* Macro end */
-`define CONTINUED_VALUE 17 /* Continued macro end */ \
 
-`define CONTINUED_EXPR (17 /* Comment before continuation */ \
-)
 
-`line 1 "preprocess_header.svh" 1
-`define WIDTH 3
+
+
+
+
+
+
 // Included module
+`line 3 "preprocess_header.svh" 1
 module child;
     localparam int width = 3;
 endmodule
@@ -222,9 +202,9 @@ endmodule
 
 
 
- 
 
- 
+
+
 
 
 
@@ -257,18 +237,17 @@ endmodule
 `line 1 "preprocess_directives.sv" 0
 `timescale 1ns/1ps
 `default_nettype none
-`define VALUE 17 // Value definition
-`define JOIN(a, b) a``b
-`define ADD_VALUE(x) /* Macro beginning */ ((x) /* Macro middle */ + `VALUE) /* Macro end */
-`define CONTINUED_VALUE 17 /* Continued macro end */ \
 
-`define CONTINUED_EXPR (17 /* Comment before continuation */ \
-)
 
-// preprocess_header.svh:1
-`line 1 "preprocess_header.svh" 1
-`define WIDTH 3
+
+
+
+
+
+
 // Included module
+// preprocess_header.svh:3
+`line 3 "preprocess_header.svh" 1
 module child;
     localparam int width = 3;
 endmodule
