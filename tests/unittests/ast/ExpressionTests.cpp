@@ -5376,3 +5376,32 @@ endmodule
     CHECK(diags[1].code == diag::SelectMethodParens);
     CHECK(diags[2].code == diag::SelectMethodParens);
 }
+
+TEST_CASE("Increment and decrement of enum variables are errors") {
+    // The result would be assigned to the enum without a cast [6.19.4, 11.4.2].
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    typedef enum { Red, Green, Blue } Colors;
+    Colors C;
+    int i;
+    initial begin
+        C++;
+        ++C;
+        C--;
+        --C;
+        C = Colors'(C + 1);
+        C = C.next();
+        i = C;
+        i++;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    for (auto& d : diags)
+        CHECK(d.code == diag::BadUnaryExpression);
+}

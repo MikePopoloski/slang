@@ -312,8 +312,9 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             }
 
             // Supported for both integral and real types. Result is same as input type.
-            // The operand must also be an assignable lvalue.
-            good = type->isNumeric();
+            // The operand must also be an assignable lvalue. An enum operand isn't
+            // allowed, since the result would be assigned back without a cast [6.19.4].
+            good = type->isNumeric() && !type->isEnum();
             result->type = type;
             if (!operand.requireLValue(context, syntax.operatorToken.location())) {
                 return badExpr(compilation, result);
@@ -359,7 +360,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
     }
 
-    if (!type->isNumeric()) {
+    if (!type->isNumeric() || type->isEnum()) {
         auto& diag = context.addDiag(diag::BadUnaryExpression, syntax.operatorToken.location());
         diag << *type;
         diag << operand.sourceRange;
