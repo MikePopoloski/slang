@@ -2313,7 +2313,7 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 18);
+    REQUIRE(diags.size() == 21);
     CHECK(diags[0].code == diag::UnknownConstraintLiteral);
     CHECK(diags[1].code == diag::UnknownConstraintLiteral);
     CHECK(diags[2].code == diag::InvalidConstraintExpr);
@@ -2328,10 +2328,13 @@ endclass
     CHECK(diags[11].code == diag::TaskInConstraint);
     CHECK(diags[12].code == diag::OutRefFuncConstraint);
     CHECK(diags[13].code == diag::BadDisableSoft);
-    CHECK(diags[14].code == diag::BadSolveBefore);
-    CHECK(diags[15].code == diag::RandCInSolveBefore);
-    CHECK(diags[16].code == diag::SolveBeforeDisallowed);
-    CHECK(diags[17].code == diag::RandCInSoft);
+    CHECK(diags[14].code == diag::BadSolveBeforeType);
+    CHECK(diags[15].code == diag::BadSolveBeforeType);
+    CHECK(diags[16].code == diag::BadSolveBefore);
+    CHECK(diags[17].code == diag::RandCInSolveBefore);
+    CHECK(diags[18].code == diag::SolveBeforeDisallowed);
+    CHECK(diags[19].code == diag::BadSolveBeforeType);
+    CHECK(diags[20].code == diag::RandCInSoft);
 }
 
 TEST_CASE("Range items in uniqueness constraints") {
@@ -3773,6 +3776,37 @@ endclass
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadSolveBefore);
+}
+
+TEST_CASE("Solve-before targets must be integral or real") {
+    auto tree = SyntaxTree::fromText(R"(
+class Item;
+    rand int v;
+endclass
+
+class A;
+    typedef struct { rand int a; } s_t;
+    typedef struct packed { bit [3:0] a; } p_t;
+    typedef enum { X, Y } e_t;
+    rand int lo;
+    rand int arr[2];
+    rand int q[$];
+    rand s_t s;
+    rand p_t p;
+    rand e_t e;
+    rand Item h;
+    constraint C1 { solve lo before arr, q, s, h; }
+    constraint C2 { solve lo before arr[0], arr[1], q.size(), s.a, h.v, p, e; }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    for (auto& diag : diags)
+        CHECK(diag.code == diag::BadSolveBeforeType);
 }
 
 TEST_CASE("v1800-2023: disable soft with array sizes") {

@@ -564,6 +564,8 @@ Constraint& SolveBeforeConstraint::fromSyntax(const SolveBeforeConstraintSyntax&
                 context.addDiag(diag::BadSolveBefore, sourceRange);
             else if (sym && context.getRandMode(*sym) == RandMode::RandC)
                 context.addDiag(diag::RandCInSolveBefore, sourceRange);
+            else if (!expr.type->isNumeric())
+                context.addDiag(diag::BadSolveBeforeType, expr.sourceRange) << *expr.type;
         }
     };
 
