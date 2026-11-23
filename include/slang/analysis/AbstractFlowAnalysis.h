@@ -642,7 +642,7 @@ protected:
     }
 
     void visitStmt(const RandSequenceStatement& stmt) {
-        using RSPS = RandSeqProductionSymbol;
+        using RSPS = RandSequenceStatement;
 
         auto initialState = (DERIVED).copyState(state);
         auto finalState = std::move(state);
@@ -672,8 +672,8 @@ protected:
         // we could have any combination of them. We could be smarter here and
         // model the control flow of the productions, figuring out which ones are
         // reachable and in which order.
-        for (auto production : stmt.productions) {
-            for (auto& rule : production->getRules()) {
+        for (auto& production : stmt.productions) {
+            for (auto& rule : production.rules) {
                 setState((DERIVED).copyState(initialState));
 
                 if (rule.weightExpr)

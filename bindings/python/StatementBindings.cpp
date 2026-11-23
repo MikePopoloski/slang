@@ -190,8 +190,61 @@ void registerStatements(nb::module_& m) {
         .def_ro("expr", &RandCaseStatement::Item::expr, byrefint)
         .def_ro("stmt", &RandCaseStatement::Item::stmt, byrefint);
 
-    nb::class_<RandSequenceStatement, Statement>(m, "RandSequenceStatement")
-        .def_ro("firstProduction", &RandSequenceStatement::firstProduction, byrefint);
+    nb::class_<RandSequenceStatement, Statement> randSeqStmt(m, "RandSequenceStatement");
+    randSeqStmt.def_ro("firstProduction", &RandSequenceStatement::firstProduction, byrefint)
+        .def_ro("productions", &RandSequenceStatement::productions, byrefint);
+
+    nb::class_<RandSequenceStatement::Production>(randSeqStmt, "Production")
+        .def_ro("symbol", &RandSequenceStatement::Production::symbol, byrefint)
+        .def_ro("rules", &RandSequenceStatement::Production::rules, byrefint);
+
+    nb::enum_<RandSequenceStatement::ProdKind>(randSeqStmt, "ProdKind")
+        .value("Item", RandSequenceStatement::ProdKind::Item)
+        .value("CodeBlock", RandSequenceStatement::ProdKind::CodeBlock)
+        .value("IfElse", RandSequenceStatement::ProdKind::IfElse)
+        .value("Repeat", RandSequenceStatement::ProdKind::Repeat)
+        .value("Case", RandSequenceStatement::ProdKind::Case);
+
+    nb::class_<RandSequenceStatement::ProdBase>(randSeqStmt, "ProdBase")
+        .def_ro("kind", &RandSequenceStatement::ProdBase::kind);
+
+    nb::class_<RandSequenceStatement::ProdItem, RandSequenceStatement::ProdBase>(randSeqStmt,
+                                                                                 "ProdItem")
+        .def_ro("target", &RandSequenceStatement::ProdItem::target)
+        .def_ro("args", &RandSequenceStatement::ProdItem::args);
+
+    nb::class_<RandSequenceStatement::CodeBlockProd, RandSequenceStatement::ProdBase>(
+        randSeqStmt, "CodeBlockProd")
+        .def_ro("block", &RandSequenceStatement::CodeBlockProd::block);
+
+    nb::class_<RandSequenceStatement::IfElseProd, RandSequenceStatement::ProdBase>(randSeqStmt,
+                                                                                   "IfElseProd")
+        .def_ro("expr", &RandSequenceStatement::IfElseProd::expr)
+        .def_ro("ifItem", &RandSequenceStatement::IfElseProd::ifItem)
+        .def_ro("elseItem", &RandSequenceStatement::IfElseProd::elseItem);
+
+    nb::class_<RandSequenceStatement::RepeatProd, RandSequenceStatement::ProdBase>(randSeqStmt,
+                                                                                   "RepeatProd")
+        .def_ro("expr", &RandSequenceStatement::RepeatProd::expr)
+        .def_ro("item", &RandSequenceStatement::RepeatProd::item);
+
+    nb::class_<RandSequenceStatement::CaseItem>(randSeqStmt, "CaseItem")
+        .def_ro("expressions", &RandSequenceStatement::CaseItem::expressions)
+        .def_ro("item", &RandSequenceStatement::CaseItem::item);
+
+    nb::class_<RandSequenceStatement::CaseProd, RandSequenceStatement::ProdBase>(randSeqStmt,
+                                                                                 "CaseProd")
+        .def_ro("expr", &RandSequenceStatement::CaseProd::expr)
+        .def_ro("items", &RandSequenceStatement::CaseProd::items)
+        .def_ro("defaultItem", &RandSequenceStatement::CaseProd::defaultItem);
+
+    nb::class_<RandSequenceStatement::Rule>(randSeqStmt, "Rule")
+        .def_ro("ruleBlock", &RandSequenceStatement::Rule::ruleBlock)
+        .def_ro("prods", &RandSequenceStatement::Rule::prods)
+        .def_ro("weightExpr", &RandSequenceStatement::Rule::weightExpr)
+        .def_ro("randJoinExpr", &RandSequenceStatement::Rule::randJoinExpr)
+        .def_ro("codeBlock", &RandSequenceStatement::Rule::codeBlock)
+        .def_ro("isRandJoin", &RandSequenceStatement::Rule::isRandJoin);
 
     nb::class_<ProceduralCheckerStatement, Statement>(m, "ProceduralCheckerStatement")
         .def_ro("instances", &ProceduralCheckerStatement::instances, byrefint);

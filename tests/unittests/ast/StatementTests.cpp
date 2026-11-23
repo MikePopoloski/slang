@@ -1769,18 +1769,20 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    const RandSeqProductionSymbol* mainProd = nullptr;
-    compilation.getRoot().visit(makeVisitor([&](auto&, const RandSeqProductionSymbol& prod) {
-        if (prod.name == "main")
-            mainProd = &prod;
+    const RandSequenceStatement::Production* mainProd = nullptr;
+    compilation.getRoot().visit(makeVisitor([&](auto&, const RandSequenceStatement& stmt) {
+        for (auto& prod : stmt.productions) {
+            if (prod.symbol->name == "main")
+                mainProd = &prod;
+        }
     }));
     REQUIRE(mainProd);
 
-    auto rules = mainProd->getRules();
+    auto rules = mainProd->rules;
     REQUIRE(rules.size() == 1);
     REQUIRE(rules[0].prods.size() == 1);
 
-    auto& caseProd = rules[0].prods[0]->as<RandSeqProductionSymbol::CaseProd>();
+    auto& caseProd = rules[0].prods[0]->as<RandSequenceStatement::CaseProd>();
     REQUIRE(caseProd.items.size() == 3);
     CHECK(caseProd.items[0].expressions.size() == 2);
     CHECK(caseProd.items[0].item.target->name == "a");
@@ -3219,4 +3221,42 @@ endmodule
     CHECK(diags[1].code == diag::ConcurrentAssertNotInProc);
     CHECK(diags[2].code == diag::UndeclaredIdentifier);
     CHECK(diags[3].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("randsequence code blocks follow the rules of the enclosing procedure") {
+    // Code blocks are nested in the enclosing procedure, so timing controls and
+    // task calls are checked against a function, final block or always_comb [18.17.7].
+    auto text = R"(
+module top;
+    task t; endtask
+    logic x, y;
+
+    function void f1(); randsequence() A : { #1; }; endsequence endfunction
+    function void f2(); randsequence() A : { t(); }; endsequence endfunction
+    final randsequence() A : { #1; }; endsequence
+    always_comb randsequence() A : { @(x); }; endsequence
+
+    function void ok1(); fork randsequence() A : { #1; t(); }; endsequence join_none endfunction
+    task ok2(); randsequence() A : { #1; t(); }; endsequence endtask
+    initial randsequence() A : { #1; t(); }; endsequence
+    always_comb randsequence() A : { y = x; }; endsequence
+endmodule
+)";
+
+    // Walking the whole AST before asking for diagnostics must not change
+    // how the rules are bound.
+    struct VisitAll : public ASTVisitor<VisitAll, VisitFlags::AllGood> {};
+    for (bool walkFirst : {false, true}) {
+        Compilation compilation;
+        compilation.addSyntaxTree(SyntaxTree::fromText(text));
+        if (walkFirst)
+            compilation.getRoot().visit(VisitAll{});
+
+        auto& diags = compilation.getAllDiagnostics();
+        REQUIRE(diags.size() == 4);
+        CHECK(diags[0].code == diag::TimingInFuncNotAllowed);
+        CHECK(diags[1].code == diag::TaskFromFunction);
+        CHECK(diags[2].code == diag::TimingInFuncNotAllowed);
+        CHECK(diags[3].code == diag::TimingInFuncNotAllowed);
+    }
 }

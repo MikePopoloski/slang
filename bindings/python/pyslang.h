@@ -627,16 +627,16 @@ struct type_hook<T, CanDowncast<T>> {
 };
 
 template<>
-struct type_hook<RandSeqProductionSymbol::ProdBase> {
-    static const std::type_info* get(const RandSeqProductionSymbol::ProdBase* src) {
+struct type_hook<RandSequenceStatement::ProdBase> {
+    static const std::type_info* get(const RandSequenceStatement::ProdBase* src) {
         if (!src)
-            return &typeid(RandSeqProductionSymbol::ProdBase);
+            return &typeid(RandSequenceStatement::ProdBase);
 
-        const std::type_info* type = &typeid(RandSeqProductionSymbol::ProdBase);
+        const std::type_info* type = &typeid(RandSequenceStatement::ProdBase);
         switch (src->kind) {
-#define CASE(x, y)                                  \
-    case RandSeqProductionSymbol::ProdKind::x:      \
-        type = &typeid(RandSeqProductionSymbol::y); \
+#define CASE(x, y)                                \
+    case RandSequenceStatement::ProdKind::x:      \
+        type = &typeid(RandSequenceStatement::y); \
         break
 
             CASE(Item, ProdItem);
@@ -649,7 +649,7 @@ struct type_hook<RandSeqProductionSymbol::ProdBase> {
 
         // ProdItem/CodeBlockProd/... derive from ProdBase as their first (and
         // only) base, so no pointer adjustment is required.
-        return registeredOr(type, &typeid(RandSeqProductionSymbol::ProdBase));
+        return registeredOr(type, &typeid(RandSequenceStatement::ProdBase));
     }
 };
 

@@ -13,6 +13,7 @@ namespace slang::ast {
 
 class VariableSymbol;
 class RandSeqProductionSymbol;
+class StatementBlockSymbol;
 
 /// Represents an empty statement, used as a placeholder or an anchor for attributes.
 class SLANG_EXPORT EmptyStatement final : public Statement {
@@ -466,16 +467,209 @@ public:
 /// Represents a `randsequence` statement.
 class SLANG_EXPORT RandSequenceStatement final : public Statement {
 public:
+    /// Specifies the kinds of productions that can appear in a rule.
+    enum class ProdKind {
+        /// A reference to another production, with optional arguments.
+        Item,
+
+        /// A block of procedural code.
+        CodeBlock,
+
+        /// A production chosen by an if-else condition.
+        IfElse,
+
+        /// A production repeated a given number of times.
+        Repeat,
+
+        /// A production chosen by a case statement.
+        Case
+    };
+
+    /// The base class for productions in a rule.
+    struct ProdBase {
+        /// The kind of production.
+        ProdKind kind;
+
+        explicit ProdBase(ProdKind kind) : kind(kind) {}
+
+        /// Casts this production to the given concrete derived type.
+        /// Asserts that the kind matches.
+        template<typename T>
+        T& as() {
+            SLANG_ASSERT(T::isKind(kind));
+            return *static_cast<T*>(this);
+        }
+
+        /// Casts this production to the given concrete derived type.
+        /// Asserts that the kind matches.
+        template<typename T>
+        const T& as() const {
+            SLANG_ASSERT(T::isKind(kind));
+            return *static_cast<const T*>(this);
+        }
+
+        /// Tries to cast this production to the given concrete derived type.
+        /// Returns nullptr if the kind doesn't match.
+        template<typename T>
+        T* as_if() {
+            if (!T::isKind(kind))
+                return nullptr;
+            return static_cast<T*>(this);
+        }
+
+        /// Tries to cast this production to the given concrete derived type.
+        /// Returns nullptr if the kind doesn't match.
+        template<typename T>
+        const T* as_if() const {
+            if (!T::isKind(kind))
+                return nullptr;
+            return static_cast<const T*>(this);
+        }
+
+        /// Visits this production's concrete derived type via the provided visitor.
+        template<typename TVisitor, typename... Args>
+        decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
+    };
+
+    /// A production item, which invokes another production.
+    struct ProdItem : public ProdBase {
+        /// The production being invoked, or nullptr if the name
+        /// didn't refer to a valid production.
+        const RandSeqProductionSymbol* target;
+
+        /// The arguments passed to the production.
+        std::span<const Expression* const> args;
+
+        ProdItem(const RandSeqProductionSymbol* target, std::span<const Expression* const> args) :
+            ProdBase(ProdKind::Item), target(target), args(args) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::Item; }
+
+        /// Visits the argument expressions.
+        template<typename TVisitor>
+        void visitExprs(TVisitor&& visitor) const {
+            for (auto arg : args)
+                arg->visit(visitor);
+        }
+    };
+
+    /// A block of procedural code that runs as part of a rule.
+    struct CodeBlockProd : public ProdBase {
+        /// The statement block that holds the code.
+        not_null<const StatementBlockSymbol*> block;
+
+        explicit CodeBlockProd(const StatementBlockSymbol& block) :
+            ProdBase(ProdKind::CodeBlock), block(&block) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::CodeBlock; }
+    };
+
+    /// A production that chooses between items based on a condition.
+    struct IfElseProd : public ProdBase {
+        /// The condition expression.
+        not_null<const Expression*> expr;
+
+        /// The item to produce if the condition is true.
+        ProdItem ifItem;
+
+        /// The item to produce if the condition is false, if there is one.
+        std::optional<ProdItem> elseItem;
+
+        IfElseProd(const Expression& expr, ProdItem ifItem, std::optional<ProdItem> elseItem) :
+            ProdBase(ProdKind::IfElse), expr(&expr), ifItem(ifItem), elseItem(elseItem) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::IfElse; }
+    };
+
+    /// A production that repeats an item a number of times.
+    struct RepeatProd : public ProdBase {
+        /// The expression giving the number of repetitions.
+        not_null<const Expression*> expr;
+
+        /// The item to repeat.
+        ProdItem item;
+
+        RepeatProd(const Expression& expr, ProdItem item) :
+            ProdBase(ProdKind::Repeat), expr(&expr), item(item) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::Repeat; }
+    };
+
+    /// An item in a case production.
+    struct CaseItem {
+        /// The expressions to match against the case condition.
+        std::span<const Expression* const> expressions;
+
+        /// The item to produce if one of the expressions matches.
+        ProdItem item;
+    };
+
+    /// A production that chooses an item with a case statement.
+    struct CaseProd : public ProdBase {
+        /// The case condition expression.
+        not_null<const Expression*> expr;
+
+        /// The case items.
+        std::span<const CaseItem> items;
+
+        /// The item to produce if no case item matches, if there is one.
+        std::optional<ProdItem> defaultItem;
+
+        CaseProd(const Expression& expr, std::span<const CaseItem> items,
+                 std::optional<ProdItem> defaultItem) :
+            ProdBase(ProdKind::Case), expr(&expr), items(items), defaultItem(defaultItem) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::Case; }
+    };
+
+    /// A rule of a production, which is one of its alternatives.
+    struct Rule {
+        /// The statement block that scopes the rule, holding the variables
+        /// that refer to the values produced by its items.
+        not_null<const StatementBlockSymbol*> ruleBlock;
+
+        /// The productions that make up the rule, in order.
+        std::span<const ProdBase* const> prods;
+
+        /// The weight of the rule, if one was given.
+        const Expression* weightExpr;
+
+        /// The bias of a rand join, if one was given.
+        const Expression* randJoinExpr;
+
+        /// The code block that follows the weight, if there is one.
+        std::optional<CodeBlockProd> codeBlock;
+
+        /// Whether the rule is a rand join.
+        bool isRandJoin;
+
+        Rule(const StatementBlockSymbol& ruleBlock, std::span<const ProdBase* const> prods,
+             const Expression* weightExpr, const Expression* randJoinExpr,
+             std::optional<CodeBlockProd> codeBlock, bool isRandJoin) :
+            ruleBlock(&ruleBlock), prods(prods), weightExpr(weightExpr), randJoinExpr(randJoinExpr),
+            codeBlock(codeBlock), isRandJoin(isRandJoin) {}
+    };
+
+    /// A production in the random sequence along with its rules. The rules
+    /// belong to the statement rather than the production symbol because they
+    /// are bound in the context of the enclosing procedure [18.17.7].
+    struct Production {
+        /// The symbol that declares the production.
+        not_null<const RandSeqProductionSymbol*> symbol;
+
+        /// The rules of the production.
+        std::span<const Rule> rules;
+    };
+
     /// A pointer to the first production that starts the random sequence,
     /// or nullptr if the sequence is empty.
     const RandSeqProductionSymbol* firstProduction;
 
     /// A list of all productions in the random sequence.
-    std::span<const RandSeqProductionSymbol* const> productions;
+    std::span<const Production> productions;
 
     RandSequenceStatement(const RandSeqProductionSymbol* firstProduction,
-                          std::span<const RandSeqProductionSymbol* const> productions,
-                          SourceRange sourceRange) :
+                          std::span<const Production> productions, SourceRange sourceRange) :
         Statement(StatementKind::RandSequence, sourceRange), firstProduction(firstProduction),
         productions(productions) {}
 
@@ -488,6 +682,70 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::RandSequence; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto& production : productions) {
+            for (auto& rule : production.rules) {
+                for (auto prod : rule.prods) {
+                    switch (prod->kind) {
+                        case ProdKind::Item:
+                            prod->as<ProdItem>().visitExprs(visitor);
+                            break;
+                        case ProdKind::CodeBlock:
+                            break;
+                        case ProdKind::IfElse: {
+                            auto& iep = prod->as<IfElseProd>();
+                            iep.expr->visit(visitor);
+                            iep.ifItem.visitExprs(visitor);
+                            if (iep.elseItem)
+                                iep.elseItem->visitExprs(visitor);
+                            break;
+                        }
+                        case ProdKind::Repeat: {
+                            auto& rp = prod->as<RepeatProd>();
+                            rp.expr->visit(visitor);
+                            rp.item.visitExprs(visitor);
+                            break;
+                        }
+                        case ProdKind::Case: {
+                            auto& cp = prod->as<CaseProd>();
+                            cp.expr->visit(visitor);
+                            if (cp.defaultItem)
+                                cp.defaultItem->visitExprs(visitor);
+
+                            for (auto& item : cp.items) {
+                                for (auto expr : item.expressions)
+                                    expr->visit(visitor);
+
+                                item.item.visitExprs(visitor);
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if (rule.weightExpr)
+                    rule.weightExpr->visit(visitor);
+
+                if (rule.randJoinExpr)
+                    rule.randJoinExpr->visit(visitor);
+            }
+        }
+    }
+
+private:
+    // Creates the rules of a production. Code blocks in the rules are nested in
+    // the procedure that encloses the randsequence [18.17.7], so they are bound
+    // only here, with the context of the statement.
+    static std::span<const Rule> createRules(const RandSeqProductionSymbol& production,
+                                             const ASTContext& parentContext);
+    static Rule createRule(const syntax::RsRuleSyntax& syntax, const ASTContext& context,
+                           const StatementBlockSymbol& ruleBlock);
+    static ProdItem createProdItem(const syntax::RsProdItemSyntax& syntax,
+                                   const ASTContext& context);
+    static const CaseProd& createCaseProd(const syntax::RsCaseSyntax& syntax,
+                                          const ASTContext& context);
 };
 
 /// Represents a procedural checker instantiation statement.

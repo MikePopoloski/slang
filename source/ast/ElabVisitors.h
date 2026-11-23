@@ -397,13 +397,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
         result.visit(*this);
     }
 
-    void handle(const RandSeqProductionSymbol& symbol) {
-        if (!handleDefault(symbol))
-            return;
-
-        symbol.getRules();
-    }
-
     void handle(const TimingPathSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

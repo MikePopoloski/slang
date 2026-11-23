@@ -640,56 +640,7 @@ void registerSymbols(nb::module_& m) {
     auto randSeq = nb::class_<RandSeqProductionSymbol, Symbol>(m, "RandSeqProductionSymbol");
     addScopeMethods(randSeq);
     randSeq.def_ro("arguments", &RandSeqProductionSymbol::arguments)
-        .def_prop_ro("rules", &RandSeqProductionSymbol::getRules)
         .def_prop_ro("returnType", &RandSeqProductionSymbol::getReturnType);
-
-    nb::enum_<RandSeqProductionSymbol::ProdKind>(randSeq, "ProdKind")
-        .value("Item", RandSeqProductionSymbol::ProdKind::Item)
-        .value("CodeBlock", RandSeqProductionSymbol::ProdKind::CodeBlock)
-        .value("IfElse", RandSeqProductionSymbol::ProdKind::IfElse)
-        .value("Repeat", RandSeqProductionSymbol::ProdKind::Repeat)
-        .value("Case", RandSeqProductionSymbol::ProdKind::Case);
-
-    nb::class_<RandSeqProductionSymbol::ProdBase>(randSeq, "ProdBase")
-        .def_ro("kind", &RandSeqProductionSymbol::ProdBase::kind);
-
-    nb::class_<RandSeqProductionSymbol::ProdItem, RandSeqProductionSymbol::ProdBase>(randSeq,
-                                                                                     "ProdItem")
-        .def_ro("target", &RandSeqProductionSymbol::ProdItem::target)
-        .def_ro("args", &RandSeqProductionSymbol::ProdItem::args);
-
-    nb::class_<RandSeqProductionSymbol::CodeBlockProd, RandSeqProductionSymbol::ProdBase>(
-        randSeq, "CodeBlockProd")
-        .def_ro("block", &RandSeqProductionSymbol::CodeBlockProd::block);
-
-    nb::class_<RandSeqProductionSymbol::IfElseProd, RandSeqProductionSymbol::ProdBase>(randSeq,
-                                                                                       "IfElseProd")
-        .def_ro("expr", &RandSeqProductionSymbol::IfElseProd::expr)
-        .def_ro("ifItem", &RandSeqProductionSymbol::IfElseProd::ifItem)
-        .def_ro("elseItem", &RandSeqProductionSymbol::IfElseProd::elseItem);
-
-    nb::class_<RandSeqProductionSymbol::RepeatProd, RandSeqProductionSymbol::ProdBase>(randSeq,
-                                                                                       "RepeatProd")
-        .def_ro("expr", &RandSeqProductionSymbol::RepeatProd::expr)
-        .def_ro("item", &RandSeqProductionSymbol::RepeatProd::item);
-
-    nb::class_<RandSeqProductionSymbol::CaseItem>(randSeq, "CaseItem")
-        .def_ro("expressions", &RandSeqProductionSymbol::CaseItem::expressions)
-        .def_ro("item", &RandSeqProductionSymbol::CaseItem::item);
-
-    nb::class_<RandSeqProductionSymbol::CaseProd, RandSeqProductionSymbol::ProdBase>(randSeq,
-                                                                                     "CaseProd")
-        .def_ro("expr", &RandSeqProductionSymbol::CaseProd::expr)
-        .def_ro("items", &RandSeqProductionSymbol::CaseProd::items)
-        .def_ro("defaultItem", &RandSeqProductionSymbol::CaseProd::defaultItem);
-
-    nb::class_<RandSeqProductionSymbol::Rule>(randSeq, "Rule")
-        .def_ro("ruleBlock", &RandSeqProductionSymbol::Rule::ruleBlock)
-        .def_ro("prods", &RandSeqProductionSymbol::Rule::prods)
-        .def_ro("weightExpr", &RandSeqProductionSymbol::Rule::weightExpr)
-        .def_ro("randJoinExpr", &RandSeqProductionSymbol::Rule::randJoinExpr)
-        .def_ro("codeBlock", &RandSeqProductionSymbol::Rule::codeBlock)
-        .def_ro("isRandJoin", &RandSeqProductionSymbol::Rule::isRandJoin);
 
     nb::class_<TimingPathSymbol, Symbol> timingPath(m, "TimingPathSymbol");
     timingPath.def_ro("connectionKind", &TimingPathSymbol::connectionKind)

@@ -351,14 +351,10 @@ Expression& CallExpression::fromArgs(Compilation& comp, const Subroutine& subrou
 
     if (context.flags.has(ASTFlags::Function | ASTFlags::Final) &&
         symbol.subroutineKind == SubroutineKind::Task) {
-        const Scope* scope = context.scope;
-        while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
-            scope = scope->asSymbol().getParentScope();
-
-        if (scope && scope->asSymbol().kind == SymbolKind::Subroutine)
-            context.addDiag(diag::TaskFromFunction, range);
-        else
+        if (context.flags.has(ASTFlags::Final))
             context.addDiag(diag::TaskFromFinal, range);
+        else
+            context.addDiag(diag::TaskFromFunction, range);
 
         return badExpr(comp, result);
     }
