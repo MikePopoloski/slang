@@ -329,9 +329,10 @@ const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSynta
     // Build iterator symbols for each loop variable.
     bool skippedAny = false;
     for (auto loopVar : loopList.loopVariables) {
-        // If type is null, we've run out of dimensions so there were too many
-        // loop variables supplied.
-        if (!type || type->isScalar()) {
+        // If type is null or can't be iterated (a scalar, or a non-integral element
+        // such as a real, class handle or unpacked struct), we've run out of dimensions
+        // so there were too many loop variables supplied.
+        if (!type || !type->isIterable()) {
             context.addDiag(diag::TooManyForeachVars, loopList.loopVariables.sourceRange())
                 << *arrayRef.type;
             return nullptr;

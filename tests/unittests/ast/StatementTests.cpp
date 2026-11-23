@@ -3289,3 +3289,44 @@ endmodule
     CHECK(diags[2].code == diag::RandJoinOutOfRange);
     CHECK(diags[3].code == diag::RandJoinOutOfRange);
 }
+
+TEST_CASE("foreach loop variables can't exceed the array dimensions for non-integral elements") {
+    // The number of loop variables shall not exceed the number of dimensions of the
+    // array [12.7.3, 18.5.7.1]. A real, class handle or struct element adds none.
+    auto tree = SyntaxTree::fromText(R"(
+class Obj; endclass
+typedef struct { int a; } S;
+
+class C;
+    real A[2];
+    rand Obj O[2];
+    rand int x;
+    constraint c1 { foreach (A[i,j]) x > j; }
+    constraint c2 { foreach (O[i,j]) x > j; }
+endclass
+
+module top;
+    real r[2];
+    S s[2];
+    int I[2];
+    bit [3:0] V[2][3];
+    int Q[$];
+    initial begin
+        foreach (r[i,j]) begin end
+        foreach (s[i,j]) begin end
+        foreach (r[i]) begin end
+        foreach (I[i,j]) begin end
+        foreach (V[i,j,k]) begin end
+        foreach (Q[i,j]) begin end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    for (auto& d : diags)
+        CHECK(d.code == diag::TooManyForeachVars);
+}
