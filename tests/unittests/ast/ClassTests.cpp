@@ -6140,3 +6140,37 @@ endmodule
     for (auto& d : diags)
         CHECK(d.code == diag::ScopeRestrictedPrefix);
 }
+
+TEST_CASE("Interface class that extends itself") {
+    // An interface class has to be declared before it is extended [8.26.4].
+    auto tree = SyntaxTree::fromText(R"(
+interface class A;
+    pure virtual function void a();
+endclass
+
+interface class X extends X;
+    pure virtual function void f();
+endclass
+
+interface class Y #(int N = 1) extends Y, A;
+    pure virtual function void g();
+endclass
+
+interface class Z extends A;
+endclass
+
+module top;
+    X x;
+    Y y;
+    Z z;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ClassInheritanceCycle);
+    CHECK(diags[1].code == diag::ClassInheritanceCycle);
+}

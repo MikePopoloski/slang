@@ -794,6 +794,14 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
             if (!iface)
                 continue;
 
+            // An interface class can't extend itself; it has to be declared before it
+            // is extended [8.26.4]. Longer cycles go through a forward typedef, which
+            // is already diagnosed as incomplete.
+            if (iface == this) {
+                context.addDiag(diag::ClassInheritanceCycle, nameSyntax->sourceRange()) << name;
+                continue;
+            }
+
             // Inherit all members that don't conflict with our declared symbols.
             auto& scopeNameMap = getNameMap();
             for (auto& member : iface->members()) {
