@@ -199,9 +199,10 @@ int driverMain(int argc, TArgs argv) {
         driver.cmdLine.setGroup("Preprocessor");
         driver.cmdLine.add("--comments", includeComments,
                            "Include comments in preprocessed output (with -E)");
-        driver.cmdLine.add("--directives", includeDirectives,
-                           "Include directives that remain after preprocessing, such as `timescale, in "
-                           "preprocessed output (with -E)");
+        driver.cmdLine.add(
+            "--directives", includeDirectives,
+            "Include directives that remain after preprocessing, such as `timescale, in "
+            "preprocessed output (with -E)");
         driver.cmdLine.add("--obfuscate-ids", obfuscateIds,
                            "Randomize all identifiers in preprocessed output (with -E)");
         driver.cmdLine.add("--preprocess-source", includeSource,

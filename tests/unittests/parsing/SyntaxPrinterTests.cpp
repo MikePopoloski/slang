@@ -403,11 +403,8 @@ module d; endmodule
 )");
     REQUIRE(tree->diagnostics().empty());
 
-    auto output = SyntaxPrinter()
-                      .setIncludeDirectives(true)
-                      .setExpandConditionals(true)
-                      .print(*tree)
-                      .str();
+    auto output =
+        SyntaxPrinter().setIncludeDirectives(true).setExpandConditionals(true).print(*tree).str();
     CHECK(output == R"(`timescale 1ns/1ps
 `define A
 module a; endmodule

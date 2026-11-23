@@ -574,8 +574,7 @@ void registerSyntax(nb::module_& syntax, nb::module_& parsing) {
         .def("setIncludeDirectives", &SyntaxPrinter::setIncludeDirectives, byrefint, "include"_a)
         .def("setExpandMacros", &SyntaxPrinter::setExpandMacros, byrefint, "expand"_a)
         .def("setExpandIncludes", &SyntaxPrinter::setExpandIncludes, byrefint, "expand"_a)
-        .def("setExpandConditionals", &SyntaxPrinter::setExpandConditionals, byrefint,
-             "expand"_a)
+        .def("setExpandConditionals", &SyntaxPrinter::setExpandConditionals, byrefint, "expand"_a)
         .def("setIncludeMacroDefinitions", &SyntaxPrinter::setIncludeMacroDefinitions, byrefint,
              "include"_a)
         .def("setIncludeComments", &SyntaxPrinter::setIncludeComments, byrefint, "include"_a)
