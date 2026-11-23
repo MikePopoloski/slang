@@ -1387,8 +1387,15 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
             }
         }
         else {
-            // Element / range selectors.
+            // Element / range selectors. A method call reached through the lookup
+            // chain has no parentheses, which are required when the result of the
+            // call is selected from [13.4.1].
             auto selectSyntax = std::get<const ElementSelectSyntax*>(selector);
+            if (expr->kind == ExpressionKind::Call) {
+                context.addDiag(diag::SelectMethodParens,
+                                SourceRange{expr->sourceRange.start(),
+                                            selectSyntax->sourceRange().end()});
+            }
             expr = &bindSelector(comp, *expr, *selectSyntax, context);
         }
     }

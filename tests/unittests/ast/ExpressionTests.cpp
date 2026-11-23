@@ -5339,3 +5339,40 @@ endmodule
     CHECK(root.lookupName<ParameterSymbol>("m.b").getValue().integer() == 1);
     CHECK(root.lookupName<ParameterSymbol>("m.p").getValue().integer() == 3);
 }
+
+TEST_CASE("Selecting from a method call requires parentheses") {
+    // Parentheses shall always be included when using a function call as an
+    // implicit variable [13.4.1].
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int x[2];
+    function byte g(); return 8'h41; endfunction
+endclass
+
+module top;
+    localparam string ps = "abc";
+    localparam byte b1 = ps.toupper[0];
+    localparam byte b2 = ps.toupper()[0];
+    int qi[$] = '{3, 1, 2};
+    C c = new;
+    bit b;
+    int r;
+    initial begin
+        r = qi.min[0];
+        r = qi.min()[0];
+        b = c.g[0];
+        b = c.g()[0];
+        r = c.x[0];
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::SelectMethodParens);
+    CHECK(diags[1].code == diag::SelectMethodParens);
+    CHECK(diags[2].code == diag::SelectMethodParens);
+}
