@@ -6174,3 +6174,43 @@ endmodule
     CHECK(diags[0].code == diag::ClassInheritanceCycle);
     CHECK(diags[1].code == diag::ClassInheritanceCycle);
 }
+
+TEST_CASE("Interface class method default values must be constant") {
+    // Default values of interface class methods must be constant expressions [8.26.8].
+    // Ordinary class methods have no such restriction.
+    auto tree = SyntaxTree::fromText(R"(
+int g;
+function automatic int nonconst(); return g; endfunction
+
+typedef enum { RED, GREEN } color_e;
+
+interface class A #(int P = 2, type T = int);
+    pure virtual function void h1(int a = g);
+    pure virtual function void h2(int a = nonconst());
+    pure virtual function void h3(int a, int b = a);
+    pure virtual function void ok1(int a = P * 2, int b = $bits(T));
+    pure virtual function void ok2(color_e c = GREEN, string s = "x");
+endclass
+
+class C implements A;
+    virtual function void h1(int a = g); endfunction
+    virtual function void h2(int a = nonconst()); endfunction
+    virtual function void h3(int a, int b = a); endfunction
+    virtual function void ok1(int a = 4, int b = 32); endfunction
+    virtual function void ok2(color_e c = GREEN, string s = "x"); endfunction
+endclass
+
+module top;
+    C c;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
+    CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[2].code == diag::ConstEvalNonConstVariable);
+}

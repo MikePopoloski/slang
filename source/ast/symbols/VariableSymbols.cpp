@@ -16,6 +16,7 @@
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
+#include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
@@ -388,6 +389,18 @@ const Expression* FormalArgumentSymbol::getDefaultValue() const {
     ASTContext context(*scope, LookupLocation::after(*this));
     defaultVal = EvaluatingPlaceholder;
     defaultVal = &Expression::bindArgument(getType(), direction, flags, *defaultValSyntax, context);
+
+    // Default values of interface class methods must be constant expressions [8.26.8].
+    if (!defaultVal->bad()) {
+        auto method = &scope->asSymbol();
+        if (method->kind == SymbolKind::Subroutine || method->kind == SymbolKind::MethodPrototype) {
+            auto classScope = method->getParentScope();
+            if (classScope && classScope->asSymbol().kind == SymbolKind::ClassType &&
+                classScope->asSymbol().as<ClassType>().isInterface) {
+                context.eval(*defaultVal);
+            }
+        }
+    }
     return defaultVal;
 }
 
