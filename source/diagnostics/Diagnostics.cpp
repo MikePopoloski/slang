@@ -153,24 +153,43 @@ Diagnostic& Diagnostics::add(const ast::Symbol& source, DiagCode code, SourceRan
 }
 
 void Diagnostics::sort(const SourceManager& sourceManager) {
-    auto compare = [&sourceManager](auto& x, auto& y) {
-        SourceLocation xl = sourceManager.getFullyExpandedLoc(x.location);
-        SourceLocation yl = sourceManager.getFullyExpandedLoc(y.location);
+    // Expand each location once up front. Diagnostics inside macro expansions can be very
+    // numerous, and expanding both sides on every comparison made the sort do
+    // O(n log n) walks up the expansion chain.
+    struct SortKey {
+        SourceLocation loc;
+        decltype(sourceManager.getSortKey(BufferID())) bufferKey;
+        DiagCode code;
+        size_t index;
+    };
 
-        auto xb = sourceManager.getSortKey(xl.buffer());
-        auto yb = sourceManager.getSortKey(yl.buffer());
-        if (xb < yb)
+    std::vector<SortKey> keys;
+    keys.reserve(size());
+    for (size_t i = 0; i < size(); i++) {
+        auto& diag = (*this)[i];
+        SourceLocation loc = sourceManager.getFullyExpandedLoc(diag.location);
+        keys.push_back({loc, sourceManager.getSortKey(loc.buffer()), diag.code, i});
+    }
+
+    auto compare = [](const SortKey& x, const SortKey& y) {
+        if (x.bufferKey < y.bufferKey)
             return true;
-        if (xb == yb) {
-            if (xl.offset() < yl.offset())
+        if (x.bufferKey == y.bufferKey) {
+            if (x.loc.offset() < y.loc.offset())
                 return true;
-            if (xl == yl)
+            if (x.loc == y.loc)
                 return x.code < y.code;
         }
         return false;
     };
 
-    std::ranges::stable_sort(*this, compare);
+    std::ranges::stable_sort(keys, compare);
+
+    Diagnostics sorted;
+    sorted.reserve(size());
+    for (auto& key : keys)
+        sorted.emplace_back(std::move((*this)[key.index]));
+    *this = std::move(sorted);
 }
 
 Diagnostics Diagnostics::filter(std::initializer_list<DiagCode> list) const {
