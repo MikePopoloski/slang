@@ -395,7 +395,8 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
                             expr.kind == ExpressionKind::ClockingEvent;
 
     if (edge == EdgeKind::None) {
-        if (expr.type->isAggregate() || expr.type->isPropertyType() ||
+        // A chandle can't be used in an event expression [6.14].
+        if (expr.type->isAggregate() || expr.type->isPropertyType() || expr.type->isCHandle() ||
             (expr.type->isVoid() && !isClocking)) {
             context.addDiag(diag::InvalidEventExpression, expr.sourceRange) << *expr.type;
             return badCtrl(compilation, result);

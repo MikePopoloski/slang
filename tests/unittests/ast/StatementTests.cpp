@@ -3330,3 +3330,26 @@ endmodule
     for (auto& d : diags)
         CHECK(d.code == diag::TooManyForeachVars);
 }
+
+TEST_CASE("chandle in an event expression") {
+    // Chandles shall not be used in event expressions [6.14].
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    chandle c1;
+    int i;
+    bit b;
+    always @(c1) b = 1;
+    always @(c1 or i) b = 1;
+    initial @(c1 == null) b = 1;
+    always @(i) b = (c1 == null);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidEventExpression);
+    CHECK(diags[1].code == diag::InvalidEventExpression);
+}

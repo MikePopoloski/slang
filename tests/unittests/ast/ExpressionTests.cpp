@@ -2130,10 +2130,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::InvalidPortType);
-    CHECK(diags[1].code == diag::AssignToCHandle);
-    CHECK(diags[2].code == diag::InvalidUnionMember);
+    CHECK(diags[1].code == diag::InvalidEventExpression);
+    CHECK(diags[2].code == diag::AssignToCHandle);
+    CHECK(diags[3].code == diag::InvalidUnionMember);
 }
 
 TEST_CASE("Event data type") {
