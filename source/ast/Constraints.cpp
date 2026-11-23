@@ -514,7 +514,11 @@ static std::pair<const Symbol*, SourceRange> getConstraintPrimary(const Expressi
         auto& call = expr.template as<CallExpression>();
         if (call.getKnownSystemName() == parsing::KnownSystemName::ArraySize &&
             call.arguments().size() == 1) {
+            // Only the size of a dynamic array or queue is random; the size of an
+            // associative array is not randomizable [18.4].
             auto& arg0 = *call.arguments()[0];
+            if (arg0.type->isAssociativeArray())
+                return {nullptr, expr.sourceRange};
             return {arg0.getSymbolReference(), arg0.sourceRange};
         }
     }

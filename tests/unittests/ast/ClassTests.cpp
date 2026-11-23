@@ -6214,3 +6214,29 @@ endmodule
     CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[2].code == diag::ConstEvalNonConstVariable);
 }
+
+TEST_CASE("Associative array size is not a random variable") {
+    // Only the size of a dynamic array or queue can appear in solve...before and
+    // disable soft; the size of an associative array is not randomizable [18.4].
+    auto tree = SyntaxTree::fromText(R"(
+typedef int aa_t[string];
+class C;
+    rand int aa[int];
+    rand aa_t ab;
+    rand int da[];
+    rand int q[$];
+    rand int x;
+    constraint c1 { solve aa.size before x; }
+    constraint c2 { disable soft ab.size; }
+    constraint c3 { solve da.size, q.size before x; disable soft da.size; disable soft q.size; }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BadSolveBefore);
+    CHECK(diags[1].code == diag::BadDisableSoft);
+}
