@@ -2305,6 +2305,18 @@ class RegField;
 endclass
 ```
 
+-Wsolve-before-type
+A `solve before` constraint names a variable that is neither integral nor real, such as an
+unpacked array. This is not allowed in SystemVerilog; an element of the array, or its size,
+can be named instead.
+```
+class C;
+  rand int lo;
+  rand int arr[];
+  constraint c { solve lo before arr; }
+endclass
+```
+
 @category Macros
 
 -Wignored-macro-paste
