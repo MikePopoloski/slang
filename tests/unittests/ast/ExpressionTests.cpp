@@ -5406,3 +5406,41 @@ endmodule
     for (auto& d : diags)
         CHECK(d.code == diag::BadUnaryExpression);
 }
+
+TEST_CASE("Floating point index into an integral-indexed associative array") {
+    // Associative array indexes of integral index type must be integral [7.8.4].
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    int ii[int];
+    int bi[bit [3:0]];
+    int si[string];
+    real rr = 2.0;
+    shortreal sr = 1.0;
+    int x;
+    initial begin
+        ii[1.5] = 1;
+        x = ii[rr];
+        bi[sr] = 1;
+        ii[int'(rr)] = 1;
+        bi[4'(int'(sr))] = 1;
+        si["a"] = 1;
+        void'(ii.exists(1.5));
+        ii.delete(2.5);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // The exists and delete arguments are converted as usual, which only warns.
+    auto& diags = compilation.getAllDiagnostics();
+    size_t errors = 0;
+    for (auto& d : diags) {
+        if (d.isError()) {
+            CHECK(d.code == diag::ExprMustBeIntegral);
+            errors++;
+        }
+    }
+    CHECK(errors == 3);
+}

@@ -186,8 +186,20 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     const Expression* selector = nullptr;
     if (valueType.isAssociativeArray()) {
         auto indexType = valueType.getAssociativeIndexType();
-        if (indexType)
+        if (indexType) {
             selector = &bindRValue(*indexType, syntax, {}, selectorCtx);
+
+            // A floating point index isn't implicitly converted to an integral
+            // index type [7.8.4].
+            if (indexType->isIntegral() && selector->kind == ExpressionKind::Conversion) {
+                auto& conv = selector->as<ConversionExpression>();
+                if (conv.isImplicit() && conv.operand().type->isFloating()) {
+                    selectorCtx.addDiag(diag::ExprMustBeIntegral, conv.operand().sourceRange)
+                        << *conv.operand().type;
+                    return badExpr(compilation, nullptr);
+                }
+            }
+        }
     }
 
     if (!selector) {
