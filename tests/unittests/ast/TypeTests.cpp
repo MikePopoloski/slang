@@ -4039,3 +4039,25 @@ endmodule
     CHECK(diags[0].code == diag::InvalidUnionMember);
     CHECK(diags[1].code == diag::InvalidUnionMember);
 }
+
+TEST_CASE("Untagged unions can't hold class handles or strings") {
+    // Dynamic types and chandles can only be members of tagged unions [7.3, 7.3.2].
+    auto tree = SyntaxTree::fromText(R"(
+class C; endclass
+
+module top;
+    union { C c; int a; } u1;
+    union { struct { C c; } s; int a; } u2;
+    union { string s; int a; } u3;
+    union tagged { C c; string s; int a; } u4;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    for (auto& d : diags)
+        CHECK(d.code == diag::InvalidUnionMember);
+}

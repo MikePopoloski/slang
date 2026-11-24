@@ -46,7 +46,7 @@ module m;
     int ua[3];
     string s = "%s";
     union { logic a; logic b; } foo;
-    union { string a; logic b; } fuz;
+    union tagged { string a; logic b; } fuz;
     struct { logic a; logic b; } bar;
     struct { logic a; string b; } baz;
 

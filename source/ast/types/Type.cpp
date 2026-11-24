@@ -1070,8 +1070,10 @@ bool Type::isValidForPort(const Type** foundInvalid) const {
 
 bool Type::isValidForUnion(bool isTagged, const Type** foundInvalid) const {
     auto& ct = getCanonicalType();
-    if (ct.isVirtualInterface() ||
-        (!isTagged && (ct.isCHandle() || ct.isDynamicallySizedArray()))) {
+    // Dynamic types and chandles, which include class handles and strings, are
+    // only allowed in tagged unions [7.3, 7.3.2].
+    if (ct.isVirtualInterface() || (!isTagged && (ct.isCHandle() || ct.isDynamicallySizedArray() ||
+                                                  ct.isClass() || ct.isString()))) {
         *foundInvalid = &ct;
         return false;
     }
