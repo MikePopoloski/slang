@@ -1295,6 +1295,15 @@ Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result
                 context.addDiag(diag::LetHierarchical, callRange);
             }
 
+            // A let instance is an expression, not a variable, so it can't be
+            // assigned to even if its body would be assignable [11.12].
+            if (symbol->kind == SymbolKind::LetDecl && context.flags.has(ASTFlags::LValue) &&
+                !expr->bad()) {
+                SourceRange callRange = localInvoke ? localInvoke->sourceRange() : result.nameRange;
+                context.addDiag(diag::ExpressionNotAssignable, callRange);
+                return badExpr(comp, expr);
+            }
+
             noteIfUpward(*expr);
             break;
         }

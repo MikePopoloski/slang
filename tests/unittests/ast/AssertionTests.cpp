@@ -2277,3 +2277,33 @@ endmodule
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("let instances can't be assigned to") {
+    // A let instance is an expression, not a variable [11.12].
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    let f(int x) = x;
+    let g(x) = x;
+    let h(x) = x + 1;
+    int q, r;
+    int a[4];
+    wire [31:0] s;
+    initial f(q) = 1;
+    initial g(r) = 1;
+    assign g(s) = 1;
+    initial begin
+        q = f(r);
+        r = g(q);
+        a[h(1)] = 0;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    for (auto& d : diags)
+        CHECK(d.code == diag::ExpressionNotAssignable);
+}
