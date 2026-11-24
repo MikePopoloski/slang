@@ -971,7 +971,8 @@ ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) co
             }
         }
 
-        result.resizeToBound();
+        if (result.resizeToBound())
+            context.addDiag(diag::QueueBoundExceeded, sourceRange) << *type;
         return result;
     }
     else {
@@ -1080,6 +1081,18 @@ Expression& SimpleAssignmentPatternExpression::forFixedArray(
     return *result;
 }
 
+// Warns if an assignment pattern with a known number of elements doesn't fit
+// in the bounded queue it creates; the extra elements are discarded [7.10.5].
+static void checkQueueBound(const ASTContext& context, const Type& type, size_t count,
+                            SourceRange sourceRange) {
+    auto& ct = type.getCanonicalType();
+    if (ct.isQueue()) {
+        auto maxBound = ct.as<QueueType>().maxBound;
+        if (maxBound && count > size_t(maxBound) + 1)
+            context.addDiag(diag::QueueBoundExceeded, sourceRange) << type;
+    }
+}
+
 Expression& SimpleAssignmentPatternExpression::forDynamicArray(
     Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const ASTContext& context,
     const Type& type, const Type& elementType, SourceRange sourceRange) {
@@ -1098,6 +1111,8 @@ Expression& SimpleAssignmentPatternExpression::forDynamicArray(
                                                                   sourceRange);
     if (bad)
         return badExpr(comp, result);
+
+    checkQueueBound(context, type, elems.size(), sourceRange);
 
     return *result;
 }
@@ -1827,6 +1842,8 @@ Expression& ReplicatedAssignmentPatternExpression::forDynamicArray(
                                                                       sourceRange);
     if (bad)
         return badExpr(comp, result);
+
+    checkQueueBound(context, type, count * elems.size(), sourceRange);
 
     return *result;
 }

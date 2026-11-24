@@ -905,7 +905,8 @@ public:
         else
             q.push_back(std::move(cv));
 
-        q.resizeToBound();
+        if (q.resizeToBound())
+            context.addDiag(diag::QueueBoundExceeded, args[0]->sourceRange) << *args[0]->type;
 
         if (!context.checkMaxValue(*target, args[0]->sourceRange))
             return nullptr;
@@ -971,7 +972,8 @@ public:
         }
 
         q.insert(q.begin() + *index, std::move(cv));
-        q.resizeToBound();
+        if (q.resizeToBound())
+            context.addDiag(diag::QueueBoundExceeded, args[0]->sourceRange) << *args[0]->type;
 
         if (!context.checkMaxValue(*target, args[0]->sourceRange))
             return nullptr;

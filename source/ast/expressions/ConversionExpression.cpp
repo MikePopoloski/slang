@@ -620,7 +620,8 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
             auto elems = value.elements();
             SVQueue result(elems.begin(), elems.end());
             result.maxBound = to.getCanonicalType().as<QueueType>().maxBound;
-            result.resizeToBound();
+            if (result.resizeToBound())
+                addDiag(diag::QueueBoundExceeded) << to;
             return result;
         }
 

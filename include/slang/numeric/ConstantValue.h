@@ -206,9 +206,14 @@ struct SLANG_EXPORT SVQueue : public std::deque<ConstantValue> {
     using std::deque<ConstantValue>::deque;
     uint32_t maxBound = 0;
 
-    void resizeToBound() {
-        if (maxBound && size() > maxBound + 1)
+    /// Discards any elements beyond the queue's bound.
+    /// @returns true if any elements were discarded.
+    bool resizeToBound() {
+        if (maxBound && size() > maxBound + 1) {
             resize(maxBound + 1);
+            return true;
+        }
+        return false;
     }
 };
 

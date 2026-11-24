@@ -2257,7 +2257,8 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
             if (!build(result))
                 return nullptr;
 
-            result.resizeToBound();
+            if (result.resizeToBound())
+                context.addDiag(diag::QueueBoundExceeded, sourceRange) << *type;
             return result;
         }
         else {

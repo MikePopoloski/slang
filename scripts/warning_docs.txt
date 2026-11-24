@@ -773,6 +773,19 @@ function int func;
 endfunction
 ```
 
+-Wqueue-bound
+Elements were written to a bounded queue beyond its bound, so they are discarded,
+as described in [7.10.5]. This is reported for assignment patterns with too many
+elements and for writes found during constant evaluation.
+```
+localparam int foo = func();
+function int func;
+    automatic int q[$:1] = '{1, 2};
+    q.push_back(3);
+    return q.size();
+endfunction
+```
+
 -Wtask-ignored
 A constant function contains a system task invocation which will
 be skipped during constant evaluation. This could yield unintuitive results.

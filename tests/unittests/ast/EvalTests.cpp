@@ -4243,3 +4243,48 @@ endmodule
     INFO(report(diags));
     CHECK(std::ranges::count(diags, diag::SpecparamInConstant, &Diagnostic::code) == 1);
 }
+
+TEST_CASE("Writing beyond the bound of a bounded queue warns") {
+    // Out-of-bounds elements of a bounded queue are discarded and a warning
+    // shall be issued [7.10.5].
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    typedef int bq_t[$:1];
+    typedef int fa_t[3];
+    localparam fa_t FA = '{1, 2, 3};
+
+    localparam bq_t P1 = '{1, 2, 3};
+    localparam bq_t P2 = '{3{1}};
+    localparam bq_t P3 = {1, 2, 3};
+    localparam bq_t P4 = bq_t'(FA);
+    int q[$:1] = '{1, 2, 3};
+
+    function automatic int f(bit front);
+        bq_t x = '{1, 2};
+        if (front)
+            x.push_front(0);
+        else
+            x.insert(1, 5);
+        return x.size();
+    endfunction
+    localparam int F1 = f(1);
+    localparam int F2 = f(0);
+
+    localparam bq_t OK1 = '{1, 2};
+    localparam bq_t OK2 = {1};
+    int r[$:1];
+    initial r.push_back(3);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    for (auto& d : diags)
+        CHECK(d.code == diag::QueueBoundExceeded);
+
+    auto& top = compilation.getRoot().lookupName<ParameterSymbol>("top.P1");
+    CHECK(top.getValue().size() == 2);
+}
