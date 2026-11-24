@@ -2253,3 +2253,27 @@ endmodule
     REQUIRE(add);
     CHECK(add->type->getBitWidth() == 2);
 }
+
+TEST_CASE("let must be declared before use with call syntax") {
+    // A let shall be declared before it is used [11.12].
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    localparam int A = f(1);
+    int y;
+    initial y = g(1);
+    let f(x) = x + 10;
+    let g(x) = x;
+    let h(x) = x * 2;
+    localparam int B = h(1);
+    initial y = h(2) + f(3);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+}

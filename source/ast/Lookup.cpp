@@ -2126,6 +2126,11 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                     if (symbol->as<EnumValueSymbol>().isEvaluating())
                         flags &= ~LookupFlags::AllowDeclaredAfter;
                     break;
+                case SymbolKind::LetDecl:
+                    // A let must be declared before it's used, even when it's
+                    // instantiated with call syntax [11.12].
+                    flags &= ~LookupFlags::AllowDeclaredAfter;
+                    break;
                 case SymbolKind::Variable:
                 case SymbolKind::FormalArgument:
                 case SymbolKind::Coverpoint:
