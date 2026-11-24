@@ -3640,6 +3640,33 @@ endfunction
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("v1800-2023: default index method name unavailable after override") {
+    // index_argument renames the index method, so the default name refers only to a
+    // member of the element type, if there is one [7.12].
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    int arr[] = '{1, 2, 3};
+    int qi[$];
+    initial begin
+        qi = arr.find(item, iter_index) with (item.index != 0);
+        qi = arr.find(item, iter_index) with (item.index() != 0);
+        qi = arr.find(item, iter_index) with (item.iter_index != 0);
+        qi = arr.find(item) with (item.index != 0);
+    end
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidMemberAccess);
+    CHECK(diags[1].code == diag::InvalidMemberAccess);
+}
+
 TEST_CASE("Overriding index method name not allowed in 1800-2017") {
     auto tree = SyntaxTree::fromText(R"(
 function automatic f;

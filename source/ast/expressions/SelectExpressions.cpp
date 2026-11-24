@@ -1205,6 +1205,13 @@ static Expression* tryBindSpecialMethod(Compilation& compilation, const Expressi
                                                  selector.name, invocation, withClause, context);
     }
 
+    // Once an iterator's index method has been renamed via index_argument, the
+    // default name is no longer available [7.12].
+    if (sym->kind == SymbolKind::Iterator && selector.name == "index"sv &&
+        sym->as<IteratorSymbol>().indexMethodName != "index"sv) {
+        return nullptr;
+    }
+
     return CallExpression::fromBuiltInMethod(compilation, sym->kind, expr, selector.name,
                                              invocation, withClause, context);
 }
