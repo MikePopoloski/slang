@@ -2038,7 +2038,7 @@ endmodule
 
 TEST_CASE("DPI import open array types") {
     auto tree = SyntaxTree::fromText(R"(
-typedef int baz;
+typedef logic baz;
 
 import "DPI-C" function void f1(logic[]);
 import "DPI-C" function void f2(enum logic {A,B} [] a);
@@ -4060,4 +4060,29 @@ endmodule
     REQUIRE(diags.size() == 3);
     for (auto& d : diags)
         CHECK(d.code == diag::InvalidUnionMember);
+}
+
+TEST_CASE("Packed dimensions on predefined integer types through typedefs and type parameters") {
+    // Packed dimensions can't be applied to a predefined-width integer type [7.4.1].
+    auto tree = SyntaxTree::fromText(R"(
+module top #(parameter type T = int);
+    typedef int myint;
+    typedef byte mybyte;
+    typedef integer myinteger;
+    typedef bit [31:0] myvec;
+    myint [1:0] mi;
+    mybyte [3:0] mb;
+    myinteger [1:0] mg;
+    T [1:0] mt;
+    myvec [1:0] mv;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    for (auto& d : diags)
+        CHECK(d.code == diag::PackedDimsOnPredefinedType);
 }

@@ -790,6 +790,14 @@ const Type& PackedArrayType::fromSyntax(const ASTContext& context, const Type& e
         return comp.getErrorType();
     }
 
+    // Packed dimensions can't be applied to a predefined-width integer type, even
+    // through a typedef or type parameter [7.4.1].
+    auto& elemCt = elementType.getCanonicalType();
+    if (elemCt.kind == SymbolKind::PredefinedIntegerType) {
+        auto& diag = context.addDiag(diag::PackedDimsOnPredefinedType, syntax.sourceRange());
+        diag << elemCt.toString();
+    }
+
     if (!dimension.isRange()) {
         if (dimension.kind == DimensionKind::DPIOpenArray) {
             if (elementType.isPackedArray()) {
