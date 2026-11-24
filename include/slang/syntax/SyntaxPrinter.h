@@ -89,8 +89,8 @@ public:
     }
 
     /// Sets whether to include preprocessor directives when printing syntax.
-    /// For controlling expansion of macros and includes, use `setExpandIncludes` and
-    /// `setExpandMacros`.
+    /// For controlling expansion of macros, includes, and conditionals, use
+    /// `setExpandIncludes`, `setExpandMacros`, and `setExpandConditionals`.
     /// @return a reference to this object, to allow chaining additional method calls.
     SyntaxPrinter& setIncludeDirectives(bool include) {
         includeDirectives = include;
@@ -108,6 +108,23 @@ public:
     /// @return a reference to this object, to allow chaining additional method calls.
     SyntaxPrinter& setExpandMacros(bool expand) {
         expandMacros = expand;
+        return *this;
+    }
+
+    /// Sets whether to expand conditional directives when printing syntax, which omits
+    /// the lines of the directives themselves along with the text of their inactive branches.
+    /// @return a reference to this object, to allow chaining additional method calls.
+    SyntaxPrinter& setExpandConditionals(bool expand) {
+        expandConditionals = expand;
+        return *this;
+    }
+
+    /// Sets whether to include macro definition and undefinition directives when printing
+    /// syntax. Has no effect unless directives are included via @a setIncludeDirectives.
+    /// When excluded, the rest of each directive's line is omitted with it.
+    /// @return a reference to this object, to allow chaining additional method calls.
+    SyntaxPrinter& setIncludeMacroDefinitions(bool include) {
+        includeMacroDefinitions = include;
         return *this;
     }
 
@@ -158,6 +175,10 @@ private:
     // Emit a line directive if the output's logical position doesn't match location.
     void printLineDirective(SourceLocation location);
 
+    // Whether the syntax is a conditional or macro definition directive that
+    // the current options omit along with the rest of its line.
+    bool isEvaluated(const SyntaxNode& syntax) const;
+
     bool shouldPrint(const SyntaxNode& syntax) const;
     bool shouldPrint(SourceLocation loc) const;
 
@@ -177,6 +198,9 @@ private:
     // Set while printing the tokens of a directive after its first one.
     bool inDirective = false;
 
+    // Set after omitting an evaluated directive, to drop what trails it on its line.
+    bool skipRestOfLine = false;
+
     const SourceManager* sourceManager = nullptr;
     bool includeTrivia = true;
     bool includeMissing = false;
@@ -184,6 +208,8 @@ private:
     bool includeDirectives = false;
     bool expandIncludes = false;
     bool expandMacros = false;
+    bool expandConditionals = false;
+    bool includeMacroDefinitions = true;
     bool includeComments = true;
     bool includeSource = false;
     bool squashNewlines = true;

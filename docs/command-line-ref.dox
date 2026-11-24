@@ -198,8 +198,10 @@ When running in preprocessor-only mode (using `-E`) include comments in the prep
 
 `--directives`
 
-When running in preprocessor-only mode (using `-E`) include directives in the preprocessed output text.
-Macro invocations and include directives are expanded, so their original text is not retained.
+When running in preprocessor-only mode (using `-E`) include directives that still affect how the
+output is compiled, such as `` `timescale `` and `` `default_nettype ``, in the preprocessed output text.
+Macro invocations, include directives, and conditional directives are evaluated, so they are not
+retained, nor are macro definitions or the text of inactive conditional branches.
 
 `--max-include-depth <depth>`
 

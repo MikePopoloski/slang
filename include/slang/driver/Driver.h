@@ -66,8 +66,9 @@ enum class SLANG_EXPORT PreprocessOutputFlags {
     /// stripped.
     IncludeComments = 1 << 0,
 
-    /// Include preprocessor directives in the output. If not set,
-    /// directives are stripped.
+    /// Include directives that still affect how the output is compiled, such as
+    /// timescale and default_nettype. Macro definitions and conditional directives
+    /// are evaluated and never included. If not set, all directives are stripped.
     IncludeDirectives = 1 << 1,
 
     /// Obfuscate identifiers in the output by replacing them with

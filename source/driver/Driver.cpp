@@ -782,6 +782,8 @@ bool Driver::runPreprocessor(bitmask<PreprocessOutputFlags> flags) {
     output.setIncludeSource(flags.has(PreprocessOutputFlags::IncludeSourceInfo));
     output.setExpandMacros(true);
     output.setExpandIncludes(true);
+    output.setExpandConditionals(true);
+    output.setIncludeMacroDefinitions(false);
 
     // Squashing newlines would desynchronize the output from its source lines,
     // costing an extra line directive each time.

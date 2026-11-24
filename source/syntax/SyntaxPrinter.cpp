@@ -26,12 +26,33 @@ SyntaxPrinter::SyntaxPrinter(const SourceManager& sourceManager) : sourceManager
 }
 
 SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
+    if (skipRestOfLine) {
+        if (trivia.kind == TriviaKind::Whitespace || trivia.kind == TriviaKind::LineComment ||
+            trivia.kind == TriviaKind::BlockComment) {
+            return *this;
+        }
+
+        // A directive's own leading trivia can still be on the line being skipped.
+        if (trivia.kind != TriviaKind::Directive)
+            skipRestOfLine = false;
+    }
+
     switch (trivia.kind) {
         case TriviaKind::Directive: {
             auto& syntax = *trivia.syntax();
             if (!shouldPrint(syntax)) {
-                for (const auto& t : syntax.getFirstToken().trivia())
-                    print(t);
+                auto leading = syntax.getFirstToken().trivia();
+                size_t count = leading.size();
+
+                // An evaluated directive takes the rest of its line with it,
+                // meaning its indentation and anything trailing it.
+                const bool wholeLine = isEvaluated(syntax);
+                while (wholeLine && count && leading[count - 1].kind == TriviaKind::Whitespace)
+                    count--;
+
+                for (size_t i = 0; i < count; i++)
+                    print(leading[i]);
+                skipRestOfLine = wholeLine;
                 break;
             }
 
@@ -137,6 +158,7 @@ void SyntaxPrinter::print(Token token, bool syncLine) {
         }
     }
 
+    skipRestOfLine = false;
     if (!excluded && (includeMissing || !token.isMissing())) {
         if (syncLine && emitLineDirectives && sourceManager && !token.isMissing())
             printLineDirective(location);
@@ -383,7 +405,24 @@ bool SyntaxPrinter::shouldPrint(SourceLocation loc) const {
     return true;
 }
 
+bool SyntaxPrinter::isEvaluated(const SyntaxNode& syntax) const {
+    if (ConditionalBranchDirectiveSyntax::isKind(syntax.kind) ||
+        UnconditionalBranchDirectiveSyntax::isKind(syntax.kind)) {
+        return expandConditionals;
+    }
+
+    if (syntax.kind == SyntaxKind::DefineDirective || syntax.kind == SyntaxKind::UndefDirective ||
+        syntax.kind == SyntaxKind::UndefineAllDirective) {
+        return !includeMacroDefinitions;
+    }
+
+    return false;
+}
+
 bool SyntaxPrinter::shouldPrint(const SyntaxNode& syntax) const {
+    if (isEvaluated(syntax))
+        return false;
+
     if (!sourceManager)
         return includeDirectives;
 
