@@ -677,6 +677,7 @@ error MissingReturnValue "must provide a return value for non-void function"
 error MissingReturnValueProd "must provide a return value for non-void production"
 error AssignmentNotAllowed "assignment expressions are not allowed in this context"
 error IncDecNotAllowed "increment and decrement expressions are not allowed in this context"
+warning nonprocedural-assign NonProceduralAssign "{} expressions are not allowed outside of procedural code"
 error AssignmentRequiresParens "assignment expressions must be parenthesized"
 error PortConnArrayMismatch "cannot connect {} to each port of type {} in '{}'"
 error AutoFromStaticInit "cannot refer to automatic variable '{}' from static initializer"
@@ -1363,7 +1364,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   tautological-range-compare tautological-bitwise-compare tautological-overlap-compare
                   tautological-negation-compare nonstandard-instance-array-query
                   missing-global-clocking qualified-pure-virtual-call solve-before-type const-reassign
-                  automatic-class-property }
+                  automatic-class-property nonprocedural-assign }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
@@ -1421,15 +1422,17 @@ compat Default error = { duplicate-definition bad-procedural-force unknown-sys-n
                          virtual-arg-name-mismatch virtual-visibility-mismatch undefined-param-override
                          redefinition redefinition-different-type nonstandard-instance-array-query
                          missing-global-clocking qualified-pure-virtual-call solve-before-type
-                         automatic-class-property }
+                         automatic-class-property nonprocedural-assign }
 
 compat Vcs error = { duplicate-definition bad-procedural-force unknown-sys-name nonstandard-hierarchical-cross
                      nonstandard-string-concat nonstandard-inside mixed-var-assigns multiple-cont-assigns
                      multiple-always-assigns misplaced-trailing-separator initializer-required
-                     string-int-concat nonstandard-instance-array-query missing-global-clocking }
+                     string-int-concat nonstandard-instance-array-query missing-global-clocking
+                     nonprocedural-assign }
 
 compat Vcs ignored = { explicit-static implicit-conv finish-num nonstandard-sys-func nonstandard-foreach
                        foreach-call-expr nonstandard-dist nested-comment automatic-class-property }
 
 compat All ignored = { explicit-static implicit-conv finish-num nonstandard-sys-func nonstandard-foreach
-                       foreach-call-expr nonstandard-dist nested-comment automatic-class-property }
+                       foreach-call-expr nonstandard-dist nested-comment automatic-class-property
+                       nonprocedural-assign }

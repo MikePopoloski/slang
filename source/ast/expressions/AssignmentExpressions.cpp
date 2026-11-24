@@ -303,6 +303,12 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, nullptr);
     }
 
+    // Parentheses allow an assignment within an expression, but only in procedural
+    // code [11.3.6]; other tools accept this in some initializers, so it can be
+    // downgraded.
+    if (context.flags.has(ASTFlags::NonProceduralInitializer))
+        context.addDiag(diag::NonProceduralAssign, syntax.sourceRange()) << "assignment"sv;
+
     if (!context.flags.has(ASTFlags::AssignmentAllowed)) {
         if (!context.flags.has(ASTFlags::NonProcedural) &&
             !context.flags.has(ASTFlags::AssignmentDisallowed)) {

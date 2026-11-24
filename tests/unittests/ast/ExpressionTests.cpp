@@ -5471,3 +5471,53 @@ endmodule
     }
     CHECK(errors == 3);
 }
+
+TEST_CASE("Assignment operators outside of procedural code") {
+    // Assignment, increment and decrement operators can only be used in procedural
+    // statements [11.3.6].
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    int a, b;
+    int x = (a = 1);
+    int y = a++;
+    class C;
+        int p;
+        int q = (p = 1);
+    endclass
+    C c = new;
+    for (genvar g = 0; g < 2; g++) begin : gb
+        int v = (b += g);
+    end
+    bit clk;
+    covergroup cg @(posedge clk);
+        coverpoint (a = b);
+    endgroup
+    cg cg_i = new;
+
+    initial begin
+        static int z = (a = 2);
+        automatic int w = a++;
+        x = (a = 1);
+        y = b++;
+    end
+    function automatic int f(int k);
+        int m = (k = 3);
+        return m;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // The module-level initializers also warn about static initialization order.
+    auto& diags = compilation.getAllDiagnostics();
+    size_t count = 0;
+    for (auto& d : diags) {
+        if (d.code == diag::NonProceduralAssign)
+            count++;
+        else
+            CHECK(d.code == diag::StaticInitValue);
+    }
+    CHECK(count == 5);
+}

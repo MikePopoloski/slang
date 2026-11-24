@@ -558,12 +558,23 @@ T DeclaredType::getASTContext() const {
     const Scope* scope = parent.getParentScope();
     SLANG_ASSERT(scope);
 
-    // Specparams inside of specify blocks have additional constraints so we
-    // need to set the AST flag for them.
-    if (parent.kind == SymbolKind::Specparam) {
-        astFlags |= ASTFlags::SpecparamInitializer;
-        if (scope->asSymbol().kind == SymbolKind::SpecifyBlock)
-            astFlags |= ASTFlags::SpecifyBlock;
+    switch (parent.kind) {
+        case SymbolKind::Variable:
+        case SymbolKind::ClassProperty:
+        case SymbolKind::Coverpoint:
+            // Assignment operators can only be used in procedural statements [11.3.6].
+            if (IsInitializer && !scope->isProceduralContext())
+                astFlags |= ASTFlags::NonProceduralInitializer;
+            break;
+        case SymbolKind::Specparam:
+            // Specparams inside of specify blocks have additional constraints so we
+            // need to set the AST flag for them.
+            astFlags |= ASTFlags::SpecparamInitializer;
+            if (scope->asSymbol().kind == SymbolKind::SpecifyBlock)
+                astFlags |= ASTFlags::SpecifyBlock;
+            break;
+        default:
+            break;
     }
 
     // If this type/initializer has been overridden by a parameter override,

@@ -209,8 +209,12 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// The type being resolved is the value of a type parameter, either its
     /// default or an assignment in a parameter value list.
     TypeParameterValue = 1ull << 47,
+
+    /// Expression is the initializer of a variable, class property or coverpoint
+    /// declared outside of procedural code, where assignment operators aren't allowed.
+    NonProceduralInitializer = 1ull << 48,
 };
-SLANG_BITMASK(ASTFlags, TypeParameterValue)
+SLANG_BITMASK(ASTFlags, NonProceduralInitializer)
 
 /// Various flags that can be applied to a constant expression evaluation.
 enum class SLANG_EXPORT EvalFlags : uint8_t {

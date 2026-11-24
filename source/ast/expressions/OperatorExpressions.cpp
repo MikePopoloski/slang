@@ -311,6 +311,11 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
                 return badExpr(compilation, result);
             }
 
+            if (context.flags.has(ASTFlags::NonProceduralInitializer)) {
+                context.addDiag(diag::NonProceduralAssign, syntax.sourceRange())
+                    << "increment and decrement"sv;
+            }
+
             // Supported for both integral and real types. Result is same as input type.
             // The operand must also be an assignable lvalue. An enum operand isn't
             // allowed, since the result would be assigned back without a cast [6.19.4].
@@ -358,6 +363,11 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
         context.flags.has(ASTFlags::AssignmentDisallowed)) {
         context.addDiag(diag::IncDecNotAllowed, syntax.sourceRange());
         return badExpr(compilation, result);
+    }
+
+    if (context.flags.has(ASTFlags::NonProceduralInitializer)) {
+        context.addDiag(diag::NonProceduralAssign, syntax.sourceRange())
+            << "increment and decrement"sv;
     }
 
     if (!type->isNumeric() || type->isEnum()) {

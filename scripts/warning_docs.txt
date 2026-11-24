@@ -933,6 +933,19 @@ class C;
 endclass
 ```
 
+-Wnonprocedural-assign
+An assignment operator, or an increment or decrement operator, appears in the initializer
+of a variable or class property declared outside of procedural code, or in a coverpoint
+expression. These operators can only be used in procedural statements [11.3.6]. This is
+an error by default, but some tools accept some of these forms, so it can be downgraded
+to a warning.
+```
+module m;
+    int a;
+    int x = (a = 1);
+endmodule
+```
+
 -Wconst-reassign
 An instance constant (a `const` class property with no initializer) is assigned more than
 once in its class constructor. The LRM allows only one assignment. Assignments on separate
