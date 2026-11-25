@@ -394,6 +394,12 @@ public:
     /// Gets the set of errors that were encountered when parsing command line options.
     std::span<const Error> getErrors() const { return errors; }
 
+    /// Gets the source location of the option currently being applied, if any.
+    /// This is only meaningful when called from within an option callback,
+    /// and is useful for attaching location information to diagnostics
+    /// issued by the callback itself.
+    SourceLocation getCurrentLocation() const { return currentLocation; }
+
     /// Gets a string representing program help text, based on registered flags.
     /// @a overview text is a human friendly description of what the program does.
     /// Option descriptions are word-wrapped to @a maxWidth columns; if @a maxWidth
@@ -556,6 +562,7 @@ private:
     std::string programName;
     std::string currentGroup;
     std::vector<Error> errors;
+    SourceLocation currentLocation;
 };
 
 template<typename T, typename Traits>

@@ -1533,13 +1533,21 @@ bool Driver::reportLoadErrors() {
 }
 
 void Driver::printError(const std::string& message) {
-    Diagnostic d(diag::CommandLineError, SourceLocation::NoLocation);
+    auto loc = cmdLine.getCurrentLocation();
+    if (!loc)
+        loc = SourceLocation::NoLocation;
+
+    Diagnostic d(diag::CommandLineError, loc);
     d << message;
     diagEngine.issue(d);
 }
 
 void Driver::printWarning(const std::string& message) {
-    Diagnostic d(diag::CommandLineWarning, SourceLocation::NoLocation);
+    auto loc = cmdLine.getCurrentLocation();
+    if (!loc)
+        loc = SourceLocation::NoLocation;
+
+    Diagnostic d(diag::CommandLineWarning, loc);
     d << message;
     diagEngine.issue(d);
 }

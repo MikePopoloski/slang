@@ -13,6 +13,7 @@
 
 #include "slang/text/CharInfo.h"
 #include "slang/util/OS.h"
+#include "slang/util/ScopeGuard.h"
 #include "slang/util/SmallVector.h"
 
 namespace fs = std::filesystem;
@@ -830,6 +831,12 @@ void CommandLine::Option::set(std::string_view name, std::string_view value, boo
             value = pathMem;
         }
     }
+
+    // Record the location of the option being applied so that callbacks
+    // can attach it to any diagnostics they issue. Callbacks can recursively
+    // parse more options (e.g. command files) so save and restore the old value.
+    auto savedLoc = std::exchange(parent.currentLocation, loc);
+    auto guard = ScopeGuard([&] { parent.currentLocation = savedLoc; });
 
     std::visit(
         [&](auto&& arg) {
