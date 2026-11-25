@@ -27,9 +27,46 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * `$typename` now prefixes class type names with their defining scope
 * Signed packed arrays are now distinguished from unsigned arrays of signed elements when checking type matching
 * Array and string methods that modify their object (like `push_back`, `sort`, `delete`, `putc`) now require a modifiable lvalue, so they can no longer modify parameters, `const` variables, or `const ref` arguments
+* Calls to a pure virtual method through `super` or a superclass scope are now an error, since there is no implementation to call. This can be downgraded via [-Wqualified-pure-virtual-call](https://sv-lang.com/warning-ref.html#qualified-pure-virtual-call) (thanks to @hankhsu1996)
+* `solve before` items whose type is neither integral nor real (like whole unpacked arrays, queues, or class handles) are now an error. This can be downgraded via [-Wsolve-before-type](https://sv-lang.com/warning-ref.html#solve-before-type), and is a warning in the compat modes (thanks to @hankhsu1996)
+* `$timeunit` and `$timeprecision` are now allowed in constant expressions, as required by the LRM
+* Parameters declared in named blocks, tasks, and functions are now regular parameters that can be overridden with `defparam`, instead of always being treated as localparams
+* Simple names of tasks, functions, named blocks, and generate blocks are now searched for upward through the hierarchy, including tasks called without parentheses and `disable` targets in a parent module. Calls with parentheses now only find those kinds of symbols upward (plus named sequences and properties). The scope arguments of `$dumpvars`, `$sdf_annotate`, and the assertion control tasks can also now name instances in a parent instance
+* A name imported through a wildcard import now stays visible for later references in the same scope, even if another wildcard import providing the same name comes in between, instead of being reported as ambiguous
+* Default clocking now applies to nested module and interface declarations that don't declare their own
+* `$global_clock` in an actual argument of a checker instance is now resolved from where the formal is used in the checker body
+* In 1800-2023 mode, subexpressions of a constraint may now have operands that are neither integral nor real (such as string comparisons) if they don't contain random variables
+* The `SV_COV_*` coverage macros are now ordinary predefined macros that can be redefined and undefined
+* Empty arguments are now allowed in calls to user-defined system tasks and functions, either anywhere if there is no prototype or for arguments with a default value
+* UDP table rows are now checked against whether the primitive is sequential during elaboration instead of in the parser, so UDPs with a `.*` port list correctly use the extern declaration's ports. These errors are no longer reported when only parsing
+* The `reset` and `resetall` pragmas now reset diagnostic state set by `` `pragma diagnostic `` and `lint_off` / `lint_save` comments
+* Nonblocking assignments inside of constant function calls are now an error, instead of running as if they were blocking assignments
+* The timing control of a nonblocking event trigger (`->>`) is no longer treated as blocking, so it is allowed in `always_ff`, `always_comb`, `final` blocks, and functions
+* Automatic variables are now allowed in intra-assignment delays (but not event controls) of nonblocking assignments
+* Calls to void functions are now allowed inside constant functions
+* Recursive property instances are now allowed after an overlapped implication or followed-by whose antecedent always spans at least two clock ticks
+* The `matched` sequence method is now allowed on sequences with a different end clock, and its result is clocked by the calling context
+* The sequence used with a bare `triggered` sequence method operand is now checked to end on the clock of the context, and assertions whose whole property is a bare `matched` or `triggered` call now require an explicit, default, or inferred clock
+* Reads that only occur in immediate assertion conditions no longer prevent inferring a procedure's clock
+* Bin values of coverpoints are now statically cast to the coverpoint's type, so bins for enum coverpoints can use integer values or values of a different enum type
+* Interconnect ports and nets with packed dimensions are now untyped and take their type from their connections
+* The following are now reported as errors, as required by the LRM:
+  * Casts to a predefined type with a signing keyword, like `int unsigned'(x)`
+  * Net alias statements that only have one net
+  * Empty `randcase` statements and empty UDP state tables
+  * Concatenations as the delayed reference or delayed data arguments of timing checks
+  * Attributes on system subroutine calls and on clocking block skew and signal items
+  * A trailing comma after a single concatenation or structured assignment pattern element, like `{a,}`
+  * Vectored and scalared nets with unpacked types that don't have a packed dimension, like `wire vectored w [3:0]`
+  * Compiler directives inside primitives, checkers, and configs
+  * `` `line `` directives split across multiple lines
+  * Compiler directives in the middle of another directive's arguments
+  * Escaped identifiers used as macro formal argument names
+  * `` `begin_keywords `` directives without a matching `` `end_keywords ``
 
 ### Notable Breaking Changes
 * Enum element ranges (like `enum { A[N] }`) must now be integer literals, as required by the LRM. Non-literal ranges were previously accepted with a warning; they are now a hard error and the `-Wenum-range` warning has been removed
+* With `-E --directives`, conditional directives, the text of inactive conditional branches, and macro definitions are no longer included in the output, since they have already been evaluated; only directives that still affect compilation (like `` `timescale `` and `` `default_nettype ``) are kept. Evaluated directives also no longer leave their indentation and trailing comments behind in the output (thanks to @AndrewNolte)
 
 ### New Features
 * Added [-Wprefer-localparam](https://sv-lang.com/warning-ref.html#prefer-localparam) which warns about using `parameter` when it's actually a synonym of `localparam` (thanks to @Timmmm)
@@ -41,6 +78,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   * [-Wtautological-overlap-compare](https://sv-lang.com/warning-ref.html#tautological-overlap-compare) warns about combinations of comparisons like `a != 1 || a != 2`
   * [-Wtautological-negation-compare](https://sv-lang.com/warning-ref.html#tautological-negation-compare) warns about combinations like `a || !a`
 * Added a flag `--allow-multi-driven-dynamically-sized-arrays` which suppresses errors for dynamic arrays, associative arrays, and queues that are driven from multiple always_comb/always_ff blocks (thanks to @hankhsu1996)
+* Added [-Wundriven-port-instance](https://sv-lang.com/warning-ref.html#undriven-port-instance) and [-Wpartially-undriven-port](https://sv-lang.com/warning-ref.html#partially-undriven-port), which warn about output ports that are not driven, or only partially driven, in a specific instance given its parameter values and the generate blocks they select
+* Added a new `lint_waive` comment directive, which waives a list of warnings for a single line. See the [user manual](https://sv-lang.com/user-manual.html) for details
+* Added a `--preprocess-lines` option which emits `` `line `` directives in preprocessed output so that the original file names and line numbers are preserved when the output is compiled again (thanks to @AndrewNolte)
+* Added a `--macro-prefix-map` option which rewrites path prefixes in the file names that `` `__FILE__ `` expands to (thanks to @hankhsu1996)
 
 ### Improvements
 * The effective width calculation used to suppress width truncation warnings now takes into account masking with `&`, right shifts by a constant, division and modulus, and leading zeros in concatenations, which removes false positives for code like `logic [3:0] y = x & 8'h0F;`
@@ -51,6 +92,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * [-Wuseless-cast](https://sv-lang.com/warning-ref.html#useless-cast) no longer warns about size casts whose width is computed (e.g. from a parameter), since such casts are only redundant for some parameterizations
 * Constant evaluation of selects of large local variables is now much faster, and the results of expensive constant function calls are memoized
 * Qualified calls to non-static methods of classes the caller doesn't derive from now get a more specific error message, and the AST records the class qualifier used for qualified calls to non-static methods
+* Sorting diagnostics is now much faster when there are many diagnostics inside deeply nested macro expansions (thanks to @vorsicht80)
+* Warnings and errors issued while processing command line options from a command file now include the location of the option
+* Release packages now include `slang-hier`, `slang-reflect`, `slang-tidy`, and `slang-unifdef` in addition to the main `slang` binary
 
 ### Fixes
 * Fixed [-Wcase-gen-dup](https://sv-lang.com/warning-ref.html#case-gen-dup) and [-Wcase-gen-none](https://sv-lang.com/warning-ref.html#case-gen-none) printing `<unset>` instead of the type when the case generate condition is a type reference
@@ -104,6 +148,49 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed `__FILE__` values pointing at freed memory after later `` `line `` directives
 * Fixed missing elaboration of class specializations created while visiting never-specialized generic classes
 * Fixed an ICE on symbols missing names due to parse errors
+* Fixed selects of signed packed arrays with non-standard dimension bounds losing those bounds
+* Fixed directives on the same line after a 1800-2023 `` `ifdef `` expression being processed in the middle of the condition, which caused bogus errors and an assertion failure
+* Fixed conditional directives inside of macro definitions ending a skipped conditional block
+* Fixed nested negations (like `` `ifdef (!!A) ``) being rejected in `` `ifdef `` expressions
+* Fixed instantiations with struct or union types declared inline as type parameter values being parsed as primitive instances
+* Fixed binary operators following a tagged union expression being parsed as applying to the enclosing assignment
+* Fixed the `?` of a conditional operator after a tagged pattern without a nested pattern (like `u matches tagged Inv ? 1 : 0`) being parsed as the start of a pattern
+* Fixed `type(T)'(expr)` casts being treated as size casts when used as an operand of an equality operator
+* Fixed package and class scoped type names being rejected as struct assignment pattern keys
+* Fixed attributes being rejected on extern task and function prototypes in interfaces, and on the first port of an ANSI style UDP header
+* Fixed extern task and function prototypes being rejected in generate blocks within interfaces
+* Fixed `ref static` failing to parse in non-ANSI task and function port declarations
+* Fixed extern constructor prototypes being unable to use `default` to inherit the base class constructor's arguments
+* Fixed `$fread` rejecting unpacked struct and union destinations
+* Fixed system subroutines with string arguments (like `$fopen` and `$test$plusargs`) rejecting integral values
+* Fixed `%u` and `%z` rejecting unpacked unions whose members aren't all raw-formattable, instead of only checking the first member
+* Fixed `$assertcontrol` rejecting empty optional arguments
+* Fixed empty clocking event arguments being rejected in sampled value functions like `$rose` and `$past`
+* Fixed the semicolon before `endsequence` being required
+* Fixed coverpoint names hiding outer identifiers of the same name in coverpoint and cross bin expressions
+* Fixed block events (`@@(begin obj.method)`) on class methods named through a class handle being rejected
+* Fixed checker output port initializers being bound without the port's type as a target
+* Fixed checker variables being rejected in generate blocks inside checkers, and `for` loops that declare loop variables being rejected in checker procedures
+* Fixed immediate assertions being rejected in the action blocks of concurrent assertions
+* Fixed `$inferred_clock` defaults on event-typed sequence and property formals not being replaced with the inferred clock
+* Fixed the sequence length calculation for concatenations, which caused the no-match warning for `intersect` and `within` to be reported for some sequences that can match and missed for some that can't
+* Fixed members of static structs being rejected as `ref static` arguments, and `ref static` arguments being rejected in `$monitor`
+* Fixed streaming unpack operations into class handles being rejected
+* Fixed sized and based integer literals being rejected as `randsequence` weights
+* Fixed member selects of struct-typed nets being rejected in net alias statements
+* Fixed selects of whole elements of arrays of user-defined nettype nets being reported as partial drivers
+* Fixed event-typed actual arguments of let, sequence, and property instances being reported as passing time in `always_comb`
+* Fixed actual arguments for typed let, sequence, and property formals rejecting types that are only bit-stream cast compatible
+* Fixed implementations of interface class methods rejecting return types derived from the original return type
+* Fixed `this` being rejected inside covergroups embedded in classes
+* Fixed queues being rejected as actual arguments for DPI unpacked open array formals
+* Fixed packed dimensions being rejected on soft unions declared without the `packed` keyword
+* Fixed bit-stream casts of `this` being rejected when a base class has local members
+* Fixed interconnect nets being rejected when connected to gate, switch, and UDP terminals
+* Fixed single-bit vectored and scalared nets with an explicit packed dimension (like `[0:0]`) being rejected
+* Fixed force and release of whole nets with a user-defined nettype being rejected
+* Fixed casts of string literals to unpacked byte arrays of a different size being rejected
+* Fixed line continuations of directives being dropped in `--directives` preprocessor output when comments aren't included (thanks to @AndrewNolte)
 
 ### Tools & Bindings
 #### slang-tidy
@@ -112,6 +199,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added a new `ConcurrentAssertHasFailAction` check that finds assertions without a fail action block (thanks to @vajeetha)
 * Added a new `ConditionalOperatorPrecedence` check that finds potentially misleading conditional operator usage (thanks to @vajeetha)
 * Added a new `UserClassDerivesFromUVMBase` check that finds classes that don't derive from UVM base classes (thanks to @svenka3)
+
+#### pyslang
+* Added bindings for the `ChargeStrength` and `DriveStrength` enums, and for `Compilation.simulationTimeUnit`
 
 
 ## [v12.2] - 2026-11-20
