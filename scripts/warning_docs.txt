@@ -2754,6 +2754,51 @@ module m(output x);
 endmodule
 ```
 
+-Wundriven-port-instance
+An output port is not driven in a particular instance, given that instance's parameter
+values and the generate blocks they select. Unlike -Wundriven-port, which only warns when
+the port is never assigned anywhere in the source, this checks each elaborated instance
+separately, so it will warn about ports that are only driven in generate blocks that are
+not taken by the instance. Ports that are never assigned anywhere in the source are left to
+-Wundriven-port, so the two warnings never fire for the same port.
+\n\n
+A port with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular port.
+```
+module m #(parameter bit P = 0) (output logic a);
+    if (P) begin : g
+        assign a = 1;
+    end
+endmodule
+
+module top;
+    logic a;
+    m m1(.a);
+endmodule
+```
+
+-Wpartially-undriven-port
+Some bits of an output port are not driven in a particular instance, given that instance's
+parameter values and the generate blocks they select. The undriven bits, array elements,
+or struct members are listed in the warning.
+\n\n
+A port with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular port.
+```
+module m #(parameter bit [3:0] P = 4'hE) (output logic [3:0] a);
+    for (genvar i = 0; i < 4; i++) begin : g
+        if (P[i]) begin : valid
+            assign a[i] = 1;
+        end
+    end
+endmodule
+
+module top;
+    logic [3:0] a;
+    m m1(.a);
+endmodule
+```
+
 -Wunused-but-set-port
 A port has a value assigned but that value is never used. This only applies to 'inout' ports.
 The assumption is that if the port doesn't need to be read, the direction should be changed

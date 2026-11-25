@@ -20,6 +20,7 @@
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/ConcurrentMap.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/Function.h"
 #include "slang/util/SmallMap.h"
 #include "slang/util/ThreadPool.h"
@@ -209,6 +210,14 @@ private:
         TypedBumpAllocator<AnalyzedScope> scopeAlloc;
         DriverTracker::SymbolDriverMap::allocator_type driverAlloc;
 
+        // Output ports seen during analysis, to be checked for undriven
+        // bits once all drivers are known.
+        std::vector<const ast::PortSymbol*> outputPorts;
+
+        // Symbols connected to the ports of uninstantiated definitions
+        // (e.g. unknown modules), which may or may not drive them.
+        flat_hash_set<const ast::ValueSymbol*> unknownPortConns;
+
         WorkerState(AnalysisManager& manager) : context(manager), driverAlloc(context.alloc) {}
     };
 
@@ -243,6 +252,7 @@ private:
 
     void addScopeResult(const ast::Scope& scope, const AnalyzedScope& result);
 
+    void checkInstanceDrivers();
     void handleAssertion(std::unique_ptr<AnalyzedAssertion>&& assertion);
     void wait();
     WorkerState& getState();

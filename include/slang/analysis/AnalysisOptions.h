@@ -75,8 +75,14 @@ enum class SLANG_EXPORT AnalysisFlags {
     /// any one of them counts as a write to the whole array. This flag lifts the
     /// restriction for such arrays.
     AllowMultiDrivenDynamicallySizedArrays = 1 << 9,
+
+    /// Analysis should check each instance for output ports that are not
+    /// (fully) driven given that instance's elaborated parameter values and
+    /// generate blocks. This differs from the unused checks, which look only
+    /// at whether a driver exists anywhere in the source code.
+    CheckInstanceDrivers = 1 << 10,
 };
-SLANG_BITMASK(AnalysisFlags, AllowMultiDrivenDynamicallySizedArrays)
+SLANG_BITMASK(AnalysisFlags, CheckInstanceDrivers)
 
 /// Contains various options that can control analysis behavior.
 struct SLANG_EXPORT AnalysisOptions {

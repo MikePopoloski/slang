@@ -9,6 +9,7 @@
 
 #include "AnalysisScopeVisitor.h"
 #include "ConstraintAnalysis.h"
+#include <fmt/format.h>
 
 #include "slang/analysis/ClockInference.h"
 #include "slang/analysis/DataFlowAnalysis.h"
@@ -98,6 +99,9 @@ void AnalysisManager::analyze(const Compilation& compilation) {
     // Finalize all drivers that are applied through indirect drivers.
     auto& state = getState();
     driverTracker.propagateIndirectDrivers(state.context, state.driverAlloc);
+
+    if (hasFlag(AnalysisFlags::CheckInstanceDrivers))
+        checkInstanceDrivers();
 
     // Report on unused definitions.
     if (hasFlag(AnalysisFlags::CheckUnused)) {
@@ -447,6 +451,241 @@ const AnalyzedProcedure& AnalysisManager::analyzeSubroutine(
     }
 
     return *result;
+}
+
+using BitRange = std::pair<uint64_t, uint64_t>;
+
+// Formats a select of the inclusive index range [a, b] (in either order),
+// written in the same direction as the declared range.
+static std::string formatSelect(std::string_view prefix, int32_t a, int32_t b, bool descending) {
+    if (a == b)
+        return fmt::format("{}[{}]", prefix, a);
+
+    auto [min, max] = std::minmax(a, b);
+    if (descending)
+        return fmt::format("{}[{}:{}]", prefix, max, min);
+    return fmt::format("{}[{}:{}]", prefix, min, max);
+}
+
+// The maximum number of undriven paths to list in a single diagnostic.
+static constexpr size_t MaxUndrivenPaths = 8;
+
+// Produces human-readable path strings describing the given bit ranges within
+// the given type, appending them to the results list. The ranges are relative to
+// the start of the type, must be sorted, and must not overlap or be adjacent.
+// Results are ordered by struct field declaration order and by ascending array index.
+//
+// No more than @a limit results will be produced; no work is done to produce
+// strings beyond that point. Returns true if all of the ranges were described,
+// or false if the description was truncated due to the limit.
+static bool describeBits(const Type& type, std::span<const BitRange> ranges,
+                         const std::string& prefix, SmallVectorBase<std::string>& results,
+                         size_t limit) {
+    SLANG_ASSERT(!ranges.empty());
+    if (results.size() >= limit)
+        return false;
+
+    auto& ct = type.getCanonicalType();
+    const uint64_t width = ct.getSelectableWidth();
+    if (ranges.size() == 1 && ranges[0].first == 0 && ranges[0].second >= width - 1) {
+        results.push_back(prefix);
+        return true;
+    }
+
+    if (ct.isStruct()) {
+        SmallVector<BitRange> sub;
+        for (auto& field : ct.as<Scope>().membersOfType<FieldSymbol>()) {
+            auto& fieldType = field.getType();
+            const uint64_t fieldLo = field.bitOffset;
+            const uint64_t fieldWidth = fieldType.getSelectableWidth();
+            SLANG_ASSERT(fieldWidth > 0);
+            const uint64_t fieldHi = fieldLo + fieldWidth - 1;
+
+            sub.clear();
+            for (auto [lo, hi] : ranges) {
+                if (hi >= fieldLo && lo <= fieldHi)
+                    sub.emplace_back(std::max(lo, fieldLo) - fieldLo,
+                                     std::min(hi, fieldHi) - fieldLo);
+            }
+
+            if (sub.empty())
+                continue;
+
+            if (results.size() >= limit ||
+                !describeBits(fieldType, sub, fmt::format("{}.{}", prefix, field.name), results,
+                              limit)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    if (ct.kind == SymbolKind::PackedArrayType ||
+        ct.kind == SymbolKind::FixedSizeUnpackedArrayType) {
+        auto& elemType = *ct.getArrayElementType();
+        const uint64_t elemWidth = elemType.getSelectableWidth();
+        SLANG_ASSERT(elemWidth > 0);
+        const auto range = ct.getFixedRange();
+
+        // Packed arrays store their elements starting from the right bound;
+        // unpacked arrays start from the left bound. Work out whether the
+        // declared index increases along with the storage offset.
+        const bool fromLower = range.isDescending() == ct.isPackedArray();
+        auto toIndex = [&](uint64_t elem) {
+            auto k = int32_t(elem);
+            return fromLower ? range.lower() + k : range.upper() - k;
+        };
+
+        // Break the ranges into runs of fully covered elements
+        // and individual partially covered elements. Since the ranges
+        // are sorted and never adjacent, no two full runs will be adjacent.
+        struct Piece {
+            uint64_t first;
+            uint64_t last;
+            SmallVector<BitRange, 2> partial; // empty if the elements are fully covered
+        };
+        SmallVector<Piece> pieces;
+
+        auto addPartial = [&](uint64_t elem, uint64_t lo, uint64_t hi) {
+            if (!pieces.empty() && !pieces.back().partial.empty() && pieces.back().first == elem)
+                pieces.back().partial.emplace_back(lo, hi);
+            else
+                pieces.push_back({elem, elem, {{lo, hi}}});
+        };
+
+        for (auto [lo, hi] : ranges) {
+            uint64_t first = lo / elemWidth;
+            uint64_t last = hi / elemWidth;
+            const uint64_t loOffset = lo % elemWidth;
+            const uint64_t hiOffset = hi % elemWidth;
+
+            if (first == last) {
+                if (loOffset == 0 && hiOffset == elemWidth - 1)
+                    pieces.push_back({first, first, {}});
+                else
+                    addPartial(first, loOffset, hiOffset);
+                continue;
+            }
+
+            if (loOffset != 0)
+                addPartial(first++, loOffset, elemWidth - 1);
+
+            const bool lastPartial = hiOffset != elemWidth - 1;
+            const uint64_t lastFull = lastPartial ? last - 1 : last;
+            if (first <= lastFull)
+                pieces.push_back({first, lastFull, {}});
+
+            if (lastPartial)
+                addPartial(last, 0, hiOffset);
+        }
+
+        if (!fromLower)
+            std::ranges::reverse(pieces);
+
+        for (auto& piece : pieces) {
+            if (results.size() >= limit)
+                return false;
+
+            if (piece.partial.empty()) {
+                results.push_back(formatSelect(prefix, toIndex(piece.first), toIndex(piece.last),
+                                               range.isDescending()));
+            }
+            else if (!describeBits(elemType, piece.partial,
+                                   fmt::format("{}[{}]", prefix, toIndex(piece.first)), results,
+                                   limit)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    if (ct.isIntegral()) {
+        // Some other integral type, like a predefined integer, enum, or
+        // packed union; just describe the bits as range selects.
+        const auto range = ct.as<IntegralType>().getBitVectorRange();
+        auto toIndex = [&](uint64_t bit) {
+            auto k = int32_t(bit);
+            return range.isDescending() ? range.lower() + k : range.upper() - k;
+        };
+
+        // For descending ranges the index increases along with the bit offset;
+        // otherwise walk the ranges backward to produce ascending indices.
+        for (size_t i = 0; i < ranges.size(); i++) {
+            if (results.size() >= limit)
+                return false;
+
+            auto [lo, hi] = ranges[range.isDescending() ? i : ranges.size() - 1 - i];
+            results.push_back(formatSelect(prefix, toIndex(lo), toIndex(hi), range.isDescending()));
+        }
+        return true;
+    }
+
+    // Otherwise we can't break this down any further.
+    results.push_back(prefix);
+    return true;
+}
+
+void AnalysisManager::checkInstanceDrivers() {
+    flat_hash_set<const ValueSymbol*> unknownPortConns;
+    for (auto& ws : workerStates)
+        unknownPortConns.insert(ws.unknownPortConns.begin(), ws.unknownPortConns.end());
+
+    auto& state = getState();
+    for (auto& ws : workerStates) {
+        for (auto port : ws.outputPorts) {
+            // If something else that we can't see might be driving this
+            // symbol then we can't say anything about it.
+            auto& symbol = port->internalSymbol->as<ValueSymbol>();
+            if (unknownPortConns.contains(&symbol))
+                continue;
+
+            auto& type = symbol.getType();
+            const uint64_t width = type.getSelectableWidth();
+
+            SmallVector<BitRange> bounds;
+            for (auto driver : driverTracker.getDrivers(symbol))
+                bounds.push_back(driver->getBounds());
+
+            if (bounds.empty()) {
+                state.context.addDiag(*port, diag::UndrivenPortInstance, port->location)
+                    << port->name;
+                continue;
+            }
+
+            // Find any gaps in coverage of the port's bits.
+            std::ranges::sort(bounds);
+            SmallVector<BitRange> gaps;
+            uint64_t next = 0;
+            for (auto [lo, hi] : bounds) {
+                if (lo > next)
+                    gaps.emplace_back(next, lo - 1);
+                next = std::max(next, hi + 1);
+            }
+
+            if (next < width)
+                gaps.emplace_back(next, width - 1);
+
+            if (!gaps.empty()) {
+                SmallVector<std::string> undriven;
+                const bool complete = describeBits(type, gaps, std::string(port->name), undriven,
+                                                   MaxUndrivenPaths);
+
+                std::string str;
+                for (auto& u : undriven) {
+                    if (!str.empty())
+                        str += ", ";
+                    str += u;
+                }
+
+                if (!complete)
+                    str += ", ...";
+
+                auto& diag = state.context.addDiag(*port, diag::PartiallyUndrivenPort,
+                                                   port->location);
+                diag << port->name << str;
+            }
+        }
+    }
 }
 
 void AnalysisManager::handleAssertion(std::unique_ptr<AnalyzedAssertion>&& assertion) {

@@ -155,6 +155,11 @@ public:
     /// location in the source code.
     DiagnosticSeverity getSeverity(DiagCode code, SourceLocation location) const;
 
+    /// Determines whether the given diagnostic might be issued (i.e. not ignored)
+    /// at any location, taking into account global settings, per-buffer options,
+    /// and in-source pragma mappings.
+    bool isEnabledAnywhere(DiagCode code) const;
+
     /// Sets the message to use for the given diagnostic. If this is a built-in
     /// diagnostic this will essentially override its default message. Otherwise
     /// this can be used to define a new user-specified diagnostic.

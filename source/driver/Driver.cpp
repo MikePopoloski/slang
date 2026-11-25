@@ -15,6 +15,7 @@
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/diagnostics/AnalysisDiags.h"
 #include "slang/diagnostics/DriverDiags.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
 #include "slang/diagnostics/StderrDiagnosticClient.h"
@@ -1296,6 +1297,14 @@ analysis::AnalysisOptions Driver::getAnalysisOptions() const {
 
     AnalysisOptions ao;
     ao.flags |= AnalysisFlags::CheckUnused | AnalysisFlags::CheckShadow;
+
+    // The instance driver checks require an extra pass over the design,
+    // so only do them if the warnings can actually be issued.
+    if (diagEngine.isEnabledAnywhere(diag::UndrivenPortInstance) ||
+        diagEngine.isEnabledAnywhere(diag::PartiallyUndrivenPort)) {
+        ao.flags |= AnalysisFlags::CheckInstanceDrivers;
+    }
+
     if (options.maxCaseAnalysisSteps)
         ao.maxCaseAnalysisSteps = *options.maxCaseAnalysisSteps;
     if (options.maxLoopAnalysisSteps)

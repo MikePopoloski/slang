@@ -1254,6 +1254,8 @@ warning unused-but-set-variable UnusedButSetVariable "variable '{}' is assigned 
 warning unused-but-set-port UnusedButSetPort "'inout' port '{}' is driven but its value is never used"
 warning unused-port UnusedPort "unused port signal '{}'"
 warning undriven-port UndrivenPort "undriven output port '{}'"
+warning undriven-port-instance UndrivenPortInstance "output port '{}' is not driven in this instance"
+warning partially-undriven-port PartiallyUndrivenPort "output port '{}' is only partially driven in this instance; undriven: {}"
 warning unused-argument UnusedArgument "unused formal argument '{}'"
 warning unused-parameter UnusedParameter "unused parameter '{}'"
 warning unused-type-parameter UnusedTypeParameter "unused type parameter '{}'"

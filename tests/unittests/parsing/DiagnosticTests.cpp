@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/diagnostics/AnalysisDiags.h"
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
@@ -607,6 +608,42 @@ TEST_CASE("DiagnosticEngine::setWarningOptions disables default group") {
     CHECK(engine.getSeverity(diag::UnconnectedInputPort, {}) == DiagnosticSeverity::Ignored);
     CHECK(engine.getSeverity(diag::UnconnectedOutputPort, {}) == DiagnosticSeverity::Ignored);
     CHECK(engine.getSeverity(diag::UnconnectedInOutPort, {}) == DiagnosticSeverity::Ignored);
+}
+
+TEST_CASE("DiagnosticEngine::isEnabledAnywhere") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+`pragma diagnostic push
+`pragma diagnostic warn="-Wundriven-port-instance"
+`pragma diagnostic pop
+endmodule
+)");
+
+    {
+        // Not part of the default warning set.
+        DiagnosticEngine engine(tree->sourceManager());
+        auto diags = engine.setWarningOptions(std::vector<std::string>{});
+        CHECK(diags.empty());
+        CHECK(!engine.isEnabledAnywhere(diag::UndrivenPortInstance));
+
+        diags = engine.setWarningOptions(std::vector{"everything"s});
+        CHECK(diags.empty());
+        CHECK(engine.isEnabledAnywhere(diag::UndrivenPortInstance));
+
+        diags = engine.setWarningOptions(std::vector{"no-undriven-port-instance"s});
+        CHECK(diags.empty());
+        CHECK(!engine.isEnabledAnywhere(diag::UndrivenPortInstance));
+    }
+    {
+        // Enabled only within a pragma region in the source.
+        DiagnosticEngine engine(tree->sourceManager());
+        auto diags = engine.setWarningOptions(std::vector<std::string>{});
+        diags.append_range(
+            engine.setMappingsFromPragmas(tree->root().sourceRange().start().buffer()));
+        if (!diags.empty())
+            FAIL_CHECK(DiagnosticEngine::reportAll(tree->sourceManager(), diags));
+        CHECK(engine.isEnabledAnywhere(diag::UndrivenPortInstance));
+    }
 }
 
 TEST_CASE("Diagnostic Pragmas") {

@@ -221,7 +221,8 @@ void registerAnalysis(nb::module_& m, nb::module_& ast) {
         .value("AlwaysStarUsesLSPs", AnalysisFlags::AlwaysStarUsesLSPs)
         .value("ContAssignUsesLSPs", AnalysisFlags::ContAssignUsesLSPs)
         .value("AllowMultiDrivenDynamicallySizedArrays",
-               AnalysisFlags::AllowMultiDrivenDynamicallySizedArrays);
+               AnalysisFlags::AllowMultiDrivenDynamicallySizedArrays)
+        .value("CheckInstanceDrivers", AnalysisFlags::CheckInstanceDrivers);
 
     nb::class_<AnalysisOptions>(m, "AnalysisOptions")
         .def(nb::init<>())

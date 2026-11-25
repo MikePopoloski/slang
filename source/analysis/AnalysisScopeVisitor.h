@@ -27,6 +27,55 @@ static bool hasUnusedAttrib(const Compilation& compilation, const Symbol& symbol
     return false;
 }
 
+// Determines whether the given port is a candidate for checking
+// whether it is driven after all drivers in the design are known.
+static bool canCheckDrivers(const PortSymbol& port) {
+    if (port.direction != ArgumentDirection::Out || !port.internalSymbol ||
+        port.getInternalExpr() || port.name.empty() || port.name == "_"sv) {
+        return false;
+    }
+
+    auto& symbol = port.internalSymbol->as<ValueSymbol>();
+    auto& compilation = port.getParentScope()->getCompilation();
+    if (hasUnusedAttrib(compilation, port) || hasUnusedAttrib(compilation, symbol))
+        return false;
+
+    // Multiple ports connected to the same internal symbol is
+    // complicated and not worth trying to diagnose.
+    auto portRef = symbol.getFirstPortBackref();
+    if (portRef && portRef->getNextBackreference())
+        return false;
+
+    auto& type = symbol.getType();
+    if (type.isError() || !type.isFixedSize() || type.getSelectableWidth() == 0)
+        return false;
+
+    // A port that is never assigned anywhere in the source is the domain
+    // of the UndrivenPort warning; don't issue a duplicate for it.
+    // Note that this is independent of whether that warning is enabled.
+    if (auto syntax = symbol.getSyntax()) {
+        auto [_, lvalue] = compilation.isReferenced(*syntax);
+        if (!lvalue)
+            return false;
+    }
+
+    // Nets with an implicit pull or supply are always driven.
+    if (symbol.kind == SymbolKind::Net) {
+        switch (symbol.as<NetSymbol>().netType.netKind) {
+            case NetType::Tri0:
+            case NetType::Tri1:
+            case NetType::Supply0:
+            case NetType::Supply1:
+            case NetType::Unknown:
+                return false;
+            default:
+                break;
+        }
+    }
+
+    return true;
+}
+
 struct AnalysisScopeVisitor {
     AnalysisManager::WorkerState& state;
     AnalysisContext& context;
@@ -361,6 +410,29 @@ struct AnalysisScopeVisitor {
         checkShadow(symbol);
         visitExprs(symbol);
         manager.driverTracker.add(state.context, state.driverAlloc, symbol);
+
+        // Record output ports so we can check them for undriven bits
+        // once all drivers in the design are known.
+        if (manager.hasFlag(AnalysisFlags::CheckInstanceDrivers) && canCheckDrivers(symbol))
+            state.outputPorts.push_back(&symbol);
+    }
+
+    void visit(const UninstantiatedDefSymbol& symbol) {
+        visitExprs(symbol);
+
+        // We don't know the directions of the ports of uninstantiated
+        // definitions, so anything connected to them might be driven.
+        if (manager.hasFlag(AnalysisFlags::CheckInstanceDrivers)) {
+            for (auto conn : symbol.getPortConnections()) {
+                if (conn && conn->kind == AssertionExprKind::Simple) {
+                    conn->as<SimpleAssertionExpr>().expr.visitSymbolReferences(
+                        [&](const Expression&, const Symbol& sym) {
+                            if (sym.isValue())
+                                state.unknownPortConns.emplace(&sym.as<ValueSymbol>());
+                        });
+                }
+            }
+        }
     }
 
     void visit(const MultiPortSymbol& symbol) {
@@ -399,10 +471,10 @@ struct AnalysisScopeVisitor {
         requires(IsAnyOf<T, InvalidSymbol, RootSymbol, CompilationUnitSymbol, DefinitionSymbol,
                          AttributeSymbol, TransparentMemberSymbol, EmptyMemberSymbol,
                          ForwardingTypedefSymbol, InstanceBodySymbol, ModportPortSymbol,
-                         ModportClockingSymbol, ElabSystemTaskSymbol, UninstantiatedDefSymbol,
-                         DefParamSymbol, PrimitivePortSymbol, CoverageBinSymbol, TimingPathSymbol,
-                         PulseStyleSymbol, SystemTimingCheckSymbol, NetAliasSymbol,
-                         ConfigBlockSymbol, CheckerInstanceBodySymbol> ||
+                         ModportClockingSymbol, ElabSystemTaskSymbol, DefParamSymbol,
+                         PrimitivePortSymbol, CoverageBinSymbol, TimingPathSymbol, PulseStyleSymbol,
+                         SystemTimingCheckSymbol, NetAliasSymbol, ConfigBlockSymbol,
+                         CheckerInstanceBodySymbol> ||
                  std::is_base_of_v<Type, T>)
     void visit(const T& symbol) {
         // Everything else doesn't need to be analyzed (except visiting expressions, if necessary).

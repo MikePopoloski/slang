@@ -4,7 +4,7 @@
 from pyslang.ast import Compilation, SymbolKind
 from pyslang.syntax import SyntaxTree
 
-from pyslang import DiagnosticEngine
+from pyslang import DiagnosticEngine, Diags
 
 
 def test_diag_args():
@@ -26,3 +26,23 @@ def test_diag_args():
     assert diags[1].args[0].kind == SymbolKind.PredefinedIntegerType
     assert engine.formatArg(diags[1].args[0]) == "'int'"
     assert engine.formatArg(diags[1].args[1]) == "'int unsigned'"
+
+
+def test_is_enabled_anywhere():
+    tree = SyntaxTree.fromText(
+        """
+module m;
+`pragma diagnostic warn="-Wundriven-port-instance"
+endmodule
+"""
+    )
+
+    engine = DiagnosticEngine(tree.sourceManager)
+    assert len(engine.setWarningOptions([])) == 0
+    assert not engine.isEnabledAnywhere(Diags.UndrivenPortInstance)
+
+    assert len(engine.setMappingsFromPragmas(tree.root.sourceRange.start.buffer)) == 0
+    assert engine.isEnabledAnywhere(Diags.UndrivenPortInstance)
+
+    engine.setWarningOptions(["everything"])
+    assert engine.isEnabledAnywhere(Diags.PartiallyUndrivenPort)

@@ -291,6 +291,7 @@ void registerDiagnostics(nb::module_& m) {
         .def("setSeverity", &DiagnosticEngine::setSeverity, "code"_a, "severity"_a)
         .def("setBaselineSeverity", &DiagnosticEngine::setBaselineSeverity, "code"_a, "severity"_a)
         .def("getSeverity", &DiagnosticEngine::getSeverity, "code"_a, "location"_a)
+        .def("isEnabledAnywhere", &DiagnosticEngine::isEnabledAnywhere, "code"_a)
         .def("setMessage", &DiagnosticEngine::setMessage, "code"_a, "message"_a)
         .def("getMessage", &DiagnosticEngine::getMessage, "code"_a)
         .def("getOptionName", &DiagnosticEngine::getOptionName, "code"_a)

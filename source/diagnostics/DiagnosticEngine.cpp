@@ -110,6 +110,33 @@ DiagnosticSeverity DiagnosticEngine::getSeverity(DiagCode code, SourceLocation l
     return result;
 }
 
+bool DiagnosticEngine::isEnabledAnywhere(DiagCode code) const {
+    if (getSeverity(code, SourceLocation::NoLocation) != DiagnosticSeverity::Ignored)
+        return true;
+
+    if (auto it = diagMappings.find(code); it != diagMappings.end()) {
+        for (auto& [_, mappings] : it->second) {
+            for (auto& mapping : mappings) {
+                if (mapping.severity && *mapping.severity != DiagnosticSeverity::Ignored)
+                    return true;
+            }
+        }
+    }
+
+    const bool isDefaultWarning = getDefaultSeverity(code) == DiagnosticSeverity::Warning;
+    for (auto& [_, options] : perBufferSeverity) {
+        if (auto it = options.overrides.find(code); it != options.overrides.end()) {
+            if (it->second != DiagnosticSeverity::Ignored)
+                return true;
+        }
+        else if (isDefaultWarning && options.enableAll && !options.ignoreAll) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void DiagnosticEngine::setMessage(DiagCode code, const std::string& message) {
     messageTable[code] = message;
 }
