@@ -2759,8 +2759,8 @@ An output port is not driven in a particular instance, given that instance's par
 values and the generate blocks they select. Unlike -Wundriven-port, which only warns when
 the port is never assigned anywhere in the source, this checks each elaborated instance
 separately, so it will warn about ports that are only driven in generate blocks that are
-not taken by the instance. Ports that are never assigned anywhere in the source are left to
--Wundriven-port, so the two warnings never fire for the same port.
+not taken by the instance. Ports that are never assigned anywhere in the source are left
+to -Wundriven-port, so the two warnings never fire for the same port.
 \n\n
 A port with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
 may be applied to suppress this warning for a particular port.
