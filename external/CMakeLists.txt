@@ -138,7 +138,7 @@ if(SLANG_USE_MIMALLOC)
   FetchContent_Declare(
     mimalloc
     GIT_REPOSITORY ${SLANG_DEP_URL_PREFIX}microsoft/mimalloc.git
-    GIT_TAG v3.7.0
+    GIT_TAG v3.7.1
     GIT_SHALLOW ON
     FIND_PACKAGE_ARGS 3.7)
   FetchContent_MakeAvailable(mimalloc)
@@ -202,7 +202,7 @@ else()
   FetchContent_Declare(
     tomlplusplus
     GIT_REPOSITORY ${SLANG_DEP_URL_PREFIX}marzer/tomlplusplus.git
-    GIT_TAG v3.5.0
+    GIT_TAG v3.5.1
     GIT_SHALLOW ON
     FIND_PACKAGE_ARGS 3.5)
   FetchContent_MakeAvailable(tomlplusplus)
