@@ -2113,14 +2113,33 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                     // the one that's declared after use. We only need to do this if
                     // AllowDeclaredAfter is enabled because if it's not, then we end up looking
                     // up the chain anyway.
-                    if (flags.has(LookupFlags::AllowDeclaredAfter)) {
+                    //
+                    // Inside a package, nothing outside the package can be referenced
+                    // [26.2], so don't let the search escape it; otherwise we could
+                    // find a top-level instance or compilation unit item instead.
+                    if (flags.has(LookupFlags::AllowDeclaredAfter) &&
+                        scope.asSymbol().kind != SymbolKind::Package) {
+                        auto parentFlags = flags;
+                        if (getContainingPackage(scope.asSymbol()))
+                            parentFlags |= LookupFlags::DisallowUnitReferences;
+
                         LookupLocation parentLocation = LookupLocation::after(scope.asSymbol());
                         if (parentLocation.getScope()) {
+                            auto savedFlags = result.flags;
                             unqualifiedImpl(*parentLocation.getScope(), name, parentLocation,
-                                            sourceRange, flags, outOfBlockIndex, result,
+                                            sourceRange, parentFlags, outOfBlockIndex, result,
                                             originalScope, originalSyntax);
-                            if (result.found)
-                                return;
+                            if (result.found) {
+                                // Top-level instances live in the root scope but aren't
+                                // earlier declarations; they're only reachable by upward
+                                // name resolution, which a local declaration hides [23.8].
+                                auto parent = result.found->getParentScope();
+                                if (!parent || parent->asSymbol().kind != SymbolKind::Root)
+                                    return;
+
+                                result.found = nullptr;
+                                result.flags = savedFlags;
+                            }
                         }
                     }
                     break;

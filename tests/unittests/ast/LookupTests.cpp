@@ -3751,3 +3751,64 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Package variable declared after use is not hidden by top-level instance") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+  class catcher;
+    static function void summarize();
+      top.info(1);
+      top.info();
+    endfunction
+  endclass
+  class root;
+    function void info(int i = 0); endfunction
+  endclass
+  const root top = new;
+
+  checker chk;
+    function automatic void f(); top.info(1); endfunction
+    root top = new;
+  endchecker
+endpackage
+
+module top;
+  initial p::catcher::summarize();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Module variable declared after use is not hidden by top-level instance") {
+    auto tree = SyntaxTree::fromText(R"(
+class root;
+  function void info(int i); endfunction
+endclass
+
+module m;
+  function void f(); top.info(1); endfunction
+  root top = new;
+endmodule
+
+module n;
+  function void f(); other.info(1); endfunction
+  root other = new;
+endmodule
+
+module top;
+  m m1();
+endmodule
+
+module other;
+  function void info(string s, int j); endfunction
+  n n1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
