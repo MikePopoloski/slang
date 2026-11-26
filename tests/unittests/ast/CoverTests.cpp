@@ -1241,3 +1241,25 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InvalidThisHandle);
 }
+
+TEST_CASE("Coverage set expression with bad coverpoint type doesn't cascade errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    typedef bit [3:0] q_t[$];
+    function automatic q_t masks(int n);
+        for (int i = 0; i < n; i++) masks.push_back(1 << i);
+    endfunction
+    covergroup cg(int n) with function sample();
+        cp: coverpoint nosuch { bins single[] = masks(n); }
+    endgroup
+    cg c = new(3);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}

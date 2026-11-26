@@ -695,7 +695,7 @@ void CoverageBinSymbol::resolve() const {
             setCoverageExpr = &Expression::bind(
                 *init->as<ExpressionCoverageBinInitializerSyntax>().expr, context);
 
-            if (!setCoverageExpr->bad()) {
+            if (!setCoverageExpr->bad() && !type.isError()) {
                 auto& t = *setCoverageExpr->type;
                 if (!t.isArray() || t.isAssociativeArray() ||
                     !type.isAssignmentCompatible(*t.getArrayElementType())) {
