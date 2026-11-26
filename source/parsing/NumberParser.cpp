@@ -256,9 +256,12 @@ Token NumberParser::finishValue(Token firstToken, bool singleToken, bool isNegat
         if (digits.size() > 1)
             bits = bitwidth_t(digits.size() - 1) * multiplier;
 
-        // If the leading digit is unknown however, allow any size.
+        // If the leading digit is unknown however, allow any size for sized literals.
+        // For unsized literals an x or z digit always sets `multiplier` bits.
         if (!digits[0].isUnknown())
             bits += (bitwidth_t)std::bit_width(digits[0].value);
+        else if (!sizeBits)
+            bits += multiplier;
 
         if (bits > sizeBits) {
             if (sizeBits == 0) {

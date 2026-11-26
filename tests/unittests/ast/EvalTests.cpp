@@ -352,6 +352,16 @@ TEST_CASE("Integer operators") {
     EVAL("xlit", "64'hxxxxxxxxxxxxxxx3"_si);
     EVAL("blit", "64'h3"_si);
 
+    // Unsized literals wider than 32 bits keep their leading x or z digit (GH #2145)
+    EVAL("$bits('hz_0000_0000)", 36);
+    EVAL("$bits('hx3x2x1x0x)", 36);
+    EVAL("$bits('h1_0000_0000)", 33);
+    EVAL("$bits('ox_0000_0000_000)", 36);
+    EVAL("$bits('bx)", 32);
+    EVAL("1 ? 'hz_0000_0000 : 64'h0", "64'hzzzzzzzz00000000"_si);
+    EVAL("'hx3x2x1x0x | 64'h0", "64'hxxxxxxxx3x2x1x0x"_si);
+    EVAL("$bits(8'hx00)", 8);
+
     // Unbased unsized literals
     EVAL("1 << '1", 2);
     EVAL("'1 + 65'b0", "65'h1ffffffffffffffff"_si);
