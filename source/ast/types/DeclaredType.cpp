@@ -537,23 +537,30 @@ void DeclaredType::setFromDeclarator(const DeclaratorSyntax& decl) {
         setInitializerSyntax(*decl.initializer->expr, decl.initializer->equals.location());
 }
 
+// Declared type flags that imply an AST flag when resolving the type or initializer.
+static constexpr std::pair<DeclaredTypeFlags, ASTFlags> ImpliedASTFlags[] = {
+    {DeclaredTypeFlags::NetType, ASTFlags::NonProcedural},
+    {DeclaredTypeFlags::CoverageType, ASTFlags::AllowCoverageSampleFormal},
+    {DeclaredTypeFlags::UserDefinedNetType, ASTFlags::AllowNetType},
+    {DeclaredTypeFlags::DPIArg, ASTFlags::DPIArg},
+    {DeclaredTypeFlags::EnumValues, ASTFlags::EnumValueType},
+    {DeclaredTypeFlags::TypeParamValue, ASTFlags::TypeParameterValue},
+};
+
+static bitmask<ASTFlags> getImpliedASTFlags(bitmask<DeclaredTypeFlags> flags) {
+    // Multiplying by each flag's presence instead of testing it keeps this
+    // free of branches once the loop is unrolled.
+    using ASTBits = bitmask<ASTFlags>::underlying_type;
+    ASTBits result = ASTBits(!flags.has(DeclaredTypeFlags::AutomaticInitializer)) *
+                     ASTBits(ASTFlags::StaticInitializer);
+    for (auto [from, to] : ImpliedASTFlags)
+        result |= ASTBits(flags.has(from)) * ASTBits(to);
+    return static_cast<ASTFlags>(result);
+}
+
 template<bool IsInitializer, typename T>
 T DeclaredType::getASTContext() const {
-    bitmask<ASTFlags> astFlags;
-    if (flags.has(DeclaredTypeFlags::NetType))
-        astFlags |= ASTFlags::NonProcedural;
-    if (!flags.has(DeclaredTypeFlags::AutomaticInitializer))
-        astFlags |= ASTFlags::StaticInitializer;
-    if (flags.has(DeclaredTypeFlags::CoverageType))
-        astFlags |= ASTFlags::AllowCoverageSampleFormal;
-    if (flags.has(DeclaredTypeFlags::UserDefinedNetType))
-        astFlags |= ASTFlags::AllowNetType;
-    if (flags.has(DeclaredTypeFlags::DPIArg))
-        astFlags |= ASTFlags::DPIArg;
-    if (flags.has(DeclaredTypeFlags::EnumValues))
-        astFlags |= ASTFlags::EnumValueType;
-    if (flags.has(DeclaredTypeFlags::TypeParamValue))
-        astFlags |= ASTFlags::TypeParameterValue;
+    bitmask<ASTFlags> astFlags = getImpliedASTFlags(flags);
 
     const Scope* scope = parent.getParentScope();
     SLANG_ASSERT(scope);
