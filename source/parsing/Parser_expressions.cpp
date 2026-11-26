@@ -1219,15 +1219,16 @@ ConditionalPatternSyntax& Parser::parseConditionalPattern() {
 EventExpressionSyntax& Parser::parseSignalEvent() {
     Token edge = parseEdgeKeyword();
     auto& expr = parseExpression();
+    return factory.signalEventExpression(edge, expr, parseIffEventClause());
+}
 
-    IffEventClauseSyntax* iffClause = nullptr;
-    if (peek(TokenKind::IffKeyword)) {
-        auto iff = consume();
-        auto& iffExpr = parseExpression();
-        iffClause = &factory.iffEventClause(iff, iffExpr);
-    }
+IffEventClauseSyntax* Parser::parseIffEventClause() {
+    if (!peek(TokenKind::IffKeyword))
+        return nullptr;
 
-    return factory.signalEventExpression(edge, expr, iffClause);
+    auto iff = consume();
+    auto& iffExpr = parseExpression();
+    return &factory.iffEventClause(iff, iffExpr);
 }
 
 EventExpressionSyntax& Parser::parseEventExpression() {
@@ -1250,7 +1251,7 @@ EventExpressionSyntax& Parser::parseEventExpression() {
                 newExpr = &parsePostfixExpression(*newExpr, ExpressionOptions::None);
                 newExpr = &parseBinaryExpression(newExpr, ExpressionOptions::None, 0);
 
-                left = &factory.signalEventExpression(Token(), *newExpr, nullptr);
+                left = &factory.signalEventExpression(Token(), *newExpr, parseIffEventClause());
             }
         }
 

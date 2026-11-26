@@ -398,3 +398,34 @@ TEST_CASE("Empty randsequence case production") {
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::CaseStatementEmpty);
 }
+
+TEST_CASE("Event expression iff after parenthesized operand -- GH #2143") {
+    auto test = [](std::string_view text) {
+        auto& stmt = parseStatement(std::string(text));
+        REQUIRE(stmt.kind == SyntaxKind::TimingControlStatement);
+
+        auto& tc = *stmt.as<TimingControlStatementSyntax>().timingControl;
+        REQUIRE(tc.kind == SyntaxKind::EventControlWithExpression);
+        CHECK(stmt.toString() == text);
+        CHECK_DIAGNOSTICS_EMPTY;
+
+        auto expr = tc.as<EventControlWithExpressionSyntax>().expr;
+        REQUIRE(expr->kind == SyntaxKind::ParenthesizedEventExpression);
+        return expr->as<ParenthesizedEventExpressionSyntax>().expr;
+    };
+
+    auto checkIff = [](EventExpressionSyntax* expr, std::string_view lhs) {
+        REQUIRE(expr->kind == SyntaxKind::SignalEventExpression);
+        auto& see = expr->as<SignalEventExpressionSyntax>();
+        CHECK(see.expr->toString() == lhs);
+        CHECK(see.iffClause != nullptr);
+    };
+
+    checkIff(test("@((a) iff (b)) ;"), "(a)");
+    checkIff(test("@((a) iff b) ;"), "(a)");
+    checkIff(test("@((a) + c iff b) ;"), "(a) + c");
+
+    auto expr = test("@(((a) & c) iff (b) or posedge c) ;");
+    REQUIRE(expr->kind == SyntaxKind::BinaryEventExpression);
+    checkIff(expr->as<BinaryEventExpressionSyntax>().left, "((a) & c)");
+}

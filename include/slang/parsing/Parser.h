@@ -234,6 +234,7 @@ private:
         Token openBrace, syntax::ExpressionSyntax* firstExpr);
     syntax::AssignmentPatternItemSyntax& parseAssignmentPatternItem(syntax::ExpressionSyntax* key);
     syntax::EventExpressionSyntax& parseSignalEvent();
+    syntax::IffEventClauseSyntax* parseIffEventClause();
     syntax::EventExpressionSyntax& parseEventExpression();
     syntax::NamedBlockClauseSyntax* parseNamedBlockClause();
     syntax::TimingControlSyntax* parseTimingControl(bool inAssertion = false);
