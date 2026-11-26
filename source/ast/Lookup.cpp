@@ -2109,10 +2109,12 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                     break;
                 case SymbolKind::Variable:
                 case SymbolKind::FormalArgument:
-                    // If we find a variable that's declared before use, then use that instead of
-                    // the one that's declared after use. We only need to do this if
-                    // AllowDeclaredAfter is enabled because if it's not, then we end up looking
-                    // up the chain anyway.
+                case SymbolKind::Coverpoint:
+                case SymbolKind::CoverCross:
+                    // If we find a variable (or coverpoint / cross) that's declared before use,
+                    // then use that instead of the one that's declared after use. We only need to
+                    // do this if AllowDeclaredAfter is enabled because if it's not, then we end up
+                    // looking up the chain anyway.
                     //
                     // Inside a package, nothing outside the package can be referenced
                     // [26.2], so don't let the search escape it; otherwise we could

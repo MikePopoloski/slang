@@ -3812,3 +3812,22 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Coverpoint expression with allow-use-before-declare prefers earlier sample arg") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+  covergroup cg with function sample(bit [2:0] clear, bit [1:0] state);
+    clear_cp: coverpoint clear;
+    clear_x_state: cross clear, state;
+  endgroup
+  cg c = new;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowUseBeforeDeclare;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
