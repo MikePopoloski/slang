@@ -3786,8 +3786,9 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    // Referencing a coverage bin or a built-in option in a constant is an error, but
-    // each should be reported once, from the scope that owns the enum.
+    // Referencing a coverage bin (which is not visible by name) or a built-in option
+    // in a constant is an error, but each should be reported once, from the scope
+    // that owns the enum.
     Diagnostics errors;
     for (auto& diag : compilation.getAllDiagnostics()) {
         if (diag.isError())
@@ -3795,7 +3796,7 @@ endmodule
     }
 
     REQUIRE(errors.size() == 2);
-    CHECK(errors[0].code == diag::NotAValue);
+    CHECK(errors[0].code == diag::UndeclaredIdentifier);
     CHECK(errors[1].code == diag::NonStaticClassProperty);
 }
 

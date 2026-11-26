@@ -2199,6 +2199,12 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                 case SymbolKind::ModportClocking:
                     result.found = symbol->as<ModportClockingSymbol>().target;
                     break;
+                case SymbolKind::CoverageBin:
+                    // Bins can only be named through their coverpoint, as in
+                    // binsof(cp.bin) [19.6], so they never hide other declarations
+                    // from unqualified lookups.
+                    done = false;
+                    break;
                 case SymbolKind::GenerateBlock:
                 case SymbolKind::GenerateBlockArray:
                     if (isBadGenblkAccess(*symbol, scope, flags)) {

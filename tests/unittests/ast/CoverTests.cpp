@@ -224,6 +224,33 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Bin names are not visible in bin expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    typedef enum bit [1:0] {ResetSt, IdleSt, RunSt} st_e;
+    st_e s, t;
+    logic clk;
+    covergroup cg @(posedge clk);
+        cp: coverpoint s {
+            bins IdleSt = {IdleSt};
+            bins again = {IdleSt};
+            bins arcs[] = (IdleSt => RunSt);
+        }
+        cq: coverpoint t;
+        cx: cross cp, cq {
+            bins RunSt = binsof(cp.IdleSt) intersect {RunSt};
+            bins other = binsof(cq) intersect {RunSt};
+        }
+    endgroup
+    cg c = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Cover points") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
