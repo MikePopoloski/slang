@@ -912,3 +912,62 @@ endclass
     REQUIRE(f3.returnValVar);
     CHECK(f3.returnValVar->lifetime == VariableLifetime::Automatic);
 }
+
+TEST_CASE("Subroutines in generate blocks inherit default lifetime -- GH #2144") {
+    auto tree = SyntaxTree::fromText(R"(
+module automatic m;
+    if (1) begin : g1
+        function int f; int n = 0; return n; endfunction
+        if (1) begin : g2
+            task t; endtask
+        end
+    end
+    for (genvar i = 0; i < 2; i++) begin : g3
+        function int f; int n = 0; return n; endfunction
+    end
+    case (1)
+        1: begin : g4
+            function int f; int n = 0; return n; endfunction
+        end
+    endcase
+endmodule
+
+interface automatic i;
+    if (1) begin : g
+        function int f; int n = 0; return n; endfunction
+    end
+endinterface
+
+program automatic p;
+    if (1) begin : g
+        function int f; int n = 0; return n; endfunction
+    end
+endprogram
+
+module s;
+    if (1) begin : g
+        function int f; return 0; endfunction
+    end
+    i i1();
+    p p1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto lifetime = [&](std::string_view name) {
+        return root.lookupName<SubroutineSymbol>(name).defaultLifetime;
+    };
+
+    CHECK(lifetime("m.g1.f") == VariableLifetime::Automatic);
+    CHECK(lifetime("m.g1.g2.t") == VariableLifetime::Automatic);
+    CHECK(lifetime("m.g3[0].f") == VariableLifetime::Automatic);
+    CHECK(lifetime("m.g3[1].f") == VariableLifetime::Automatic);
+    CHECK(lifetime("m.g4.f") == VariableLifetime::Automatic);
+    CHECK(lifetime("s.i1.g.f") == VariableLifetime::Automatic);
+    CHECK(lifetime("s.p1.g.f") == VariableLifetime::Automatic);
+    CHECK(lifetime("s.g.f") == VariableLifetime::Static);
+}

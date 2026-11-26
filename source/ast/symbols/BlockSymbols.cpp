@@ -523,6 +523,10 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
     block->caseItemExpressions = caseItemExprs;
     results.push_back(block);
 
+    // Set the parent now so that members created below can walk up to the
+    // containing instance (e.g. to find the default subroutine lifetime).
+    // The block will be properly linked into the scope by our caller.
+    block->setParent(*context.scope);
     addBlockMembers(*block, syntax);
 }
 
@@ -705,6 +709,7 @@ GenerateBlockSymbol& GenerateBlockSymbol::fromSyntax(const Scope& scope,
                                                    scope.isUninstantiated());
     block->setSyntax(syntax);
     block->setAttributes(scope, syntax.attributes);
+    block->setParent(scope);
 
     for (auto member : syntax.members)
         block->addMembers(*member);
@@ -795,6 +800,11 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     result->setSyntax(syntax);
     result->setAttributes(*context.scope, syntax.attributes);
 
+    // Set the parent now so that members of the blocks created below can walk up
+    // to the containing instance. The array will be properly linked into the scope
+    // by our caller.
+    result->setParent(*context.scope);
+
     auto genvar = syntax.identifier;
     if (genvar.isMissing())
         return *result;
@@ -855,6 +865,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         block->addMember(*implicitParam);
         block->setSyntax(*syntax.block);
         block->branchKind = GenerateBranchKind::LoopIteration;
+        block->setParent(*result);
 
         addBlockMembers(*block, *syntax.block);
 
