@@ -3341,6 +3341,84 @@ endmodule
           TimeScaleValue(TimeUnit::Femtoseconds, TimeScaleMagnitude::One));
 }
 
+TEST_CASE("Simulation time unit ignores scopes that don't use a time scale") {
+    auto run = [](std::vector<std::string_view> texts,
+                  std::optional<TimeScale> defaultTimeScale = {}) {
+        auto options = optionsFor(LanguageVersion::v1800_2023);
+        options.insertOrGet<CompilationOptions>().defaultTimeScale = defaultTimeScale;
+
+        Compilation compilation(options);
+        for (auto text : texts)
+            compilation.addSyntaxTree(SyntaxTree::fromText(text, options));
+        NO_COMPILATION_ERRORS;
+
+        auto& root = compilation.getRoot();
+        auto& param = root.lookupName<ParameterSymbol>("top.RU");
+        return param.getValue().integer().as<int32_t>().value();
+    };
+
+    auto top = R"(
+`timescale 1us / 1us
+module top;
+    localparam int RU = $timeunit($root);
+endmodule
+)";
+
+    // The built-in std package doesn't count.
+    CHECK(run({top}) == -6);
+
+    // Neither do compilation units without a time scale that don't contain
+    // anything that depends on one.
+    CHECK(run({top, R"(
+typedef int foo_t;
+localparam int P = 1;
+)"}) == -6);
+
+    // But they do count if they contain constructs that use the default time scale.
+    CHECK(run({top, R"(
+class C;
+endclass
+)"}) == -9);
+
+    CHECK(run({top, R"(
+function automatic int f; return 1; endfunction
+)"}) == -9);
+
+    // Explicitly declared time scales always count.
+    CHECK(run({top, R"(
+timeunit 1ns / 1ps;
+)"}) == -12);
+
+    CHECK(run({top, R"(
+`timescale 1ns / 10ps
+package p;
+endpackage
+)"}) == -11);
+
+    // A configured default time scale is likewise only used where needed.
+    auto def = TimeScale::fromString("1ns/1ps");
+    CHECK(run({top, "package p; localparam int P = 1; endpackage"}, def) == -6);
+    CHECK(run({top, "package p; task t; endtask endpackage"}, def) == -12);
+    CHECK(run({top, "task t; endtask"}, def) == -12);
+
+    // Variables don't need a time step, even with initializers,
+    // but nets with delays do.
+    CHECK(run({top, "package p; int i; realtime r = 1.5ns; endpackage"}, def) == -6);
+    CHECK(run({top, "package p; wire w; endpackage"}, def) == -6);
+    CHECK(run({top, "package p; wire #1 w; endpackage"}, def) == -12);
+    CHECK(run({top, R"(
+package p;
+    nettype logic nt;
+    nt #1 w;
+endpackage
+)"},
+              def) == -12);
+
+    // Anonymous programs count based on their contents.
+    CHECK(run({top, "package p; program; endprogram endpackage"}, def) == -6);
+    CHECK(run({top, "package p; program; class C; endclass endprogram endpackage"}, def) == -12);
+}
+
 TEST_CASE("Scope arguments accept instance names found by upward lookup") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(

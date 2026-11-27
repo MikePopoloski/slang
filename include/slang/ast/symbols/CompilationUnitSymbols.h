@@ -29,6 +29,11 @@ public:
     std::optional<TimeScale> timeScale;
     const SourceLibrary& sourceLibrary;
 
+    /// Set if the unit declares its own time scale or contains constructs whose
+    /// behavior depends on it, such as subroutines or classes. Only such units
+    /// contribute to the simulation time unit.
+    bool usesTimeScale = false;
+
     CompilationUnitSymbol(Compilation& compilation, const SourceLibrary& sourceLibrary);
 
     void addMembers(const syntax::SyntaxNode& syntax);
@@ -51,6 +56,12 @@ public:
     std::optional<TimeScale> timeScale;
     VariableLifetime defaultLifetime;
     bool hasExportAll = false;
+
+    /// Set if the package declares its own time scale (including via a `timescale
+    /// directive) or contains constructs whose behavior depends on it, such as
+    /// subroutines or classes. Only such packages contribute to the simulation
+    /// time unit.
+    bool usesTimeScale = false;
 
     PackageSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                   const NetType& defaultNetType, VariableLifetime defaultLifetime);

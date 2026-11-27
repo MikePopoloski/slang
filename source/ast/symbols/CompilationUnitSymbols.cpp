@@ -24,6 +24,34 @@ namespace slang::ast {
 using namespace parsing;
 using namespace syntax;
 
+// Returns true if the given member is a construct whose behavior depends
+// on the time scale of its containing scope. Note that variable declarations
+// don't count, even with initializers, since those run before simulation
+// time can advance, and any time literals they contain depend only on
+// the time unit, not the precision.
+static bool isTimeScaleDependent(const SyntaxNode& member) {
+    switch (member.kind) {
+        case SyntaxKind::FunctionDeclaration:
+        case SyntaxKind::TaskDeclaration:
+        case SyntaxKind::DPIImport:
+        case SyntaxKind::ClassDeclaration:
+        case SyntaxKind::CovergroupDeclaration:
+        case SyntaxKind::PropertyDeclaration:
+        case SyntaxKind::SequenceDeclaration:
+        case SyntaxKind::CheckerDeclaration:
+        case SyntaxKind::UserDefinedNetDeclaration: // always has a delay
+            return true;
+        case SyntaxKind::NetDeclaration:
+            // Net delays apply to drivers of the net, wherever they are.
+            return member.as<NetDeclarationSyntax>().delay != nullptr;
+        case SyntaxKind::AnonymousProgram:
+            return std::ranges::any_of(member.as<AnonymousProgramSyntax>().members,
+                                       [](auto m) { return isTimeScaleDependent(*m); });
+        default:
+            return false;
+    }
+}
+
 CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation,
                                              const SourceLibrary& sourceLibrary) :
     Symbol(SymbolKind::CompilationUnit, "", SourceLocation()), Scope(compilation, this),
@@ -43,6 +71,7 @@ CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation,
 
 void CompilationUnitSymbol::addMembers(const SyntaxNode& syntax) {
     if (syntax.kind == SyntaxKind::TimeUnitsDeclaration) {
+        usesTimeScale = true;
         if (!timeScale)
             timeScale.emplace();
 
@@ -53,12 +82,15 @@ void CompilationUnitSymbol::addMembers(const SyntaxNode& syntax) {
         auto& cu = syntax.as<CompilationUnitSyntax>();
         if (!cu.members.empty()) {
             anyMembers = true;
-            for (auto member : cu.members)
+            for (auto member : cu.members) {
+                usesTimeScale |= isTimeScaleDependent(*member);
                 Scope::addMembers(*member);
+            }
         }
     }
     else {
         anyMembers = true;
+        usesTimeScale |= isTimeScaleDependent(syntax);
         Scope::addMembers(syntax);
     }
 }
@@ -89,6 +121,7 @@ PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclara
 
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::TimeUnitsDeclaration) {
+            result->usesTimeScale = true;
             if (!result->timeScale)
                 result->timeScale.emplace();
 
@@ -114,6 +147,7 @@ PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclara
             }
         }
 
+        result->usesTimeScale |= isTimeScaleDependent(*member);
         result->addMembers(*member);
     }
 
@@ -127,6 +161,9 @@ PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclara
         if (hasStarExports)
             result->exportData->wildcardExportPackages = comp.allocSymbolMap();
     }
+
+    if (directiveTimeScale)
+        result->usesTimeScale = true;
 
     SemanticFacts::populateTimeScale(result->timeScale, scope, directiveTimeScale, unitsRange,
                                      precisionRange);

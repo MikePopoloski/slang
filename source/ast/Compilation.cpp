@@ -335,16 +335,26 @@ std::vector<const PackageSymbol*> Compilation::getPackages() const {
 }
 
 TimeScaleValue Compilation::getSimulationTimeUnit() const {
-    TimeScaleValue result = getDefaultTimeScale().value_or(TimeScale()).precision;
+    // The simulation time unit is the smallest time precision used in the design [3.14.3].
+    // Compilation units and packages that don't declare their own time scale only
+    // participate if they contain constructs that run in terms of the time scale they
+    // inherit.
+    std::optional<TimeScaleValue> result;
     auto check = [&](const std::optional<TimeScale>& ts) {
-        result = std::min(result, ts.value_or(TimeScale()).precision);
+        auto precision = ts.value_or(TimeScale()).precision;
+        result = result ? std::min(*result, precision) : precision;
     };
 
-    for (auto unit : getCompilationUnits())
-        check(unit->timeScale);
+    for (auto unit : getCompilationUnits()) {
+        if (unit->usesTimeScale)
+            check(unit->timeScale);
+    }
 
-    for (auto& [name, pkg] : packageMap)
-        check(pkg->timeScale);
+    // Note that the built-in std package never participates here.
+    for (auto& [name, pkg] : packageMap) {
+        if (pkg->usesTimeScale)
+            check(pkg->timeScale);
+    }
 
     for (auto& [key, val] : definitionMap) {
         for (auto sym : val.first) {
@@ -353,7 +363,9 @@ TimeScaleValue Compilation::getSimulationTimeUnit() const {
         }
     }
 
-    return result;
+    if (result)
+        return *result;
+    return getDefaultTimeScale().value_or(TimeScale()).precision;
 }
 
 const SourceLibrary* Compilation::getSourceLibrary(std::string_view name) const {
