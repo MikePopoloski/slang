@@ -907,7 +907,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
         case BinaryOperator::CaseEquality:
         case BinaryOperator::CaseInequality:
             // Two types are comparable if:
-            // - they are both integral or floating
+            // - they are both integral or floating (only integral for wildcard ops)
             // - both classes or null, and assignment compatible
             // - both chandles or null
             // - both aggregates and equivalent
@@ -948,11 +948,9 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             }
             else {
                 bool isContext = false;
-                bool isWildcard = op == BinaryOperator::WildcardEquality ||
-                                  op == BinaryOperator::WildcardInequality;
 
                 if (bothStrings) {
-                    good = !isWildcard;
+                    good = true;
                     result->type = &compilation.getBitType();
 
                     // If there is a literal involved, make sure it's converted to string.
@@ -963,7 +961,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                                       opRange);
                 }
                 else if (lt->isAggregate() && lt->isEquivalent(*rt)) {
-                    good = !isWildcard;
+                    good = true;
                     result->type = singleBitType(compilation, lt, rt);
                 }
                 else if ((lt->isClass() && lt->isAssignmentCompatible(*rt)) ||
@@ -990,10 +988,16 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                     result->type = &compilation.getBitType();
                 }
                 else if (lt->isTypeRefType() && rt->isTypeRefType()) {
-                    good = !isWildcard;
+                    good = true;
                     result->type = &compilation.getBitType();
                 }
                 else {
+                    good = false;
+                }
+
+                // Wildcard equality operators only apply to integral operands.
+                if (op == BinaryOperator::WildcardEquality ||
+                    op == BinaryOperator::WildcardInequality) {
                     good = false;
                 }
 

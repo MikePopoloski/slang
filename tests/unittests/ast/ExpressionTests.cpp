@@ -5521,3 +5521,38 @@ endmodule
     }
     CHECK(count == 5);
 }
+
+TEST_CASE("Wildcard equality requires integral operands") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+endclass
+
+module m;
+    event e1, e2;
+    chandle h1, h2;
+    C c1, c2;
+    real r;
+    logic [3:0] l;
+    logic b;
+
+    initial begin
+        b = e1 == e2;
+        b = e1 === null;
+        b = l ==? 4'b1x0z;
+        b = e1 ==? e2;
+        b = e1 !=? null;
+        b = h1 ==? h2;
+        b = c1 !=? c2;
+        b = r ==? 1.0;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    for (auto& d : diags)
+        CHECK(d.code == diag::BadBinaryExpression);
+}
