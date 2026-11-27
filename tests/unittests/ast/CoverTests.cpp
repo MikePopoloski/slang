@@ -106,9 +106,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::UndeclaredIdentifier);
-    CHECK(diags[1].code == diag::InvalidBlockEventTarget);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UpwardHierarchicalName);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::InvalidBlockEventTarget);
 }
 
 TEST_CASE("Covergroup block events on methods through class handles") {

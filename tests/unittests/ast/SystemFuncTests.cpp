@@ -3340,3 +3340,69 @@ endmodule
     CHECK(compilation.getSimulationTimeUnit() ==
           TimeScaleValue(TimeUnit::Femtoseconds, TimeScaleMagnitude::One));
 }
+
+TEST_CASE("Scope arguments accept instance names found by upward lookup") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+`timescale 1ns/1ps
+module k;
+    initial begin
+        int c;
+        $printtimescale(k);
+        $list(k);
+        $scope(k);
+        c = $scale(k);
+        c = $timeunit(k);
+        c = $timeprecision(k);
+        $dumpports(k);
+        c = $coverage_control(1, 1, 1, k);
+    end
+endmodule
+
+module m;
+    k k1();
+    initial begin
+        int c;
+        $printtimescale(m);
+        $list(m);
+        $scope(m);
+        c = $scale(m);
+        c = $timeunit(m);
+        c = $timeprecision(m);
+        $dumpports(m);
+        c = $coverage_control(1, 1, 1, m);
+    end
+endmodule
+
+module leaf;
+    initial begin
+        int c;
+        $printtimescale(b);
+        $list(b);
+        $scope(b);
+        c = $scale(b);
+        c = $timeunit(b);
+        c = $timeprecision(b);
+        $dumpports(b);
+        c = $coverage_control(1, 1, 1, b);
+    end
+endmodule
+
+module a;
+    leaf l();
+endmodule
+
+module b;
+endmodule
+)",
+                                     options);
+
+    auto& co = options.insertOrGet<CompilationOptions>();
+    co.topModules.emplace("m");
+    co.topModules.emplace("a");
+    co.topModules.emplace("b");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

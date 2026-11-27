@@ -502,9 +502,9 @@ public:
                 return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
             }
 
-            bitmask<LookupFlags> extraFlags;
+            bitmask<LookupFlags> extraFlags = LookupFlags::AllowUpwardInstances;
             if (isOptional)
-                extraFlags = LookupFlags::AllowRoot | LookupFlags::AllowUnit;
+                extraFlags |= LookupFlags::AllowRoot | LookupFlags::AllowUnit;
 
             return ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context,
                                                          extraFlags);

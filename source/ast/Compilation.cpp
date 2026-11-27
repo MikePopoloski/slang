@@ -2323,10 +2323,11 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
 
     // If an instance list is given, then the target name must be a definition name.
     // Otherwise, the target name can be either an instance name or a definition name,
-    // preferencing the instance if found.
+    // preferencing the instance if found. Instance names can be found by upward lookup.
     ASTContext context(scope, LookupLocation::max);
     bitmask<LookupFlags> flags = LookupFlags::ForceHierarchical |
-                                 LookupFlags::DisallowWildcardImport | LookupFlags::NoSelectors;
+                                 LookupFlags::DisallowWildcardImport | LookupFlags::NoSelectors |
+                                 LookupFlags::AllowUpwardInstances;
 
     if (syntax.targetInstances) {
         if (syntax.target->kind != SyntaxKind::IdentifierName)
@@ -2359,6 +2360,14 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
     else {
         LookupResult result;
         Lookup::name(*syntax.target, context, flags, result);
+
+        // A simple name that only matches a top-level instance names its definition
+        // instead, which binds that instance along with any others of the same module.
+        if (result.found && syntax.target->kind == SyntaxKind::IdentifierName) {
+            auto parent = result.found->getParentScope();
+            if (parent && parent->asSymbol().kind == SymbolKind::Root)
+                result.clear();
+        }
 
         if (result.found) {
             if (checkValidTarget(*result.found, *syntax.target))

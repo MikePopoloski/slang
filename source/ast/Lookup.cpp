@@ -616,6 +616,7 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
     };
 
     uint32_t upwardCount = 0;
+    bool crossedInstance = false;
     const Scope* scope = context.scope;
     do {
         // Search for a scope or instance target within our current scope.
@@ -644,7 +645,11 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
                     // Resolving a member of an enclosing class is a lexical reference within
                     // the same instance, not an upward hierarchical one, so don't count it as
                     // such (otherwise it would spuriously trigger the upward-name warning).
-                    result.upwardCount = enclosingClassMember ? 0 : upwardCount;
+                    // Likewise a top-level instance named from outside of any instance
+                    // (e.g. a bind directive in $unit) isn't reached by going upward.
+                    const bool fromOutsideRoot = scope->asSymbol().kind == SymbolKind::Root &&
+                                                 !crossedInstance;
+                    result.upwardCount = enclosingClassMember || fromOutsideRoot ? 0 : upwardCount;
                     return true;
                 }
             }
@@ -668,10 +673,13 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
                     return false;
 
                 if (result.found) {
-                    result.upwardCount = upwardCount;
+                    // A module naming itself always refers to its own instance,
+                    // wherever that instance lives, so that isn't an upward reference.
+                    result.upwardCount = crossedInstance ? upwardCount : 0;
                     return true;
                 }
             }
+            crossedInstance = true;
         }
 
         upwardCount++;
@@ -2151,21 +2159,11 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
 
                         LookupLocation parentLocation = LookupLocation::after(scope.asSymbol());
                         if (parentLocation.getScope()) {
-                            auto savedFlags = result.flags;
                             unqualifiedImpl(*parentLocation.getScope(), name, parentLocation,
                                             sourceRange, parentFlags, outOfBlockIndex, result,
                                             originalScope, originalSyntax);
-                            if (result.found) {
-                                // Top-level instances live in the root scope but aren't
-                                // earlier declarations; they're only reachable by upward
-                                // name resolution, which a local declaration hides [23.8].
-                                auto parent = result.found->getParentScope();
-                                if (!parent || parent->asSymbol().kind != SymbolKind::Root)
-                                    return;
-
-                                result.found = nullptr;
-                                result.flags = savedFlags;
-                            }
+                            if (result.found)
+                                return;
                         }
                     }
                     break;
@@ -2410,9 +2408,11 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         }
     }
 
-    // Continue up the scope chain via our parent.
+    // Continue up the scope chain via our parent. The root scope's members are top-level
+    // instances, which aren't lexically visible; they're only reachable via upward
+    // hierarchical name resolution [23.8] or $root.
     location = LookupLocation::after(scope.asSymbol());
-    if (!location.getScope())
+    if (!location.getScope() || location.getScope()->asSymbol().kind == SymbolKind::Root)
         return;
 
     // Coverpoint names are only visible in specific contexts, which don't include

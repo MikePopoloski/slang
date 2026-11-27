@@ -3814,6 +3814,98 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Dotted names prefer a nearer instance over a top-level module of the same name") {
+    // Every name below should resolve to x.top; the top-level module 'top'
+    // has members of the same names that would fail to bind if chosen.
+    auto tree = SyntaxTree::fromText(R"(
+module y;
+    int v;
+    event e;
+    function void f0(); endfunction
+    function void f1(int i); endfunction
+    task t1(int i); endtask
+    leaf u();
+endmodule
+
+module leaf;
+endmodule
+
+module child;
+    initial begin
+        top.v = 1;
+        top.f0();
+        top.f1(1);
+        top.t1(1);
+        -> top.e;
+        $printtimescale(top.u);
+        $asserton(0, top.u);
+        $dumpvars(0, top.u);
+    end
+endmodule
+
+module x;
+    y top();
+    child c();
+endmodule
+
+module top;
+    string v;
+    int e;
+    int u;
+    function void f0(int i, int j); endfunction
+    function void f1(int i, int j); endfunction
+    task t1(int i, int j); endtask
+    x x();
+endmodule
+)");
+
+    for (bool useBeforeDeclare : {false, true}) {
+        CompilationOptions options;
+        if (useBeforeDeclare)
+            options.flags |= CompilationFlags::AllowUseBeforeDeclare;
+
+        Compilation compilation(options);
+        compilation.addSyntaxTree(tree);
+        NO_COMPILATION_ERRORS;
+    }
+}
+
+TEST_CASE("A module naming itself is not an upward reference") {
+    auto tree = SyntaxTree::fromText(R"(
+module k;
+    int n;
+    initial begin : blk
+        k.n = 1;
+        disable k.blk;
+    end
+endmodule
+
+module m;
+    int n;
+    k k1();
+    initial begin : blk
+        m.n = 1;
+        m.k1.n = 2;
+        disable m.blk;
+    end
+endmodule
+
+module chk;
+endmodule
+
+bind m.k1 chk c();
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("m");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK(diags.empty());
+}
+
 TEST_CASE("Coverpoint expression with allow-use-before-declare prefers earlier sample arg") {
     auto tree = SyntaxTree::fromText(R"(
 module top;

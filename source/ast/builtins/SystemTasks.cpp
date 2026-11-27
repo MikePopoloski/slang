@@ -429,7 +429,8 @@ public:
 
             return ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context,
                                                          LookupFlags::AllowRoot |
-                                                             LookupFlags::AllowUnit);
+                                                             LookupFlags::AllowUnit |
+                                                             LookupFlags::AllowUpwardInstances);
         }
 
         return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
@@ -517,7 +518,8 @@ public:
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         if (NameSyntax::isKind(syntax.kind)) {
             return ArbitrarySymbolExpression::fromSyntax(context.getCompilation(),
-                                                         syntax.as<NameSyntax>(), context);
+                                                         syntax.as<NameSyntax>(), context,
+                                                         LookupFlags::AllowUpwardInstances);
         }
 
         return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
@@ -849,7 +851,8 @@ public:
                                    const ExpressionSyntax& syntax, const Args& args) const final {
         if (argIndex == 0 && NameSyntax::isKind(syntax.kind)) {
             return ArbitrarySymbolExpression::fromSyntax(context.getCompilation(),
-                                                         syntax.as<NameSyntax>(), context);
+                                                         syntax.as<NameSyntax>(), context,
+                                                         LookupFlags::AllowUpwardInstances);
         }
 
         return SystemTaskBase::bindArgument(argIndex, context, syntax, args);

@@ -40,7 +40,8 @@ public:
         if (argIndex == nameOrHierIndex && NameSyntax::isKind(syntax.kind)) {
             return ArbitrarySymbolExpression::fromSyntax(context.getCompilation(),
                                                          syntax.as<NameSyntax>(), context,
-                                                         LookupFlags::AllowRoot);
+                                                         LookupFlags::AllowRoot |
+                                                             LookupFlags::AllowUpwardInstances);
         }
 
         return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, {}, syntax,

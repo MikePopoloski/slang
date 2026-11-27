@@ -2224,8 +2224,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::MissingGlobalClocking);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UpwardHierarchicalName);
+    CHECK(diags[1].code == diag::MissingGlobalClocking);
 }
 
 TEST_CASE("Untyped sequence actuals are cast to their self-determined type") {

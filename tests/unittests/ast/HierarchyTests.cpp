@@ -3634,3 +3634,60 @@ endmodule
     CHECK(root.lookupName<ParameterSymbol>("top.u.L").getValue().integer() == 14);
     CHECK(root.lookupName<ValueSymbol>("top.u.a").getType().getBitWidth() == 4);
 }
+
+TEST_CASE("Bind targets prefer nearer instances over top-level modules") {
+    auto tree = SyntaxTree::fromText(R"(
+module chk;
+endmodule
+
+module leaf;
+endmodule
+
+module y;
+    leaf u();
+endmodule
+
+module w;
+endmodule
+
+module child;
+    bind u chk c1();
+    bind top.u chk c2();
+    bind leaf: top.u chk c3();
+endmodule
+
+module x;
+    leaf u();
+    y top();
+    child c();
+endmodule
+
+module top;
+    leaf u();
+    x x();
+    w w1();
+endmodule
+
+bind w chk c4();
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("top");
+    options.topModules.emplace("w");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName("top.x.u.c1"));
+    CHECK(root.lookupName("top.x.top.u.c2"));
+    CHECK(root.lookupName("top.x.top.u.c3"));
+    CHECK(!root.lookupName("top.u.c2"));
+    CHECK(!root.lookupName("top.u.c3"));
+
+    // A simple name in $unit that matches a top-level instance names the
+    // module, so every instance of it gets the bind.
+    CHECK(root.lookupName("w.c4"));
+    CHECK(root.lookupName("top.w1.c4"));
+}
