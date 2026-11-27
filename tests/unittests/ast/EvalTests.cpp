@@ -4288,3 +4288,48 @@ endmodule
     auto& top = compilation.getRoot().lookupName<ParameterSymbol>("top.P1");
     CHECK(top.getValue().size() == 2);
 }
+
+TEST_CASE("Constant function default arguments referencing earlier formals") {
+    // Default argument expressions are bound in the scope of the subroutine,
+    // so names of earlier formals refer to those formals, even in constant
+    // function calls (GitHub #2147).
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    localparam int a = 1;
+    localparam int x = 10;
+    int v;
+
+    function automatic int f(int x = 20, int y = a + x);
+        return y;
+    endfunction
+
+    function automatic int g(int z);
+        return f(z) + f() + f(, 3);
+    endfunction
+
+    function automatic int h(int y = v);
+        return y;
+    endfunction
+
+    localparam int P1 = f();
+    localparam int P2 = f(5);
+    localparam int P3 = f(.y(7));
+    localparam int P4 = g(2);
+    localparam int P5 = h();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& top = compilation.getRoot().lookupName("top")->as<InstanceSymbol>().body;
+    CHECK(top.find<ParameterSymbol>("P1").getValue().integer() == 21);
+    CHECK(top.find<ParameterSymbol>("P2").getValue().integer() == 6);
+    CHECK(top.find<ParameterSymbol>("P3").getValue().integer() == 7);
+    CHECK(top.find<ParameterSymbol>("P4").getValue().integer() == 3 + 21 + 3);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
+    CHECK(report(diags).find("in call to 'h()'") != std::string::npos);
+}

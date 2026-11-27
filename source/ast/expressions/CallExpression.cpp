@@ -736,14 +736,31 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     if (!checkConstant(context, symbol, sourceRange))
         return nullptr;
 
-    // Evaluate all argument in the current stack frame.
+    // Evaluate all explicitly provided arguments in the current stack frame.
+    // Default argument expressions are bound in the scope of the subroutine
+    // and can refer to earlier formal arguments, so they get evaluated
+    // separately below in the context of the callee.
+    std::span<const FormalArgumentSymbol* const> formals = symbol.getArguments();
+    auto argExprs = arguments();
+    SLANG_ASSERT(formals.size() == argExprs.size());
+
+    bool hasDefaults = false;
     SmallVector<ConstantValue, 4> args;
-    for (auto arg : arguments()) {
-        ConstantValue v = arg->eval(context);
+    for (size_t i = 0; i < argExprs.size(); i++) {
+        if (argExprs[i] == formals[i]->getDefaultValue()) {
+            hasDefaults = true;
+            args.emplace_back();
+            continue;
+        }
+
+        ConstantValue v = argExprs[i]->eval(context);
         if (!v)
             return nullptr;
         args.emplace_back(std::move(v));
     }
+
+    if (hasDefaults && !evalDefaultArgs(context, symbol, args))
+        return nullptr;
 
     if (!canMemoize(context))
         return invokeSubroutine(context, symbol, args);
@@ -817,6 +834,29 @@ bool CallExpression::canMemoize(const EvalContext& context) const {
     // within a package (the call site's scope chain can't reach the parameter's).
     auto scope = lookupLocation.getScope();
     return scope && !scope->asSymbol().getDeclaringPackage();
+}
+
+bool CallExpression::evalDefaultArgs(EvalContext& context, const SubroutineSymbol& symbol,
+                                     std::span<ConstantValue> args) const {
+    // Evaluate default arguments in a frame for the callee, where the values
+    // of earlier formal arguments are available as locals.
+    if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
+        return false;
+
+    std::span<const FormalArgumentSymbol* const> formals = symbol.getArguments();
+    for (size_t i = 0; i < formals.size(); i++) {
+        if (!args[i]) {
+            args[i] = formals[i]->getDefaultValue()->eval(context);
+            if (!args[i]) {
+                context.popFrame();
+                return false;
+            }
+        }
+        context.createLocal(formals[i], args[i]);
+    }
+
+    context.popFrame();
+    return true;
 }
 
 ConstantValue CallExpression::invokeSubroutine(EvalContext& context, const SubroutineSymbol& symbol,

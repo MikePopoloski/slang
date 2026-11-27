@@ -185,6 +185,8 @@ private:
                               SourceRange range);
 
     bool canMemoize(const EvalContext& context) const;
+    bool evalDefaultArgs(EvalContext& context, const SubroutineSymbol& symbol,
+                         std::span<ConstantValue> args) const;
     ConstantValue invokeSubroutine(EvalContext& context, const SubroutineSymbol& symbol,
                                    std::span<const ConstantValue> args) const;
 

@@ -221,13 +221,19 @@ static void reportFrame(Diagnostic& diag, const EvalContext::Frame& frame) {
     FormatBuffer buffer;
     buffer.format("{}(", frame.subroutine->name);
 
+    // Arguments are missing from the frame if the error occurred while
+    // evaluating default argument values, in which case we only print
+    // the ones that have been evaluated thus far.
+    bool first = true;
     for (auto arg : frame.subroutine->getArguments()) {
         auto it = frame.temporaries.find(arg);
-        SLANG_ASSERT(it != frame.temporaries.end());
+        if (it == frame.temporaries.end())
+            break;
 
-        buffer.append(it->second.toString());
-        if (arg != frame.subroutine->getArguments().last(1)[0])
+        if (!first)
             buffer.append(", ");
+        first = false;
+        buffer.append(it->second.toString());
     }
 
     buffer.append(")");
