@@ -1350,7 +1350,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
                   split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
                   dup-config-rule unused-config-cell unused-config-instance specify-condition-expr
-                  seq-no-match case-too-complex nested-solve-before dynamic-non-procedural
+                  seq-no-match case-too-complex dynamic-non-procedural
                   nonstandard-string-concat nested-comment multi-write read-write mixed-var-assigns
                   multiple-cont-assigns multiple-always-assigns misplaced-trailing-separator
                   qualifiers-on-out-of-block member-impl-not-found shift-count-overflow shift-count-negative
@@ -1363,7 +1363,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   tautological-self-compare
                   tautological-range-compare tautological-bitwise-compare tautological-overlap-compare
                   tautological-negation-compare nonstandard-instance-array-query
-                  missing-global-clocking qualified-pure-virtual-call solve-before-type const-reassign
+                  missing-global-clocking qualified-pure-virtual-call const-reassign
                   automatic-class-property nonprocedural-assign }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
@@ -1380,7 +1380,8 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 bits-of-integer-constant missing-else-clause tautological-limit-compare }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
-                   nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage }
+                   nonstandard-sys-func nonstandard-foreach nonstandard-dist nonstandard-randomize isunbounded-param-arg udp-coverage
+                   nested-solve-before solve-before-type }
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
                      constant-conversion sign-conversion float-bool-conv int-bool-conv float-int-conv
@@ -1413,7 +1414,7 @@ compat Default error = { duplicate-definition bad-procedural-force unknown-sys-n
                          mixed-var-assigns multiple-cont-assigns multiple-always-assigns
                          misplaced-trailing-separator initializer-required string-int-concat index-oob
                          range-oob range-width-oob implicit-port-type-mismatch split-distweight-op
-                         dpi-pure-task specify-condition-expr nested-solve-before foreach-call-expr
+                         dpi-pure-task specify-condition-expr foreach-call-expr
                          dynamic-non-procedural qualifiers-on-out-of-block member-impl-not-found
                          package-import-in-class nonstandard-bare-assoc-pattern literal-leading-underscore
                          ref-arg-automatic range-select-reversed nonstandard-constraint-block format-empty-arg
@@ -1421,7 +1422,7 @@ compat Default error = { duplicate-definition bad-procedural-force unknown-sys-n
                          ref-arg-in-fork-join cannot-index-scalar string-in-constraint
                          virtual-arg-name-mismatch virtual-visibility-mismatch undefined-param-override
                          redefinition redefinition-different-type nonstandard-instance-array-query
-                         missing-global-clocking qualified-pure-virtual-call solve-before-type
+                         missing-global-clocking qualified-pure-virtual-call
                          automatic-class-property nonprocedural-assign }
 
 compat Vcs error = { duplicate-definition bad-procedural-force unknown-sys-name nonstandard-hierarchical-cross

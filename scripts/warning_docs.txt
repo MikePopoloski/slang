@@ -1917,7 +1917,7 @@ longint i = {1, 2};
 
 -Wnested-solve-before
 A `solve before` constraint is nested inside another constraint. This is not allowed in
-SystemVerilog.
+SystemVerilog but most tools allow it anyway, so this is only enabled by -Wpedantic.
 ```
 class A;
     int arr[3];
@@ -2358,8 +2358,8 @@ endclass
 
 -Wsolve-before-type
 A `solve before` constraint names a variable that is neither integral nor real, such as an
-unpacked array. This is not allowed in SystemVerilog; an element of the array, or its size,
-can be named instead.
+unpacked array. This is not allowed in SystemVerilog but most tools allow it anyway, so this
+is only enabled by -Wpedantic. An element of the array, or its size, can be named instead.
 ```
 class C;
   rand int lo;
